@@ -1,6 +1,8 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -30,6 +32,22 @@ class SpaForwardingControllerTests {
     @Test
     void shoeCatalogRouteServesSpaShell() throws Exception {
         mockMvc.perform(get("/shoe-catalog"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/dashboard/users",
+            "/dashboard/course-maps",
+            "/dashboard/shoes",
+            "/dashboard/jobs",
+            "/dashboard/audit",
+            "/dashboard/settings"
+    })
+    void dashboardChildRoutesServeSpaShellOnRefresh(String path) throws Exception {
+        mockMvc.perform(get(path))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));

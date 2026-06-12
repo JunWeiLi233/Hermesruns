@@ -34,11 +34,24 @@ public class Shoe {
     @Column(name = "photo_verified")
     private Boolean photoVerified = false;
     private boolean retired;
+    private LocalDateTime retiredDate;
     private boolean isPrimary;
     private LocalDateTime createdAt;
 
     @Transient
     private Double currentDistanceKm;
+
+    @Transient
+    private String type;
+
+    @Transient
+    private String surfaceType;
+
+    @Transient
+    private LocalDateTime lastWornAt;
+
+    @Transient
+    private Integer daysSinceLastWear;
 
     @PrePersist
     public void prePersist() {
@@ -76,6 +89,9 @@ public class Shoe {
     public boolean isRetired() { return retired; }
     public void setRetired(boolean retired) { this.retired = retired; }
 
+    public LocalDateTime getRetiredDate() { return retiredDate; }
+    public void setRetiredDate(LocalDateTime retiredDate) { this.retiredDate = retiredDate; }
+
     public boolean getIsPrimary() { return isPrimary; }
     public void setIsPrimary(boolean isPrimary) { this.isPrimary = isPrimary; }
 
@@ -90,4 +106,16 @@ public class Shoe {
 
     public Double getCurrentDistanceKm() { return currentDistanceKm; }
     public void setCurrentDistanceKm(Double currentDistanceKm) { this.currentDistanceKm = currentDistanceKm; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getSurfaceType() { return surfaceType; }
+    public void setSurfaceType(String surfaceType) { this.surfaceType = surfaceType; }
+
+    public LocalDateTime getLastWornAt() { return lastWornAt; }
+    public void setLastWornAt(LocalDateTime lastWornAt) { this.lastWornAt = lastWornAt; }
+
+    public Integer getDaysSinceLastWear() { return daysSinceLastWear; }
+    public void setDaysSinceLastWear(Integer daysSinceLastWear) { this.daysSinceLastWear = daysSinceLastWear; }
 }

@@ -12,6 +12,68 @@ public class RaceCourseMapGeometryService {
     private static final int SELF_INTERSECTION_REPAIR_LIMIT = 6;
     private static final int MIN_ALIGNMENT_ROUTE_POINTS = 12;
 
+    public AlignmentPlausibilityVerdict assessAlignmentPlausibility(
+            List<RoutePoint> routePoints,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            int minimumRoutePoints,
+            RaceCourseMapService.PromptRaceType raceType
+    ) {
+        return assessAlignmentPlausibility(routePoints, latitude, longitude, distanceKm, minimumRoutePoints, raceType, null);
+    }
+
+    public AlignmentPlausibilityVerdict assessAlignmentPlausibility(
+            List<RoutePoint> routePoints,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            int minimumRoutePoints,
+            RaceCourseMapService.PromptRaceType raceType,
+            Integer maxAllowedSelfIntersections
+    ) {
+        if (routePoints.size() < minimumRoutePoints) {
+            return invalid("route has only %d route points; need at least %d".formatted(routePoints.size(), minimumRoutePoints));
+        }
+        if (latitude != null && longitude != null) {
+            double centroidDistanceKm = routeCentroidDistanceKm(routePoints, latitude, longitude);
+            double maxCentroidDistance = 50.0;
+            if (centroidDistanceKm > maxCentroidDistance) {
+                return invalid("route centroid is %.1f km from the race location, which is too far".formatted(centroidDistanceKm));
+            }
+        }
+        if (distanceKm != null && distanceKm > 0) {
+            double routeDistanceKm = polylineDistanceKm(routePoints);
+            RaceCourseMapService.AlignmentRatioWindow ratioWindow = new RaceCourseMapService.AlignmentRatioWindow(0.30, 3.0);
+            if (routeDistanceKm < distanceKm * ratioWindow.minRatio() || routeDistanceKm > distanceKm * ratioWindow.maxRatio()) {
+                return invalid("route length %.1f km falls outside the coarse expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm));
+            }
+            if (minimumRoutePoints >= MIN_ALIGNMENT_ROUTE_POINTS) {
+                RaceCourseMapService.AlignmentRatioWindow expectedWindow = expectedDistanceRatioWindow(distanceKm, routePoints.size());
+                if (routeDistanceKm < distanceKm * expectedWindow.minRatio() || routeDistanceKm > distanceKm * expectedWindow.maxRatio()) {
+                    return invalid("route length %.1f km falls outside the expected range for a %.1f km race".formatted(routeDistanceKm, distanceKm));
+                }
+            }
+            double largestSegmentRatio = largestSegmentRatio(routePoints, routeDistanceKm);
+            double maxLargestSegmentRatio = maxLargestSegmentRatio(routePoints.size(), minimumRoutePoints);
+            if (largestSegmentRatio > maxLargestSegmentRatio) {
+                return invalid("one segment covers %.0f%% of the full route, which is too large".formatted(largestSegmentRatio * 100.0));
+            }
+        }
+        RaceCourseMapService.RouteGeometryDiagnosis diagnosis = diagnoseRouteGeometry(routePoints, raceType, distanceKm);
+        int allowedSelfIntersections = maxAllowedSelfIntersections == null
+                ? diagnosis.allowedSelfIntersections()
+                : Math.max(diagnosis.allowedSelfIntersections(), maxAllowedSelfIntersections);
+        if (diagnosis.selfIntersectionCount() > allowedSelfIntersections) {
+            return invalid("route crosses itself %d times, exceeding the %d allowed for %s".formatted(
+                    diagnosis.selfIntersectionCount(),
+                    allowedSelfIntersections,
+                    raceType.promptValue()
+            ));
+        }
+        return valid("alignment passed plausibility checks");
+    }
+
     public boolean isAlignmentPlausible(
             List<RoutePoint> routePoints,
             Double latitude,
@@ -20,27 +82,7 @@ public class RaceCourseMapGeometryService {
             int minimumRoutePoints,
             RaceCourseMapService.PromptRaceType raceType
     ) {
-        if (routePoints.size() < minimumRoutePoints) return false;
-        if (latitude != null && longitude != null) {
-            double centroidDistanceKm = routeCentroidDistanceKm(routePoints, latitude, longitude);
-            double maxCentroidDistance = 50.0;
-            if (centroidDistanceKm > maxCentroidDistance) return false;
-        }
-        if (distanceKm != null && distanceKm > 0) {
-            double routeDistanceKm = polylineDistanceKm(routePoints);
-            RaceCourseMapService.AlignmentRatioWindow ratioWindow = new RaceCourseMapService.AlignmentRatioWindow(0.30, 3.0);
-            if (routeDistanceKm < distanceKm * ratioWindow.minRatio() || routeDistanceKm > distanceKm * ratioWindow.maxRatio()) return false;
-            if (minimumRoutePoints >= MIN_ALIGNMENT_ROUTE_POINTS) {
-                RaceCourseMapService.AlignmentRatioWindow expectedWindow = expectedDistanceRatioWindow(distanceKm, routePoints.size());
-                if (routeDistanceKm < distanceKm * expectedWindow.minRatio() || routeDistanceKm > distanceKm * expectedWindow.maxRatio()) {
-                    return false;
-                }
-            }
-            if (largestSegmentRatio(routePoints, routeDistanceKm) > 0.30) return false;
-        }
-        RaceCourseMapService.RouteGeometryDiagnosis diagnosis = diagnoseRouteGeometry(routePoints, raceType, distanceKm);
-        if (diagnosis.selfIntersectionCount() > diagnosis.allowedSelfIntersections()) return false;
-        return true;
+        return assessAlignmentPlausibility(routePoints, latitude, longitude, distanceKm, minimumRoutePoints, raceType).plausible();
     }
 
     public RaceCourseMapService.AlignmentRatioWindow expectedDistanceRatioWindow(Double distanceKm, int routePointCount) {
@@ -247,8 +289,12 @@ public class RaceCourseMapGeometryService {
         int selfIntersections = countSelfIntersections(routePoints);
         int allowedSelfIntersections = allowedSelfIntersections(raceType);
         int startDistanceBacktracks = countStartDistanceBacktracks(routePoints, raceType, distanceKm);
+        double routeDistanceKm = routePoints == null ? 0.0 : polylineDistanceKm(routePoints);
         String feedbackPrompt = null;
-        if (selfIntersections > allowedSelfIntersections) {
+        if (isCollapsedRouteDistance(routeDistanceKm, distanceKm)) {
+            feedbackPrompt = "The route you returned is collapsed into one small city-center cluster and covers only %.1f km. Correct it by tracing distinct checkpoints across the full visible course, or return routePoints=[] if the image cannot support that."
+                    .formatted(routeDistanceKm);
+        } else if (selfIntersections > allowedSelfIntersections) {
             feedbackPrompt = "The route you returned crosses itself %d times which is impossible for this race type. Correct it."
                     .formatted(selfIntersections);
         } else if (startDistanceBacktracks >= 2 && raceType == RaceCourseMapService.PromptRaceType.POINT_TO_POINT) {
@@ -261,6 +307,11 @@ public class RaceCourseMapGeometryService {
                 startDistanceBacktracks,
                 feedbackPrompt
         );
+    }
+
+    private boolean isCollapsedRouteDistance(double routeDistanceKm, Double distanceKm) {
+        if (distanceKm == null || distanceKm <= 0) return false;
+        return routeDistanceKm < Math.max(1.0, distanceKm * 0.08);
     }
 
     public int allowedSelfIntersections(RaceCourseMapService.PromptRaceType raceType) {
@@ -307,6 +358,18 @@ public class RaceCourseMapGeometryService {
             ));
         }
         return largestSegmentKm / routeDistanceKm;
+    }
+
+    private double maxLargestSegmentRatio(int routePointCount, int minimumRoutePoints) {
+        if (minimumRoutePoints < MIN_ALIGNMENT_ROUTE_POINTS) {
+            if (routePointCount <= 5) {
+                return 0.40;
+            }
+            if (routePointCount <= 7) {
+                return 0.35;
+            }
+        }
+        return 0.30;
     }
 
     public OverlayBounds boundsFromRoute(List<RoutePoint> routePoints) {
@@ -369,4 +432,14 @@ public class RaceCourseMapGeometryService {
         }
         return routePoints.get(routePoints.size() - 1);
     }
+
+    public static AlignmentPlausibilityVerdict invalid(String reason) {
+        return new AlignmentPlausibilityVerdict(false, reason);
+    }
+
+    public static AlignmentPlausibilityVerdict valid(String reason) {
+        return new AlignmentPlausibilityVerdict(true, reason);
+    }
+
+    public record AlignmentPlausibilityVerdict(boolean plausible, String reason) {}
 }

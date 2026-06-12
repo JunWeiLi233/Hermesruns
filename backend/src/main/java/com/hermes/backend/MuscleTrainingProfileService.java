@@ -16,7 +16,7 @@ public class MuscleTrainingProfileService {
         this.preferenceRepository = preferenceRepository;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public MuscleProfileDto getProfile(Runner runner) {
         MuscleTrainingPreference preference = getOrCreatePreference(runner);
         return toProfileDto(preference);
@@ -66,7 +66,10 @@ public class MuscleTrainingProfileService {
                 p.getEquipmentLevel().name(),
                 p.getSessionMinutes(),
                 p.getNoisePreference().name(),
-                p.getPreferredStrengthDays().stream().map(Enum::name).toList()
+                p.getPreferredStrengthDays().stream()
+                        .sorted(java.util.Comparator.comparingInt(DayOfWeek::getValue))
+                        .map(Enum::name)
+                        .toList()
         );
     }
 

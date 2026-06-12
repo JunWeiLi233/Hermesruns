@@ -11,6 +11,356 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-03-02
+Date: 2026-06-03
+Surface: Territory layered ownership on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed territory polygon ownership from deleting older overlapping cells to preserving every owner's claimed land as stacked layers. The API keeps older and newer overlapping masks, while the frontend paints older layers first and the most recent claim on top.
+Why: The user clarified that overlapping claims should cover one another visually, not remove ownership from the covered-down territory.
+Rollback target: `DV-2026-06-03-01`
+Notes: Territory score ranking remains separate; this entry covers the concrete land-mask polygon stack used by `/api/territory/polygons` and the Leaflet territory view.
+
+### Version: DV-2026-06-03-01
+Date: 2026-06-03
+Surface: Territory exact coverage and smoothed claim map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-border-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Split territory land rendering into a visible exact ownership underlay plus brighter smoothed land fills and a single neon owner contour, using less aggressive smoothing and nonzero SVG fill rules so narrow claimed areas stay covered instead of being clipped by the visual path.
+Why: The previous count-based fix still let smoothed fill geometry leave user-owned cells visually uncovered around red, blue, and green overlaps.
+Rollback target: `working tree before DV-2026-06-03-01`
+Notes: Frontend rendering and proof-harness update only. Backend ownership cells, auth, routing, and territory API contracts remain unchanged.
+
+### Version: DV-2026-06-01-01
+Date: 2026-06-01
+Surface: Territory concrete land border on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the land-mask edge as layered Leaflet canvas strokes: dark undercut, warm cement bevel, chipped aggregate grit, and owner-color seam. The active territory remains a sealed conquest surface while the border reads more like a physical concrete landmass than a flat vector outline.
+Why: The Territory page needed stronger visual proof that occupied land is concrete territory, not overlapping translucent sectors or route traces.
+Rollback target: `working tree before DV-2026-06-01-01`
+Notes: Frontend presentation only. Territory APIs, auth, route data, ownership rules, and seeded test accounts remain unchanged.
+### Version: DV-2026-05-24-04
+Date: 2026-05-24
+Surface: Muscle Training light-theme settings contrast on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a high-specificity white-theme guard for the bottom training check-in and plan tuning console so headings, helper copy, form controls, normal day chips, select options, summary values, impact copy, and disabled buttons use dark readable text on light surfaces.
+Why: The light theme inherited dark-route pale text colors inside the settings console, making several labels, values, and controls nearly invisible on white cards.
+Rollback target: `DV-2026-05-24-03`
+Notes: CSS and smoke-test guard only. Dark theme styling, red active states, training data, save/reset/profile APIs, exercise selection, Reference Dock, and sidebar behavior remain unchanged.
+
+### Version: DV-2026-05-24-03
+Date: 2026-05-24
+Surface: Muscle Training sidebar typography on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the strength-route sidebar overrides for nav link font size, weight, letter spacing, and text transform while keeping the dark and white sidebar color branches intact.
+Why: Entering the strength page made the shared left navigation text look larger than the rest of the site.
+Rollback target: `DV-2026-05-24-02`
+Notes: CSS and smoke-test guard only. Strength page content, global theme selection, training logic, save APIs, and the red settings control deck remain unchanged.
+
+### Version: DV-2026-05-24-02
+Date: 2026-05-24
+Surface: Muscle Training settings control deck on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the bottom training check-in and plan tuning console's leftover lime active states with the red and coral control palette used elsewhere in Hermes. Primary actions, active chips, sync pills, hover and focus states, summary borders, and the plan-impact strip now share the same red tone in both dark and white muscle themes.
+Why: The settings console visually drifted from the rest of the page and still used neon green for important states, making the lower section feel disconnected.
+Rollback target: `DV-2026-05-24-01`
+Notes: CSS and smoke-test guard only. Check-in save, reset, profile save, fields, routes, backend APIs, exercise recommendations, Reference Dock, and training plan generation remain unchanged.
+
+### Version: DV-2026-05-24-01
+Date: 2026-05-24
+Surface: Strength route sidebar theme sync on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Split the strength-route sidebar styling into dark-default and white-theme branches so the shared runner sidebar follows the strength page `data-muscle-theme` instead of always rendering as a light shell.
+Why: The user reported that entering the strength area made the left sidebar turn white while the strength page itself stayed dark.
+Rollback target: `DV-2026-05-19-06`
+Notes: This is a scoped visual repair for `/muscle-training`. It does not change the global theme switch, training logic, exercise selection, media, or save APIs.
+
+### Version: DV-2026-05-23-17
+Date: 2026-05-23
+Surface: Muscle Training global theme sync on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the route-local strength theme switch and made the page follow the global app theme directly. The light variant now fixes Reference Dock headings, recommendation names, step indicators, card surfaces, and active controls so they stay readable on the white surface.
+Why: The strength page should not have a second theme system, and the first white-theme pass left several titles and neon labels unreadable.
+Rollback target: `DV-2026-05-23-16`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-16
+Date: 2026-05-23
+Surface: Muscle Training local themes on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a local dark and white theme switch for the strength page, tied the default to the global app theme, persisted manual selection, and rebuilt the white theme surfaces for the workbench, exercise cards, Reference Dock, and settings console.
+Why: The strength page was effectively dark-only because its route CSS overrode the global light theme.
+Rollback target: `DV-2026-05-23-15`
+Notes: Frontend presentation only. Routes, backend APIs, training plan logic, check-in save, profile save, exercise image mapping, and video embeds remain unchanged.
+
+### Version: DV-2026-05-23-15
+Date: 2026-05-23
+Surface: Muscle Training settings purpose on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the training profile panel as plan tuning, added draft-based preview results, field-level impact hints, a synced or unsaved state chip, and clearer save copy that explains the plan refresh.
+Why: The previous settings area looked like a questionnaire and did not clearly show why the user should answer those fields.
+Rollback target: `DV-2026-05-23-14`
+Notes: Frontend presentation and copy only. Check-in, profile save, reset, routes, APIs, fields, and plan generation remain unchanged.
+
+### Version: DV-2026-05-23-14
+Date: 2026-05-23
+Surface: Muscle Training settings chip readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final light-theme override so active settings chips keep dark text on the lime background.
+Why: `body.theme-light` was repainting active settings chips with pale text, leaving `计划中`, `轻松跑`, `周一`, and `周四` at very low contrast.
+Rollback target: `DV-2026-05-23-13`
+Notes: CSS-only readability fix. Check-in, profile save, reset, fields, layout, routes, APIs, and training data are unchanged.
+
+### Version: DV-2026-05-23-13
+Date: 2026-05-23
+Surface: Muscle Training settings console readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Filled enabled settings primary actions with the lime treatment and replaced the low-contrast profile pills with readable light text on a restrained green tint.
+Why: The compact settings console still had dark action text and red-brown preference pills that were hard to read on the black training surface.
+Rollback target: `DV-2026-05-23-12`
+Notes: CSS-only readability fix. Check-in save, profile save, reset, form fields, APIs, routes, training data, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-12
+Date: 2026-05-23
+Surface: Muscle Training hero CTA on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated label wrapper to the top hero CTA and tightened its internal grid, line-height, icon sizing, and no-wrap behavior so `记录今日训练` stays on one readable line beside the arrow.
+Why: The CTA text could collapse into three stacked Chinese lines, making the main action look broken.
+Rollback target: `DV-2026-05-23-11`
+Notes: The CTA still uses the same localized copy and the same `scrollToControls` click behavior. No settings, training data, recommendation, route, or backend behavior changed.
+
+### Version: DV-2026-05-23-11
+Date: 2026-05-23
+Surface: Muscle Training compact settings console on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the bottom settings area into a compact two-lane control console, with today check-in on the left and training profile preferences on the right. The plan source moved into a lightweight inline note, the profile summary became a compact data strip, and the plan-impact copy became a short bottom strip.
+Why: The previous bottom settings area looked like two large stacked admin forms with heavy blank space and weak hierarchy.
+Rollback target: `DV-2026-05-23-10`
+Notes: Check-in save, check-in reset, profile save, existing fields, backend APIs, training plan generation, muscle selection, exercise details, and Reference Dock behavior are unchanged.
+
+### Version: DV-2026-05-23-10
+Date: 2026-05-23
+Surface: Muscle Training settings visibility and contrast on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the vague coach-settings disclosure button so the check-in and training profile panels are directly visible, then strengthened the dark settings deck contrast for summary cards, form controls, disabled actions, and native select options.
+Why: The grey "Open coach settings" button added no useful meaning, and some settings text was still too dim or washed out when selecting options.
+Rollback target: `DV-2026-05-23-09`
+Notes: Settings functionality, save flows, check-in reset, profile fields, routes, backend APIs, and training logic are unchanged.
+
+### Version: DV-2026-05-23-09
+Date: 2026-05-23
+Surface: Muscle Training settings readability on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Raised contrast inside the expanded settings deck for the today check-in card and training profile card, including muted copy, summary values, form controls, day chips, and disabled buttons.
+Why: Some words in the dark bottom settings area were too dim to read clearly.
+Rollback target: `DV-2026-05-23-08`
+Notes: CSS-only readability fix. Save flows, profile fields, training data, routes, API contracts, and layout structure are unchanged.
+
+### Version: DV-2026-05-23-08
+Date: 2026-05-23
+Surface: Muscle Training profile controls on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Upgraded the bottom Training Profile preferences panel with a real summary strip and plan-impact notes, while keeping the existing preference fields and save flow.
+Why: The profile record area looked like a plain stacked form and needed clearer information density without adding fake log controls or new backend fields.
+Rollback target: `DV-2026-05-23-07`
+Notes: This only changes the bottom expanded settings profile panel. Muscle selection, recommendations, exercise details, Reference Dock, profile API shape, routes, and training logic are unchanged.
+
+### Version: DV-2026-05-23-07
+Date: 2026-05-23
+Surface: Muscle Training expanded exercise detail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the expanded action detail card so the prescription, steps, and intent stay in a left record area while the existing `MuscleHeatmap` sits inside the same frame on the right.
+Why: The lower half of the muscle-training detail card looked unbalanced, and the requested layout was record content on the left with the anatomy figure on the right.
+Rollback target: `DV-2026-05-23-06`
+Notes: This is a local layout-only change. Top muscle selection, recommended actions, Reference Dock, training logic, routes, backend contracts, videos, and image mappings are unchanged.
+
+### Version: DV-2026-05-23-06
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a persistent selected ring to the anatomy image. Clicking the image keeps that specific ring visible, and clicking a visible muscle button keeps that muscle area's primary ring visible.
+Why: The selector needed to show the current body-part choice after the click instead of losing the visual target immediately.
+Rollback target: `DV-2026-05-23-05`
+Notes: This only changes selector feedback. Training logic, recommendations, videos, exercise images, routes, and backend contracts are unchanged.
+
+### Version: DV-2026-05-23-05
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored anatomy-image body-part clicking with transparent hit zones aligned to the current 512px image, while keeping the six visible muscle buttons as the readable labels.
+Why: Removing the bad hotspot circles also removed the expected body-part click path, so the selector needed clickable anatomy areas without misleading visible markers.
+Rollback target: `DV-2026-05-23-04`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-04
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the anatomy-image hotspot layer because its percentage coordinates did not match the current image. The anatomy image is now visual context only, and the six visible muscle buttons are the only selector.
+Why: The hotspot circles could appear over the abdomen, chest, or empty space while shoulder was selected, creating a misleading interaction.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-03
+Date: 2026-05-23
+Surface: Muscle Training muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the anatomy image hotspots, made their default hit areas visible, and added six clear muscle shortcut buttons below the image. Both paths now use the same top-muscle selection handler and expose a stronger selected state.
+Why: The previous selector required users to guess where the invisible hotspots were, making the first interaction feel unreliable.
+Rollback target: `working tree before this change`
+Notes: No training logic, action recommendation rules, video embeds, image mapping, routes, or backend contracts changed.
+
+### Version: DV-2026-05-23-02
+Date: 2026-05-23
+Surface: Muscle Training right media rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Wrapped the right-side video and reference card in an inner sticky rail for desktop, capped its viewport height, and restored normal document flow below 1180px. The page-level overflow rules now avoid creating an outer scroll ancestor that breaks sticky behavior.
+Why: The user wanted the action demo video and professional tip card to stay visible while scrolling the desktop exercise list, without covering the mobile layout.
+Rollback target: `working tree before this change`
+Notes: No exercise selection, image resolution, video embed mapping, or training data behavior changed.
+
+### Version: DV-2026-05-23-01
+Date: 2026-05-23
+Surface: Muscle Training exercise reference rail on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/assets/muscle-training/ASSET_SOURCES.md`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the repeated target-area image in the right-side reference rail with action-keyed online exercise images. Top action thumbnails and the top reference dock now use the same exercise image resolver, with target-area imagery only as a fallback.
+Why: The user reported that the right-side image stayed the same across exercises and asked for each action to have its own image from the web.
+Rollback target: `working tree before this change`
+Notes: No backend contract, training recommendation logic, video embed mapping, or route behavior changed.
+
+### Version: DV-2026-05-22-06
+Date: 2026-05-22
+Surface: Muscle Training top anatomy workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/assets/muscle-training/anatomy-neon-selector.png`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a screenshot-matched top workbench with a local neon anatomy image, clickable muscle-group hotspots, a real recommendation list, and a right Reference Dock synced to the selected action.
+Why: The user supplied the target HTML and wanted only the top strength area rebuilt around a usable anatomy image, without reworking the lower action protocol workbench.
+Rollback target: `working tree before this change`
+Notes: The lower protocol rows and existing plan/library data contracts are preserved.
+
+### Version: DV-2026-05-22-05
+Date: 2026-05-22
+Surface: Muscle Training restored card workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the pre-merge `mt-*` card-based Muscle Training frontend design on the current page: warm card canvas, hero progress ring, recommendation banner, target filters, session/history cards, and expandable exercise rows.
+Why: The user asked to apply the previous frontend design to the current page after the upstream IRONPULSE merge.
+Rollback target: `ecbe742f`
+Notes: The removed action-diagram implementation remains excluded and is guarded by the smoke test.
+
+### Version: DV-2026-05-19-07
+Date: 2026-05-19
+Surface: Muscle Training action protocol drawer on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en.js`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Upgraded the selected exercise detail card into an IRONPULSE-style protocol drawer. Clicking a plan or library row now opens a right-side desktop drawer, or an in-flow mobile sheet, with a breadcrumb, dose/equipment/source tags, a real YouTube nocookie iframe when the exercise has a mapped video, honest no-video copy when it does not, accordion coach tips, and high-contrast numbered step cards.
+Why: The prior detail card was too flat for the action-workbench interaction. The user wanted the row click to feel like the reference action-analysis drawer while preserving the practical left-side exercise ledger.
+Rollback target: `working tree before this change`
+Notes: No backend schema or training-plan generation changed. Optional library exercises remain clearly marked as not participating in today's training recommendation calculation.
+
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Schedule light-mode text contrast on `/schedule`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/scheduleContrast.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added a route-scoped light-theme contrast repair for the Schedule hero and next-session card so the main weekly title, target/completed volume values, and upcoming-session heading stay dark on warm white cards even when broader runner-card rules apply later in the cascade.
+Why: The live Schedule page rendered several primary words in near-white text on a white background, making the hero and next-up title hard to read.
+Rollback target: `working tree before this change`
+Notes: Added `scheduleContrast.smoke.test.js` to guard the Schedule-only contrast selectors.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Shoes locker and Add Shoes catalog grids on `/shoes` and `/shoes/add`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a profile-aligned Shoes grid visibility pass that gives the locker cards, rotation signal panels, filter/action strips, brand grids, model grids, form fields, placeholders, and empty states explicit warm-paper foreground/background tokens in light mode plus matching dark-mode tokens. The repair targets the real runtime classes `.shoes-dashboard-page` and `.add-shoes-page`, keeping the existing Shoes/Add Shoes structure and data wiring while preventing inherited near-white dark-theme text from disappearing on warm light cards.
+Why: Several Shoes grids and card sub-surfaces could become visually invisible after the Profile-aligned redesign because dark-theme text, placeholders, and translucent grid cards were still cascading onto light warm-paper panels, and some older profile-aligned selectors were scoped to a wrapper that the current Shoes runtime does not emit.
+Rollback target: `working tree before this change`
+Notes: Added `shoesGridVisibility.smoke.test.js` to guard the route-scoped contrast repair selectors and the live Shoes/Add Shoes class hooks.
+
+### Version: DV-2026-05-18-01
+Date: 2026-05-18
+Surface: Rewards / `/rewards` milestone ledger
+Files: `frontend/src/pages/Rewards.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/en.js`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `.ai-sync/CONTEXT_LEDGER.md`, `DESIGN_VERSIONS.md`
+What changed: Reworked the Rewards first fold into an asymmetric milestone ledger that keeps the live earned/all badge progress while promoting `upcomingRewards[0]` into a dedicated closest-next-unlock rail. The page now exposes earned, locked, and logged-run metrics above the existing earned/upcoming badge grids, preserving the shared runner shell and live `buildRewardShowcase` ordering.
+Why: The previous Rewards page showed the correct data but made the next achievable badge feel like one generic upcoming card instead of the primary runner decision for the page.
+Rollback target: `working tree before this change`
+Notes: Focused verification passed with `node frontend/src/pages/rewardsMilestoneLedger.smoke.test.js`, `node frontend/src/utils/rewardsShellMarker.smoke.test.js`, `node --check frontend/src/i18n/locales/en.js`, and `node --check frontend/src/i18n/locales/zh-CN.js`. Full frontend build is currently blocked before Rewards compilation by missing pre-existing Muscle Training imports: `frontend/src/assets/anatomy/muscles-anterior-gray.png` and `frontend/src/assets/anatomy/muscles-posterior-gray-unlabeled.png`.
+
+### Version: DV-2026-04-29-03
+Date: 2026-04-29
+Surface: Add Shoes / `/shoes/add` Chinese running-brand logos
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/utils/addShoeCatalog.js`, `frontend/src/utils/addShoeCatalog.test.js`, `frontend/vite.config.js`, `frontend/src/assets/brand-logos/lining.svg`, `frontend/src/assets/brand-logos/anta.svg`, `frontend/src/assets/brand-logos/peak.svg`, `frontend/src/assets/brand-logos/bmai.svg`, `frontend/src/assets/brand-logos/do-win.svg`, `frontend/src/pages/addShoesChineseBrandLogoAssets.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added repo-local transparent SVG logo assets for Li-Ning, ANTA, Peak, Bmai, and Do-win, then mapped the catalog's Chinese brand names plus normalized English aliases through the shared `ShoeBrandLogo` component used by `/shoes/add` brand and model cards. The Add Shoes series catalog now keeps parent brand identity on each series model and caches the built series catalog in localStorage so the model browser can recover locally if the live catalog is unavailable.
+Why: The Add Shoes brand browser still fell back to synthetic text/emoji marks for several core Chinese running-shoe brands even though the user supplied the correct logo order and expected those brands to display real marks. The follow-up asked for shoe series to get the same local-first treatment, so series/model cards now preserve local brand-logo resolution and keep a local browser cache of the filtered series catalog.
+Rollback target: `working tree before this change`
+Notes: Added `addShoesChineseBrandLogoAssets.smoke.test.js` to guard the five asset imports, brand aliases, AddShoes shared-logo usage, series-cache hooks, remote-logo avoidance, and the Vite `assetsInlineLimit: 0` setting that keeps small SVG logos emitted as local backend-served asset files. Expanded `addShoeCatalog.test.js` to guard series brand retention and localStorage read/write behavior.
+
+### Version: DV-2026-04-29-02
+Date: 2026-04-29
+Surface: Runner strength page on `/muscle-training` plus runner-shell sidebars
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/muscleTrainingShellNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reconnected Muscle Training to the shared runner-shell sidebar contract, added the strength route to older one-off runner sidebars, and fixed the MuscleTraining control-deck markup so the weekly context and full week plan no longer sit inside the collapsible settings/control section.
+Why: The strength page could feel disconnected from the rest of Hermes and its lower page structure was broken by a misplaced section close. The repair keeps the existing Daily Opening Test strength redesign while making navigation and layout behave like the other runner pages.
+Rollback target: `working tree before this change`
+Notes: Added `muscleTrainingShellNav.smoke.test.js` to guard shared nav usage, side-nav connectivity, clean above-fold copy, and the control-deck close boundary.
+
+### Version: DV-2026-04-29-01
+Date: 2026-04-29
+Surface: Admin course-map add portal on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js`, `frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Added a live progress bar to the admin course-map upload/re-analysis flow. The portal now starts with upload progress, moves into FIFO queued scan progress, streams admin background-job progress into an accessible progressbar, and keeps a localized helper explaining that maps are scanned in upload order rather than in parallel.
+Why: Admins uploading marathon course maps needed visible feedback while Qwen scanning waits for or runs through the FIFO queue, instead of a static queued message that made the scan feel stalled.
+Rollback target: `DV-2026-04-24-02`
+Notes: Verification passed with `node frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js`, `node frontend/src/pages/dashboardCourseMapWorkbench.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardCourseMapProgressBar.smoke.test.js||frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js||frontend/src/pages/dashboardCourseMapFifoUploadQueue.smoke.test.js||frontend/src/styles/style.css||frontend/src/i18n/translations.js"`.
+
+### Version: DV-2026-04-24-02
+Date: 2026-04-24
+Surface: Runner race-detail course map on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js`, `backend/src/main/java/com/hermes/backend/RaceController.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java`, `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`
+What changed: Added a generated transparent course-map image layer for trusted aligned course maps. The runner-facing Leaflet map still uses OpenStreetMap as the real-world basemap and still draws extracted route geometry on top, but now it can place a cleared-background course-map PNG in a dedicated middle pane for visual context when Hermes has verified route points and bounds.
+Why: Real marathon course-map uploads can carry useful station/marker context that should be visible without turning the runner map back into an opaque poster overlay.
+Rollback target: `DV-2026-04-24-01`
+Notes: Verification included focused backend and frontend smoke checks before the broader build/runtime gates.
+
+### Version: DV-2026-04-24-01
+Date: 2026-04-24
+Surface: Admin jobs inspector on `/dashboard/jobs`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardJobsInspector.smoke.test.js`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `DESIGN_VERSIONS.md`
+What changed: Expanded the selected-job rail into a real inspector surface. Selecting a job now fetches `/api/admin/jobs/{jobId}` for the full detail payload, labels course-map and Garmin/Strava background-job types, shows queue/run timing, extracts top-level `detailsJson` highlights, and renders Qwen/course-map watcher steps from `qwenScanSteps` as a readable scan timeline while preserving the raw JSON payload below.
+Why: Admins debugging course-map and Qwen scanning jobs needed to inspect more than status counters. The new rail keeps the command-deck layout but makes failed or long-running scan jobs easier to diagnose without leaving `/dashboard/jobs`.
+Rollback target: `DV-2026-04-21-07`
+Notes: Verification passed with `node frontend/src/pages/dashboardJobsInspector.smoke.test.js`, `node frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardJobsInspector.smoke.test.js||frontend/src/styles/style.css||frontend/src/i18n/translations.js"`.
+
+### Version: DV-2026-04-21-07
+Date: 2026-04-21
+Surface: Admin course-map workbench on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Promoted the course-map review stage into a true side-by-side compare surface so admins can see both the current live website map and the pending candidate map at the same time inside the main stage. The existing preview engine stays intact through `AdminCourseMapPreview`, but the dominant map area now splits into explicit live and pending panels with their own labels, map frames, and compact metadata strips. The operator controls, publish verdict, output deck, and queue rail remain in place underneath the compare stage instead of being replaced.
+Why: The previous workbench already carried both live and pending preview data, but it only surfaced one preview at a time in the main stage and pushed the compare logic down into smaller footer signals. The user asked for admins to clearly see the current website map and the new pending map together before making publish decisions.
+Rollback target: `DV-2026-04-19-11`
+Notes: Verification passed with `node frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/Dashboard.jsx||frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js||frontend/src/styles/style.css"`.
+
+### Version: DV-2026-04-21-06
+Date: 2026-04-21
+Surface: Admin portal desktop spacing on `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, and `/dashboard/settings`
+Files: `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Loosened the full admin portal while preserving the existing Hermes operator shell and route workbench layouts. The desktop shell now uses a wider canvas, larger outer gutters, more space between the sticky sidebar/topbar/main content, a roomier shared route summary rail, and a new route-surface spacing baseline. The overview, users, shoes, course-maps, jobs, audit, and settings sections all received coordinated padding/gap increases so cards, workbenches, toolbars, and data rows no longer feel packed together, but the route structure, visual identity, and existing data/control flows stay the same.
+Why: The current admin portal already had strong route-specific designs, but the user called out that the whole operator experience felt squeezed together. This pass keeps the same shell language and hierarchy while giving the portal more breathing room across every level of the desktop layout.
+Rollback target: `DV-2026-04-20-06`
+Notes: Verification passed with `node frontend/src/pages/dashboardKineticShell.smoke.test.js`, `node frontend/src/pages/dashboardRouteSections.smoke.test.js`, `node frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `node frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `node frontend/src/pages/dashboardAdminLightMode.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/styles/style.css||frontend/src/pages/Dashboard.jsx"`.
+
+### Version: DV-2026-04-21-05
+Date: 2026-04-21
+Surface: Today Run shell alignment on `/today-run`
+Files: `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/todayRunShellAlignment.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Aligned Today Run back toward the shared runner-shell structure used by Profile and the other runner pages without replacing its existing coaching content. The page now builds its sidebar navigation from the shared `runnerShellNav` helper instead of maintaining a local copy, restores the same sidebar workout CTA pattern used on Profile, and drops the page-specific light-mode sidebar/topbar overrides so the shared runner shell styling can carry more of the chrome. A focused smoke guard now protects that alignment contract.
+Why: Today Run already had the same broad shell scaffolding, but it still behaved like a special-case surface because it hand-rolled its nav and overrode parts of the shared shell styling. The user asked for it to feel like the same runner-shell family as `/profile`, not a separate product inside Hermes.
+Rollback target: `DV-2026-04-20-02`
+Notes: Verification passed with `node frontend/src/pages/todayRunShellAlignment.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/TodayRun.jsx||frontend/src/pages/todayRunShellAlignment.smoke.test.js||frontend/src/styles/style.css"`.
+
+### Version: DV-2026-04-21-03
+Date: 2026-04-21
+Surface: Runner Settings import surfaces on `/settings`, `/settings/import-data`, and `/settings/garmin-import`
+Files: `frontend/src/App.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/ImportDataSettings.jsx`, `frontend/src/pages/GarminImportSettings.jsx`, `frontend/src/pages/garminImportRoute.smoke.test.js`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Split the old mixed Garmin/manual import flow into two clearer settings sibling routes. The Settings atlas manual-import card now opens a new `/settings/import-data` page that keeps the settings-atlas visual family but translates the supplied reference into a lighter editorial intake board with distinct FIT/GPX, COROS, Huawei, and command lanes. The `/settings/garmin-import` page was narrowed so it only handles Garmin account import plus Garmin wellness sync, removing the manual-file guide and mixed-source messaging.
+Why: The previous setup blurred two different jobs into one destination: Garmin account sync versus manual file intake. The user asked for a clean route split while keeping the new manual page visually tied to the current Settings atlas rather than turning it into a totally separate dark landing page.
+Rollback target: `DV-2026-04-21-01`
+Notes: Verification passed with `node frontend/src/pages/garminImportRoute.smoke.test.js`, `cd frontend && node scripts/run-vite-build.mjs`, and `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/App.jsx||frontend/src/components/SettingsAtlasLayout.jsx||frontend/src/pages/Settings.jsx||frontend/src/pages/GarminImportSettings.jsx||frontend/src/pages/ImportDataSettings.jsx||frontend/src/pages/garminImportRoute.smoke.test.js||frontend/src/styles/style.css"`. Repo-wide translation parity still has unrelated pre-existing gaps outside this change set.
+
 ### Version: DV-2026-04-20-06
 Date: 2026-04-20
 Surface: Admin portal / `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, `/dashboard/settings`
@@ -1971,3 +2321,327 @@ What changed: Reworked the race-detail elevation profile from a fixed sparse che
 Why: The user wanted the elevation chart to respect every kilometer and show more accurate elevation change over the full course. That required fixing both the data contract and the chart geometry instead of only restyling the existing sparse profile.
 Rollback target: `DV-2026-04-14-29`
 Notes: `cd backend && ./mvnw -q -Dtest=RaceCourseMapServiceTests test`, `cd backend && ./mvnw -q -DskipTests compile`, `node frontend/src/pages/raceDetailElevationPerKm.smoke.test.js`, `cd frontend && npm run lint` (with unrelated pre-existing warnings only), frontend build, frontend runtime sync, and backend runtime sync all passed.
+
+### Version: DV-2026-04-21-01
+Date: 2026-04-21
+Surface: Runner Settings Garmin import on `/settings/garmin-import`
+Files: `frontend/src/App.jsx`, `frontend/src/pages/Settings.jsx`, `frontend/src/pages/GarminImportSettings.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/garminImportRoute.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Garmin activity-import and wellness-sync experience out of the in-place settings modal and into a dedicated routed page with a focused back-link workflow. The Settings atlas now stays as the control hub and launches the Garmin surface, while the new route reuses the existing Garmin import/wellness APIs inside a full-page split editorial layout that keeps manual file import as a secondary path.
+Why: The user asked for the Garmin modal-card settings surface to become a standalone page instead of a modal, while keeping both activity import and wellness controls together. A route-level redesign gives the flow more space and clearer hierarchy without changing the backend contract.
+Rollback target: `DV-2026-04-20-03`
+Notes: This redesign is scoped to the Garmin import path only. `/settings` remains the runner settings hub, and the Garmin APIs plus manual import modal behavior stay intact behind the new page entry point.
+
+### Version: DV-2026-04-21-02
+Date: 2026-04-21
+Surface: Profile dashboard feature grid on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `DESIGN_VERSIONS.md`
+What changed: Removed the standalone recent-sessions summary card from the lower Profile feature grid. The grid now ends after the training-load card while the earlier recent-sessions timeline module stays in place.
+Why: The user explicitly asked to remove the duplicate recent-sessions card because it repeated information already shown elsewhere on the Profile surface.
+Rollback target: `DV-2026-04-21-01`
+Notes: This is a subtraction-only UI change. No data wiring, translations, routes, or backend contracts changed.
+
+### Version: DV-2026-04-21-03
+Date: 2026-04-21
+Surface: Profile dashboard hero on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the recent-sessions utility card into a new hero row so it now sits beside the welcome heading at the top of the Profile dashboard. The lower dashboard grid now focuses on readiness, workout, and weekly progress, while the greeting and session history read as one top-level opening band.
+Why: The user explicitly asked to place the white/dark utility card next to the `欢迎回来, JunWei Li.` greeting instead of keeping that card lower on the page.
+Rollback target: `DV-2026-04-21-02`
+Notes: This is a layout-only repositioning of existing Profile content. Session data, interactions, and routes remain unchanged.
+
+### Version: DV-2026-04-21-04
+Date: 2026-04-21
+Surface: Profile dashboard hero and grid on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the recent-sessions utility card to its previous origin in the lower Profile dashboard grid and reverted the hero back to the simpler greeting-plus-subline layout.
+Why: The user asked to restore the previous version so the white/dark utility card returns to the place it originally came from instead of staying attached to the greeting row.
+Rollback target: `DV-2026-04-21-03`
+Notes: This is a rollback of the hero-row repositioning only. The existing recent-sessions card content, links, and session interactions remain unchanged.
+
+### Version: DV-2026-04-28-01
+Date: 2026-04-28
+Surface: Login brand introduction on `/login`
+Files: `frontend/src/pages/Login.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/loginBrandCarousel.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Turned the static `auth-flow-brand-inner` login brand block into a three-message rolling introduction carousel with website-value slides for daily decisions, training trust, and race readiness. The form side, OAuth/email auth behavior, and public footer remain unchanged.
+Why: The user asked for `auth-flow-brand-inner` on the login page to use a slide animation that rolls information introducing the website.
+Rollback target: `DV-2026-04-21-04`
+Notes: The animation is CSS-only, dual-mode-safe for the existing login treatment, and includes a reduced-motion fallback that shows the first slide without auto movement.
+
+### Version: DV-2026-04-29-02
+Date: 2026-04-29
+Surface: Admin Dashboard course-map publish canvas on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapPublishCanvasGrid.smoke.test.js`, `frontend/src/pages/dashboardCourseMapWorkspace.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the course-map command bridge so the publish canvas owns the recommended next action and spans the full top row, while secondary source/analysis controls and parameter review sit beneath it. The improve state now has a stronger processing-tone treatment so admins can immediately see that the next useful action is to improve/re-analyze the map before publishing.
+Why: The user asked to redesign the `admin-coursemap-publish-canvas admin-track-hub-footer-panel admin-track-hub-footer-panel--publish is-improve` grid to make admin map processing easier.
+Rollback target: `DV-2026-04-29-01`
+Notes: This is a layout and hierarchy change only. It preserves existing upload, re-analyze, pipeline, accept-live, preview, and backend course-map contracts.
+
+### Version: DV-2026-04-29-03
+Date: 2026-04-29
+Surface: Admin Dashboard course-map working notice on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/dashboardCourseMapWorkingNotification.smoke.test.js`, `frontend/src/pages/dashboardCourseMapUploadProcessing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added an explicit live working notice to the course-map progress card and made upload, source-scan, and re-analysis actions announce their active/queued state immediately through the dashboard status banner. The progress card still appears in the header and beside the publish-canvas decision dock, but now it includes a pulsing work indicator plus accessible status copy.
+Why: The admin source-scan and re-analysis jobs were running, but the UI only showed completion/failure messages, so operators could miss that Hermes was actively working after they clicked the button.
+Rollback target: `DV-2026-04-29-02`
+Notes: This is a feedback-layer change only. It preserves the existing FIFO job lane, polling helper, course-map action buttons, and backend contracts.
+
+### Version: DV-2026-04-29-04
+Date: 2026-04-29
+Surface: Prediction detail on `/prediction/:distKey`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/predictionDetailCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the prediction detail page into a Race Forecast Cockpit. The page now leads with a dominant predicted finish-time hero, confidence bar, trend delta, Today Run / Analysis actions, an effort ladder, coach judgment rail, evidence tiles, and a larger prediction trend card. User-facing copy now routes through i18n instead of hard-coded strings.
+Why: The old route stacked small utility sections and made the main forecast feel secondary. The new structure answers the runner's first questions faster: what can I run, how trustworthy is it, and what should I train next?
+Rollback target: `DV-2026-04-29-03`
+Notes: This redesign preserves the existing `/prediction/:distKey` route, `/api/activities` fetch, VDOT utilities, calibrated prediction math, Chart.js trend, auth shell, and distance keys.
+
+### Version: DV-2026-04-29-05
+Date: 2026-04-29
+Surface: Analysis overview and Profile dashboard quick preview on `/analysis` and `/profile`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/analysisVdotTrendAccent.smoke.test.js`, `frontend/src/pages/profileDashboardBrandCarouselLightMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the Analysis VO2/VDOT trend card a static data grid instead of a clickable navigation target, removed the old VO2 detail CTA affordance, and normalized the low-load ACWR status pill away from the removed `is-cool` variant. Reworked the Profile `runner-dashboard-brand-carousel` into a user-data quick preview with readiness, weekly distance, cumulative distance/sessions, and VO2 trend cards.
+Why: The user asked for the Analysis VO2max trend grid to stop behaving like a click target, to remove the `analysis-overview-status-pill is-cool` treatment, and to make the Profile brand carousel useful as a fast user-data preview instead of rotating brand copy.
+Rollback target: `DV-2026-04-29-04`
+Notes: This is a frontend presentation change only. It preserves existing Analysis/Profile data fetches, dashboard calculations, auth shell, and routing outside the removed VO2 overview click affordance.
+
+### Version: DV-2026-04-30-01
+Date: 2026-04-30
+Surface: Public landing page on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/translations.js`, `frontend/src/pages/landingCinematicEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the public landing page into a cinematic editorial runner experience inspired by premium sports journalism and a performance HUD. The page now leads with an asymmetric dark hero, readiness/workout HUD, live training ticker, coach voice pull-quote, three-answer product cards, methodology paper, race landscape map, comparison table, Daniels zone grid, and final CTA.
+Why: The user supplied a prototype direction for a premium sports-journalism x performance-HUD landing redesign and asked to apply it to Hermes.
+Rollback target: `DV-2026-04-29-05`
+Notes: The redesign preserves the existing public `/` route, authenticated-user redirect behavior, `/login` and `/signup` links, Strava OAuth start path, public footer links, and bilingual translation contract.
+
+### Version: DV-2026-04-30-02
+Date: 2026-04-30
+Surface: Public landing page on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCinematicEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Isolated the cinematic landing page from the broader app design system by removing the legacy `landing-page` root class, replacing shared `AppIcon` and `FooterNavLinks` usage with landing-local SVG glyphs and footer links, and moving the landing CSS onto local `--lc-*` typography tokens.
+Why: The user explicitly asked to keep using the same landing files but not apply the system `design.md` visual language to the landing page.
+Rollback target: `DV-2026-04-30-01`
+Notes: The page still preserves the supplied cinematic editorial direction, authenticated redirect behavior, `/login` and `/signup` links, Strava OAuth start path, and public Terms/Privacy/Support footer destinations.
+
+### Version: DV-2026-04-30-03
+Date: 2026-04-30
+Surface: Global design authority in `design.md`
+Files: `design.md`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Rewrote `design.md` around the new Hermes Cinematic Editorial language with explicit surface expressions for the public landing page, signed-in runner app, and admin operations tools. The document now treats the landing page as the signature campaign expression while keeping it intentionally isolated from shared app-shell components and global typography tokens.
+Why: The user asked to rewrite `design.md` based on the new landing-driven design language.
+Rollback target: `DV-2026-04-30-02`
+Notes: Documentation/workflow authority change only. No frontend runtime sync is required because no shipped UI source changed in this round.
+
+### Version: DV-2026-04-30-04
+Date: 2026-04-30
+Surface: Profile dashboard Coach Cockpit on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/profileCoachCockpitRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Reworked the Profile opening surface into the approved Coach Cockpit option. The top fold now combines the runner greeting, readiness score, quick-preview data cards, and suggested workout prescription into one editorial cockpit while retaining the existing `runner-dashboard-brand-carousel` and quick-preview hooks.
+Why: The user chose option A for the profile redesign and explicitly asked to remember the original version.
+Rollback target: `DV-2026-04-29-05`
+Notes: This is a top-fold presentation change only. It preserves the batch-first dashboard data loading, quick-preview data model, calibrated race predictions, lower recent-session card, existing Today Run / Analysis actions, and the original quick-preview design as the rollback baseline.
+
+### Version: DV-2026-05-18-02
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Opted Territory into the Heatmap-style full-viewport Leaflet shell, using the same dark real-world CARTO map treatment as the page background with glass overlay cards, an overlay brand/sector/action topbar, and a compact route utility rail.
+Why: The user asked to inspect the Heatmap page and apply the same real-world map background style to Territory.
+Rollback target: `DV-2026-05-18-01`
+Notes: This is a presentation-layer change only. It preserves the live `/api/territory` and `/api/territory/polygons` wiring, polygon/zone toggle, sidebar route availability via the overlay utility rail, and existing Territory backend contracts.
+
+### Version: DV-2026-05-18-03
+Date: 2026-05-18
+Surface: Territory full-screen world map on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the obsolete `terr-brief` overlay card from the Territory full-screen map so the real-world Leaflet surface owns the viewport without a duplicate conquered-space panel.
+Why: The user said the `terr-brief` block was unnecessary and asked to remove it.
+Rollback target: `DV-2026-05-18-02`
+Notes: This is a presentation cleanup only. It preserves the Heatmap-style world-map shell, overlay topbar, route utility rail, polygon/zone toggle, and live backend territory rendering.
+
+### Version: DV-2026-05-18-04
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the Territory page's visible buttons, overlay topbar, utility rail, filters, legend, lower panels, and footer so `/territory` renders only the full-screen real-world Leaflet map plus concrete backend conquered-land masks.
+Why: The user asked to remove the page buttons and keep only the concrete lands visible.
+Rollback target: `DV-2026-05-18-03`
+Notes: This preserves `/api/territory` and `/api/territory/polygons` data loading, Leaflet readiness, full-bleed map sizing, and external route availability from other runner sidebars; the Territory page itself no longer renders local navigation controls.
+
+### Version: DV-2026-05-18-05
+Date: 2026-05-18
+Surface: Territory map-only land view on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the compact icon-only navigation rail on top of the Territory map while keeping the page free of action buttons, filters, legends, cards, footer, and Leaflet controls.
+Why: The user clarified that necessary buttons, specifically navigation buttons, should remain available.
+Rollback target: `DV-2026-05-18-04`
+Notes: This preserves the concrete backend land-mask map-only treatment and reuses the shared runner navigation model for route exits.
+
+### Version: DV-2026-05-18-06
+Date: 2026-05-18
+Surface: Territory map title strip on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryRouteSidebar.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Added the Heatmap-style title strip to Territory with a Hermes/territory brand pill, recenter status with map coordinates, View Runs, Open Settings, and avatar actions while keeping the land map, navigation rail, and concrete backend mask as the main view.
+Why: The user shared the Heatmap top strip reference and asked to add those titles to Territory too.
+Rollback target: `DV-2026-05-18-05`
+Notes: This preserves the removed filters, legends, lower panels, footer, and Leaflet controls; only title/action chrome and the navigation rail remain over the map.
+
+### Version: DV-2026-05-18-07
+Date: 2026-05-18
+Surface: Territory concrete land and competition model on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `backend/src/test/java/com/hermes/backend/ProfileControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Hardened latest-run territory competition so a newer rival capture blocks older loop interior refill, then changed the map renderer from dotted circle markers to aggregated filled Leaflet rectangles so straight routes and loop interiors read as concrete occupied land tiles.
+Why: The user asked to redesign the occupied-land mechanism so borders fill concretely, loops fill their interiors, and newer user coverage consumes the land it overlaps from previous owners.
+Rollback target: `DV-2026-05-18-06`
+Notes: The backend still uses activity start time as the ownership ordering source, preserves the existing `/api/territory/polygons` land-mask contract, and keeps only the necessary Territory navigation/title controls over the map.
+
+### Version: DV-2026-05-18-08
+Date: 2026-05-18
+Surface: Territory concrete border polish on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Increased client mask density and added continuous anti-aliased land-mask border loops plus rounded route-trace skins over the filled tiles so occupied land reads as a concrete map shape rather than a pixelized grid edge.
+Why: The user said the Territory border still looked pixelized and asked to make it more concrete.
+Rollback target: `DV-2026-05-18-07`
+Notes: This is a visual renderer refinement only. It preserves the backend latest-wins ownership model, `/api/territory/polygons` land-mask data contract, filled tile occupation, title strip, and icon-only navigation rail.
+
+### Version: DV-2026-05-18-09
+Date: 2026-05-18
+Surface: Territory active red land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Demoted route traces into a low-opacity underlay, removed the bright route-core overlay, and suppresses heavy concrete border halos for small active red masks so active territory no longer reads as stamp-like markers on top of the land fill.
+Why: The user asked to review a visible bug on the red Territory land after the border polish pass.
+Rollback target: `DV-2026-05-18-08`
+Notes: The backend ownership data was verified as non-empty and consistent; this is a frontend paint-order/opacity/border-threshold repair that preserves concrete filled tiles, smooth mask borders for larger land, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-10
+Date: 2026-05-18
+Surface: Territory narrow land-conquest mechanism on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Tightened the backend land-mask grid from 16m to 8m cells, reduced open-route claim radius from 22m to a center-strict 6m paint radius, and bumped mask/cache versions so old wide masks are treated as stale and recomputed. A regression now requires an open straight run to stay within a narrow corridor, including rejecting land 20m off the route, instead of claiming a broad territory block.
+Why: The user said a single line was over-estimating occupied land and asked for more concrete land-conquering semantics.
+Rollback target: `DV-2026-05-18-09`
+Notes: Open routes now claim a road-like strip; closed loops still flood-fill the genuinely enclosed interior. Latest-wins ownership and frontend concrete tile rendering remain unchanged.
+
+### Version: DV-2026-05-18-11
+Date: 2026-05-18
+Surface: Territory personal route visibility on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored a slim, high-contrast active-runner route centerline above the concrete land fill while keeping the broad route skin as a low-opacity underlay. The visible line is independent from the backend 6m land-conquest radius, so personal routes remain readable without inflating conquered land.
+Why: After narrowing the backend conquest radius, the user's own running route visually disappeared because the route trace was only a subtle underlay below the filled land tiles.
+Rollback target: `DV-2026-05-18-10`
+Notes: This is a frontend paint-order/visibility repair. It preserves the narrow backend land mask, latest-wins ownership, concrete tile fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-12
+Date: 2026-05-18
+Surface: Territory authenticated route loading on `/territory`
+Files: `frontend/src/contexts/AuthContext.jsx`, `frontend/src/contexts/authUrlTokenPersistence.smoke.test.js`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Persisted URL tokens synchronously in `AuthProvider` before child route effects can call `apiJson`, and made Territory wait for auth hydration before loading `/api/territory` and `/api/territory/polygons`. This prevents the page from briefly using unauthenticated fallback/demo data with zero route overlays on first load.
+Why: The user's running routes were not displaying because `/territory?token=...` could race: the page requested route/land-mask data before the URL token reached localStorage, then stayed on the empty/demo map until a reload.
+Rollback target: `DV-2026-05-18-11`
+Notes: This preserves the narrow land-conquest backend, visible route centerline, concrete land fill, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-13
+Date: 2026-05-18
+Surface: Territory continuous route and loop-fill conquest on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Bumped the land-mask encoding to v5 so stale persisted masks cannot keep rendering old broken/wide geometry, and explicitly paints detected mid-route loop closures before flood-fill so a route that returns to an earlier border seals and fills the enclosed land. Added regressions for connected sparse straight routes, mid-route loop interior fill, and stale v4 mask rejection.
+Why: The user reported straight route territory appearing broken into pieces and route loops failing to cover the enclosed area.
+Rollback target: `DV-2026-05-18-12`
+Notes: This preserves the 8m concrete mask grid, 6m open-route conquest radius, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-14
+Date: 2026-05-18
+Surface: Territory own-route warmup refresh on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Territory now schedules a bounded refresh while `/api/territory/polygons` reports `backfillInProgress` or pending activity recomputation, so the page automatically repaints the active runner's route traces after backend land-mask versions rebuild.
+Why: The user's own running route could appear erased when the first load happened during polygon backfill: the warming response contained only already-cached rival land and no active own route traces until a later manual reload.
+Rollback target: `DV-2026-05-18-13`
+Notes: This is a frontend hydration/polling repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, active route centerline, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-15
+Date: 2026-05-18
+Surface: Territory land-first route highlight removal on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the bright white personal-route centerline overlay from active Territory land masks while keeping the subtle low-opacity route skin underneath the concrete fill for corridor softness.
+Why: The user pointed at the white route highlighting and asked to remove it so the page reads as occupied land rather than a route-tracing view.
+Rollback target: `DV-2026-05-18-14`
+Notes: This is a visual paint-layer repair only. It preserves the 8m concrete mask grid, 6m open-route conquest radius, mid-route loop fill, latest-wins ownership, warmup refresh, title strip, and navigation rail.
+
+### Version: DV-2026-05-18-16
+Date: 2026-05-18
+Surface: Territory solid land fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the remaining route-skin underlay and made occupied land tiles substantially more opaque, so background road/route lines no longer show through conquered territory.
+Why: The user pointed at visible background lines inside the red occupied land and asked to remove them.
+Rollback target: `DV-2026-05-18-15`
+Notes: Territory still uses backend land-mask cells and route traces for bounds, but it no longer paints route lines over or under the concrete land fill; active fill opacity is now `0.9`.
+
+### Version: DV-2026-05-18-17
+Date: 2026-05-18
+Surface: Heatmap continuous route rendering on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Replaced the visible GPS sample overlay from isolated Leaflet circle markers with same-activity rounded route polylines, while leaving the real-world basemap and heat-fog layer intact.
+Why: The user reported that a straight heatmap route appeared broken into separated pieces instead of reading as one continuous line.
+Rollback target: `DV-2026-05-18-16`
+Notes: This is a frontend rendering repair only. Backend `/api/profile/heatmap` still owns sampling, newest-run protection, and point totals; the frontend now uses those sampled points as route continuity geometry instead of disconnected dots.
+
+### Version: DV-2026-05-18-18
+Date: 2026-05-18
+Surface: Territory sealed concrete land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Removed the same-color `routeTraces` corridor bridge and instead seals the concrete land-mask tile bounds with a small client-side overlap, so straight or diagonal conquered land reads continuously without painting any route highlight on the Territory map.
+Why: The user clarified that route highlighting is unnecessary on Territory; the broken-straight-line issue must be solved at the occupied-land mask level.
+Rollback target: `DV-2026-05-18-17`
+Notes: This does not restore the removed white route highlighter, route-skin overlay, or same-color route bridge. Backend route traces remain available only for bounds/warmup reference; visible continuity comes from slightly overlapped concrete land tiles while preserving the narrow 8m/6m conquest semantics.
+
+### Version: DV-2026-05-19-01
+Date: 2026-05-19
+Surface: Heatmap auth-hydrated loading on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Heatmap now reads `authHydrated` from `AuthContext`, waits for hydration before redirecting to `/login`, and waits for hydration before requesting `/api/profile/heatmap` plus `/api/activities`.
+Why: The live `/heatmap` route could bounce to `/login` before URL/local token hydration completed, matching the earlier Territory first-load race.
+Rollback target: `DV-2026-05-18-17`
+Notes: This preserves the current Heatmap map-first layout, Leaflet heat layer, same-activity rounded route polylines, and signed-in auth requirement; unauthenticated sessions still redirect to `/login` after hydration.
+
+### Version: DV-2026-05-19-02
+Date: 2026-05-19
+Surface: Heatmap visible GPS dot restoration on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`
+What changed: Restored the visible GPS overlay from same-activity route polylines back to sampled Leaflet circle markers while keeping the auth-hydrated redirect/data-loading guard added in the previous round.
+Why: The user explicitly asked to restore Heatmap to the dot version.
+Rollback target: `DV-2026-05-19-01`
+Notes: This changes only the visible overlay style. The heat-fog layer, sampled backend payload, and auth requirement stay intact.
+
+### Version: DV-2026-05-19-03
+Date: 2026-05-19
+Surface: IRONPULSE strength cockpit on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the existing single strength route as a dark route-scoped cockpit with an acid-lime hero, weekly strength goal ring, target-area filters, weekly runway, real run-load/recovery metrics, sticky exercise detail panel, and clearly labeled placeholder strength-history cards.
+Why: The user asked to remake the strength area using the provided IRONPULSE references while preserving Hermes runner-strength logic and avoiding fake PR/1RM data.
+Rollback target: `DV-2026-05-19-02`
+Notes: No backend schema or route was added. Check-in save/reset now uses the existing `/api/training/muscle/today` backend endpoint instead of the stale `/check-in/today` path.
+
+### Version: DV-2026-05-19-04
+Date: 2026-05-19
+Surface: IRONPULSE reference-one strength home on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `frontend/src/assets/muscle-training/*.svg`, `DESIGN_VERSIONS.md`
+What changed: Replaced the failed hybrid cockpit with a reference-one IRONPULSE home layout: centered weekly strength goal ring, current training arrangement strip, six local dark target-area image cards, explicit pending strength-history records, and secondary protocol/check-in panels below the first visual pass.
+Why: The user clarified that the main content should match the first IRONPULSE reference rather than retain the Runner Atlas white-card or anatomy-board direction.
+Rollback target: `DV-2026-05-19-03`
+Notes: The visible main route now uses `mt-ironpulse-page` instead of `muscle-training-page`, removes `data-friendly-strength-lab`, and suppresses the old Runner Atlas white canvas overlay for `/muscle-training`. Check-in still uses `/api/training/muscle/today`; PR, total lifted, and 1RM remain clearly marked as pending real strength history.
+
+### Version: DV-2026-05-19-05
+Date: 2026-05-19
+Surface: Compound target library on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/i18n/locales/zh-CN.js`, `frontend/src/i18n/locales/en.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a frontend-only compound exercise library for all six target areas, with four optional movements per area, split from real `today plan` rows and wired into target-card counts, row selection, and the detail panel.
+Why: The user wanted every muscle-area card to expose several compound-focused exercise options without pretending those optional movements are part of the backend-generated runner strength plan.
+Rollback target: `DV-2026-05-19-04`
+Notes: This does not change backend planning or recommendation math. Optional library rows are labeled as not participating in today's training suggestion calculation, while real check-in still uses `/api/training/muscle/today`.
+
+### Version: DV-2026-05-19-06
+Date: 2026-05-19
+Surface: Practical protocol workbench on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the exercise protocol area into the primary route experience: compact target filters, ledger-style exercise rows, and a right-side detail panel with dose, equipment, intent, and execution phases.
+Why: The user clarified that the image-card-first layout was not practical and asked for a page closer to the action detail/workbench reference.
+Rollback target: `DV-2026-05-19-05`
+Notes: The six target photos remain available only as small filter thumbnails. Real plan/recovery/check-in wiring is unchanged, and optional library movements still do not participate in today's recommendation calculation.

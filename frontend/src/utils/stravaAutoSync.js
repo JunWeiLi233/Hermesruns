@@ -1,5 +1,8 @@
 const AUTO_SYNC_SESSION_KEY = 'hermes_strava_auto_sync_at';
 const AUTO_SYNC_MIN_INTERVAL_MS = 15 * 60 * 1000;
+const STRAVA_OAUTH_PENDING_SESSION_KEY = 'hermes_strava_oauth_pending_at';
+const STRAVA_OAUTH_PENDING_MAX_AGE_MS = 2 * 60 * 1000;
+export const STRAVA_SYNC_FINISHED_EVENT = 'hermes:strava-sync-finished';
 
 export function shouldTriggerStravaAutoSync({ isAuthenticated, authHydrated, token, storage = window.sessionStorage, nowMs = Date.now() }) {
   if (!isAuthenticated || !authHydrated || !token) return false;
@@ -18,6 +21,40 @@ export function shouldTriggerStravaAutoSync({ isAuthenticated, authHydrated, tok
 export function markStravaAutoSyncTriggered({ storage = window.sessionStorage, nowMs = Date.now() }) {
   try {
     storage.setItem(AUTO_SYNC_SESSION_KEY, String(nowMs));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function markStravaOauthPendingFlag({ storage = window.sessionStorage, nowMs = Date.now() }) {
+  try {
+    storage.setItem(STRAVA_OAUTH_PENDING_SESSION_KEY, String(nowMs));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function hasStravaOauthPendingFlag({ storage = window.sessionStorage, nowMs = Date.now() }) {
+  try {
+    const raw = storage.getItem(STRAVA_OAUTH_PENDING_SESSION_KEY);
+    const pendingAt = raw ? Number.parseInt(raw, 10) : 0;
+    return Number.isFinite(pendingAt) && pendingAt > 0 && nowMs - pendingAt < STRAVA_OAUTH_PENDING_MAX_AGE_MS;
+  } catch {
+    return false;
+  }
+}
+
+export function consumeStravaOauthPendingFlag({ storage = window.sessionStorage, nowMs = Date.now() }) {
+  const pending = hasStravaOauthPendingFlag({ storage, nowMs });
+  if (pending) {
+    clearStravaOauthPendingFlag({ storage });
+  }
+  return pending;
+}
+
+export function clearStravaOauthPendingFlag({ storage = window.sessionStorage }) {
+  try {
+    storage.removeItem(STRAVA_OAUTH_PENDING_SESSION_KEY);
   } catch {
     // Ignore storage failures.
   }

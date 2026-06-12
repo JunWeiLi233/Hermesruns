@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -177,14 +176,13 @@ class LoginControllerTests {
         when(authService.findByAuthorizationHeader("Bearer admin-token")).thenReturn(Optional.of(admin));
         when(authService.isAdmin(admin)).thenReturn(true);
         when(runnerRepository.findByDeletedFalseOrderByIdAsc()).thenReturn(List.of(broken));
-        when(runnerRepository.save(broken)).thenReturn(broken);
         LoginController controller = controller(runnerRepository, authService, mock(LoginRateLimiter.class));
 
         ResponseEntity<?> response = controller.getAllRunners("Bearer admin-token");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isInstanceOf(List.class);
-        verify(runnerRepository).save(broken);
+        verify(runnerRepository).saveAll(List.of(broken));
         assertThat(broken.getRole()).isEqualTo("USER");
     }
 
@@ -225,7 +223,8 @@ class LoginControllerTests {
                 verificationResendLimiter,
                 passwordResetLimiter,
                 passwordResetService,
-                apiRateLimiter
+                apiRateLimiter,
+                mock(RecaptchaVerifier.class)
         );
     }
 

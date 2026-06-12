@@ -15,6 +15,7 @@ public class GeneratedRaceGpxPersistenceService {
 
     @Transactional
     public GeneratedRaceGpxAsset save(
+            Runner runner,
             String raceId,
             String raceName,
             String city,
@@ -27,6 +28,9 @@ public class GeneratedRaceGpxPersistenceService {
         GeneratedRaceGpxAsset asset = repository.findByRaceId(normalizedRaceId)
                 .orElseGet(GeneratedRaceGpxAsset::new);
         asset.setRaceId(normalizedRaceId);
+        if (asset.getRunner() == null) {
+            asset.setRunner(runner);
+        }
         asset.setRaceName(trimToNull(raceName));
         asset.setCity(trimToNull(city));
         asset.setCountry(trimToNull(country));

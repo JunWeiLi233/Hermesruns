@@ -28,10 +28,22 @@ public class SystemConfigService {
     // Strava OAuth
     @Value("${strava.client.id:}")
     private String stravaClientId;
+    @Value("${STRAVA_CLIENT_ID:}")
+    private String stravaClientIdEnv;
+    @Value("${APP_STRAVA_CLIENT_ID:}")
+    private String appStravaClientId;
     @Value("${strava.client.secret:}")
     private String stravaClientSecret;
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecretEnv;
+    @Value("${APP_STRAVA_CLIENT_SECRET:}")
+    private String appStravaClientSecret;
     @Value("${app.strava.redirect-uri:http://localhost:8080/api/auth/strava/callback}")
     private String stravaRedirectUri;
+    @Value("${STRAVA_REDIRECT_URI:}")
+    private String stravaRedirectUriEnv;
+    @Value("${APP_STRAVA_REDIRECT_URI:}")
+    private String appStravaRedirectUri;
 
     // AI / Shoe scanning
     @Value("${app.ai.api-key:}")
@@ -40,6 +52,14 @@ public class SystemConfigService {
     private String aiModel;
     @Value("${app.ai.provider:gemini}")
     private String aiProvider;
+    @Value("${app.ai.course-map.provider:qwen-local}")
+    private String courseMapAiProvider;
+    @Value("${app.ai.agent.provider:}")
+    private String aiAgentProvider;
+    @Value("${app.ai.agent.letta.base-url:}")
+    private String lettaBaseUrl;
+    @Value("${app.ai.agent.letta.agent-id:}")
+    private String lettaAgentId;
 
     // Billing / Stripe
     @Value("${app.billing.stripe.secret-key:}")
@@ -61,17 +81,27 @@ public class SystemConfigService {
         return v != null && !v.trim().isBlank();
     }
 
+    private static String firstPresent(String... values) {
+        if (values == null) return "";
+        for (String value : values) {
+            if (isPresent(value)) {
+                return value.trim();
+            }
+        }
+        return "";
+    }
+
     public boolean isGoogleConfigured() {
         return isPresent(googleClientId) && isPresent(googleClientSecret);
     }
 
     public boolean isStravaConfigured() {
-        return isPresent(stravaClientId) && isPresent(stravaClientSecret) && secretEncryptionService.isConfigured();
+        return isPresent(effectiveStravaClientId()) && isPresent(effectiveStravaClientSecret()) && secretEncryptionService.isConfigured();
     }
 
     public Map<String, Object> getStravaStatus() {
-        boolean clientIdPresent = isPresent(stravaClientId);
-        boolean clientSecretPresent = isPresent(stravaClientSecret);
+        boolean clientIdPresent = isPresent(effectiveStravaClientId());
+        boolean clientSecretPresent = isPresent(effectiveStravaClientSecret());
         boolean encryptionKeyConfigured = secretEncryptionService.isConfigured();
         boolean configured = isStravaConfigured();
         String mode = configured ? "configured" : "config-missing";
@@ -91,13 +121,65 @@ public class SystemConfigService {
         response.put("clientIdPresent", clientIdPresent);
         response.put("clientSecretPresent", clientSecretPresent);
         response.put("encryptionKeyConfigured", encryptionKeyConfigured);
-        response.put("redirectUri", stravaRedirectUri);
+        response.put("redirectUri", effectiveStravaRedirectUri());
         response.put("reason", reason);
         return response;
     }
 
+    private String effectiveStravaClientId() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_ID"),
+                System.getProperty("APP_STRAVA_CLIENT_ID"),
+                stravaClientId,
+                stravaClientIdEnv,
+                appStravaClientId,
+                System.getenv("STRAVA_CLIENT_ID"),
+                System.getenv("APP_STRAVA_CLIENT_ID"));
+    }
+
+    private String effectiveStravaClientSecret() {
+        return firstPresent(
+                System.getProperty("STRAVA_CLIENT_SECRET"),
+                System.getProperty("APP_STRAVA_CLIENT_SECRET"),
+                stravaClientSecret,
+                stravaClientSecretEnv,
+                appStravaClientSecret,
+                System.getenv("STRAVA_CLIENT_SECRET"),
+                System.getenv("APP_STRAVA_CLIENT_SECRET"));
+    }
+
+    private String effectiveStravaRedirectUri() {
+        return firstPresent(
+                System.getProperty("app.strava.redirect-uri"),
+                System.getProperty("STRAVA_REDIRECT_URI"),
+                System.getProperty("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUriEnv,
+                appStravaRedirectUri,
+                System.getenv("STRAVA_REDIRECT_URI"),
+                System.getenv("APP_STRAVA_REDIRECT_URI"),
+                stravaRedirectUri);
+    }
+
     public boolean isAiConfigured() {
         return isPresent(aiApiKey);
+    }
+
+    public boolean isCourseMapAiConfigured() {
+        String provider = courseMapAiProvider == null
+                ? ""
+                : courseMapAiProvider.trim().toLowerCase(java.util.Locale.ROOT);
+        if (provider.isBlank() || "qwen-local".equals(provider) || "local-qwen".equals(provider) || "qwen".equals(provider)) {
+            return true;
+        }
+        return isAiConfigured();
+    }
+
+    public boolean isAiAgentConfigured() {
+        String provider = aiAgentProvider == null ? "" : aiAgentProvider.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!"letta".equals(provider)) {
+            return false;
+        }
+        return isPresent(lettaBaseUrl) && isPresent(lettaAgentId);
     }
 
     public boolean isCheckoutFullyConfigured() {
@@ -118,6 +200,10 @@ public class SystemConfigService {
         ai.put("configured", isAiConfigured());
         ai.put("provider", aiProvider);
         ai.put("model", aiModel);
+        ai.put("courseMapConfigured", isCourseMapAiConfigured());
+        ai.put("courseMapProvider", courseMapAiProvider);
+        ai.put("agentConfigured", isAiAgentConfigured());
+        ai.put("agentProvider", aiAgentProvider == null ? "" : aiAgentProvider);
         root.put("ai", ai);
 
         Map<String, Object> billing = new LinkedHashMap<>();

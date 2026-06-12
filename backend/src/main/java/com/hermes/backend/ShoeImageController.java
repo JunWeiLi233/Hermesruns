@@ -1,102 +1,79 @@
 package com.hermes.backend;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/shoes")
 public class ShoeImageController {
+    private static final Logger logger = LoggerFactory.getLogger(ShoeImageController.class);
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final Set<String> QUERY_ONLY_FIELDS = Set.of("query");
     private static final Set<String> PHOTO_ONLY_FIELDS = Set.of("photoUrl");
+    private static final Set<String> RENDER_SOURCE_FIELDS = Set.of("url");
     private static final long MAX_RENDER_SOURCE_BYTES = 8L * 1024L * 1024L;
 
     private final AuthService authService;
     private final AiUsageService aiUsageService;
+    private final QuotaService quotaService;
     private final RestTemplate restTemplate;
     private final SystemConfigService systemConfigService;
     private final ApiRateLimiter apiRateLimiter;
-
-    @Value("${app.ai.api-key:}")
-    private String aiApiKey;
-
-    @Value("${app.ai.model:gemini-2.0-flash}")
-    private String aiModel;
-
-    @Value("${app.ai.provider:gemini}")
-    private String aiProvider;
-
-    private static final String SHOE_PROMPT =
-            "Extract all running shoe names and their accumulated mileage from this screenshot. " +
-            "Return ONLY a JSON array, no other text. Each element should have: " +
-            "\"brand\" (string), \"model\" (string), \"distanceKm\" (number in kilometers). " +
-            "If the distance is in miles, convert to km (multiply by 1.60934). " +
-            "Return at most 10 elements in the JSON array. " +
-            "Example: [{\"brand\":\"Nike\",\"model\":\"Pegasus 41\",\"distanceKm\":342.5}]";
+    private final BingImageScraper bingImageScraper;
+    private final AiShoeScanService aiShoeScanService;
 
     private final ShoeRepository shoeRepository;
 
-    // Bing uses mediaurl=URL_ENCODED in href attributes
-    private static final Pattern MEDIA_URL_PATTERN =
-            Pattern.compile("mediaurl=(https?%3a%2f%2f[^&\"]+)", Pattern.CASE_INSENSITIVE);
-
-    // Prevent resource exhaustion and limit what we send to 3rd-party AI.
     private static final long MAX_SCAN_IMAGE_BYTES = 6L * 1024L * 1024L; // 6MB
 
-    // Brand → official website domain mapping
-    private static final Map<String, String> BRAND_DOMAINS = Map.ofEntries(
-            Map.entry("nike", "nike.com"),
-            Map.entry("adidas", "adidas.com"),
-            Map.entry("asics", "asics.com"),
-            Map.entry("new balance", "newbalance.com"),
-            Map.entry("hoka", "hoka.com"),
-            Map.entry("brooks", "brooksrunning.com"),
-            Map.entry("saucony", "saucony.com"),
-            Map.entry("on", "on-running.com"),
-            Map.entry("mizuno", "mizuno.com"),
-            Map.entry("altra", "altrarunning.com"),
-            Map.entry("puma", "puma.com"),
-            Map.entry("reebok", "reebok.com"),
-            Map.entry("under armour", "underarmour.com"),
-            Map.entry("skechers", "skechers.com"),
-            Map.entry("361°", "361sport.com"),
-            Map.entry("361 degrees", "361sport.com"),
-            Map.entry("li-ning", "lining.com"),
-            Map.entry("li ning", "lining.com"),
-            Map.entry("anta", "anta.com"),
-            Map.entry("xtep", "xtep.com.hk"),
-            Map.entry("peak", "peaksport.com"),
-            Map.entry("特步", "xtep.com.hk"),
-            Map.entry("安踏", "anta.com"),
-            Map.entry("李宁", "lining.com"),
-            Map.entry("匹克", "peaksport.com"),
-            Map.entry("361度", "361sport.com")
+    // Magic byte signatures for supported image formats
+    private static final Map<String, byte[]> IMAGE_MAGIC = Map.of(
+            "PNG",       new byte[]{(byte)0x89, 0x50, 0x4E, 0x47},
+            "JPEG",      new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF},
+            "GIF",       new byte[]{0x47, 0x49, 0x46, 0x38},
+            "WEBP_RIFF", new byte[]{0x52, 0x49, 0x46, 0x46}
     );
+
+    private boolean hasImageMagicBytes(byte[] data) {
+        if (data == null || data.length < 8) return false;
+        for (byte[] magic : IMAGE_MAGIC.values()) {
+            boolean match = true;
+            for (int i = 0; i < magic.length; i++) {
+                if (data[i] != magic[i]) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
 
     public ShoeImageController(
             AuthService authService,
             ShoeRepository shoeRepository,
             AiUsageService aiUsageService,
+            QuotaService quotaService,
             RestTemplate restTemplate,
             SystemConfigService systemConfigService,
-            ApiRateLimiter apiRateLimiter) {
+            ApiRateLimiter apiRateLimiter,
+            BingImageScraper bingImageScraper,
+            AiShoeScanService aiShoeScanService) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.aiUsageService = aiUsageService;
+        this.quotaService = quotaService;
         this.restTemplate = restTemplate;
         this.systemConfigService = systemConfigService;
         this.apiRateLimiter = apiRateLimiter;
+        this.bingImageScraper = bingImageScraper;
+        this.aiShoeScanService = aiShoeScanService;
     }
 
     // ── Admin endpoints (all shoes, regardless of owner) ──
@@ -148,15 +125,15 @@ public class ShoeImageController {
 
             List<String> images;
             if (!customQuery.isBlank()) {
-                images = scrapeMultipleImages(customQuery, 12);
+                images = bingImageScraper.scrapeMultipleImages(customQuery, 12);
             } else {
-                images = searchShoeImageCandidates(brand, model);
+                images = bingImageScraper.searchShoeImageCandidates(brand, model);
             }
-            return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
+            return ResponseEntity.ok(Map.of("images", bingImageScraper.sanitizeImageUrls(images)));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Admin image search failed for shoe " + id + ": " + e.getMessage());
+            logger.warn("Admin image search failed for shoe {}: {}", id, e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -166,6 +143,7 @@ public class ShoeImageController {
      * with the same brand+model across all users.
      */
     @PutMapping("/admin/{id}/photo")
+    @Transactional
     public ResponseEntity<?> adminSetPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
@@ -201,9 +179,9 @@ public class ShoeImageController {
             for (Shoe s : matching) {
                 s.setPhotoUrl(finalUrl);
                 s.setPhotoVerified(false);
-                shoeRepository.save(s);
-                count++;
             }
+            shoeRepository.saveAll(matching);
+            count = matching.size();
         } else {
             shoe.setPhotoUrl(finalUrl);
             shoe.setPhotoVerified(false);
@@ -221,6 +199,7 @@ public class ShoeImageController {
      * Admin: mark the current product image as verified for this shoe model (all same brand+model rows).
      */
     @PutMapping("/admin/{id}/verify-photo")
+    @Transactional
     public ResponseEntity<?> adminVerifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -242,13 +221,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(true);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(true);
@@ -264,6 +247,7 @@ public class ShoeImageController {
      * (all same brand+model rows that share the same image URL).
      */
     @PutMapping("/admin/{id}/unverify-photo")
+    @Transactional
     public ResponseEntity<?> adminUnverifyPhoto(
             @PathVariable Long id,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -285,13 +269,17 @@ public class ShoeImageController {
         int count = 0;
         if (brand != null && model != null) {
             List<Shoe> matching = shoeRepository.findByBrandIgnoreCaseAndModelIgnoreCase(brand, model);
+            List<Shoe> toSave = new ArrayList<>();
             for (Shoe s : matching) {
                 String pu = s.getPhotoUrl();
                 if (pu != null && pu.trim().equals(canonicalUrl)) {
                     s.setPhotoVerified(false);
-                    shoeRepository.save(s);
+                    toSave.add(s);
                     count++;
                 }
+            }
+            if (!toSave.isEmpty()) {
+                shoeRepository.saveAll(toSave);
             }
         } else {
             shoe.setPhotoVerified(false);
@@ -328,7 +316,7 @@ public class ShoeImageController {
         }
 
         try {
-            String imageUrl = scrapeShoeImage(brand, model);
+            String imageUrl = bingImageScraper.scrapeShoeImage(brand, model);
             if (imageUrl != null) {
                 shoe.setPhotoUrl(imageUrl);
                 shoeRepository.save(shoe);
@@ -336,7 +324,7 @@ public class ShoeImageController {
             }
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("photoUrl", ""));
         }
     }
@@ -365,15 +353,15 @@ public class ShoeImageController {
         try {
             List<String> images;
             if (!customQuery.isBlank()) {
-                images = scrapeMultipleImages(customQuery, 12);
+                images = bingImageScraper.scrapeMultipleImages(customQuery, 12);
             } else {
-                images = searchShoeImageCandidates(brand, model);
+                images = bingImageScraper.searchShoeImageCandidates(brand, model);
             }
-            return ResponseEntity.ok(Map.of("images", sanitizeImageUrls(images)));
+            return ResponseEntity.ok(Map.of("images", bingImageScraper.sanitizeImageUrls(images)));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         } catch (Exception e) {
-            System.err.println("Image search failed: " + e.getMessage());
+            logger.warn("Image search failed: {}", e.getMessage(), e);
             return ResponseEntity.ok(Map.of("images", List.of(), "error", "search_failed"));
         }
     }
@@ -416,6 +404,26 @@ public class ShoeImageController {
     public ResponseEntity<?> renderSource(
             @RequestParam("url") String url,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        return renderSourceInternal(url, authHeader);
+    }
+
+    @PostMapping("/render-source")
+    public ResponseEntity<?> renderSourcePost(
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        final String url;
+        try {
+            RequestBodyValidator.rejectUnexpectedFields(body, RENDER_SOURCE_FIELDS);
+            url = RequestBodyValidator.optionalString(body, "url", MAX_PHOTO_REFERENCE_LENGTH);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        }
+        return renderSourceInternal(url, authHeader);
+    }
+
+    private ResponseEntity<?> renderSourceInternal(
+            String url,
+            String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
 
@@ -463,154 +471,6 @@ public class ShoeImageController {
         }
     }
 
-    /**
-     * Multi-strategy shoe image search — returns multiple candidates.
-     * Searches across JD, Tmall, brand site, and generic queries.
-     */
-    private List<String> searchShoeImageCandidates(String brand, String model) {
-        String brandLower = brand.toLowerCase().trim();
-        String cnQuery = brand + " " + model + " 跑鞋";
-        LinkedHashSet<String> results = new LinkedHashSet<>();
-
-        // Strategy 1: User-requested E-commerce platforms with sterile "White Background" or "Main Image" modifiers
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 京东 白底图"), 4));
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 淘宝 主图"), 4));
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 拼多多 主图"), 4));
-
-        // Strategy 2: Poizon (得物) - Best industry source for 360-degree floating shoe images
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 得物 白底图"), 4));
-        
-        // Strategy 3: Brand official website domains
-        String domain = BRAND_DOMAINS.get(brandLower);
-        if (domain != null) {
-            results.addAll(fetchMultipleImages(bingImageUrl(brand + " " + model + " site:" + domain), 4));
-        }
-        
-        // Strategy 4: Fallback generic clean images targeting Chinese review sites or english
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " 跑鞋 透底图"), 4));
-        results.addAll(fetchMultipleImages(bingImageUrl(cnQuery + " running shoe white background"), 4));
-
-        return new ArrayList<>(results);
-    }
-
-    private String scrapeShoeImage(String brand, String model) {
-        String brandLower = brand.toLowerCase().trim();
-        String cnQuery = brand + " " + model + " 跑鞋";
-
-        // Strategy 1: JD / Taobao / PDD / DeWu catalogue imagery (White backgrounds)
-        String[] specificTargets = {
-            " 京东 白底图",
-            " 淘宝 主图",
-            " 得物 白底图",
-            " 拼多多 主图"
-        };
-        
-        for (String target : specificTargets) {
-            String result = fetchAndParse(bingImageUrl(cnQuery + target));
-            if (result != null) return result;
-        }
-
-        // Strategy 2: Brand official website domains
-        String domain = BRAND_DOMAINS.get(brandLower);
-        if (domain != null) {
-            String result = fetchAndParse(bingImageUrl(brand + " " + model + " site:" + domain));
-            if (result != null) return result;
-        }
-
-        // Strategy 3: Site restrictive (original fallbacks)
-        String result = fetchAndParse(bingImageUrl(cnQuery + " site:jd.com"));
-        if (result != null) return result;
-        result = fetchAndParse(bingImageUrl(cnQuery + " site:taobao.com"));
-        if (result != null) return result;
-
-        // Strategy 4: Fallback generic clean images
-        result = fetchAndParse(bingImageUrl(cnQuery + " 跑鞋 白底图"));
-        if (result != null) return result;
-
-        return fetchAndParse(bingImageUrl(brand + " " + model + " running shoe white background"));
-    }
-
-    /** Fetch up to maxResults image URLs from a single Bing search page. */
-    private List<String> fetchMultipleImages(String searchUrl, int maxResults) {
-        List<String> urls = new ArrayList<>();
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            headers.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            headers.set("Accept-Language", "en-US,en;q=0.9");
-
-            RestTemplate restTemplate = this.restTemplate;
-            ResponseEntity<String> response = restTemplate.exchange(
-                    searchUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class);
-
-            String html = response.getBody();
-            if (html == null || html.length() < 100) return urls;
-
-            Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
-            while (matcher.find() && urls.size() < maxResults) {
-                String url = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
-                if (isImageFileUrl(url) && !urls.contains(url)) {
-                    urls.add(url);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Multi-image fetch failed: " + e.getMessage());
-        }
-        return urls;
-    }
-
-    /** Search with a custom query string, returning up to maxResults images. */
-    private List<String> scrapeMultipleImages(String query, int maxResults) {
-        return fetchMultipleImages(bingImageUrl(query), maxResults);
-    }
-
-    private String bingImageUrl(String query) {
-        return "https://www.bing.com/images/search?q="
-                + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&first=1";
-    }
-
-    private String fetchAndParse(String searchUrl) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            headers.set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            headers.set("Accept-Language", "en-US,en;q=0.9");
-
-            RestTemplate restTemplate = this.restTemplate;
-            ResponseEntity<String> response = restTemplate.exchange(
-                    searchUrl, HttpMethod.GET, new HttpEntity<>(headers), String.class);
-
-            String html = response.getBody();
-            if (html == null || html.length() < 100) {
-                System.err.println("Bing returned empty/short response for: " + searchUrl);
-                return null;
-            }
-
-            // Extract mediaurl= values (URL-encoded) from Bing HTML
-            Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
-            while (matcher.find()) {
-                String url = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
-                if (isImageFileUrl(url)) return url;
-            }
-        } catch (Exception e) {
-            System.err.println("Image fetch failed for " + searchUrl + ": " + e.getMessage());
-        }
-        return null;
-    }
-
-    private boolean isImageFileUrl(String url) {
-        if (url == null || !url.startsWith("http")) return false;
-        String lower = url.toLowerCase();
-        if (lower.contains(".html") || lower.contains(".htm")) return false;
-        return lower.contains(".jpg") || lower.contains(".jpeg") ||
-               lower.contains(".png") || lower.contains(".webp") ||
-               lower.contains(".gif") || lower.contains(".avif");
-    }
-
     private String extractQuery(Map<String, ?> body) {
         if (body == null) return "";
         try {
@@ -627,15 +487,6 @@ public class ShoeImageController {
         }
     }
 
-    private List<String> sanitizeImageUrls(List<String> urls) {
-        if (urls == null || urls.isEmpty()) return List.of();
-        LinkedHashSet<String> out = new LinkedHashSet<>();
-        for (String u : urls) {
-            if (isImageFileUrl(u)) out.add(u);
-        }
-        return new ArrayList<>(out);
-    }
-
     @GetMapping("/scan-available")
     public ResponseEntity<?> isScanAvailable(
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -648,7 +499,7 @@ public class ShoeImageController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("available", available);
         if (available) {
-            result.putAll(aiUsageService.getUsageStatus(user.get()));
+            result.putAll(buildShoeScanUsageStatus(user.get()));
         }
         return ResponseEntity.ok(result);
     }
@@ -658,7 +509,7 @@ public class ShoeImageController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
         if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
-        return ResponseEntity.ok(aiUsageService.getUsageStatus(user.get()));
+        return ResponseEntity.ok(buildShoeScanUsageStatus(user.get()));
     }
 
     @PostMapping("/scan-image")
@@ -682,14 +533,28 @@ public class ShoeImageController {
                     .body(Map.of("error", "AI API key not configured. Set APP_AI_API_KEY environment variable."));
         }
 
-        // Check and atomically reserve AI usage quota
         Runner runner = user.get();
-        String quotaError = aiUsageService.tryConsumeQuota(runner);
-        if (quotaError != null) {
-            Map<String, Object> errorBody = new LinkedHashMap<>();
-            errorBody.put("error", quotaError);
-            errorBody.putAll(aiUsageService.getUsageStatus(runner));
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+
+        // Feature-gating quota check: Pro users skip all quota checks entirely.
+        if (!quotaService.isPro(runner)) {
+            // Step 1: Check feature quota (premium feature gating for free users)
+            if (!quotaService.canUseFeature(runner, "shoe-scan")) {
+                Map<String, Object> errorBody = new LinkedHashMap<>(quotaService.quotaExceededError(runner, "shoe-scan"));
+                errorBody.putAll(buildShoeScanUsageStatus(runner));
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+            }
+
+            // Step 2: Check and atomically reserve AI daily usage quota
+            String aiQuotaError = aiUsageService.tryConsumeQuota(runner);
+            if (aiQuotaError != null) {
+                Map<String, Object> errorBody = new LinkedHashMap<>();
+                errorBody.put("error", aiQuotaError);
+                errorBody.putAll(buildShoeScanUsageStatus(runner));
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
+            }
+
+            // Consume the feature quota now that we know the scan will proceed
+            quotaService.consumeFeature(runner, "shoe-scan");
         }
 
         try {
@@ -706,17 +571,18 @@ public class ShoeImageController {
             }
 
             byte[] imageBytes = image.getBytes();
+            if (!hasImageMagicBytes(imageBytes)) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format."));
+            }
             String base64 = Base64.getEncoder().encodeToString(imageBytes);
 
-            String text;
-            if ("claude".equalsIgnoreCase(aiProvider)) {
-                text = callClaude(base64, mediaType);
-            } else {
-                text = callGemini(base64, mediaType);
-            }
+            String text = aiShoeScanService.callAi(base64, mediaType);
 
             if (text == null) {
-                return ResponseEntity.ok(Map.of("shoes", List.of()));
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("shoes", List.of());
+                result.putAll(buildShoeScanUsageStatus(runner));
+                return ResponseEntity.ok(result);
             }
 
             // Extract JSON array from text (may have surrounding text)
@@ -726,99 +592,74 @@ public class ShoeImageController {
                 String jsonArray = text.substring(start, end + 1);
                 Map<String, Object> result = new LinkedHashMap<>();
                 result.put("raw", jsonArray);
-                result.putAll(aiUsageService.getUsageStatus(runner));
+                result.putAll(buildShoeScanUsageStatus(runner));
                 return ResponseEntity.ok(result);
             }
 
-            return ResponseEntity.ok(Map.of("shoes", List.of()));
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("shoes", List.of());
+            result.putAll(buildShoeScanUsageStatus(runner));
+            return ResponseEntity.ok(result);
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("AI API error " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+            logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            if (!quotaService.isPro(runner)) {
+                aiUsageService.rollbackConsumedQuota(runner);
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
-            System.err.println("Shoe image scan failed: " + e.getMessage());
+            logger.error("Shoe image scan failed: {}", e.getMessage(), e);
+            if (!quotaService.isPro(runner)) {
+                aiUsageService.rollbackConsumedQuota(runner);
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Failed to analyze image. Please try again."));
         }
     }
 
-    /** Google Gemini API (free tier available) */
-    @SuppressWarnings("unchecked")
-    private String callGemini(String base64, String mediaType) {
-        Map<String, Object> request = Map.of(
-                "contents", List.of(Map.of(
-                        "parts", List.of(
-                                Map.of("inline_data", Map.of(
-                                        "mime_type", mediaType,
-                                        "data", base64
-                                )),
-                                Map.of("text", SHOE_PROMPT)
-                        )
-                ))
-        );
+    private Map<String, Object> buildShoeScanUsageStatus(Runner runner) {
+        Map<String, Object> status = new LinkedHashMap<>(aiUsageService.getUsageStatus(runner));
+        if (runner == null || Boolean.TRUE.equals(status.get("unlimited")) || Boolean.TRUE.equals(status.get("admin"))) {
+            return status;
+        }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map<String, Object> quotaStatus = quotaService.getQuotaStatus(runner);
+        Object shoeScanRaw = quotaStatus.get("shoeScan");
+        if (!(shoeScanRaw instanceof Map<?, ?> shoeScan)) {
+            return status;
+        }
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + aiModel + ":generateContent?key=" + aiApiKey;
+        int featureUsed = intValue(shoeScan.get("used"), 0);
+        int featureLimit = intValue(shoeScan.get("limit"), 0);
+        int featureRemaining = intValue(shoeScan.get("remaining"), Math.max(0, featureLimit - featureUsed));
+        int dailyRemaining = intValue(status.get("scansRemaining"), featureRemaining);
 
-        RestTemplate restTemplate = this.restTemplate;
-        ResponseEntity<Map> response = restTemplate.exchange(
-                url, HttpMethod.POST, new HttpEntity<>(request, headers), Map.class);
-
-        Map body = response.getBody();
-        if (body == null) return null;
-
-        List<Map<String, Object>> candidates = (List<Map<String, Object>>) body.get("candidates");
-        if (candidates == null || candidates.isEmpty()) return null;
-
-        Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
-        if (content == null) return null;
-
-        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-        if (parts == null || parts.isEmpty()) return null;
-
-        return (String) parts.get(0).get("text");
+        status.put("quotaType", "user_free");
+        status.put("scansRemaining", Math.max(0, Math.min(featureRemaining, dailyRemaining)));
+        status.put("monthlyLimit", featureLimit);
+        status.put("monthlyUsed", featureUsed);
+        status.put("userFreeTotal", featureLimit);
+        status.put("featureQuotaLimit", featureLimit);
+        status.put("featureQuotaUsed", featureUsed);
+        status.put("featureQuotaRemaining", featureRemaining);
+        return status;
     }
 
-    /** Anthropic Claude API (fallback) */
-    @SuppressWarnings("unchecked")
-    private String callClaude(String base64, String mediaType) {
-        Map<String, Object> request = Map.of(
-                "model", aiModel,
-                "max_tokens", 1024,
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(
-                                Map.of("type", "image",
-                                        "source", Map.of(
-                                                "type", "base64",
-                                                "media_type", mediaType,
-                                                "data", base64
-                                        )),
-                                Map.of("type", "text", "text", SHOE_PROMPT)
-                        )
-                ))
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("x-api-key", aiApiKey);
-        headers.set("anthropic-version", "2023-06-01");
-
-        RestTemplate restTemplate = this.restTemplate;
-        ResponseEntity<Map> response = restTemplate.exchange(
-                "https://api.anthropic.com/v1/messages",
-                HttpMethod.POST, new HttpEntity<>(request, headers), Map.class);
-
-        Map body = response.getBody();
-        if (body == null) return null;
-
-        List<Map<String, Object>> content = (List<Map<String, Object>>) body.get("content");
-        if (content == null || content.isEmpty()) return null;
-
-        return (String) content.get(0).get("text");
+    private int intValue(Object value, int fallback) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String stringValue) {
+            try {
+                return Integer.parseInt(stringValue.trim());
+            } catch (Exception ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
     }
+
 }

@@ -1,9 +1,15 @@
 package com.hermes.backend;
 
 import org.springframework.http.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,14 +27,45 @@ public class ShoeController {
     private final ShoeRepository shoeRepository;
     private final ActivityRepository activityRepository;
     private final ShoeIdentityService shoeIdentityService;
+    private final ShoeCatalogModelRepository shoeCatalogModelRepository;
+    private final ShoeTrackerService shoeTrackerService;
+    private final CoachScheduledWorkoutRepository scheduledWorkoutRepository;
 
+    @Autowired
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
                           ActivityRepository activityRepository,
-                          ShoeIdentityService shoeIdentityService) {
+                          ShoeIdentityService shoeIdentityService,
+                          ShoeCatalogModelRepository shoeCatalogModelRepository,
+                          ShoeTrackerService shoeTrackerService,
+                          CoachScheduledWorkoutRepository scheduledWorkoutRepository) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.activityRepository = activityRepository;
         this.shoeIdentityService = shoeIdentityService;
+        this.shoeCatalogModelRepository = shoeCatalogModelRepository;
+        this.shoeTrackerService = shoeTrackerService;
+        this.scheduledWorkoutRepository = scheduledWorkoutRepository;
+    }
+
+    public ShoeController(AuthService authService, ShoeRepository shoeRepository,
+                          ActivityRepository activityRepository,
+                          ShoeIdentityService shoeIdentityService,
+                          ShoeCatalogModelRepository shoeCatalogModelRepository) {
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, null, null);
+    }
+
+    public ShoeController(AuthService authService, ShoeRepository shoeRepository,
+                          ActivityRepository activityRepository,
+                          ShoeIdentityService shoeIdentityService,
+                          ShoeCatalogModelRepository shoeCatalogModelRepository,
+                          ShoeTrackerService shoeTrackerService) {
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, shoeTrackerService, null);
+    }
+
+    public ShoeController(AuthService authService, ShoeRepository shoeRepository,
+                          ActivityRepository activityRepository,
+                          ShoeIdentityService shoeIdentityService) {
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, null, null, null);
     }
 
     @GetMapping
@@ -45,9 +82,39 @@ public class ShoeController {
 
         backfillIdentityKeys(shoes);
         Map<Long, Double> distanceMap = buildShoeDistanceMap(user.get());
-        shoes.forEach(s -> attachCurrentDistance(s, distanceMap));
+        Map<Long, Object> lastUsedMap = buildLastUsedMap(user.get());
+        Map<String, String> typeMap = buildShoeTypeMap();
+        shoes.forEach(s -> attachRotationContext(s, distanceMap, lastUsedMap, typeMap));
 
         return ResponseEntity.ok(shoes);
+    }
+
+    @GetMapping("/recommendation")
+    public ResponseEntity<?> recommendation(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "surface", required = false) String surfaceOverride) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        LocalDate today = LocalDate.now();
+        CoachScheduledWorkout scheduledWorkout = scheduledWorkoutRepository == null
+                ? null
+                : scheduledWorkoutRepository.findByRunnerAndScheduledDate(user.get(), today).orElse(null);
+        SurfacePreference surfacePreference = resolveSurfacePreference(surfaceOverride, scheduledWorkout);
+        CoachWorkoutType workoutType = scheduledWorkout == null ? null : scheduledWorkout.getWorkoutType();
+
+        Optional<Shoe> recommended = shoeTrackerService == null
+                ? Optional.empty()
+                : shoeTrackerService.recommendShoe(user.get(), workoutType, surfacePreference.surface());
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("scheduledDate", today);
+        body.put("scheduledWorkoutType", workoutType == null ? null : workoutType.name());
+        body.put("targetSurface", surfacePreference.surface());
+        body.put("targetSurfaceSource", surfacePreference.source());
+        body.put("recommendedShoe", recommended.map(shoe -> recommendationPayload(shoe, workoutType, surfacePreference.surface())).orElse(null));
+        return ResponseEntity.ok(body);
     }
 
     /**
@@ -226,11 +293,8 @@ public class ShoeController {
         }
 
         Map<Long, Double> distanceMap2 = buildShoeDistanceMap(user.get());
-        shoes.forEach(s -> {
-            double activityKm = distanceMap2.getOrDefault(s.getId(), 0.0);
-            double initial = s.getInitialDistanceKm() != null ? s.getInitialDistanceKm() : 0.0;
-            s.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
-        });
+        Map<String, String> typeMap = buildShoeTypeMap();
+        shoes.forEach(s -> attachRotationContext(s, distanceMap2, lastUsed, typeMap));
 
         // Sort: shoes with recent activity first, then by last used date desc, unlinked shoes last
         shoes.sort((a, b) -> {
@@ -396,7 +460,7 @@ public class ShoeController {
         }
         if (body.containsKey("retired")) {
             try {
-                shoe.setRetired(RequestBodyValidator.booleanOrDefault(body, "retired", false));
+                applyRetiredState(shoe, RequestBodyValidator.booleanOrDefault(body, "retired", false));
             } catch (IllegalArgumentException ex) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
             }
@@ -457,10 +521,78 @@ public class ShoeController {
         } else {
             // Soft-delete: retire the shoe so activity links remain valid
             Shoe shoe = shoeOpt.get();
-            shoe.setRetired(true);
+            applyRetiredState(shoe, true);
             shoeRepository.save(shoe);
             return ResponseEntity.ok(Map.of("message", "Shoe retired"));
         }
+    }
+
+    @PostMapping("/{id}/retire")
+    public ResponseEntity<?> retireShoe(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findByIdAndRunner(id, user.get());
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        applyRetiredState(shoe, true);
+        Shoe saved = shoeRepository.save(shoe);
+
+        double activityKm = activityRepository.sumDistanceKmByShoeId(saved.getId());
+        double initial = saved.getInitialDistanceKm() != null ? saved.getInitialDistanceKm() : 0.0;
+        saved.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Shoe retired",
+                "shoeId", saved.getId(),
+                "retiredDate", saved.getRetiredDate().toString()
+        ));
+    }
+
+    @PostMapping("/{id}/reactivate")
+    public ResponseEntity<?> reactivateShoe(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        Optional<Shoe> shoeOpt = shoeRepository.findByIdAndRunner(id, user.get());
+        if (shoeOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shoe not found");
+
+        Shoe shoe = shoeOpt.get();
+        applyRetiredState(shoe, false);
+        Shoe saved = shoeRepository.save(shoe);
+
+        double activityKm = activityRepository.sumDistanceKmByShoeId(saved.getId());
+        double initial = saved.getInitialDistanceKm() != null ? saved.getInitialDistanceKm() : 0.0;
+        saved.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Shoe reactivated",
+                "shoeId", saved.getId()
+        ));
+    }
+
+    @GetMapping("/retired")
+    public ResponseEntity<?> listRetiredShoes(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        Optional<Runner> user = authService.findByAuthorizationHeader(authHeader);
+        if (user.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+
+        List<Shoe> retiredShoes = shoeRepository.findByRunnerAndRetiredTrueOrderByRetiredDateDesc(user.get());
+
+        Map<Long, Double> distanceMap = buildShoeDistanceMap(user.get());
+        Map<Long, Object> lastUsedMap = buildLastUsedMap(user.get());
+        Map<String, String> typeMap = buildShoeTypeMap();
+        retiredShoes.forEach(s -> attachRotationContext(s, distanceMap, lastUsedMap, typeMap));
+
+        return ResponseEntity.ok(retiredShoes);
     }
 
     @PatchMapping("/{shoeId}/assign/{activityId}")
@@ -494,10 +626,42 @@ public class ShoeController {
 
     private Map<Long, Double> buildShoeDistanceMap(Runner runner) {
         Map<Long, Double> map = new HashMap<>();
-        for (Object[] row : activityRepository.sumDistanceKmByRunner(runner)) {
+        List<Object[]> rows = activityRepository.sumDistanceKmByRunner(runner);
+        if (rows == null) return map;
+        for (Object[] row : rows) {
             map.put((Long) row[0], ((Number) row[1]).doubleValue());
         }
         return map;
+    }
+
+    private Map<Long, Object> buildLastUsedMap(Runner runner) {
+        Map<Long, Object> map = new HashMap<>();
+        List<Object[]> rows = activityRepository.findLastUsedDateByRunner(runner);
+        if (rows == null) return map;
+        for (Object[] row : rows) {
+            map.put((Long) row[0], row[1]);
+        }
+        return map;
+    }
+
+    private Map<String, String> buildShoeTypeMap() {
+        if (shoeCatalogModelRepository == null) return Map.of();
+        Map<String, String> map = new HashMap<>();
+        List<ShoeCatalogModel> models = shoeCatalogModelRepository.findAll();
+        if (models == null) return map;
+        for (ShoeCatalogModel model : models) {
+            if (model == null || model.getBrand() == null) continue;
+            String type = normalizeShoeType(model.getType());
+            putTypeKey(map, model.getBrand().getName(), model.getName(), type);
+            putTypeKey(map, model.getBrand().getName(), model.getNameEn(), type);
+            putTypeKey(map, model.getBrand().getName(), model.getNameZh(), type);
+        }
+        return map;
+    }
+
+    private void putTypeKey(Map<String, String> map, String brand, String model, String type) {
+        String key = typeKey(brand, model);
+        if (!key.isBlank()) map.put(key, type);
     }
 
     private void backfillIdentityKeys(List<Shoe> shoes) {
@@ -514,4 +678,121 @@ public class ShoeController {
         double initial = s.getInitialDistanceKm() != null ? s.getInitialDistanceKm() : 0.0;
         s.setCurrentDistanceKm(Math.round((activityKm + initial) * 100.0) / 100.0);
     }
+
+    private void attachRotationContext(Shoe shoe, Map<Long, Double> distanceMap, Map<Long, Object> lastUsedMap, Map<String, String> typeMap) {
+        attachCurrentDistance(shoe, distanceMap);
+
+        String type = typeMap.get(typeKey(shoe.getBrand(), shoe.getModel()));
+        if (type == null) type = inferShoeType(shoe);
+        shoe.setType(type);
+        shoe.setSurfaceType("trail".equals(type) ? "trail" : "road");
+
+        LocalDateTime lastWornAt = toLocalDateTime(lastUsedMap.get(shoe.getId()));
+        shoe.setLastWornAt(lastWornAt);
+        if (lastWornAt == null) {
+            shoe.setDaysSinceLastWear(null);
+        } else {
+            long days = ChronoUnit.DAYS.between(lastWornAt.toLocalDate(), LocalDate.now());
+            shoe.setDaysSinceLastWear((int) Math.max(0, days));
+        }
+    }
+
+    private Map<String, Object> recommendationPayload(Shoe shoe, CoachWorkoutType workoutType, String targetSurface) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", shoe.getId());
+        payload.put("brand", shoe.getBrand());
+        payload.put("model", shoe.getModel());
+        payload.put("nickname", shoe.getNickname());
+        payload.put("photoUrl", shoe.getPhotoUrl());
+        payload.put("type", shoe.getType());
+        payload.put("surfaceType", shoe.getSurfaceType());
+        payload.put("currentDistanceKm", shoe.getCurrentDistanceKm());
+        payload.put("maxDistanceKm", shoe.getMaxDistanceKm());
+        payload.put("lastWornAt", shoe.getLastWornAt());
+        payload.put("daysSinceLastWear", shoe.getDaysSinceLastWear());
+        String workoutLabel = workoutType == null ? "today's run" : workoutType.name() + " workout";
+        String surfaceLabel = targetSurface == null ? "rotation" : targetSurface + " surface";
+        payload.put("recommendationReason", "Best match for " + surfaceLabel + " and " + workoutLabel);
+        return payload;
+    }
+
+    private SurfacePreference resolveSurfacePreference(String surfaceOverride, CoachScheduledWorkout scheduledWorkout) {
+        String normalizedOverride = normalizeSurface(surfaceOverride);
+        if (normalizedOverride != null) {
+            return new SurfacePreference(normalizedOverride, "query");
+        }
+        String scheduledSurface = inferScheduledSurface(scheduledWorkout);
+        if (scheduledSurface != null) {
+            return new SurfacePreference(scheduledSurface, "schedule");
+        }
+        return new SurfacePreference(null, "rotation");
+    }
+
+    private String inferScheduledSurface(CoachScheduledWorkout scheduledWorkout) {
+        if (scheduledWorkout == null || scheduledWorkout.getNotes() == null) return null;
+        String notes = scheduledWorkout.getNotes().toLowerCase(Locale.ROOT);
+        if (notes.contains("trail")) return "trail";
+        if (notes.contains("road")) return "road";
+        return null;
+    }
+
+    private String normalizeSurface(String surface) {
+        if (surface == null) return null;
+        String normalized = surface.trim().toLowerCase(Locale.ROOT);
+        if ("trail".equals(normalized)) return "trail";
+        if ("road".equals(normalized)) return "road";
+        return null;
+    }
+
+    private String typeKey(String brand, String model) {
+        return ((brand == null ? "" : brand) + "::" + (model == null ? "" : model))
+                .trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[\\s\\-_'’.,/]+", "");
+    }
+
+    private String normalizeShoeType(String type) {
+        String normalized = type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
+        if (Set.of("daily", "speed", "race", "trail", "stability").contains(normalized)) return normalized;
+        return "daily";
+    }
+
+    private String inferShoeType(Shoe shoe) {
+        String combined = String.join(" ",
+                shoe.getBrand() == null ? "" : shoe.getBrand(),
+                shoe.getModel() == null ? "" : shoe.getModel(),
+                shoe.getNickname() == null ? "" : shoe.getNickname()
+        ).toLowerCase(Locale.ROOT);
+        if (combined.contains("trail")
+                || combined.contains("speedgoat")
+                || combined.contains("mafate")
+                || combined.contains("peregrine")
+                || combined.contains("torrent")
+                || combined.contains("kiger")
+                || combined.contains("terrex")) {
+            return "trail";
+        }
+        return "daily";
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value instanceof LocalDateTime localDateTime) return localDateTime;
+        if (value instanceof Timestamp timestamp) return timestamp.toLocalDateTime();
+        if (value instanceof java.sql.Date date) return date.toLocalDate().atStartOfDay();
+        if (value instanceof Date date) return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
+        return null;
+    }
+
+    private void applyRetiredState(Shoe shoe, boolean retired) {
+        shoe.setRetired(retired);
+        if (retired) {
+            if (shoe.getRetiredDate() == null) {
+                shoe.setRetiredDate(LocalDateTime.now());
+            }
+        } else {
+            shoe.setRetiredDate(null);
+        }
+    }
+
+    private record SurfacePreference(String surface, String source) {}
 }

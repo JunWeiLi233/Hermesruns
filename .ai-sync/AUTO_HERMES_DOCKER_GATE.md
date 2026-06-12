@@ -1,572 +1,133 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-04-20T04:15:35.024Z
-Passed: no
-Git Head: c5bf4f03cae3d1dba436725e92cbd7e8a9b81311
+Generated: 2026-06-06T01:36:10.896Z
+Passed: yes
+Git Head: ec14f93de36f73a594eac949bb3080e7eb334304
 Command: docker build -f C:\Users\Junwei\Downloads\Hermes\Dockerfile -t hermes-autohermes-gate:local .
-Reason: Docker publish gate failed for the current working tree.
+Reason: Docker publish gate passed for the current working tree.
 
 ## Status Snapshot
 ```text
-M .codex/agents/README.md
- M .codex/skills/ralph/SKILL.md
- M .gitignore
- M .tools/H2ToPostgresMigrator.java
- M .tools/run-backend.cmd
- M .tools/suggest-tasks.smoke.test.mjs
- M DESIGN_VERSIONS.md
- M TASKS.md
- M backend/src/main/java/com/hermes/backend/AdminPortalController.java
- M backend/src/main/java/com/hermes/backend/AutomatedCoachService.java
- M backend/src/main/java/com/hermes/backend/OAuthController.java
- M backend/src/main/java/com/hermes/backend/RaceController.java
- M backend/src/main/java/com/hermes/backend/RaceCourseMapService.java
- M backend/src/main/java/com/hermes/backend/StravaAutoSyncScheduler.java
- M backend/src/main/java/com/hermes/backend/StravaSyncStateService.java
- M backend/src/main/java/com/hermes/backend/StravaWebhookController.java
- M backend/src/main/resources/application.properties
- D backend/src/main/resources/static/assets/AddShoes-B_EN0mmw.js
- D backend/src/main/resources/static/assets/AddShoes-B_EN0mmw.js.map
- D backend/src/main/resources/static/assets/AdminLogin-DsPjCubE.js
- D backend/src/main/resources/static/assets/AdminLogin-DsPjCubE.js.map
- D backend/src/main/resources/static/assets/Analysis-5Nmz7s0m.js
- D backend/src/main/resources/static/assets/Analysis-5Nmz7s0m.js.map
- D backend/src/main/resources/static/assets/AnalysisInsightDetail-CVnfUBwv.js
- D backend/src/main/resources/static/assets/AnalysisInsightDetail-CVnfUBwv.js.map
- D backend/src/main/resources/static/assets/AppIcon-B6HwPj_6.js
- D backend/src/main/resources/static/assets/AppIcon-B6HwPj_6.js.map
- D backend/src/main/resources/static/assets/CoachIdentityBadge-DhGuPbuc.js
- D backend/src/main/resources/static/assets/CoachIdentityBadge-DhGuPbuc.js.map
- D backend/src/main/resources/static/assets/Dashboard-BD8n02Z_.js
- D backend/src/main/resources/static/assets/Dashboard-BD8n02Z_.js.map
- D backend/src/main/resources/static/assets/FooterNavLinks-DlZq0z4I.js
- D backend/src/main/resources/static/assets/FooterNavLinks-DlZq0z4I.js.map
- D backend/src/main/resources/static/assets/ForgotPassword-BeBNVH9e.js
- D backend/src/main/resources/static/assets/ForgotPassword-BeBNVH9e.js.map
- D backend/src/main/resources/static/assets/Heatmap-DhjzQ9xr.js
- D backend/src/main/resources/static/assets/Heatmap-DhjzQ9xr.js.map
- D backend/src/main/resources/static/assets/HermesLogo-BXOA29yZ.js
- D backend/src/main/resources/static/assets/HermesLogo-BXOA29yZ.js.map
- D backend/src/main/resources/static/assets/I18nContext-BkhzsyAi.js
- D backend/src/main/resources/static/assets/I18nContext-BkhzsyAi.js.map
- D backend/src/main/resources/static/assets/ImportDataGuide-DyZ2EWS6.js
- D backend/src/main/resources/static/assets/ImportDataGuide-DyZ2EWS6.js.map
- D backend/src/main/resources/static/assets/InfoDisclosure-DN6Il6nK.js
- D backend/src/main/resources/static/assets/InfoDisclosure-DN6Il6nK.js.map
- D backend/src/main/resources/static/assets/Landing-Cpv3S8YS.js
- D backend/src/main/resources/static/assets/Landing-Cpv3S8YS.js.map
- D backend/src/main/resources/static/assets/LanguageSwitcher-iXX6rTZs.js
- D backend/src/main/resources/static/assets/LanguageSwitcher-iXX6rTZs.js.map
- D backend/src/main/resources/static/assets/LegalPage-ByyXixvo.js
- D backend/src/main/resources/static/assets/LegalPage-ByyXixvo.js.map
- D backend/src/main/resources/static/assets/Login-CCGQPj0c.js
- D backend/src/main/resources/static/assets/Login-CCGQPj0c.js.map
- D backend/src/main/resources/static/assets/Modal-0bh5aEss.js
- D backend/src/main/resources/static/assets/Modal-0bh5aEss.js.map
- D backend/src/main/resources/static/assets/MuscleTraining-cryYtdW0.js
- D backend/src/main/resources/static/assets/MuscleTraining-cryYtdW0.js.map
- D backend/src/main/resources/static/assets/PredictionDetail-CwaDtmiD.js
- D backend/src/main/resources/static/assets/PredictionDetail-CwaDtmiD.js.map
- D backend/src/main/resources/static/assets/Profile-DMYMzXuQ.js
- D backend/src/main/resources/static/assets/Profile-DMYMzXuQ.js.map
- D backend/src/main/resources/static/assets/Races-CgSE__Dv.js
- D backend/src/main/resources/static/assets/Races-CgSE__Dv.js.map
- D backend/src/main/resources/static/assets/RacesDetail-BtgouEtd.js
- D backend/src/main/resources/static/assets/RacesDetail-BtgouEtd.js.map
- D backend/src/main/resources/static/assets/Rewards-BQ--Pcr-.js
- D backend/src/main/resources/static/assets/Rewards-BQ--Pcr-.js.map
- D backend/src/main/resources/static/assets/RunDetail-BCnif75d.js
- D backend/src/main/resources/static/assets/RunDetail-BCnif75d.js.map
- D backend/src/main/resources/static/assets/Runs-BSXEK8qK.js
- D backend/src/main/resources/static/assets/Runs-BSXEK8qK.js.map
- D backend/src/main/resources/static/assets/Schedule-BR8eMoAo.js
- D backend/src/main/resources/static/assets/Schedule-BR8eMoAo.js.map
- D backend/src/main/resources/static/assets/Settings-BbxeilZR.js
- D backend/src/main/resources/static/assets/Settings-BbxeilZR.js.map
- D backend/src/main/resources/static/assets/ShoeCatalog-gSm6PRHA.js
- D backend/src/main/resources/static/assets/ShoeCatalog-gSm6PRHA.js.map
- D backend/src/main/resources/static/assets/Shoes-B9cyXvuR.js
- D backend/src/main/resources/static/assets/Shoes-B9cyXvuR.js.map
- D backend/src/main/resources/static/assets/Signup-C3wONuHs.js
- D backend/src/main/resources/static/assets/Signup-C3wONuHs.js.map
- D backend/src/main/resources/static/assets/TodayRun-CI8vChu4.js
- D backend/src/main/resources/static/assets/TodayRun-CI8vChu4.js.map
- D backend/src/main/resources/static/assets/TopbarNotifications-D8XdZbdL.js
- D backend/src/main/resources/static/assets/TopbarNotifications-D8XdZbdL.js.map
- D backend/src/main/resources/static/assets/Vo2MaxDetail-DYsue2c-.js
- D backend/src/main/resources/static/assets/Vo2MaxDetail-DYsue2c-.js.map
- D backend/src/main/resources/static/assets/WeatherEngine-DVPb-3OA.js
- D backend/src/main/resources/static/assets/WeatherEngine-DVPb-3OA.js.map
- D backend/src/main/resources/static/assets/WorkflowBuilder-BAF-5HZo.js
- D backend/src/main/resources/static/assets/WorkflowBuilder-BAF-5HZo.js.map
- D backend/src/main/resources/static/assets/analysisInsights-CER1_2nF.js
- D backend/src/main/resources/static/assets/analysisInsights-CER1_2nF.js.map
- D backend/src/main/resources/static/assets/index-BM806bDW.css
- D backend/src/main/resources/static/assets/index-BUscyXOg.js
- D backend/src/main/resources/static/assets/index-BUscyXOg.js.map
- D backend/src/main/resources/static/assets/profileIdentity-BylwIMLM.js
- D backend/src/main/resources/static/assets/profileIdentity-BylwIMLM.js.map
- D backend/src/main/resources/static/assets/raceImage-BcfjuhX3.js
- D backend/src/main/resources/static/assets/raceImage-BcfjuhX3.js.map
- D backend/src/main/resources/static/assets/removeBackground-CYPeZzKr.js
- D backend/src/main/resources/static/assets/removeBackground-CYPeZzKr.js.map
- D backend/src/main/resources/static/assets/runnerShellNav-BLMT093D.js
- D backend/src/main/resources/static/assets/runnerShellNav-BLMT093D.js.map
- D backend/src/main/resources/static/assets/shoeRotation-gkAzN7TL.js
- D backend/src/main/resources/static/assets/shoeRotation-gkAzN7TL.js.map
- D backend/src/main/resources/static/assets/stravaLinking-Bcxhk5pX.js
- D backend/src/main/resources/static/assets/stravaLinking-Bcxhk5pX.js.map
- D backend/src/main/resources/static/assets/todayRun-Ct6drQAR.js
- D backend/src/main/resources/static/assets/todayRun-Ct6drQAR.js.map
- D backend/src/main/resources/static/assets/vdot-DVAaWsci.js
- D backend/src/main/resources/static/assets/vdot-DVAaWsci.js.map
- M backend/src/main/resources/static/index.html
- M backend/src/test/java/com/hermes/backend/AdminControllerTests.java
- M backend/src/test/java/com/hermes/backend/AdminPortalControllerTests.java
- M backend/src/test/java/com/hermes/backend/OAuthControllerTests.java
- M backend/src/test/java/com/hermes/backend/RaceControllerTests.java
- M backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java
- M backend/src/test/java/com/hermes/backend/RaceOfficialImageServiceTests.java
- M backend/src/test/java/com/hermes/backend/SecurityHardeningTests.java
- M backend/src/test/java/com/hermes/backend/SpaForwardingControllerTests.java
- M backend/src/test/java/com/hermes/backend/StravaWebhookControllerTests.java
- M frontend/package.json
- M frontend/src/App.jsx
- M frontend/src/components/AdminCourseMapPreview.jsx
- M frontend/src/components/CoachIdentityBadge.jsx
- M frontend/src/components/ui/InfoDisclosure.jsx
- M frontend/src/contexts/AuthContext.jsx
- M frontend/src/i18n/translations.js
- M frontend/src/main.jsx
- M frontend/src/pages/AddShoes.jsx
- M frontend/src/pages/Analysis.jsx
- M frontend/src/pages/AnalysisInsightDetail.jsx
- M frontend/src/pages/Dashboard.jsx
- M frontend/src/pages/Heatmap.jsx
- M frontend/src/pages/PredictionDetail.jsx
- M frontend/src/pages/ProfileDashboard.jsx
- M frontend/src/pages/Rewards.jsx
- M frontend/src/pages/Runs.jsx
- M frontend/src/pages/Schedule.jsx
- M frontend/src/pages/Settings.jsx
- M frontend/src/pages/ShoeCatalog.jsx
- M frontend/src/pages/Shoes.jsx
- M frontend/src/pages/Signup.jsx
- M frontend/src/pages/TodayRun.jsx
- M frontend/src/pages/Vo2MaxDetail.jsx
- M frontend/src/styles/style.css
- M frontend/src/utils/raceDetailMapHost.smoke.test.js
- M frontend/src/utils/todayRun.js
-?? .codex/agents/seo-agent.md
-?? .codex/agents/voltagent-accessibility-tester.toml
-?? .codex/agents/voltagent-ad-security-reviewer.toml
-?? .codex/agents/voltagent-agent-installer.toml
-?? .codex/agents/voltagent-agent-organizer.toml
-?? .codex/agents/voltagent-ai-engineer.toml
-?? .codex/agents/voltagent-angular-architect.toml
-?? .codex/agents/voltagent-api-designer.toml
-?? .codex/agents/voltagent-api-documenter.toml
-?? .codex/agents/voltagent-architect-reviewer.toml
-?? .codex/agents/voltagent-azure-infra-engineer.toml
-?? .codex/agents/voltagent-backend-developer.toml
-?? .codex/agents/voltagent-blockchain-developer.toml
-?? .codex/agents/voltagent-browser-debugger.toml
-?? .codex/agents/voltagent-build-engineer.toml
-?? .codex/agents/voltagent-business-analyst.toml
-?? .codex/agents/voltagent-chaos-engineer.toml
-?? .codex/agents/voltagent-cli-developer.toml
-?? .codex/agents/voltagent-cloud-architect.toml
-?? .codex/agents/voltagent-code-mapper.toml
-?? .codex/agents/voltagent-code-reviewer.toml
-?? .codex/agents/voltagent-competitive-analyst.toml
-?? .codex/agents/voltagent-compliance-auditor.toml
-?? .codex/agents/voltagent-content-marketer.toml
-?? .codex/agents/voltagent-context-manager.toml
-?? .codex/agents/voltagent-cpp-pro.toml
-?? .codex/agents/voltagent-csharp-developer.toml
-?? .codex/agents/voltagent-customer-success-manager.toml
-?? .codex/agents/voltagent-data-analyst.toml
-?? .codex/agents/voltagent-data-engineer.toml
-?? .codex/agents/voltagent-data-researcher.toml
-?? .codex/agents/voltagent-data-scientist.toml
-?? .codex/agents/voltagent-database-administrator.toml
-?? .codex/agents/voltagent-database-optimizer.toml
-?? .codex/agents/voltagent-debugger.toml
-?? .codex/agents/voltagent-dependency-manager.toml
-?? .codex/agents/voltagent-deployment-engineer.toml
-?? .codex/agents/voltagent-devops-engineer.toml
-?? .codex/agents/voltagent-devops-incident-responder.toml
-?? .codex/agents/voltagent-django-developer.toml
-?? .codex/agents/voltagent-docker-expert.toml
-?? .codex/agents/voltagent-docs-researcher.toml
-?? .codex/agents/voltagent-documentation-engineer.toml
-?? .codex/agents/voltagent-dotnet-core-expert.toml
-?? .codex/agents/voltagent-dotnet-framework-4.8-expert.toml
-?? .codex/agents/voltagent-dx-optimizer.toml
-?? .codex/agents/voltagent-electron-pro.toml
-?? .codex/agents/voltagent-elixir-expert.toml
-?? .codex/agents/voltagent-embedded-systems.toml
-?? .codex/agents/voltagent-erlang-expert.toml
-?? .codex/agents/voltagent-error-coordinator.toml
-?? .codex/agents/voltagent-error-detective.toml
-?? .codex/agents/voltagent-fintech-engineer.toml
-?? .codex/agents/voltagent-flutter-expert.toml
-?? .codex/agents/voltagent-frontend-developer.toml
-?? .codex/agents/voltagent-fullstack-developer.toml
-?? .codex/agents/voltagent-game-developer.toml
-?? .codex/agents/voltagent-git-workflow-manager.toml
-?? .codex/agents/voltagent-golang-pro.toml
-?? .codex/agents/voltagent-graphql-architect.toml
-?? .codex/agents/voltagent-incident-responder.toml
-?? .codex/agents/voltagent-iot-engineer.toml
-?? .codex/agents/voltagent-it-ops-orchestrator.toml
-?? .codex/agents/voltagent-java-architect.toml
-?? .codex/agents/voltagent-javascript-pro.toml
-?? .codex/agents/voltagent-knowledge-synthesizer.toml
-?? .codex/agents/voltagent-kotlin-specialist.toml
-?? .codex/agents/voltagent-kubernetes-specialist.toml
-?? .codex/agents/voltagent-laravel-specialist.toml
-?? .codex/agents/voltagent-legacy-modernizer.toml
-?? .codex/agents/voltagent-legal-advisor.toml
-?? .codex/agents/voltagent-llm-architect.toml
-?? .codex/agents/voltagent-m365-admin.toml
-?? .codex/agents/voltagent-machine-learning-engineer.toml
-?? .codex/agents/voltagent-market-researcher.toml
-?? .codex/agents/voltagent-mcp-developer.toml
-?? .codex/agents/voltagent-microservices-architect.toml
-?? .codex/agents/voltagent-ml-engineer.toml
-?? .codex/agents/voltagent-mlops-engineer.toml
-?? .codex/agents/voltagent-mobile-app-developer.toml
-?? .codex/agents/voltagent-mobile-developer.toml
-?? .codex/agents/voltagent-multi-agent-coordinator.toml
-?? .codex/agents/voltagent-network-engineer.toml
-?? .codex/agents/voltagent-nextjs-developer.toml
-?? .codex/agents/voltagent-nlp-engineer.toml
-?? .codex/agents/voltagent-payment-integration.toml
-?? .codex/agents/voltagent-penetration-tester.toml
-?? .codex/agents/voltagent-performance-engineer.toml
-?? .codex/agents/voltagent-performance-monitor.toml
-?? .codex/agents/voltagent-php-pro.toml
-?? .codex/agents/voltagent-platform-engineer.toml
-?? .codex/agents/voltagent-postgres-pro.toml
-?? .codex/agents/voltagent-powershell-5.1-expert.toml
-?? .codex/agents/voltagent-powershell-7-expert.toml
-?? .codex/agents/voltagent-powershell-module-architect.toml
-?? .codex/agents/voltagent-powershell-security-hardening.toml
-?? .codex/agents/voltagent-powershell-ui-architect.toml
-?? .codex/agents/voltagent-product-manager.toml
-?? .codex/agents/voltagent-project-manager.toml
-?? .codex/agents/voltagent-prompt-engineer.toml
-?? .codex/agents/voltagent-python-pro.toml
-?? .codex/agents/voltagent-qa-expert.toml
-?? .codex/agents/voltagent-quant-analyst.toml
-?? .codex/agents/voltagent-rails-expert.toml
-?? .codex/agents/voltagent-react-specialist.toml
-?? .codex/agents/voltagent-refactoring-specialist.toml
-?? .codex/agents/voltagent-research-analyst.toml
-?? .codex/agents/voltagent-reviewer.toml
-?? .codex/agents/voltagent-risk-manager.toml
-?? .codex/agents/voltagent-rust-engineer.toml
-?? .codex/agents/voltagent-sales-engineer.toml
-?? .codex/agents/voltagent-scrum-master.toml
-?? .codex/agents/voltagent-search-specialist.toml
-?? .codex/agents/voltagent-security-auditor.toml
-?? .codex/agents/voltagent-security-engineer.toml
-?? .codex/agents/voltagent-seo-specialist.toml
-?? .codex/agents/voltagent-slack-expert.toml
-?? .codex/agents/voltagent-spring-boot-engineer.toml
-?? .codex/agents/voltagent-sql-pro.toml
-?? .codex/agents/voltagent-sre-engineer.toml
-?? .codex/agents/voltagent-swift-expert.toml
-?? .codex/agents/voltagent-task-distributor.toml
-?? .codex/agents/voltagent-technical-writer.toml
-?? .codex/agents/voltagent-terraform-engineer.toml
-?? .codex/agents/voltagent-terragrunt-expert.toml
-?? .codex/agents/voltagent-test-automator.toml
-?? .codex/agents/voltagent-tooling-engineer.toml
-?? .codex/agents/voltagent-trend-analyst.toml
-?? .codex/agents/voltagent-typescript-pro.toml
-?? .codex/agents/voltagent-ui-designer.toml
-?? .codex/agents/voltagent-ui-fixer.toml
-?? .codex/agents/voltagent-ux-researcher.toml
-?? .codex/agents/voltagent-vue-expert.toml
-?? .codex/agents/voltagent-websocket-engineer.toml
-?? .codex/agents/voltagent-windows-infra-admin.toml
-?? .codex/agents/voltagent-wordpress-master.toml
-?? .codex/agents/voltagent-workflow-orchestrator.toml
-?? .dockerignore
-?? .superpowers/brainstorm/66980-1776550960.8846/content/race-map-stage-option-1.html
-?? .superpowers/brainstorm/66980-1776550960.8846/state/server-stopped
-?? .superpowers/brainstorm/codex-111856-1776359578.62412/content/dashboard-system-options.html
-?? .superpowers/brainstorm/codex-111856-1776359578.62412/state/server-stopped
-?? .superpowers/brainstorm/codex-1776636659/content/layout-options.html
-?? .superpowers/brainstorm/codex-1776636659/state/server-stopped
-?? .superpowers/brainstorm/codex-2028-1776628354.20956/content/users-layout-options.html
-?? .superpowers/brainstorm/codex-2028-1776628354.20956/content/waiting-users-terminal.html
-?? .superpowers/brainstorm/codex-2028-1776628354.20956/state/server-stopped
-?? .superpowers/brainstorm/codex-62124-1776585834/state/server.err
-?? .superpowers/brainstorm/codex-admin-settings/content/admin-settings-surface.html
-?? .superpowers/brainstorm/codex-admin-settings/content/waiting-route-architecture.html
-?? .superpowers/brainstorm/codex-admin-settings/state/server-stopped
-?? .superpowers/brainstorm/codex-audit-redesign/content/audit-terminal-direction.html
-?? .superpowers/brainstorm/codex-audit-redesign/state/server-stopped
-?? .superpowers/brainstorm/dashboard-redesign-20260419-1/content/dashboard-approaches.html
-?? .superpowers/brainstorm/dashboard-redesign-20260419-1/state/server-info
-?? .superpowers/brainstorm/launch-server.ps1
-?? .tools/H2ToPostgresMigrator$MigrationCounts.class
-?? .tools/H2ToPostgresMigrator.class
-?? .tools/auto-hermes-config-history.json
-?? .tools/auto-hermes-config.json
-?? .tools/auto-hermes-docker-gate.mjs
-?? .tools/auto-hermes-health-check.mjs
-?? .tools/auto-hermes-human-loop.json
-?? .tools/auto-hermes-max-loop.mjs
-?? .tools/auto-hermes-rollback.mjs
-?? .tools/auto-hermes-run-state.mjs
-?? .tools/auto-hermes-security.mjs
-?? .tools/auto-hermes-security.test.mjs
-?? .tools/auto-hermes-subagent-catalog.mjs
-?? .tools/auto-hermes-supervisor.mjs
-?? .tools/auto-hermes-tech-debt.mjs
-?? .tools/auto-hermes-tech-debt.test.mjs
-?? .tools/auto-hermes-trace-to-skill.mjs
-?? .tools/auto-hermes-website-audit.mjs
-?? .tools/install-hermes-codex-commands.ps1
-?? .tools/install-voltagent-codex-subagents.mjs
-?? Dockerfile
-?? backend/src/main/java/com/hermes/backend/AdminRouteExtractionController.java
-?? backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java
-?? backend/src/main/java/com/hermes/backend/AffineTransformCoefficientsDTO.java
-?? backend/src/main/java/com/hermes/backend/AffineTransformEstimator.java
-?? backend/src/main/java/com/hermes/backend/GeminiAnchorPixelClient.java
-?? backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java
-?? backend/src/main/java/com/hermes/backend/GeneratedRaceGpxAsset.java
-?? backend/src/main/java/com/hermes/backend/GeneratedRaceGpxAssetRepository.java
-?? backend/src/main/java/com/hermes/backend/GeneratedRaceGpxPersistenceService.java
-?? backend/src/main/java/com/hermes/backend/GeocodedAnchorPointDTO.java
-?? backend/src/main/java/com/hermes/backend/GoogleGeocodingClient.java
-?? backend/src/main/java/com/hermes/backend/GpxExportService.java
-?? backend/src/main/java/com/hermes/backend/LocalConsoleErrorController.java
-?? backend/src/main/java/com/hermes/backend/LocalConsoleErrorReport.java
-?? backend/src/main/java/com/hermes/backend/LocalConsoleErrorService.java
-?? backend/src/main/java/com/hermes/backend/MapTileController.java
-?? backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java
-?? backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java
-?? backend/src/main/java/com/hermes/backend/MarathonRouteMatchAndExportService.java
-?? backend/src/main/java/com/hermes/backend/MarathonRoutePipelineRequest.java
-?? backend/src/main/java/com/hermes/backend/MarathonRoutePipelineService.java
-?? backend/src/main/java/com/hermes/backend/MatchedBreadcrumbPointDTO.java
-?? backend/src/main/java/com/hermes/backend/OsrmMapMatchingClient.java
-?? backend/src/main/java/com/hermes/backend/RawBreadcrumbPointDTO.java
-?? backend/src/main/java/com/hermes/backend/RouteAnchorPixelPointDTO.java
-?? backend/src/main/java/com/hermes/backend/RouteParametersDTO.java
-?? backend/src/main/java/com/hermes/backend/RoutePathExtractionResultDTO.java
-?? backend/src/main/java/com/hermes/backend/RoutePixelPointDTO.java
-?? backend/src/main/java/com/hermes/backend/ShoeMetadataDto.java
-?? backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationController.java
-?? backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationService.java
-?? backend/src/main/java/com/hermes/inventory/ShoeTracker.java
-?? backend/src/main/resources/python/extract_route_path.py
-?? backend/src/main/resources/python/requirements-route-extraction.txt
-?? backend/src/main/resources/python/test_extract_route_path.py
-?? backend/src/main/resources/static/assets/AddShoes-3qPocusu.js
-?? backend/src/main/resources/static/assets/AddShoes-3qPocusu.js.map
-?? backend/src/main/resources/static/assets/AdminLogin-CIk4Bh-8.js
-?? backend/src/main/resources/static/assets/AdminLogin-CIk4Bh-8.js.map
-?? backend/src/main/resources/static/assets/Analysis-BQFKQWp9.js
-?? backend/src/main/resources/static/assets/Analysis-BQFKQWp9.js.map
-?? backend/src/main/resources/static/assets/AnalysisInsightDetail-Csl9nEnJ.js
-?? backend/src/main/resources/static/assets/AnalysisInsightDetail-Csl9nEnJ.js.map
-?? backend/src/main/resources/static/assets/AppIcon-CeWW2du0.js
-?? backend/src/main/resources/static/assets/AppIcon-CeWW2du0.js.map
-?? backend/src/main/resources/static/assets/CoachIdentityBadge-F81sJ70t.js
-?? backend/src/main/resources/static/assets/CoachIdentityBadge-F81sJ70t.js.map
-?? backend/src/main/resources/static/assets/Dashboard-BXvHWFNC.js
-?? backend/src/main/resources/static/assets/Dashboard-BXvHWFNC.js.map
-?? backend/src/main/resources/static/assets/FooterNavLinks-BKiWtGgC.js
-?? backend/src/main/resources/static/assets/FooterNavLinks-BKiWtGgC.js.map
-?? backend/src/main/resources/static/assets/ForgotPassword-D6u0_gHE.js
-?? backend/src/main/resources/static/assets/ForgotPassword-D6u0_gHE.js.map
-?? backend/src/main/resources/static/assets/Heatmap-BRlQaxx6.js
-?? backend/src/main/resources/static/assets/Heatmap-BRlQaxx6.js.map
-?? backend/src/main/resources/static/assets/HermesLogo-FNVf-U8d.js
-?? backend/src/main/resources/static/assets/HermesLogo-FNVf-U8d.js.map
-?? backend/src/main/resources/static/assets/I18nContext-CjL6ddOt.js
-?? backend/src/main/resources/static/assets/I18nContext-CjL6ddOt.js.map
-?? backend/src/main/resources/static/assets/ImportDataGuide-Vn_RY_4J.js
-?? backend/src/main/resources/static/assets/ImportDataGuide-Vn_RY_4J.js.map
-?? backend/src/main/resources/static/assets/InfoDisclosure-DOq8RVab.js
-?? backend/src/main/resources/static/assets/InfoDisclosure-DOq8RVab.js.map
-?? backend/src/main/resources/static/assets/Landing-CgkJu0Oo.js
-?? backend/src/main/resources/static/assets/Landing-CgkJu0Oo.js.map
-?? backend/src/main/resources/static/assets/LegalPage-uFrmRNVF.js
-?? backend/src/main/resources/static/assets/LegalPage-uFrmRNVF.js.map
-?? backend/src/main/resources/static/assets/Login-sMC_6_0b.js
-?? backend/src/main/resources/static/assets/Login-sMC_6_0b.js.map
-?? backend/src/main/resources/static/assets/Modal-CZnfMYCa.js
-?? backend/src/main/resources/static/assets/Modal-CZnfMYCa.js.map
-?? backend/src/main/resources/static/assets/MuscleTraining-Bo1onfRE.js
-?? backend/src/main/resources/static/assets/MuscleTraining-Bo1onfRE.js.map
-?? backend/src/main/resources/static/assets/PredictionDetail-CT6inkFV.js
-?? backend/src/main/resources/static/assets/PredictionDetail-CT6inkFV.js.map
-?? backend/src/main/resources/static/assets/Profile-BMu_ZMWh.js
-?? backend/src/main/resources/static/assets/Profile-BMu_ZMWh.js.map
-?? backend/src/main/resources/static/assets/Races-DT-trOQm.js
-?? backend/src/main/resources/static/assets/Races-DT-trOQm.js.map
-?? backend/src/main/resources/static/assets/RacesDetail-77wswDPY.js
-?? backend/src/main/resources/static/assets/RacesDetail-77wswDPY.js.map
-?? backend/src/main/resources/static/assets/Rewards-lCXul6T0.js
-?? backend/src/main/resources/static/assets/Rewards-lCXul6T0.js.map
-?? backend/src/main/resources/static/assets/RunDetail-CvJz3iHi.js
-?? backend/src/main/resources/static/assets/RunDetail-CvJz3iHi.js.map
-?? backend/src/main/resources/static/assets/Runs-CWlWVeSy.js
-?? backend/src/main/resources/static/assets/Runs-CWlWVeSy.js.map
-?? backend/src/main/resources/static/assets/Schedule-01Zi0Y59.js
-?? backend/src/main/resources/static/assets/Schedule-01Zi0Y59.js.map
-?? backend/src/main/resources/static/assets/Settings-7khoEiZl.js
-?? backend/src/main/resources/static/assets/Settings-7khoEiZl.js.map
-?? backend/src/main/resources/static/assets/ShoeCatalog-CJYeQsdz.js
-?? backend/src/main/resources/static/assets/ShoeCatalog-CJYeQsdz.js.map
-?? backend/src/main/resources/static/assets/Shoes-NRzE22pg.js
-?? backend/src/main/resources/static/assets/Shoes-NRzE22pg.js.map
-?? backend/src/main/resources/static/assets/Signup-BQ5M6age.js
-?? backend/src/main/resources/static/assets/Signup-BQ5M6age.js.map
-?? backend/src/main/resources/static/assets/TodayRun-CFgQF-4x.js
-?? backend/src/main/resources/static/assets/TodayRun-CFgQF-4x.js.map
-?? backend/src/main/resources/static/assets/TopbarNotifications-RJ1qfdWW.js
-?? backend/src/main/resources/static/assets/TopbarNotifications-RJ1qfdWW.js.map
-?? backend/src/main/resources/static/assets/Vo2MaxDetail-TDGJzDbN.js
-?? backend/src/main/resources/static/assets/Vo2MaxDetail-TDGJzDbN.js.map
-?? backend/src/main/resources/static/assets/WeatherEngine-j2XNaFWT.js
-?? backend/src/main/resources/static/assets/WeatherEngine-j2XNaFWT.js.map
-?? backend/src/main/resources/static/assets/WorkflowBuilder-CAj28MaU.js
-?? backend/src/main/resources/static/assets/WorkflowBuilder-CAj28MaU.js.map
-?? backend/src/main/resources/static/assets/analysisInsights-CNHxQtcg.js
-?? backend/src/main/resources/static/assets/analysisInsights-CNHxQtcg.js.map
-?? backend/src/main/resources/static/assets/createLucideIcon-DlM22mVy.js
-?? backend/src/main/resources/static/assets/createLucideIcon-DlM22mVy.js.map
-?? backend/src/main/resources/static/assets/index-BBsEh7Tp.js
-?? backend/src/main/resources/static/assets/index-BBsEh7Tp.js.map
-?? backend/src/main/resources/static/assets/index-BUfby_uJ.css
-?? backend/src/main/resources/static/assets/profileIdentity-D00mVy3A.js
-?? backend/src/main/resources/static/assets/profileIdentity-D00mVy3A.js.map
-?? backend/src/main/resources/static/assets/raceImage-DVaLleOm.js
-?? backend/src/main/resources/static/assets/raceImage-DVaLleOm.js.map
-?? backend/src/main/resources/static/assets/removeBackground-CA3ZXXkN.js
-?? backend/src/main/resources/static/assets/removeBackground-CA3ZXXkN.js.map
-?? backend/src/main/resources/static/assets/runnerShellNav-CVMvXVYa.js
-?? backend/src/main/resources/static/assets/runnerShellNav-CVMvXVYa.js.map
-?? backend/src/main/resources/static/assets/shoeRotation-BHP2CGr4.js
-?? backend/src/main/resources/static/assets/shoeRotation-BHP2CGr4.js.map
-?? backend/src/main/resources/static/assets/stravaLinking-CHPS9KL1.js
-?? backend/src/main/resources/static/assets/stravaLinking-CHPS9KL1.js.map
-?? backend/src/main/resources/static/assets/todayRun-DrkWvnu4.js
-?? backend/src/main/resources/static/assets/todayRun-DrkWvnu4.js.map
-?? backend/src/main/resources/static/assets/todayRunAcwrInsight-B1wsHZAJ.js
-?? backend/src/main/resources/static/assets/todayRunAcwrInsight-B1wsHZAJ.js.map
-?? backend/src/main/resources/static/assets/vdot-DJaVbfkA.js
-?? backend/src/main/resources/static/assets/vdot-DJaVbfkA.js.map
-?? backend/src/test/java/com/hermes/backend/AdminRouteExtractionControllerTests.java
-?? backend/src/test/java/com/hermes/backend/AffineTransformEstimatorTests.java
-?? backend/src/test/java/com/hermes/backend/BackendStressTests.java
-?? backend/src/test/java/com/hermes/backend/GeminiAnchorPixelClientTests.java
-?? backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java
-?? backend/src/test/java/com/hermes/backend/GeneratedRaceGpxPersistenceServiceTests.java
-?? backend/src/test/java/com/hermes/backend/GoogleGeocodingClientTests.java
-?? backend/src/test/java/com/hermes/backend/GpxExportServiceTests.java
-?? backend/src/test/java/com/hermes/backend/LocalConsoleErrorControllerTests.java
-?? backend/src/test/java/com/hermes/backend/LocalConsoleErrorServiceTests.java
-?? backend/src/test/java/com/hermes/backend/MapTileControllerTests.java
-?? backend/src/test/java/com/hermes/backend/MarathonRouteExtractionServiceTests.java
-?? backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java
-?? backend/src/test/java/com/hermes/backend/MarathonRouteMatchAndExportServiceTests.java
-?? backend/src/test/java/com/hermes/backend/MarathonRoutePipelineServiceTests.java
-?? backend/src/test/java/com/hermes/backend/OsrmMapMatchingClientTests.java
-?? backend/src/test/java/com/hermes/backend/ShoeQueryNormalizationControllerTests.java
-?? backend/src/test/java/com/hermes/backend/ShoeQueryNormalizationServiceTests.java
-?? docs/auto-hermes/daily-operator-guide.md
-?? docs/auto-hermes/index.md
-?? docs/repo-rules/design-and-ui.md
-?? docs/repo-rules/git-and-publish.md
-?? docs/repo-rules/index.md
-?? docs/repo-rules/runtime-and-workflow.md
-?? docs/repo-rules/stack-and-commands.md
-?? docs/repo-rules/truth-and-memory.md
-?? docs/superpowers/plans/2026-04-16-self-evolving-auto-hermes.md
-?? docs/superpowers/plans/2026-04-16-visual-agent-orchestration-phase1.md
-?? docs/superpowers/plans/2026-04-17-auto-hermes-voltagent-subagents.md
-?? docs/superpowers/plans/2026-04-17-marathon-route-extraction-phase1.md
-?? docs/superpowers/plans/2026-04-18-auto-hermes-trace-to-skill.md
-?? docs/superpowers/plans/2026-04-18-hermes-continuous-website-audit-loop.md
-?? docs/superpowers/plans/2026-04-19-auto-hermes-tech-debt.md
-?? docs/superpowers/plans/2026-04-19-races-detail-map-stage.md
-?? docs/superpowers/plans/2026-04-20-add-shoes-kinetic-editorial.md
-?? docs/superpowers/plans/2026-04-20-race-course-map-alignment-accuracy.md
-?? docs/superpowers/specs/2026-04-16-self-evolving-auto-hermes-design.md
-?? docs/superpowers/specs/2026-04-17-auto-hermes-voltagent-subagents-design.md
-?? docs/superpowers/specs/2026-04-18-auto-hermes-market-seo-agent-design.md
-?? docs/superpowers/specs/2026-04-18-auto-hermes-security-design.md
-?? docs/superpowers/specs/2026-04-18-auto-hermes-trace-to-skill-design.md
-?? docs/superpowers/specs/2026-04-19-auto-hermes-tech-debt-design.md
-?? docs/superpowers/specs/2026-04-19-dashboard-users-command-center-design.md
-?? docs/superpowers/specs/2026-04-19-races-detail-map-stage-design.md
-?? docs/superpowers/specs/2026-04-20-add-shoes-kinetic-editorial-design.md
-?? frontend/src/components/ShoeRecommendation.jsx
-?? frontend/src/pages/addShoesKineticEditorial.smoke.test.js
-?? frontend/src/pages/analysisVdotTrendAccent.smoke.test.js
-?? frontend/src/pages/dashboardAdminLightMode.smoke.test.js
-?? frontend/src/pages/dashboardAuditTerminal.smoke.test.js
-?? frontend/src/pages/dashboardCourseHubRedesign.smoke.test.js
-?? frontend/src/pages/dashboardCourseMapPreview.smoke.test.js
-?? frontend/src/pages/dashboardCourseMapRailLeaflet.smoke.test.js
-?? frontend/src/pages/dashboardCourseMapTrackHubRefactor.smoke.test.js
-?? frontend/src/pages/dashboardCourseMapWorkbench.smoke.test.js
-?? frontend/src/pages/dashboardCourseMapWorkspace.smoke.test.js
-?? frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js
-?? frontend/src/pages/dashboardKineticShell.smoke.test.js
-?? frontend/src/pages/dashboardRouteSections.smoke.test.js
-?? frontend/src/pages/dashboardTranslations.smoke.test.js
-?? frontend/src/pages/dashboardUsersCommandCenter.smoke.test.js
-?? frontend/src/pages/heatmapStability.smoke.test.js
-?? frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
-?? frontend/src/utils/coachVoice.js
-?? frontend/src/utils/dashboardTopbarNav.js
-?? frontend/src/utils/dashboardTopbarNav.test.js
-?? frontend/src/utils/localConsoleErrorTracker.js
-?? frontend/src/utils/localConsoleErrorTracker.test.js
-?? frontend/src/utils/raceDetailMapCityFallback.smoke.test.js
-?? frontend/src/utils/raceDetailMapFallback.smoke.test.js
-?? frontend/src/utils/raceDetailMapImageFallback.smoke.test.js
-?? frontend/src/utils/raceDetailMapLayering.smoke.test.js
-?? frontend/src/utils/raceDetailMapLifecycle.smoke.test.js
-?? frontend/src/utils/raceDetailMapPerformance.smoke.test.js
-?? frontend/src/utils/raceDetailMapTrust.js
-?? frontend/src/utils/raceDetailMapTrust.test.js
-?? frontend/src/utils/raceDetailMapVisualBaseline.smoke.test.js
-?? frontend/src/utils/runnerShellNav.js
-?? frontend/src/utils/scheduleCoachSummary.js
-?? frontend/src/utils/scheduleCoachSummary.test.js
-?? frontend/src/utils/scheduleRemoteAssetPolicy.smoke.test.js
-?? frontend/src/utils/staleAssetRecovery.js
-?? frontend/src/utils/staleAssetRecovery.test.js
-?? frontend/src/utils/stravaAutoSync.js
-?? frontend/src/utils/stravaAutoSync.test.js
-?? frontend/src/utils/todayRunAcwrInsight.js
-?? frontend/src/utils/todayRunAcwrInsight.test.js
-?? frontend/src/utils/todayRunAcwrNarrative.smoke.test.js
-?? shoe-image-service/README.md
-?? shoe-image-service/app/__init__.py
-?? shoe-image-service/app/main.py
-?? shoe-image-service/app/models.py
-?? shoe-image-service/app/providers.py
-?? shoe-image-service/app/service.py
-?? shoe-image-service/pyproject.toml
-?? shoe-image-service/tests/test_providers.py
+M  .ai-sync/AGENT_SYNC.md
+ M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
+ M .ai-sync/AUTO_HERMES_DOCKER_GATE.md
+M  .ai-sync/CONTEXT_LEDGER.md
+ M .codex/config.toml
+M  .tools/audit-marathon-coursemaps.mjs
+M  .tools/auto-commit.ps1
+M  backend/pom.xml
+M  backend/src/main/java/com/hermes/backend/AdminRacePortalController.java
+A  backend/src/main/java/com/hermes/backend/AthensMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/BostonMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/BusanMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/ChicagoMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/ChongqingMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/CopenhagenMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/DalianMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/DohaMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/DubaiMarathonKnownCourse.java
+M  backend/src/main/java/com/hermes/backend/GoogleGeocodingClient.java
+A  backend/src/main/java/com/hermes/backend/HelsinkiMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/IstanbulMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/JakartaMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/JerusalemMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/KualaLumpurMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/LisbonMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/LondonMarathonKnownCourse.java
+M  backend/src/main/java/com/hermes/backend/LosAngelesMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/ManchesterMarathonKnownCourse.java
+M  backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java
+M  backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java
+A  backend/src/main/java/com/hermes/backend/MarineCorpsMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/MarrakechMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/MexicoCityMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/MilanMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/MumbaiMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/MunichMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/NairobiCityMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/NiceCannesMarathonKnownCourse.java
+M  backend/src/main/java/com/hermes/backend/NycMarathonOfficialCourse.java
+M  backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java
+M  backend/src/main/java/com/hermes/backend/OsakaMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/ParisMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/PortoMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/PragueMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/QingdaoMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/QueenstownMarathonKnownCourse.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapGeometryService.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapSearchService.java
+M  backend/src/main/java/com/hermes/backend/RaceCourseMapService.java
+A  backend/src/main/java/com/hermes/backend/RomeMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/StandardCharteredNairobiMarathonKnownCourse.java
+A  backend/src/main/java/com/hermes/backend/SupplementalMarathonKnownCourses.java
+M  backend/src/main/java/com/hermes/backend/TerritoryService.java
+M  backend/src/main/java/com/hermes/backend/TokyoMarathonOfficialCourse.java
+A  backend/src/main/java/com/hermes/backend/WuxiMarathonOfficialCourse.java
+M  backend/src/main/resources/application.properties
+M  backend/src/main/resources/python/extract_route_path.py
+M  backend/src/main/resources/python/test_extract_route_path.py
+M  backend/src/test/java/com/hermes/backend/AdminRacePortalControllerTests.java
+A  backend/src/test/java/com/hermes/backend/BostonMarathonOfficialCourseTests.java
+A  backend/src/test/java/com/hermes/backend/BusanMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/ChicagoMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/ChongqingMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/CopenhagenMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/DalianMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/DohaMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/DubaiMarathonKnownCourseTests.java
+M  backend/src/test/java/com/hermes/backend/GoogleGeocodingClientTests.java
+A  backend/src/test/java/com/hermes/backend/HelsinkiMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/IstanbulMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/JakartaMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/JerusalemMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/KualaLumpurMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/LisbonMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/LondonMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/ManchesterMarathonKnownCourseTests.java
+M  backend/src/test/java/com/hermes/backend/MarathonRouteExtractionServiceTests.java
+M  backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java
+A  backend/src/test/java/com/hermes/backend/MarineCorpsMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/MarrakechMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/MexicoCityMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/MilanMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/MumbaiMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/MunichMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/NairobiCityMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/NiceCannesMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java
+A  backend/src/test/java/com/hermes/backend/ParisMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/PortoMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/PragueMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/QingdaoMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/QueenstownMarathonKnownCourseTests.java
+M  backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java
+A  backend/src/test/java/com/hermes/backend/RaceCourseMapImageServiceTests.java
+M  backend/src/test/java/com/hermes/backend/RaceCourseMapManualAssetTests.java
+M  backend/src/test/java/com/hermes/backend/RaceCourseMapSearchServiceTests.java
+M  backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java
+A  backend/src/test/java/com/hermes/backend/RomeMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/StandardCharteredNairobiMarathonKnownCourseTests.java
+A  backend/src/test/java/com/hermes/backend/SupplementalMarathonKnownCoursesTests.java
+M  backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java
+A  backend/src/test/java/com/hermes/backend/TokyoMarathonOfficialCourseTests.java
+A  backend/src/test/java/com/hermes/backend/WuxiMarathonOfficialCourseTests.java
+M  frontend/src/data/worldRaceCatalog.json
+M  frontend/src/i18n/locales/en/pages.js
+M  frontend/src/i18n/locales/zh-CN/pages.js
+M  frontend/src/pages/RacesDetail.jsx
+M  frontend/src/pages/Territory.jsx
+M  frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
+M  frontend/src/pages/raceDetailElevationPerKm.smoke.test.js
+M  frontend/src/pages/territoryBackendWiring.smoke.test.js
+M  frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js
+?? .tools/InspectPdfPages.class
+?? .tools/InspectPdfPages.java
+?? backend_err.txt
 ```
 
 ## Output
-```text
-ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
-Command failed: C:\Program Files\Docker\Docker\resources\bin\docker.exe build -f C:\Users\Junwei\Downloads\Hermes\Dockerfile -t hermes-autohermes-gate:local .
-ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
-```
+
+none
+

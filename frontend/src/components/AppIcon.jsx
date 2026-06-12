@@ -219,6 +219,34 @@ export default function AppIcon({ name, className = '', title }) {
           <circle cx="12" cy="11" r="2" />
         </>
       );
+    case 'territory':
+      return titled(
+        <>
+          <path d="M4.5 7.5 9 5l6 2.5 4.5-2.2v11.2L15 19l-6-2.5-4.5 2.2Z" />
+          <path d="M9 5v11.5" />
+          <path d="M15 7.5V19" />
+        </>
+      );
+    case 'account_tree':
+      return titled(
+        <>
+          <rect x="4" y="4" width="6" height="5" rx="1.4" />
+          <rect x="14" y="15" width="6" height="5" rx="1.4" />
+          <rect x="4" y="15" width="6" height="5" rx="1.4" />
+          <path d="M7 9v3.2a2 2 0 0 0 2 2h6" />
+          <path d="M7 15v-2.8" />
+        </>
+      );
+    case 'fitness_center':
+      return titled(
+        <>
+          <path d="M6 8v8" />
+          <path d="M18 8v8" />
+          <path d="M3.5 10v4" />
+          <path d="M20.5 10v4" />
+          <path d="M6 12h12" />
+        </>
+      );
     case 'sprint':
       return titled(
         <>
@@ -408,6 +436,12 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M15.7 10.2c1 1.2 1.5 2.6 1.5 4.5 0 1.7-1 2.8-2.5 2.8-1.8 0-2.8-1.1-2.8-3.2 0-2 1-3.3 2.2-4.4" />
         </>
       );
+    case 'check':
+      return titled(
+        <>
+          <path d="M5 13l4 4L19 7" />
+        </>
+      );
     case 'close':
       return titled(
         <>
@@ -430,6 +464,18 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m12.5 7.5 4 4" />
         </>
       );
+    case 'sleep':
+      return titled(
+        <>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+        </>
+      );
+    case 'stress':
+      return titled(
+        <>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+        </>
+      );
     case 'arrow_back':
       return titled(
         <>
@@ -437,12 +483,336 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m11 18-6-6 6-6" />
         </>
       );
-    default:
+    case 'play_arrow':
+      return titled(
+        <>
+          <path d="M8 5.14v13.72a.5.5 0 0 0 .76.43l10.83-6.86a.5.5 0 0 0 0-.86L8.76 4.71A.5.5 0 0 0 8 5.14Z" />
+        </>
+      );
+    case 'schedule':
+      return titled(
+        <>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3.5 2" />
+        </>
+      );
+    case 'self_improvement':
+      return titled(
+        <>
+          <circle cx="12" cy="5" r="2" />
+          <path d="M12 7v5" />
+          <path d="M5 19c2-4 5-5 7-5s5 1 7 5" />
+          <path d="M8 12l-2 4" />
+          <path d="M16 12l2 4" />
+        </>
+      );
+    case 'sports_gymnastics':
+      return titled(
+        <>
+          <circle cx="12" cy="4.5" r="2" />
+          <path d="M12 6.5v6" />
+          <path d="M6 9l6-2 6 2" />
+          <path d="M9 19l3-6 3 6" />
+        </>
+      );
+    case 'chest':
+      return titled(
+        <>
+          <path d="M5 8c0-1.5 1.5-3 3-3h8c1.5 0 3 1.5 3 3v6c0 2-1 4-3 4h-2l-2-3-2 3h-2c-2 0-3-2-3-4V8Z" />
+          <path d="M12 10v6" />
+        </>
+      );
+    case 'shoulders':
+      return titled(
+        <>
+          <circle cx="12" cy="5.5" r="2" />
+          <path d="M3 12c2-4 5-5 9-5s7 1 9 5" />
+          <path d="M6 12c2-2 4-3 6-3s4 1 6 3" />
+        </>
+      );
+    case 'legs':
+      return titled(
+        <>
+          <path d="M9 4h6" />
+          <path d="M9.5 4l-1.5 8l-0.5 8" />
+          <path d="M14.5 4l1.5 8l0.5 8" />
+          <circle cx="7.5" cy="20" r="1" />
+          <circle cx="16.5" cy="20" r="1" />
+        </>
+      );
+    case 'core':
+      return titled(
+        <>
+          <rect x="7.5" y="4" width="9" height="16" rx="2.5" />
+          <path d="M7.5 9h9" />
+          <path d="M7.5 14h9" />
+          <path d="M12 4v16" />
+        </>
+      );
+    case 'arms':
+      return titled(
+        <>
+          <path d="M6 18c-1-3 0-7 3-8c2-1 4 0 5 1c2 2 1 5 0 6" />
+          <path d="M14 11c1 1 2 3 1 5" />
+          <circle cx="9" cy="6" r="2" />
+        </>
+      );
+    case 'back':
+      return titled(
+        <>
+          <circle cx="12" cy="5.5" r="2" />
+          <path d="M9 9c-3 1-5 3-5 6c0 2 1 3 3 3h10c2 0 3-1 3-3c0-3-2-5-5-6" />
+          <path d="M12 9v8" />
+        </>
+      );
+    case 'architecture':
+      return titled(
+        <>
+          <path d="m12 4 8 14H4Z" />
+          <path d="M9 12h6" />
+          <path d="M12 4v14" />
+        </>
+      );
+    case 'boot':
+    case 'shoe':
+      return titled(
+        <>
+          <path d="M4 18h14a2 2 0 0 0 2-2v-2c0-1.4-1.1-2-2.5-2.3l-3.5-.7-1.5-3.5a1 1 0 0 0-1-.5H6a2 2 0 0 0-2 2Z" />
+          <path d="M6 11h4" />
+          <path d="M11.5 11l1 1.8" />
+        </>
+      );
+    case 'chat_bubble_outline':
+      return titled(
+        <>
+          <path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17H9l-4 3.5V6.5A1.5 1.5 0 0 1 6.5 5Z" />
+        </>
+      );
+    case 'coach_voice':
+      return titled(
+        <>
+          <rect x="9.5" y="3" width="5" height="11" rx="2.5" />
+          <path d="M6 11a6 6 0 0 0 12 0" />
+          <path d="M12 17v3.5" />
+          <path d="M9 21h6" />
+        </>
+      );
+    case 'delete_sweep':
+      return titled(
+        <>
+          <path d="M5 8h10v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z" />
+          <path d="M3.5 6h13" />
+          <path d="M8 5h4" />
+          <path d="M18 4h3" />
+          <path d="M18 8h3" />
+          <path d="M18 12h3" />
+        </>
+      );
+    case 'favorite':
+      return titled(
+        <>
+          <path d="M12 20s-7-4.4-7-10A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 7 3c0 5.6-7 10-7 10Z" />
+        </>
+      );
+    case 'flame':
+      return titled(
+        <>
+          <path d="M12 3c1.5 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1 .4-2 1-2.8C8.5 9.5 9 6.5 12 3Z" />
+          <path d="M11 14a2 2 0 0 0 2 2" />
+        </>
+      );
+    case 'globe':
       return titled(
         <>
           <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 8.5v4.5" />
-          <path d="M12 16.5h.01" />
+          <path d="M3.5 12h17" />
+          <path d="M12 3.5c2.5 3 2.5 14 0 17" />
+          <path d="M12 3.5c-2.5 3-2.5 14 0 17" />
+        </>
+      );
+    case 'groups':
+      return titled(
+        <>
+          <circle cx="9" cy="9" r="2.6" />
+          <circle cx="17" cy="9.5" r="2" />
+          <path d="M3.5 18a5.5 5.5 0 0 1 11 0" />
+          <path d="M14.5 18a3.5 3.5 0 0 1 6 0" />
+        </>
+      );
+    case 'image_search':
+      return titled(
+        <>
+          <rect x="3.5" y="3.5" width="13" height="11" rx="1.6" />
+          <path d="m6 13.5 3-3 3 2 2-1.5" />
+          <circle cx="7.5" cy="7" r="1" />
+          <circle cx="17" cy="17" r="3" />
+          <path d="m19.5 19.5 1.5 1.5" />
+        </>
+      );
+    case 'low_priority':
+      return titled(
+        <>
+          <path d="M3.5 5h11" />
+          <path d="M3.5 9h7" />
+          <path d="M3.5 13h7" />
+          <path d="M14 15v5" />
+          <path d="m11.5 17.5 2.5 2.5 2.5-2.5" />
+        </>
+      );
+    case 'monitor_heart':
+      return titled(
+        <>
+          <rect x="3" y="5" width="18" height="11" rx="2" />
+          <path d="M6 11h2.5l1.5-2 2.5 4 1.5-2H18" />
+          <path d="M8 20h8" />
+          <path d="M12 16v4" />
+        </>
+      );
+    case 'moon':
+      return titled(
+        <>
+          <path d="M14.5 4.5a7 7 0 1 0 5 12.5 8 8 0 1 1-5-12.5Z" />
+        </>
+      );
+    case 'newsmode':
+      return titled(
+        <>
+          <rect x="3.5" y="5" width="14" height="14" rx="1.5" />
+          <path d="M17.5 9H20v8.5a1.5 1.5 0 0 1-1.5 1.5h-1" />
+          <path d="M6.5 8.5h8" />
+          <path d="M6.5 12h8" />
+          <path d="M6.5 15.5h5" />
+        </>
+      );
+    case 'palette':
+      return titled(
+        <>
+          <path d="M12 3.5a8.5 8.5 0 1 0 0 17 1.5 1.5 0 0 0 1.4-2c-.4-1.1.4-2 1.6-2H17a3.5 3.5 0 0 0 3.5-3.5A8.5 8.5 0 0 0 12 3.5Z" />
+          <circle cx="7.5" cy="11" r="1" />
+          <circle cx="11" cy="7" r="1" />
+          <circle cx="15" cy="7.5" r="1" />
+          <circle cx="17" cy="11.5" r="1" />
+        </>
+      );
+    case 'psychology':
+      return titled(
+        <>
+          <path d="M15 4a5 5 0 0 0-5 5v1.2A3 3 0 0 0 11.5 16H13v2.5h4V14h1a2 2 0 0 0 2-2c0-.7-.4-1.3-1-1.7A5 5 0 0 0 15 4Z" />
+          <path d="M13 8.5a2 2 0 0 0 0 4" />
+        </>
+      );
+    case 'radio_button_unchecked':
+      return titled(
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+        </>
+      );
+    case 'refresh':
+      return titled(
+        <>
+          <path d="M4.5 12a7.5 7.5 0 0 1 13-5.1" />
+          <path d="M19.5 12a7.5 7.5 0 0 1-13 5.1" />
+          <path d="M17.5 3v4h-4" />
+          <path d="M6.5 21v-4h4" />
+        </>
+      );
+    case 'sunrise':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="M7 14a5 5 0 0 1 10 0" />
+          <path d="M12 4v3" />
+          <path d="m4.5 9 2 2" />
+          <path d="m19.5 9-2 2" />
+          <path d="M3.5 18h17" />
+        </>
+      );
+    case 'sync':
+      return titled(
+        <>
+          <path d="M4.5 12a7.5 7.5 0 0 1 12.6-5.5" />
+          <path d="M19.5 12a7.5 7.5 0 0 1-12.6 5.5" />
+          <path d="M17 3v4h-4" />
+          <path d="M7 21v-4h4" />
+        </>
+      );
+    case 'translate':
+      return titled(
+        <>
+          <path d="M4 6h9" />
+          <path d="M8.5 4v2" />
+          <path d="M11 14c-2.5-1.5-4.5-4-5.5-8" />
+          <path d="M4 14c2-5 5-8 9-8" />
+          <path d="M12.5 20.5 16 12l3.5 8.5" />
+          <path d="M13.5 18h5" />
+        </>
+      );
+    case 'trending_up':
+      return titled(
+        <>
+          <path d="M4 17 10 11l3 3 7-8" />
+          <path d="M14 6h6v6" />
+        </>
+      );
+    case 'trending_down':
+      return titled(
+        <>
+          <path d="M4 7 10 13l3-3 7 8" />
+          <path d="M14 18h6v-6" />
+        </>
+      );
+    case 'trophy':
+      return titled(
+        <>
+          <path d="M8 4h8v3a4 4 0 0 1-8 0Z" />
+          <path d="M9 18h6" />
+          <path d="M12 11v7" />
+          <path d="M16 5h2a2 2 0 0 1 0 4h-2" />
+          <path d="M8 5H6a2 2 0 0 0 0 4h2" />
+          <path d="M9 20h6" />
+        </>
+      );
+    case 'vdot':
+      return titled(
+        <>
+          <path d="M4 14a8 8 0 0 1 16 0" />
+          <path d="m12 14 4-4" />
+          <circle cx="12" cy="14" r="1.2" />
+          <path d="M6 18h12" />
+        </>
+      );
+    case 'warning':
+      return titled(
+        <>
+          <path d="M12 4 21 20H3Z" />
+          <path d="M12 10v4.5" />
+          <path d="M12 17.5h.01" />
+        </>
+      );
+    case 'weekend':
+      return titled(
+        <>
+          <path d="M4 12a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v-2H7v2H6a2 2 0 0 1-2-2Z" />
+          <path d="M7 12V8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4" />
+        </>
+      );
+    case 'zones':
+      return titled(
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="5.5" />
+          <circle cx="12" cy="12" r="2.5" />
+        </>
+      );
+    default:
+      // Neutral filler — a simple bullet circle rather than a "?" alarm. A
+      // missing icon shouldn't shout at the runner; it just leaves a calm
+      // placeholder visible to operators in dev. The drift smoke test
+      // (runsAppIconCoverage.smoke.test.js) prevents new missing names
+      // from shipping silently.
+      return titled(
+        <>
+          <circle cx="12" cy="12" r="3" />
         </>
       );
   }

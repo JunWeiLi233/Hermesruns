@@ -44,6 +44,13 @@ public class Runner {
 
     private String displayName;
 
+    @Column(length = 280)
+    private String settingsMantra;
+
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean weeklyDigestEnabled = false;
+
     /** Optional profile override for coach HR zone math (bpm). */
     private Integer maxHeartRateBpm;
 
@@ -75,6 +82,18 @@ public class Runner {
     private boolean garminWellnessSyncEnabled = false;
 
     private LocalDateTime garminWellnessLastSyncedAt;
+
+    @Column(length = 32)
+    private String wellnessSleepSource;
+
+    @Column(length = 32)
+    private String wellnessHrvSource;
+
+    @Column(length = 32)
+    private String wellnessRestingHrSource;
+
+    @Column(length = 32)
+    private String wellnessStressSource;
 
     private LocalDateTime createdAt;
 
@@ -158,6 +177,22 @@ public class Runner {
         this.displayName = displayName;
     }
 
+    public String getSettingsMantra() {
+        return settingsMantra;
+    }
+
+    public void setSettingsMantra(String settingsMantra) {
+        this.settingsMantra = settingsMantra;
+    }
+
+    public boolean isWeeklyDigestEnabled() {
+        return weeklyDigestEnabled;
+    }
+
+    public void setWeeklyDigestEnabled(boolean weeklyDigestEnabled) {
+        this.weeklyDigestEnabled = weeklyDigestEnabled;
+    }
+
     public Integer getMaxHeartRateBpm() {
         return maxHeartRateBpm;
     }
@@ -229,6 +264,18 @@ public class Runner {
     public LocalDateTime getGarminWellnessLastSyncedAt() { return garminWellnessLastSyncedAt; }
     public void setGarminWellnessLastSyncedAt(LocalDateTime garminWellnessLastSyncedAt) { this.garminWellnessLastSyncedAt = garminWellnessLastSyncedAt; }
 
+    public String getWellnessSleepSource() { return wellnessSleepSource; }
+    public void setWellnessSleepSource(String wellnessSleepSource) { this.wellnessSleepSource = wellnessSleepSource; }
+
+    public String getWellnessHrvSource() { return wellnessHrvSource; }
+    public void setWellnessHrvSource(String wellnessHrvSource) { this.wellnessHrvSource = wellnessHrvSource; }
+
+    public String getWellnessRestingHrSource() { return wellnessRestingHrSource; }
+    public void setWellnessRestingHrSource(String wellnessRestingHrSource) { this.wellnessRestingHrSource = wellnessRestingHrSource; }
+
+    public String getWellnessStressSource() { return wellnessStressSource; }
+    public void setWellnessStressSource(String wellnessStressSource) { this.wellnessStressSource = wellnessStressSource; }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -274,6 +321,13 @@ public class Runner {
     private int aiDailyScansUsed = 0;
 
     private LocalDate aiDailyResetDate;
+
+    /** Monthly shoe-scan counter for feature quota gating (free users). Reset on the 1st of each month. */
+    @Column(nullable = false)
+    @ColumnDefault("0")
+    private int shoeScanCount = 0;
+
+    private LocalDate shoeScanCountReset;
 
     /** False until the user completes email verification (password sign-up only). OAuth users are verified by the provider. */
     @Column(nullable = false)
@@ -332,6 +386,12 @@ public class Runner {
 
     public LocalDate getAiDailyResetDate() { return aiDailyResetDate; }
     public void setAiDailyResetDate(LocalDate aiDailyResetDate) { this.aiDailyResetDate = aiDailyResetDate; }
+
+    public int getShoeScanCount() { return shoeScanCount; }
+    public void setShoeScanCount(int shoeScanCount) { this.shoeScanCount = shoeScanCount; }
+
+    public LocalDate getShoeScanCountReset() { return shoeScanCountReset; }
+    public void setShoeScanCountReset(LocalDate shoeScanCountReset) { this.shoeScanCountReset = shoeScanCountReset; }
 
     public boolean isEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }

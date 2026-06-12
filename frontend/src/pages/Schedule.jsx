@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
-import { apiJson } from '../api';
+import { apiJson, apiFetch } from '../api';
+import 'leaflet/dist/leaflet.css';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import { formatDistance } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildScheduleTargetBlockModel } from '../utils/scheduleMarathonBlock';
@@ -15,6 +17,7 @@ import { getTodayRunRecommendation } from '../utils/todayRun';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildWeeklyCoachSummaryModel } from '../utils/scheduleCoachSummary';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
 
 function resolveRunDistanceKm(run) {
@@ -48,11 +51,15 @@ function formatScheduleTargetDate(dateValue, lang) {
   if (!dateValue) return null;
   const date = new Date(`${dateValue}T00:00:00`);
   if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+  return date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
     month: 'short',
     day: 'numeric',
-  }).format(date);
+  });
 }
+
+
+
+
 
 function getScheduleCountdownLabel(countdownDays, s) {
   if (!Number.isFinite(countdownDays)) return null;
@@ -221,46 +228,120 @@ function pickCurrentGear(shoes) {
     || null;
 }
 
-function getRouteZoneLabel(zoneKey, lang) {
-  const labels = lang === 'zh-CN'
-    ? {
-      core: '核心路线',
-      north: '北向路线',
-      south: '南向路线',
-      east: '东向路线',
-      west: '西向路线',
-      'north-east': '东北路线',
-      'north-west': '西北路线',
-      'south-east': '东南路线',
-      'south-west': '西南路线',
-    }
-    : {
-      core: 'Core route',
-      north: 'North route',
-      south: 'South route',
-      east: 'East route',
-      west: 'West route',
-      'north-east': 'Northeast route',
-      'north-west': 'Northwest route',
-      'south-east': 'Southeast route',
-      'south-west': 'Southwest route',
-    };
-
-  return labels[zoneKey] || labels.core;
-}
-
-function getRouteAnchoredRunsLabel(routeRecommendation, lang) {
-  if (!routeRecommendation) {
-    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
+function normalizeRouteWaypoint(point) {
+  if (Array.isArray(point) && point.length >= 2) {
+    const lat = Number(point[0]);
+    const lng = Number(point[1]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
   }
-  return lang === 'zh-CN'
-    ? `在这片区域跑过 ${routeRecommendation.activityCount} 次`
-    : `${routeRecommendation.activityCount} runs anchored here`;
+  const lat = Number(point?.lat ?? point?.latitude);
+  const lng = Number(point?.lng ?? point?.lon ?? point?.longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-function getRouteConfidenceLabel(routeRecommendation, lang, unit) {
+function buildPlannedRoutePreview(waypoints) {
+  const points = (Array.isArray(waypoints) ? waypoints : [])
+    .map(normalizeRouteWaypoint)
+    .filter(Boolean);
+  if (points.length < 2) return null;
+
+  const minLat = Math.min(...points.map((point) => point.lat));
+  const maxLat = Math.max(...points.map((point) => point.lat));
+  const minLng = Math.min(...points.map((point) => point.lng));
+  const maxLng = Math.max(...points.map((point) => point.lng));
+  const latSpan = Math.max(0.00012, maxLat - minLat);
+  const lngSpan = Math.max(0.00012, maxLng - minLng);
+  const padding = 10;
+  const scale = 100 - padding * 2;
+  const projected = points.map((point) => ({
+    x: padding + ((point.lng - minLng) / lngSpan) * scale,
+    y: padding + ((maxLat - point.lat) / latSpan) * scale,
+  }));
+  const path = projected
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ');
+  const start = projected[0];
+  const finish = projected[projected.length - 1];
+  return {
+    path,
+    startX: start.x,
+    startY: start.y,
+    finishX: finish.x,
+    finishY: finish.y,
+  };
+}
+
+function extractRouteWaypoints(route) {
+  const rawWaypoints = route?.waypoints;
+  const points = (Array.isArray(rawWaypoints) ? rawWaypoints : [])
+    .map(normalizeRouteWaypoint)
+    .filter(Boolean);
+  return points.length >= 2 ? points : null;
+}
+
+function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
+  const candidates = (Array.isArray(plannedRoutes) ? plannedRoutes : [])
+    .map((route) => {
+      const actualDistanceKm = Number(route?.actualDistanceKm || 0);
+      const routeTargetDistanceKm = Number(route?.targetDistanceKm || actualDistanceKm || 0);
+      const waypoints = extractRouteWaypoints(route);
+      const preview = waypoints ? buildPlannedRoutePreview(route?.waypoints) : null;
+      if (!waypoints || actualDistanceKm <= 0) return null;
+      const desiredDistanceKm = Number(targetDistanceKm || routeTargetDistanceKm || actualDistanceKm);
+      const distanceGapKm = Math.abs(actualDistanceKm - desiredDistanceKm);
+      const distanceAccuracy = Number(route?.distanceAccuracy || (desiredDistanceKm > 0 ? actualDistanceKm / desiredDistanceKm : 1));
+      const createdAt = new Date(route?.createdAt || 0).getTime();
+      return {
+        zoneKey: 'core',
+        confidence: distanceGapKm <= Math.max(1, desiredDistanceKm * 0.12) ? 'distance-match' : 'near-match',
+        targetDistanceKm: desiredDistanceKm,
+        representativeDistanceKm: actualDistanceKm,
+        activityCount: 1,
+        preview,
+        waypoints,
+        source: 'planner',
+        actualDistanceKm,
+        distanceGapKm,
+        distanceAccuracy,
+        elevationGainMeters: Number(route?.elevationGainMeters || 0),
+        estimatedTimeMinutes: Number(route?.estimatedTimeMinutes || 0),
+        elevationPreference: String(route?.elevationPreference || 'rolling').toLowerCase(),
+        createdAt: Number.isFinite(createdAt) ? createdAt : 0,
+      };
+    })
+    .filter(Boolean);
+
+  return candidates.sort((a, b) => (
+    a.distanceGapKm - b.distanceGapKm
+      || b.createdAt - a.createdAt
+  ))[0] || null;
+}
+
+function getRouteElevationPreferenceLabel(preference, s) {
+  switch (String(preference || '').toLowerCase()) {
+    case 'flat':
+      return s('route_elevation_flat');
+    case 'hilly':
+      return s('route_elevation_hilly');
+    default:
+      return s('route_elevation_rolling');
+  }
+}
+
+function getRouteZoneLabel(zoneKey, s) {
+  return s(`routeZone.${zoneKey}`);
+}
+
+function getRouteAnchoredRunsLabel(routeRecommendation, s) {
   if (!routeRecommendation) {
-    return lang === 'zh-CN' ? '等待路线记录' : 'Waiting for route history';
+    return s('routeAnchoredRuns.waiting');
+  }
+  return s('routeAnchoredRuns.runs_anchored', { count: routeRecommendation.activityCount });
+}
+
+function getRouteConfidenceLabel(routeRecommendation, s, unit, lang) {
+  if (!routeRecommendation) {
+    return s('routeConfidence.waiting');
   }
 
   const targetDistance = Number(routeRecommendation.targetDistanceKm || 0) > 0
@@ -268,22 +349,16 @@ function getRouteConfidenceLabel(routeRecommendation, lang, unit) {
     : null;
 
   if (!targetDistance) {
-    return lang === 'zh-CN' ? '根据最近跑步记录推荐' : 'Built from your recent run history';
+    return s('routeConfidence.built_from_history');
   }
 
   switch (routeRecommendation.confidence) {
     case 'distance-match':
-      return lang === 'zh-CN'
-        ? `匹配到今日 ${targetDistance} 计划`
-        : `Matched to today's ${targetDistance} plan`;
+      return s('routeConfidence.distance_match', { distance: targetDistance });
     case 'near-match':
-      return lang === 'zh-CN'
-        ? `最接近 ${targetDistance} 的最近路线`
-        : `Closest recent route to ${targetDistance}`;
+      return s('routeConfidence.near_match', { distance: targetDistance });
     default:
-      return lang === 'zh-CN'
-        ? `先用这片最近常跑区，等待更接近 ${targetDistance} 的路线`
-        : `Best recent area while we wait for a closer ${targetDistance} match`;
+      return s('routeConfidence.best_recent', { distance: targetDistance });
   }
 }
 
@@ -302,7 +377,16 @@ export default function Schedule() {
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
   const [shoes, setShoes] = useState([]);
+  const [plannedRoutes, setPlannedRoutes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [autoPlanning, setAutoPlanning] = useState(false);
+  const [recentRunFallback, setRecentRunFallback] = useState(null);
+
+  const routeMapRef = useRef(null);
+  const routeMapInstanceRef = useRef(null);
+  const didAutoPlanRef = useRef(false);
+  const startPointCacheRef = useRef(null);
+  const didRecentRunFetchRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -315,13 +399,14 @@ export default function Schedule() {
     async function loadSchedule() {
       setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData] = await Promise.all([
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData] = await Promise.all([
           apiJson('/api/profile/me'),
           apiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),
           apiJson('/api/shoes').catch(() => []),
+          apiJson('/api/route/plan/recent').catch(() => []),
         ]);
 
         if (cancelled) return;
@@ -335,6 +420,7 @@ export default function Schedule() {
         setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
         setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
+        setPlannedRoutes(Array.isArray(plannedRouteData) ? plannedRouteData : []);
         setLoadState('ready');
       } catch {
         if (!cancelled) {
@@ -390,9 +476,6 @@ export default function Schedule() {
     () => pickCurrentGear(shoes),
     [shoes],
   );
-  const routeRecommendation = coachToday?.routeRecommendation || null;
-  const routePreview = routeRecommendation?.preview || null;
-  const hasRoutePreview = Boolean(routePreview?.path);
 
   const activeBlock = coachState?.activeBlock || null;
   const targetBlock = useMemo(
@@ -401,11 +484,16 @@ export default function Schedule() {
   );
   const displayName = getDisplayName(profile, t('profile.default_name'));
   const initials = displayName.slice(0, 1).toUpperCase();
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'schedule',
+  }), [lang, t]);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
   const heroKicker = targetBlock.name
     ? `${targetBlock.name}: ${s('phase_label', { week: targetBlock.weekIndex || 1 })}`
-    : s('default_phase');
+    : s('phase_label', { week: 1 });
   const heroTitle = targetBlock.hasActiveBlock
     ? targetBlock.isMarathonBlock
       ? s('hero_title_marathon')
@@ -574,16 +662,46 @@ export default function Schedule() {
   const sleepLabel = coachState?.lastSleepScore != null && coachState.lastSleepScore >= 80
     ? s('sleep_high')
     : s('sleep_moderate');
-  const routeTitle = routeRecommendation
-    ? getRouteZoneLabel(routeRecommendation.zoneKey, lang)
-    : targetBlock.name || s('default_route_name');
-  const routeAnchoredRuns = getRouteAnchoredRunsLabel(routeRecommendation, lang);
-  const routeConfidenceLabel = getRouteConfidenceLabel(routeRecommendation, lang, unit);
-  const routeTargetDistanceKm = Number(
-    routeRecommendation?.targetDistanceKm
-      || nextSession?.plannedDistanceKm
+  const targetRouteDistanceKm = Number(
+    nextSession?.plannedDistanceKm
       || coachToday?.today?.plannedDistanceKm
       || targetBlock.currentLongRunKm
+      || 0,
+  );
+  const plannedRouteRecommendation = useMemo(
+    () => selectPlannedRouteRecommendation(plannedRoutes, targetRouteDistanceKm),
+    [plannedRoutes, targetRouteDistanceKm],
+  );
+  const routeRecommendation = plannedRouteRecommendation || recentRunFallback || coachToday?.routeRecommendation || null;
+  const routeRecommendationSource = routeRecommendation?.source === 'planner'
+    ? 'planner'
+    : routeRecommendation?.source === 'recent-run'
+      ? 'recent-run'
+      : 'history';
+  const routeWaypoints = routeRecommendation?.waypoints || null;
+  const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
+  const routeTitle = routeRecommendation
+    ? routeRecommendationSource === 'planner'
+      ? s('route_planner_title')
+      : getRouteZoneLabel(routeRecommendation.zoneKey, s)
+    : targetBlock.name || s('default_route_name');
+  const routeAnchoredRuns = routeRecommendationSource === 'planner'
+    ? s('route_planner_source')
+    : routeRecommendationSource === 'recent-run'
+      ? s('route_planner_source_recent_run', { date: routeRecommendation?.runDateLabel || '' })
+      : getRouteAnchoredRunsLabel(routeRecommendation, s);
+  const routeConfidenceLabel = routeRecommendationSource === 'planner' && routeRecommendation?.actualDistanceKm
+    ? s('route_planner_accuracy', {
+      distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
+    })
+    : routeRecommendationSource === 'recent-run' && routeRecommendation?.actualDistanceKm
+      ? s('route_planner_accuracy', {
+        distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
+      })
+      : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
+  const routeTargetDistanceKm = Number(
+    routeRecommendation?.targetDistanceKm
+      || targetRouteDistanceKm
       || 0,
   );
   const routeTargetDistanceLabel = routeTargetDistanceKm > 0
@@ -605,7 +723,292 @@ export default function Schedule() {
         ? s('phase_label', { week: targetBlock.weekIndex || 1 })
         : null,
   ].filter(Boolean);
+  const routePlannerInsights = routeRecommendationSource === 'planner'
+    ? [
+      getRouteElevationPreferenceLabel(routeRecommendation.elevationPreference, s),
+      s('route_planner_safety'),
+      routeConfidenceLabel,
+    ]
+    : [
+      routeTargetDistanceLabel ? s('route_planner_target', { distance: routeTargetDistanceLabel }) : null,
+      s('route_elevation_rolling'),
+      s('route_planner_safety_pending'),
+    ].filter(Boolean);
   const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
+
+  // Auto-plan: fire once when load is ready AND no saved planned routes exist.
+  // Derives start lat/lng from /api/activities/{id}/points because the activity
+  // payload does not expose top-level lat/lng — only routePreview with normalised
+  // viewBox coords.
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    if (plannedRoutes.length > 0) return;
+    if (didAutoPlanRef.current) return;
+    if (!isAuthenticated) return;
+
+    // Find the most recent run that has GPS-backed route data
+    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
+    if (!startCandidateRun) return;
+
+    didAutoPlanRef.current = true;
+    setAutoPlanning(true);
+
+    const rawTarget = Number(
+      nextSession?.plannedDistanceKm
+        || coachToday?.today?.plannedDistanceKm
+        || targetBlock?.currentLongRunKm
+        || 0,
+    );
+    const targetDistanceKm = Math.min(50, Math.max(1, rawTarget > 0 ? rawTarget : 5));
+
+    // Derive elevation preference from last 5 runs (median gain/km)
+    const recentWithElevation = runs
+      .filter((r) => Number(r.distanceKm || 0) > 0 && Number(r.elevationGainMeters || r.totalElevationGain || 0) > 0)
+      .slice(0, 5);
+    let elevationPreference = 'rolling';
+    if (recentWithElevation.length > 0) {
+      const gainPerKmValues = recentWithElevation.map((r) => {
+        const dist = Number(r.distanceKm || 1);
+        const gain = Number(r.elevationGainMeters || r.totalElevationGain || 0);
+        return gain / dist;
+      });
+      gainPerKmValues.sort((a, b) => a - b);
+      const median = gainPerKmValues[Math.floor(gainPerKmValues.length / 2)];
+      if (median < 6) elevationPreference = 'flat';
+      else if (median > 12) elevationPreference = 'hilly';
+      else elevationPreference = 'rolling';
+    }
+
+    const resolveStartPoint = () => {
+      if (startPointCacheRef.current) {
+        return Promise.resolve(startPointCacheRef.current);
+      }
+      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
+        .then((points) => {
+          const first = Array.isArray(points) ? points[0] : null;
+          if (!first) return null;
+          const lat = Number(first.latitude);
+          const lng = Number(first.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
+            return null;
+          }
+          // Cache full points list so the recent-run fallback effect can reuse it
+          const pt = { lat, lng, _fullPoints: Array.isArray(points) ? points : null };
+          startPointCacheRef.current = pt;
+          return pt;
+        })
+        .catch((err) => {
+          console.warn('[Schedule] auto-plan points fetch failed:', err.message);
+          return null;
+        });
+    };
+
+    resolveStartPoint()
+      .then((pt) => {
+        if (!pt) {
+          setAutoPlanning(false);
+          return;
+        }
+        return apiFetch('/api/route/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startLat: pt.lat,
+            startLng: pt.lng,
+            targetDistanceKm,
+            elevationPreference,
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`auto-plan HTTP ${res.status}`);
+            return res.json();
+          })
+          .then((newRoute) => {
+            if (newRoute && typeof newRoute === 'object') {
+              setPlannedRoutes((prev) => [newRoute, ...prev]);
+            }
+          })
+          .catch((err) => {
+            console.warn('[Schedule] auto-plan failed:', err.message);
+          })
+          .finally(() => {
+            setAutoPlanning(false);
+          });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadState, plannedRoutes.length, isAuthenticated]);
+
+  // Recent-run fallback: when no plannedRoutes, immediately build a recommendation
+  // from the most recent run's GPS points so the Leaflet map renders right away.
+  // Re-uses the same /api/activities/{id}/points fetch (cached in startPointCacheRef)
+  // that the auto-plan effect already uses for its start coord.
+  useEffect(() => {
+    if (loadState !== 'ready') return;
+    if (plannedRoutes.length > 0) return;
+    if (didRecentRunFetchRef.current) return;
+    if (!isAuthenticated) return;
+
+    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
+    if (!startCandidateRun) return;
+
+    didRecentRunFetchRef.current = true;
+
+    const resolvePoints = () => {
+      if (startPointCacheRef.current?._fullPoints) {
+        return Promise.resolve(startPointCacheRef.current._fullPoints);
+      }
+      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
+        .then((points) => {
+          if (!Array.isArray(points) || points.length < 2) return null;
+          // Cache both first-point (for auto-plan) and full points list
+          const first = points[0];
+          const lat = Number(first.latitude);
+          const lng = Number(first.longitude);
+          if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+            startPointCacheRef.current = { lat, lng, _fullPoints: points };
+          }
+          return points;
+        })
+        .catch((err) => {
+          console.warn('[Schedule] recent-run points fetch failed:', err.message);
+          return null;
+        });
+    };
+
+    resolvePoints().then((points) => {
+      if (!Array.isArray(points) || points.length < 2) return;
+
+      // Decimate to ~100 points — keep first and last exactly
+      const MAX_WAYPOINTS = 100;
+      let decimated;
+      if (points.length <= MAX_WAYPOINTS) {
+        decimated = points;
+      } else {
+        const step = Math.floor(points.length / (MAX_WAYPOINTS - 1));
+        const sampled = [];
+        for (let i = 0; i < points.length - 1; i += step) {
+          sampled.push(points[i]);
+        }
+        sampled.push(points[points.length - 1]);
+        decimated = sampled;
+      }
+
+      const waypoints = decimated
+        .map((p) => {
+          const lat = Number(p.latitude);
+          const lng = Number(p.longitude);
+          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+        })
+        .filter(Boolean);
+
+      if (waypoints.length < 2) return;
+
+      const preview = buildPlannedRoutePreview(waypoints);
+      const runDistanceKm = resolveRunDistanceKm(startCandidateRun);
+      const rawTarget = Number(
+        nextSession?.plannedDistanceKm
+          || coachToday?.today?.plannedDistanceKm
+          || 0,
+      );
+      const targetDistanceKm = rawTarget > 0 ? rawTarget : runDistanceKm;
+
+      // Format date for the source label
+      const runDate = new Date(startCandidateRun.startTime || startCandidateRun.startDate || 0);
+      const runDateLabel = Number.isNaN(runDate.getTime())
+        ? ''
+        : runDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
+
+      setRecentRunFallback({
+        source: 'recent-run',
+        zoneKey: 'core',
+        confidence: 'built_from_history',
+        waypoints,
+        preview,
+        actualDistanceKm: runDistanceKm,
+        targetDistanceKm,
+        activityCount: 1,
+        elevationGainMeters: Number(startCandidateRun.elevationGainMeters || startCandidateRun.totalElevationGain || 0),
+        estimatedTimeMinutes: 0,
+        elevationPreference: 'rolling',
+        distanceGapKm: Math.abs(runDistanceKm - targetDistanceKm),
+        distanceAccuracy: targetDistanceKm > 0 ? runDistanceKm / targetDistanceKm : 1,
+        createdAt: runDate.getTime() || 0,
+        runDateLabel,
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadState, plannedRoutes.length, isAuthenticated]);
+
+  // Leaflet map effect for the route card
+  useEffect(() => {
+    if (!routeMapRef.current) return;
+    if (!routeWaypoints || routeWaypoints.length < 2) {
+      if (routeMapInstanceRef.current) {
+        routeMapInstanceRef.current.remove();
+        routeMapInstanceRef.current = null;
+      }
+      return;
+    }
+
+    if (routeMapInstanceRef.current) {
+      // Already initialized — rebuild for new waypoints
+      routeMapInstanceRef.current.remove();
+      routeMapInstanceRef.current = null;
+    }
+
+    import('leaflet').then((L) => {
+      if (!routeMapRef.current) return;
+      const map = L.map(routeMapRef.current, {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        dragging: false,
+        touchZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        attributionControl: true,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      const latlngs = routeWaypoints.map((pt) => [pt.lat, pt.lng]);
+      const polyline = L.polyline(latlngs, {
+        color: '#f07561',
+        weight: 4,
+        opacity: 0.92,
+      }).addTo(map);
+
+      L.circleMarker(latlngs[0], {
+        radius: 6,
+        color: '#ffffff',
+        fillColor: '#4caf50',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map);
+      L.circleMarker(latlngs[latlngs.length - 1], {
+        radius: 7,
+        color: '#ffffff',
+        fillColor: '#f07561',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map);
+
+      map.fitBounds(polyline.getBounds(), { padding: [16, 16] });
+      routeMapInstanceRef.current = map;
+    });
+
+    return () => {
+      if (routeMapInstanceRef.current) {
+        routeMapInstanceRef.current.remove();
+        routeMapInstanceRef.current = null;
+      }
+    };
+  }, [routeWaypoints]);
 
   if (loadState === 'loading') {
     return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
@@ -635,16 +1038,7 @@ export default function Schedule() {
         </div>
 
         <nav className="runner-shell-side-nav">
-          {[
-            { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard' },
-            { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
-            { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
-            { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: lang === 'zh-CN' ? '天气' : 'Weather', route: '/weather', icon: 'thermostat' },
-            { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
-            { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
-            { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today', active: true },
-          ].map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.key}
               type="button"
@@ -673,9 +1067,11 @@ export default function Schedule() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_schedule')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_schedule')}
+              navigate={navigate}
+            />
           </div>
 
           <div className="runner-shell-topbar-actions">
@@ -731,16 +1127,25 @@ export default function Schedule() {
           <section className="schedule-plan-week-grid">
             {weekSchedule.map((day) => {
               const isLongRunAnchor = targetBlock.hasActiveBlock && String(day.entry?.workoutType || '').toUpperCase() === 'LONG_RUN';
+              const isReadinessDeferred = Boolean(day.entry?.readinessAdjusted && day.entry?.mutatedFrom);
               return (
                 <article
                   key={day.key}
-                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}`}
+                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}${isReadinessDeferred ? ' is-readiness-deferred' : ''}`}
                 >
                   <div>
                     <div className="schedule-plan-day-head">
                       <p className="schedule-plan-day-label">{day.dayLabel}</p>
                       {isLongRunAnchor ? <span className="schedule-plan-day-anchor">{s('long_run_anchor')}</span> : null}
                     </div>
+                    {isReadinessDeferred && (
+                      <span className="schedule-plan-day-deferred-badge">
+                        {s('readinessDeferred.badge', {
+                          originalType: prettifyWorkoutType(day.entry.mutatedFrom, t),
+                          newType: prettifyWorkoutType(day.entry.workoutType, t),
+                        })}
+                      </span>
+                    )}
                     <p className="schedule-plan-day-tag">{day.tag}</p>
                   </div>
                   <div>
@@ -784,7 +1189,7 @@ export default function Schedule() {
                     
                     <h3>{nextSessionTitle}</h3>
                     <p>{nextSessionCopy}</p>
-                    <button type="button" onClick={() => navigate('/today-run')}>
+                    <button type="button" aria-label={s('view_drills')} onClick={() => navigate('/today-run')}>
                       {s('view_drills')}
                       <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
                     </button>
@@ -795,22 +1200,24 @@ export default function Schedule() {
               <article className={`schedule-plan-route-card${hasRoutePreview ? ' has-route-preview' : ' is-route-fallback'}`}>
                 <div className="schedule-plan-route-map" aria-hidden="true">
                   {hasRoutePreview ? (
-                    <svg className="schedule-plan-route-map-svg" viewBox="0 0 100 100">
-                      <path className="schedule-plan-route-map-shadow" d={routePreview.path} />
-                      <path className="schedule-plan-route-map-line" d={routePreview.path} />
-                      <circle className="schedule-plan-route-map-start" cx={routePreview.startX} cy={routePreview.startY} r="3.2" />
-                      <circle className="schedule-plan-route-map-finish" cx={routePreview.finishX} cy={routePreview.finishY} r="3.6" />
-                    </svg>
+                    <div ref={routeMapRef} className="schedule-plan-route-leaflet-map" />
+                  ) : autoPlanning ? (
+                    <div className="schedule-plan-route-empty-panel schedule-plan-route-empty-panel--loading">
+                      <div className="schedule-plan-route-auto-spinner" aria-hidden="true" />
+                      <div className="schedule-plan-route-empty-copy">
+                        <span>{s('route_auto_loading')}</span>
+                      </div>
+                    </div>
                   ) : (
                     <div className="schedule-plan-route-empty-panel">
                       <div className="schedule-plan-route-empty-badges">
-                        {routeFallbackBadges.map((badge, index) => (
-                          <span key={`${badge}-${index}`} className="schedule-plan-route-empty-badge">{badge}</span>
+                        {routeFallbackBadges.map((badge) => (
+                          <span key={badge} className="schedule-plan-route-empty-badge">{badge}</span>
                         ))}
                       </div>
                       <div className="schedule-plan-route-empty-copy">
                         <strong>{routeTitle}</strong>
-                        <span>{routeFallbackStatus}</span>
+                        <span>{runs.length === 0 ? s('route_auto_empty_hint') : routeFallbackStatus}</span>
                       </div>
                     </div>
                   )}
@@ -822,6 +1229,11 @@ export default function Schedule() {
                     <div className="schedule-plan-route-meta">
                       <span>{routeAnchoredRuns}</span>
                       <span>{routeConfidenceLabel}</span>
+                    </div>
+                    <div className="schedule-plan-route-insight" aria-label={s('route_planner_insights')}>
+                      {routePlannerInsights.map((insight) => (
+                        <span key={insight}>{insight}</span>
+                      ))}
                     </div>
                     {targetBlock.hasActiveBlock && routeTargetDistanceLabel ? (
                       <div className="schedule-plan-route-target">

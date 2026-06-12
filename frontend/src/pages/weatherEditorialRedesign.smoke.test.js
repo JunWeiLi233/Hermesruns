@@ -52,6 +52,54 @@ assert.match(
 );
 
 assert.match(
+  weatherSource,
+  /function toFiniteNumber\(value\)/,
+  'Weather page should normalize numeric API values before deciding whether live forecast can load.',
+);
+
+assert.match(
+  weatherSource,
+  /const latitude = toFiniteNumber\((?:weatherContext|ctx)\?\.latitude\);[\s\S]*const longitude = toFiniteNumber\((?:weatherContext|ctx)\?\.longitude\);/,
+  'Weather page should accept numeric-string coordinates from the backend context response.',
+);
+
+assert.match(
+  weatherSource,
+  /WEATHER_PAGE_REQUEST_TIMEOUT_MS\s*=\s*6000/,
+  'Weather page hydration should use a bounded timeout so backend stalls cannot leave the route loading forever.',
+);
+
+assert.match(
+  weatherSource,
+  /apiJson\('\/api\/profile\/me', \{ signal: (?:controller|contextController)\.signal \}\)[\s\S]*apiJson\('\/api\/v1\/weather\/context', \{ signal: (?:controller|contextController)\.signal \}\)/,
+  'Weather page should attach the timeout abort signal to its initial profile and weather context requests.',
+);
+
+assert.match(
+  weatherSource,
+  /WEATHER_FORECAST_REQUEST_TIMEOUT_MS\s*=\s*6500/,
+  'Weather page forecast fetch should use a bounded timeout so external Open-Meteo stalls fall back cleanly.',
+);
+
+assert.match(
+  weatherSource,
+  /const forecastTimeout = window\.setTimeout\(\s*\(\) => forecastController\.abort\(\),\s*WEATHER_FORECAST_REQUEST_TIMEOUT_MS,\s*\);[\s\S]*fetch\(url, \{ signal: forecastController\.signal \}\)[\s\S]*if \(!cancelled\) \{[\s\S]*setForecastState\('error'\);/,
+  'Weather page should turn forecast timeout failures into the existing fallback state instead of staying in loading.',
+);
+
+assert.doesNotMatch(
+  weatherSource,
+  /Number\.isFinite\(weatherContext\.latitude\)|Number\.isFinite\(weatherContext\.longitude\)/,
+  'Weather page should not reject valid coordinate strings by checking raw context fields.',
+);
+
+assert.match(
+  weatherSource,
+  /typeof profile\?\.displayName === 'string'[\s\S]*typeof profile\?\.email === 'string'/,
+  'Weather page should only call profile string helpers on string fields.',
+);
+
+assert.match(
   styleSource,
   /\.weather-engine-hero-shell\s*\{/,
   'Styles should define the cinematic weather hero shell.',

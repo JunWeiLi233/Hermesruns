@@ -5,6 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
+import authBrandSlides from '../data/authBrandSlides';
 
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
@@ -21,8 +22,10 @@ export default function Login() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [stravaStatus, setStravaStatus] = useState(null);
+  const [authProviders, setAuthProviders] = useState(null);
 
   const stravaConfigured = stravaStatus?.configured !== false;
+  const googleConfigured = authProviders?.googleConfigured === true;
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -45,6 +48,21 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/auth/providers')
+      .then((res) => {
+        if (!cancelled) setAuthProviders(res || {});
+      })
+      .catch(() => {
+        if (!cancelled) setAuthProviders({ googleConfigured: false, stravaConfigured: false });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const bannerState = parseLoginStatusQuery(window.location.search, {
       verifyInvalid: t('index.verify_error'),
       verifyExpired: t('index.verify_expired'),
@@ -57,6 +75,10 @@ export default function Login() {
         setError(t('common.strava_not_configured'));
       } else if (bannerState.banner === 'strava_failed') {
         setError(bannerState.errorMessage || t('common.strava_login_failed'));
+      } else if (bannerState.banner === 'google_not_configured') {
+        setError(t('common.google_not_configured'));
+      } else if (bannerState.banner === 'google_failed') {
+        setError(bannerState.errorMessage || t('common.google_login_failed'));
       } else if (bannerState.banner === 'invalid' || bannerState.banner === 'expired') {
         setError(bannerState.errorMessage || '');
       } else {
@@ -129,6 +151,9 @@ export default function Login() {
     if (provider === 'strava' && !stravaConfigured) {
       return;
     }
+    if (provider === 'google' && !googleConfigured) {
+      return;
+    }
     const baseUrl = getBackendBaseUrl();
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=login`;
   }
@@ -137,6 +162,7 @@ export default function Login() {
   const stravaUnavailableHint = stravaStatusReason
     ? `Strava OAuth is off on this server: ${stravaStatusReason}`
     : t('index.stitch_strava_hint');
+  const googleUnavailableHint = t('common.google_not_configured');
 
   return (
     <div className="auth-page auth-page--login">
@@ -148,29 +174,36 @@ export default function Login() {
               <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
 
-            <div className="auth-flow-copy">
-              <h2 className="auth-flow-hero">
-                <span>{t('index.stitch_hero_line_one')}</span>
-                <span className="is-accent">{t('index.stitch_hero_line_two')}</span>
-              </h2>
-              <p className="auth-flow-text">{t('index.stitch_hero_copy')}</p>
+            <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+              <div className="auth-flow-slide-viewport">
+                <div className="auth-flow-slide-track">
+                  {authBrandSlides.map((slide) => (
+                    <article className="auth-flow-slide" key={slide.id}>
+                      <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                      <h2 className="auth-flow-hero">
+                        <span>{t(slide.lineOneKey)}</span>
+                        <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                      </h2>
+                      <p className="auth-flow-text">{t(slide.copyKey)}</p>
 
-              <div className="auth-flow-stats">
-                <div>
-                  <strong>12k+</strong>
-                  <span>{t('index.stitch_stat_athletes')}</span>
-                </div>
-                <div>
-                  <strong>99.8%</strong>
-                  <span>{t('index.stitch_stat_accuracy')}</span>
+                      <div className="auth-flow-stats">
+                        {slide.stats.map((stat) => (
+                          <div key={stat.labelKey}>
+                            <strong>{stat.value}</strong>
+                            <span>{t(stat.labelKey)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </div>
             </div>
 
             <div className="auth-flow-dots" aria-hidden="true">
-              <span className="is-active" />
-              <span />
-              <span />
+              {authBrandSlides.map((slide, index) => (
+                <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+              ))}
             </div>
           </div>
         </section>
@@ -200,11 +233,16 @@ export default function Login() {
               <button
                 type="button"
                 className="auth-flow-btn auth-flow-btn--google"
+                disabled={!googleConfigured}
                 onClick={() => startOAuth('google')}
               >
                 <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t('index.google')}</span>
+                <span>{t(googleConfigured ? 'index.google' : 'common.google_not_configured')}</span>
               </button>
+
+              {!googleConfigured && (
+                <p className="auth-flow-status-note">{googleUnavailableHint}</p>
+              )}
             </div>
 
             <div className="auth-flow-divider">
@@ -233,6 +271,12 @@ export default function Login() {
               )}
               {banner === 'strava_failed' && (
                 <div className="error-alert is-visible" role="alert">{t('common.strava_login_failed')}</div>
+              )}
+              {banner === 'google_not_configured' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_not_configured')}</div>
+              )}
+              {banner === 'google_failed' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_login_failed')}</div>
               )}
               {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 

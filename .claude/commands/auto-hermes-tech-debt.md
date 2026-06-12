@@ -1,5 +1,6 @@
 ---
 name: auto-hermes-tech-debt
+description: One-shot tech-debt audit — scans the codebase, writes findings as bounded tasks into TASKS.md with Files / Context / Done when / Verify.
 ---
 
 # Hermes Tech Debt Audit

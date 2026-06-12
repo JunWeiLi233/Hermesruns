@@ -70,8 +70,16 @@ public class AiUsageService {
      * Returns null on success (slot reserved and persisted), or an error code if blocked.
      * This prevents the check-then-act race where multiple threads pass checkQuota
      * before any thread calls recordUsage.
+     * <p>
+     * Pro and admin users skip the quota check entirely.
+     * </p>
      */
     public synchronized String tryConsumeQuota(Runner runner) {
+        // Pro and admin runners are unlimited
+        if (isProOrAdmin(runner)) {
+            return null;
+        }
+
         normalizeDailyWindow(runner);
 
         if (runner.getAiDailyScansUsed() >= perRunnerDailyLimit) {
@@ -90,8 +98,10 @@ public class AiUsageService {
 
     /**
      * Record one successful AI scan against the shared Gemini free-tier budget.
+     * No-op for Pro and admin runners.
      */
     public void recordUsage(Runner runner) {
+        if (isProOrAdmin(runner)) return;
         normalizeDailyWindow(runner);
         runner.setAiDailyScansUsed(runner.getAiDailyScansUsed() + 1);
         runner.setAiDailyLastUsedDate(LocalDate.now());
@@ -102,26 +112,56 @@ public class AiUsageService {
      * Frontend status for the shoe scan UI.
      */
     public Map<String, Object> getUsageStatus(Runner runner) {
-        normalizeDailyWindow(runner);
+        boolean proOrAdmin = isProOrAdmin(runner);
 
-        long projectDailyUsed = getProjectDailyUsage();
-        int effectiveProjectDailyLimit = getEffectiveProjectDailyLimit();
-        int runnerRemaining = Math.max(0, perRunnerDailyLimit - runner.getAiDailyScansUsed());
-        int projectRemaining = (int) Math.max(0, effectiveProjectDailyLimit - projectDailyUsed);
+        if (!proOrAdmin) {
+            normalizeDailyWindow(runner);
+        }
 
         Map<String, Object> status = new LinkedHashMap<>();
-        status.put("tier", "FREE");
+        status.put("tier", proOrAdmin ? runner.getSubscriptionTier() : "FREE");
         status.put("admin", "ADMIN".equals(runner.getRole()));
-        status.put("unlimited", false);
-        status.put("quotaType", "free_tier_daily");
-        status.put("scansRemaining", Math.max(0, Math.min(runnerRemaining, projectRemaining)));
-        status.put("dailyLimit", perRunnerDailyLimit);
-        status.put("dailyUsed", runner.getAiDailyScansUsed());
-        status.put("projectDailyLimit", effectiveProjectDailyLimit);
-        status.put("projectDailyUsed", projectDailyUsed);
-        status.put("projectDailyReserve", projectDailyReserve);
-        status.put("resetsAt", LocalDate.now().plusDays(1).atStartOfDay().toString());
+        status.put("unlimited", proOrAdmin);
+
+        if (proOrAdmin) {
+            status.put("quotaType", "unlimited");
+            status.put("scansRemaining", -1);
+            status.put("dailyLimit", -1);
+            status.put("dailyUsed", 0);
+            status.put("projectDailyLimit", -1);
+            status.put("projectDailyUsed", 0);
+            status.put("projectDailyReserve", 0);
+            status.put("resetsAt", null);
+        } else {
+            long projectDailyUsed = getProjectDailyUsage();
+            int effectiveProjectDailyLimit = getEffectiveProjectDailyLimit();
+            int runnerRemaining = Math.max(0, perRunnerDailyLimit - runner.getAiDailyScansUsed());
+            int projectRemaining = (int) Math.max(0, effectiveProjectDailyLimit - projectDailyUsed);
+
+            status.put("quotaType", "free_tier_daily");
+            status.put("scansRemaining", Math.max(0, Math.min(runnerRemaining, projectRemaining)));
+            status.put("dailyLimit", perRunnerDailyLimit);
+            status.put("dailyUsed", runner.getAiDailyScansUsed());
+            status.put("projectDailyLimit", effectiveProjectDailyLimit);
+            status.put("projectDailyUsed", projectDailyUsed);
+            status.put("projectDailyReserve", projectDailyReserve);
+            status.put("resetsAt", LocalDate.now().plusDays(1).atStartOfDay().toString());
+        }
         return status;
+    }
+
+    /**
+     * Rollback a previously consumed quota slot when the API call fails.
+     * Decrements the runner's daily counter by 1 (floor at 0) and persists.
+     * No-op for Pro and admin runners (they were never charged).
+     */
+    public synchronized void rollbackConsumedQuota(Runner runner) {
+        if (isProOrAdmin(runner)) return;
+        int current = runner.getAiDailyScansUsed();
+        if (current > 0) {
+            runner.setAiDailyScansUsed(current - 1);
+            runnerRepository.save(runner);
+        }
     }
 
     public void grantPro(Runner runner, int months) {
@@ -138,6 +178,14 @@ public class AiUsageService {
         runner.setSubscriptionTier("FREE");
         runner.setProExpiresAt(null);
         runnerRepository.save(runner);
+    }
+
+    private boolean isProOrAdmin(Runner runner) {
+        if (runner == null) return false;
+        if ("ADMIN".equals(runner.getRole())) return true;
+        if (!"PRO".equals(runner.getSubscriptionTier())) return false;
+        java.time.LocalDateTime expiresAt = runner.getProExpiresAt();
+        return expiresAt == null || expiresAt.isAfter(java.time.LocalDateTime.now());
     }
 
     private void normalizeDailyWindow(Runner runner) {

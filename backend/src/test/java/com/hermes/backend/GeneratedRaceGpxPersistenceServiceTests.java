@@ -17,6 +17,8 @@ class GeneratedRaceGpxPersistenceServiceTests {
     @Test
     void savePersistsRaceMetadataAndGpxPayload() {
         GeneratedRaceGpxAssetRepository repository = mock(GeneratedRaceGpxAssetRepository.class);
+        Runner runner = new Runner();
+        runner.setId(1L);
         when(repository.findByRaceId("boston-marathon")).thenReturn(Optional.empty());
         when(repository.save(any(GeneratedRaceGpxAsset.class))).thenAnswer(invocation -> {
             GeneratedRaceGpxAsset asset = invocation.getArgument(0);
@@ -27,6 +29,7 @@ class GeneratedRaceGpxPersistenceServiceTests {
         GeneratedRaceGpxPersistenceService service = new GeneratedRaceGpxPersistenceService(repository);
 
         GeneratedRaceGpxAsset saved = service.save(
+                runner,
                 "boston-marathon",
                 "Boston Marathon",
                 "Boston",
@@ -49,6 +52,8 @@ class GeneratedRaceGpxPersistenceServiceTests {
     @Test
     void saveUpdatesExistingRaceAssetForSameRaceId() {
         GeneratedRaceGpxAssetRepository repository = mock(GeneratedRaceGpxAssetRepository.class);
+        Runner runner = new Runner();
+        runner.setId(1L);
         GeneratedRaceGpxAsset existing = new GeneratedRaceGpxAsset();
         existing.setRaceId("tokyo-marathon");
         existing.setRaceName("Tokyo Marathon");
@@ -58,6 +63,7 @@ class GeneratedRaceGpxPersistenceServiceTests {
         GeneratedRaceGpxPersistenceService service = new GeneratedRaceGpxPersistenceService(repository);
 
         GeneratedRaceGpxAsset saved = service.save(
+                runner,
                 "tokyo-marathon",
                 "Tokyo Marathon 2026",
                 "Tokyo",
@@ -84,11 +90,12 @@ class GeneratedRaceGpxPersistenceServiceTests {
     @Test
     void saveRejectsBlankRaceIdAndBlankGpxXml() {
         GeneratedRaceGpxPersistenceService service = new GeneratedRaceGpxPersistenceService(mock(GeneratedRaceGpxAssetRepository.class));
+        Runner runner = new Runner();
 
-        assertThatThrownBy(() -> service.save(" ", "Race", "City", "Country", null, 42.195, "<gpx/>"))
+        assertThatThrownBy(() -> service.save(runner, " ", "Race", "City", "Country", null, 42.195, "<gpx/>"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("raceId");
-        assertThatThrownBy(() -> service.save("race-id", "Race", "City", "Country", null, 42.195, " "))
+        assertThatThrownBy(() -> service.save(runner, "race-id", "Race", "City", "Country", null, 42.195, " "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("gpxXml");
     }

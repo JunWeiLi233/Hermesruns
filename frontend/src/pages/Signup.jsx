@@ -1,19 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
-import { getBackendBaseUrl, apiFetch } from '../api';
+import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
+import { fetchPasswordRules, getFailedPasswordRuleIds } from '../utils/passwordRules';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
+import authBrandSlides from '../data/authBrandSlides';
 
 const SIGNUP_STITCH_COPY = {
   'zh-CN': {
     login_nav: '返回登录',
-    hero_line_one: '提高你的',
-    hero_line_two: '每一步',
-    hero_line_three: '表现。',
-    hero_copy: '把训练记录、表现判断和下一步建议放进同一个入口。连接 Strava 后，Hermes 会把新的跑步数据持续带回你的训练面板。',
-    standard: '数字节律',
+    hero_line_one: '从下一次',
+    hero_line_two: '聪明训练',
+    hero_line_three: '开始。',
+    hero_copy: '创建账号，把跑步记录、恢复状态、跑鞋里程和比赛目标汇成每天一个清晰训练决定。现在连接 Strava，或先用邮箱注册，稍后再补充数据。',
+    standard: '跑者优先设置',
     strava_cta: '使用 Strava 继续',
     email_divider: '或使用邮箱',
     email_label: '跑者邮箱',
@@ -34,11 +36,11 @@ const SIGNUP_STITCH_COPY = {
   },
   en: {
     login_nav: 'Back to login',
-    hero_line_one: 'Elevate your',
-    hero_line_two: 'every',
-    hero_line_three: 'stride.',
-    hero_copy: 'Bring training history, performance signals, and the next best action into one entry point. Once Strava is connected, Hermes keeps pulling fresh run data back into your coaching dashboard.',
-    standard: 'Digital pulse',
+    hero_line_one: 'Start with',
+    hero_line_two: 'your next',
+    hero_line_three: 'smart run.',
+    hero_copy: 'Create the account that turns runs, recovery, shoes, and race goals into one daily training decision. Connect Strava now or start with email and add data later.',
+    standard: 'Runner-first setup',
     strava_cta: 'Continue with Strava',
     email_divider: 'or use email',
     email_label: 'Runner email',
@@ -55,24 +57,12 @@ const SIGNUP_STITCH_COPY = {
     footer_terms: 'Terms',
     footer_privacy: 'Privacy',
     footer_contact: 'Contact',
-    footer_copy: 'A better training entry point for serious runners.',
+    footer_copy: 'A daily training entry point for runners who care about the next decision.',
   },
 };
 
 function formatLocalCopy(template, vars = {}) {
   return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
-}
-
-function checkPasswordClient(password, minLength) {
-  const failed = [];
-  if (!password || password.length < minLength) failed.push('MIN_LENGTH');
-  if (!/[A-Z]/.test(password)) failed.push('UPPERCASE');
-  if (!/[a-z]/.test(password)) failed.push('LOWERCASE');
-  if (!/\d/.test(password)) failed.push('DIGIT');
-  if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?/~`"'\\]/.test(password)) failed.push('SPECIAL');
-  const common = ['password', 'password123', '12345678', '123456789', 'qwerty', 'admin', 'letmein'];
-  if (common.includes(password.toLowerCase())) failed.push('NOT_COMMON');
-  return failed;
 }
 
 export default function Signup() {
@@ -86,25 +76,32 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [failedRules, setFailedRules] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [pwRules, setPwRules] = useState({ minLength: 10 });
+  const [pwRules, setPwRules] = useState(null);
   const [doneInfo, setDoneInfo] = useState(null);
   const [banner, setBanner] = useState(null);
+  const [authProviders, setAuthProviders] = useState(null);
+
+  const stravaConfigured = authProviders?.stravaConfigured === true;
+  const googleConfigured = authProviders?.googleConfigured === true;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const baseUrl = getBackendBaseUrl();
-        const res = await fetch(`${baseUrl}/api/auth/password-rules`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.minLength) setPwRules(data);
-        }
-      } catch {
-        // Ignore password rule fetch failures and keep the local fallback.
-      }
-    })();
+    fetchPasswordRules().then(setPwRules);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiJson('/api/auth/providers')
+      .then((res) => {
+        if (!cancelled) setAuthProviders(res || {});
+      })
+      .catch(() => {
+        if (!cancelled) setAuthProviders({ googleConfigured: false, stravaConfigured: false });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -122,6 +119,10 @@ export default function Signup() {
         setError(t('common.strava_not_configured'));
       } else if (bannerState.banner === 'strava_failed') {
         setError(bannerState.errorMessage || t('common.strava_login_failed'));
+      } else if (bannerState.banner === 'google_not_configured') {
+        setError(t('common.google_not_configured'));
+      } else if (bannerState.banner === 'google_failed') {
+        setError(bannerState.errorMessage || t('common.google_login_failed'));
       } else {
         setError(bannerState.errorMessage || t('profile.strava_link_confirmation_required'));
       }
@@ -133,13 +134,21 @@ export default function Signup() {
   }, [setSearchParams, t]);
 
   const clientFailed = useMemo(
-    () => checkPasswordClient(password, pwRules.minLength || 10),
-    [password, pwRules.minLength],
+    () => getFailedPasswordRuleIds(password, pwRules || {}),
+    [password, pwRules],
   );
-  const displayFailed = failedRules.length > 0 ? failedRules : clientFailed;
+
+  const strengthScore = useMemo(() => {
+    if (!password) return null;
+    const allRules = ['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'];
+    const passed = allRules.filter((r) => !clientFailed.includes(r)).length;
+    if (passed <= 2) return 'weak';
+    if (passed === 3) return 'fair';
+    return 'strong';
+  }, [password, clientFailed]);
 
   const ruleLabels = {
-    MIN_LENGTH: () => t('signup.password_rule_min', { n: pwRules.minLength || 10 }),
+    MIN_LENGTH: () => t('signup.password_rule_min', { n: pwRules?.minLength || 10 }),
     UPPERCASE: () => t('signup.password_rule_upper'),
     LOWERCASE: () => t('signup.password_rule_lower'),
     DIGIT: () => t('signup.password_rule_digit'),
@@ -150,16 +159,14 @@ export default function Signup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    setFailedRules([]);
 
     if (password !== confirmPassword) {
       setError(s('confirm_password_mismatch'));
       return;
     }
 
-    const failed = checkPasswordClient(password, pwRules.minLength || 10);
+    const failed = getFailedPasswordRuleIds(password, pwRules || {});
     if (failed.length > 0) {
-      setFailedRules(failed);
       setError(t('signup.password_rules_title'));
       return;
     }
@@ -175,7 +182,6 @@ export default function Signup() {
 
       if (!res.ok) {
         if (data.code === 'WEAK_PASSWORD' && Array.isArray(data.failedRules)) {
-          setFailedRules(data.failedRules);
           setError(data.error || t('signup.password_rules_title'));
         } else {
           setError(data.error || data.message || 'Request failed.');
@@ -196,6 +202,12 @@ export default function Signup() {
   }
 
   function startOAuth(provider) {
+    if (provider === 'strava' && !stravaConfigured) {
+      return;
+    }
+    if (provider === 'google' && !googleConfigured) {
+      return;
+    }
     const baseUrl = getBackendBaseUrl();
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=signup`;
   }
@@ -203,23 +215,71 @@ export default function Signup() {
   if (doneInfo) {
     return (
       <div className="auth-page auth-page--signup">
-        <div className="signup-flow-bg" />
-        <main className="signup-flow-shell signup-flow-shell--done">
-          <section className="signup-flow-copy signup-flow-copy--done">
-            <div className="signup-flow-copy-stack">
-              <Link to="/" className="signup-flow-wordmark">HERMES</Link>
-              <h1 className="signup-flow-hero">
-                <span>{s('done_line_one')}</span>
-                <span className="is-accent">{s('done_line_two')}</span>
-              </h1>
-              <p className="signup-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
+        <main className="auth-flow-shell">
+          <section className="auth-flow-brand">
+            <div className="auth-flow-brand-inner">
+              <div className="auth-flow-wordmark-wrap">
+                <h1 className="auth-flow-wordmark">HERMES</h1>
+                <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
+              </div>
+
+              <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+                <div className="auth-flow-slide-viewport">
+                  <div className="auth-flow-slide-track">
+                    {authBrandSlides.map((slide) => (
+                      <article className="auth-flow-slide" key={slide.id}>
+                        <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                        <h2 className="auth-flow-hero">
+                          <span>{t(slide.lineOneKey)}</span>
+                          <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                        </h2>
+                        <p className="auth-flow-text">{t(slide.copyKey)}</p>
+                        <div className="auth-flow-stats">
+                          {slide.stats.map((stat) => (
+                            <div key={stat.labelKey}>
+                              <strong>{stat.value}</strong>
+                              <span>{t(stat.labelKey)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="auth-flow-dots" aria-hidden="true">
+                {authBrandSlides.map((slide, index) => (
+                  <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="auth-flow-formside">
+            <div className="auth-flow-card">
+              <div className="auth-flow-header">
+                <h3>{s('done_line_one')}</h3>
+                <p>{s('done_line_two')}</p>
+              </div>
+
+              <p className="auth-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
               {!doneInfo.verificationRequired && (
-                <p className="signup-flow-subtle">{t('signup.no_mail_server_note')}</p>
+                <p className="auth-flow-status-note">{t('signup.no_mail_server_note')}</p>
               )}
-              <button type="button" className="signup-flow-primary" onClick={() => navigate('/login')}>
+
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--submit"
+                onClick={() => navigate('/login')}
+              >
                 {t('signup.signin_link')}
               </button>
             </div>
+
+            <footer className="auth-flow-legal">
+              <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
+            </footer>
           </section>
         </main>
       </div>
@@ -228,48 +288,91 @@ export default function Signup() {
 
   return (
     <div className="auth-page auth-page--signup">
-      <div className="signup-flow-bg" />
-
-      <nav className="signup-flow-nav">
-        <Link to="/" className="signup-flow-wordmark">HERMES</Link>
-        <Link to="/login" className="signup-flow-login-link">{s('login_nav')}</Link>
-      </nav>
-
-      <main className="signup-flow-shell">
-        <section className="signup-flow-copy">
-          <div className="signup-flow-copy-stack">
-            <h1 className="signup-flow-hero">
-              <span>{s('hero_line_one')}</span>
-              <span>{s('hero_line_two')}</span>
-              <span className="is-accent">{s('hero_line_three')}</span>
-            </h1>
-            <p className="signup-flow-text">{s('hero_copy')}</p>
-            <div className="signup-flow-standard">
-              <span className="signup-flow-standard-line" />
-              <span>{s('standard')}</span>
+      <main className="auth-flow-shell">
+        <section className="auth-flow-brand">
+          <div className="auth-flow-brand-inner">
+            <div className="auth-flow-wordmark-wrap">
+              <h1 className="auth-flow-wordmark">HERMES</h1>
+              <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
-            <div className="signup-flow-rail" aria-hidden="true">
-              <span className="is-active" />
-              <span />
-              <span />
+
+            <div className="auth-flow-copy auth-flow-copy--carousel" aria-label={t('index.stitch_slides_label')}>
+              <div className="auth-flow-slide-viewport">
+                <div className="auth-flow-slide-track">
+                  {authBrandSlides.map((slide) => (
+                    <article className="auth-flow-slide" key={slide.id}>
+                      <span className="auth-flow-kicker">{t(slide.kickerKey)}</span>
+                      <h2 className="auth-flow-hero">
+                        <span>{t(slide.lineOneKey)}</span>
+                        <span className="is-accent">{t(slide.lineTwoKey)}</span>
+                      </h2>
+                      <p className="auth-flow-text">{t(slide.copyKey)}</p>
+                      <div className="auth-flow-stats">
+                        {slide.stats.map((stat) => (
+                          <div key={stat.labelKey}>
+                            <strong>{stat.value}</strong>
+                            <span>{t(stat.labelKey)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="auth-flow-dots" aria-hidden="true">
+              {authBrandSlides.map((slide, index) => (
+                <span className={`auth-flow-dot auth-flow-dot--${index + 1}`} key={slide.id} />
+              ))}
             </div>
           </div>
         </section>
 
-        <section className="signup-flow-panel-wrap">
-          <div className="signup-flow-panel">
-            <button type="button" className="signup-flow-strava" onClick={() => startOAuth('strava')}>
-              <AppIcon name="directions_run" className="signup-flow-strava-icon" />
-              <span>{s('strava_cta')}</span>
-            </button>
+        <section className="auth-flow-formside">
+          <div className="auth-flow-card">
+            <div className="auth-flow-header">
+              <h3>{s('hero_line_one')} {s('hero_line_two')} <span className="is-accent">{s('hero_line_three')}</span></h3>
+              <p>{s('hero_copy')}</p>
+            </div>
 
-            <div className="signup-flow-divider">
+            <div className="auth-flow-social">
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--strava"
+                disabled={!stravaConfigured}
+                onClick={() => startOAuth('strava')}
+              >
+                <span className="auth-flow-btn__icon auth-flow-btn__icon--bolt" aria-hidden="true">+</span>
+                <span>{stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}</span>
+              </button>
+
+              {!stravaConfigured && (
+                <p className="auth-flow-status-note">{t('common.strava_not_configured')}</p>
+              )}
+
+              <button
+                type="button"
+                className="auth-flow-btn auth-flow-btn--google"
+                disabled={!googleConfigured}
+                onClick={() => startOAuth('google')}
+              >
+                <span className="auth-flow-google-g" aria-hidden="true">G</span>
+                <span>{t(googleConfigured ? 'signup.google' : 'common.google_not_configured')}</span>
+              </button>
+
+              {!googleConfigured && (
+                <p className="auth-flow-status-note">{t('common.google_not_configured')}</p>
+              )}
+            </div>
+
+            <div className="auth-flow-divider">
               <span />
               <strong>{s('email_divider')}</strong>
               <span />
             </div>
 
-            <form className="signup-flow-form" onSubmit={handleSubmit}>
+            <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'strava_link_confirmation_required' && (
                 <div className="error-alert is-visible" role="alert">{t('profile.strava_link_confirmation_required')}</div>
               )}
@@ -279,9 +382,40 @@ export default function Signup() {
               {banner === 'strava_failed' && (
                 <div className="error-alert is-visible" role="alert">{t('common.strava_login_failed')}</div>
               )}
+              {banner === 'google_not_configured' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_not_configured')}</div>
+              )}
+              {banner === 'google_failed' && (
+                <div className="error-alert is-visible" role="alert">{t('common.google_login_failed')}</div>
+              )}
               {error && <div className="error-alert is-visible" role="alert">{error}</div>}
 
-              <div className="signup-flow-field">
+              <div className={`pwd-strength-card${!password ? ' pwd-strength-card--hidden' : ''}`}>
+                <div className="pwd-strength-header">
+                  <span className="pwd-strength-label">{t('signup.password_strength')}</span>
+                  {strengthScore && (
+                    <span className={`pwd-strength-badge pwd-strength-badge--${strengthScore}`}>
+                      {t(`signup.password_strength_${strengthScore}`)}
+                    </span>
+                  )}
+                </div>
+                <div className="pwd-strength-bar-track">
+                  <div className={`pwd-strength-bar-fill${strengthScore ? ` pwd-strength-bar-fill--${strengthScore}` : ''}`} />
+                </div>
+                <ul className="pwd-strength-rules">
+                  {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
+                    const isMet = !clientFailed.includes(id) && password.length > 0;
+                    return (
+                      <li key={id} className={`pwd-strength-rule${isMet ? ' is-met' : ''}`}>
+                        <AppIcon name={isMet ? 'check' : 'close'} className="rule-icon" />
+                        <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div className="form-group form-group--auth">
                 <label htmlFor="email">{t('signup.email_label')}</label>
                 <input
                   type="email"
@@ -294,23 +428,8 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="signup-flow-field">
+              <div className="form-group form-group--auth">
                 <label htmlFor="password">{t('signup.password_label')}</label>
-                
-                <div className="password-rules-display">
-                  <ul className="password-rules-list">
-                    {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
-                      const isPassed = !displayFailed.includes(id) && password.length > 0;
-                      return (
-                        <li key={id} className={`password-rule-item${isPassed ? ' is-passed' : ''}`}>
-                          <AppIcon name={isPassed ? 'check' : 'close'} className="rule-icon" />
-                          <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-
                 <input
                   type="password"
                   id="password"
@@ -318,15 +437,12 @@ export default function Signup() {
                   autoComplete="new-password"
                   required
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setFailedRules([]);
-                  }}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
-              <div className="signup-flow-field">
-                <label htmlFor="confirm-password">{t('signup.confirm_password_label') || (lang === 'zh-CN' ? '确认密码' : 'Confirm password')}</label>
+              <div className="form-group form-group--auth">
+                <label htmlFor="confirm-password">{t('signup.confirm_password_label')}</label>
                 <input
                   type="password"
                   id="confirm-password"
@@ -338,34 +454,22 @@ export default function Signup() {
                 />
               </div>
 
-              <button type="submit" className="signup-flow-primary" disabled={loading}>
+              <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
                 {loading ? t('signup.submit_loading') : t('signup.submit')}
-              </button>
-
-              <button
-                type="button"
-                className="signup-flow-google"
-                onClick={() => startOAuth('google')}
-              >
-                <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t('signup.google')}</span>
               </button>
             </form>
 
-            <p className="signup-flow-legal">
-              {s('legal_prefix')}{' '}
-              <a href="/terms">{s('footer_terms')}</a>{' '}
-              {s('legal_joiner')}{' '}
-              <a href="/privacy">{s('footer_privacy')}</a>.
-            </p>
+            <div className="signup-link signup-link--auth">
+              <span>{t('signup.signin_prompt')}</span>
+              <Link to="/login">{t('signup.signin_link')}</Link>
+            </div>
           </div>
+
+          <footer className="auth-flow-legal">
+            <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
+          </footer>
         </section>
       </main>
-
-      <footer className="signup-flow-footer">
-        <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
-        <p>{s('footer_copy')}</p>
-      </footer>
     </div>
   );
 }

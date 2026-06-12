@@ -34,17 +34,22 @@ public class AuthService {
                 .filter(runner -> !runner.isDeleted());
     }
 
+    private static final String DUMMY_HASH = "pbkdf2$120000$MTIzNDU2Nzg5MDEyMzQ1Ng==$MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=";
+
     public Optional<Runner> authenticate(String email, String rawPassword) {
         Optional<Runner> runnerOptional = findByEmail(email);
-        if (runnerOptional.isEmpty()) {
+
+        String passwordToMatch = runnerOptional.isPresent()
+                ? runnerOptional.get().getPassword()
+                : DUMMY_HASH;
+
+        boolean matches = passwordHasher.matches(rawPassword, passwordToMatch);
+
+        if (runnerOptional.isEmpty() || !matches) {
             return Optional.empty();
         }
 
         Runner runner = runnerOptional.get();
-        if (!passwordHasher.matches(rawPassword, runner.getPassword())) {
-            return Optional.empty();
-        }
-
         if (passwordHasher.needsMigration(runner.getPassword())) {
             runner.setPassword(passwordHasher.hash(rawPassword));
             runnerRepository.save(runner);
@@ -60,6 +65,12 @@ public class AuthService {
     private static final int SESSION_DAYS = 30;
 
     public String issueSessionToken(Runner runner) {
+        // Invalidate any existing session before issuing a new one.
+        // Clearing these fields first ensures no prior token remains valid
+        // even if a flush occurs mid-transaction before the new values are set.
+        runner.setSessionToken(null);
+        runner.setTokenIssuedAt(null);
+
         String token = UUID.randomUUID().toString();
         runner.setSessionToken(hashSessionToken(token));
         runner.setTokenIssuedAt(LocalDateTime.now());
@@ -79,28 +90,16 @@ public class AuthService {
 
         String hashedToken = hashSessionToken(token);
 
-        Optional<Runner> hashedMatch = runnerRepository.findBySessionToken(hashedToken)
+        return runnerRepository.findBySessionToken(hashedToken)
                 .filter(runner -> !runner.isDeleted())
                 .filter(this::isTokenValid);
-        if (hashedMatch.isPresent()) {
-            return hashedMatch;
-        }
-
-        Optional<Runner> legacyMatch = runnerRepository.findBySessionToken(token)
-                .filter(runner -> !runner.isDeleted())
-                .filter(this::isTokenValid);
-        legacyMatch.ifPresent(runner -> {
-            runner.setSessionToken(hashedToken);
-            runnerRepository.save(runner);
-        });
-        return legacyMatch;
     }
 
     private boolean isTokenValid(Runner runner) {
         LocalDateTime issuedAt = runner.getTokenIssuedAt();
         if (issuedAt == null) {
-            // Legacy tokens without a timestamp: accept but re-stamp on next issue
-            return true;
+            // No timestamp means age cannot be verified — treat as expired.
+            return false;
         }
         return issuedAt.isAfter(LocalDateTime.now().minusDays(SESSION_DAYS));
     }

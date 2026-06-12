@@ -1,7 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+
+const RUNS_CACHE_TTL_MS = 86400000;
+
+function readRunsCache(email) {
+  try {
+    const raw = localStorage.getItem(`hermes_runs_v1_${email}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function writeRunsCache(email, runs, profile, stravaStatus) {
+  try {
+    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+  } catch { /* ignore */ }
+}
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
@@ -10,12 +27,13 @@ import { formatDate, formatDistance, formatDuration, formatPace } from '../utils
 import HermesLogo from '../components/HermesLogo';
 import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import { formatStravaSyncLabel } from '../utils/stravaAutoSync';
+import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 
-const BATCH_SIZE = 10;
 const ROUTE_PREVIEW_CONCURRENCY = 2;
+const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -26,53 +44,147 @@ function localizeStravaSyncMessage(message, t) {
   return raw;
 }
 
+function computeBboxFromPoints(points) {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [lat, lng] of points) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  return { minLat, maxLat, minLng, maxLng };
+}
+
 function buildRoutePreviewModel(points) {
   if (!Array.isArray(points) || points.length < 2) return null;
-
-  let minLat = points[0][0];
-  let maxLat = points[0][0];
-  let minLng = points[0][1];
-  let maxLng = points[0][1];
-
-  points.forEach(([lat, lng]) => {
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
-    minLng = Math.min(minLng, lng);
-    maxLng = Math.max(maxLng, lng);
-  });
-
-  const latSpan = Math.max(0.0001, maxLat - minLat);
-  const lngSpan = Math.max(0.0001, maxLng - minLng);
-  const padding = 12;
-  const width = 100;
-  const height = 100;
-  const innerWidth = width - (padding * 2);
-  const innerHeight = height - (padding * 2);
-
-  const normalized = points.map(([lat, lng]) => {
-    const x = padding + (((lng - minLng) / lngSpan) * innerWidth);
-    const y = padding + (innerHeight - (((lat - minLat) / latSpan) * innerHeight));
-    return [x, y];
-  });
-
+  const bbox = computeBboxFromPoints(points);
+  if (!bbox) return null;
+  const latSpan = Math.max(0.0001, bbox.maxLat - bbox.minLat);
+  const lngSpan = Math.max(0.0001, bbox.maxLng - bbox.minLng);
+  const pad = 12;
+  const inner = 76; // 100 viewBox - pad*2
+  const normalized = points.map(([lat, lng]) => [
+    pad + ((lng - bbox.minLng) / lngSpan) * inner,
+    pad + inner - ((lat - bbox.minLat) / latSpan) * inner,
+  ]);
   return {
-    path: normalized.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
+    path: normalized.map(([x, y], i) => `${i ? 'L' : 'M'} ${x.toFixed(2)} ${y.toFixed(2)}`).join(' '),
     start: normalized[0],
     finish: normalized[normalized.length - 1],
+    bbox,
   };
 }
 
-function RoutePreviewThumb({ points, provider, runName }) {
-  const preview = buildRoutePreviewModel(points);
+function readBboxFromPreview(preview) {
+  if (!preview || typeof preview !== 'object') return null;
+  const direct = preview.bbox && typeof preview.bbox === 'object' ? preview.bbox : preview;
+  const minLat = Number(direct.minLat);
+  const maxLat = Number(direct.maxLat);
+  const minLng = Number(direct.minLng);
+  const maxLng = Number(direct.maxLng);
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null;
+  if (minLat === maxLat && minLng === maxLng) return null;
+  return { minLat, maxLat, minLng, maxLng };
+}
+
+function normalizeRoutePreview(preview) {
+  if (!preview || typeof preview !== 'object' || !preview.path) return null;
+  const startX = Array.isArray(preview.start) ? Number(preview.start[0]) : Number(preview.startX);
+  const startY = Array.isArray(preview.start) ? Number(preview.start[1]) : Number(preview.startY);
+  const finishX = Array.isArray(preview.finish) ? Number(preview.finish[0]) : Number(preview.finishX);
+  const finishY = Array.isArray(preview.finish) ? Number(preview.finish[1]) : Number(preview.finishY);
+  if (![startX, startY, finishX, finishY].every(Number.isFinite)) return null;
+  return {
+    path: preview.path,
+    start: [startX, startY],
+    finish: [finishX, finishY],
+    bbox: readBboxFromPreview(preview),
+  };
+}
+
+// Real-world dark-mode map tile helpers — renders a concrete OpenStreetMap
+// area under each thumbnail's SVG route so a runner sees where the run
+// actually happened, not just an abstract gradient.
+const ROUTE_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
+const ROUTE_TILE_MIN_ZOOM = 2;
+const ROUTE_TILE_MAX_ZOOM = 16;
+
+function pickRouteTileZoom(latSpan, lngSpan) {
+  // Pick the smallest zoom whose single 256-tile width exceeds the route span,
+  // so the whole route fits in roughly one tile. log2(360 / span) gives the
+  // zoom at which one tile equals `span` degrees of longitude; subtract 1 so
+  // the route sits comfortably with margin.
+  const span = Math.max(latSpan * 2, lngSpan, 0.0005);
+  const rawZoom = Math.floor(Math.log2(360 / span)) - 1;
+  if (!Number.isFinite(rawZoom)) return 12;
+  return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
+}
+
+function buildRouteTileUrl(bbox) {
+  if (!bbox) return null;
+  const centerLat = (bbox.minLat + bbox.maxLat) / 2;
+  const centerLng = (bbox.minLng + bbox.maxLng) / 2;
+  const zoom = pickRouteTileZoom(bbox.maxLat - bbox.minLat, bbox.maxLng - bbox.minLng);
+  const n = 2 ** zoom;
+  const x = Math.floor(((centerLng + 180) / 360) * n);
+  const latRad = (centerLat * Math.PI) / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x >= n || y >= n) return null;
+  // Mirror Heatmap / Territory choice but use no-labels variant — at thumb
+  // size, street-name labels are illegible noise; the dark basemap alone
+  // already conveys "real place", and the SVG route still pops on top.
+  const sub = ROUTE_TILE_SUBDOMAINS[(x + y) % ROUTE_TILE_SUBDOMAINS.length];
+  return `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}.png`;
+}
+
+// Persist bbox per run id so subsequent loads don't re-fetch the point list
+// just to recompute the same 4 numbers. Bbox never changes for a given run.
+const ROUTE_BBOX_CACHE_PREFIX = 'hermes_run_bbox_v1_';
+const ROUTE_BBOX_CACHE_TTL_MS = 30 * 86400000; // 30 days
+
+function readBboxCache(runId) {
+  try {
+    const raw = localStorage.getItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.cachedAt || Date.now() - parsed.cachedAt > ROUTE_BBOX_CACHE_TTL_MS) return null;
+    return readBboxFromPreview(parsed.bbox);
+  } catch { return null; }
+}
+
+function writeBboxCache(runId, bbox) {
+  if (!bbox) return;
+  try {
+    localStorage.setItem(`${ROUTE_BBOX_CACHE_PREFIX}${runId}`, JSON.stringify({ bbox, cachedAt: Date.now() }));
+  } catch { /* quota — ignore */ }
+}
+
+function RoutePreviewThumb({ preview, provider, runName, bbox }) {
+  const normalizedPreview = normalizeRoutePreview(preview);
+  const resolvedBbox = bbox || (normalizedPreview ? normalizedPreview.bbox : null);
+  const tileUrl = resolvedBbox ? buildRouteTileUrl(resolvedBbox) : null;
 
   return (
-    <div className={`recent-runs-thumb${preview ? ' is-route-preview' : ''}`}>
-      {preview ? (
+    <div className={`recent-runs-thumb${normalizedPreview ? ' is-route-preview' : ''}${tileUrl ? ' has-route-tile' : ''}`}>
+      {tileUrl ? (
+        <img
+          className="recent-runs-thumb-route-tile"
+          src={tileUrl}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : null}
+      {normalizedPreview ? (
         <svg className="recent-runs-thumb-route-svg" viewBox="0 0 100 100" aria-hidden="true">
-          <path className="recent-runs-thumb-route-shadow" d={preview.path} />
-          <path className="recent-runs-thumb-route-line" d={preview.path} />
-          <circle className="recent-runs-thumb-route-start" cx={preview.start[0]} cy={preview.start[1]} r="3.2" />
-          <circle className="recent-runs-thumb-route-finish" cx={preview.finish[0]} cy={preview.finish[1]} r="3.6" />
+          <path className="recent-runs-thumb-route-shadow" d={normalizedPreview.path} />
+          <path className="recent-runs-thumb-route-line" d={normalizedPreview.path} />
+          <circle className="recent-runs-thumb-route-start" cx={normalizedPreview.start[0]} cy={normalizedPreview.start[1]} r="3.2" />
+          <circle className="recent-runs-thumb-route-finish" cx={normalizedPreview.finish[0]} cy={normalizedPreview.finish[1]} r="3.6" />
         </svg>
       ) : (
         <div className="recent-runs-thumb-route-empty" aria-hidden="true">
@@ -85,8 +197,42 @@ function RoutePreviewThumb({ points, provider, runName }) {
   );
 }
 
-export default function Runs() {
-  const { isAuthenticated } = useAuth();
+const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
+const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
+
+function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen }) {
+  const provider = run.provider || t('runs.manual_import');
+  const runName = run.name || t('runs.default_run_name');
+  const preview = run.routePreview || routePreviewFallbacks[run.id] || null;
+  // Bbox priority: explicit override (cached from a previous fallback fetch) →
+  // bbox embedded in the preview (today only happens via the fallback path).
+  const bbox = routeBboxes[run.id] || readBboxFromPreview(preview);
+
+  return (
+    <article className="recent-runs-card" onClick={() => onOpen(run)}>
+      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
+      <div className="recent-runs-card-body">
+        <div className="recent-runs-card-top">
+          <div>
+            <h2>{runName}</h2>
+            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+          </div>
+          <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
+            <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
+          </button>
+        </div>
+        <div className="recent-runs-card-metrics">
+          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
+          <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+const Runs = memo(function Runs() {
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -98,7 +244,6 @@ export default function Runs() {
   const [activeMode, setActiveMode] = useState('all');
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [runsSort, setRunsSort] = useState('date');
   const [stravaStatus, setStravaStatus] = useState(null);
   const [stravaLinking, setStravaLinking] = useState(false);
@@ -109,34 +254,100 @@ export default function Runs() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
-  const [routePreviewPoints, setRoutePreviewPoints] = useState({});
+  const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
+  // Per-run geographic bbox keyed by run id. Used to render a concrete dark
+  // OpenStreetMap tile under each thumbnail. Seeded from localStorage so a
+  // repeat page load doesn't re-fetch the same point list to recompute it.
+  const [routeBboxes, setRouteBboxes] = useState({});
+  const [visibleRunsCount, setVisibleRunsCount] = useState(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  // Track which month groups the runner has explicitly collapsed. Default
+  // open: every month starts expanded so all runs render exactly the way
+  // they did before the fold-affordance shipped — runners only feel the
+  // change when they deliberately fold a month. Using a Set of keys keeps
+  // the state O(1) per toggle and short-circuits on the empty default.
+  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState(() => new Set());
   const routePreviewInflightRef = useRef(new Set());
+  const routeBboxInflightRef = useRef(new Set());
+  const loadMoreSentinelRef = useRef(null);
+
+  const toggleMonthFold = useCallback((monthKey) => {
+    setCollapsedMonthKeys((current) => {
+      const next = new Set(current);
+      if (next.has(monthKey)) next.delete(monthKey);
+      else next.add(monthKey);
+      return next;
+    });
+  }, []);
+
+  const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
+    if (fromCache) {
+      const hit = readRunsCache(email);
+      if (hit) {
+        const sorted = [...hit.runs].sort((a, b) => runDate(b) - runDate(a));
+        setAllRuns(sorted);
+        setProfile(hit.profile);
+        setStravaStatus(hit.stravaStatus);
+        setLoadState('ready');
+      }
+    }
+
+    // Fire the three calls in parallel but apply each result as it resolves,
+    // so the (heavy) runs payload paints as soon as it arrives instead of
+    // waiting for /api/profile/me and /api/auth/strava/status to finish too.
+    let latestRuns = null;
+    let latestProfile = null;
+    let latestStrava = null;
+    let runsFailed = false;
+
+    const runsPromise = apiJson('/api/activities')
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        list.sort((a, b) => runDate(b) - runDate(a));
+        setAllRuns(list);
+        setLoadState('ready');
+        latestRuns = list;
+      })
+      .catch((err) => {
+        runsFailed = true;
+        if (err && err.message !== 'Unauthorized') {
+          setLoadState((prev) => (prev === 'ready' ? prev : 'error'));
+        }
+      });
+
+    const profilePromise = apiJson('/api/profile/me')
+      .then((data) => { setProfile(data); latestProfile = data; })
+      .catch(() => {});
+
+    const stravaPromise = apiJson('/api/auth/strava/status')
+      .then((data) => { setStravaStatus(data); latestStrava = data; })
+      .catch(() => {});
+
+    await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
+    if (!runsFailed && latestRuns) {
+      writeRunsCache(email, latestRuns, latestProfile, latestStrava);
+    }
+  }, [email]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    loadRuns();
-  }, [isAuthenticated, navigate]);
+    loadRuns({ fromCache: true });
+  }, [isAuthenticated, navigate, loadRuns]);
 
-  async function loadRuns() {
-    try {
-      const [data, profileData, stravaData] = await Promise.all([
-        apiJson('/api/activities'),
-        apiJson('/api/profile/me').catch(() => null),
-        apiJson('/api/auth/strava/status').catch(() => null),
-      ]);
-      const list = Array.isArray(data) ? data : [];
-      list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
-      setAllRuns(list);
-      setProfile(profileData);
-      setStravaStatus(stravaData);
-      setLoadState('ready');
-    } catch (err) {
-      if (err.message !== 'Unauthorized') setLoadState('error');
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      loadRuns();
     }
-  }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [isAuthenticated, loadRuns]);
 
   async function handleStravaConnect() {
     setStravaLinking(true);
@@ -196,18 +407,18 @@ export default function Runs() {
 
     if (activeMode === 'year') {
       if (selectedYear != null) {
-        result = result.filter((run) => new Date(run.startTime || run.startDate || 0).getFullYear() === selectedYear);
+        result = result.filter((run) => runDate(run).getFullYear() === selectedYear);
       }
     } else if (activeMode === 'month') {
       const year = selectedYear || now.getFullYear();
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         if (date.getFullYear() !== year) return false;
         return selectedMonth == null ? true : date.getMonth() === selectedMonth;
       });
     } else if (activeMode === 'day') {
       result = result.filter((run) => {
-        const date = new Date(run.startTime || run.startDate || 0);
+        const date = runDate(run);
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
       });
     }
@@ -221,20 +432,16 @@ export default function Runs() {
         return paceA - paceB;
       });
     } else {
-      result.sort((a, b) => new Date(b.startTime || b.startDate || 0).getTime() - new Date(a.startTime || a.startDate || 0).getTime());
+      result.sort((a, b) => runDate(b).getTime() - runDate(a).getTime());
     }
 
     return result;
   }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t]);
 
-  useEffect(() => {
-    setVisibleCount(BATCH_SIZE);
-  }, [activeMode, selectedYear, selectedMonth]);
-
   const distinctYears = useMemo(() => {
     const years = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) years.add(date.getFullYear());
     });
     return [...years].sort((a, b) => b - a);
@@ -244,7 +451,7 @@ export default function Runs() {
     const year = selectedYear || new Date().getFullYear();
     const months = new Set();
     allRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime()) && date.getFullYear() === year) months.add(date.getMonth());
     });
     return [...months].sort((a, b) => a - b);
@@ -259,20 +466,10 @@ export default function Runs() {
     if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
   }, [activeMode, monthsWithData, selectedMonth]);
 
-  const sortedRuns = useMemo(() => {
-    if (runsSort === 'distance') return [...filteredRuns].sort((a, b) => (b.distanceKm || 0) - (a.distanceKm || 0));
-    if (runsSort === 'pace') {
-      return [...filteredRuns].sort((a, b) => {
-        const paceA = a.distanceKm > 0 ? (a.movingTimeSeconds || 0) / a.distanceKm : Infinity;
-        const paceB = b.distanceKm > 0 ? (b.movingTimeSeconds || 0) / b.distanceKm : Infinity;
-        return paceA - paceB;
-      });
-    }
-    return filteredRuns;
-  }, [filteredRuns, runsSort]);
+  useEffect(() => {
+    setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
+  }, [activeMode, allRuns.length, runsSort, searchQuery, selectedMonth, selectedYear]);
 
-  const visibleRuns = sortedRuns.slice(0, visibleCount);
-  const routePreviewRuns = visibleRuns;
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
@@ -292,11 +489,60 @@ export default function Runs() {
   const avgPaceText = filteredRuns.length > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
     : t('runs.pace_zero');
+  const visibleRuns = useMemo(
+    () => filteredRuns.slice(0, visibleRunsCount),
+    [filteredRuns, visibleRunsCount],
+  );
+  const routePreviewRuns = useMemo(
+    () => visibleRuns.slice(0, 50).filter((run) => !run.routePreview),
+    [visibleRuns],
+  );
+  const hasMoreRuns = visibleRunsCount < filteredRuns.length;
+
+  // Group the visible runs by YYYY-MM so the page-list renders each month as
+  // its own header + responsive run-card grid. visibleRuns is already sorted
+  // most-recent-first, so a single pass preserves the chronological group
+  // order without an extra sort. Each group also carries an aggregate run
+  // count and total distance so the header copy can summarize the month at
+  // a glance.
+  const runsByMonth = useMemo(() => {
+    const groups = [];
+    const groupByKey = new Map();
+    const monthLabelFormatter = (() => {
+      try {
+        return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long' });
+      } catch {
+        return null;
+      }
+    })();
+    visibleRuns.forEach((run) => {
+      const started = runDate(run);
+      if (Number.isNaN(started.getTime())) return;
+      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      let group = groupByKey.get(key);
+      if (!group) {
+        group = {
+          key,
+          label: monthLabelFormatter
+            ? monthLabelFormatter.format(started)
+            : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
+          runs: [],
+          totalKm: 0,
+        };
+        groupByKey.set(key, group);
+        groups.push(group);
+      }
+      group.runs.push(run);
+      group.totalKm += Number(run.distanceKm || 0)
+        || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
+    });
+    return groups;
+  }, [visibleRuns, lang]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
     filteredRuns.forEach((run) => {
-      const date = new Date(run.startTime || run.startDate || 0);
+      const date = runDate(run);
       if (!Number.isNaN(date.getTime())) uniqueDays.add(date.toISOString().slice(0, 10));
     });
     return uniqueDays.size;
@@ -338,10 +584,28 @@ export default function Runs() {
   }
 
   useEffect(() => {
+    if (!hasMoreRuns || loadState !== 'ready') return undefined;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+    }, {
+      root: null,
+      rootMargin: '240px 0px 360px',
+      threshold: 0.01,
+    });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredRuns.length, hasMoreRuns, loadState]);
+
+  useEffect(() => {
     let cancelled = false;
     const pendingRuns = routePreviewRuns.filter((run) => (
       run?.id
-      && !(run.id in routePreviewPoints)
+      && !(run.id in routePreviewFallbacks)
       && !routePreviewInflightRef.current.has(run.id)
     ));
     if (pendingRuns.length === 0) return undefined;
@@ -357,7 +621,7 @@ export default function Runs() {
               const response = await apiFetch(`/api/activities/${run.id}/points`);
               if (!response.ok) {
                 if (!cancelled) {
-                  setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
+                  setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
                 }
                 continue;
               }
@@ -367,12 +631,13 @@ export default function Runs() {
                   .map((point) => [Number(point.latitude), Number(point.longitude)])
                   .filter(([latitude, longitude]) => Number.isFinite(latitude) && Number.isFinite(longitude))
                 : [];
+              const preview = buildRoutePreviewModel(points);
               if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: points }));
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: preview }));
               }
             } catch {
               if (!cancelled) {
-                setRoutePreviewPoints((current) => ({ ...current, [run.id]: [] }));
+                setRoutePreviewFallbacks((current) => ({ ...current, [run.id]: null }));
               }
             } finally {
               routePreviewInflightRef.current.delete(run.id);
@@ -387,7 +652,84 @@ export default function Runs() {
     return () => {
       cancelled = true;
     };
-  }, [routePreviewPoints, routePreviewRuns]);
+  }, [routePreviewFallbacks, routePreviewRuns]);
+
+  // Ensure every currently-visible run has a geographic bbox (for the dark map
+  // tile under each thumb). Reuses the points endpoint that the preview fallback
+  // already calls, but runs even when the backend has cached the SVG path
+  // (since that cache doesn't carry bbox today). Cap at 50 visible runs to
+  // mirror the existing routePreviewRuns slice.
+  useEffect(() => {
+    if (!Array.isArray(visibleRuns) || visibleRuns.length === 0) return undefined;
+    const cappedVisibleRuns = visibleRuns.slice(0, 50);
+
+    // 1. Hydrate from localStorage for any visible run we haven't loaded yet.
+    const seeded = {};
+    for (const run of cappedVisibleRuns) {
+      if (!run?.id) continue;
+      if (run.id in routeBboxes) continue;
+      const cached = readBboxCache(run.id);
+      if (cached) seeded[run.id] = cached;
+    }
+    if (Object.keys(seeded).length > 0) {
+      setRouteBboxes((current) => ({ ...current, ...seeded }));
+      return undefined; // Re-run after the seed lands; next pass picks the still-missing runs.
+    }
+
+    // 2. Fetch points for any visible run still missing a bbox (and not in flight).
+    const pendingRuns = cappedVisibleRuns.filter((run) => (
+      run?.id
+      && !(run.id in routeBboxes)
+      && !readBboxFromPreview(run.routePreview || routePreviewFallbacks[run.id])
+      && !routeBboxInflightRef.current.has(run.id)
+    ));
+    if (pendingRuns.length === 0) return undefined;
+
+    let cancelled = false;
+    async function loadBboxes() {
+      const workers = Array.from(
+        { length: Math.min(ROUTE_PREVIEW_CONCURRENCY, pendingRuns.length) },
+        async (_, workerIndex) => {
+          for (let index = workerIndex; index < pendingRuns.length; index += ROUTE_PREVIEW_CONCURRENCY) {
+            const run = pendingRuns[index];
+            routeBboxInflightRef.current.add(run.id);
+            try {
+              const response = await apiFetch(`/api/activities/${run.id}/points`);
+              if (!response.ok) {
+                if (!cancelled) {
+                  setRouteBboxes((current) => ({ ...current, [run.id]: null }));
+                }
+                continue;
+              }
+              const data = await response.json();
+              const points = Array.isArray(data)
+                ? data
+                  .map((point) => [Number(point.latitude), Number(point.longitude)])
+                  .filter(([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng))
+                : [];
+              const bbox = computeBboxFromPoints(points);
+              if (bbox) writeBboxCache(run.id, bbox);
+              if (!cancelled) {
+                setRouteBboxes((current) => ({ ...current, [run.id]: bbox }));
+              }
+            } catch {
+              if (!cancelled) {
+                setRouteBboxes((current) => ({ ...current, [run.id]: null }));
+              }
+            } finally {
+              routeBboxInflightRef.current.delete(run.id);
+            }
+          }
+        }
+      );
+      await Promise.all(workers);
+    }
+
+    loadBboxes();
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleRuns, routeBboxes, routePreviewFallbacks]);
 
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
@@ -497,9 +839,11 @@ export default function Runs() {
         <main className="runner-shell-main">
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
-              <div className="runner-shell-topnav">
-                <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-              </div>
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={t('profile.dashboard_nav_activities')}
+                navigate={navigate}
+              />
             </div>
             <div className="runner-shell-topbar-actions">
               <div className="runner-shell-topbar-profile-actions">
@@ -655,9 +999,11 @@ export default function Runs() {
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
           <div className="runner-shell-topbar-left">
-            <div className="runner-shell-topnav">
-              <span className="runner-shell-topnav-link is-active">{t('profile.dashboard_nav_activities')}</span>
-            </div>
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={t('profile.dashboard_nav_activities')}
+              navigate={navigate}
+            />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
@@ -745,39 +1091,64 @@ export default function Runs() {
           {loadState === 'loading' ? <div className="recent-runs-status">{t('runs.loading')}</div> : null}
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
-          {loadState === 'ready' && visibleRuns.map((run, index) => {
-            const provider = run.provider || t('runs.manual_import');
-            const runName = run.name || t('runs.default_run_name');
-            return (
-              <article key={run.id || `${runName}-${index}`} className="recent-runs-card" onClick={() => openRun(run)}>
-                <RoutePreviewThumb points={routePreviewPoints[run.id] || []} provider={provider} runName={runName} />
-                <div className="recent-runs-card-body">
-                  <div className="recent-runs-card-top">
-                    <div>
-                      <h2>{runName}</h2>
-                      <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
-                    </div>
-                    <button type="button" className="recent-runs-card-menu" onClick={(event) => event.stopPropagation()} aria-label={t('runs.stitch_more_actions')}>
-                      <AppIcon name="more_horiz" className="runner-dashboard-side-link-icon" />
-                    </button>
-                  </div>
-                  <div className="recent-runs-card-metrics">
-                    <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
-                    <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
-                  </div>
+          {loadState === 'ready' && filteredRuns.length > 0 ? (
+              <>
+                <div className="recent-runs-page-list">
+                  {runsByMonth.map((group) => {
+                    const collapsed = collapsedMonthKeys.has(group.key);
+                    const panelId = `recent-runs-month-${group.key}`;
+                    return (
+                      <section
+                        key={group.key}
+                        className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
+                        aria-label={group.label}
+                      >
+                        <button
+                          type="button"
+                          className="recent-runs-month-header recent-runs-month-toggle"
+                          aria-expanded={!collapsed}
+                          aria-controls={panelId}
+                          onClick={() => toggleMonthFold(group.key)}
+                        >
+                          <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
+                            <AppIcon name={collapsed ? 'expand_more' : 'expand_less'} />
+                          </span>
+                          <h3 className="recent-runs-month-title">{group.label}</h3>
+                          <span className="recent-runs-month-meta">
+                            {t('runs.count_label', { count: group.runs.length })}
+                            {' · '}
+                            {formatDistance(group.totalKm, 1, lang)}
+                          </span>
+                        </button>
+                        <div
+                          id={panelId}
+                          className="recent-runs-month-grid"
+                          hidden={collapsed}
+                        >
+                          {group.runs.map((run) => (
+                            <RunCard
+                              key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
+                              run={run}
+                              t={t}
+                              lang={lang}
+                              routePreviewFallbacks={routePreviewFallbacks}
+                              routeBboxes={routeBboxes}
+                              onOpen={openRun}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    );
+                  })}
                 </div>
-              </article>
-            );
-          })}
-            </section>
-            {visibleCount < filteredRuns.length ? (
-              <div className="recent-runs-load-more-row">
-            <button type="button" className="recent-runs-load-more" onClick={() => setVisibleCount((value) => Math.min(filteredRuns.length, value + BATCH_SIZE))}>
-              {t('runs.load_more')}
-            </button>
-              </div>
+                {hasMoreRuns ? (
+                  <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
+                    <span>{t('runs.loading')}</span>
+                  </div>
+                ) : null}
+              </>
             ) : null}
+            </section>
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
             </footer>
@@ -787,4 +1158,6 @@ export default function Runs() {
       {renderImportModal()}
     </div>
   );
-}
+});
+
+export default Runs;

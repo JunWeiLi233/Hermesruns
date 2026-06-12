@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -7,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SecurityDiagnosticsInitializer {
+    private static final Logger logger = LoggerFactory.getLogger(SecurityDiagnosticsInitializer.class);
     @Value("${google.client.id:}")
     private String googleClientId;
 
@@ -33,8 +36,8 @@ public class SecurityDiagnosticsInitializer {
 
             boolean stravaConfigured = isPresent(stravaClientId) && isPresent(stravaClientSecret);
             if (stravaConfigured && !secretEncryptionService.isConfigured()) {
-                System.out.println("[Hermes] Strava OAuth credentials are set, but APP_DATA_ENCRYPTION_KEY is missing.");
-                System.out.println("[Hermes] Strava sign-in will remain unavailable until APP_DATA_ENCRYPTION_KEY is configured.");
+                logger.warn("[Hermes] Strava OAuth credentials are set, but APP_DATA_ENCRYPTION_KEY is missing.");
+                logger.warn("[Hermes] Strava sign-in will remain unavailable until APP_DATA_ENCRYPTION_KEY is configured.");
             }
 
             logIfHalfConfigured("Admin bootstrap", bootstrapAdminEmail, bootstrapAdminPassword);
@@ -45,7 +48,7 @@ public class SecurityDiagnosticsInitializer {
         boolean leftPresent = isPresent(leftValue);
         boolean rightPresent = isPresent(rightValue);
         if (leftPresent != rightPresent) {
-            System.out.println("[Hermes] " + label + " is only partially configured.");
+            logger.warn("[Hermes] {} is only partially configured.", label);
         }
     }
 

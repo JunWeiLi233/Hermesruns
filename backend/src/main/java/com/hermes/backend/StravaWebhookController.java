@@ -1,13 +1,23 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.annotation.PreDestroy;
+import jakarta.servlet.http.HttpServletRequest;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,15 +46,20 @@ public class StravaWebhookController {
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
     private final RunnerRepository runnerRepository;
-    private final OAuthController oAuthController;
+    private final StravaSyncService stravaSyncService;
     private final ExecutorService webhookExecutor;
 
     @Value("${strava.webhook.verify-token:hermes-strava-webhook}")
     private String verifyToken;
 
-    public StravaWebhookController(RunnerRepository runnerRepository, OAuthController oAuthController) {
+    @Value("${STRAVA_CLIENT_SECRET:}")
+    private String stravaClientSecret;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    public StravaWebhookController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
         this.runnerRepository = runnerRepository;
-        this.oAuthController = oAuthController;
+        this.stravaSyncService = stravaSyncService;
         // Bound concurrency to reduce memory pressure on small-RAM servers.
         this.webhookExecutor = Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "strava-webhook-worker");
@@ -80,26 +95,71 @@ public class StravaWebhookController {
     /**
      * Strava event callback — receives activity create/update/delete/deauthorize events.
      * Must return 200 within 2 seconds (Strava requirement), so processing is async.
+     *
+     * <p>Strava does not send a verify_token on POST event callbacks (only on GET
+     * subscription validation). Instead, we validate the event payload structure and
+     * only process events for known athletes (checked via owner_id lookup in
+     * runnerRepository). The {@link WebhookRateLimitFilter} provides per-IP flood
+     * protection, and the runner lookup ensures only events for registered athletes
+     * trigger activity processing.</p>
      */
     @PostMapping
     public ResponseEntity<String> handleEvent(
-            @RequestParam(value = "verify_token", required = false) String token,
-            @RequestBody Map<String, Object> event) {
-        
-        if (verifyToken != null && !verifyToken.equals(token)) {
-            log.warn("Strava webhook event forged or missing token. verify_token param mismatch.");
-            return ResponseEntity.status(401).body("UNAUTHORIZED");
+            @RequestBody String body,
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
+            HttpServletRequest request) {
+
+        boolean isProd = "production".equals(System.getenv("HERMES_ENV"));
+        if (isProd && (stravaClientSecret == null || stravaClientSecret.isBlank()
+                || !verifyStravaSignature(body, signature))) {
+            log.warn("Strava webhook rejected: HMAC signature mismatch or missing secret");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
         }
 
-        log.debug("Strava webhook event: {}", event);
+        Map<String, Object> event;
+        try {
+            event = OBJECT_MAPPER.readValue(body, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("Strava webhook rejected: invalid JSON body");
+            return ResponseEntity.badRequest().body("INVALID_JSON");
+        }
 
         String objectType = str(event.get("object_type"));
         String aspectType = str(event.get("aspect_type"));
         Long ownerId = lng(event.get("owner_id"));
         Long objectId = lng(event.get("object_id"));
 
-        if (ownerId == null) {
+        if (objectType == null || aspectType == null || ownerId == null) {
+            log.warn("Strava webhook event rejected: missing required fields (object_type, aspect_type, owner_id).");
+            return ResponseEntity.badRequest().body("MISSING_REQUIRED_FIELDS");
+        }
+
+        log.info("Strava webhook event: object_type={}, aspect_type={}, owner_id={}, object_id={}",
+                objectType, aspectType, ownerId, objectId);
+
+        // Athlete updates and non-activity objects do not trigger runner work, so
+        // acknowledge them before spending a repository lookup on owner validation.
+        if ("athlete".equals(objectType) && "update".equals(aspectType)) {
+            Map<String, Object> updates = map(event.get("updates"));
+            if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
+                log.info("Strava deauthorization for athlete {}", ownerId);
+                // Don't delete data - just log it. User can re-connect.
+            }
             return ResponseEntity.ok("EVENT_RECEIVED");
+        }
+
+        if (!"activity".equals(objectType) || objectId == null) {
+            return ResponseEntity.ok("EVENT_RECEIVED");
+        }
+
+        // Verify the owner_id corresponds to a known registered runner.
+        // Forged events with arbitrary owner_ids are rejected synchronously
+        // before any async processing or resource consumption occurs.
+        Optional<Runner> knownRunner = runnerRepository.findByStravaAthleteId(ownerId);
+        if (knownRunner.isEmpty()) {
+            String ip = RequestIpResolver.clientIp(request);
+            log.warn("Strava webhook event rejected: unknown owner_id={} ip={}", ownerId, ip);
+            return ResponseEntity.status(403).body("UNKNOWN_OWNER");
         }
 
         // Handle deauthorization
@@ -136,7 +196,7 @@ public class StravaWebhookController {
                     } else if ("delete".equals(aspectType)) {
                         log.info("Strava webhook: deleting activity {} for runner {}",
                                 stravaActivityId, runner.getId());
-                        oAuthController.deleteStravaActivity(runner, stravaActivityId);
+                        stravaSyncService.deleteStravaActivity(runner, stravaActivityId);
                     }
                 },
                 () -> log.warn("Strava webhook: no runner found for athlete {}", stravaAthleteId)
@@ -155,12 +215,28 @@ public class StravaWebhookController {
                 }
             }
 
-            OAuthController.SingleActivitySyncResult result = oAuthController.syncStravaActivityById(runner, stravaActivityId);
-            if (result == OAuthController.SingleActivitySyncResult.SUCCESS
-                    || result == OAuthController.SingleActivitySyncResult.ALREADY_RUNNING
-                    || result == OAuthController.SingleActivitySyncResult.PERMANENT_FAILURE) {
+            StravaSyncService.SingleActivitySyncResult result = stravaSyncService.syncStravaActivityById(runner, stravaActivityId);
+            if (result == StravaSyncService.SingleActivitySyncResult.SUCCESS
+                    || result == StravaSyncService.SingleActivitySyncResult.ALREADY_RUNNING
+                    || result == StravaSyncService.SingleActivitySyncResult.PERMANENT_FAILURE) {
                 return;
             }
+        }
+    }
+
+    private boolean verifyStravaSignature(String body, String signatureHeader) {
+        if (signatureHeader == null || !signatureHeader.startsWith("sha256=")) return false;
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(stravaClientSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] digest = mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
+            String expected = "sha256=" + HexFormat.of().formatHex(digest);
+            return MessageDigest.isEqual(
+                    expected.getBytes(StandardCharsets.UTF_8),
+                    signatureHeader.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            log.warn("Strava signature verification error: {}", e.getMessage());
+            return false;
         }
     }
 

@@ -13,6 +13,13 @@ export function getBackendBaseUrl() {
 export async function apiFetch(url, options = {}) {
   const baseUrl = getBackendBaseUrl();
   const headers = new Headers(options.headers || {});
+  if (!headers.has('Accept-Language')) {
+    const storedLanguage = localStorage.getItem('hermes_lang');
+    const browserLanguage = typeof navigator !== 'undefined'
+      ? navigator.languages?.[0] || navigator.language || 'en'
+      : 'en';
+    headers.set('Accept-Language', storedLanguage || browserLanguage);
+  }
   const token = localStorage.getItem('hermes_jwt');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -35,7 +42,13 @@ export async function apiJson(url, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const data = contentType.includes('application/json') ? await response.json() : {};
   if (!response.ok) {
-    throw new Error(data.error || data.message || 'Request failed');
+    const error = new Error(data.error || data.message || 'Request failed');
+    error.status = response.status;
+    const retryAfter = response.headers.get('retry-after');
+    if (retryAfter) {
+      error.retryAfter = retryAfter;
+    }
+    throw error;
   }
   return data;
 }

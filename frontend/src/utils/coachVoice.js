@@ -4,24 +4,40 @@
 
 export function generateMorningBriefing({ recommendation, metrics, lang }) {
   const isZh = lang === 'zh-CN';
-  
+
   // 1. Warm Greeting
-  const greetings = isZh 
-    ? ['早上好！', '嘿，准备好出发了吗？', '今天感觉怎么样？'] 
+  const greetings = isZh
+    ? ['早上好！', '嘿，准备好出发了吗？', '今天感觉怎么样？']
     : ['Good morning!', 'Hey there, ready to move?', 'How are you feeling today?'];
   const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+  const hasVdot = Number.isFinite(metrics?.bestVdot) && metrics.bestVdot > 0;
+  const hasAcwr = metrics?.acwr != null && Number.isFinite(metrics.acwr);
+
+  // New-runner / no-data fallback: skip VDOT/ACWR claims entirely.
+  if (!hasVdot) {
+    const newRunnerLine = isZh
+      ? '准备好开始了吗？今天就把目标放在打底：用能说话的轻松配速跑 30–40 分钟，先让身体熟悉跑步的节奏。'
+      : 'Ready to get started? Today is about building your aerobic foundation. Run easy — conversation pace — for 30–40 minutes.';
+    const closure = isZh ? '加油，第一步最关键。' : 'Take that first step — it sets the tone.';
+    return `${greeting} ${newRunnerLine} ${closure}`;
+  }
 
   // 2. State Summary (VDOT, ACWR, Recovery)
   let stateSentence = '';
   if (isZh) {
-    stateSentence = `你的 VDOT 保持在 ${metrics.bestVdot.toFixed(1)}，训练负荷 (ACWR) 处于 ${metrics.acwr?.toFixed(2) || '--'} 的健康区间。`;
+    stateSentence = hasAcwr
+      ? `你的 VDOT 保持在 ${metrics.bestVdot.toFixed(1)}，训练负荷 (ACWR) 处于 ${metrics.acwr.toFixed(2)} 的健康区间。`
+      : `你的 VDOT 保持在 ${metrics.bestVdot.toFixed(1)}，训练负荷数据还在积累中。`;
     if (metrics.recoveryHours > 0) {
       stateSentence += ` 虽然你还需要约 ${metrics.recoveryHours} 小时才能彻底恢复，但今天的安排已经考虑了这一点。`;
     } else {
       stateSentence += ` 你的身体已经完全恢复，蓄势待发。`;
     }
   } else {
-    stateSentence = `Your VDOT is solid at ${metrics.bestVdot.toFixed(1)}, and your load (ACWR) is at ${metrics.acwr?.toFixed(2) || '--'} within the healthy zone.`;
+    stateSentence = hasAcwr
+      ? `Your VDOT is solid at ${metrics.bestVdot.toFixed(1)}, and your load (ACWR) is at ${metrics.acwr.toFixed(2)} within the healthy zone.`
+      : `Your VDOT is solid at ${metrics.bestVdot.toFixed(1)}; your training load picture is still building.`;
     if (metrics.recoveryHours > 0) {
       stateSentence += ` You still have about ${metrics.recoveryHours} hours of recovery left, which we've accounted for.`;
     } else {
@@ -35,7 +51,7 @@ export function generateMorningBriefing({ recommendation, metrics, lang }) {
     if (recommendation.type.includes('质量') || recommendation.type.includes('Quality')) {
       whySentence = `根据你最近的节奏，今天是一个适合提升强度的日子，让我们来一点 ${recommendation.type}。`;
     } else if (recommendation.type.includes('恢复') || recommendation.type.includes('Recovery')) {
-      whySentence = `今天我们的重点是“主动恢复”，通过 ${recommendation.type} 让双腿保持活力，同时不增加额外负担。`;
+      whySentence = `今天我们的重点是"主动恢复"，通过 ${recommendation.type} 让双腿保持活力，同时不增加额外负担。`;
     } else {
       whySentence = `今天安排了一趟 ${recommendation.type}，这是维持体能基底的关键。`;
     }

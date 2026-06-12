@@ -22,6 +22,9 @@ public class ShoeImageAssetService {
         String identityKey = requireIdentityKey(shoe);
         ShoeImageAsset asset = shoeImageAssetRepository.findByIdentityKey(identityKey).orElseGet(ShoeImageAsset::new);
         asset.setIdentityKey(identityKey);
+        if (asset.getRunner() == null) {
+            asset.setRunner(shoe.getRunner());
+        }
         asset.setBrand(shoe.getBrand());
         asset.setModel(shoe.getModel());
         asset.setPendingImageUrl(imageUrl);
@@ -40,6 +43,9 @@ public class ShoeImageAssetService {
         }
         asset.setLiveImageUrl(asset.getPendingImageUrl());
         asset.setLiveSource(asset.getPendingSource());
+        if (asset.getRunner() == null) {
+            asset.setRunner(shoe.getRunner());
+        }
         asset.setLiveUpdatedAt(LocalDateTime.now());
         asset.setLiveUpdatedByEmail(actorEmail);
         shoeImageAssetRepository.save(asset);

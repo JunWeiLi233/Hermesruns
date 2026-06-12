@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import java.util.concurrent.Executors;
 
 @Service
 public class GarminConnectImportService {
+    private static final Logger logger = LoggerFactory.getLogger(GarminConnectImportService.class);
 
     private static final int MAX_ACTIVITIES = 200;
     private static final int POINTS_BATCH_SIZE = 500;
@@ -70,7 +73,7 @@ public class GarminConnectImportService {
             try {
                 runImport(runner, garminEmail, garminPassword, clampedLimit, tracker);
             } catch (Exception e) {
-                tracker.markFailed("Import failed: " + safeMessage(e));
+                markDownloadFailure(tracker, "Import failed: " + safeMessage(e), Map.of());
             }
         });
 
@@ -85,6 +88,11 @@ public class GarminConnectImportService {
         return tracker.snapshot();
     }
 
+    public long getRateLimitRetryAfterSeconds(Long runnerId) {
+        GarminSyncTracker tracker = syncStates.get(runnerId);
+        return tracker == null ? 0 : tracker.retryAfterSeconds();
+    }
+
     private void runImport(Runner runner, String email, String password, int limit, GarminSyncTracker tracker) {
         Path tempDir = null;
         try {
@@ -94,7 +102,7 @@ public class GarminConnectImportService {
             Boolean success = (Boolean) result.get("success");
             if (!Boolean.TRUE.equals(success)) {
                 String error = (String) result.get("error");
-                tracker.markFailed(error != null ? error : "Garmin download failed.");
+                markDownloadFailure(tracker, error != null ? error : "Garmin download failed.", result);
                 return;
             }
 
@@ -114,18 +122,30 @@ public class GarminConnectImportService {
                 try {
                     importSingleActivity(runner, activityMeta, tracker);
                 } catch (Exception e) {
-                    System.err.println("[Hermes] Garmin import skipped activity: " + safeMessage(e));
+                    logger.warn("[Hermes] Garmin import skipped activity: {}", safeMessage(e), e);
                 }
             }
 
             tracker.markCompleted(null);
         } catch (Exception e) {
-            tracker.markFailed("Import failed: " + safeMessage(e));
+            markDownloadFailure(tracker, "Import failed: " + safeMessage(e), Map.of());
         } finally {
             if (tempDir != null) {
                 deleteTempDir(tempDir);
             }
         }
+    }
+
+    private void markDownloadFailure(GarminSyncTracker tracker, String message, Map<String, Object> result) {
+        Object errorCode = result == null ? null : result.get("errorCode");
+        if (GarminRateLimitSupport.isRateLimited(errorCode, message)) {
+            long retryAfterSeconds = GarminRateLimitSupport.retryAfterSeconds(
+                    result == null ? null : result.get("retryAfterSeconds")
+            );
+            tracker.markRateLimited(GarminRateLimitSupport.message(retryAfterSeconds), retryAfterSeconds);
+            return;
+        }
+        tracker.markFailed(message);
     }
 
     private void importSingleActivity(Runner runner, Map<String, Object> meta, GarminSyncTracker tracker) throws IOException {
@@ -251,7 +271,7 @@ public class GarminConnectImportService {
         int exitCode = process.waitFor();
 
         if (stderr.length > 0) {
-            System.err.println("[Hermes] Garmin download stderr: " + new String(stderr, StandardCharsets.UTF_8).trim());
+            logger.warn("[Hermes] Garmin download stderr: {}", new String(stderr, StandardCharsets.UTF_8).trim());
         }
 
         if (exitCode != 0 || stdout.length == 0) {
@@ -338,10 +358,11 @@ public class GarminConnectImportService {
             int skippedNonRuns,
             int skippedDuplicates,
             String message,
-            boolean active
+            boolean active,
+            long retryAfterSeconds
     ) {
         static GarminSyncStatus idle() {
-            return new GarminSyncStatus("IDLE", 0, 0, 0, 0, null, false);
+            return new GarminSyncStatus("IDLE", 0, 0, 0, 0, null, false, 0);
         }
     }
 
@@ -352,16 +373,19 @@ public class GarminConnectImportService {
         private int skippedNonRuns;
         private int skippedDuplicates;
         private String message;
+        private long cooldownUntilMs;
         private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized boolean tryBegin() {
             if ("RUNNING".equals(status)) return false;
+            if (retryAfterSeconds() > 0) return false;
             status = "RUNNING";
             importedRuns = 0;
             importedPoints = 0;
             skippedNonRuns = 0;
             skippedDuplicates = 0;
             message = null;
+            cooldownUntilMs = 0;
             return true;
         }
 
@@ -381,12 +405,21 @@ public class GarminConnectImportService {
         synchronized void markCompleted(String msg) {
             status = "COMPLETED";
             message = msg;
+            cooldownUntilMs = 0;
             lastUpdatedMs = System.currentTimeMillis();
         }
 
         synchronized void markFailed(String msg) {
             status = "FAILED";
             message = msg;
+            cooldownUntilMs = 0;
+            lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        synchronized void markRateLimited(String msg, long retryAfterSeconds) {
+            status = "RATE_LIMITED";
+            message = msg;
+            cooldownUntilMs = System.currentTimeMillis() + (retryAfterSeconds * 1000);
             lastUpdatedMs = System.currentTimeMillis();
         }
 
@@ -398,8 +431,17 @@ public class GarminConnectImportService {
             return new GarminSyncStatus(
                     status, importedRuns, importedPoints,
                     skippedNonRuns, skippedDuplicates, message,
-                    "RUNNING".equals(status)
+                    "RUNNING".equals(status),
+                    retryAfterSeconds()
             );
+        }
+
+        synchronized long retryAfterSeconds() {
+            long remainingMs = cooldownUntilMs - System.currentTimeMillis();
+            if (remainingMs <= 0) {
+                return 0;
+            }
+            return (long) Math.ceil(remainingMs / 1000.0);
         }
     }
 }

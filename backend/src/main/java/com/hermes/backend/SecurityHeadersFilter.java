@@ -14,7 +14,7 @@ import java.io.IOException;
 @Component
 public class SecurityHeadersFilter implements Filter {
 
-    @Value("${app.security.enable-hsts:false}")
+    @Value("${app.security.enable-hsts:true}")
     private boolean enableHsts;
 
     @Override
@@ -32,15 +32,16 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=()");
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline'; " +
+                "script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-                "img-src 'self' data: https:; " +
+                "img-src 'self' data: https: blob:; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
-                "frame-src 'none'; " +
+                "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://www.youtube-nocookie.com; " +
                 "object-src 'none'; " +
                 "base-uri 'self'; " +
                 "form-action 'self'; " +
                 "connect-src 'self' https://www.strava.com https://accounts.google.com " +
+                "https://www.google.com/recaptcha/ " +
                 "https://generativelanguage.googleapis.com " +
                 "https://api.stripe.com https://*.stripe.com " +
                 "https://api.open-meteo.com");
