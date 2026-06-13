@@ -72781,10 +72781,7 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card.is-accent {
   grid-column: span 2;
   min-height: clamp(210px, 19vw, 320px);
-  background:
-    radial-gradient(circle at 82% 18%, rgba(239, 106, 82, 0.24), transparent 16rem),
-    linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
-    var(--runner-profile-ink) !important;
+  background: var(--runner-profile-ink) !important;
   color: #fff8ee !important;
 }
 
@@ -73306,10 +73303,7 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/run"], [data-route-path^="/run/"]) .run-detail-stat-card.is-accent {
   grid-column: span 2;
   min-height: clamp(210px, 19vw, 320px);
-  background:
-    radial-gradient(circle at 82% 18%, rgba(239, 106, 82, 0.24), transparent 16rem),
-    linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
-    var(--runner-profile-ink) !important;
+  background: var(--runner-profile-ink) !important;
   color: #fff8ee !important;
 }
 
