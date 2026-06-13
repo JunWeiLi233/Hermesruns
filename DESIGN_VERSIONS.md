@@ -3446,3 +3446,12 @@ What changed: Moved the per-second telemetry cockpit out of the primary content 
 Why: The user requested the screenshoted telemetry area to extend to the full page.
 Rollback target: `DV-2026-06-13-02`
 Notes: The underlying telemetry data contract and tab behavior are unchanged; this is a layout-only expansion.
+
+### Version: DV-2026-06-13-04
+Date: 2026-06-13
+Surface: Run Detail full-width evidence sections on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the recent-run comparison panel and splits table out of the primary content column so they render as full-width shell-level sections around the telemetry cockpit.
+Why: The user requested the same full-page treatment for `run-detail-section` and `run-detail-section run-detail-comparison-section`.
+Rollback target: `DV-2026-06-13-03`
+Notes: The comparison and split data logic is unchanged; only the page composition changed.

@@ -72867,7 +72867,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   align-items: flex-end;
 }
 
-.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-section {
+.run-detail-page.run-detail-profile-cockpit .run-detail-comparison-section,
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-section,
+.run-detail-page.run-detail-profile-cockpit .run-detail-splits-section {
   margin-top: clamp(18px, 2.4vw, 34px);
 }
 
