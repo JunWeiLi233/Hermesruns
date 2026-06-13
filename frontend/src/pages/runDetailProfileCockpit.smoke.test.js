@@ -47,6 +47,13 @@ assert(
 );
 
 assert(
+  runDetailSource.includes("apiJson(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' })")
+    && !runDetailSource.includes("apiFetch(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' })")
+    && runDetailSource.includes('setShoeDropdownOpen(false);'),
+  'Run Detail shoe linking should validate the assignment response before updating local gear state.',
+);
+
+assert(
   runDetailSource.includes('const displaySample = getTelemetryDisplaySample(samples);')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')

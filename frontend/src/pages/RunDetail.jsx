@@ -237,7 +237,7 @@ export default function RunDetail() {
   async function assignShoe(shoeId) {
     if (!run?.id) return;
     try {
-      await apiFetch(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' });
+      await apiJson(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' });
       setRun((prev) => ({
         ...prev,
         shoeId: shoeId === 0 ? null : shoeId,
