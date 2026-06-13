@@ -99,9 +99,11 @@ assert(
 
 assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*0\.34fr\)\s+minmax\(0,\s*1fr\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*calc\(\(clamp\(1\.25rem,\s*1\.55vw,\s*1\.65rem\)\s*\*\s*1\.1\)\s*\+\s*14px\);/.test(styleSource)
+    && /@media\s*\(max-width:\s*1180px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*0;/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-comparison-section,[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-section\s*\{[\s\S]*margin-top:\s*clamp\(18px,\s*2\.4vw,\s*34px\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-table tbody tr:nth-child\(2n\)\s*\{[\s\S]*rgba\(247,\s*240,\s*231,\s*0\.58\)/.test(styleSource),
-  'Run Detail should keep elite-runner evidence sections readable instead of only restyling the hero.',
+  'Run Detail should keep elite-runner evidence sections readable and align debrief and gear panels in the desktop grid.',
 );
 
 assert(

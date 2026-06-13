@@ -72767,6 +72767,16 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   padding: clamp(22px, 2.2vw, 34px);
 }
 
+.run-detail-page.run-detail-profile-cockpit .run-detail-section h2 {
+  margin-bottom: 14px;
+  font-size: clamp(1.25rem, 1.55vw, 1.65rem);
+  line-height: 1.1;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-main-grid:has(.run-detail-debrief-section) .run-detail-gear-panel {
+  margin-top: calc((clamp(1.25rem, 1.55vw, 1.65rem) * 1.1) + 14px);
+}
+
 .run-detail-page.run-detail-profile-cockpit .run-detail-section h2,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel h3,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-head strong,
@@ -73069,6 +73079,10 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 
   .run-detail-page.run-detail-profile-cockpit .run-detail-profile-stat-rail {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-main-grid:has(.run-detail-debrief-section) .run-detail-gear-panel {
+    margin-top: 0;
   }
 
   .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card.is-accent {
