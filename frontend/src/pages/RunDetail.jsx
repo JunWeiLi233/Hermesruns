@@ -737,73 +737,6 @@ export default function RunDetail() {
               </section>
             )}
 
-            {runComparison && (
-              <section className="run-detail-section run-detail-comparison-section">
-                <h2>{t('run_detail.run_comparison_title')}</h2>
-                <div className="run-detail-panel run-detail-comparison-panel">
-                  <div className="run-detail-comparison-signal">
-                    <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
-                      {runComparison.direction === 'faster' ? '+' : runComparison.direction === 'slower' ? '-' : '='}
-                    </span>
-                    <div>
-                      <strong>
-                        {runComparison.direction === 'faster'
-                          ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                          : runComparison.direction === 'slower'
-                            ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                            : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
-                      </strong>
-                      <p>
-                        {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
-                          : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
-                            : t('run_detail.run_comparison_stable')}
-                        {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            <section className="run-detail-section">
-              <div className="run-detail-section-head">
-                <h2>{t('run_detail.splits')}</h2>
-                {lapRows.length > 5 && (
-                  <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
-                    {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
-                  </button>
-                )}
-              </div>
-              <div className="run-detail-panel run-detail-table-panel">
-                <table className="run-detail-splits-table">
-                  <thead>
-                    <tr>
-                      <th>{t('run_detail.split_unit')}</th>
-                      <th>{t('run_detail.split_pace')}</th>
-                      <th>{t('run_detail.split_elev')}</th>
-                      <th>{t('run_detail.split_hr')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
-                      const lapGain = lapElevationGains ? lapElevationGains[index] : null;
-                      return (
-                        <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                          <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
-                          <td>{lap.pace || '--'}</td>
-                          <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
-                          <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr>
-                        <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
           </div>
 
           <aside className="run-detail-side-column">
@@ -854,6 +787,34 @@ export default function RunDetail() {
             </section>
           </aside>
         </section>
+
+        {runComparison && (
+          <section className="run-detail-section run-detail-comparison-section">
+            <h2>{t('run_detail.run_comparison_title')}</h2>
+            <div className="run-detail-panel run-detail-comparison-panel">
+              <div className="run-detail-comparison-signal">
+                <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
+                  {runComparison.direction === 'faster' ? '+' : runComparison.direction === 'slower' ? '-' : '='}
+                </span>
+                <div>
+                  <strong>
+                    {runComparison.direction === 'faster'
+                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                      : runComparison.direction === 'slower'
+                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                  </strong>
+                  <p>
+                    {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
+                      : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
+                        : t('run_detail.run_comparison_stable')}
+                    {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="run-detail-section run-detail-telemetry-section">
           <div className="run-detail-section-head run-detail-telemetry-heading">
@@ -961,6 +922,46 @@ export default function RunDetail() {
                 </button>
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="run-detail-section run-detail-splits-section">
+          <div className="run-detail-section-head">
+            <h2>{t('run_detail.splits')}</h2>
+            {lapRows.length > 5 && (
+              <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
+                {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+              </button>
+            )}
+          </div>
+          <div className="run-detail-panel run-detail-table-panel">
+            <table className="run-detail-splits-table">
+              <thead>
+                <tr>
+                  <th>{t('run_detail.split_unit')}</th>
+                  <th>{t('run_detail.split_pace')}</th>
+                  <th>{t('run_detail.split_elev')}</th>
+                  <th>{t('run_detail.split_hr')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
+                  const lapGain = lapElevationGains ? lapElevationGains[index] : null;
+                  return (
+                    <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
+                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                      <td>{lap.pace || '--'}</td>
+                      <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
+                      <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
 

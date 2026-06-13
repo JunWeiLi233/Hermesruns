@@ -53,6 +53,14 @@ assert(
 );
 
 assert(
+  runDetailSource.indexOf('run-detail-comparison-section') > runDetailSource.indexOf('</aside>')
+    && runDetailSource.indexOf('run-detail-comparison-section') < runDetailSource.indexOf('run-detail-telemetry-section')
+    && runDetailSource.indexOf('run-detail-splits-section') > runDetailSource.indexOf('run-detail-telemetry-section')
+    && runDetailSource.indexOf('run-detail-splits-section') < runDetailSource.indexOf('run-detail-bottom-grid'),
+  'Run Detail comparison and splits sections should render at shell level around telemetry instead of being constrained to the primary column.',
+);
+
+assert(
   !runDetailSource.includes("t('run_detail.route_intelligence')")
     && !runDetailSource.includes("t('run_detail.analysis_notes')")
     && !runDetailSource.includes('lap.averageHeartRate || 0')
@@ -77,6 +85,7 @@ assert(
 
 assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*0\.34fr\)\s+minmax\(0,\s*1fr\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-comparison-section,[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-section\s*\{[\s\S]*margin-top:\s*clamp\(18px,\s*2\.4vw,\s*34px\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-table tbody tr:nth-child\(2n\)\s*\{[\s\S]*rgba\(247,\s*240,\s*231,\s*0\.58\)/.test(styleSource),
   'Run Detail should keep elite-runner evidence sections readable instead of only restyling the hero.',
 );
