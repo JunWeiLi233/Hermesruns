@@ -47,6 +47,11 @@ assert(
 );
 
 assert(
+  runDetailSource.includes('{!isActive && <strong>{samples.length ? samples.length.toLocaleString() : \'--\'}</strong>}'),
+  'Run Detail active telemetry tab should not render the sample-count number.',
+);
+
+assert(
   runDetailSource.indexOf('run-detail-telemetry-section') > runDetailSource.indexOf('</aside>')
     && runDetailSource.indexOf('run-detail-telemetry-section') < runDetailSource.indexOf('run-detail-bottom-grid'),
   'Run Detail telemetry section should render at shell level before the bottom grid so the telemetry cockpit can span the full page width.',
