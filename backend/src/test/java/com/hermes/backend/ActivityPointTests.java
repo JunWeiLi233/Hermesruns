@@ -23,6 +23,8 @@ class ActivityPointTests {
         p.setElevationCorrectedMeters(49.5);
         p.setHeartRate(145);
         p.setCadence(82);
+        p.setGroundContactTimeMs(242.5);
+        p.setVerticalOscillationMm(86.0);
 
         assertEquals(1L, p.getId());
         assertEquals(5, p.getSequenceIndex());
@@ -35,6 +37,8 @@ class ActivityPointTests {
         assertEquals(49.5, p.getElevationCorrectedMeters());
         assertEquals(145, p.getHeartRate());
         assertEquals(82, p.getCadence());
+        assertEquals(242.5, p.getGroundContactTimeMs());
+        assertEquals(86.0, p.getVerticalOscillationMm());
     }
 
     @Test
@@ -47,6 +51,8 @@ class ActivityPointTests {
         assertNull(p.getElevationCorrectedMeters());
         assertNull(p.getHeartRate());
         assertNull(p.getCadence());
+        assertNull(p.getGroundContactTimeMs());
+        assertNull(p.getVerticalOscillationMm());
     }
 
     @Test

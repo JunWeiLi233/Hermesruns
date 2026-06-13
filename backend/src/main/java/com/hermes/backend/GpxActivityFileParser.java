@@ -55,6 +55,10 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
                     "hr", "heartrate", "gpxtpx:hr", "ns3:hr", "TrackPointExtension/hr");
             Integer cadence = parseFirstInt(trackPoint,
                     "cad", "gpxtpx:cad", "ns3:cad", "TrackPointExtension/cad");
+            Double groundContactTimeMs = parseFirstPositiveDouble(trackPoint,
+                    "GroundContactTime", "GroundContactTimeMs", "StanceTime", "stance_time", "ground_contact_time");
+            Double verticalOscillationMm = parseFirstPositiveDouble(trackPoint,
+                    "VerticalOscillation", "VerticalOscillationMm", "vertical_oscillation");
 
             points.add(new ParsedTrackPoint(
                     latitude,
@@ -63,7 +67,9 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
                     null,
                     elevationMeters,
                     heartRate,
-                    cadence
+                    cadence,
+                    groundContactTimeMs,
+                    verticalOscillationMm
             ));
         }
 
@@ -132,5 +138,20 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
         }
         String local = key.contains(":") ? key.substring(key.indexOf(':') + 1) : key;
         return firstTextByLocalName(parent, local);
+    }
+
+    private Double parseFirstPositiveDouble(Element parent, String... localNames) {
+        for (String localName : localNames) {
+            var nodes = parent.getElementsByTagNameNS("*", localName);
+            for (int index = 0; index < nodes.getLength(); index += 1) {
+                if (nodes.item(index) instanceof Element element) {
+                    Double value = parseDouble(element.getTextContent());
+                    if (value != null && value > 0 && Double.isFinite(value)) {
+                        return value;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }

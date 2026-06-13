@@ -231,7 +231,9 @@ public class ActivityImportService {
                 activityPoint.setElevationRawMeters(point.elevationMeters());
                 activityPoint.setHeartRate(point.heartRate());
                 activityPoint.setCadence(point.cadence());
-            batch.add(activityPoint);
+                activityPoint.setGroundContactTimeMs(point.groundContactTimeMs());
+                activityPoint.setVerticalOscillationMm(point.verticalOscillationMm());
+                batch.add(activityPoint);
                 keptPoints++;
 
                 if (batch.size() >= POINTS_BATCH_SIZE) {

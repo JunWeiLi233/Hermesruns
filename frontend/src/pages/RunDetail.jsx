@@ -100,6 +100,35 @@ function formatLapElevation(lap) {
   return `${value > 0 ? '+' : ''}${value.toFixed(0)} m`;
 }
 
+function formatTelemetryTime(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value < 0) return '--';
+  const total = Math.round(value);
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function getTelemetrySamples(series) {
+  return Array.isArray(series?.samples)
+    ? series.samples
+      .map((sample) => ({
+        ...sample,
+        t: Number(sample?.t),
+        value: Number(sample?.value),
+        distanceKm: sample?.distanceKm == null ? null : Number(sample.distanceKm),
+      }))
+      .filter((sample) => Number.isFinite(sample.t) && Number.isFinite(sample.value))
+    : [];
+}
+
+function formatTelemetryValue(value, key) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '--';
+  if (key === 'strideLength' || key === 'verticalOscillationCm') return numeric.toFixed(2);
+  return numeric.toFixed(0);
+}
+
 export default function RunDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
@@ -114,6 +143,9 @@ export default function RunDetail() {
   const [shoes, setShoes] = useState([]);
   const [shoeDropdownOpen, setShoeDropdownOpen] = useState(false);
   const [analytics, setAnalytics] = useState(null);
+  const [telemetry, setTelemetry] = useState(null);
+  const [activeTelemetryKey, setActiveTelemetryKey] = useState('heartRate');
+  const [selectedTelemetryPoint, setSelectedTelemetryPoint] = useState(null);
   const [elevationStatus, setElevationStatus] = useState(null);
   const [recalibratingElevation, setRecalibratingElevation] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
@@ -222,9 +254,10 @@ export default function RunDetail() {
     if (!run?.id || !isAuthenticated) return;
     async function fetchPoints() {
       try {
-        const [res, analyticsRes, elevStatusRes] = await Promise.all([
+        const [res, analyticsRes, telemetryRes, elevStatusRes] = await Promise.all([
           apiFetch(`/api/activities/${run.id}/points`),
           apiFetch(`/api/activities/${run.id}/analytics`),
+          apiFetch(`/api/activities/${run.id}/telemetry`),
           apiFetch(`/api/activities/${run.id}/elevation/status`),
         ]);
         if (!res.ok) return;
@@ -238,6 +271,10 @@ export default function RunDetail() {
           const payload = await analyticsRes.json();
           setAnalytics(payload && typeof payload === 'object' ? payload : null);
         }
+        if (telemetryRes.ok) {
+          const payload = await telemetryRes.json();
+          setTelemetry(payload && typeof payload === 'object' ? payload : null);
+        }
         if (elevStatusRes.ok) {
           const payload = await elevStatusRes.json();
           setElevationStatus(payload && typeof payload === 'object' ? payload : null);
@@ -249,6 +286,10 @@ export default function RunDetail() {
     fetchPoints();
   }, [run, isAuthenticated]);
 
+  useEffect(() => {
+    setSelectedTelemetryPoint(null);
+  }, [activeTelemetryKey, telemetry]);
+
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
     setRecalibratingElevation(true);
@@ -259,13 +300,18 @@ export default function RunDetail() {
         body: JSON.stringify({ coordinates: points.map(([latitude, longitude]) => ({ latitude, longitude })) }),
       });
       if (!res.ok) return;
-      const [analyticsRes, statusRes] = await Promise.all([
+      const [analyticsRes, telemetryRes, statusRes] = await Promise.all([
         apiFetch(`/api/activities/${run.id}/analytics`),
+        apiFetch(`/api/activities/${run.id}/telemetry`),
         apiFetch(`/api/activities/${run.id}/elevation/status`),
       ]);
       if (analyticsRes.ok) {
         const payload = await analyticsRes.json();
         setAnalytics(payload && typeof payload === 'object' ? payload : null);
+      }
+      if (telemetryRes.ok) {
+        const payload = await telemetryRes.json();
+        setTelemetry(payload && typeof payload === 'object' ? payload : null);
       }
       if (statusRes.ok) {
         const payload = await statusRes.json();
@@ -328,46 +374,74 @@ export default function RunDetail() {
 
   const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
 
-  const hrChartData = useMemo(() => {
-    const source = lapRows
-      .map((lap, index) => ({ index, label: `${lap.distanceKm ? `${lap.distanceKm.toFixed(1)} km` : `#${lap.lapIndex || index + 1}`}`, hr: Number(lap.averageHeartRate || 0) }))
-      .filter((point) => point.hr > 0);
-    if (source.length < 2) return null;
+  const telemetryDefinitions = useMemo(() => [
+    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: '#b75f4a', fill: 'rgba(183, 95, 74, 0.18)' },
+    { key: 'cadence', label: t('run_detail.telemetry_cadence'), unit: t('run_detail.unit_spm'), color: '#54756a', fill: 'rgba(84, 117, 106, 0.16)' },
+    { key: 'strideLength', label: t('run_detail.telemetry_stride'), unit: t('run_detail.unit_meter'), color: '#9b6c35', fill: 'rgba(155, 108, 53, 0.15)' },
+    { key: 'groundContactTimeMs', label: t('run_detail.ground_contact_time'), unit: 'ms', color: '#7b684b', fill: 'rgba(123, 104, 75, 0.16)' },
+    { key: 'verticalOscillationCm', label: t('run_detail.vertical_oscillation'), unit: 'cm', color: '#7d7565', fill: 'rgba(125, 117, 101, 0.16)' },
+    { key: 'elevation', label: t('run_detail.telemetry_elevation'), unit: t('run_detail.unit_meter'), color: '#6f6b5e', fill: 'rgba(111, 107, 94, 0.16)' },
+  ], [t]);
+
+  const activeTelemetryDefinition = telemetryDefinitions.find((definition) => definition.key === activeTelemetryKey) || telemetryDefinitions[0];
+  const activeTelemetrySeries = telemetry?.series?.[activeTelemetryDefinition.key];
+  const activeTelemetrySamples = useMemo(
+    () => getTelemetrySamples(activeTelemetrySeries),
+    [activeTelemetrySeries]
+  );
+  const hasTelemetryData = activeTelemetrySamples.length >= 2;
+
+  const telemetryChartData = useMemo(() => {
+    if (!hasTelemetryData) return null;
     return {
-      labels: source.map((p) => p.label),
+      labels: activeTelemetrySamples.map((sample) => formatTelemetryTime(sample.t)),
       datasets: [
         {
-          label: t('run_detail.average_hr'),
-          data: source.map((p) => p.hr),
-          borderColor: '#f49787',
-          backgroundColor: 'rgba(240, 117, 97, 0.18)',
+          label: activeTelemetryDefinition.label,
+          data: activeTelemetrySamples.map((sample) => sample.value),
+          borderColor: activeTelemetryDefinition.color,
+          backgroundColor: activeTelemetryDefinition.fill,
           fill: true,
-          tension: 0.35,
-          pointRadius: 3,
-          pointBackgroundColor: '#f49787',
+          tension: 0.22,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: activeTelemetryDefinition.color,
           pointBorderColor: '#fff',
           pointBorderWidth: 1.5,
-          pointHoverRadius: 6,
-          borderWidth: 2.5,
+          borderWidth: 2,
         },
       ],
     };
-  }, [lapRows, t]);
+  }, [activeTelemetryDefinition, activeTelemetrySamples, hasTelemetryData]);
 
-  const hrChartOptions = useMemo(() => ({
+  const telemetryChartOptions = useMemo(() => {
+    const values = activeTelemetrySamples.map((sample) => sample.value);
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 1;
+    const pad = Math.max(1, (max - min) * 0.12);
+    return {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { intersect: false, mode: 'index' },
+    onClick: (_event, elements) => {
+      if (!elements?.length) return;
+      const sample = activeTelemetrySamples[elements[0].index];
+      if (sample) setSelectedTelemetryPoint({ ...sample, key: activeTelemetryDefinition.key });
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(18, 18, 18, 0.92)',
+        backgroundColor: 'rgba(31, 29, 25, 0.94)',
         titleColor: '#fce6de',
         bodyColor: '#e1e1e1',
         cornerRadius: 10,
         padding: 12,
         callbacks: {
-          label: (ctx) => `${ctx.parsed.y} bpm`,
+          label: (ctx) => `${ctx.parsed.y} ${activeTelemetryDefinition.unit}`,
+          afterLabel: (ctx) => {
+            const sample = activeTelemetrySamples[ctx.dataIndex];
+            return sample?.distanceKm != null ? `${sample.distanceKm.toFixed(2)} km` : '';
+          },
         },
       },
     },
@@ -377,13 +451,23 @@ export default function RunDetail() {
       },
       y: {
         display: false,
-        min: Math.max(0, Math.min(...(hrChartData?.datasets?.[0]?.data || [0])) - 15),
-        max: Math.max(...(hrChartData?.datasets?.[0]?.data || [0])) + 15,
+        min: Math.max(0, min - pad),
+        max: max + pad,
       },
     },
-  }), [hrChartData]);
+  };
+  }, [activeTelemetryDefinition, activeTelemetrySamples]);
 
-  const hasHrData = hrChartData && hrChartData.datasets[0].data.length >= 2;
+  const focusTelemetryPoint = selectedTelemetryPoint?.key === activeTelemetryDefinition.key
+    ? selectedTelemetryPoint
+    : activeTelemetrySamples[Math.floor(activeTelemetrySamples.length * 0.66)] || activeTelemetrySamples[activeTelemetrySamples.length - 1] || null;
+  const trainingEffect = telemetry?.trainingEffect && typeof telemetry.trainingEffect === 'object'
+    ? telemetry.trainingEffect
+    : null;
+  const groundContactSamples = getTelemetrySamples(telemetry?.series?.groundContactTimeMs);
+  const verticalOscillationSamples = getTelemetrySamples(telemetry?.series?.verticalOscillationCm);
+  const latestGroundContact = groundContactSamples[groundContactSamples.length - 1] || null;
+  const latestVerticalOscillation = verticalOscillationSamples[verticalOscillationSamples.length - 1] || null;
 
   const lapElevationGains = useMemo(() => {
     const profile = analytics?.elevationProfile;
@@ -437,28 +521,6 @@ export default function RunDetail() {
       paceTrend: direction === 'faster' ? 'improving' : direction === 'slower' ? 'declining' : 'stable',
     };
   }, [run, recentRuns]);
-
-  const elevationPoints = useMemo(() => {
-    const profile = analytics?.elevationProfile;
-    if (!Array.isArray(profile) || profile.length < 2) return null;
-    const xs = profile.map((p) => Number(p.distanceKm || 0));
-    const ys = profile.map((p) => Number(p.elevationMeters || 0));
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const width = 640;
-    const height = 180;
-    const pad = 16;
-    const spanX = Math.max(1e-9, maxX - minX);
-    const spanY = Math.max(1e-9, maxY - minY);
-    const path = profile.map((p, index) => {
-      const x = pad + ((p.distanceKm - minX) / spanX) * (width - pad * 2);
-      const y = height - pad - ((p.elevationMeters - minY) / spanY) * (height - pad * 2);
-      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' ');
-    return { path, minY, maxY };
-  }, [analytics]);
 
   async function handleResync() {
     setSyncDisabled(true);
@@ -588,12 +650,15 @@ export default function RunDetail() {
   }, -1);
 
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
-  const paceValue = distKm && movingSec ? formatPace(distKm, movingSec, lang) : '--';
   const paceMetricValue = distKm && movingSec ? formatPaceSeconds(movingSec / distKm) : '--';
   const timeValue = movingSec ? formatDuration(movingSec) : '--';
   const cadenceValue = analytics?.averageCadence || run.averageCadence;
   const strideLengthValue = analytics?.averageStrideLengthMeters;
   const powerValue = run.averageWatts;
+  const telemetrySampleCount = Number(telemetry?.sampleCount || 0);
+  const aerobicEffect = Number(trainingEffect?.aerobic);
+  const anaerobicEffect = Number(trainingEffect?.anaerobic);
+  const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
 
   return (
     <div className="run-detail-page run-detail-profile-cockpit">
@@ -681,7 +746,7 @@ export default function RunDetail() {
                 <div className="run-detail-panel run-detail-comparison-panel">
                   <div className="run-detail-comparison-signal">
                     <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
-                      {runComparison.direction === 'faster' ? '↑' : runComparison.direction === 'slower' ? '↓' : '→'}
+                      {runComparison.direction === 'faster' ? '+' : runComparison.direction === 'slower' ? '-' : '='}
                     </span>
                     <div>
                       <strong>
@@ -703,46 +768,112 @@ export default function RunDetail() {
               </section>
             )}
 
-            <section className="run-detail-section">
-              <h2>{t('run_detail.physiological_response')}</h2>
-              <div className="run-detail-panel">
-                <div className="run-detail-panel-head">
-                  <div>
-                    <span>{t('run_detail.average_hr')}</span>
-                    <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
+            <section className="run-detail-section run-detail-telemetry-section">
+              <div className="run-detail-section-head run-detail-telemetry-heading">
+                <div>
+                  <h2>{t('run_detail.telemetry_title')}</h2>
+                  <p>{t('run_detail.telemetry_subtitle')}</p>
+                </div>
+                <span className="run-detail-telemetry-resolution">
+                  {telemetrySampleCount > 0
+                    ? t('run_detail.telemetry_sample_count', { count: telemetrySampleCount.toLocaleString() })
+                    : t('run_detail.telemetry_resolution_empty')}
+                </span>
+              </div>
+              <div className="run-detail-panel run-detail-telemetry-panel">
+                <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
+                  {telemetryDefinitions.map((definition) => {
+                    const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
+                    const isActive = definition.key === activeTelemetryDefinition.key;
+                    return (
+                      <button
+                        key={definition.key}
+                        type="button"
+                        className={`run-detail-telemetry-tab${isActive ? ' is-active' : ''}`}
+                        onClick={() => setActiveTelemetryKey(definition.key)}
+                        role="tab"
+                        aria-selected={isActive}
+                      >
+                        <span>{definition.label}</span>
+                        <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="run-detail-telemetry-stage">
+                  <div className="run-detail-telemetry-readout">
+                    <span>{activeTelemetryDefinition.label}</span>
+                    <strong>
+                      {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
+                      <em>{activeTelemetryDefinition.unit}</em>
+                    </strong>
+                    <p>
+                      {focusTelemetryPoint
+                        ? t('run_detail.telemetry_focus_copy', {
+                          time: formatTelemetryTime(focusTelemetryPoint.t),
+                          distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
+                        })
+                        : t('run_detail.telemetry_no_stream')}
+                    </p>
                   </div>
-                  <div className="is-right">
-                    <span>{t('run_detail.max_hr')}</span>
-                    <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
+                  <div className="run-detail-telemetry-chart">
+                    {telemetryChartData ? (
+                      <Line data={telemetryChartData} options={telemetryChartOptions} />
+                    ) : (
+                      <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
+                    )}
                   </div>
                 </div>
-                <div className="run-detail-hr-chart" style={lapRows.length > 8 ? { overflowX: 'auto', WebkitOverflowScrolling: 'touch' } : undefined}>
-                  <div className="run-detail-hr-zones">
-                    <span>Z5</span>
-                    <span>Z4</span>
-                    <span>Z3</span>
-                    <span>Z2</span>
-                    <span>Z1</span>
-                  </div>
-                  {hasHrData ? (
-                    <div className="run-detail-hr-chart-canvas" style={{ minWidth: Math.max(100, lapRows.length * 48), height: 180 }}>
-                      <Line data={hrChartData} options={hrChartOptions} />
-                    </div>
-                  ) : (
-                    <div className="run-detail-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
-                  )}
-                </div>
-                <div className="run-detail-chip-row">
+
+                <div className="run-detail-chip-row run-detail-telemetry-chip-row">
                   <span className="run-detail-chip">
                     {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
                   </span>
                   <span className="run-detail-chip">
-                    {t('run_detail.first_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.firstHalfPace : '--'}
+                    {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
                   </span>
                   <span className="run-detail-chip">
-                    {t('run_detail.second_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.secondHalfPace : '--'}
+                    {t('run_detail.max_hr')}: {run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : '--'}
                   </span>
                 </div>
+
+                <div className="run-detail-training-effect-grid">
+                  <article>
+                    <span>{t('run_detail.aerobic_effect')}</span>
+                    <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
+                    <p>{trainingEffectAvailable ? t('run_detail.training_effect_estimated') : t('run_detail.training_effect_unavailable')}</p>
+                  </article>
+                  <article>
+                    <span>{t('run_detail.anaerobic_effect')}</span>
+                    <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
+                    <p>{trainingEffect?.basis || t('run_detail.training_effect_unavailable')}</p>
+                  </article>
+                </div>
+
+                <div className="run-detail-unavailable-grid">
+                  <div>
+                    <span>{t('run_detail.ground_contact_time')}</span>
+                    <strong>
+                      {latestGroundContact ? `${formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')} ms` : t('run_detail.not_captured')}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>{t('run_detail.vertical_oscillation')}</span>
+                    <strong>
+                      {latestVerticalOscillation ? `${formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')} cm` : t('run_detail.not_captured')}
+                    </strong>
+                  </div>
+                </div>
+
+                {elevationStatus?.flagged && (
+                  <div className="run-detail-warning">
+                    <p>{t('run_detail.elevation_warning')}</p>
+                    <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                      {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -852,21 +983,13 @@ export default function RunDetail() {
               )}
             </section>
 
-            <section className="run-detail-panel">
-              <h3>{t('run_detail.route_intelligence')}</h3>
+            <section className="run-detail-panel run-detail-data-quality-panel">
+              <h3>{t('run_detail.data_quality_title')}</h3>
               <div className="run-detail-info-list">
                 <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights ? getRouteShapeLabel(insights.routeShapeKey) : '--'}</strong></div>
                 <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
                 <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : '--'}</strong></div>
               </div>
-              {elevationStatus?.flagged && (
-                <div className="run-detail-warning">
-                  <p>{t('run_detail.elevation_warning')}</p>
-                  <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
-                    {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
-                  </button>
-                </div>
-              )}
             </section>
           </aside>
         </section>
@@ -881,44 +1004,11 @@ export default function RunDetail() {
             </div>
           </article>
           <article className="run-detail-panel">
-            <h3>{t('run_detail.elevation_profile')}</h3>
-            {elevationPoints ? (
-              <>
-                <svg viewBox="0 0 640 180" className="run-detail-elevation-graph" aria-hidden="true">
-                  <path d={elevationPoints.path} fill="none" stroke="#f49787" strokeWidth="2.5" />
-                </svg>
-                <div className="run-detail-info-list">
-                  <div>
-                    <span>{t('run_detail.min_max_elevation')}</span>
-                    <strong>{elevationPoints.minY.toFixed(1)} {elevationUnitLabel} / {elevationPoints.maxY.toFixed(1)} {elevationUnitLabel}</strong>
-                  </div>
-                  <div>
-                    <span>{t('run_detail.route_efficiency')}</span>
-                    <strong>{insights?.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : '--'}</strong>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="run-detail-chart-empty is-inline">{t('run_detail.no_elevation_stream')}</div>
-            )}
-          </article>
-        </section>
-
-        <section className="run-detail-bottom-grid">
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.route_intelligence')}</h3>
+            <h3>{t('run_detail.data_capture_title')}</h3>
             <div className="run-detail-stat-list">
               {routeRows.map(([label, value], index) => (
                 <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
               ))}
-            </div>
-          </article>
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.analysis_notes')}</h3>
-            <div className="run-detail-info-list">
-              <div><span>{t('run_detail.metric_average_pace')}</span><strong>{paceValue}</strong></div>
-              <div><span>{t('run_detail.metric_moving_time')}</span><strong>{timeValue}</strong></div>
-              <div><span>{t('run_detail.route_source_file')}</span><strong>{run.sourceFileName || t('run_detail.not_available')}</strong></div>
             </div>
           </article>
         </section>

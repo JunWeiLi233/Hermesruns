@@ -155,6 +155,8 @@ public class FitActivityFileParser implements ActivityFileParser {
             Integer heartRate = hr != null && hr > 0 ? hr.intValue() : null;
             Short cadenceRaw = mesg.getCadence();
             Integer cadence = (cadenceRaw != null && cadenceRaw > 0) ? cadenceRaw.intValue() * 2 : null;
+            Double groundContactTimeMs = positiveDouble(mesg.getStanceTime());
+            Double verticalOscillationMm = positiveDouble(mesg.getVerticalOscillation());
 
             points.add(new ParsedTrackPoint(
                     semicirclesToDegrees(latitude),
@@ -163,7 +165,9 @@ public class FitActivityFileParser implements ActivityFileParser {
                     distanceMeters,
                     elevationMeters,
                     heartRate,
-                    cadence
+                    cadence,
+                    groundContactTimeMs,
+                    verticalOscillationMm
             ));
         }
 
@@ -237,6 +241,13 @@ public class FitActivityFileParser implements ActivityFileParser {
 
     private Double toNullableDouble(Float value) {
         if (value == null) {
+            return null;
+        }
+        return value.doubleValue();
+    }
+
+    private Double positiveDouble(Float value) {
+        if (value == null || value <= 0f) {
             return null;
         }
         return value.doubleValue();
