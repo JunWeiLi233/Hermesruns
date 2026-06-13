@@ -49,8 +49,12 @@ assert(
 assert(
   !runDetailSource.includes("t('run_detail.route_intelligence')")
     && !runDetailSource.includes("t('run_detail.analysis_notes')")
-    && !runDetailSource.includes('lap.averageHeartRate || 0'),
-  'Run Detail should remove the old route intelligence/analysis notes panels and lap-average HR chart source.',
+    && !runDetailSource.includes('lap.averageHeartRate || 0')
+    && !runDetailSource.includes('run-detail-efficiency-panel')
+    && !runDetailSource.includes('run-detail-data-quality-panel')
+    && !styleSource.includes('run-detail-efficiency-panel')
+    && !styleSource.includes('run-detail-data-quality-panel'),
+  'Run Detail should remove the old route intelligence/analysis notes, lap-average HR source, efficiency panel, and data-quality panel.',
 );
 
 assert(

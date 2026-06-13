@@ -652,9 +652,6 @@ export default function RunDetail() {
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
   const paceMetricValue = distKm && movingSec ? formatPaceSeconds(movingSec / distKm) : '--';
   const timeValue = movingSec ? formatDuration(movingSec) : '--';
-  const cadenceValue = analytics?.averageCadence || run.averageCadence;
-  const strideLengthValue = analytics?.averageStrideLengthMeters;
-  const powerValue = run.averageWatts;
   const telemetrySampleCount = Number(telemetry?.sampleCount || 0);
   const aerobicEffect = Number(trainingEffect?.aerobic);
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
@@ -919,24 +916,6 @@ export default function RunDetail() {
           </div>
 
           <aside className="run-detail-side-column">
-            <section className="run-detail-panel run-detail-efficiency-panel">
-              <h3>{t('run_detail.efficiency')}</h3>
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.cadence')}</span>
-                <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>{cadenceUnitLabel}</em></strong>
-              </div>
-              <div className="run-detail-divider" />
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.stride_length')}</span>
-                <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>{elevationUnitLabel}</em></strong>
-              </div>
-              <div className="run-detail-divider" />
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.running_power')}</span>
-                <strong>{powerValue ? Math.round(powerValue) : '--'} <em>{powerUnitLabel}</em></strong>
-              </div>
-            </section>
-
             <section className="run-detail-panel run-detail-gear-panel">
               <span className="run-detail-panel-label">{t('run_detail.gear_linked')}</span>
               <div className="run-detail-gear-row">
@@ -981,15 +960,6 @@ export default function RunDetail() {
                   ))}
                 </div>
               )}
-            </section>
-
-            <section className="run-detail-panel run-detail-data-quality-panel">
-              <h3>{t('run_detail.data_quality_title')}</h3>
-              <div className="run-detail-info-list">
-                <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights ? getRouteShapeLabel(insights.routeShapeKey) : '--'}</strong></div>
-                <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
-                <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : '--'}</strong></div>
-              </div>
             </section>
           </aside>
         </section>
