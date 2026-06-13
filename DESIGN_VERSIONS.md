@@ -3437,3 +3437,12 @@ What changed: Completed the device-only telemetry gap by storing imported ground
 Why: Issue #51 explicitly requests per-second ground contact time and vertical oscillation instead of an unavailable placeholder when the source activity file provides those streams.
 Rollback target: `DV-2026-06-13-01`
 Notes: TCX, GPX, and FIT imports now carry running-dynamics fields into `ActivityPoint`; vertical oscillation is stored in millimeters and displayed as centimeters.
+
+### Version: DV-2026-06-13-03
+Date: 2026-06-13
+Surface: Run Detail full-width telemetry cockpit on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the per-second telemetry cockpit out of the primary content column and into a shell-level section before the bottom metrics grid. Expanded the chart stage and panel padding so the telemetry stream reads as a full-page analysis surface instead of a narrow card.
+Why: The user requested the screenshoted telemetry area to extend to the full page.
+Rollback target: `DV-2026-06-13-02`
+Notes: The underlying telemetry data contract and tab behavior are unchanged; this is a layout-only expansion.

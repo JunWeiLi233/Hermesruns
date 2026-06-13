@@ -765,115 +765,6 @@ export default function RunDetail() {
               </section>
             )}
 
-            <section className="run-detail-section run-detail-telemetry-section">
-              <div className="run-detail-section-head run-detail-telemetry-heading">
-                <div>
-                  <h2>{t('run_detail.telemetry_title')}</h2>
-                  <p>{t('run_detail.telemetry_subtitle')}</p>
-                </div>
-                <span className="run-detail-telemetry-resolution">
-                  {telemetrySampleCount > 0
-                    ? t('run_detail.telemetry_sample_count', { count: telemetrySampleCount.toLocaleString() })
-                    : t('run_detail.telemetry_resolution_empty')}
-                </span>
-              </div>
-              <div className="run-detail-panel run-detail-telemetry-panel">
-                <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
-                  {telemetryDefinitions.map((definition) => {
-                    const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
-                    const isActive = definition.key === activeTelemetryDefinition.key;
-                    return (
-                      <button
-                        key={definition.key}
-                        type="button"
-                        className={`run-detail-telemetry-tab${isActive ? ' is-active' : ''}`}
-                        onClick={() => setActiveTelemetryKey(definition.key)}
-                        role="tab"
-                        aria-selected={isActive}
-                      >
-                        <span>{definition.label}</span>
-                        <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="run-detail-telemetry-stage">
-                  <div className="run-detail-telemetry-readout">
-                    <span>{activeTelemetryDefinition.label}</span>
-                    <strong>
-                      {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
-                      <em>{activeTelemetryDefinition.unit}</em>
-                    </strong>
-                    <p>
-                      {focusTelemetryPoint
-                        ? t('run_detail.telemetry_focus_copy', {
-                          time: formatTelemetryTime(focusTelemetryPoint.t),
-                          distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
-                        })
-                        : t('run_detail.telemetry_no_stream')}
-                    </p>
-                  </div>
-                  <div className="run-detail-telemetry-chart">
-                    {telemetryChartData ? (
-                      <Line data={telemetryChartData} options={telemetryChartOptions} />
-                    ) : (
-                      <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="run-detail-chip-row run-detail-telemetry-chip-row">
-                  <span className="run-detail-chip">
-                    {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
-                  </span>
-                  <span className="run-detail-chip">
-                    {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
-                  </span>
-                  <span className="run-detail-chip">
-                    {t('run_detail.max_hr')}: {run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : '--'}
-                  </span>
-                </div>
-
-                <div className="run-detail-training-effect-grid">
-                  <article>
-                    <span>{t('run_detail.aerobic_effect')}</span>
-                    <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
-                    <p>{trainingEffectAvailable ? t('run_detail.training_effect_estimated') : t('run_detail.training_effect_unavailable')}</p>
-                  </article>
-                  <article>
-                    <span>{t('run_detail.anaerobic_effect')}</span>
-                    <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
-                    <p>{trainingEffect?.basis || t('run_detail.training_effect_unavailable')}</p>
-                  </article>
-                </div>
-
-                <div className="run-detail-unavailable-grid">
-                  <div>
-                    <span>{t('run_detail.ground_contact_time')}</span>
-                    <strong>
-                      {latestGroundContact ? `${formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')} ms` : t('run_detail.not_captured')}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>{t('run_detail.vertical_oscillation')}</span>
-                    <strong>
-                      {latestVerticalOscillation ? `${formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')} cm` : t('run_detail.not_captured')}
-                    </strong>
-                  </div>
-                </div>
-
-                {elevationStatus?.flagged && (
-                  <div className="run-detail-warning">
-                    <p>{t('run_detail.elevation_warning')}</p>
-                    <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
-                      {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
-
             <section className="run-detail-section">
               <div className="run-detail-section-head">
                 <h2>{t('run_detail.splits')}</h2>
@@ -962,6 +853,115 @@ export default function RunDetail() {
               )}
             </section>
           </aside>
+        </section>
+
+        <section className="run-detail-section run-detail-telemetry-section">
+          <div className="run-detail-section-head run-detail-telemetry-heading">
+            <div>
+              <h2>{t('run_detail.telemetry_title')}</h2>
+              <p>{t('run_detail.telemetry_subtitle')}</p>
+            </div>
+            <span className="run-detail-telemetry-resolution">
+              {telemetrySampleCount > 0
+                ? t('run_detail.telemetry_sample_count', { count: telemetrySampleCount.toLocaleString() })
+                : t('run_detail.telemetry_resolution_empty')}
+            </span>
+          </div>
+          <div className="run-detail-panel run-detail-telemetry-panel">
+            <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
+              {telemetryDefinitions.map((definition) => {
+                const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
+                const isActive = definition.key === activeTelemetryDefinition.key;
+                return (
+                  <button
+                    key={definition.key}
+                    type="button"
+                    className={`run-detail-telemetry-tab${isActive ? ' is-active' : ''}`}
+                    onClick={() => setActiveTelemetryKey(definition.key)}
+                    role="tab"
+                    aria-selected={isActive}
+                  >
+                    <span>{definition.label}</span>
+                    <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="run-detail-telemetry-stage">
+              <div className="run-detail-telemetry-readout">
+                <span>{activeTelemetryDefinition.label}</span>
+                <strong>
+                  {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
+                  <em>{activeTelemetryDefinition.unit}</em>
+                </strong>
+                <p>
+                  {focusTelemetryPoint
+                    ? t('run_detail.telemetry_focus_copy', {
+                      time: formatTelemetryTime(focusTelemetryPoint.t),
+                      distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
+                    })
+                    : t('run_detail.telemetry_no_stream')}
+                </p>
+              </div>
+              <div className="run-detail-telemetry-chart">
+                {telemetryChartData ? (
+                  <Line data={telemetryChartData} options={telemetryChartOptions} />
+                ) : (
+                  <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="run-detail-chip-row run-detail-telemetry-chip-row">
+              <span className="run-detail-chip">
+                {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
+              </span>
+              <span className="run-detail-chip">
+                {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
+              </span>
+              <span className="run-detail-chip">
+                {t('run_detail.max_hr')}: {run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : '--'}
+              </span>
+            </div>
+
+            <div className="run-detail-training-effect-grid">
+              <article>
+                <span>{t('run_detail.aerobic_effect')}</span>
+                <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
+                <p>{trainingEffectAvailable ? t('run_detail.training_effect_estimated') : t('run_detail.training_effect_unavailable')}</p>
+              </article>
+              <article>
+                <span>{t('run_detail.anaerobic_effect')}</span>
+                <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
+                <p>{trainingEffect?.basis || t('run_detail.training_effect_unavailable')}</p>
+              </article>
+            </div>
+
+            <div className="run-detail-unavailable-grid">
+              <div>
+                <span>{t('run_detail.ground_contact_time')}</span>
+                <strong>
+                  {latestGroundContact ? `${formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')} ms` : t('run_detail.not_captured')}
+                </strong>
+              </div>
+              <div>
+                <span>{t('run_detail.vertical_oscillation')}</span>
+                <strong>
+                  {latestVerticalOscillation ? `${formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')} cm` : t('run_detail.not_captured')}
+                </strong>
+              </div>
+            </div>
+
+            {elevationStatus?.flagged && (
+              <div className="run-detail-warning">
+                <p>{t('run_detail.elevation_warning')}</p>
+                <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                  {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
+                </button>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="run-detail-bottom-grid">

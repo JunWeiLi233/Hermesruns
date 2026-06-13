@@ -3107,6 +3107,10 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   align-items: flex-end;
 }
 
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-section {
+  margin-top: clamp(18px, 2.4vw, 34px);
+}
+
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-heading p {
   max-width: 64ch;
   margin: 6px 0 0;
@@ -3129,6 +3133,7 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-panel {
   display: grid;
   gap: clamp(16px, 1.8vw, 24px);
+  padding: clamp(22px, 2.6vw, 42px) !important;
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tabs {
@@ -3179,9 +3184,9 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-stage {
   display: grid;
-  grid-template-columns: minmax(168px, 0.26fr) minmax(0, 1fr);
-  gap: clamp(16px, 1.8vw, 24px);
-  min-height: 260px;
+  grid-template-columns: minmax(220px, 0.2fr) minmax(0, 1fr);
+  gap: clamp(22px, 2.4vw, 38px);
+  min-height: clamp(340px, 28vw, 520px);
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout {
@@ -3224,7 +3229,7 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-chart {
-  min-height: 260px;
+  min-height: clamp(340px, 28vw, 520px);
   background:
     linear-gradient(rgba(67, 54, 42, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(67, 54, 42, 0.06) 1px, transparent 1px),

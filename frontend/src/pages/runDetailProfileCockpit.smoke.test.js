@@ -47,6 +47,12 @@ assert(
 );
 
 assert(
+  runDetailSource.indexOf('run-detail-telemetry-section') > runDetailSource.indexOf('</aside>')
+    && runDetailSource.indexOf('run-detail-telemetry-section') < runDetailSource.indexOf('run-detail-bottom-grid'),
+  'Run Detail telemetry section should render at shell level before the bottom grid so the telemetry cockpit can span the full page width.',
+);
+
+assert(
   !runDetailSource.includes("t('run_detail.route_intelligence')")
     && !runDetailSource.includes("t('run_detail.analysis_notes')")
     && !runDetailSource.includes('lap.averageHeartRate || 0')
@@ -77,7 +83,8 @@ assert(
 
 assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tabs\s*\{[\s\S]*grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\);/.test(styleSource)
-    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-chart\s*\{[\s\S]*min-height:\s*260px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-panel\s*\{[\s\S]*padding:\s*clamp\(22px,\s*2\.6vw,\s*42px\)\s*!important;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-chart\s*\{[\s\S]*min-height:\s*clamp\(340px,\s*28vw,\s*520px\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-unavailable-grid/.test(styleSource),
   'Run Detail telemetry cockpit CSS should cover chart tabs, large chart stage, and unavailable device metrics.',
 );
