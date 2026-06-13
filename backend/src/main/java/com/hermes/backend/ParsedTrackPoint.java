@@ -7,9 +7,11 @@ public record ParsedTrackPoint(
         Double distanceMeters,
         Double elevationMeters,
         Integer heartRate,
-        Integer cadence
+        Integer cadence,
+        Double groundContactTimeMs,
+        Double verticalOscillationMm
 ) {
     public ParsedTrackPoint(double latitude, double longitude) {
-        this(latitude, longitude, null, null, null, null, null);
+        this(latitude, longitude, null, null, null, null, null, null, null);
     }
 }

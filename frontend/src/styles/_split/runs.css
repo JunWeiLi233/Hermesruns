@@ -3119,13 +3119,173 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   background: rgba(255, 248, 238, 0.07);
 }
 
-.run-detail-page.run-detail-profile-cockpit .run-detail-hr-chart {
-  min-height: 210px;
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-heading {
+  align-items: flex-end;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-heading p {
+  max-width: 64ch;
+  margin: 6px 0 0;
+  color: var(--runner-profile-muted);
+  line-height: 1.55;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-resolution {
+  border: 1px solid rgba(67, 54, 42, 0.12);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 252, 246, 0.72);
+  color: var(--runner-profile-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-panel {
+  display: grid;
+  gap: clamp(16px, 1.8vw, 24px);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab {
+  border: 1px solid rgba(67, 54, 42, 0.12);
+  border-radius: 18px;
+  padding: 13px 14px;
+  background: rgba(255, 252, 246, 0.62);
+  color: var(--runner-profile-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab.is-active {
+  border-color: rgba(183, 95, 74, 0.34);
+  background: rgba(248, 235, 220, 0.86);
+  color: var(--runner-profile-ink);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab span,
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab strong {
+  display: block;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab strong {
+  margin-top: 8px;
+  color: inherit;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 1.15rem;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-stage {
+  display: grid;
+  grid-template-columns: minmax(168px, 0.26fr) minmax(0, 1fr);
+  gap: clamp(16px, 1.8vw, 24px);
+  min-height: 260px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout {
+  border-right: 1px solid rgba(67, 54, 42, 0.1);
+  padding-right: clamp(16px, 1.8vw, 24px);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout span {
+  color: var(--runner-profile-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--runner-profile-ink);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(2.8rem, 6vw, 5.7rem);
+  line-height: 0.92;
+  letter-spacing: -0.08em;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout em {
+  margin-left: 0.28em;
+  color: var(--runner-profile-muted);
+  font-family: inherit;
+  font-size: 0.22em;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout p {
+  max-width: 22ch;
+  margin: 16px 0 0;
+  color: var(--runner-profile-muted);
+  line-height: 1.5;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-chart {
+  min-height: 260px;
   background:
     linear-gradient(rgba(67, 54, 42, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(67, 54, 42, 0.06) 1px, transparent 1px),
     rgba(255, 252, 246, 0.56) !important;
   background-size: 100% 20%, 12.5% 100%, auto;
+  border: 1px solid rgba(67, 54, 42, 0.1);
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid,
+.run-detail-page.run-detail-profile-cockpit .run-detail-unavailable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid article,
+.run-detail-page.run-detail-profile-cockpit .run-detail-unavailable-grid div {
+  border-top: 1px solid rgba(67, 54, 42, 0.12);
+  padding-top: 14px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid span,
+.run-detail-page.run-detail-profile-cockpit .run-detail-unavailable-grid span {
+  color: var(--runner-profile-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid strong,
+.run-detail-page.run-detail-profile-cockpit .run-detail-unavailable-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--runner-profile-ink);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: clamp(1.4rem, 2vw, 2.1rem);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid p {
+  margin: 8px 0 0;
+  color: var(--runner-profile-muted);
+  line-height: 1.45;
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-table-panel {
@@ -3221,5 +3381,31 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
     border-bottom: 1px solid rgba(255, 248, 238, 0.14);
     padding-right: 0;
     padding-bottom: 18px;
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-heading,
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-stage,
+  .run-detail-page.run-detail-profile-cockpit .run-detail-training-effect-grid,
+  .run-detail-page.run-detail-profile-cockpit .run-detail-unavailable-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-heading {
+    align-items: flex-start;
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout {
+    border-right: 0;
+    border-bottom: 1px solid rgba(67, 54, 42, 0.1);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
+
+  .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout p {
+    max-width: none;
   }
 }

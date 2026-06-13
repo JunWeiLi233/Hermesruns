@@ -254,13 +254,15 @@ final class ActivityAnalyticsHelper {
             Double distanceMeters,
             Double elevationMeters,
             Integer heartRate,
-            Integer cadence
+            Integer cadence,
+            Double groundContactTimeMs,
+            Double verticalOscillationMm
     ) {
         SamplePoint withElapsedSeconds(Integer elapsedSeconds) {
-            return new SamplePoint(latitude, longitude, elapsedSeconds, distanceMeters, elevationMeters, heartRate, cadence);
+            return new SamplePoint(latitude, longitude, elapsedSeconds, distanceMeters, elevationMeters, heartRate, cadence, groundContactTimeMs, verticalOscillationMm);
         }
         SamplePoint withDistanceMeters(Double distanceMeters) {
-            return new SamplePoint(latitude, longitude, elapsedSeconds, distanceMeters, elevationMeters, heartRate, cadence);
+            return new SamplePoint(latitude, longitude, elapsedSeconds, distanceMeters, elevationMeters, heartRate, cadence, groundContactTimeMs, verticalOscillationMm);
         }
     }
 

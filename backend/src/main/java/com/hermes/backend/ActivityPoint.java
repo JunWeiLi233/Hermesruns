@@ -82,6 +82,12 @@ public class ActivityPoint {
     /** Cadence for this sample in steps per minute (if available). */
     private Integer cadence;
 
+    /** Ground contact / stance time in milliseconds (if provided by the device stream). */
+    private Double groundContactTimeMs;
+
+    /** Vertical oscillation in millimeters (if provided by the device stream). */
+    private Double verticalOscillationMm;
+
     public Long getId() {
         return id;
     }
@@ -177,5 +183,21 @@ public class ActivityPoint {
 
     public void setCadence(Integer cadence) {
         this.cadence = cadence;
+    }
+
+    public Double getGroundContactTimeMs() {
+        return groundContactTimeMs;
+    }
+
+    public void setGroundContactTimeMs(Double groundContactTimeMs) {
+        this.groundContactTimeMs = groundContactTimeMs;
+    }
+
+    public Double getVerticalOscillationMm() {
+        return verticalOscillationMm;
+    }
+
+    public void setVerticalOscillationMm(Double verticalOscillationMm) {
+        this.verticalOscillationMm = verticalOscillationMm;
     }
 }

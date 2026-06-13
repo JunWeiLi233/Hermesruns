@@ -3410,3 +3410,21 @@ What changed: Bumped territory masks to `mask:v30`, API ETag to `land-mask-union
 Why: The visible shared-runner "territory" was not real land. It came from 32-point generated local seed loops that were closed but too sparse to prove a concrete covered boundary. The page must show no active territory for those runs instead of drawing false land.
 Rollback target: `DV-2026-06-12-01`
 Notes: Backend tests passed for `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, and `LocalSharedRunnerBootstrapServiceTests`; frontend territory smoke/build/runtime-sync passed; live `/api/territory/polygons` for `Hermes Shared Runner` returned `polygonCount=0`, `activeCount=0`, `pending=0`, and `backfill=false`; in-app Browser on `/territory` rendered map tiles and both scope buttons with `activeConcrete=0` and `activeContour=0` before and after wheel zoom in/out; escalated live verifier passed with `activeBackendCells=0`, no synthetic/helper layers, unfiltered tiles, and zero console errors.
+
+### Version: DV-2026-06-13-01
+Date: 2026-06-13
+Surface: Run Detail telemetry cockpit on `/run/:id`
+Files: `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/test/java/com/hermes/backend/ActivityControllerTests.java`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Added an owned activity telemetry endpoint and replaced the old lap-average heart-rate card with a simpler telemetry cockpit for heart rate, cadence, stride length, elevation, estimated training effect, and explicitly unavailable device-only metrics.
+Why: Issue #51 requires `/run/:id` to show per-second activity streams instead of per-kilometer averages, remove unnecessary "Analysis Notes" and "Route Intelligence" panels, and make the page easier to inspect.
+Rollback target: `DV-2026-06-12-03`
+Notes: Ground contact time and vertical oscillation are surfaced as not captured because the current `ActivityPoint` model does not store those streams. Training effect is labeled as an HR-stream estimate, not an official device field.
+
+### Version: DV-2026-06-13-02
+Date: 2026-06-13
+Surface: Run Detail device telemetry streams on `/run/:id`
+Files: `backend/src/main/java/com/hermes/backend/ActivityPoint.java`, `backend/src/main/java/com/hermes/backend/ParsedTrackPoint.java`, `backend/src/main/java/com/hermes/backend/TcxActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/GpxActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/FitActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/ActivityImportService.java`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Completed the device-only telemetry gap by storing imported ground contact time and vertical oscillation, returning them through `/api/activities/{id}/telemetry`, and adding six Run Detail telemetry tabs for HR, cadence, stride, GCT, vertical oscillation, and elevation.
+Why: Issue #51 explicitly requests per-second ground contact time and vertical oscillation instead of an unavailable placeholder when the source activity file provides those streams.
+Rollback target: `DV-2026-06-13-01`
+Notes: TCX, GPX, and FIT imports now carry running-dynamics fields into `ActivityPoint`; vertical oscillation is stored in millimeters and displayed as centimeters.

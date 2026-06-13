@@ -38,6 +38,22 @@ assert(
 );
 
 assert(
+  runDetailSource.includes('/telemetry')
+    && runDetailSource.includes("activeTelemetryKey")
+    && runDetailSource.includes("run-detail-telemetry-section")
+    && runDetailSource.includes("groundContactTimeMs")
+    && runDetailSource.includes("verticalOscillationCm"),
+  'Run Detail should fetch and render the telemetry stream instead of relying on lap-average charts.',
+);
+
+assert(
+  !runDetailSource.includes("t('run_detail.route_intelligence')")
+    && !runDetailSource.includes("t('run_detail.analysis_notes')")
+    && !runDetailSource.includes('lap.averageHeartRate || 0'),
+  'Run Detail should remove the old route intelligence/analysis notes panels and lap-average HR chart source.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s*\{[\s\S]*--runner-profile-paper:[\s\S]*linear-gradient\(145deg,\s*var\(--runner-profile-paper\)/.test(styleSource),
   'Run Detail should provide an unwrapped profile-aligned page fallback because App.jsx does not render the route data wrapper.',
 );
@@ -53,6 +69,13 @@ assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*0\.34fr\)\s+minmax\(0,\s*1fr\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-table tbody tr:nth-child\(2n\)\s*\{[\s\S]*rgba\(247,\s*240,\s*231,\s*0\.58\)/.test(styleSource),
   'Run Detail should keep elite-runner evidence sections readable instead of only restyling the hero.',
+);
+
+assert(
+  /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tabs\s*\{[\s\S]*grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-chart\s*\{[\s\S]*min-height:\s*260px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-unavailable-grid/.test(styleSource),
+  'Run Detail telemetry cockpit CSS should cover chart tabs, large chart stage, and unavailable device metrics.',
 );
 
 assert(

@@ -93,7 +93,7 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
 
     @Query("""
             select p.latitude, p.longitude, p.elapsedSeconds, p.distanceMeters, p.elevationMeters, p.heartRate, p.cadence,
-                   p.elevationRawMeters, p.elevationCorrectedMeters
+                   p.elevationRawMeters, p.elevationCorrectedMeters, p.groundContactTimeMs, p.verticalOscillationMm
             from ActivityPoint p
             where p.activity.id = :activityId
             order by p.sequenceIndex asc
