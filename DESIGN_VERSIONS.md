@@ -3464,3 +3464,12 @@ What changed: Recalibrated Run Detail profile cockpit paper, card, ink, muted te
 Why: The user requested RunDetail to be redesigned based on Run/Runs color design while preserving the existing telemetry and evidence layout.
 Rollback target: `DV-2026-06-13-04`
 Notes: This is a color-system alignment only; data wiring, telemetry tabs, comparison, and split-table behavior are unchanged.
+
+### Version: DV-2026-06-13-06
+Date: 2026-06-13
+Surface: Run Detail debrief and gear panel alignment on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a desktop-only Run Detail grid offset so `run-detail-gear-panel` aligns with the top edge of `run-detail-debrief-panel` when the coach debrief section is present, while stacked tablet/mobile layouts reset to natural flow.
+Why: The user requested `run-detail-panel run-detail-debrief-panel` and `run-detail-panel run-detail-gear-panel` to align.
+Rollback target: `DV-2026-06-13-05`
+Notes: This is a layout alignment change only; gear linking, debrief content, telemetry, and comparison data behavior are unchanged.
