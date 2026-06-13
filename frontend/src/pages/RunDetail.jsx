@@ -843,7 +843,7 @@ export default function RunDetail() {
                     aria-selected={isActive}
                   >
                     <span>{definition.label}</span>
-                    <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>
+                    {!isActive && <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>}
                   </button>
                 );
               })}
