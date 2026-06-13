@@ -19646,7 +19646,6 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
 }
 
 .run-detail-panel-head span,
-.run-detail-side-metric span,
 .run-detail-panel-label,
 .run-detail-info-list span,
 .run-detail-stat-list span {
@@ -19657,8 +19656,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
   text-transform: uppercase;
 }
 
-.run-detail-panel-head strong,
-.run-detail-side-metric strong {
+.run-detail-panel-head strong {
   display: block;
   margin-top: 6px;
   color: #f4f0ea;
@@ -19668,8 +19666,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
   letter-spacing: -0.05em;
 }
 
-.run-detail-panel-head strong em,
-.run-detail-side-metric strong em {
+.run-detail-panel-head strong em {
   color: rgba(229, 226, 225, 0.56);
   font-size: 0.9rem;
   font-style: normal;
@@ -19811,19 +19808,8 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-page {
   color: rgba(229, 226, 225, 0.58);
 }
 
-.run-detail-efficiency-panel h3,
 .run-detail-gear-panel .run-detail-panel-label,
 .run-detail-panel > h3 {
-  margin-bottom: 18px;
-}
-
-.run-detail-side-metric + .run-detail-divider {
-  margin-top: 18px;
-}
-
-.run-detail-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
   margin-bottom: 18px;
 }
 
@@ -47162,7 +47148,6 @@ body.theme-light .run-detail-gear-copy strong,
 body.theme-light .run-detail-info-list strong,
 body.theme-light .run-detail-stat-list strong,
 body.theme-light .run-detail-panel-head strong,
-body.theme-light .run-detail-side-metric strong,
 body.theme-high-contrast-light .run-detail-loading-card h1,
 body.theme-high-contrast-light .run-detail-heading h1,
 body.theme-high-contrast-light .run-detail-section h2,
@@ -47170,14 +47155,12 @@ body.theme-high-contrast-light .run-detail-panel h3,
 body.theme-high-contrast-light .run-detail-gear-copy strong,
 body.theme-high-contrast-light .run-detail-info-list strong,
 body.theme-high-contrast-light .run-detail-stat-list strong,
-body.theme-high-contrast-light .run-detail-panel-head strong,
-body.theme-high-contrast-light .run-detail-side-metric strong {
+body.theme-high-contrast-light .run-detail-panel-head strong {
   color: var(--text-strong);
 }
 
 body.theme-light .run-detail-heading p,
 body.theme-light .run-detail-panel-head span,
-body.theme-light .run-detail-side-metric span,
 body.theme-light .run-detail-panel-label,
 body.theme-light .run-detail-info-list span,
 body.theme-light .run-detail-stat-list span,
@@ -47187,7 +47170,6 @@ body.theme-light .run-detail-splits-table th,
 body.theme-light .run-detail-splits-table .is-empty,
 body.theme-high-contrast-light .run-detail-heading p,
 body.theme-high-contrast-light .run-detail-panel-head span,
-body.theme-high-contrast-light .run-detail-side-metric span,
 body.theme-high-contrast-light .run-detail-panel-label,
 body.theme-high-contrast-light .run-detail-info-list span,
 body.theme-high-contrast-light .run-detail-stat-list span,
@@ -47199,9 +47181,7 @@ body.theme-high-contrast-light .run-detail-splits-table .is-empty {
 }
 
 body.theme-light .run-detail-panel-head strong em,
-body.theme-light .run-detail-side-metric strong em,
-body.theme-high-contrast-light .run-detail-panel-head strong em,
-body.theme-high-contrast-light .run-detail-side-metric strong em {
+body.theme-high-contrast-light .run-detail-panel-head strong em {
   color: rgba(89, 92, 93, 0.64);
 }
 
@@ -47294,12 +47274,6 @@ body.theme-high-contrast-light .run-detail-splits-table tbody tr:nth-child(2n) {
 body.theme-light .run-detail-splits-table tbody tr.is-highlight td,
 body.theme-high-contrast-light .run-detail-splits-table tbody tr.is-highlight td {
   color: #b24f3f;
-}
-
-body.theme-light .run-detail-divider,
-body.theme-high-contrast-light .run-detail-divider {
-  height: 2px;
-  background: linear-gradient(90deg, rgba(252, 126, 105, 0.18), rgba(185, 188, 190, 0.18), transparent);
 }
 
 body.theme-light .run-detail-gear-art,
@@ -72832,7 +72806,6 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 .run-detail-page.run-detail-profile-cockpit .run-detail-section h2,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel h3,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-head strong,
-.run-detail-page.run-detail-profile-cockpit .run-detail-side-metric strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-info-list strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-list strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-gear-copy strong {
@@ -72840,7 +72813,6 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-head span,
-.run-detail-page.run-detail-profile-cockpit .run-detail-side-metric span,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-label,
 .run-detail-page.run-detail-profile-cockpit .run-detail-info-list span,
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-list span,

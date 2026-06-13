@@ -949,7 +949,6 @@
 }
 
 .run-detail-panel-head span,
-.run-detail-side-metric span,
 .run-detail-panel-label,
 .run-detail-info-list span,
 .run-detail-stat-list span {
@@ -960,8 +959,7 @@
   text-transform: uppercase;
 }
 
-.run-detail-panel-head strong,
-.run-detail-side-metric strong {
+.run-detail-panel-head strong {
   display: block;
   margin-top: 6px;
   color: #f4f0ea;
@@ -971,8 +969,7 @@
   letter-spacing: -0.05em;
 }
 
-.run-detail-panel-head strong em,
-.run-detail-side-metric strong em {
+.run-detail-panel-head strong em {
   color: rgba(229, 226, 225, 0.56);
   font-size: 0.9rem;
   font-style: normal;
@@ -1114,19 +1111,8 @@
   color: rgba(229, 226, 225, 0.58);
 }
 
-.run-detail-efficiency-panel h3,
 .run-detail-gear-panel .run-detail-panel-label,
 .run-detail-panel > h3 {
-  margin-bottom: 18px;
-}
-
-.run-detail-side-metric + .run-detail-divider {
-  margin-top: 18px;
-}
-
-.run-detail-divider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
   margin-bottom: 18px;
 }
 
@@ -3060,7 +3046,6 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 .run-detail-page.run-detail-profile-cockpit .run-detail-section h2,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel h3,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-head strong,
-.run-detail-page.run-detail-profile-cockpit .run-detail-side-metric strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-info-list strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-list strong,
 .run-detail-page.run-detail-profile-cockpit .run-detail-gear-copy strong {
@@ -3068,7 +3053,6 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-head span,
-.run-detail-page.run-detail-profile-cockpit .run-detail-side-metric span,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel-label,
 .run-detail-page.run-detail-profile-cockpit .run-detail-info-list span,
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-list span,
