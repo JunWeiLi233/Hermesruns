@@ -57,6 +57,7 @@ class ActivityFileParserDeviceTelemetryTests {
         ParsedActivityData parsed = new TcxActivityFileParser().parse("run.tcx", tcx.getBytes(StandardCharsets.UTF_8));
 
         assertEquals(2, parsed.points().size());
+        assertEquals(86, parsed.points().get(0).cadence());
         assertEquals(241.5, parsed.points().get(0).groundContactTimeMs());
         assertEquals(84.0, parsed.points().get(0).verticalOscillationMm());
     }

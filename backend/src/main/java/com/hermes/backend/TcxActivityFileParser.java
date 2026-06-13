@@ -76,6 +76,10 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
             Element hrElem = firstChildElementByLocalName(trackPointElement, "HeartRateBpm");
             Integer heartRate = hrElem != null ? parseInt(firstTextByLocalName(hrElem, "Value")) : null;
             Integer cadence = parseInt(firstTextByLocalName(trackPointElement, "Cadence"));
+            if (cadence == null) {
+                Double runCadence = firstPositiveDescendantDouble(trackPointElement, "RunCadence", "run_cadence");
+                cadence = runCadence == null ? null : (int) Math.round(runCadence);
+            }
             Double groundContactTimeMs = firstPositiveDescendantDouble(trackPointElement,
                     "GroundContactTime", "GroundContactTimeMs", "StanceTime", "stance_time", "ground_contact_time");
             Double verticalOscillationMm = firstPositiveDescendantDouble(trackPointElement,
