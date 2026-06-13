@@ -85,6 +85,12 @@ assert(
 );
 
 assert(
+  /\.run-detail-page\.run-detail-profile-cockpit\s*\{[\s\S]*--runner-profile-paper:\s*#f7efe3;[\s\S]*--runner-profile-card:\s*rgba\(255,\s*252,\s*246,\s*0\.82\);[\s\S]*--runner-profile-card-strong:\s*rgba\(255,\s*253,\s*248,\s*0\.94\);[\s\S]*--runner-profile-flame:\s*#ef6a52;[\s\S]*--runner-profile-moss:\s*#6f9474;/.test(styleSource)
+    && /body:is\(\.theme-midnight,\s*\.theme-high-contrast\)\s+\.run-detail-page\.run-detail-profile-cockpit\s*\{[\s\S]*--runner-profile-paper:\s*#12100e;[\s\S]*--runner-profile-card:\s*rgba\(30,\s*27,\s*23,\s*0\.82\);[\s\S]*linear-gradient\(145deg,\s*var\(--runner-profile-paper\)\s*0%,\s*#1c1814\s*100%\)/.test(styleSource),
+  'Run Detail should use the same calibrated warm paper, coral, moss, card, and dark-mode token family as Runs.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-profile-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1\.1fr\)\s+minmax\(340px,\s*0\.5fr\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-profile-map\s*\{[\s\S]*min-height:\s*clamp\(480px,\s*43vw,\s*720px\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-profile-stat-rail\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/.test(styleSource),

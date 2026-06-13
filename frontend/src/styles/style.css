@@ -72583,22 +72583,23 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 
 /* Profile-aligned Run Detail cockpit polish */
 .run-detail-page.run-detail-profile-cockpit {
-  --runner-profile-paper: #f7f0e7;
-  --runner-profile-card: rgba(255, 252, 246, 0.74);
-  --runner-profile-card-strong: rgba(255, 252, 246, 0.9);
+  --runner-profile-paper: #f7efe3;
+  --runner-profile-card: rgba(255, 252, 246, 0.82);
+  --runner-profile-card-strong: rgba(255, 253, 248, 0.94);
   --runner-profile-ink: #171512;
-  --runner-profile-muted: rgba(67, 54, 42, 0.68);
-  --runner-profile-line: rgba(67, 54, 42, 0.14);
-  --runner-profile-flame: #f2664f;
-  --runner-profile-moss: #7aa882;
-  --runner-profile-shadow: 0 22px 58px rgba(72, 51, 36, 0.1);
+  --runner-profile-muted: rgba(55, 47, 39, 0.68);
+  --runner-profile-line: rgba(69, 54, 38, 0.14);
+  --runner-profile-flame: #ef6a52;
+  --runner-profile-flame-soft: rgba(239, 106, 82, 0.14);
+  --runner-profile-moss: #6f9474;
+  --runner-profile-shadow: 0 24px 70px rgba(58, 43, 28, 0.15);
   min-height: 100vh;
   padding: clamp(16px, 2vw, 30px) 0 clamp(46px, 6vw, 96px);
   color: var(--runner-profile-ink) !important;
   background:
-    radial-gradient(circle at 10% 8%, rgba(242, 102, 79, 0.13), transparent 26rem),
-    radial-gradient(circle at 88% 14%, rgba(122, 168, 130, 0.1), transparent 27rem),
-    linear-gradient(145deg, var(--runner-profile-paper) 0%, #ede2d2 100%) !important;
+    radial-gradient(circle at 10% 8%, rgba(239, 106, 82, 0.13), transparent 26rem),
+    radial-gradient(circle at 88% 14%, rgba(111, 148, 116, 0.1), transparent 27rem),
+    linear-gradient(145deg, var(--runner-profile-paper) 0%, #efe3d3 100%) !important;
   overflow-x: clip;
 }
 
@@ -72617,11 +72618,28 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   border: 1px solid var(--runner-profile-line);
   border-radius: clamp(26px, 2.8vw, 42px);
   background:
-    radial-gradient(circle at 10% 0%, rgba(242, 102, 79, 0.12), transparent 18rem),
-    radial-gradient(circle at 88% 16%, rgba(122, 168, 130, 0.12), transparent 18rem),
-    linear-gradient(145deg, rgba(255, 252, 246, 0.86), rgba(247, 240, 231, 0.52)),
+    radial-gradient(circle at 10% 0%, rgba(239, 106, 82, 0.12), transparent 18rem),
+    radial-gradient(circle at 88% 16%, rgba(111, 148, 116, 0.12), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 253, 248, 0.9), rgba(247, 239, 227, 0.56)),
     var(--runner-profile-card-strong);
   box-shadow: var(--runner-profile-shadow);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profile-cockpit {
+  --runner-profile-paper: #12100e;
+  --runner-profile-card: rgba(30, 27, 23, 0.82);
+  --runner-profile-card-strong: rgba(34, 30, 26, 0.94);
+  --runner-profile-ink: #fff7ee;
+  --runner-profile-muted: rgba(245, 235, 224, 0.68);
+  --runner-profile-line: rgba(255, 246, 235, 0.12);
+  --runner-profile-shadow: 0 26px 74px rgba(0, 0, 0, 0.32);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profile-cockpit {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(239, 106, 82, 0.18), transparent 26rem),
+    radial-gradient(circle at 88% 14%, rgba(111, 148, 116, 0.12), transparent 27rem),
+    linear-gradient(145deg, var(--runner-profile-paper) 0%, #1c1814 100%) !important;
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-topbar-left {
@@ -72668,14 +72686,14 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   min-height: clamp(480px, 43vw, 720px);
   border: 1px solid var(--runner-profile-line);
   background:
-    radial-gradient(circle at 18% 0%, rgba(242, 102, 79, 0.11), transparent 18rem),
-    linear-gradient(135deg, rgba(255, 252, 246, 0.72), rgba(238, 226, 211, 0.42));
+    radial-gradient(circle at 18% 0%, rgba(239, 106, 82, 0.11), transparent 18rem),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.76), rgba(239, 225, 207, 0.44));
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-map-card::after {
   background:
     linear-gradient(180deg, rgba(23, 21, 18, 0.02), rgba(23, 21, 18, 0.18)),
-    radial-gradient(circle at bottom right, rgba(242, 102, 79, 0.16), transparent 18rem);
+    radial-gradient(circle at bottom right, rgba(239, 106, 82, 0.16), transparent 18rem);
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-map-overlay {
@@ -72697,8 +72715,8 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card,
 .run-detail-page.run-detail-profile-cockpit .run-detail-panel {
   border: 1px solid var(--runner-profile-line) !important;
-  background: rgba(255, 252, 246, 0.68) !important;
-  box-shadow: none !important;
+  background: var(--runner-profile-card) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58) !important;
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card {
@@ -72710,7 +72728,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   grid-column: span 2;
   min-height: clamp(210px, 19vw, 320px);
   background:
-    radial-gradient(circle at 82% 18%, rgba(242, 102, 79, 0.24), transparent 16rem),
+    radial-gradient(circle at 82% 18%, rgba(239, 106, 82, 0.24), transparent 16rem),
     linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
     var(--runner-profile-ink) !important;
   color: #fff8ee !important;
@@ -72772,7 +72790,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   gap: clamp(18px, 2vw, 28px);
   align-items: stretch;
   background:
-    radial-gradient(circle at 86% 8%, rgba(242, 102, 79, 0.22), transparent 18rem),
+    radial-gradient(circle at 86% 8%, rgba(239, 106, 82, 0.22), transparent 18rem),
     linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
     var(--runner-profile-ink) !important;
   color: #fff8ee !important;
@@ -73027,8 +73045,8 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 .run-detail-page.run-detail-profile-cockpit .run-detail-empty-state {
   border: 1px solid var(--runner-profile-line);
   background:
-    radial-gradient(circle at 12% 0%, rgba(242, 102, 79, 0.12), transparent 18rem),
-    linear-gradient(145deg, rgba(255, 252, 246, 0.88), rgba(247, 240, 231, 0.58));
+    radial-gradient(circle at 12% 0%, rgba(239, 106, 82, 0.12), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 253, 248, 0.88), rgba(247, 239, 227, 0.58));
   box-shadow: var(--runner-profile-shadow);
   color: var(--runner-profile-ink);
 }
@@ -73135,9 +73153,9 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   border: 1px solid var(--runner-profile-line);
   border-radius: clamp(26px, 2.8vw, 42px);
   background:
-    radial-gradient(circle at 10% 0%, rgba(242, 102, 79, 0.12), transparent 18rem),
-    radial-gradient(circle at 88% 16%, rgba(122, 168, 130, 0.12), transparent 18rem),
-    linear-gradient(145deg, rgba(255, 252, 246, 0.86), rgba(247, 240, 231, 0.52)),
+    radial-gradient(circle at 10% 0%, rgba(239, 106, 82, 0.12), transparent 18rem),
+    radial-gradient(circle at 88% 16%, rgba(111, 148, 116, 0.12), transparent 18rem),
+    linear-gradient(145deg, rgba(255, 253, 248, 0.9), rgba(247, 239, 227, 0.56)),
     var(--runner-profile-card-strong);
   box-shadow: var(--runner-profile-shadow);
 }
@@ -73183,14 +73201,14 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/run"], [data-route-path^="/run/"]) .run-detail-profile-map {
   min-height: clamp(480px, 43vw, 720px);
   background:
-    radial-gradient(circle at 18% 0%, rgba(242, 102, 79, 0.11), transparent 18rem),
-    linear-gradient(135deg, rgba(255, 252, 246, 0.72), rgba(238, 226, 211, 0.42));
+    radial-gradient(circle at 18% 0%, rgba(239, 106, 82, 0.11), transparent 18rem),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.76), rgba(239, 225, 207, 0.44));
 }
 
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/run"], [data-route-path^="/run/"]) .run-detail-map-card::after {
   background:
     linear-gradient(180deg, rgba(23, 21, 18, 0.02), rgba(23, 21, 18, 0.18)),
-    radial-gradient(circle at bottom right, rgba(242, 102, 79, 0.16), transparent 18rem);
+    radial-gradient(circle at bottom right, rgba(239, 106, 82, 0.16), transparent 18rem);
 }
 
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/run"], [data-route-path^="/run/"]) .run-detail-map-overlay {
@@ -73213,15 +73231,15 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   min-height: clamp(152px, 12vw, 210px);
   padding: clamp(20px, 2vw, 30px);
   border: 1px solid var(--runner-profile-line) !important;
-  background: rgba(255, 252, 246, 0.68) !important;
-  box-shadow: none !important;
+  background: var(--runner-profile-card) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58) !important;
 }
 
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/run"], [data-route-path^="/run/"]) .run-detail-stat-card.is-accent {
   grid-column: span 2;
   min-height: clamp(210px, 19vw, 320px);
   background:
-    radial-gradient(circle at 82% 18%, rgba(242, 102, 79, 0.24), transparent 16rem),
+    radial-gradient(circle at 82% 18%, rgba(239, 106, 82, 0.24), transparent 16rem),
     linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
     var(--runner-profile-ink) !important;
   color: #fff8ee !important;
@@ -73261,7 +73279,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   gap: clamp(18px, 2vw, 28px);
   align-items: stretch;
   background:
-    radial-gradient(circle at 86% 8%, rgba(242, 102, 79, 0.22), transparent 18rem),
+    radial-gradient(circle at 86% 8%, rgba(239, 106, 82, 0.22), transparent 18rem),
     linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
     var(--runner-profile-ink) !important;
   color: #fff8ee !important;
