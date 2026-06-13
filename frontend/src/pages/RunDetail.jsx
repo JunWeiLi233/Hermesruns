@@ -129,6 +129,10 @@ function formatTelemetryValue(value, key) {
   return numeric.toFixed(0);
 }
 
+function getTelemetryDisplaySample(samples) {
+  return samples[Math.floor(samples.length * 0.66)] || samples[samples.length - 1] || null;
+}
+
 export default function RunDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
@@ -460,7 +464,7 @@ export default function RunDetail() {
 
   const focusTelemetryPoint = selectedTelemetryPoint?.key === activeTelemetryDefinition.key
     ? selectedTelemetryPoint
-    : activeTelemetrySamples[Math.floor(activeTelemetrySamples.length * 0.66)] || activeTelemetrySamples[activeTelemetrySamples.length - 1] || null;
+    : getTelemetryDisplaySample(activeTelemetrySamples);
   const trainingEffect = telemetry?.trainingEffect && typeof telemetry.trainingEffect === 'object'
     ? telemetry.trainingEffect
     : null;
@@ -832,6 +836,7 @@ export default function RunDetail() {
             <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
               {telemetryDefinitions.map((definition) => {
                 const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
+                const displaySample = getTelemetryDisplaySample(samples);
                 const isActive = definition.key === activeTelemetryDefinition.key;
                 return (
                   <button
@@ -843,7 +848,10 @@ export default function RunDetail() {
                     aria-selected={isActive}
                   >
                     <span>{definition.label}</span>
-                    {!isActive && <strong>{samples.length ? samples.length.toLocaleString() : '--'}</strong>}
+                    <strong>
+                      {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
+                      {displaySample && <em>{definition.unit}</em>}
+                    </strong>
                   </button>
                 );
               })}

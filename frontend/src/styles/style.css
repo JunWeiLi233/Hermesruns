@@ -72890,6 +72890,14 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   font-size: 1.15rem;
 }
 
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab strong em {
+  margin-left: 0.35em;
+  color: var(--runner-profile-muted);
+  font-size: 0.68em;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-stage {
   display: grid;
   grid-template-columns: minmax(220px, 0.2fr) minmax(0, 1fr);
