@@ -3464,3 +3464,12 @@ What changed: Added a desktop-only Run Detail grid offset so `run-detail-gear-pa
 Why: The user requested `run-detail-panel run-detail-debrief-panel` and `run-detail-panel run-detail-gear-panel` to align.
 Rollback target: `DV-2026-06-13-05`
 Notes: This is a layout alignment change only; gear linking, debrief content, telemetry, and comparison data behavior are unchanged.
+
+### Version: DV-2026-06-13-07
+Date: 2026-06-13
+Surface: Run Detail full-dark accent stat card on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral radial wash from `run-detail-stat-card is-accent` and made the accent grid card a solid dark `runner-profile-ink` surface with warm light text.
+Why: The user requested a full dark color for the accent stat grid card.
+Rollback target: `DV-2026-06-13-06`
+Notes: This is a color treatment change only; RunDetail layout, telemetry, gear linking, and stat data remain unchanged.

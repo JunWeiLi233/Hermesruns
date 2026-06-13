@@ -105,6 +105,12 @@ assert(
 );
 
 assert(
+  /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*background:\s*var\(--runner-profile-ink\)\s*!important;[\s\S]*color:\s*#fff8ee\s*!important;/.test(styleSource)
+    && !/\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*radial-gradient\(circle at 82% 18%/.test(styleSource),
+  'Run Detail accent stat card should render as a fully dark grid card without the coral radial wash.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*0\.34fr\)\s+minmax\(0,\s*1fr\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*calc\(\(clamp\(1\.25rem,\s*1\.55vw,\s*1\.65rem\)\s*\*\s*1\.1\)\s*\+\s*14px\);/.test(styleSource)
     && /@media\s*\(max-width:\s*1180px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*0;/.test(styleSource)
