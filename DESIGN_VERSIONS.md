@@ -3455,3 +3455,12 @@ What changed: Moved the recent-run comparison panel and splits table out of the 
 Why: The user requested the same full-page treatment for `run-detail-section` and `run-detail-section run-detail-comparison-section`.
 Rollback target: `DV-2026-06-13-03`
 Notes: The comparison and split data logic is unchanged; only the page composition changed.
+
+### Version: DV-2026-06-13-05
+Date: 2026-06-13
+Surface: Run Detail Runs-aligned color system on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated Run Detail profile cockpit paper, card, ink, muted text, hairline, coral, moss, and shadow tokens to match the Runs page palette, including the loading/empty fallback states and a RunDetail-specific dark-mode token map.
+Why: The user requested RunDetail to be redesigned based on Run/Runs color design while preserving the existing telemetry and evidence layout.
+Rollback target: `DV-2026-06-13-04`
+Notes: This is a color-system alignment only; data wiring, telemetry tabs, comparison, and split-table behavior are unchanged.
