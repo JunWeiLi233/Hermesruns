@@ -24,9 +24,7 @@ export function getConsecutiveRunWeekStreak(runs) {
 
   const currentWeek = startOfWeek(new Date()).getTime();
   const lastRunWeek = sortedWeeks[0];
-  const diffWeeksFromCurrent = Math.round((currentWeek - lastRunWeek) / (7 * 86400000));
-
-  if (diffWeeksFromCurrent > 1) return 0;
+  if (lastRunWeek !== currentWeek) return 0;
 
   let streak = 1;
   for (let i = 1; i < sortedWeeks.length; i += 1) {
