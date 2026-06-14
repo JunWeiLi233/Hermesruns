@@ -3554,3 +3554,12 @@ What changed: Redrew the inactive telemetry icons with simpler, cleaner 16px-fri
 Why: The user reported the current icons still had weird shapes and imperfect drawing.
 Rollback target: `DV-2026-06-14-01`
 Notes: This changes icon drawing only; selected-tab suppression, tab labels, values, units, chart behavior, and styles remain unchanged.
+
+### Version: DV-2026-06-14-03
+Date: 2026-06-14
+Surface: Run Detail telemetry heading copy on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `DESIGN_VERSIONS.md`
+What changed: Removed the telemetry subtitle paragraph under the `运动数据` / `Telemetry Stream` heading so neither Chinese nor English explanatory copy appears on the page.
+Why: The user requested removing the Chinese subtitle and clarified to remove the English equivalent too.
+Rollback target: `DV-2026-06-14-02`
+Notes: This is a copy-removal change only; telemetry data, chart selection, icons, values, units, and layout behavior remain unchanged.

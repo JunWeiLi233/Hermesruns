@@ -71,8 +71,9 @@ assert(
     && runDetailSource.includes('className="run-detail-telemetry-tab-icon"')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
+    && !runDetailSource.includes("t('run_detail.telemetry_subtitle')")
     && !runDetailSource.includes('samples.length ? samples.length.toLocaleString()'),
-  'Run Detail telemetry tabs should show the metric value and unit with a heart icon affordance instead of sample counts.',
+  'Run Detail telemetry tabs should show values/units without sample counts or the old explanatory subtitle.',
 );
 
 assert(

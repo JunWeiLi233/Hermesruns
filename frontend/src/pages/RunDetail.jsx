@@ -824,7 +824,6 @@ export default function RunDetail() {
           <div className="run-detail-section-head run-detail-telemetry-heading">
             <div>
               <h2>{t('run_detail.telemetry_title')}</h2>
-              <p>{t('run_detail.telemetry_subtitle')}</p>
             </div>
             <span className="run-detail-telemetry-resolution">
               {telemetrySampleCount > 0
