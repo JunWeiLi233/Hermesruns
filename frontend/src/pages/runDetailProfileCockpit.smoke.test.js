@@ -105,6 +105,13 @@ assert(
 );
 
 assert(
+  /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-topbar\s*\{[\s\S]*gap:\s*clamp\(14px,\s*1\.8vw,\s*26px\);[\s\S]*padding:\s*clamp\(16px,\s*2vw,\s*28px\)\s*!important;[\s\S]*border-radius:\s*clamp\(22px,\s*2\.2vw,\s*34px\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(2\.6rem,\s*5\.8vw,\s*5\.8rem\)\s*!important;[\s\S]*line-height:\s*0\.9;/.test(styleSource)
+    && /@media\s*\(max-width:\s*760px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-topbar\s*\{[\s\S]*padding:\s*clamp\(16px,\s*4\.5vw,\s*22px\)\s*!important;[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(2\.35rem,\s*11vw,\s*3\.8rem\)\s*!important;/.test(styleSource),
+  'Run Detail topbar should use the compact profile-cockpit sizing instead of the oversized editorial shell.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*background:\s*var\(--runner-profile-ink\)\s*!important;[\s\S]*color:\s*#fff8ee\s*!important;/.test(styleSource)
     && !/\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*radial-gradient\(circle at 82% 18%/.test(styleSource),
   'Run Detail accent stat card should render as a fully dark grid card without the coral radial wash.',
