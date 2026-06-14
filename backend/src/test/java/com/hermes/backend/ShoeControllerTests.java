@@ -867,7 +867,7 @@ class ShoeControllerTests {
 
         when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(actRepo.findByIdAndRunner(10L, runner)).thenReturn(Optional.of(activity));
-        when(actRepo.save(activity)).thenReturn(activity);
+        when(actRepo.saveAndFlush(activity)).thenReturn(activity);
 
         ResponseEntity<?> resp = controller(auth, shoeRepo, actRepo, identSvc)
                 .assignShoeToActivity(0L, 10L, "Bearer token");
@@ -877,7 +877,7 @@ class ShoeControllerTests {
         Map<String, Object> body = (Map<String, Object>) resp.getBody();
         assertThat(body).containsEntry("message", "Shoe assignment updated");
         verify(activity).setShoe(null);
-        verify(actRepo).save(activity);
+        verify(actRepo).saveAndFlush(activity);
     }
 
     @Test
@@ -893,14 +893,14 @@ class ShoeControllerTests {
         when(auth.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(actRepo.findByIdAndRunner(10L, runner)).thenReturn(Optional.of(activity));
         when(shoeRepo.findByIdAndRunner(5L, runner)).thenReturn(Optional.of(existing));
-        when(actRepo.save(activity)).thenReturn(activity);
+        when(actRepo.saveAndFlush(activity)).thenReturn(activity);
 
         ResponseEntity<?> resp = controller(auth, shoeRepo, actRepo, identSvc)
                 .assignShoeToActivity(5L, 10L, "Bearer token");
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         verify(activity).setShoe(existing);
-        verify(actRepo).save(activity);
+        verify(actRepo).saveAndFlush(activity);
     }
 
     // ---------------------------------------------------------------------------

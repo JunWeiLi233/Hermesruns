@@ -596,7 +596,6 @@ public class ActivityController {
         effect.put("averageHeartRate", ActivityAnalyticsHelper.round2(avgHr));
         effect.put("maxHeartRateBasis", ActivityAnalyticsHelper.round2(maxHr));
         effect.put("highIntensityShare", ActivityAnalyticsHelper.round2(highIntensityShare));
-        effect.put("basis", "Estimated from elapsed heart-rate stream, duration, and high-intensity share; not an official device Training Effect field.");
         return effect;
     }
 

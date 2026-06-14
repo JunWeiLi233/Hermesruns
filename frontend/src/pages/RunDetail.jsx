@@ -216,6 +216,8 @@ export default function RunDetail() {
   const [syncDisabled, setSyncDisabled] = useState(false);
   const [shoes, setShoes] = useState([]);
   const [shoeDropdownOpen, setShoeDropdownOpen] = useState(false);
+  const [assigningShoeId, setAssigningShoeId] = useState(null);
+  const [shoeActionMessage, setShoeActionMessage] = useState('');
   const [analytics, setAnalytics] = useState(null);
   const [telemetry, setTelemetry] = useState(null);
   const [activeTelemetryKey, setActiveTelemetryKey] = useState('heartRate');
@@ -229,31 +231,17 @@ export default function RunDetail() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
-  function getRouteShapeLabel(shapeKey) {
-    switch (shapeKey) {
-      case 'loop':
-        return t('run_detail.route_shape_loop');
-      case 'out_and_back':
-        return t('run_detail.route_shape_out_and_back');
-      case 'point_to_point':
-        return t('run_detail.route_shape_point_to_point');
-      case 'none':
-        return t('run_detail.route_shape_none');
-      default:
-        return t('run_detail.route_shape_unknown');
-    }
-  }
-
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
     if (cachedRun) {
       setRun(cachedRun);
       setIsBootstrappingRun(false);
-      return;
     }
 
     if (!isAuthenticated || !id) {
-      setRun(null);
+      if (!cachedRun) {
+        setRun(null);
+      }
       setIsBootstrappingRun(false);
       return;
     }
@@ -271,6 +259,8 @@ export default function RunDetail() {
         setRun(matchedRun || null);
         if (matchedRun && typeof window !== 'undefined') {
           sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
+        } else if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('hermes_selected_run');
         }
       } catch {
         if (!cancelled) {
@@ -305,22 +295,48 @@ export default function RunDetail() {
   }, [isAuthenticated, id]);
 
   async function assignShoe(shoeId) {
-    if (!run?.id) return;
+    if (!run?.id) {
+      setShoeActionMessage(t('run_detail.shoe_assign_no_run'));
+      return;
+    }
+    const normalizedShoeId = Number(shoeId);
+    const isUnlinking = normalizedShoeId === 0;
+    setAssigningShoeId(normalizedShoeId);
+    setShoeActionMessage('');
     try {
-      await apiJson(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' });
-      setRun((prev) => ({
-        ...prev,
-        shoeId: shoeId === 0 ? null : shoeId,
-        shoeName: shoeId === 0 ? null : (() => {
-          const shoe = shoes.find((item) => item.id === shoeId);
-          return shoe
-            ? formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })
-            : null;
-        })(),
-      }));
+      const response = await apiJson(`/api/shoes/${normalizedShoeId}/assign/${run.id}`, { method: 'PATCH' });
+      if (response?.activityId != null && String(response.activityId) !== String(run.id)) {
+        throw new Error('Activity mismatch');
+      }
+      const selectedShoe = isUnlinking
+        ? null
+        : shoes.find((item) => String(item.id) === String(normalizedShoeId));
+      const selectedShoeName = selectedShoe
+        ? formatShoeDisplayName({ brand: selectedShoe.brand, model: selectedShoe.model, nickname: selectedShoe.nickname, lang })
+        : null;
+      const nextShoeId = isUnlinking ? null : (response?.shoeId ?? normalizedShoeId);
+      const nextShoeName = isUnlinking ? null : (response?.shoeName || selectedShoeName);
+
+      setRun((prev) => {
+        if (!prev) return prev;
+        const nextRun = {
+          ...prev,
+          shoeId: nextShoeId,
+          shoeName: nextShoeName,
+        };
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('hermes_selected_run', JSON.stringify(nextRun));
+        }
+        return nextRun;
+      });
       setShoeDropdownOpen(false);
+      setShoeActionMessage(isUnlinking
+        ? t('run_detail.shoe_unlinked')
+        : t('run_detail.shoe_linked', { shoe: nextShoeName || t('run_detail.shoe') }));
     } catch {
-      // ignored
+      setShoeActionMessage(t('run_detail.shoe_assign_failed'));
+    } finally {
+      setAssigningShoeId(null);
     }
   }
 
@@ -328,11 +344,10 @@ export default function RunDetail() {
     if (!run?.id || !isAuthenticated) return;
     async function fetchPoints() {
       try {
-        const [res, analyticsRes, telemetryRes, elevStatusRes] = await Promise.all([
+        const [res, analyticsRes, telemetryRes] = await Promise.all([
           apiFetch(`/api/activities/${run.id}/points`),
           apiFetch(`/api/activities/${run.id}/analytics`),
           apiFetch(`/api/activities/${run.id}/telemetry`),
-          apiFetch(`/api/activities/${run.id}/elevation/status`),
         ]);
         if (!res.ok) return;
         const data = await res.json();
@@ -349,15 +364,23 @@ export default function RunDetail() {
           const payload = await telemetryRes.json();
           setTelemetry(payload && typeof payload === 'object' ? payload : null);
         }
+      } catch {
+        // ignored
+      }
+    }
+    async function fetchElevationStatus() {
+      try {
+        const elevStatusRes = await apiFetch(`/api/activities/${run.id}/elevation/status`);
         if (elevStatusRes.ok) {
           const payload = await elevStatusRes.json();
           setElevationStatus(payload && typeof payload === 'object' ? payload : null);
         }
       } catch {
-        // ignored
+        // Elevation quality is advisory; it should not block the run detail page.
       }
     }
     fetchPoints();
+    fetchElevationStatus();
   }, [run, isAuthenticated]);
 
   useEffect(() => {
@@ -451,6 +474,21 @@ export default function RunDetail() {
     { key: 'verticalOscillationCm', label: t('run_detail.vertical_oscillation'), unit: 'cm', color: '#7d7565', fill: 'rgba(125, 117, 101, 0.16)', icon: 'telemetry_vertical' },
     { key: 'elevation', label: t('run_detail.telemetry_elevation'), unit: t('run_detail.unit_meter'), color: '#6f6b5e', fill: 'rgba(111, 107, 94, 0.16)', icon: 'telemetry_elevation' },
   ], [t]);
+  const telemetryTabDefinitions = useMemo(() => telemetryDefinitions
+    .map((definition, index) => {
+      const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
+      const displaySample = getTelemetryDisplaySample(samples);
+      return {
+        ...definition,
+        displaySample,
+        hasData: Boolean(displaySample),
+        sourceIndex: index,
+      };
+    })
+    .sort((a, b) => {
+      if (a.hasData !== b.hasData) return a.hasData ? -1 : 1;
+      return a.sourceIndex - b.sourceIndex;
+    }), [telemetry, telemetryDefinitions]);
 
   const activeTelemetryDefinition = telemetryDefinitions.find((definition) => definition.key === activeTelemetryKey) || telemetryDefinitions[0];
   const activeTelemetrySeries = telemetry?.series?.[activeTelemetryDefinition.key];
@@ -702,17 +740,8 @@ export default function RunDetail() {
     [t('run_detail.perf_elevation_gain'), run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : t('run_detail.not_available')],
   ];
 
-  const routeRows = insights ? [
-    [t('run_detail.route_gps_samples'), insights.pointCount ? insights.pointCount.toLocaleString() : t('run_detail.no_route_data')],
-    [t('run_detail.route_gps_distance'), insights.computedDistanceKm != null ? `${insights.computedDistanceKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_start_finish_gap'), insights.startFinishGapMeters != null ? `${Math.round(insights.startFinishGapMeters)} ${elevationUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_shape'), getRouteShapeLabel(insights.routeShapeKey)],
-    [t('run_detail.route_efficiency'), insights.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : t('run_detail.not_available')],
-    [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
-  ] : [];
-
-  const linkedShoe = run?.shoeId ? shoes.find((shoe) => shoe.id === run.shoeId) : null;
+  const activeShoes = shoes.filter((shoe) => !shoe.retired);
+  const linkedShoe = run?.shoeId ? shoes.find((shoe) => String(shoe.id) === String(run.shoeId)) : null;
   const linkedShoeName = run?.shoeName
     || (linkedShoe
       ? formatShoeDisplayName({ brand: linkedShoe.brand, model: linkedShoe.model, nickname: linkedShoe.nickname, lang })
@@ -840,30 +869,46 @@ export default function RunDetail() {
                   )}
                 </div>
               </div>
-              <div className="run-detail-gear-actions">
-                <button type="button" className="run-detail-link-btn" onClick={() => setShoeDropdownOpen((prev) => !prev)}>
-                  {run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
+            <div className="run-detail-gear-actions">
+              <button
+                type="button"
+                className="run-detail-link-btn"
+                disabled={assigningShoeId != null}
+                onClick={() => {
+                  setShoeActionMessage('');
+                  setShoeDropdownOpen((prev) => !prev);
+                }}
+              >
+                {assigningShoeId != null
+                  ? t('run_detail.shoe_assigning')
+                  : run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
+              </button>
+              {run.shoeId && (
+                <button type="button" className="run-detail-link-btn is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
+                  {t('run_detail.unlink_shoe')}
                 </button>
-                {run.shoeId && (
-                  <button type="button" className="run-detail-link-btn is-danger" onClick={() => assignShoe(0)}>
-                    {t('run_detail.unlink_shoe')}
+              )}
+            </div>
+            {shoeDropdownOpen && (
+              <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
+                {activeShoes.length > 0 ? activeShoes.map((shoe) => (
+                  <button
+                    key={shoe.id}
+                    type="button"
+                    className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
+                    disabled={assigningShoeId != null}
+                    onClick={() => assignShoe(shoe.id)}
+                  >
+                    {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
                   </button>
+                )) : (
+                  <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
                 )}
               </div>
-              {shoeDropdownOpen && shoes.length > 0 && (
-                <div className="shoe-run-dropdown run-detail-dropdown">
-                  {shoes.filter((shoe) => !shoe.retired).map((shoe) => (
-                    <button
-                      key={shoe.id}
-                      type="button"
-                      className={`shoe-run-option${shoe.id === run.shoeId ? ' active' : ''}`}
-                      onClick={() => assignShoe(shoe.id)}
-                    >
-                      {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
-                    </button>
-                  ))}
-                </div>
-              )}
+            )}
+            {shoeActionMessage && (
+              <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
+            )}
             </section>
           </aside>
         </section>
@@ -901,9 +946,8 @@ export default function RunDetail() {
           </div>
           <div className="run-detail-panel run-detail-telemetry-panel">
             <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
-              {telemetryDefinitions.map((definition) => {
-                const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
-                const displaySample = getTelemetryDisplaySample(samples);
+              {telemetryTabDefinitions.map((definition) => {
+                const displaySample = definition.displaySample;
                 const isActive = definition.key === activeTelemetryDefinition.key;
                 return (
                   <button
@@ -960,9 +1004,6 @@ export default function RunDetail() {
 
             <div className="run-detail-chip-row run-detail-telemetry-chip-row">
               <span className="run-detail-chip">
-                {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
-              </span>
-              <span className="run-detail-chip">
                 {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
               </span>
               <span className="run-detail-chip">
@@ -974,12 +1015,12 @@ export default function RunDetail() {
               <article>
                 <span>{t('run_detail.aerobic_effect')}</span>
                 <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
-                <p>{trainingEffectAvailable ? t('run_detail.training_effect_estimated') : t('run_detail.training_effect_unavailable')}</p>
+                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
               </article>
               <article>
                 <span>{t('run_detail.anaerobic_effect')}</span>
                 <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
-                <p>{trainingEffect?.basis || t('run_detail.training_effect_unavailable')}</p>
+                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
               </article>
             </div>
 
@@ -1001,9 +1042,11 @@ export default function RunDetail() {
             {elevationStatus?.flagged && (
               <div className="run-detail-warning">
                 <p>{t('run_detail.elevation_warning')}</p>
-                <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
-                  {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
-                </button>
+                {elevationStatus?.canRecalibrate && (
+                  <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                    {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1054,14 +1097,6 @@ export default function RunDetail() {
             <h3>{t('run_detail.performance_metrics')}</h3>
             <div className="run-detail-stat-list">
               {performanceRows.map(([label, value], index) => (
-                <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
-              ))}
-            </div>
-          </article>
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.data_capture_title')}</h3>
-            <div className="run-detail-stat-list">
-              {routeRows.map(([label, value], index) => (
                 <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
               ))}
             </div>

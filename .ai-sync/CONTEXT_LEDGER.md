@@ -16,6 +16,13 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - After a meaningful verified round, refresh the matching capsule.
 
 ## Surface Capsules
+### /run/:id
+- Goal: Make /run/:id easier to inspect with per-second streams required by Issue #51
+- Changed: Completed Issue #51 Run Detail per-second telemetry cockpit with real imported GCT/VO streams
+- Preserve: Real route map, auth, Strava/shoe wiring, analytics debrief, splits, performance metrics, bilingual copy
+- Next Risk: 8080 still serves another old Hermes checkout; current worktree runtime proof used isolated localhost:8092
+- Rollback Target: working tree before this round
+
 ### runner shell sidebar
 - Goal:
 - Changed:

@@ -1149,11 +1149,15 @@
 }
 
 .run-detail-gear-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
   min-width: 0;
 }
 
 .run-detail-gear-copy strong {
   display: block;
+  grid-column: 1;
   color: #f4f0ea;
   font-family: "Manrope", var(--font-display);
   font-size: 0.98rem;
@@ -1161,12 +1165,14 @@
 
 .run-detail-gear-copy span {
   display: block;
+  grid-column: 1;
   margin-top: 4px;
   color: rgba(229, 226, 225, 0.58);
   font-size: 0.78rem;
 }
 
 .run-detail-gear-usage {
+  grid-column: 1 / -1;
   width: 100%;
   height: 6px;
   margin-top: 10px;
@@ -1184,17 +1190,63 @@
 .run-detail-gear-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 18px;
+  grid-column: 1;
+  justify-self: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.run-detail-gear-actions .run-detail-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-height: 38px;
+  border: 1px solid rgba(244, 240, 234, 0.16);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(244, 240, 234, 0.1);
+  color: #f4f0ea;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.run-detail-gear-actions .run-detail-link-btn:hover {
+  background: rgba(244, 240, 234, 0.16);
+}
+
+.run-detail-gear-actions .run-detail-link-btn.is-danger {
+  border-color: rgba(255, 154, 147, 0.3);
+  background: rgba(255, 154, 147, 0.12);
+  color: #ffbbb5;
+}
+
+.run-detail-gear-panel > .run-detail-gear-actions,
+.run-detail-gear-panel > .run-detail-dropdown,
+.run-detail-gear-panel > .run-detail-gear-status {
+  margin-left: 0;
+  width: 100%;
 }
 
 .run-detail-dropdown {
+  grid-column: 1 / -1;
   position: static;
+  left: auto;
+  top: auto;
   margin-top: 14px;
   min-width: 0;
   border: 0;
   box-shadow: none;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.shoe-run-dropdown.run-detail-dropdown {
+  position: static;
+  left: auto;
+  top: auto;
+  z-index: auto;
 }
 
 .run-detail-dropdown .shoe-run-option {
@@ -1203,6 +1255,25 @@
 
 .run-detail-dropdown .shoe-run-option:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.run-detail-dropdown .shoe-run-option:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.run-detail-dropdown .shoe-run-empty {
+  padding: 12px 14px;
+  color: rgba(229, 226, 225, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.run-detail-gear-status {
+  margin: 12px 0 0;
+  color: rgba(244, 240, 234, 0.68);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .run-detail-shoe-browser {
@@ -1311,8 +1382,13 @@
 }
 
 .run-detail-bottom-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 24px;
+}
+
+.run-detail-bottom-grid > .run-detail-panel {
+  width: 100%;
+  justify-self: stretch;
 }
 
 @media (max-width: 980px) {
@@ -3049,6 +3125,48 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   padding: clamp(22px, 2.2vw, 34px);
 }
 
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-panel {
+  padding: clamp(18px, 1.7vw, 24px);
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-panel .run-detail-panel-label {
+  margin-bottom: 12px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-row {
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 12px;
+  width: min(100%, 280px);
+  max-width: 280px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-art {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-placeholder {
+  font-size: 1.05rem;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-actions {
+  width: min(100%, 280px);
+  max-width: 280px;
+  margin-top: 10px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-dropdown,
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-status {
+  width: min(100%, 280px);
+  max-width: 280px;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-gear-actions .run-detail-link-btn {
+  min-height: 34px;
+  padding: 0.45rem 0.8rem;
+}
+
 .run-detail-page.run-detail-profile-cockpit .run-detail-section h2 {
   margin-bottom: 14px;
   font-size: clamp(1.25rem, 1.55vw, 1.65rem);
@@ -3434,4 +3552,19 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-readout p {
     max-width: none;
   }
+}
+
+.run-detail-page .run-detail-bottom-grid,
+.hermes-site-frame[data-route-path^="/run/"] .run-detail-bottom-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.run-detail-page .run-detail-bottom-grid > .run-detail-panel,
+.hermes-site-frame[data-route-path^="/run/"] .run-detail-bottom-grid > .run-detail-panel {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  justify-self: stretch !important;
 }
