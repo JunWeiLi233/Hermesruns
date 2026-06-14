@@ -650,7 +650,7 @@ export default function RunDetail() {
   const heroMetaText = [
     dateText,
     timeText,
-    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+    run.locationCity || run.city || run.locationName || run.location,
   ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
 
   const performanceRows = [
