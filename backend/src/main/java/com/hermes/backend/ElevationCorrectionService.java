@@ -14,14 +14,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ElevationCorrectionService {
     private static final double DISCREPANCY_THRESHOLD = 0.25;
     private static final int DEM_CHUNK = 100;
+    private static final int STATUS_DEM_SAMPLE_LIMIT = 96;
 
     private final ActivityPointRepository activityPointRepository;
     private final RestTemplate restTemplate;
+    private final Map<Long, ElevationStatus> statusCache = new ConcurrentHashMap<>();
 
     public ElevationCorrectionService(ActivityPointRepository activityPointRepository, RestTemplate restTemplate) {
         this.activityPointRepository = activityPointRepository;
@@ -30,33 +33,50 @@ public class ElevationCorrectionService {
 
     @Transactional(readOnly = true)
     public ElevationStatus computeStatus(Activity activity) {
+        Long activityId = activity.getId();
+        if (activityId != null) {
+            ElevationStatus cached = statusCache.get(activityId);
+            if (cached != null) {
+                return cached;
+            }
+        }
+
         List<ActivityPoint> points = activityPointRepository.findByActivityOrderBySequenceIndexAsc(activity);
         if (points.size() < 2) {
             return new ElevationStatus(false, null, null, 0.0, false, false, "Insufficient points");
         }
 
         List<Double> rawProfile = new ArrayList<>(points.size());
+        List<Double> correctedProfile = new ArrayList<>(points.size());
         boolean hasCorrected = false;
         for (ActivityPoint p : points) {
             Double raw = p.getElevationRawMeters() != null ? p.getElevationRawMeters() : p.getElevationMeters();
             rawProfile.add(raw);
-            if (p.getElevationCorrectedMeters() != null) hasCorrected = true;
+            correctedProfile.add(p.getElevationCorrectedMeters());
+            if (p.getElevationCorrectedMeters() != null) {
+                hasCorrected = true;
+            }
         }
 
         Double rawAscent = totalAscent(rawProfile);
-        Double demAscent = demAscentFromStartEnd(points);
-        double variance = variance(rawAscent, demAscent);
+        Double statusAscent = hasCorrected ? totalAscent(correctedProfile) : rawAscent;
+        Double demAscent = hasCorrected ? statusAscent : demAscentFromStatusProfile(points);
+        double variance = variance(statusAscent, demAscent);
         boolean flagged = variance > DISCREPANCY_THRESHOLD;
 
-        return new ElevationStatus(
+        ElevationStatus status = new ElevationStatus(
                 flagged,
                 rawAscent,
                 demAscent,
                 variance,
                 hasCorrected,
-                hasCorrected,
+                true,
                 flagged ? "Suspicious elevation data detected. Barometric drift likely." : "Elevation profile looks consistent."
         );
+        if (activityId != null && demAscent != null) {
+            statusCache.put(activityId, status);
+        }
+        return status;
     }
 
     @Transactional
@@ -88,6 +108,9 @@ public class ElevationCorrectionService {
             corrected.add(demElev.get(i));
         }
         activityPointRepository.saveAll(points);
+        if (activity.getId() != null) {
+            statusCache.remove(activity.getId());
+        }
 
         Double correctedAscent = totalAscent(corrected);
         Double rawAscent = totalAscent(points.stream()
@@ -186,14 +209,25 @@ public class ElevationCorrectionService {
         }
     }
 
-    private Double demAscentFromStartEnd(List<ActivityPoint> points) {
-        List<LatLng> ends = List.of(
-                new LatLng(points.get(0).getLatitude(), points.get(0).getLongitude()),
-                new LatLng(points.get(points.size() - 1).getLatitude(), points.get(points.size() - 1).getLongitude())
-        );
-        List<Double> e = fetchDemElevations(ends);
-        if (e.size() < 2) return null;
-        return Math.abs(e.get(1) - e.get(0));
+    private Double demAscentFromStatusProfile(List<ActivityPoint> points) {
+        List<ActivityPoint> sampledPoints = samplePoints(points, STATUS_DEM_SAMPLE_LIMIT);
+        List<LatLng> coords = sampledPoints.stream()
+                .map(p -> new LatLng(p.getLatitude(), p.getLongitude()))
+                .toList();
+        List<Double> elevations = fetchDemElevations(coords);
+        if (elevations.size() < 2) return null;
+        return totalAscent(elevations);
+    }
+
+    private static List<ActivityPoint> samplePoints(List<ActivityPoint> points, int limit) {
+        if (points.size() <= limit) return points;
+        List<ActivityPoint> sampled = new ArrayList<>(limit);
+        int lastIndex = points.size() - 1;
+        for (int i = 0; i < limit; i++) {
+            int index = (int) Math.round((i / (double) (limit - 1)) * lastIndex);
+            sampled.add(points.get(index));
+        }
+        return sampled;
     }
 
     private static Double totalAscent(List<Double> profile) {
