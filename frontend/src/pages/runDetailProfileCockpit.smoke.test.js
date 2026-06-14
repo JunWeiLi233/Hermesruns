@@ -50,9 +50,12 @@ assert(
     && !runDetailSource.includes("t('run_detail.route_center')")
     && runDetailSource.includes('const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1')
     && runDetailSource.includes('function resampleTelemetrySamples')
+    && runDetailSource.includes('function formatTelemetryInteractionTime')
     && runDetailSource.includes('activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value }))')
-    && runDetailSource.includes("type: 'linear'"),
-  'Run Detail should fetch telemetry streams, render the chart on a 0.1-second linear time scale, and keep the route-center marker/label removed.',
+    && runDetailSource.includes("type: 'linear'")
+    && runDetailSource.includes('title: (items) => formatTelemetryInteractionTime(items?.[0]?.parsed?.x)')
+    && runDetailSource.includes('time: formatTelemetryInteractionTime(focusTelemetryPoint.t)'),
+  'Run Detail should fetch telemetry streams, render the chart on a 0.1-second linear time scale, keep hover/readout time at whole seconds, and keep the route-center marker/label removed.',
 );
 
 assert(
