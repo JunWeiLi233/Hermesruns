@@ -50,13 +50,23 @@ assert(
     && !runDetailSource.includes("t('run_detail.route_center_marker')")
     && !runDetailSource.includes("t('run_detail.route_center')")
     && runDetailSource.includes('const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1')
+    && runDetailSource.includes('const TELEMETRY_CHART_RENDER_POINT_BUDGET = 12000')
+    && runDetailSource.includes('Decimation')
     && runDetailSource.includes('function resampleTelemetrySamples')
+    && runDetailSource.includes('function getTelemetryValueBounds')
+    && runDetailSource.includes('tick += tickStep')
     && runDetailSource.includes('function formatTelemetryInteractionTime')
     && runDetailSource.includes('activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value }))')
+    && runDetailSource.includes('parsing: false')
+    && runDetailSource.includes('normalized: true')
+    && runDetailSource.includes('animation: false')
+    && runDetailSource.includes('decimation: {')
     && runDetailSource.includes("type: 'linear'")
     && runDetailSource.includes('title: (items) => formatTelemetryInteractionTime(items?.[0]?.parsed?.x)')
-    && runDetailSource.includes('time: formatTelemetryInteractionTime(focusTelemetryPoint.t)'),
-  'Run Detail should fetch telemetry streams, render the chart on a 0.1-second linear time scale, keep hover/readout time at whole seconds, and keep the route-center marker/label removed.',
+    && runDetailSource.includes('time: formatTelemetryInteractionTime(focusTelemetryPoint.t)')
+    && !runDetailSource.includes('Math.min(...values)')
+    && !runDetailSource.includes('Math.max(...values)'),
+  'Run Detail should fetch telemetry streams, render the chart on a bounded 0.1-second linear time scale, keep hover/readout time at whole seconds, avoid dense-stream min/max spread work, and keep the route-center marker/label removed.',
 );
 
 assert(
