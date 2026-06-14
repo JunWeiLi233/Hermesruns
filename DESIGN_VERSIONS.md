@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-14-04
+Date: 2026-06-14
+Surface: Run Detail telemetry heading resolution badge on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `run-detail-telemetry-resolution` badge from the telemetry heading and deleted its unused CSS.
+Why: The user requested removing `run-detail-telemetry-resolution`.
+Rollback target: `working tree before this change`
+Notes: This is a heading cleanup only; telemetry data loading, chart selection, icons, tab values, and units remain unchanged.
+
 ### Version: DV-2026-06-12-01
 Date: 2026-06-12
 Surface: Comeback card reactivation on `/profile`
