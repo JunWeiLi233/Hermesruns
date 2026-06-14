@@ -46,8 +46,9 @@ assert(
     && runDetailSource.includes("run-detail-telemetry-section")
     && runDetailSource.includes("groundContactTimeMs")
     && runDetailSource.includes("verticalOscillationCm")
-    && !runDetailSource.includes("t('run_detail.route_center_marker')"),
-  'Run Detail should fetch and render the telemetry stream instead of relying on lap-average charts, and the map should no longer render a route-center marker.',
+    && !runDetailSource.includes("t('run_detail.route_center_marker')")
+    && !runDetailSource.includes("t('run_detail.route_center')"),
+  'Run Detail should fetch and render the telemetry stream instead of relying on lap-average charts, and the route-center marker/label should stay removed.',
 );
 
 assert(
