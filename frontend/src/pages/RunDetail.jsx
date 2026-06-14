@@ -344,11 +344,6 @@ export default function RunDetail() {
       L.circleMarker(points[points.length - 1], { radius: 7, color: '#f49787', fillColor: '#f49787', fillOpacity: 1 })
         .bindTooltip(t('run_detail.finish')).addTo(map);
 
-      if (insights.centerPoint) {
-        L.circleMarker(insights.centerPoint, { radius: 5, color: '#fce6de', fillColor: '#fce6de', fillOpacity: 0.95 })
-          .bindTooltip(t('run_detail.route_center_marker')).addTo(map);
-      }
-
       mapInstanceRef.current = map;
     });
 
