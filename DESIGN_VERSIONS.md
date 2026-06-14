@@ -3500,3 +3500,12 @@ What changed: Replaced the compressed Run Detail activity title treatment with t
 Why: The user reported the `Afternoon Run` title font looked too weird.
 Rollback target: `DV-2026-06-13-09`
 Notes: This is a typography-only change; RunDetail data, navigation, telemetry, gear linking, and panel layout behavior are unchanged.
+
+### Version: DV-2026-06-13-11
+Date: 2026-06-13
+Surface: Run Detail heart telemetry tab icon on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the existing `monitor_heart` AppIcon beside the heart-rate telemetry tab label and tuned its active-state color to the RunDetail coral accent.
+Why: The user requested a heart icon next to the active `run-detail-telemetry-tab` treatment.
+Rollback target: `DV-2026-06-13-10`
+Notes: This is a visual affordance only; telemetry tab state, chart selection, values, and units remain unchanged.

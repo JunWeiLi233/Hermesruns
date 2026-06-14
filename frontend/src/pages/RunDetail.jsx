@@ -379,7 +379,7 @@ export default function RunDetail() {
   const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
 
   const telemetryDefinitions = useMemo(() => [
-    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: '#b75f4a', fill: 'rgba(183, 95, 74, 0.18)' },
+    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: '#b75f4a', fill: 'rgba(183, 95, 74, 0.18)', icon: 'monitor_heart' },
     { key: 'cadence', label: t('run_detail.telemetry_cadence'), unit: t('run_detail.unit_spm'), color: '#54756a', fill: 'rgba(84, 117, 106, 0.16)' },
     { key: 'strideLength', label: t('run_detail.telemetry_stride'), unit: t('run_detail.unit_meter'), color: '#9b6c35', fill: 'rgba(155, 108, 53, 0.15)' },
     { key: 'groundContactTimeMs', label: t('run_detail.ground_contact_time'), unit: 'ms', color: '#7b684b', fill: 'rgba(123, 104, 75, 0.16)' },
@@ -847,7 +847,16 @@ export default function RunDetail() {
                     role="tab"
                     aria-selected={isActive}
                   >
-                    <span>{definition.label}</span>
+                    <span className="run-detail-telemetry-tab-label">
+                      {definition.icon && (
+                        <AppIcon
+                          name={definition.icon}
+                          className="run-detail-telemetry-tab-icon"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {definition.label}
+                    </span>
                     <strong>
                       {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
                       {displaySample && <em>{definition.unit}</em>}
