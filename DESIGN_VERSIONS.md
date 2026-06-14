@@ -3491,3 +3491,12 @@ What changed: Reduced `run-detail-topbar` padding, gap, corner radius, heading s
 Why: The user reported `run-detail-topbar` was too large and requested a better size.
 Rollback target: `DV-2026-06-13-08`
 Notes: This is a sizing-only change; RunDetail navigation, provider actions, hero/map/stat content, telemetry, and gear linking are unchanged.
+
+### Version: DV-2026-06-13-10
+Date: 2026-06-13
+Surface: Run Detail readable activity title on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the compressed Run Detail activity title treatment with the calmer Outfit/Manrope stack, a wider text measure, less aggressive tracking, and a more natural line-height while preserving the compact topbar.
+Why: The user reported the `Afternoon Run` title font looked too weird.
+Rollback target: `DV-2026-06-13-09`
+Notes: This is a typography-only change; RunDetail data, navigation, telemetry, gear linking, and panel layout behavior are unchanged.
