@@ -55,10 +55,12 @@ assert(
 
 assert(
   runDetailSource.includes('const displaySample = getTelemetryDisplaySample(samples);')
+    && runDetailSource.includes("icon: 'monitor_heart'")
+    && runDetailSource.includes('className="run-detail-telemetry-tab-icon"')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
     && !runDetailSource.includes('samples.length ? samples.length.toLocaleString()'),
-  'Run Detail telemetry tabs should show the metric value and corresponding unit instead of sample counts.',
+  'Run Detail telemetry tabs should show the metric value and unit with a heart icon affordance instead of sample counts.',
 );
 
 assert(
@@ -130,6 +132,8 @@ assert(
 
 assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tabs\s*\{[\s\S]*grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tab-label\s*\{[\s\S]*display:\s*inline-flex\s*!important;[\s\S]*gap:\s*0\.45rem;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tab\.is-active\s+\.run-detail-telemetry-tab-icon\s*\{[\s\S]*color:\s*var\(--runner-profile-coral\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-tab strong em\s*\{[\s\S]*font-size:\s*0\.68em;/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-panel\s*\{[\s\S]*padding:\s*clamp\(22px,\s*2\.6vw,\s*42px\)\s*!important;/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-telemetry-chart\s*\{[\s\S]*min-height:\s*clamp\(340px,\s*28vw,\s*520px\);/.test(styleSource)

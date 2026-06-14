@@ -72960,6 +72960,24 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   text-transform: uppercase;
 }
 
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab-label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  color: currentColor;
+  stroke-width: 2.15;
+}
+
+.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab.is-active .run-detail-telemetry-tab-icon {
+  color: var(--runner-profile-coral);
+}
+
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab strong {
   margin-top: 8px;
   color: inherit;
