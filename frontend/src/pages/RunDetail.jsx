@@ -23,6 +23,8 @@ import 'leaflet/dist/leaflet.css';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
+const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1;
+
 function readSelectedRunFromSession(expectedId) {
   if (typeof window === 'undefined') return null;
   try {
@@ -103,10 +105,11 @@ function formatLapElevation(lap) {
 function formatTelemetryTime(seconds) {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value < 0) return '--';
-  const total = Math.round(value);
-  const min = Math.floor(total / 60);
-  const sec = total % 60;
-  return `${min}:${String(sec).padStart(2, '0')}`;
+  const totalTenths = Math.round(value * 10);
+  const min = Math.floor(totalTenths / 600);
+  const sec = Math.floor((totalTenths % 600) / 10);
+  const tenth = totalTenths % 10;
+  return `${min}:${String(sec).padStart(2, '0')}${tenth ? `.${tenth}` : ''}`;
 }
 
 function getTelemetrySamples(series) {
@@ -131,6 +134,47 @@ function formatTelemetryValue(value, key) {
 
 function getTelemetryDisplaySample(samples) {
   return samples[Math.floor(samples.length * 0.66)] || samples[samples.length - 1] || null;
+}
+
+function interpolateTelemetrySample(current, next, targetTime) {
+  const span = next.t - current.t;
+  if (span <= 0) return { ...next, t: Number(targetTime.toFixed(1)) };
+  const ratio = (targetTime - current.t) / span;
+  const interpolatedDistance = current.distanceKm != null && next.distanceKm != null
+    ? current.distanceKm + (next.distanceKm - current.distanceKm) * ratio
+    : ratio < 0.5 ? current.distanceKm : next.distanceKm;
+
+  return {
+    t: Number(targetTime.toFixed(1)),
+    value: current.value + (next.value - current.value) * ratio,
+    distanceKm: interpolatedDistance == null ? null : Number(interpolatedDistance.toFixed(3)),
+  };
+}
+
+function resampleTelemetrySamples(samples, intervalSeconds = TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS) {
+  if (!Array.isArray(samples) || samples.length < 2) return samples;
+  const sortedSamples = [...samples].sort((a, b) => a.t - b.t);
+  const first = sortedSamples[0];
+  const last = sortedSamples[sortedSamples.length - 1];
+  if (!Number.isFinite(first?.t) || !Number.isFinite(last?.t) || last.t <= first.t) return sortedSamples;
+
+  const ticksPerSecond = Math.round(1 / intervalSeconds);
+  const startTick = Math.round(first.t * ticksPerSecond);
+  const endTick = Math.round(last.t * ticksPerSecond);
+  const resampled = [];
+  let segmentIndex = 0;
+
+  for (let tick = startTick; tick <= endTick; tick += 1) {
+    const targetTime = tick / ticksPerSecond;
+    while (segmentIndex < sortedSamples.length - 2 && sortedSamples[segmentIndex + 1].t < targetTime) {
+      segmentIndex += 1;
+    }
+    const current = sortedSamples[segmentIndex];
+    const next = sortedSamples[Math.min(segmentIndex + 1, sortedSamples.length - 1)];
+    resampled.push(interpolateTelemetrySample(current, next, targetTime));
+  }
+
+  return resampled;
 }
 
 export default function RunDetail() {
@@ -388,16 +432,19 @@ export default function RunDetail() {
     () => getTelemetrySamples(activeTelemetrySeries),
     [activeTelemetrySeries]
   );
+  const activeTelemetryChartSamples = useMemo(
+    () => resampleTelemetrySamples(activeTelemetrySamples),
+    [activeTelemetrySamples]
+  );
   const hasTelemetryData = activeTelemetrySamples.length >= 2;
 
   const telemetryChartData = useMemo(() => {
     if (!hasTelemetryData) return null;
     return {
-      labels: activeTelemetrySamples.map((sample) => formatTelemetryTime(sample.t)),
       datasets: [
         {
           label: activeTelemetryDefinition.label,
-          data: activeTelemetrySamples.map((sample) => sample.value),
+          data: activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value })),
           borderColor: activeTelemetryDefinition.color,
           backgroundColor: activeTelemetryDefinition.fill,
           fill: true,
@@ -411,7 +458,7 @@ export default function RunDetail() {
         },
       ],
     };
-  }, [activeTelemetryDefinition, activeTelemetrySamples, hasTelemetryData]);
+  }, [activeTelemetryChartSamples, activeTelemetryDefinition, hasTelemetryData]);
 
   const telemetryChartOptions = useMemo(() => {
     const values = activeTelemetrySamples.map((sample) => sample.value);
@@ -424,7 +471,7 @@ export default function RunDetail() {
     interaction: { intersect: false, mode: 'index' },
     onClick: (_event, elements) => {
       if (!elements?.length) return;
-      const sample = activeTelemetrySamples[elements[0].index];
+      const sample = activeTelemetryChartSamples[elements[0].index];
       if (sample) setSelectedTelemetryPoint({ ...sample, key: activeTelemetryDefinition.key });
     },
     plugins: {
@@ -436,9 +483,10 @@ export default function RunDetail() {
         cornerRadius: 10,
         padding: 12,
         callbacks: {
-          label: (ctx) => `${ctx.parsed.y} ${activeTelemetryDefinition.unit}`,
+          title: (items) => formatTelemetryTime(items?.[0]?.parsed?.x),
+          label: (ctx) => `${formatTelemetryValue(ctx.parsed.y, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}`,
           afterLabel: (ctx) => {
-            const sample = activeTelemetrySamples[ctx.dataIndex];
+            const sample = activeTelemetryChartSamples[ctx.dataIndex];
             return sample?.distanceKm != null ? `${sample.distanceKm.toFixed(2)} km` : '';
           },
         },
@@ -446,6 +494,7 @@ export default function RunDetail() {
     },
     scales: {
       x: {
+        type: 'linear',
         display: false,
       },
       y: {
@@ -455,7 +504,7 @@ export default function RunDetail() {
       },
     },
   };
-  }, [activeTelemetryDefinition, activeTelemetrySamples]);
+  }, [activeTelemetryChartSamples, activeTelemetryDefinition, activeTelemetrySamples]);
 
   const focusTelemetryPoint = selectedTelemetryPoint?.key === activeTelemetryDefinition.key
     ? selectedTelemetryPoint

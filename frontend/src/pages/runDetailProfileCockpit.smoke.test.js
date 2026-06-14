@@ -47,8 +47,12 @@ assert(
     && runDetailSource.includes("groundContactTimeMs")
     && runDetailSource.includes("verticalOscillationCm")
     && !runDetailSource.includes("t('run_detail.route_center_marker')")
-    && !runDetailSource.includes("t('run_detail.route_center')"),
-  'Run Detail should fetch and render the telemetry stream instead of relying on lap-average charts, and the route-center marker/label should stay removed.',
+    && !runDetailSource.includes("t('run_detail.route_center')")
+    && runDetailSource.includes('const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1')
+    && runDetailSource.includes('function resampleTelemetrySamples')
+    && runDetailSource.includes('activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value }))')
+    && runDetailSource.includes("type: 'linear'"),
+  'Run Detail should fetch telemetry streams, render the chart on a 0.1-second linear time scale, and keep the route-center marker/label removed.',
 );
 
 assert(
