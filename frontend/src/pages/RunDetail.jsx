@@ -102,14 +102,13 @@ function formatLapElevation(lap) {
   return `${value > 0 ? '+' : ''}${value.toFixed(0)} m`;
 }
 
-function formatTelemetryTime(seconds) {
+function formatTelemetryInteractionTime(seconds) {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value < 0) return '--';
-  const totalTenths = Math.round(value * 10);
-  const min = Math.floor(totalTenths / 600);
-  const sec = Math.floor((totalTenths % 600) / 10);
-  const tenth = totalTenths % 10;
-  return `${min}:${String(sec).padStart(2, '0')}${tenth ? `.${tenth}` : ''}`;
+  const total = Math.round(value);
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
 function getTelemetrySamples(series) {
@@ -483,7 +482,7 @@ export default function RunDetail() {
         cornerRadius: 10,
         padding: 12,
         callbacks: {
-          title: (items) => formatTelemetryTime(items?.[0]?.parsed?.x),
+          title: (items) => formatTelemetryInteractionTime(items?.[0]?.parsed?.x),
           label: (ctx) => `${formatTelemetryValue(ctx.parsed.y, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}`,
           afterLabel: (ctx) => {
             const sample = activeTelemetryChartSamples[ctx.dataIndex];
@@ -913,7 +912,7 @@ export default function RunDetail() {
                 <p>
                   {focusTelemetryPoint
                     ? t('run_detail.telemetry_focus_copy', {
-                      time: formatTelemetryTime(focusTelemetryPoint.t),
+                      time: formatTelemetryInteractionTime(focusTelemetryPoint.t),
                       distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
                     })
                     : t('run_detail.telemetry_no_stream')}
