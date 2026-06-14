@@ -9,6 +9,7 @@ import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
   Chart as ChartJS,
   CategoryScale,
+  Decimation,
   Filler,
   Legend,
   LineController,
@@ -21,9 +22,10 @@ import {
 import { Line } from 'react-chartjs-2';
 import 'leaflet/dist/leaflet.css';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler, Decimation);
 
 const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1;
+const TELEMETRY_CHART_RENDER_POINT_BUDGET = 12000;
 
 function readSelectedRunFromSession(expectedId) {
   if (typeof window === 'undefined') return null;
@@ -115,7 +117,6 @@ function getTelemetrySamples(series) {
   return Array.isArray(series?.samples)
     ? series.samples
       .map((sample) => ({
-        ...sample,
         t: Number(sample?.t),
         value: Number(sample?.value),
         distanceKm: sample?.distanceKm == null ? null : Number(sample.distanceKm),
@@ -135,6 +136,20 @@ function getTelemetryDisplaySample(samples) {
   return samples[Math.floor(samples.length * 0.66)] || samples[samples.length - 1] || null;
 }
 
+function getTelemetryValueBounds(samples) {
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (const sample of samples) {
+    const value = Number(sample?.value);
+    if (!Number.isFinite(value)) continue;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+
+  return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : { min: 0, max: 1 };
+}
+
 function interpolateTelemetrySample(current, next, targetTime) {
   const span = next.t - current.t;
   if (span <= 0) return { ...next, t: Number(targetTime.toFixed(1)) };
@@ -150,7 +165,11 @@ function interpolateTelemetrySample(current, next, targetTime) {
   };
 }
 
-function resampleTelemetrySamples(samples, intervalSeconds = TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS) {
+function resampleTelemetrySamples(
+  samples,
+  intervalSeconds = TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS,
+  maxRenderPoints = TELEMETRY_CHART_RENDER_POINT_BUDGET,
+) {
   if (!Array.isArray(samples) || samples.length < 2) return samples;
   const sortedSamples = [...samples].sort((a, b) => a.t - b.t);
   const first = sortedSamples[0];
@@ -160,10 +179,12 @@ function resampleTelemetrySamples(samples, intervalSeconds = TELEMETRY_CHART_SAM
   const ticksPerSecond = Math.round(1 / intervalSeconds);
   const startTick = Math.round(first.t * ticksPerSecond);
   const endTick = Math.round(last.t * ticksPerSecond);
+  const totalTicks = endTick - startTick + 1;
+  const tickStep = Math.max(1, Math.ceil(totalTicks / Math.max(1, maxRenderPoints)));
   const resampled = [];
   let segmentIndex = 0;
 
-  for (let tick = startTick; tick <= endTick; tick += 1) {
+  for (let tick = startTick; tick <= endTick; tick += tickStep) {
     const targetTime = tick / ticksPerSecond;
     while (segmentIndex < sortedSamples.length - 2 && sortedSamples[segmentIndex + 1].t < targetTime) {
       segmentIndex += 1;
@@ -171,6 +192,12 @@ function resampleTelemetrySamples(samples, intervalSeconds = TELEMETRY_CHART_SAM
     const current = sortedSamples[segmentIndex];
     const next = sortedSamples[Math.min(segmentIndex + 1, sortedSamples.length - 1)];
     resampled.push(interpolateTelemetrySample(current, next, targetTime));
+  }
+
+  const lastRenderedTime = resampled[resampled.length - 1]?.t;
+  const endTime = endTick / ticksPerSecond;
+  if (lastRenderedTime !== endTime) {
+    resampled.push(interpolateTelemetrySample(sortedSamples[sortedSamples.length - 2], last, endTime));
   }
 
   return resampled;
@@ -444,6 +471,8 @@ export default function RunDetail() {
         {
           label: activeTelemetryDefinition.label,
           data: activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value })),
+          parsing: false,
+          normalized: true,
           borderColor: activeTelemetryDefinition.color,
           backgroundColor: activeTelemetryDefinition.fill,
           fill: true,
@@ -460,13 +489,14 @@ export default function RunDetail() {
   }, [activeTelemetryChartSamples, activeTelemetryDefinition, hasTelemetryData]);
 
   const telemetryChartOptions = useMemo(() => {
-    const values = activeTelemetrySamples.map((sample) => sample.value);
-    const min = values.length ? Math.min(...values) : 0;
-    const max = values.length ? Math.max(...values) : 1;
+    const { min, max } = getTelemetryValueBounds(activeTelemetrySamples);
     const pad = Math.max(1, (max - min) * 0.12);
     return {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
+    parsing: false,
+    normalized: true,
     interaction: { intersect: false, mode: 'index' },
     onClick: (_event, elements) => {
       if (!elements?.length) return;
@@ -474,6 +504,12 @@ export default function RunDetail() {
       if (sample) setSelectedTelemetryPoint({ ...sample, key: activeTelemetryDefinition.key });
     },
     plugins: {
+      decimation: {
+        enabled: activeTelemetryChartSamples.length > 2000,
+        algorithm: 'lttb',
+        samples: 1200,
+        threshold: 2000,
+      },
       legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(31, 29, 25, 0.94)',
