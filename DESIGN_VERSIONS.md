@@ -3491,3 +3491,12 @@ What changed: Removed the coral radial and angled gradient wash from `run-detail
 Why: The user requested the same full-dark color treatment for the Run Detail debrief panel.
 Rollback target: `DV-2026-06-13-07`
 Notes: This is a color treatment change only; coach debrief content, gear linking, telemetry, and layout behavior are unchanged.
+
+### Version: DV-2026-06-13-09
+Date: 2026-06-13
+Surface: Run Detail compact topbar on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reduced `run-detail-topbar` padding, gap, corner radius, heading scale, and mobile heading cap so the profile cockpit header remains editorial but no longer consumes an oversized vertical block.
+Why: The user reported `run-detail-topbar` was too large and requested a better size.
+Rollback target: `DV-2026-06-13-08`
+Notes: This is a sizing-only change; RunDetail navigation, provider actions, hero/map/stat content, telemetry, and gear linking are unchanged.
