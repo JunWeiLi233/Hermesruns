@@ -11,6 +11,15 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-14-04
+Date: 2026-06-14
+Surface: Run Detail telemetry heading resolution badge on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `run-detail-telemetry-resolution` badge from the telemetry heading and deleted its unused CSS.
+Why: The user requested removing `run-detail-telemetry-resolution`.
+Rollback target: `working tree before this change`
+Notes: This is a heading cleanup only; telemetry data loading, chart selection, icons, tab values, and units remain unchanged.
+
 ### Version: DV-2026-06-12-01
 Date: 2026-06-12
 Surface: Comeback card reactivation on `/profile`
@@ -3419,3 +3428,156 @@ What changed: Bumped territory masks to `mask:v30`, API ETag to `land-mask-union
 Why: The visible shared-runner "territory" was not real land. It came from 32-point generated local seed loops that were closed but too sparse to prove a concrete covered boundary. The page must show no active territory for those runs instead of drawing false land.
 Rollback target: `DV-2026-06-12-02`
 Notes: Backend tests passed for `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, and `LocalSharedRunnerBootstrapServiceTests`; frontend territory smoke/build/runtime-sync passed; live `/api/territory/polygons` for `Hermes Shared Runner` returned `polygonCount=0`, `activeCount=0`, `pending=0`, and `backfill=false`; in-app Browser on `/territory` rendered map tiles and both scope buttons with `activeConcrete=0` and `activeContour=0` before and after wheel zoom in/out; escalated live verifier passed with `activeBackendCells=0`, no synthetic/helper layers, unfiltered tiles, and zero console errors.
+
+### Version: DV-2026-06-13-01
+Date: 2026-06-13
+Surface: Run Detail telemetry cockpit on `/run/:id`
+Files: `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/test/java/com/hermes/backend/ActivityControllerTests.java`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Added an owned activity telemetry endpoint and replaced the old lap-average heart-rate card with a simpler telemetry cockpit for heart rate, cadence, stride length, elevation, estimated training effect, and explicitly unavailable device-only metrics.
+Why: Issue #51 requires `/run/:id` to show per-second activity streams instead of per-kilometer averages, remove unnecessary "Analysis Notes" and "Route Intelligence" panels, and make the page easier to inspect.
+Rollback target: `DV-2026-06-12-03`
+Notes: Ground contact time and vertical oscillation are surfaced as not captured because the current `ActivityPoint` model does not store those streams. Training effect is labeled as an HR-stream estimate, not an official device field.
+
+### Version: DV-2026-06-13-02
+Date: 2026-06-13
+Surface: Run Detail device telemetry streams on `/run/:id`
+Files: `backend/src/main/java/com/hermes/backend/ActivityPoint.java`, `backend/src/main/java/com/hermes/backend/ParsedTrackPoint.java`, `backend/src/main/java/com/hermes/backend/TcxActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/GpxActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/FitActivityFileParser.java`, `backend/src/main/java/com/hermes/backend/ActivityImportService.java`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Completed the device-only telemetry gap by storing imported ground contact time and vertical oscillation, returning them through `/api/activities/{id}/telemetry`, and adding six Run Detail telemetry tabs for HR, cadence, stride, GCT, vertical oscillation, and elevation.
+Why: Issue #51 explicitly requests per-second ground contact time and vertical oscillation instead of an unavailable placeholder when the source activity file provides those streams.
+Rollback target: `DV-2026-06-13-01`
+Notes: TCX, GPX, and FIT imports now carry running-dynamics fields into `ActivityPoint`; vertical oscillation is stored in millimeters and displayed as centimeters.
+
+### Version: DV-2026-06-13-03
+Date: 2026-06-13
+Surface: Run Detail full-width telemetry cockpit on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the per-second telemetry cockpit out of the primary content column and into a shell-level section before the bottom metrics grid. Expanded the chart stage and panel padding so the telemetry stream reads as a full-page analysis surface instead of a narrow card.
+Why: The user requested the screenshoted telemetry area to extend to the full page.
+Rollback target: `DV-2026-06-13-02`
+Notes: The underlying telemetry data contract and tab behavior are unchanged; this is a layout-only expansion.
+
+### Version: DV-2026-06-13-04
+Date: 2026-06-13
+Surface: Run Detail full-width evidence sections on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the recent-run comparison panel and splits table out of the primary content column so they render as full-width shell-level sections around the telemetry cockpit.
+Why: The user requested the same full-page treatment for `run-detail-section` and `run-detail-section run-detail-comparison-section`.
+Rollback target: `DV-2026-06-13-03`
+Notes: The comparison and split data logic is unchanged; only the page composition changed.
+
+### Version: DV-2026-06-13-05
+Date: 2026-06-13
+Surface: Run Detail Runs-aligned color system on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated Run Detail profile cockpit paper, card, ink, muted text, hairline, coral, moss, and shadow tokens to match the Runs page palette, including the loading/empty fallback states and a RunDetail-specific dark-mode token map.
+Why: The user requested RunDetail to be redesigned based on Run/Runs color design while preserving the existing telemetry and evidence layout.
+Rollback target: `DV-2026-06-13-04`
+Notes: This is a color-system alignment only; data wiring, telemetry tabs, comparison, and split-table behavior are unchanged.
+
+### Version: DV-2026-06-13-06
+Date: 2026-06-13
+Surface: Run Detail debrief and gear panel alignment on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a desktop-only Run Detail grid offset so `run-detail-gear-panel` aligns with the top edge of `run-detail-debrief-panel` when the coach debrief section is present, while stacked tablet/mobile layouts reset to natural flow.
+Why: The user requested `run-detail-panel run-detail-debrief-panel` and `run-detail-panel run-detail-gear-panel` to align.
+Rollback target: `DV-2026-06-13-05`
+Notes: This is a layout alignment change only; gear linking, debrief content, telemetry, and comparison data behavior are unchanged.
+
+### Version: DV-2026-06-13-07
+Date: 2026-06-13
+Surface: Run Detail full-dark accent stat card on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral radial wash from `run-detail-stat-card is-accent` and made the accent grid card a solid dark `runner-profile-ink` surface with warm light text.
+Why: The user requested a full dark color for the accent stat grid card.
+Rollback target: `DV-2026-06-13-06`
+Notes: This is a color treatment change only; RunDetail layout, telemetry, gear linking, and stat data remain unchanged.
+
+### Version: DV-2026-06-13-08
+Date: 2026-06-13
+Surface: Run Detail full-dark coach debrief panel on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral radial and angled gradient wash from `run-detail-panel run-detail-debrief-panel` and made the coach debrief panel a solid dark `runner-profile-ink` surface with warm light text.
+Why: The user requested the same full-dark color treatment for the Run Detail debrief panel.
+Rollback target: `DV-2026-06-13-07`
+Notes: This is a color treatment change only; coach debrief content, gear linking, telemetry, and layout behavior are unchanged.
+
+### Version: DV-2026-06-13-09
+Date: 2026-06-13
+Surface: Run Detail compact topbar on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reduced `run-detail-topbar` padding, gap, corner radius, heading scale, and mobile heading cap so the profile cockpit header remains editorial but no longer consumes an oversized vertical block.
+Why: The user reported `run-detail-topbar` was too large and requested a better size.
+Rollback target: `DV-2026-06-13-08`
+Notes: This is a sizing-only change; RunDetail navigation, provider actions, hero/map/stat content, telemetry, and gear linking are unchanged.
+
+### Version: DV-2026-06-13-10
+Date: 2026-06-13
+Surface: Run Detail readable activity title on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the compressed Run Detail activity title treatment with the calmer Outfit/Manrope stack, a wider text measure, less aggressive tracking, and a more natural line-height while preserving the compact topbar.
+Why: The user reported the `Afternoon Run` title font looked too weird.
+Rollback target: `DV-2026-06-13-09`
+Notes: This is a typography-only change; RunDetail data, navigation, telemetry, gear linking, and panel layout behavior are unchanged.
+
+### Version: DV-2026-06-13-11
+Date: 2026-06-13
+Surface: Run Detail heart telemetry tab icon on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the existing `monitor_heart` AppIcon beside the heart-rate telemetry tab label and tuned its active-state color to the RunDetail flame accent.
+Why: The user requested a heart icon next to the active `run-detail-telemetry-tab` treatment.
+Rollback target: `DV-2026-06-13-10`
+Notes: This is a visual affordance only; telemetry tab state, chart selection, values, and units remain unchanged.
+
+### Version: DV-2026-06-13-12
+Date: 2026-06-13
+Surface: Run Detail telemetry tab icon set on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added existing AppIcon glyphs to the five remaining telemetry tabs: `sprint` for cadence, `straighten` for stride length, `timer` for ground contact, `altitude` for vertical oscillation, and `mountain` for elevation.
+Why: The user requested matching icons for the remaining five telemetry buttons.
+Rollback target: `DV-2026-06-13-11`
+Notes: This is a visual affordance only; telemetry tab state, chart selection, values, units, and styles remain unchanged.
+
+### Version: DV-2026-06-13-13
+Date: 2026-06-13
+Surface: Run Detail metric-specific telemetry icons on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the borrowed icons on the five non-heart telemetry tabs with dedicated metric glyphs for cadence rhythm, stride length, ground-contact timing, vertical oscillation, and elevation.
+Why: The user reported the previous five icons did not fit the meaning of their telemetry buttons.
+Rollback target: `DV-2026-06-13-12`
+Notes: This is an icon semantics change only; telemetry values, units, chart behavior, and tab styling remain unchanged.
+
+### Version: DV-2026-06-13-14
+Date: 2026-06-13
+Surface: Run Detail readable telemetry icon glyphs on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `DESIGN_VERSIONS.md`
+What changed: Simplified the five non-heart metric glyphs into clearer label-adjacent symbols: footprint ticks for cadence, two-foot span for stride length, sole plus clock for ground contact, vertical bounce arrows, and an elevation slope profile.
+Why: The user reported the previous custom icons still did not fit the telemetry button meanings.
+Rollback target: `DV-2026-06-13-13`
+Notes: This refines icon drawing only; icon names, telemetry tab wiring, values, units, and styles remain unchanged.
+
+### Version: DV-2026-06-14-01
+Date: 2026-06-14
+Surface: Run Detail selected telemetry tab icon suppression on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Telemetry tab icons now render only on inactive tabs; the selected tab temporarily hides its icon while preserving the label, value, unit, and active state.
+Why: The user requested selected telemetry buttons not display their icon temporarily on this page.
+Rollback target: `DV-2026-06-13-14`
+Notes: This is a selected-state rendering change only; telemetry definitions, chart selection, values, units, and tab styling remain unchanged.
+
+### Version: DV-2026-06-14-02
+Date: 2026-06-14
+Surface: Run Detail simplified telemetry tab icon drawings on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `DESIGN_VERSIONS.md`
+What changed: Redrew the inactive telemetry icons with simpler, cleaner 16px-friendly strokes: cadence rhythm bars, stride measurement arrows, ground contact footline plus timer, vertical waveform arrows, and elevation trace.
+Why: The user reported the current icons still had weird shapes and imperfect drawing.
+Rollback target: `DV-2026-06-14-01`
+Notes: This changes icon drawing only; selected-tab suppression, tab labels, values, units, chart behavior, and styles remain unchanged.
+
+### Version: DV-2026-06-14-03
+Date: 2026-06-14
+Surface: Run Detail telemetry heading copy on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `DESIGN_VERSIONS.md`
+What changed: Removed the telemetry subtitle paragraph under the `运动数据` / `Telemetry Stream` heading so neither Chinese nor English explanatory copy appears on the page.
+Why: The user requested removing the Chinese subtitle and clarified to remove the English equivalent too.
+Rollback target: `DV-2026-06-14-02`
+Notes: This is a copy-removal change only; telemetry data, chart selection, icons, values, units, and layout behavior remain unchanged.

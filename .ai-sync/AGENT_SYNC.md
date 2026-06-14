@@ -1,6 +1,6 @@
 # Cross-Agent Sync
 
-Updated: 2026-06-05T19:14:32-04:00
+Updated: 2026-06-13T04:55:37.234Z
 
 Use this file as the shared cross-platform coordination layer for Codex, Claude, and other Hermes-capable agents.
 
@@ -84,6 +84,17 @@ Use this file as the shared cross-platform coordination layer for Codex, Claude,
   Files: backend/src/main/java/com/hermes/backend/ChicagoMarathonKnownCourse.java | backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java | backend/src/main/java/com/hermes/backend/RaceCourseMapService.java | backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java | backend/src/test/java/com/hermes/backend/ChicagoMarathonKnownCourseTests.java | backend/src/test/java/com/hermes/backend/RaceCourseMapBulkSeedServiceTests.java | backend/src/test/java/com/hermes/backend/OfficialCourseStartupSeedConfigurationTests.java | frontend/src/pages/RacesDetail.jsx | frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
 
 ## Recently Completed
+- Key: run-id-issue-51-run-detail-telemetry-cockpit
+  Task: Issue #51 Run Detail telemetry cockpit
+  Surface: /run/:id
+  Agent: codex
+  Owner: codex
+  Status: completed
+  Completed: 2026-06-13T04:55:37.234Z
+  Verify: backend targeted tests; backend compile; frontend smoke; frontend lint; translation parity; Vite build; localhost:8092 API import telemetry proof; Browser /run/49 proof
+  Files: backend/src/main/java/com/hermes/backend/ActivityController.java | backend/src/main/java/com/hermes/backend/ActivityPoint.java | backend/src/main/java/com/hermes/backend/TcxActivityFileParser.java | backend/src/main/java/com/hermes/backend/GpxActivityFileParser.java | backend/src/main/java/com/hermes/backend/FitActivityFileParser.java | backend/src/test/java/com/hermes/backend/ActivityFileParserDeviceTelemetryTests.java | frontend/src/pages/RunDetail.jsx | frontend/src/pages/runDetailProfileCockpit.smoke.test.js | frontend/src/i18n/locales/en/pages.js | frontend/src/i18n/locales/zh-CN/pages.js | frontend/src/styles/_split/runs.css | frontend/src/styles/style.css | DESIGN_VERSIONS.md
+  Review: approve-next-round
+
 - Key: nyc-marathon-coursemap-elevation-fix
   Task: Fixed New York City Marathon course map and elevation chart seed
   Surface: /races/details/new-york-city-marathon

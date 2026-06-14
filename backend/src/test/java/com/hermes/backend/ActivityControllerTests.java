@@ -429,6 +429,133 @@ class ActivityControllerTests {
     }
 
     @Test
+    void getActivityTelemetryReturnsPerSecondStreamsAndDeviceMetrics() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        runner.setEmail("runner@hermes.test");
+
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+        activity.setMaxHeartRate(184.0);
+        activity.setMovingTimeSeconds(12);
+
+        List<Object[]> samples = new java.util.ArrayList<>();
+        for (int second = 0; second < 12; second += 1) {
+            samples.add(new Object[]{
+                    40.7000 + second * 0.00001,
+                    -73.9000 - second * 0.00001,
+                    second,
+                    second * 3.0,
+                    8.0 + second * 0.2,
+                    142 + second,
+                    174,
+                    null,
+                    8.5 + second * 0.2,
+                    240.0 + second,
+                    82.0 + second * 0.5
+            });
+        }
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(activityPointRepository.existsByActivity(activity)).thenReturn(true);
+        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(51L)).thenReturn(samples);
+
+        ResponseEntity<?> response = controller.getActivityTelemetry(51L, "Bearer token");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertInstanceOf(Map.class, response.getBody());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertEquals(12, body.get("sampleCount"));
+        assertEquals("source_elapsed_seconds", body.get("resolution"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> series = (Map<String, Object>) body.get("series");
+        assertInstanceOf(Map.class, series.get("heartRate"));
+        assertInstanceOf(Map.class, series.get("cadence"));
+        assertInstanceOf(Map.class, series.get("strideLength"));
+        assertInstanceOf(Map.class, series.get("elevation"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> heartRate = (Map<String, Object>) series.get("heartRate");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> heartRateSamples = (List<Map<String, Object>>) heartRate.get("samples");
+        assertEquals(12, heartRateSamples.size());
+        assertEquals(0, heartRateSamples.get(0).get("t"));
+        assertEquals(142.0, heartRateSamples.get(0).get("value"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> strideLength = (Map<String, Object>) series.get("strideLength");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> strideSamples = (List<Map<String, Object>>) strideLength.get("samples");
+        assertTrue(strideSamples.size() >= 10);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> groundContact = (Map<String, Object>) series.get("groundContactTimeMs");
+        assertEquals(true, groundContact.get("available"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> groundContactSamples = (List<Map<String, Object>>) groundContact.get("samples");
+        assertEquals(12, groundContactSamples.size());
+        assertEquals(240.0, groundContactSamples.get(0).get("value"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> verticalOscillation = (Map<String, Object>) series.get("verticalOscillationCm");
+        assertEquals(true, verticalOscillation.get("available"));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> verticalOscillationSamples = (List<Map<String, Object>>) verticalOscillation.get("samples");
+        assertEquals(12, verticalOscillationSamples.size());
+        assertEquals(8.2, verticalOscillationSamples.get(0).get("value"));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> trainingEffect = (Map<String, Object>) body.get("trainingEffect");
+        assertEquals(true, trainingEffect.get("available"));
+        assertEquals("estimated_from_hr_stream", trainingEffect.get("source"));
+        assertNotNull(trainingEffect.get("aerobic"));
+        assertNotNull(trainingEffect.get("anaerobic"));
+    }
+
+    @Test
+    void getActivityTelemetryRejectsCrossRunnerAccess() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = new ActivityController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        runner.setEmail("runner@hermes.test");
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityTelemetry(51L, "Bearer token");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(activityPointRepository, never()).findAnalyticsSamplesByActivityIdOrdered(51L);
+    }
+
+    @Test
     void getHeatmapRejectsUnauthenticated() {
         AuthService authService = mock(AuthService.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);

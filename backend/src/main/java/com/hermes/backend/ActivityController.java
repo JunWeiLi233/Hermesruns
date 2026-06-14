@@ -388,20 +388,7 @@ public class ActivityController {
             return ResponseEntity.ok(response);
         }
 
-        List<ActivityAnalyticsHelper.SamplePoint> pts = new ArrayList<>(rows.size());
-        for (Object[] r : rows) {
-            if (r == null || r.length < 2) continue;
-            pts.add(new ActivityAnalyticsHelper.SamplePoint(
-                    ((Number) r[0]).doubleValue(),
-                    ((Number) r[1]).doubleValue(),
-                    r[2] == null ? null : ((Number) r[2]).intValue(),
-                    r[3] == null ? null : ((Number) r[3]).doubleValue(),
-                    ActivityAnalyticsHelper.resolveElevationForAnalytics(r),
-                    r[5] == null ? null : ((Number) r[5]).intValue(),
-                    r[6] == null ? null : ((Number) r[6]).intValue()
-            ));
-        }
-        ActivityAnalyticsHelper.normalizeSamples(pts, activity);
+        List<ActivityAnalyticsHelper.SamplePoint> pts = buildAnalyticsSamplePoints(rows, activity);
 
         ActivityAnalyticsHelper.PostRunDebrief debrief = buildPostRunDebrief(activity, pts, responseLanguage);
 
@@ -433,6 +420,188 @@ public class ActivityController {
 
         cacheStore.put("activity-analytics", analyticsCacheKey, analyticsResponse, ACTIVITY_ANALYTICS_CACHE_TTL);
         return ResponseEntity.ok(analyticsResponse);
+    }
+
+    @GetMapping("/{id}/telemetry")
+    public ResponseEntity<?> getActivityTelemetry(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+
+        Optional<Activity> activityOpt = activityRepository.findByIdAndRunner(id, activeUser.get());
+        if (activityOpt.isEmpty()) {
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
+        }
+
+        Activity activity = activityOpt.get();
+        if (!activityPointRepository.existsByActivity(activity) && activity.getStravaId() != null) {
+            String stravaToken = resolveRunnerStravaAccessToken(activeUser.get());
+            if (stravaToken != null && !stravaToken.isBlank()) {
+                try {
+                    fetchAndCacheStravaStream(activity, activity.getStravaId(), stravaToken);
+                } catch (Exception exception) {
+                    logger.warn("Failed to hydrate telemetry stream for activity {}: {}", activity.getId(), exception.getMessage());
+                }
+            }
+        }
+
+        List<ActivityAnalyticsHelper.SamplePoint> pts = buildAnalyticsSamplePoints(
+                activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(activity.getId()),
+                activity
+        );
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("sampleCount", pts.size());
+        response.put("resolution", "source_elapsed_seconds");
+        response.put("series", buildTelemetrySeries(pts));
+        response.put("trainingEffect", estimateTrainingEffect(activity, pts));
+        return ResponseEntity.ok(response);
+    }
+
+    private List<ActivityAnalyticsHelper.SamplePoint> buildAnalyticsSamplePoints(List<Object[]> rows, Activity activity) {
+        List<ActivityAnalyticsHelper.SamplePoint> pts = new ArrayList<>(rows == null ? 0 : rows.size());
+        if (rows == null || rows.isEmpty()) {
+            return pts;
+        }
+        for (Object[] row : rows) {
+            if (row == null || row.length < 2 || row[0] == null || row[1] == null) continue;
+            pts.add(new ActivityAnalyticsHelper.SamplePoint(
+                    ((Number) row[0]).doubleValue(),
+                    ((Number) row[1]).doubleValue(),
+                    row[2] == null ? null : ((Number) row[2]).intValue(),
+                    row[3] == null ? null : ((Number) row[3]).doubleValue(),
+                    ActivityAnalyticsHelper.resolveElevationForAnalytics(row),
+                    row.length > 5 && row[5] != null ? ((Number) row[5]).intValue() : null,
+                    row.length > 6 && row[6] != null ? ((Number) row[6]).intValue() : null,
+                    row.length > 9 && row[9] != null ? ((Number) row[9]).doubleValue() : null,
+                    row.length > 10 && row[10] != null ? ((Number) row[10]).doubleValue() : null
+            ));
+        }
+        ActivityAnalyticsHelper.normalizeSamples(pts, activity);
+        return pts;
+    }
+
+    private Map<String, Object> buildTelemetrySeries(List<ActivityAnalyticsHelper.SamplePoint> pts) {
+        Map<String, Object> series = new LinkedHashMap<>();
+        series.put("heartRate", telemetrySeries("heartRate", "bpm", telemetrySamples(pts, "heartRate")));
+        series.put("cadence", telemetrySeries("cadence", "spm", telemetrySamples(pts, "cadence")));
+        series.put("strideLength", telemetrySeries("strideLength", "m", strideLengthSamples(pts)));
+        series.put("elevation", telemetrySeries("elevation", "m", telemetrySamples(pts, "elevation")));
+        series.put("groundContactTimeMs", telemetrySeries("groundContactTimeMs", "ms", telemetrySamples(pts, "groundContactTimeMs")));
+        series.put("verticalOscillationCm", telemetrySeries("verticalOscillationCm", "cm", telemetrySamples(pts, "verticalOscillationCm")));
+        return series;
+    }
+
+    private Map<String, Object> telemetrySeries(String key, String unit, List<Map<String, Object>> samples) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("key", key);
+        payload.put("unit", unit);
+        payload.put("available", !samples.isEmpty());
+        payload.put("samples", samples);
+        if (samples.isEmpty()) {
+            payload.put("unavailableReason", "not_captured");
+        }
+        return payload;
+    }
+
+    private List<Map<String, Object>> telemetrySamples(List<ActivityAnalyticsHelper.SamplePoint> pts, String metric) {
+        List<Map<String, Object>> samples = new ArrayList<>();
+        for (ActivityAnalyticsHelper.SamplePoint point : pts) {
+            if (point.elapsedSeconds() == null) continue;
+            Double value = null;
+            if ("heartRate".equals(metric) && point.heartRate() != null && point.heartRate() > 0) {
+                value = point.heartRate().doubleValue();
+            } else if ("cadence".equals(metric) && point.cadence() != null && point.cadence() > 0) {
+                value = point.cadence().doubleValue();
+            } else if ("elevation".equals(metric) && point.elevationMeters() != null) {
+                value = point.elevationMeters();
+            } else if ("groundContactTimeMs".equals(metric) && point.groundContactTimeMs() != null && point.groundContactTimeMs() > 0) {
+                value = point.groundContactTimeMs();
+            } else if ("verticalOscillationCm".equals(metric) && point.verticalOscillationMm() != null && point.verticalOscillationMm() > 0) {
+                value = point.verticalOscillationMm() / 10.0;
+            }
+            if (value == null || !Double.isFinite(value)) continue;
+            samples.add(telemetrySample(point.elapsedSeconds(), value, point.distanceMeters()));
+        }
+        return samples;
+    }
+
+    private List<Map<String, Object>> strideLengthSamples(List<ActivityAnalyticsHelper.SamplePoint> pts) {
+        List<Map<String, Object>> samples = new ArrayList<>();
+        for (int index = 1; index < pts.size(); index += 1) {
+            ActivityAnalyticsHelper.SamplePoint previous = pts.get(index - 1);
+            ActivityAnalyticsHelper.SamplePoint current = pts.get(index);
+            if (previous.distanceMeters() == null || current.distanceMeters() == null
+                    || previous.elapsedSeconds() == null || current.elapsedSeconds() == null
+                    || current.cadence() == null || current.cadence() <= 0) {
+                continue;
+            }
+            double distanceDelta = current.distanceMeters() - previous.distanceMeters();
+            double timeDelta = current.elapsedSeconds() - previous.elapsedSeconds();
+            if (distanceDelta <= 0 || timeDelta <= 0) continue;
+            double speedMetersPerSecond = distanceDelta / timeDelta;
+            double strideMeters = speedMetersPerSecond / (current.cadence() / 60.0);
+            if (Double.isFinite(strideMeters) && strideMeters > 0 && strideMeters < 3.5) {
+                samples.add(telemetrySample(current.elapsedSeconds(), ActivityAnalyticsHelper.round2(strideMeters), current.distanceMeters()));
+            }
+        }
+        return samples;
+    }
+
+    private Map<String, Object> telemetrySample(Integer elapsedSeconds, Double value, Double distanceMeters) {
+        Map<String, Object> sample = new LinkedHashMap<>();
+        sample.put("t", elapsedSeconds);
+        sample.put("value", ActivityAnalyticsHelper.round2(value));
+        if (distanceMeters != null && Double.isFinite(distanceMeters)) {
+            sample.put("distanceKm", ActivityAnalyticsHelper.round2(distanceMeters / 1000.0));
+        }
+        return sample;
+    }
+
+    private Map<String, Object> estimateTrainingEffect(Activity activity, List<ActivityAnalyticsHelper.SamplePoint> pts) {
+        List<ActivityAnalyticsHelper.SamplePoint> hrPoints = pts.stream()
+                .filter(point -> point.heartRate() != null && point.heartRate() > 0 && point.elapsedSeconds() != null)
+                .toList();
+        if (hrPoints.size() < 10) {
+            return Map.of(
+                    "available", false,
+                    "source", "unavailable",
+                    "basis", "Insufficient heart-rate stream for training-effect estimate."
+            );
+        }
+
+        double avgHr = hrPoints.stream().mapToInt(ActivityAnalyticsHelper.SamplePoint::heartRate).average().orElse(0);
+        int observedMax = hrPoints.stream().mapToInt(ActivityAnalyticsHelper.SamplePoint::heartRate).max().orElse(0);
+        double maxHr = activity.getMaxHeartRate() != null && activity.getMaxHeartRate() > 0
+                ? Math.max(activity.getMaxHeartRate(), observedMax)
+                : Math.max(190, observedMax);
+        int firstSecond = hrPoints.get(0).elapsedSeconds();
+        int lastSecond = hrPoints.get(hrPoints.size() - 1).elapsedSeconds();
+        double durationMinutes = Math.max(1, (lastSecond - firstSecond) / 60.0);
+        double intensity = maxHr > 0 ? avgHr / maxHr : 0;
+        long highIntensityCount = hrPoints.stream().filter(point -> point.heartRate() >= maxHr * 0.90).count();
+        double highIntensityShare = highIntensityCount / (double) hrPoints.size();
+
+        double aerobic = clampTrainingEffect((durationMinutes / 24.0) * Math.pow(Math.max(0, intensity), 1.7) * 2.8);
+        double anaerobic = clampTrainingEffect((highIntensityShare * 5.0) + Math.max(0, intensity - 0.88) * 8.0);
+
+        Map<String, Object> effect = new LinkedHashMap<>();
+        effect.put("available", true);
+        effect.put("source", "estimated_from_hr_stream");
+        effect.put("aerobic", ActivityAnalyticsHelper.round2(aerobic));
+        effect.put("anaerobic", ActivityAnalyticsHelper.round2(anaerobic));
+        effect.put("averageHeartRate", ActivityAnalyticsHelper.round2(avgHr));
+        effect.put("maxHeartRateBasis", ActivityAnalyticsHelper.round2(maxHr));
+        effect.put("highIntensityShare", ActivityAnalyticsHelper.round2(highIntensityShare));
+        return effect;
+    }
+
+    private double clampTrainingEffect(double value) {
+        if (!Double.isFinite(value)) return 0;
+        return Math.max(0, Math.min(5, value));
     }
 
     private static String normalizeResponseLanguage(String acceptLanguage) {

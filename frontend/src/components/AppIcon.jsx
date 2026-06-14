@@ -669,6 +669,58 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M12 16v4" />
         </>
       );
+    case 'telemetry_cadence':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="M7 15v-4" />
+          <path d="M12 15V6" />
+          <path d="M17 15V9" />
+          <circle cx="7" cy="8" r="1.1" />
+          <circle cx="12" cy="3.8" r="1.1" />
+          <circle cx="17" cy="6.8" r="1.1" />
+        </>
+      );
+    case 'telemetry_stride':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="M7 14V9" />
+          <path d="M17 14V9" />
+          <path d="M7 11.5h10" />
+          <path d="m10 8.5-3 3 3 3" />
+          <path d="m14 8.5 3 3-3 3" />
+        </>
+      );
+    case 'telemetry_ground_contact':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="M7 15h6.5" />
+          <path d="M7 15c.8-2.4 2.3-3.8 4.8-4.4" />
+          <circle cx="16" cy="7" r="3" />
+          <path d="M16 5.4V7l1.2.8" />
+        </>
+      );
+    case 'telemetry_vertical':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="M12 5v10" />
+          <path d="m9.7 7.3 2.3-2.3 2.3 2.3" />
+          <path d="m9.7 12.7 2.3 2.3 2.3-2.3" />
+          <path d="M6 10.5c1.4-1.3 2.7-2 4-2s2.6.7 4 2 2.7 2 4 2" />
+        </>
+      );
+    case 'telemetry_elevation':
+      return titled(
+        <>
+          <path d="M5 18h14" />
+          <path d="m6 15 3.3-4 2.4 2.4 3.5-6.2 3.3 7.8" />
+          <path d="M15.2 7.2h3.3" />
+          <path d="M16.9 5.5v3.4" />
+        </>
+      );
     case 'moon':
       return titled(
         <>
