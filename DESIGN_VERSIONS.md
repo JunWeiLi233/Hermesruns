@@ -3527,3 +3527,12 @@ What changed: Added existing AppIcon glyphs to the five remaining telemetry tabs
 Why: The user requested matching icons for the remaining five telemetry buttons.
 Rollback target: `DV-2026-06-13-11`
 Notes: This is a visual affordance only; telemetry tab state, chart selection, values, units, and styles remain unchanged.
+
+### Version: DV-2026-06-13-13
+Date: 2026-06-13
+Surface: Run Detail metric-specific telemetry icons on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the borrowed icons on the five non-heart telemetry tabs with dedicated metric glyphs for cadence rhythm, stride length, ground-contact timing, vertical oscillation, and elevation.
+Why: The user reported the previous five icons did not fit the meaning of their telemetry buttons.
+Rollback target: `DV-2026-06-13-12`
+Notes: This is an icon semantics change only; telemetry values, units, chart behavior, and tab styling remain unchanged.

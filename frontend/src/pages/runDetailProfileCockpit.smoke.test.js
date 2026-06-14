@@ -16,6 +16,7 @@ function assert(condition, message) {
 }
 
 const runDetailSource = read('pages/RunDetail.jsx');
+const appIconSource = read('components/AppIcon.jsx');
 const styleSource = read('styles/style.css');
 
 assert(
@@ -56,11 +57,16 @@ assert(
 assert(
   runDetailSource.includes('const displaySample = getTelemetryDisplaySample(samples);')
     && runDetailSource.includes("icon: 'monitor_heart'")
-    && runDetailSource.includes("icon: 'sprint'")
-    && runDetailSource.includes("icon: 'straighten'")
-    && runDetailSource.includes("icon: 'timer'")
-    && runDetailSource.includes("icon: 'altitude'")
-    && runDetailSource.includes("icon: 'mountain'")
+    && runDetailSource.includes("icon: 'telemetry_cadence'")
+    && runDetailSource.includes("icon: 'telemetry_stride'")
+    && runDetailSource.includes("icon: 'telemetry_ground_contact'")
+    && runDetailSource.includes("icon: 'telemetry_vertical'")
+    && runDetailSource.includes("icon: 'telemetry_elevation'")
+    && appIconSource.includes("case 'telemetry_cadence':")
+    && appIconSource.includes("case 'telemetry_stride':")
+    && appIconSource.includes("case 'telemetry_ground_contact':")
+    && appIconSource.includes("case 'telemetry_vertical':")
+    && appIconSource.includes("case 'telemetry_elevation':")
     && runDetailSource.includes('className="run-detail-telemetry-tab-icon"')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
