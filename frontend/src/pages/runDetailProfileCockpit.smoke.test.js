@@ -27,8 +27,9 @@ assert(
 assert(
   runDetailSource.includes('run-detail-hero-grid run-detail-profile-hero')
     && runDetailSource.includes('run-detail-map-card run-detail-profile-map')
-    && runDetailSource.includes('run-detail-stat-rail run-detail-profile-stat-rail'),
-  'Run Detail should render the profile hero, map, and stat-rail hooks targeted by the profile CSS.',
+    && runDetailSource.includes('run-detail-stat-rail run-detail-profile-stat-rail')
+    && !runDetailSource.includes('run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel'),
+  'Run Detail should render the profile hero, map, and stat-rail hooks targeted by the profile CSS, and the topbar metadata should not fall back to coordinate labels.',
 );
 
 assert(
