@@ -72,8 +72,10 @@ assert(
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
     && !runDetailSource.includes("t('run_detail.telemetry_subtitle')")
-    && !runDetailSource.includes('samples.length ? samples.length.toLocaleString()'),
-  'Run Detail telemetry tabs should show values/units without sample counts or the old explanatory subtitle.',
+    && !runDetailSource.includes('samples.length ? samples.length.toLocaleString()')
+    && !runDetailSource.includes('run-detail-telemetry-resolution')
+    && !styleSource.includes('run-detail-telemetry-resolution'),
+  'Run Detail telemetry tabs should show values/units without sample counts, the resolution badge, or the old explanatory subtitle.',
 );
 
 assert(

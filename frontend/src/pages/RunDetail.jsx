@@ -656,7 +656,6 @@ export default function RunDetail() {
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
   const paceMetricValue = distKm && movingSec ? formatPaceSeconds(movingSec / distKm) : '--';
   const timeValue = movingSec ? formatDuration(movingSec) : '--';
-  const telemetrySampleCount = Number(telemetry?.sampleCount || 0);
   const aerobicEffect = Number(trainingEffect?.aerobic);
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
   const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
@@ -825,11 +824,6 @@ export default function RunDetail() {
             <div>
               <h2>{t('run_detail.telemetry_title')}</h2>
             </div>
-            <span className="run-detail-telemetry-resolution">
-              {telemetrySampleCount > 0
-                ? t('run_detail.telemetry_sample_count', { count: telemetrySampleCount.toLocaleString() })
-                : t('run_detail.telemetry_resolution_empty')}
-            </span>
           </div>
           <div className="run-detail-panel run-detail-telemetry-panel">
             <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>

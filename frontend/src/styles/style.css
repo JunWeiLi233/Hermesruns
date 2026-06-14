@@ -72849,18 +72849,6 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   line-height: 1.55;
 }
 
-.run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-resolution {
-  border: 1px solid rgba(67, 54, 42, 0.12);
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: rgba(255, 252, 246, 0.72);
-  color: var(--runner-profile-muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-panel {
   display: grid;
   gap: clamp(16px, 1.8vw, 24px);
