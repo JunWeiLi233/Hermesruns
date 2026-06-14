@@ -1785,7 +1785,7 @@ export default {
     "no_shoe": "未关联跑鞋",
     "unlink_shoe": "取消关联",
     "physiological_response": "心率",
-    "telemetry_title": "运动数据曲线",
+    "telemetry_title": "运动数据",
     "telemetry_subtitle": "直接读取活动文件中的时间序列，不再用每公里均值替代。",
     "telemetry_sample_count": "{count} 个源采样点",
     "telemetry_resolution_empty": "暂无逐秒数据",
