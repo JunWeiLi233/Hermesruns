@@ -3545,3 +3545,12 @@ What changed: Simplified the five non-heart metric glyphs into clearer label-adj
 Why: The user reported the previous custom icons still did not fit the telemetry button meanings.
 Rollback target: `DV-2026-06-13-13`
 Notes: This refines icon drawing only; icon names, telemetry tab wiring, values, units, and styles remain unchanged.
+
+### Version: DV-2026-06-14-01
+Date: 2026-06-14
+Surface: Run Detail selected telemetry tab icon suppression on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Telemetry tab icons now render only on inactive tabs; the selected tab temporarily hides its icon while preserving the label, value, unit, and active state.
+Why: The user requested selected telemetry buttons not display their icon temporarily on this page.
+Rollback target: `DV-2026-06-13-14`
+Notes: This is a selected-state rendering change only; telemetry definitions, chart selection, values, units, and tab styling remain unchanged.
