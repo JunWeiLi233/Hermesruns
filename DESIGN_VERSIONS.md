@@ -3518,3 +3518,12 @@ What changed: Added the existing `monitor_heart` AppIcon beside the heart-rate t
 Why: The user requested a heart icon next to the active `run-detail-telemetry-tab` treatment.
 Rollback target: `DV-2026-06-13-10`
 Notes: This is a visual affordance only; telemetry tab state, chart selection, values, and units remain unchanged.
+
+### Version: DV-2026-06-13-12
+Date: 2026-06-13
+Surface: Run Detail telemetry tab icon set on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added existing AppIcon glyphs to the five remaining telemetry tabs: `sprint` for cadence, `straighten` for stride length, `timer` for ground contact, `altitude` for vertical oscillation, and `mountain` for elevation.
+Why: The user requested matching icons for the remaining five telemetry buttons.
+Rollback target: `DV-2026-06-13-11`
+Notes: This is a visual affordance only; telemetry tab state, chart selection, values, units, and styles remain unchanged.
