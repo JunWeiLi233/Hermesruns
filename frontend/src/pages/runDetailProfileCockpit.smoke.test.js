@@ -56,6 +56,11 @@ assert(
 assert(
   runDetailSource.includes('const displaySample = getTelemetryDisplaySample(samples);')
     && runDetailSource.includes("icon: 'monitor_heart'")
+    && runDetailSource.includes("icon: 'sprint'")
+    && runDetailSource.includes("icon: 'straighten'")
+    && runDetailSource.includes("icon: 'timer'")
+    && runDetailSource.includes("icon: 'altitude'")
+    && runDetailSource.includes("icon: 'mountain'")
     && runDetailSource.includes('className="run-detail-telemetry-tab-icon"')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
