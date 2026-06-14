@@ -100,9 +100,10 @@ assert(
     && runDetailSource.indexOf('run-detail-comparison-section') < runDetailSource.indexOf('run-detail-telemetry-section')
     && runDetailSource.indexOf('run-detail-splits-section') > runDetailSource.indexOf('run-detail-telemetry-section')
     && runDetailSource.indexOf('run-detail-splits-section') < runDetailSource.indexOf('run-detail-bottom-grid')
-    && runDetailSource.includes("runComparison.direction !== 'slower'")
-    && !runDetailSource.includes("runComparison.direction === 'slower' ? '-'"),
-  'Run Detail comparison and splits sections should render at shell level around telemetry, and the slower comparison state should no longer render the old arrow badge.',
+    && !runDetailSource.includes('run-detail-comparison-arrow')
+    && !runDetailSource.includes("runComparison.direction === 'slower' ? '-'")
+    && !runDetailSource.includes("runComparison.direction === 'faster' ? '+'"),
+  'Run Detail comparison and splits sections should render at shell level around telemetry, and the comparison panel should no longer render arrow badges for faster or slower states.',
 );
 
 assert(
