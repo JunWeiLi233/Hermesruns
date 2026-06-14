@@ -34,8 +34,10 @@ assert(
 assert(
   runDetailSource.includes('<Link to="/runs"')
     && runDetailSource.includes("aria-label={t('run_detail.back_to_runs')}")
-    && runDetailSource.includes("t('run_detail.no_run_selected')"),
-  'Run Detail redesign must preserve back navigation and the recoverable empty state.',
+    && runDetailSource.includes("t('run_detail.no_run_selected')")
+    && !runDetailSource.includes('run-detail-debrief-icon')
+    && !runDetailSource.includes("name=\"coach_voice\""),
+  'Run Detail redesign must preserve back navigation and the recoverable empty state while removing the debrief icon.',
 );
 
 assert(

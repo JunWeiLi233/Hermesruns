@@ -57725,12 +57725,6 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-readiness-signal-ba
   font-weight: 900;
   color: var(--indigo-600);
 }
-.run-detail-debrief-icon {
-  width: 32px;
-  height: 32px;
-  color: var(--indigo-500);
-  opacity: 0.8;
-}
 .run-detail-debrief-interpretation {
   font-size: 16px;
   font-weight: 500;

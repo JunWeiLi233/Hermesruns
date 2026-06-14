@@ -2331,13 +2331,6 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   color: var(--indigo-600);
 }
 
-.run-detail-debrief-icon {
-  width: 32px;
-  height: 32px;
-  color: var(--indigo-500);
-  opacity: 0.8;
-}
-
 .run-detail-debrief-interpretation {
   font-size: 16px;
   font-weight: 500;

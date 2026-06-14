@@ -727,7 +727,6 @@ export default function RunDetail() {
                       <span>{t('run_detail.pre_run_readiness')}</span>
                       <strong>{analytics.debrief.readinessScore}%</strong>
                     </div>
-                    <AppIcon name="coach_voice" className="run-detail-debrief-icon" />
                   </div>
                   <div className="run-detail-debrief-content">
                     <p className="run-detail-debrief-interpretation">{analytics.debrief.interpretation}</p>
