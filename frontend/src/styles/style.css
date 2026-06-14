@@ -72921,7 +72921,7 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab.is-active .run-detail-telemetry-tab-icon {
-  color: var(--runner-profile-coral);
+  color: var(--runner-profile-flame);
 }
 
 .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-tab strong {
