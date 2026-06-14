@@ -3473,3 +3473,12 @@ What changed: Removed the coral radial wash from `run-detail-stat-card is-accent
 Why: The user requested a full dark color for the accent stat grid card.
 Rollback target: `DV-2026-06-13-06`
 Notes: This is a color treatment change only; RunDetail layout, telemetry, gear linking, and stat data remain unchanged.
+
+### Version: DV-2026-06-13-08
+Date: 2026-06-13
+Surface: Run Detail full-dark coach debrief panel on `/run/:id`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral radial and angled gradient wash from `run-detail-panel run-detail-debrief-panel` and made the coach debrief panel a solid dark `runner-profile-ink` surface with warm light text.
+Why: The user requested the same full-dark color treatment for the Run Detail debrief panel.
+Rollback target: `DV-2026-06-13-07`
+Notes: This is a color treatment change only; coach debrief content, gear linking, telemetry, and layout behavior are unchanged.

@@ -3087,10 +3087,7 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
   gap: clamp(18px, 2vw, 28px);
   align-items: stretch;
-  background:
-    radial-gradient(circle at 86% 8%, rgba(239, 106, 82, 0.22), transparent 18rem),
-    linear-gradient(135deg, rgba(23, 21, 18, 0.98), rgba(54, 42, 31, 0.92)),
-    var(--runner-profile-ink) !important;
+  background: var(--runner-profile-ink) !important;
   color: #fff8ee !important;
 }
 
