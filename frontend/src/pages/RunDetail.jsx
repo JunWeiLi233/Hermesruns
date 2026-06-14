@@ -848,7 +848,7 @@ export default function RunDetail() {
                     aria-selected={isActive}
                   >
                     <span className="run-detail-telemetry-tab-label">
-                      {definition.icon && (
+                      {definition.icon && !isActive && (
                         <AppIcon
                           name={definition.icon}
                           className="run-detail-telemetry-tab-icon"

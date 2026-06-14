@@ -67,6 +67,7 @@ assert(
     && appIconSource.includes("case 'telemetry_ground_contact':")
     && appIconSource.includes("case 'telemetry_vertical':")
     && appIconSource.includes("case 'telemetry_elevation':")
+    && runDetailSource.includes('definition.icon && !isActive')
     && runDetailSource.includes('className="run-detail-telemetry-tab-icon"')
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
