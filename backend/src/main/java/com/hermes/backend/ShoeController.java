@@ -596,6 +596,7 @@ public class ShoeController {
     }
 
     @PatchMapping("/{shoeId}/assign/{activityId}")
+    @Transactional
     public ResponseEntity<?> assignShoeToActivity(
             @PathVariable Long shoeId,
             @PathVariable Long activityId,
@@ -620,8 +621,13 @@ public class ShoeController {
             activity.setShoe(shoeOpt.get());
         }
 
-        activityRepository.save(activity);
-        return ResponseEntity.ok(Map.of("message", "Shoe assignment updated"));
+        Activity saved = activityRepository.saveAndFlush(activity);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", "Shoe assignment updated");
+        body.put("activityId", saved.getId());
+        body.put("shoeId", saved.getShoeId());
+        body.put("shoeName", saved.getShoeName());
+        return ResponseEntity.ok(body);
     }
 
     private Map<Long, Double> buildShoeDistanceMap(Runner runner) {

@@ -9,6 +9,7 @@ import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
   Chart as ChartJS,
   CategoryScale,
+  Decimation,
   Filler,
   Legend,
   LineController,
@@ -21,7 +22,10 @@ import {
 import { Line } from 'react-chartjs-2';
 import 'leaflet/dist/leaflet.css';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler, Decimation);
+
+const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1;
+const TELEMETRY_CHART_RENDER_POINT_BUDGET = 12000;
 
 function readSelectedRunFromSession(expectedId) {
   if (typeof window === 'undefined') return null;
@@ -100,6 +104,105 @@ function formatLapElevation(lap) {
   return `${value > 0 ? '+' : ''}${value.toFixed(0)} m`;
 }
 
+function formatTelemetryInteractionTime(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value < 0) return '--';
+  const total = Math.round(value);
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function getTelemetrySamples(series) {
+  return Array.isArray(series?.samples)
+    ? series.samples
+      .map((sample) => ({
+        t: Number(sample?.t),
+        value: Number(sample?.value),
+        distanceKm: sample?.distanceKm == null ? null : Number(sample.distanceKm),
+      }))
+      .filter((sample) => Number.isFinite(sample.t) && Number.isFinite(sample.value))
+    : [];
+}
+
+function formatTelemetryValue(value, key) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '--';
+  if (key === 'strideLength' || key === 'verticalOscillationCm') return numeric.toFixed(2);
+  return numeric.toFixed(0);
+}
+
+function getTelemetryDisplaySample(samples) {
+  return samples[Math.floor(samples.length * 0.66)] || samples[samples.length - 1] || null;
+}
+
+function getTelemetryValueBounds(samples) {
+  let min = Infinity;
+  let max = -Infinity;
+
+  for (const sample of samples) {
+    const value = Number(sample?.value);
+    if (!Number.isFinite(value)) continue;
+    min = Math.min(min, value);
+    max = Math.max(max, value);
+  }
+
+  return Number.isFinite(min) && Number.isFinite(max) ? { min, max } : { min: 0, max: 1 };
+}
+
+function interpolateTelemetrySample(current, next, targetTime) {
+  const span = next.t - current.t;
+  if (span <= 0) return { ...next, t: Number(targetTime.toFixed(1)) };
+  const ratio = (targetTime - current.t) / span;
+  const interpolatedDistance = current.distanceKm != null && next.distanceKm != null
+    ? current.distanceKm + (next.distanceKm - current.distanceKm) * ratio
+    : ratio < 0.5 ? current.distanceKm : next.distanceKm;
+
+  return {
+    t: Number(targetTime.toFixed(1)),
+    value: current.value + (next.value - current.value) * ratio,
+    distanceKm: interpolatedDistance == null ? null : Number(interpolatedDistance.toFixed(3)),
+  };
+}
+
+function resampleTelemetrySamples(
+  samples,
+  intervalSeconds = TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS,
+  maxRenderPoints = TELEMETRY_CHART_RENDER_POINT_BUDGET,
+) {
+  if (!Array.isArray(samples) || samples.length < 2) return samples;
+  const sortedSamples = [...samples].sort((a, b) => a.t - b.t);
+  const first = sortedSamples[0];
+  const last = sortedSamples[sortedSamples.length - 1];
+  if (!Number.isFinite(first?.t) || !Number.isFinite(last?.t) || last.t <= first.t) return sortedSamples;
+
+  const ticksPerSecond = Math.round(1 / intervalSeconds);
+  const startTick = Math.round(first.t * ticksPerSecond);
+  const endTick = Math.round(last.t * ticksPerSecond);
+  const totalTicks = endTick - startTick + 1;
+  const tickStep = Math.max(1, Math.ceil(totalTicks / Math.max(1, maxRenderPoints)));
+  const resampled = [];
+  let segmentIndex = 0;
+
+  for (let tick = startTick; tick <= endTick; tick += tickStep) {
+    const targetTime = tick / ticksPerSecond;
+    while (segmentIndex < sortedSamples.length - 2 && sortedSamples[segmentIndex + 1].t < targetTime) {
+      segmentIndex += 1;
+    }
+    const current = sortedSamples[segmentIndex];
+    const next = sortedSamples[Math.min(segmentIndex + 1, sortedSamples.length - 1)];
+    resampled.push(interpolateTelemetrySample(current, next, targetTime));
+  }
+
+  const lastRenderedTime = resampled[resampled.length - 1]?.t;
+  const endTime = endTick / ticksPerSecond;
+  if (lastRenderedTime !== endTime) {
+    resampled.push(interpolateTelemetrySample(sortedSamples[sortedSamples.length - 2], last, endTime));
+  }
+
+  return resampled;
+}
+
 export default function RunDetail() {
   const { id } = useParams();
   const { isAuthenticated } = useAuth();
@@ -113,7 +216,12 @@ export default function RunDetail() {
   const [syncDisabled, setSyncDisabled] = useState(false);
   const [shoes, setShoes] = useState([]);
   const [shoeDropdownOpen, setShoeDropdownOpen] = useState(false);
+  const [assigningShoeId, setAssigningShoeId] = useState(null);
+  const [shoeActionMessage, setShoeActionMessage] = useState('');
   const [analytics, setAnalytics] = useState(null);
+  const [telemetry, setTelemetry] = useState(null);
+  const [activeTelemetryKey, setActiveTelemetryKey] = useState('heartRate');
+  const [selectedTelemetryPoint, setSelectedTelemetryPoint] = useState(null);
   const [elevationStatus, setElevationStatus] = useState(null);
   const [recalibratingElevation, setRecalibratingElevation] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
@@ -123,31 +231,17 @@ export default function RunDetail() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
-  function getRouteShapeLabel(shapeKey) {
-    switch (shapeKey) {
-      case 'loop':
-        return t('run_detail.route_shape_loop');
-      case 'out_and_back':
-        return t('run_detail.route_shape_out_and_back');
-      case 'point_to_point':
-        return t('run_detail.route_shape_point_to_point');
-      case 'none':
-        return t('run_detail.route_shape_none');
-      default:
-        return t('run_detail.route_shape_unknown');
-    }
-  }
-
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
     if (cachedRun) {
       setRun(cachedRun);
       setIsBootstrappingRun(false);
-      return;
     }
 
     if (!isAuthenticated || !id) {
-      setRun(null);
+      if (!cachedRun) {
+        setRun(null);
+      }
       setIsBootstrappingRun(false);
       return;
     }
@@ -165,6 +259,8 @@ export default function RunDetail() {
         setRun(matchedRun || null);
         if (matchedRun && typeof window !== 'undefined') {
           sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
+        } else if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('hermes_selected_run');
         }
       } catch {
         if (!cancelled) {
@@ -199,22 +295,48 @@ export default function RunDetail() {
   }, [isAuthenticated, id]);
 
   async function assignShoe(shoeId) {
-    if (!run?.id) return;
+    if (!run?.id) {
+      setShoeActionMessage(t('run_detail.shoe_assign_no_run'));
+      return;
+    }
+    const normalizedShoeId = Number(shoeId);
+    const isUnlinking = normalizedShoeId === 0;
+    setAssigningShoeId(normalizedShoeId);
+    setShoeActionMessage('');
     try {
-      await apiFetch(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' });
-      setRun((prev) => ({
-        ...prev,
-        shoeId: shoeId === 0 ? null : shoeId,
-        shoeName: shoeId === 0 ? null : (() => {
-          const shoe = shoes.find((item) => item.id === shoeId);
-          return shoe
-            ? formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })
-            : null;
-        })(),
-      }));
+      const response = await apiJson(`/api/shoes/${normalizedShoeId}/assign/${run.id}`, { method: 'PATCH' });
+      if (response?.activityId != null && String(response.activityId) !== String(run.id)) {
+        throw new Error('Activity mismatch');
+      }
+      const selectedShoe = isUnlinking
+        ? null
+        : shoes.find((item) => String(item.id) === String(normalizedShoeId));
+      const selectedShoeName = selectedShoe
+        ? formatShoeDisplayName({ brand: selectedShoe.brand, model: selectedShoe.model, nickname: selectedShoe.nickname, lang })
+        : null;
+      const nextShoeId = isUnlinking ? null : (response?.shoeId ?? normalizedShoeId);
+      const nextShoeName = isUnlinking ? null : (response?.shoeName || selectedShoeName);
+
+      setRun((prev) => {
+        if (!prev) return prev;
+        const nextRun = {
+          ...prev,
+          shoeId: nextShoeId,
+          shoeName: nextShoeName,
+        };
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('hermes_selected_run', JSON.stringify(nextRun));
+        }
+        return nextRun;
+      });
       setShoeDropdownOpen(false);
+      setShoeActionMessage(isUnlinking
+        ? t('run_detail.shoe_unlinked')
+        : t('run_detail.shoe_linked', { shoe: nextShoeName || t('run_detail.shoe') }));
     } catch {
-      // ignored
+      setShoeActionMessage(t('run_detail.shoe_assign_failed'));
+    } finally {
+      setAssigningShoeId(null);
     }
   }
 
@@ -222,10 +344,10 @@ export default function RunDetail() {
     if (!run?.id || !isAuthenticated) return;
     async function fetchPoints() {
       try {
-        const [res, analyticsRes, elevStatusRes] = await Promise.all([
+        const [res, analyticsRes, telemetryRes] = await Promise.all([
           apiFetch(`/api/activities/${run.id}/points`),
           apiFetch(`/api/activities/${run.id}/analytics`),
-          apiFetch(`/api/activities/${run.id}/elevation/status`),
+          apiFetch(`/api/activities/${run.id}/telemetry`),
         ]);
         if (!res.ok) return;
         const data = await res.json();
@@ -238,16 +360,32 @@ export default function RunDetail() {
           const payload = await analyticsRes.json();
           setAnalytics(payload && typeof payload === 'object' ? payload : null);
         }
-        if (elevStatusRes.ok) {
-          const payload = await elevStatusRes.json();
-          setElevationStatus(payload && typeof payload === 'object' ? payload : null);
+        if (telemetryRes.ok) {
+          const payload = await telemetryRes.json();
+          setTelemetry(payload && typeof payload === 'object' ? payload : null);
         }
       } catch {
         // ignored
       }
     }
+    async function fetchElevationStatus() {
+      try {
+        const elevStatusRes = await apiFetch(`/api/activities/${run.id}/elevation/status`);
+        if (elevStatusRes.ok) {
+          const payload = await elevStatusRes.json();
+          setElevationStatus(payload && typeof payload === 'object' ? payload : null);
+        }
+      } catch {
+        // Elevation quality is advisory; it should not block the run detail page.
+      }
+    }
     fetchPoints();
+    fetchElevationStatus();
   }, [run, isAuthenticated]);
+
+  useEffect(() => {
+    setSelectedTelemetryPoint(null);
+  }, [activeTelemetryKey, telemetry]);
 
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
@@ -259,13 +397,18 @@ export default function RunDetail() {
         body: JSON.stringify({ coordinates: points.map(([latitude, longitude]) => ({ latitude, longitude })) }),
       });
       if (!res.ok) return;
-      const [analyticsRes, statusRes] = await Promise.all([
+      const [analyticsRes, telemetryRes, statusRes] = await Promise.all([
         apiFetch(`/api/activities/${run.id}/analytics`),
+        apiFetch(`/api/activities/${run.id}/telemetry`),
         apiFetch(`/api/activities/${run.id}/elevation/status`),
       ]);
       if (analyticsRes.ok) {
         const payload = await analyticsRes.json();
         setAnalytics(payload && typeof payload === 'object' ? payload : null);
+      }
+      if (telemetryRes.ok) {
+        const payload = await telemetryRes.json();
+        setTelemetry(payload && typeof payload === 'object' ? payload : null);
       }
       if (statusRes.ok) {
         const payload = await statusRes.json();
@@ -293,11 +436,6 @@ export default function RunDetail() {
         .bindTooltip(t('run_detail.start')).addTo(map);
       L.circleMarker(points[points.length - 1], { radius: 7, color: '#f49787', fillColor: '#f49787', fillOpacity: 1 })
         .bindTooltip(t('run_detail.finish')).addTo(map);
-
-      if (insights.centerPoint) {
-        L.circleMarker(insights.centerPoint, { radius: 5, color: '#fce6de', fillColor: '#fce6de', fillOpacity: 0.95 })
-          .bindTooltip(t('run_detail.route_center_marker')).addTo(map);
-      }
 
       mapInstanceRef.current = map;
     });
@@ -328,62 +466,129 @@ export default function RunDetail() {
 
   const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
 
-  const hrChartData = useMemo(() => {
-    const source = lapRows
-      .map((lap, index) => ({ index, label: `${lap.distanceKm ? `${lap.distanceKm.toFixed(1)} km` : `#${lap.lapIndex || index + 1}`}`, hr: Number(lap.averageHeartRate || 0) }))
-      .filter((point) => point.hr > 0);
-    if (source.length < 2) return null;
+  const telemetryDefinitions = useMemo(() => [
+    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: '#b75f4a', fill: 'rgba(183, 95, 74, 0.18)', icon: 'monitor_heart' },
+    { key: 'cadence', label: t('run_detail.telemetry_cadence'), unit: t('run_detail.unit_spm'), color: '#54756a', fill: 'rgba(84, 117, 106, 0.16)', icon: 'telemetry_cadence' },
+    { key: 'strideLength', label: t('run_detail.telemetry_stride'), unit: t('run_detail.unit_meter'), color: '#9b6c35', fill: 'rgba(155, 108, 53, 0.15)', icon: 'telemetry_stride' },
+    { key: 'groundContactTimeMs', label: t('run_detail.ground_contact_time'), unit: 'ms', color: '#7b684b', fill: 'rgba(123, 104, 75, 0.16)', icon: 'telemetry_ground_contact' },
+    { key: 'verticalOscillationCm', label: t('run_detail.vertical_oscillation'), unit: 'cm', color: '#7d7565', fill: 'rgba(125, 117, 101, 0.16)', icon: 'telemetry_vertical' },
+    { key: 'elevation', label: t('run_detail.telemetry_elevation'), unit: t('run_detail.unit_meter'), color: '#6f6b5e', fill: 'rgba(111, 107, 94, 0.16)', icon: 'telemetry_elevation' },
+  ], [t]);
+  const telemetryTabDefinitions = useMemo(() => telemetryDefinitions
+    .map((definition, index) => {
+      const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
+      const displaySample = getTelemetryDisplaySample(samples);
+      return {
+        ...definition,
+        displaySample,
+        hasData: Boolean(displaySample),
+        sourceIndex: index,
+      };
+    })
+    .sort((a, b) => {
+      if (a.hasData !== b.hasData) return a.hasData ? -1 : 1;
+      return a.sourceIndex - b.sourceIndex;
+    }), [telemetry, telemetryDefinitions]);
+
+  const activeTelemetryDefinition = telemetryDefinitions.find((definition) => definition.key === activeTelemetryKey) || telemetryDefinitions[0];
+  const activeTelemetrySeries = telemetry?.series?.[activeTelemetryDefinition.key];
+  const activeTelemetrySamples = useMemo(
+    () => getTelemetrySamples(activeTelemetrySeries),
+    [activeTelemetrySeries]
+  );
+  const activeTelemetryChartSamples = useMemo(
+    () => resampleTelemetrySamples(activeTelemetrySamples),
+    [activeTelemetrySamples]
+  );
+  const hasTelemetryData = activeTelemetrySamples.length >= 2;
+
+  const telemetryChartData = useMemo(() => {
+    if (!hasTelemetryData) return null;
     return {
-      labels: source.map((p) => p.label),
       datasets: [
         {
-          label: t('run_detail.average_hr'),
-          data: source.map((p) => p.hr),
-          borderColor: '#f49787',
-          backgroundColor: 'rgba(240, 117, 97, 0.18)',
+          label: activeTelemetryDefinition.label,
+          data: activeTelemetryChartSamples.map((sample) => ({ x: sample.t, y: sample.value })),
+          parsing: false,
+          normalized: true,
+          borderColor: activeTelemetryDefinition.color,
+          backgroundColor: activeTelemetryDefinition.fill,
           fill: true,
-          tension: 0.35,
-          pointRadius: 3,
-          pointBackgroundColor: '#f49787',
+          tension: 0.22,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: activeTelemetryDefinition.color,
           pointBorderColor: '#fff',
           pointBorderWidth: 1.5,
-          pointHoverRadius: 6,
-          borderWidth: 2.5,
+          borderWidth: 2,
         },
       ],
     };
-  }, [lapRows, t]);
+  }, [activeTelemetryChartSamples, activeTelemetryDefinition, hasTelemetryData]);
 
-  const hrChartOptions = useMemo(() => ({
+  const telemetryChartOptions = useMemo(() => {
+    const { min, max } = getTelemetryValueBounds(activeTelemetrySamples);
+    const pad = Math.max(1, (max - min) * 0.12);
+    return {
     responsive: true,
     maintainAspectRatio: false,
+    animation: false,
+    parsing: false,
+    normalized: true,
     interaction: { intersect: false, mode: 'index' },
+    onClick: (_event, elements) => {
+      if (!elements?.length) return;
+      const sample = activeTelemetryChartSamples[elements[0].index];
+      if (sample) setSelectedTelemetryPoint({ ...sample, key: activeTelemetryDefinition.key });
+    },
     plugins: {
+      decimation: {
+        enabled: activeTelemetryChartSamples.length > 2000,
+        algorithm: 'lttb',
+        samples: 1200,
+        threshold: 2000,
+      },
       legend: { display: false },
       tooltip: {
-        backgroundColor: 'rgba(18, 18, 18, 0.92)',
+        backgroundColor: 'rgba(31, 29, 25, 0.94)',
         titleColor: '#fce6de',
         bodyColor: '#e1e1e1',
         cornerRadius: 10,
         padding: 12,
         callbacks: {
-          label: (ctx) => `${ctx.parsed.y} bpm`,
+          title: (items) => formatTelemetryInteractionTime(items?.[0]?.parsed?.x),
+          label: (ctx) => `${formatTelemetryValue(ctx.parsed.y, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}`,
+          afterLabel: (ctx) => {
+            const sample = activeTelemetryChartSamples[ctx.dataIndex];
+            return sample?.distanceKm != null ? `${sample.distanceKm.toFixed(2)} km` : '';
+          },
         },
       },
     },
     scales: {
       x: {
+        type: 'linear',
         display: false,
       },
       y: {
         display: false,
-        min: Math.max(0, Math.min(...(hrChartData?.datasets?.[0]?.data || [0])) - 15),
-        max: Math.max(...(hrChartData?.datasets?.[0]?.data || [0])) + 15,
+        min: Math.max(0, min - pad),
+        max: max + pad,
       },
     },
-  }), [hrChartData]);
+  };
+  }, [activeTelemetryChartSamples, activeTelemetryDefinition, activeTelemetrySamples]);
 
-  const hasHrData = hrChartData && hrChartData.datasets[0].data.length >= 2;
+  const focusTelemetryPoint = selectedTelemetryPoint?.key === activeTelemetryDefinition.key
+    ? selectedTelemetryPoint
+    : getTelemetryDisplaySample(activeTelemetrySamples);
+  const trainingEffect = telemetry?.trainingEffect && typeof telemetry.trainingEffect === 'object'
+    ? telemetry.trainingEffect
+    : null;
+  const groundContactSamples = getTelemetrySamples(telemetry?.series?.groundContactTimeMs);
+  const verticalOscillationSamples = getTelemetrySamples(telemetry?.series?.verticalOscillationCm);
+  const latestGroundContact = groundContactSamples[groundContactSamples.length - 1] || null;
+  const latestVerticalOscillation = verticalOscillationSamples[verticalOscillationSamples.length - 1] || null;
 
   const lapElevationGains = useMemo(() => {
     const profile = analytics?.elevationProfile;
@@ -437,28 +642,6 @@ export default function RunDetail() {
       paceTrend: direction === 'faster' ? 'improving' : direction === 'slower' ? 'declining' : 'stable',
     };
   }, [run, recentRuns]);
-
-  const elevationPoints = useMemo(() => {
-    const profile = analytics?.elevationProfile;
-    if (!Array.isArray(profile) || profile.length < 2) return null;
-    const xs = profile.map((p) => Number(p.distanceKm || 0));
-    const ys = profile.map((p) => Number(p.elevationMeters || 0));
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const width = 640;
-    const height = 180;
-    const pad = 16;
-    const spanX = Math.max(1e-9, maxX - minX);
-    const spanY = Math.max(1e-9, maxY - minY);
-    const path = profile.map((p, index) => {
-      const x = pad + ((p.distanceKm - minX) / spanX) * (width - pad * 2);
-      const y = height - pad - ((p.elevationMeters - minY) / spanY) * (height - pad * 2);
-      return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' ');
-    return { path, minY, maxY };
-  }, [analytics]);
 
   async function handleResync() {
     setSyncDisabled(true);
@@ -541,7 +724,7 @@ export default function RunDetail() {
   const heroMetaText = [
     dateText,
     timeText,
-    run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel,
+    run.locationCity || run.city || run.locationName || run.location,
   ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
 
   const performanceRows = [
@@ -557,18 +740,8 @@ export default function RunDetail() {
     [t('run_detail.perf_elevation_gain'), run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : t('run_detail.not_available')],
   ];
 
-  const routeRows = insights ? [
-    [t('run_detail.route_gps_samples'), insights.pointCount ? insights.pointCount.toLocaleString() : t('run_detail.no_route_data')],
-    [t('run_detail.route_gps_distance'), insights.computedDistanceKm != null ? `${insights.computedDistanceKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_start_finish_gap'), insights.startFinishGapMeters != null ? `${Math.round(insights.startFinishGapMeters)} ${elevationUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.route_shape'), getRouteShapeLabel(insights.routeShapeKey)],
-    [t('run_detail.route_efficiency'), insights.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : t('run_detail.not_available')],
-    [t('run_detail.route_center'), insights.centerLabel || t('run_detail.not_available')],
-    [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
-  ] : [];
-
-  const linkedShoe = run?.shoeId ? shoes.find((shoe) => shoe.id === run.shoeId) : null;
+  const activeShoes = shoes.filter((shoe) => !shoe.retired);
+  const linkedShoe = run?.shoeId ? shoes.find((shoe) => String(shoe.id) === String(run.shoeId)) : null;
   const linkedShoeName = run?.shoeName
     || (linkedShoe
       ? formatShoeDisplayName({ brand: linkedShoe.brand, model: linkedShoe.model, nickname: linkedShoe.nickname, lang })
@@ -588,12 +761,11 @@ export default function RunDetail() {
   }, -1);
 
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
-  const paceValue = distKm && movingSec ? formatPace(distKm, movingSec, lang) : '--';
   const paceMetricValue = distKm && movingSec ? formatPaceSeconds(movingSec / distKm) : '--';
   const timeValue = movingSec ? formatDuration(movingSec) : '--';
-  const cadenceValue = analytics?.averageCadence || run.averageCadence;
-  const strideLengthValue = analytics?.averageStrideLengthMeters;
-  const powerValue = run.averageWatts;
+  const aerobicEffect = Number(trainingEffect?.aerobic);
+  const anaerobicEffect = Number(trainingEffect?.anaerobic);
+  const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
 
   return (
     <div className="run-detail-page run-detail-profile-cockpit">
@@ -662,7 +834,6 @@ export default function RunDetail() {
                       <span>{t('run_detail.pre_run_readiness')}</span>
                       <strong>{analytics.debrief.readinessScore}%</strong>
                     </div>
-                    <AppIcon name="coach_voice" className="run-detail-debrief-icon" />
                   </div>
                   <div className="run-detail-debrief-content">
                     <p className="run-detail-debrief-interpretation">{analytics.debrief.interpretation}</p>
@@ -675,137 +846,9 @@ export default function RunDetail() {
               </section>
             )}
 
-            {runComparison && (
-              <section className="run-detail-section run-detail-comparison-section">
-                <h2>{t('run_detail.run_comparison_title')}</h2>
-                <div className="run-detail-panel run-detail-comparison-panel">
-                  <div className="run-detail-comparison-signal">
-                    <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
-                      {runComparison.direction === 'faster' ? '↑' : runComparison.direction === 'slower' ? '↓' : '→'}
-                    </span>
-                    <div>
-                      <strong>
-                        {runComparison.direction === 'faster'
-                          ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                          : runComparison.direction === 'slower'
-                            ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                            : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
-                      </strong>
-                      <p>
-                        {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
-                          : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
-                            : t('run_detail.run_comparison_stable')}
-                        {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            <section className="run-detail-section">
-              <h2>{t('run_detail.physiological_response')}</h2>
-              <div className="run-detail-panel">
-                <div className="run-detail-panel-head">
-                  <div>
-                    <span>{t('run_detail.average_hr')}</span>
-                    <strong>{run.averageHeartRate != null ? Math.round(run.averageHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
-                  </div>
-                  <div className="is-right">
-                    <span>{t('run_detail.max_hr')}</span>
-                    <strong>{run.maxHeartRate != null ? Math.round(run.maxHeartRate) : '--'} <em>{heartRateUnitLabel}</em></strong>
-                  </div>
-                </div>
-                <div className="run-detail-hr-chart" style={lapRows.length > 8 ? { overflowX: 'auto', WebkitOverflowScrolling: 'touch' } : undefined}>
-                  <div className="run-detail-hr-zones">
-                    <span>Z5</span>
-                    <span>Z4</span>
-                    <span>Z3</span>
-                    <span>Z2</span>
-                    <span>Z1</span>
-                  </div>
-                  {hasHrData ? (
-                    <div className="run-detail-hr-chart-canvas" style={{ minWidth: Math.max(100, lapRows.length * 48), height: 180 }}>
-                      <Line data={hrChartData} options={hrChartOptions} />
-                    </div>
-                  ) : (
-                    <div className="run-detail-chart-empty">{t('run_detail.no_heart_rate_data')}</div>
-                  )}
-                </div>
-                <div className="run-detail-chip-row">
-                  <span className="run-detail-chip">
-                    {t('run_detail.decoupling')}: {analytics?.cardiacDrift ? `${analytics.cardiacDrift.driftPercent.toFixed(2)}%` : '--'}
-                  </span>
-                  <span className="run-detail-chip">
-                    {t('run_detail.first_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.firstHalfPace : '--'}
-                  </span>
-                  <span className="run-detail-chip">
-                    {t('run_detail.second_half')}: {analytics?.cardiacDrift ? analytics.cardiacDrift.secondHalfPace : '--'}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            <section className="run-detail-section">
-              <div className="run-detail-section-head">
-                <h2>{t('run_detail.splits')}</h2>
-                {lapRows.length > 5 && (
-                  <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
-                    {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
-                  </button>
-                )}
-              </div>
-              <div className="run-detail-panel run-detail-table-panel">
-                <table className="run-detail-splits-table">
-                  <thead>
-                    <tr>
-                      <th>{t('run_detail.split_unit')}</th>
-                      <th>{t('run_detail.split_pace')}</th>
-                      <th>{t('run_detail.split_elev')}</th>
-                      <th>{t('run_detail.split_hr')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
-                      const lapGain = lapElevationGains ? lapElevationGains[index] : null;
-                      return (
-                        <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                          <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
-                          <td>{lap.pace || '--'}</td>
-                          <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
-                          <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
-                        </tr>
-                      );
-                    }) : (
-                      <tr>
-                        <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
           </div>
 
           <aside className="run-detail-side-column">
-            <section className="run-detail-panel run-detail-efficiency-panel">
-              <h3>{t('run_detail.efficiency')}</h3>
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.cadence')}</span>
-                <strong>{cadenceValue ? Math.round(cadenceValue) : '--'} <em>{cadenceUnitLabel}</em></strong>
-              </div>
-              <div className="run-detail-divider" />
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.stride_length')}</span>
-                <strong>{strideLengthValue ? strideLengthValue.toFixed(2) : '--'} <em>{elevationUnitLabel}</em></strong>
-              </div>
-              <div className="run-detail-divider" />
-              <div className="run-detail-side-metric">
-                <span>{t('run_detail.running_power')}</span>
-                <strong>{powerValue ? Math.round(powerValue) : '--'} <em>{powerUnitLabel}</em></strong>
-              </div>
-            </section>
-
             <section className="run-detail-panel run-detail-gear-panel">
               <span className="run-detail-panel-label">{t('run_detail.gear_linked')}</span>
               <div className="run-detail-gear-row">
@@ -826,49 +869,227 @@ export default function RunDetail() {
                   )}
                 </div>
               </div>
-              <div className="run-detail-gear-actions">
-                <button type="button" className="run-detail-link-btn" onClick={() => setShoeDropdownOpen((prev) => !prev)}>
-                  {run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
+            <div className="run-detail-gear-actions">
+              <button
+                type="button"
+                className="run-detail-link-btn"
+                disabled={assigningShoeId != null}
+                onClick={() => {
+                  setShoeActionMessage('');
+                  setShoeDropdownOpen((prev) => !prev);
+                }}
+              >
+                {assigningShoeId != null
+                  ? t('run_detail.shoe_assigning')
+                  : run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
+              </button>
+              {run.shoeId && (
+                <button type="button" className="run-detail-link-btn is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
+                  {t('run_detail.unlink_shoe')}
                 </button>
-                {run.shoeId && (
-                  <button type="button" className="run-detail-link-btn is-danger" onClick={() => assignShoe(0)}>
-                    {t('run_detail.unlink_shoe')}
+              )}
+            </div>
+            {shoeDropdownOpen && (
+              <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
+                {activeShoes.length > 0 ? activeShoes.map((shoe) => (
+                  <button
+                    key={shoe.id}
+                    type="button"
+                    className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
+                    disabled={assigningShoeId != null}
+                    onClick={() => assignShoe(shoe.id)}
+                  >
+                    {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
                   </button>
+                )) : (
+                  <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
                 )}
               </div>
-              {shoeDropdownOpen && shoes.length > 0 && (
-                <div className="shoe-run-dropdown run-detail-dropdown">
-                  {shoes.filter((shoe) => !shoe.retired).map((shoe) => (
-                    <button
-                      key={shoe.id}
-                      type="button"
-                      className={`shoe-run-option${shoe.id === run.shoeId ? ' active' : ''}`}
-                      onClick={() => assignShoe(shoe.id)}
-                    >
-                      {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
-                    </button>
-                  ))}
-                </div>
-              )}
+            )}
+            {shoeActionMessage && (
+              <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
+            )}
             </section>
+          </aside>
+        </section>
 
-            <section className="run-detail-panel">
-              <h3>{t('run_detail.route_intelligence')}</h3>
-              <div className="run-detail-info-list">
-                <div><span>{t('run_detail.metric_route_shape')}</span><strong>{insights ? getRouteShapeLabel(insights.routeShapeKey) : '--'}</strong></div>
-                <div><span>{t('run_detail.route_gps_samples')}</span><strong>{insights?.pointCount ? insights.pointCount.toLocaleString() : '--'}</strong></div>
-                <div><span>{t('run_detail.perf_elevation_gain')}</span><strong>{run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : '--'}</strong></div>
+        {runComparison && (
+          <section className="run-detail-section run-detail-comparison-section">
+            <h2>{t('run_detail.run_comparison_title')}</h2>
+            <div className="run-detail-panel run-detail-comparison-panel">
+              <div className="run-detail-comparison-signal">
+                <div>
+                  <strong>
+                    {runComparison.direction === 'faster'
+                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                      : runComparison.direction === 'slower'
+                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                  </strong>
+                  <p>
+                    {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
+                      : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
+                        : t('run_detail.run_comparison_stable')}
+                    {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
+                  </p>
+                </div>
               </div>
-              {elevationStatus?.flagged && (
-                <div className="run-detail-warning">
-                  <p>{t('run_detail.elevation_warning')}</p>
+            </div>
+          </section>
+        )}
+
+        <section className="run-detail-section run-detail-telemetry-section">
+          <div className="run-detail-section-head run-detail-telemetry-heading">
+            <div>
+              <h2>{t('run_detail.telemetry_title')}</h2>
+            </div>
+          </div>
+          <div className="run-detail-panel run-detail-telemetry-panel">
+            <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
+              {telemetryTabDefinitions.map((definition) => {
+                const displaySample = definition.displaySample;
+                const isActive = definition.key === activeTelemetryDefinition.key;
+                return (
+                  <button
+                    key={definition.key}
+                    type="button"
+                    className={`run-detail-telemetry-tab${isActive ? ' is-active' : ''}`}
+                    onClick={() => setActiveTelemetryKey(definition.key)}
+                    role="tab"
+                    aria-selected={isActive}
+                  >
+                    <span className="run-detail-telemetry-tab-label">
+                      {definition.icon && !isActive && (
+                        <AppIcon
+                          name={definition.icon}
+                          className="run-detail-telemetry-tab-icon"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {definition.label}
+                    </span>
+                    <strong>
+                      {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
+                      {displaySample && <em>{definition.unit}</em>}
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="run-detail-telemetry-stage">
+              <div className="run-detail-telemetry-readout">
+                <span>{activeTelemetryDefinition.label}</span>
+                <strong>
+                  {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
+                  <em>{activeTelemetryDefinition.unit}</em>
+                </strong>
+                <p>
+                  {focusTelemetryPoint
+                    ? t('run_detail.telemetry_focus_copy', {
+                      time: formatTelemetryInteractionTime(focusTelemetryPoint.t),
+                      distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
+                    })
+                    : t('run_detail.telemetry_no_stream')}
+                </p>
+              </div>
+              <div className="run-detail-telemetry-chart">
+                {telemetryChartData ? (
+                  <Line data={telemetryChartData} options={telemetryChartOptions} />
+                ) : (
+                  <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
+                )}
+              </div>
+            </div>
+
+            <div className="run-detail-chip-row run-detail-telemetry-chip-row">
+              <span className="run-detail-chip">
+                {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
+              </span>
+              <span className="run-detail-chip">
+                {t('run_detail.max_hr')}: {run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : '--'}
+              </span>
+            </div>
+
+            <div className="run-detail-training-effect-grid">
+              <article>
+                <span>{t('run_detail.aerobic_effect')}</span>
+                <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
+                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
+              </article>
+              <article>
+                <span>{t('run_detail.anaerobic_effect')}</span>
+                <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
+                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
+              </article>
+            </div>
+
+            <div className="run-detail-unavailable-grid">
+              <div>
+                <span>{t('run_detail.ground_contact_time')}</span>
+                <strong>
+                  {latestGroundContact ? `${formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')} ms` : t('run_detail.not_captured')}
+                </strong>
+              </div>
+              <div>
+                <span>{t('run_detail.vertical_oscillation')}</span>
+                <strong>
+                  {latestVerticalOscillation ? `${formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')} cm` : t('run_detail.not_captured')}
+                </strong>
+              </div>
+            </div>
+
+            {elevationStatus?.flagged && (
+              <div className="run-detail-warning">
+                <p>{t('run_detail.elevation_warning')}</p>
+                {elevationStatus?.canRecalibrate && (
                   <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
                     {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
                   </button>
-                </div>
-              )}
-            </section>
-          </aside>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="run-detail-section run-detail-splits-section">
+          <div className="run-detail-section-head">
+            <h2>{t('run_detail.splits')}</h2>
+            {lapRows.length > 5 && (
+              <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
+                {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+              </button>
+            )}
+          </div>
+          <div className="run-detail-panel run-detail-table-panel">
+            <table className="run-detail-splits-table">
+              <thead>
+                <tr>
+                  <th>{t('run_detail.split_unit')}</th>
+                  <th>{t('run_detail.split_pace')}</th>
+                  <th>{t('run_detail.split_elev')}</th>
+                  <th>{t('run_detail.split_hr')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
+                  const lapGain = lapElevationGains ? lapElevationGains[index] : null;
+                  return (
+                    <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
+                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                      <td>{lap.pace || '--'}</td>
+                      <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
+                      <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="run-detail-bottom-grid">
@@ -878,47 +1099,6 @@ export default function RunDetail() {
               {performanceRows.map(([label, value], index) => (
                 <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
               ))}
-            </div>
-          </article>
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.elevation_profile')}</h3>
-            {elevationPoints ? (
-              <>
-                <svg viewBox="0 0 640 180" className="run-detail-elevation-graph" aria-hidden="true">
-                  <path d={elevationPoints.path} fill="none" stroke="#f49787" strokeWidth="2.5" />
-                </svg>
-                <div className="run-detail-info-list">
-                  <div>
-                    <span>{t('run_detail.min_max_elevation')}</span>
-                    <strong>{elevationPoints.minY.toFixed(1)} {elevationUnitLabel} / {elevationPoints.maxY.toFixed(1)} {elevationUnitLabel}</strong>
-                  </div>
-                  <div>
-                    <span>{t('run_detail.route_efficiency')}</span>
-                    <strong>{insights?.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : '--'}</strong>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="run-detail-chart-empty is-inline">{t('run_detail.no_elevation_stream')}</div>
-            )}
-          </article>
-        </section>
-
-        <section className="run-detail-bottom-grid">
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.route_intelligence')}</h3>
-            <div className="run-detail-stat-list">
-              {routeRows.map(([label, value], index) => (
-                <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
-              ))}
-            </div>
-          </article>
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.analysis_notes')}</h3>
-            <div className="run-detail-info-list">
-              <div><span>{t('run_detail.metric_average_pace')}</span><strong>{paceValue}</strong></div>
-              <div><span>{t('run_detail.metric_moving_time')}</span><strong>{timeValue}</strong></div>
-              <div><span>{t('run_detail.route_source_file')}</span><strong>{run.sourceFileName || t('run_detail.not_available')}</strong></div>
             </div>
           </article>
         </section>

@@ -76,6 +76,14 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
             Element hrElem = firstChildElementByLocalName(trackPointElement, "HeartRateBpm");
             Integer heartRate = hrElem != null ? parseInt(firstTextByLocalName(hrElem, "Value")) : null;
             Integer cadence = parseInt(firstTextByLocalName(trackPointElement, "Cadence"));
+            if (cadence == null) {
+                Double runCadence = firstPositiveDescendantDouble(trackPointElement, "RunCadence", "run_cadence");
+                cadence = runCadence == null ? null : (int) Math.round(runCadence);
+            }
+            Double groundContactTimeMs = firstPositiveDescendantDouble(trackPointElement,
+                    "GroundContactTime", "GroundContactTimeMs", "StanceTime", "stance_time", "ground_contact_time");
+            Double verticalOscillationMm = firstPositiveDescendantDouble(trackPointElement,
+                    "VerticalOscillation", "VerticalOscillationMm", "vertical_oscillation");
 
             points.add(new ParsedTrackPoint(
                     latitude,
@@ -84,7 +92,9 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
                     distanceMetersTrack,
                     elevationMeters,
                     heartRate,
-                    cadence
+                    cadence,
+                    groundContactTimeMs,
+                    verticalOscillationMm
             ));
         }
 
@@ -123,5 +133,20 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    private Double firstPositiveDescendantDouble(Element parent, String... localNames) {
+        for (String localName : localNames) {
+            var nodes = parent.getElementsByTagNameNS("*", localName);
+            for (int index = 0; index < nodes.getLength(); index += 1) {
+                if (nodes.item(index) instanceof Element element) {
+                    Double value = parseDouble(element.getTextContent());
+                    if (value != null && value > 0 && Double.isFinite(value)) {
+                        return value;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
