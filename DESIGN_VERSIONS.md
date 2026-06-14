@@ -3527,3 +3527,12 @@ What changed: Replaced the borrowed icons on the five non-heart telemetry tabs w
 Why: The user reported the previous five icons did not fit the meaning of their telemetry buttons.
 Rollback target: `DV-2026-06-13-12`
 Notes: This is an icon semantics change only; telemetry values, units, chart behavior, and tab styling remain unchanged.
+
+### Version: DV-2026-06-13-14
+Date: 2026-06-13
+Surface: Run Detail readable telemetry icon glyphs on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `DESIGN_VERSIONS.md`
+What changed: Simplified the five non-heart metric glyphs into clearer label-adjacent symbols: footprint ticks for cadence, two-foot span for stride length, sole plus clock for ground contact, vertical bounce arrows, and an elevation slope profile.
+Why: The user reported the previous custom icons still did not fit the telemetry button meanings.
+Rollback target: `DV-2026-06-13-13`
+Notes: This refines icon drawing only; icon names, telemetry tab wiring, values, units, and styles remain unchanged.
