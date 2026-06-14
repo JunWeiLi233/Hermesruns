@@ -3554,3 +3554,12 @@ What changed: Telemetry tab icons now render only on inactive tabs; the selected
 Why: The user requested selected telemetry buttons not display their icon temporarily on this page.
 Rollback target: `DV-2026-06-13-14`
 Notes: This is a selected-state rendering change only; telemetry definitions, chart selection, values, units, and tab styling remain unchanged.
+
+### Version: DV-2026-06-14-02
+Date: 2026-06-14
+Surface: Run Detail simplified telemetry tab icon drawings on `/run/:id`
+Files: `frontend/src/components/AppIcon.jsx`, `DESIGN_VERSIONS.md`
+What changed: Redrew the inactive telemetry icons with simpler, cleaner 16px-friendly strokes: cadence rhythm bars, stride measurement arrows, ground contact footline plus timer, vertical waveform arrows, and elevation trace.
+Why: The user reported the current icons still had weird shapes and imperfect drawing.
+Rollback target: `DV-2026-06-14-01`
+Notes: This changes icon drawing only; selected-tab suppression, tab labels, values, units, chart behavior, and styles remain unchanged.
