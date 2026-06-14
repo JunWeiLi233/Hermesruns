@@ -796,9 +796,11 @@ export default function RunDetail() {
             <h2>{t('run_detail.run_comparison_title')}</h2>
             <div className="run-detail-panel run-detail-comparison-panel">
               <div className="run-detail-comparison-signal">
-                <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
-                  {runComparison.direction === 'faster' ? '+' : runComparison.direction === 'slower' ? '-' : '='}
-                </span>
+                {runComparison.direction !== 'slower' && (
+                  <span className={`run-detail-comparison-arrow run-detail-comparison-arrow--${runComparison.direction}`} aria-hidden="true">
+                    {runComparison.direction === 'faster' ? '+' : '='}
+                  </span>
+                )}
                 <div>
                   <strong>
                     {runComparison.direction === 'faster'
