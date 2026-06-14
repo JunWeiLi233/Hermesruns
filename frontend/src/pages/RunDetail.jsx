@@ -625,7 +625,6 @@ export default function RunDetail() {
     [t('run_detail.route_bounding_span'), insights.boundingSpanKm != null ? `${insights.boundingSpanKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
     [t('run_detail.route_shape'), getRouteShapeLabel(insights.routeShapeKey)],
     [t('run_detail.route_efficiency'), insights.efficiency != null ? `${Math.round(insights.efficiency * 100)}%` : t('run_detail.not_available')],
-    [t('run_detail.route_center'), insights.centerLabel || t('run_detail.not_available')],
     [t('run_detail.route_source_file'), run.sourceFileName || t('run_detail.not_available')],
   ] : [];
 
