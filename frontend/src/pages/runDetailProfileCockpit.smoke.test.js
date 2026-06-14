@@ -106,8 +106,8 @@ assert(
 
 assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-topbar\s*\{[\s\S]*gap:\s*clamp\(14px,\s*1\.8vw,\s*26px\);[\s\S]*padding:\s*clamp\(16px,\s*2vw,\s*28px\)\s*!important;[\s\S]*border-radius:\s*clamp\(22px,\s*2\.2vw,\s*34px\);/.test(styleSource)
-    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(2\.6rem,\s*5\.8vw,\s*5\.8rem\)\s*!important;[\s\S]*line-height:\s*0\.9;/.test(styleSource)
-    && /@media\s*\(max-width:\s*760px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-topbar\s*\{[\s\S]*padding:\s*clamp\(16px,\s*4\.5vw,\s*22px\)\s*!important;[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(2\.35rem,\s*11vw,\s*3\.8rem\)\s*!important;/.test(styleSource),
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-family:\s*"Outfit",\s*"Manrope",\s*var\(--font-display\);[\s\S]*font-size:\s*clamp\(2\.45rem,\s*5\.2vw,\s*5\.4rem\)\s*!important;[\s\S]*line-height:\s*0\.98;[\s\S]*letter-spacing:\s*-0\.035em;/.test(styleSource)
+    && /@media\s*\(max-width:\s*760px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-topbar\s*\{[\s\S]*padding:\s*clamp\(16px,\s*4\.5vw,\s*22px\)\s*!important;[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(2\.2rem,\s*9\.5vw,\s*3\.4rem\)\s*!important;/.test(styleSource),
   'Run Detail topbar should use the compact profile-cockpit sizing instead of the oversized editorial shell.',
 );
 
