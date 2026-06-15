@@ -1405,43 +1405,101 @@
 }
 
 .runner-dashboard-empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 28px;
-    padding: 64px 32px;
-    text-align: center;
-    max-width: 480px;
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+    padding: clamp(34px, 5vw, 58px);
+    max-width: 740px;
     margin: 0 auto;
+    border: 1px solid rgba(229, 226, 225, 0.12);
+    border-radius: 32px;
+    background:
+        radial-gradient(circle at top right, rgba(252, 76, 2, 0.14), transparent 28%),
+        linear-gradient(145deg, rgba(28, 27, 27, 0.96), rgba(17, 17, 17, 0.94));
+    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.22);
+    text-align: left;
+}
+
+.runner-dashboard-empty-hero {
+    display: grid;
+    gap: 12px;
+    max-width: 620px;
 }
 
 .runner-dashboard-empty-hero h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 12px;
+    margin: 0;
     color: #f0f0f0;
+    font-size: clamp(1.55rem, 2.8vw, 2.35rem);
+    font-weight: 780;
+    letter-spacing: -0.045em;
 }
 
 .runner-dashboard-empty-hero p {
+    max-width: 58ch;
+    margin: 0;
     font-size: 0.95rem;
     line-height: 1.6;
     color: rgba(229, 226, 225, 0.68);
-    margin: 0;
 }
 
 .runner-dashboard-empty-icon {
-    font-size: 3rem;
-    color: rgba(229, 226, 225, 0.35);
-    margin-bottom: 12px;
+    display: grid;
+    width: 54px;
+    height: 54px;
+    place-items: center;
+    border-radius: 18px;
+    background: rgba(252, 76, 2, 0.14);
+    color: rgba(252, 76, 2, 0.86);
+    font-size: 2rem;
+}
+
+.runner-dashboard-empty-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.runner-dashboard-empty-steps li {
+    display: grid;
+    gap: 12px;
+    min-height: 118px;
+    padding: 16px;
+    border: 1px solid rgba(229, 226, 225, 0.1);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.runner-dashboard-empty-steps span {
+    color: rgba(252, 76, 2, 0.9);
+    font-family: var(--font-mono, "SFMono-Regular", Consolas, monospace);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.runner-dashboard-empty-steps p {
+    margin: 0;
+    color: rgba(245, 242, 238, 0.86);
+    font-size: 0.92rem;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.runner-dashboard-empty-trust {
+    margin: 0;
+    color: rgba(229, 226, 225, 0.58);
+    font-size: 0.88rem;
 }
 
 .runner-dashboard-empty-actions {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 12px;
     width: 100%;
-    max-width: 320px;
 }
 
 .runner-dashboard-empty-cta {
@@ -1476,6 +1534,26 @@
 
 .runner-dashboard-empty-cta .material-symbols-outlined {
     font-size: 1.2rem;
+}
+
+@media (max-width: 700px) {
+    .runner-dashboard-empty-state {
+        justify-items: stretch;
+        padding: 30px 20px;
+        border-radius: 26px;
+    }
+
+    .runner-dashboard-empty-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .runner-dashboard-empty-steps li {
+        min-height: auto;
+    }
+
+    .runner-dashboard-empty-actions {
+        flex-direction: column;
+    }
 }
 
 .runner-dashboard-progression-atlas {

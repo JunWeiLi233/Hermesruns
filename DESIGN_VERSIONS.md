@@ -11,6 +11,555 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-15-59
+Date: 2026-06-15
+Surface: Public landing final CTA on `/`
+Files: `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Widened and centered the final CTA copy container, reduced the desktop title scale slightly, and forced the Chinese CTA title to stay on one line above tablet width.
+Why: The CTA headline wrapped awkwardly and the composition did not feel fully centered.
+Rollback target: `DV-2026-06-15-58`
+Notes: CTA markup, copy, Strava/email actions, trust chips, no-grid layout, routes, race map, comparison chart, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-58
+Date: 2026-06-15
+Surface: Public landing final CTA on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the three activation/proof grids from the final CTA and tightened the card into a focused warm single-column CTA with headline, copy, actions, and trust chips.
+Why: The three grids created cramped vertical text and distracted from the signup action.
+Rollback target: `DV-2026-06-15-57`
+Notes: Strava/email actions, trust claims, warm page-matching card theme, routes, race map, comparison chart, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-57
+Date: 2026-06-15
+Surface: Public landing final CTA on `/`
+Files: `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Re-themed the final CTA from an isolated dark block into a warm paper/vellum card that matches the surrounding landing sections while preserving the three-step activation flow.
+Why: The dark CTA card felt disconnected from the page's warm editorial theme.
+Rollback target: `DV-2026-06-15-56`
+Notes: CTA markup, translated activation-flow copy, Strava/email actions, trust chips, routes, race map, comparison chart, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-56
+Date: 2026-06-15
+Surface: Public landing final CTA on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Reworked the final CTA again into a stable dark conversion card with a meaningful three-step activation flow: connect Strava, read training history, open today's answer.
+Why: The previous split proof-ticket layout looked broken at the live browser width and used fake race/readiness metrics that did not explain the signup value.
+Rollback target: `DV-2026-06-15-55`
+Notes: Strava and email signup actions, trust chips, routes, race map, comparison chart, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-55
+Date: 2026-06-15
+Surface: Public landing final CTA on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Redesigned the final CTA from a flat foggy slab into a two-column editorial decision-ticket grid with dark CTA copy, warm proof cards, readiness/race metrics, and responsive collapse.
+Why: The previous CTA had low contrast and an unused empty right side; the new grid makes the product promise tangible while preserving the Strava and email actions.
+Rollback target: `DV-2026-06-15-54`
+Notes: CTA copy meaning, auth actions, route targets, race map, comparison chart, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-54
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the generated SVG race readout paths that drew diagonal coral lines across the world map.
+Why: The lines looked like map artifacts and distracted from the intended race-pin spread animation.
+Rollback target: `DV-2026-06-15-53`
+Notes: Race pins, calibrated marathon locations, spread-circle animation, timeline chips, guide cards, captions, and comparison chart are unchanged.
+
+### Version: DV-2026-06-15-53
+Date: 2026-06-15
+Surface: Public landing comparison chart on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the comparison chart as an explained objective table: Runna is credited for structured race-plan calendars, Strava is credited for history import, and Hermes is positioned around transparent formulas, local/private analysis, shoe decisions, and no-feed coaching.
+Why: The chart needed to be fair to competitors while still making Hermes' real website advantages obvious.
+Rollback target: `DV-2026-06-15-52`
+Notes: Compare section only; race map, hero, CTAs, routes, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-52
+Date: 2026-06-15
+Surface: Public landing comparison chart on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebalanced the Strava column to mark public capabilities objectively: partial for workout/load/offline-like support and yes for shoe tracking plus EN/ZH language support.
+Why: The previous Strava column was too absolute and marked several real Strava capabilities as unavailable.
+Rollback target: `DV-2026-06-15-51`
+Notes: Chart layout, Runna column, Hermes column, CTAs, race map, and routes are unchanged.
+
+### Version: DV-2026-06-15-51
+Date: 2026-06-15
+Surface: Public landing comparison chart on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Reworked the comparison table into a bordered light-surface chart with compact columns, cell dividers, wrapped comparison cells, centered glyph badges, and visible unavailable/partial states.
+Why: The chart looked broken on the light landing page because the old dark-theme no marks were nearly invisible and the table lacked enough structure.
+Rollback target: `DV-2026-06-15-50`
+Notes: Comparison copy, row data, race map, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-50
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Increased the race-point spread visibility with a stronger translucent coral fill, `1.4px` outline, and higher opacity during expansion.
+Why: Browser-plugin inspection showed the wave was technically animating but visually too faint to read reliably.
+Rollback target: `DV-2026-06-15-49`
+Notes: Race anchors, pin markup, captions, guide deck, race rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-49
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Strengthened the active race spread with a translucent fill, thicker coral outline, higher opacity, and larger radius expansion to `r: 86`.
+Why: Browser inspection showed the radius was animating, but it was too faint to read visually as a spreading wave.
+Rollback target: `DV-2026-06-15-48`
+Notes: Race anchors, pin markup, captions, guide deck, race rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-48
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Replaced the active race wave's SVG transform scaling with direct radius animation from `r: 1.2` to `r: 72`.
+Why: The user reported the spread did not read as an animation; animating the circle radius makes the wave visibly expand from the race point.
+Rollback target: `DV-2026-06-15-47`
+Notes: Race anchors, pin markup, captions, guide deck, race rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-47
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Expanded the active race spread from a local pulse into a gradual full-map wave that grows from the selected race point during its active slot.
+Why: The user clarified the animation should be a race point spreading out throughout the map, not just a small nearby circle.
+Rollback target: `DV-2026-06-15-46`
+Notes: Race anchors, captions, guide deck, race rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-46
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Added a per-race map-wide spreading circle from the active race pin, synchronized to the existing race selection cycle.
+Why: The user wanted the animation to show the selected race point radiating through the map instead of only using a small local ping.
+Rollback target: `DV-2026-06-15-45`
+Notes: Race anchors, captions, guide deck, race rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-45
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated the Comrades Ultra Marathon marker from the projected ocean gap between Africa and Madagascar onto the visible southeast-Africa landmass.
+Why: The user flagged Comrades again; PNG crop inspection showed the prior projection-based anchor still sat offshore on the actual raster map.
+Rollback target: `DV-2026-06-15-44`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-44
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Comrades Ultra Marathon marker down and east to the Durban/Pietermaritzburg corridor in southeast South Africa.
+Why: The user flagged Comrades as wrong; the previous anchor sat too far north/west for the actual race region on the raster map.
+Rollback target: `DV-2026-06-15-43`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-43
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Sydney Marathon marker from an offshore Pacific raster gap to a visible southeast-Australia land point.
+Why: The user flagged Sydney as wrong; pixel inspection showed the previous Sydney anchor was transparent/offshore east of Australia.
+Rollback target: `DV-2026-06-15-42`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-42
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Valencia Marathon marker from the western-Mediterranean island area to a visible east-coast Spain point.
+Why: The user flagged Valencia as wrong; visual raster inspection showed the previous Valencia anchor read east of Spain rather than on the Iberian coast.
+Rollback target: `DV-2026-06-15-41`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-41
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Paris Marathon marker west/northwest from a central-Europe-looking raster position to a visible northern-France point.
+Why: The user flagged Paris as wrong; visual raster inspection showed the previous Paris anchor read too far east of France.
+Rollback target: `DV-2026-06-15-40`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-40
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Berlin Marathon marker west/northwest from the far-eastern Europe raster position to a visible Germany-region point.
+Why: The user flagged Berlin as wrong; visual raster inspection showed the previous Berlin anchor read too far east of Germany.
+Rollback target: `DV-2026-06-15-39`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-39
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the London Marathon marker from mainland Europe to a visible southeast-UK land point on the stylized map.
+Why: The user flagged London as wrong; pixel inspection showed the previous London anchor sat on continental Europe instead of the UK island.
+Rollback target: `DV-2026-06-15-38`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-38
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Tokyo Marathon marker from the offshore Pacific raster gap to a visible east-side Japan land point on the stylized map.
+Why: The user flagged Tokyo as wrong; pixel inspection showed the previous Tokyo anchor was transparent/offshore on the current map asset.
+Rollback target: `DV-2026-06-15-37`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-37
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the New York City Marathon marker from the offshore raster gap to a visible Atlantic-coast point south/southwest of the corrected Boston marker.
+Why: The user flagged New York as wrong; pixel inspection showed the previous New York anchor was transparent/offshore on the current map asset.
+Rollback target: `DV-2026-06-15-36`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-36
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the Boston Marathon marker from the offshore Atlantic/Canada-side raster gap to a visible northeast-US coastal point on the stylized map.
+Why: The user flagged Boston as wrong; pixel inspection showed the previous Boston anchor was transparent/offshore on the current map asset.
+Rollback target: `DV-2026-06-15-35`
+Notes: Other race anchors, centered numbered badges, guide/caption deck, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-35
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the detached numbered race callouts with compact centered numbered badges, then retuned the raster-map anchors so Tokyo sits on Japan, Sydney on Australia's east coast, and Comrades sits on eastern South Africa.
+Why: The user reported the race points were still wrong; browser inspection showed the numbered labels were translated away from the true dot, and pixel inspection showed some anchors were only snapped to nearby land rather than the intended city region.
+Rollback target: `DV-2026-06-15-34`
+Notes: City anchors, race data, translated labels, guide/caption deck, timeline, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-34
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated the ten race-map anchors from nearest-land snaps to visible city-region positions: Tokyo sits on Japan, Sydney on southeast Australia, Comrades on eastern South Africa, and the US/Europe pins stay on their intended race regions.
+Why: The user reported the race points were still wrong; the prior correction only guaranteed a point touched some land pixel, which could still place coastal races on the wrong coastline or island.
+Rollback target: `DV-2026-06-15-33`
+Notes: Race data, translated labels, guide/caption deck, timeline, table rows, CTAs, and routes are unchanged.
+
+### Version: DV-2026-06-15-33
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added stable race IDs and PNG-calibrated city anchors for all ten landing race-map pins, while preserving the real lat/lng values for each marathon.
+Why: The user reported the race points were still in the wrong places; the generic projection left several coastal races on transparent ocean pixels in the static map asset.
+Rollback target: `DV-2026-06-15-32`
+Notes: Race list, labels, table rows, guide/caption deck, CTAs, and routes are unchanged; this only corrects pin placement against the current map PNG.
+
+### Version: DV-2026-06-15-32
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the race-map guide chips and active race caption into a shared bottom overlay deck with separate grid lanes, preventing the left guide stack from colliding with the right caption card.
+Why: The user reported the lower map grids conflicted visually; the previous absolute-positioned guide and caption overlapped on the current browser width.
+Rollback target: `DV-2026-06-15-31`
+Notes: Race projection, race data, timeline chips, table rows, auth routes, and CTAs are unchanged; this only separates the map overlay lanes.
+
+### Version: DV-2026-06-15-31
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the landing race-map marker projection from linear equirectangular math to Robinson coefficient interpolation so marathon pins align with the curved political map asset.
+Why: The user reported the race points were in the wrong places; the old linear projection put Pacific-side races like Tokyo and Sydney into the ocean on the curved map.
+Rollback target: `DV-2026-06-15-30`
+Notes: Race names, dates, goals, map asset, table animation, auth routes, and CTAs are unchanged; this is a projection-correctness fix.
+
+### Version: DV-2026-06-15-30
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Expanded the landing race-map sequence from five races to ten famous marathons, adding London, New York City, Paris, Valencia, and Sydney. The animation duration now derives from the race count so every pin/readout/row highlight keeps its own phase.
+Why: The user asked to add more famous marathons, and the old fixed 15-second loop would have made added races overlap the original five.
+Rollback target: `DV-2026-06-15-29`
+Notes: Race section behavior, auth routes, CTAs, and formula panels are unchanged; this is a race-map content and timing update.
+
+### Version: DV-2026-06-15-29
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the latest pulse-heavy race-map playback with a clearer diagram sequence: the active race pin draws an insight line into the metric card, date/countdown/goal read in order, and the matching table row highlights only at the end of that race slot.
+Why: The user reported the current animation still felt weird and meaningless; this version makes the motion explain how Hermes turns a race location into structured race-table guidance.
+Rollback target: `DV-2026-06-15-28`
+Notes: Race data, map asset, pin projection, translated column labels, navigation, auth routes, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-28
+Date: 2026-06-15
+Surface: Profile no-data empty state on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/profile.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/styles/style.css`, `frontend/src/pages/profileEmptyStateActions.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the no-run Profile state into an import-first onboarding panel with Strava and file-import actions, a three-step data-unlock walkthrough, and a no-sample-data trust note.
+Why: The previous empty state sent new users to Today Run before Profile had real data; the new state points them toward the data source that actually unlocks VDOT, load, readiness, and weekly-change signals.
+Rollback target: `DV-2026-06-15-27`
+Notes: Existing dashboard data loading, Strava linking flow, authenticated route guard, and populated Profile dashboard behavior are unchanged.
+
+### Version: DV-2026-06-15-27
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the race-map score-card/plan-rail animation with a simpler fixed-pin playback: the active race pin gets a location lock, the guide reads locate/read/match, and the same race's timeline chip, caption, and table row highlight together.
+Why: The previous animation still felt weird and over-explained the diagram with artificial route and scoring overlays; this version keeps motion tied to what the user can actually read on the map and table.
+Rollback target: `DV-2026-06-15-26`
+Notes: Race data, map asset, pin projection, CTAs, navigation, auth routes, and formula panels are unchanged.
+
+### Version: DV-2026-06-15-26
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the race-map motion into a slower 15-second explanatory cycle with three visible flow steps: select race, score date/countdown/goal inside Hermes, and update the matching race row.
+Why: The prior packet animation still read as abstract moving UI tokens; the user asked for a new animation that makes sense and helps visualize the diagram.
+Rollback target: `DV-2026-06-15-25`
+Notes: The race data, map geography, table rows, CTAs, and routes are unchanged; the smoke guard now requires the 3-step flow legend, 3-second race cadence, request question marker, hub fills, output line, and table-row update.
+
+### Version: DV-2026-06-15-25
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the small moving dot tokens with card-shaped request and recommendation packets, added visible mini row targets on the map's table rail, and kept the Hermes field-fill sequence synchronized with the active race.
+Why: The user said the current animation felt weird and meaningless; the new motion makes the diagram read as race facts flowing into Hermes and a recommendation landing on the matching row.
+Rollback target: `DV-2026-06-15-24`
+Notes: The smoke guard now rejects the old dossier/answer token contract and requires request cards, row targets, recommendation cards, hub field fills, synchronized row metrics, and reduced-motion fallback.
+
+### Version: DV-2026-06-15-24
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the abstract hub packet with a diagram-readable pipeline: the active race pin draws an input line, a dossier token travels along that path into Hermes, the hub fills date/days/goal fields, an answer token travels to the matching table node, and the table row remains synchronized.
+Why: The user said the current animation felt weird and meaningless; the new sequence explains how the map point becomes Hermes race-table guidance.
+Rollback target: `DV-2026-06-15-23`
+Notes: Source guards now reject the old signal-line/hub-packet contract and require input lines, dossier tokens, hub field fills, answer tokens, table output nodes, synchronized row metrics, and reduced-motion fallback.
+
+### Version: DV-2026-06-15-23
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the right-edge handoff rail with a clearer signal diagram: the active race pin sends a line into a visible Hermes analysis hub, a packet travels through the hub, and an output line lands on the matching race-table node while the row metrics highlight.
+Why: The previous rail still felt arbitrary; the new motion shows the cause-and-effect path from race location to Hermes analysis to table decision.
+Rollback target: `DV-2026-06-15-22`
+Notes: Source guards now reject the old handoff/decision-rail classes and require route legs, race-to-Hermes signal lines, the hub packet, table output lines, and reduced-motion fallback.
+
+### Version: DV-2026-06-15-22
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the scan-ring race animation with active route-leg playback, map-to-table handoff lines, a right-edge decision rail, active selector corners, and a countdown meter on the synchronized race row.
+Why: The previous motion still looked like decorative scanning; the new motion makes the diagram explain which race point maps to which table decision.
+Rollback target: `DV-2026-06-15-21`
+Notes: Live desktop and mobile Browser proof confirmed 4 route legs, 5 handoff lines, 5 rail nodes, 5 selectors, no old scan/progress nodes, no horizontal overflow, and zero console errors.
+
+### Version: DV-2026-06-15-21
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Increased the active map-caption badge width, minimum height, padding, and metric type size so the labeled date, countdown, and goal rows stay readable while the ordered race-map animation plays.
+Why: The new semantic animation explained the diagram, but the caption metric stack was too small after every value became labeled.
+Rollback target: `DV-2026-06-15-20`
+Notes: Live proof confirmed active caption rows for date, countdown, and goal on desktop and mobile with 388px/320px caption widths, 58px height, 9.6px metric text, no horizontal overflow, and no console/page errors.
+
+### Version: DV-2026-06-15-20
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Labeled the active map-caption date row too and replaced broad caption span styling with explicit order and metric selectors.
+Why: The caption had labeled countdown and goal values, but the date still appeared as an unlabeled exception and broad span styling could leak into nested metric labels.
+Rollback target: `DV-2026-06-15-19`
+Notes: Live proof confirmed three compact metric rows for date, countdown, and goal on desktop and mobile with no horizontal overflow.
+
+### Version: DV-2026-06-15-19
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added translated labels inside the active map caption metrics so countdown and goal read as labeled values instead of raw numbers.
+Why: The active caption showed values like `218` and `2:55` without explaining which number meant time remaining versus target.
+Rollback target: `DV-2026-06-15-18`
+Notes: The labels reuse the existing race-table translations and stay compact on desktop and mobile without changing the table source of truth.
+
+### Version: DV-2026-06-15-18
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the decorative route cursor with ordered race scan windows: race 01 starts the loop, each city gets an active scan ring, and the itinerary rail, map caption, and table row share the same 0s/2s/4s/6s/8s sequence.
+Why: The previous moving cursor looked arbitrary and did not clearly explain how to read the race-map diagram.
+Rollback target: `DV-2026-06-15-17`
+Notes: Reduced-motion users still receive a static full-route fallback; the smoke guard now rejects reintroducing `landing-cinematic-map-cursor-route`.
+
+### Version: DV-2026-06-15-17
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Expanded the synchronized map caption to include the active race countdown and goal alongside date and race name.
+Why: The map caption named the active race but still forced users to look to the table for the two most decision-relevant values: time remaining and target.
+Rollback target: `DV-2026-06-15-16`
+Notes: The caption remains non-interactive and tied to the same `--race-delay` phase as the route cursor, itinerary rail, active row, countdown, and goal badge.
+
+### Version: DV-2026-06-15-16
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Increased desktop race-table header contrast, added a subtle divider, and gave the labels stronger weight so the schedule reads as a trustworthy data table.
+Why: The previous header labels were too faint compared with the animated race rows, weakening date/countdown/goal scanability on desktop.
+Rollback target: `DV-2026-06-15-15`
+Notes: Mobile card labels are unchanged because mobile hides the desktop table header and uses per-value labels.
+
+### Version: DV-2026-06-15-15
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the race goal badge to the synchronized active-row timeline, so the current race target highlights with the same phase as the route cursor, itinerary rail, caption, row number, and countdown.
+Why: The previous active row emphasized the race and countdown but left the target badge visually quiet, making the selected race's actual objective less immediate.
+Rollback target: `DV-2026-06-15-14`
+Notes: Reduced-motion disables the goal-badge animation along with the rest of the race-map motion.
+
+### Version: DV-2026-06-15-14
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a synchronized 01-05 itinerary rail inside the race map, showing each race step and date while highlighting the active step on the same `--race-delay` timeline as the cursor, caption, and table row.
+Why: The cursor timeline was meaningful, but the map still benefited from a compact visual legend that makes the animation read as a race-calendar sequence immediately.
+Rollback target: `DV-2026-06-15-13`
+Notes: Desktop keeps the rail at the map's top-left and mobile centers it at the top, keeping the bottom active caption unobstructed.
+
+### Version: DV-2026-06-15-13
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the drifting pulse-only race-map animation with a synchronized 10-second planner timeline: the route builds in ordered race beats, a cursor travels through the race pins, captions and table rows share the same phase delay, and reduced-motion users get a static full-route fallback.
+Why: The previous animation could read as decorative or arbitrary because pins, rows, and path progress were staggered independently instead of visualizing the race-calendar sequence.
+Rollback target: `DV-2026-06-15-12`
+Notes: Race data, map asset, layout, CTAs, and mobile compact cards are unchanged.
+
+### Version: DV-2026-06-15-12
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added real screen-reader text for the mobile race card value labels while preserving the same visual compact-card layout.
+Why: The previous labels were CSS pseudo-content only, which clarified the cards visually but did not expose the same context reliably to assistive technology.
+Rollback target: `DV-2026-06-15-11`
+Notes: Uses existing translated race column labels and a local landing visually-hidden utility; no route, CTA, or race data changes.
+
+### Version: DV-2026-06-15-11
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added translated mobile-only labels for race card values so date, countdown, and goal remain understandable after the desktop table header is hidden.
+Why: Compact mobile race cards were readable but standalone values like `218` needed context.
+Rollback target: `DV-2026-06-15-10`
+Notes: Desktop table layout is unchanged; labels reuse existing landing race column translations.
+
+### Version: DV-2026-06-15-10
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the mobile race sequence layout into compact schedule cards and centered the active map-caption strip on phone-sized viewports.
+Why: The prior mobile collapse stacked every race field vertically, making the race list much taller than the diagram needed.
+Rollback target: `DV-2026-06-15-09`
+Notes: Desktop layout and race data are unchanged; this is a responsive readability improvement for the existing sequence animation.
+
+### Version: DV-2026-06-15-09
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a synchronized map-caption strip that names the active race directly on the map while the route path, pin, and table row advance through the same sequence.
+Why: The previous improvement linked the map to the table, but the map panel still needed a self-contained explanation of which race was active.
+Rollback target: `DV-2026-06-15-08`
+Notes: The caption reuses existing race data, adds no new dependencies, and includes a reduced-motion static fallback.
+
+### Version: DV-2026-06-15-08
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the race-map animation into a synchronized calendar walkthrough: the map path advances in ordered steps, each pin keeps its numbered focus, and the matching race-table row/order/day cells pulse on the same timing.
+Why: The previous motion still felt abstract because the table did not participate, so users could not easily connect the animated map point to the race it represented.
+Rollback target: `DV-2026-06-15-07`
+Notes: CSS/SVG-only motion, no new dependencies, no race data changes, and reduced-motion users keep a static readable diagram.
+
+### Version: DV-2026-06-15-07
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Replaced the decorative simultaneous race-dot pulse with a meaningful race-calendar sequence animation: a subtle path draws through the displayed race order, each marker focuses in turn, and small numeric labels map pins back to the race list.
+Why: The previous animation looked decorative and did not help users understand the map diagram.
+Rollback target: `DV-2026-06-15-06`
+Notes: The animation is CSS/SVG-only, respects reduced-motion settings, and does not change race data, links, or section layout.
+
+### Version: DV-2026-06-15-06
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Tightened the race marker halo/core size and recalibrated the displayed map anchors so the visible point centers read as exact race locations on the reference-style map.
+Why: The previous animated halo made the race points look offset or placed in surrounding empty map space.
+Rollback target: `DV-2026-06-15-05`
+Notes: This is a visual marker correction only; race copy, dates, and table data are unchanged.
+
+### Version: DV-2026-06-15-05
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `DESIGN_VERSIONS.md`
+What changed: Calibrated the five race pin anchors against the reference-derived political map asset so Berlin, Chicago, Tokyo, Boston, and Comrades land on their intended map locations.
+Why: The previous longitude/latitude projection did not match the stylized reference map projection, leaving several race points visibly off-city.
+Rollback target: `DV-2026-06-15-04`
+Notes: Race metadata keeps the original geographic coordinates; the visual map now uses per-race display anchors for this editorial projection.
+
+### Version: DV-2026-06-15-04
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/assets/generated/landing-world-map-political-dotted.png`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the landing race map from the supplied political world-map reference as a local dotted/transparent map asset, preserving the Hermes coral race pins and editorial race table.
+Why: The user supplied a reference political world map and asked to rebuild the map again while preserving the existing Hermes style.
+Rollback target: `DV-2026-06-15-03`
+Notes: The map remains dependency-free at runtime; race pins still project from real coordinates and lower race section behavior is unchanged.
+
+### Version: DV-2026-06-15-03
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the landing race map geometry from simplified longitude/latitude land polygons instead of fixed screen-space shapes, preserving the dotted land mask, graticule, coastlines, and coral race markers.
+Why: The user asked to rebuild the map again using the reference direction while keeping the same style.
+Rollback target: `DV-2026-06-15-02`
+Notes: Race markers still project from real race coordinates; no copy, CTA, routing, or race-list behavior changed.
+
+### Version: DV-2026-06-15-02
+Date: 2026-06-15
+Surface: Public landing race map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Replaced the abstract ellipse-dot race map with a dotted real-world geography silhouette, subtle graticule/coastline layers, and race pins projected from real latitude/longitude.
+Why: The user requested turning the map into a real world map while keeping the same landing-page style.
+Rollback target: `DV-2026-06-15-01`
+Notes: The race list copy, goals, dates, and section layout stay unchanged; this is a visual/geographic map upgrade only.
+
+### Version: DV-2026-06-15-01
+Date: 2026-06-15
+Surface: Public landing hero markup on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the first-fold `RevealSection` wrapper that combined the hero grid, command hero, and reveal-visible classes, leaving the visible hero copy in `landing-command-copy`.
+Why: The user requested removing that rendered class combination from the landing page.
+Rollback target: `DV-2026-06-14-06`
+Notes: The generated hero photo, public auth routes, CTAs, trust line, and lower landing sections remain unchanged.
+
+### Version: DV-2026-06-14-06
+Date: 2026-06-14
+Surface: Public landing hero background on `/`
+Files: `frontend/src/assets/generated/landing-cinematic-hero-runner-dawn.webp`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the landing hero background reference with a generated documentary-style dawn runner photograph saved as a compressed WebP asset.
+Why: The user requested generating and applying a photorealistic runner image to `landing-cinematic-hero-photo`.
+Rollback target: `DV-2026-06-14-05`
+Notes: The asset keeps the runner on the right and dark negative space on the left for the existing headline; no landing routes, CTAs, or copy changed.
+
+### Version: DV-2026-06-14-05
+Date: 2026-06-14
+Surface: Public landing hero on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the right-side `landing-command-board landing-cinematic-hero-proof` proof panel from the landing hero and deleted its now-unused workout/readiness helper code, while keeping the remaining command-hero copy and CTA structure intact.
+Why: The user requested removing that proof panel from the landing page.
+Rollback target: `DV-2026-06-14-04`
+Notes: This is a hero-surface simplification only; public auth routing, Strava CTA wiring, translations, and lower landing sections remain unchanged.
+
 ### Version: DV-2026-06-14-04
 Date: 2026-06-14
 Surface: Run Detail telemetry heading resolution badge on `/run/:id`
@@ -3404,29 +3953,20 @@ Notes: The Runs cockpit guard now requires a transparent page canvas, a plain `v
 
 ### Version: DV-2026-06-12-01
 Date: 2026-06-12
-Surface: Real route thumbnails on `/runs`
-Files: `frontend/src/pages/Runs.jsx`, `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `backend/src/main/java/com/hermes/backend/ActivityController.java`, `backend/src/main/java/com/hermes/backend/ActivityPointRepository.java`, `DESIGN_VERSIONS.md`
-What changed: `/runs` thumbnails now draw dense route previews on matching CARTO map tiles, keep the Strava badge above the route line, and preload upcoming preview batches so cards do not visibly upgrade after entering the viewport.
-Why: The route cards were showing oversized or stale simplified paths, and later cards could appear with fallback geometry before the real route preview arrived.
-Rollback target: `DV-2026-05-19-06`
-Notes: The run-detail route source remains authoritative; the list page uses the batched route-preview endpoint only for thumbnail-grade rendering.
-
-### Version: DV-2026-06-12-02
-Date: 2026-06-12
 Surface: Territory enclosed-run land map on `/territory`
 Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
 What changed: Removed normal route-corridor territory persistence and made `/api/territory/polygons` land-only. Territory now comes from meaningful enclosed regions within a single run, with newer overlap still winning. Shared-runner bootstrap routes were reseeded as v3 closed loops around Flushing at 32 samples and now persist land masks during bootstrap so the live page has real territory immediately after restart.
 Why: The territory page needed to stop showing open-route artifacts as land and move to the user-approved single-run enclosed-land model, while still proving the shared local account on localhost with real territory instead of an empty page.
-Rollback target: `DV-2026-06-12-01`
+Rollback target: `DV-2026-06-11-04`
 Notes: Backend tests passed for `LocalSharedRunnerBootstrapServiceTests`, `TerritoryPolygonComputerTests`, and `TerritoryControllerTests`; frontend smoke/build/runtime-sync passed; live `/api/territory/polygons` returned `polygonCount=18` for `Hermes Shared Runner`; escalated live verifier saved `task-images/territory-live-shared-account-proof.jpg` and passed with `activeConcrete=1`, `activeContour=1`, `mapZoom=14`, aligned boxes, no helper/synthetic layers, sharp unfiltered tiles, and zero console errors.
 
-### Version: DV-2026-06-12-03
+### Version: DV-2026-06-12-02
 Date: 2026-06-12
 Surface: Territory sparse generated-loop rejection on `/territory`
 Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-live-shared-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `.tools/verify-territory-stale-cache-clear-runtime.mjs`, `DESIGN_VERSIONS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`
 What changed: Bumped territory masks to `mask:v30`, API ETag to `land-mask-union-v54-mask-v30-concrete-boundary-sampling`, and browser cache to `global-owner-territory-cache-v97-concrete-boundary-sampling`. A closed outline must now have at least `48` points and no segment longer than `70m` before it can become land. No-territory activities now persist an empty processed land-mask marker so rejected runs do not remain pending.
 Why: The visible shared-runner "territory" was not real land. It came from 32-point generated local seed loops that were closed but too sparse to prove a concrete covered boundary. The page must show no active territory for those runs instead of drawing false land.
-Rollback target: `DV-2026-06-12-02`
+Rollback target: `DV-2026-06-12-01`
 Notes: Backend tests passed for `TerritoryPolygonComputerTests`, `TerritoryControllerTests`, and `LocalSharedRunnerBootstrapServiceTests`; frontend territory smoke/build/runtime-sync passed; live `/api/territory/polygons` for `Hermes Shared Runner` returned `polygonCount=0`, `activeCount=0`, `pending=0`, and `backfill=false`; in-app Browser on `/territory` rendered map tiles and both scope buttons with `activeConcrete=0` and `activeContour=0` before and after wheel zoom in/out; escalated live verifier passed with `activeBackendCells=0`, no synthetic/helper layers, unfiltered tiles, and zero console errors.
 
 ### Version: DV-2026-06-13-01
@@ -3581,3 +4121,12 @@ What changed: Removed the telemetry subtitle paragraph under the `运动数据` 
 Why: The user requested removing the Chinese subtitle and clarified to remove the English equivalent too.
 Rollback target: `DV-2026-06-14-02`
 Notes: This is a copy-removal change only; telemetry data, chart selection, icons, values, units, and layout behavior remain unchanged.
+
+### Version: DV-2026-06-15-01
+Date: 2026-06-15
+Surface: Landing race-map animation on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/styles/style.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the decorative race-map packet/hub motion with a projected race-point sequence: active race pin, metric scoring bars, and matched plan row. Race pins now derive from real lat/lng projection instead of manual `pin` overrides.
+Why: The user reported the current animation felt weird and meaningless, and wanted motion that helps explain the diagram.
+Rollback target: `DV-2026-06-14-03`
+Notes: This changes the landing map animation only; race copy, navigation, authentication, and formula panels are unchanged.

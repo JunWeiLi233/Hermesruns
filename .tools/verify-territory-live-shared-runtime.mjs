@@ -197,6 +197,8 @@ try {
     const rivalConcrete = q(".terr-land-mask-concrete-land--rival");
     const rivalContour = q(".terr-land-mask-contour--rival");
     const syntheticFields = q(".terr-land-mask-territory-field, .terr-land-mask-field, .terr-land-mask-coverage");
+    const permanentZoneLabels = q(".terr-zone-label");
+    const permanentLeafletTooltips = q(".leaflet-tooltip-permanent");
     const helperPaths = q([
       ".terr-land-mask-contour-glow",
       ".terr-land-mask-contour-falloff",
@@ -419,6 +421,8 @@ try {
         rivalContour: rivalContour.length,
         rivalOwnerNames: [...new Set(rivalConcrete.map((element) => element.dataset.hermesOwnerName).filter(Boolean))].sort(),
         syntheticFields: syntheticFields.length,
+        permanentZoneLabels: permanentZoneLabels.length,
+        permanentLeafletTooltips: permanentLeafletTooltips.length,
         helperPaths: helperPaths.length,
         activeConcreteBoxes: activeConcrete.slice(0, 12).map(box),
         activeContourBoxes: activeContour.slice(0, 12).map(box),
@@ -495,6 +499,8 @@ try {
     `Live /territory rendered rival paths without owner metadata: ${JSON.stringify(proof.dom.rivalOwnerNames)}`,
   );
   assert(proof.dom.syntheticFields === 0, `Live /territory rendered synthetic field paths: ${proof.dom.syntheticFields}`);
+  assert(proof.dom.permanentZoneLabels === 0, `Live /territory restored overlap-prone permanent zone labels: ${proof.dom.permanentZoneLabels}`);
+  assert(proof.dom.permanentLeafletTooltips === 0, `Live /territory restored permanent Leaflet tooltips: ${proof.dom.permanentLeafletTooltips}`);
   assert(proof.dom.helperPaths === 0, `Live /territory rendered helper/halo paths: ${proof.dom.helperPaths}`);
   assert(proof.dom.mapTileCount > 0, "Live /territory did not render real map tiles.");
   assert(proof.dom.mapTileStyle?.filter === "none", `Map tiles are filtered/blurred: ${proof.dom.mapTileStyle?.filter}`);

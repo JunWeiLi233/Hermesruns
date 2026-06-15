@@ -169,8 +169,7 @@ class AdminBackgroundJobServiceTests {
             service.runCourseMapScanAsync(job, 1, taskFinished::countDown);
 
             assertThat(taskFinished.await(2, TimeUnit.SECONDS)).isTrue();
-            assertThat(awaitJobStatus(job, AdminBackgroundJob.STATUS_FAILED, 2)).isTrue();
-            assertThat(job.getFailureCount()).isEqualTo(1);
+            assertThat(awaitFailedCourseMapJob(job, 2)).isTrue();
             assertThat(job.getFinishedAt()).isNotNull();
             assertThat(job.getSummary()).contains("without recording a terminal status");
         } finally {
@@ -348,5 +347,20 @@ class AdminBackgroundJobServiceTests {
             TimeUnit.MILLISECONDS.sleep(25);
         }
         return status.equals(job.getStatus());
+    }
+
+    private boolean awaitFailedCourseMapJob(AdminBackgroundJob job, long timeoutSeconds) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
+        while (System.nanoTime() < deadline) {
+            if (AdminBackgroundJob.STATUS_FAILED.equals(job.getStatus())
+                    && job.getFailureCount() == 1
+                    && job.getFinishedAt() != null) {
+                return true;
+            }
+            TimeUnit.MILLISECONDS.sleep(25);
+        }
+        return AdminBackgroundJob.STATUS_FAILED.equals(job.getStatus())
+                && job.getFailureCount() == 1
+                && job.getFinishedAt() != null;
     }
 }

@@ -79,6 +79,8 @@ function parseArgs(argv) {
     tasks: "TASKS.md",
     product: "PRODUCT.md",
     contextLedger: ".ai-sync/CONTEXT_LEDGER.md",
+    agentSync: ".ai-sync/AGENT_SYNC.md",
+    agentSyncJson: ".ai-sync/AGENT_SYNC.json",
     pagesIndex: ".ai-codex/pages.md",
     outputJson: ".ai-sync/AUTO_HERMES_WEBSITE_AUDIT.json",
     outputMd: ".ai-sync/AUTO_HERMES_WEBSITE_AUDIT.md",
@@ -92,6 +94,8 @@ function parseArgs(argv) {
     else if (arg === "--tasks") args.tasks = argv[++i] || args.tasks;
     else if (arg === "--product") args.product = argv[++i] || args.product;
     else if (arg === "--context-ledger") args.contextLedger = argv[++i] || args.contextLedger;
+    else if (arg === "--agent-sync") args.agentSync = argv[++i] || args.agentSync;
+    else if (arg === "--agent-sync-json") args.agentSyncJson = argv[++i] || args.agentSyncJson;
     else if (arg === "--pages-index") args.pagesIndex = argv[++i] || args.pagesIndex;
     else if (arg === "--output-json") args.outputJson = argv[++i] || args.outputJson;
     else if (arg === "--output-md") args.outputMd = argv[++i] || args.outputMd;
@@ -391,18 +395,110 @@ function calculateQualitySignals(rootDir, filePath, screen, contextLedgerText) {
   };
 }
 
-function findAuditCandidate({ rootDir, productText, pagesText, tasksText, contextLedgerText }) {
+function parseRecentCompletions(agentSyncJsonText) {
+  if (!String(agentSyncJsonText || "").trim()) return [];
+  try {
+    const parsed = JSON.parse(agentSyncJsonText);
+    if (!Array.isArray(parsed?.recentlyCompleted)) return [];
+    return parsed.recentlyCompleted
+      .filter((entry) => entry && entry.status === "completed")
+      .map((entry) => ({
+        key: String(entry.key || "").trim(),
+        task: String(entry.task || "").trim(),
+        surface: String(entry.surface || "").trim(),
+        files: Array.isArray(entry.files)
+          ? entry.files.map((file) => String(file || "").trim()).filter(Boolean)
+          : [],
+      }))
+      .filter((entry) => entry.task || entry.surface || entry.files.length);
+  } catch {
+    return [];
+  }
+}
+
+function parseMarkdownAgentSyncCompletions(agentSyncText) {
+  const entries = [];
+  let current = null;
+
+  for (const line of String(agentSyncText || "").split(/\r?\n/)) {
+    const keyMatch = line.match(/^\s*-\s*Key:\s*(.+?)\s*$/);
+    if (keyMatch) {
+      if (current) entries.push(current);
+      current = { key: keyMatch[1].trim(), task: "", surface: "", status: "", files: [] };
+      continue;
+    }
+    if (!current) continue;
+
+    const fieldMatch = line.match(/^\s{2}(Task|Surface|Status|Files):\s*(.*)$/);
+    if (!fieldMatch) continue;
+    const field = fieldMatch[1];
+    const value = fieldMatch[2].trim();
+    if (field === "Task") current.task = value;
+    else if (field === "Surface") current.surface = value;
+    else if (field === "Status") current.status = value;
+    else if (field === "Files") current.files = value.split("|").map((file) => file.trim()).filter(Boolean);
+  }
+
+  if (current) entries.push(current);
+  return entries
+    .filter((entry) => entry.status === "completed")
+    .filter((entry) => entry.task || entry.surface || entry.files.length);
+}
+
+function combineRecentCompletions(agentSyncJsonText, agentSyncText) {
+  const byKey = new Map();
+  for (const entry of [
+    ...parseRecentCompletions(agentSyncJsonText),
+    ...parseMarkdownAgentSyncCompletions(agentSyncText),
+  ]) {
+    const key = `${normalizeAuditMatch(entry.key)}|${normalizeAuditMatch(entry.task)}|${normalizeAuditMatch(entry.surface)}`;
+    if (!byKey.has(key)) byKey.set(key, entry);
+  }
+  return [...byKey.values()];
+}
+
+function normalizeAuditMatch(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function generatedImproveTitle(candidate) {
+  const displayLabel = candidate.displayLabel || candidate.screen;
+  return `Improve ${displayLabel} page`;
+}
+
+function isRecentlyCompletedCandidate(candidate, recentCompletions) {
+  const candidateSurface = normalizeAuditMatch(candidate.displayLabel || candidate.screen);
+  const candidateTitle = normalizeAuditMatch(generatedImproveTitle(candidate));
+
+  return recentCompletions.some((entry) => {
+    const completedTask = normalizeAuditMatch(entry.task);
+    const completedSurface = normalizeAuditMatch(entry.surface);
+
+    if (candidateTitle && completedTask && candidateTitle === completedTask) return true;
+    return Boolean(candidateTitle && completedTask && candidateSurface && completedSurface
+      && candidateSurface === completedSurface
+      && candidateTitle === completedTask);
+  });
+}
+
+function findAuditCandidate({ rootDir, productText, pagesText, tasksText, contextLedgerText, agentSyncJsonText, agentSyncText }) {
   if (!tasksText || tasksText.status !== "present") {
-    return { selected: null, allCandidates: [] };
+    return { selected: null, allCandidates: [], excludedCandidates: [] };
   }
   if (hasQueuedTasks(tasksText.text)) {
-    return { selected: null, allCandidates: [] };
+    return { selected: null, allCandidates: [], excludedCandidates: [] };
   }
 
   const productScreens = parseProductScreens(productText.text);
   const pageEntries = parsePagesIndex(rootDir, pagesText.text);
   const entryByKey = new Map(pageEntries.map((entry) => [entry.key, entry]));
   const candidates = [];
+  const recentCompletions = combineRecentCompletions(agentSyncJsonText, agentSyncText);
 
   for (const screen of productScreens) {
     const explicitEntry =
@@ -440,13 +536,25 @@ function findAuditCandidate({ rootDir, productText, pagesText, tasksText, contex
     }
   }
 
-  if (candidates.length === 0) return { selected: null, allCandidates: [] };
+  if (candidates.length === 0) return { selected: null, allCandidates: [], excludedCandidates: [] };
+
+  const eligibleCandidates = [];
+  const excludedCandidates = [];
+  for (const candidate of candidates) {
+    if (isRecentlyCompletedCandidate(candidate, recentCompletions)) {
+      excludedCandidates.push(candidate);
+    } else {
+      eligibleCandidates.push(candidate);
+    }
+  }
 
   // Sort by score descending
-  candidates.sort((a, b) => b.score - a.score);
+  eligibleCandidates.sort((a, b) => b.score - a.score);
+  excludedCandidates.sort((a, b) => b.score - a.score);
   return {
-    selected: candidates[0],
-    allCandidates: candidates,
+    selected: eligibleCandidates[0] || null,
+    allCandidates: eligibleCandidates,
+    excludedCandidates,
   };
 }
 
@@ -519,13 +627,17 @@ export function runAutoHermesWebsiteAudit(rawArgs = process.argv.slice(2)) {
   const productInput = readOptional(rootDir, args.product);
   const pagesInput = readOptional(rootDir, args.pagesIndex);
   const contextLedgerInput = readOptional(rootDir, args.contextLedger);
+  const agentSyncInput = readOptional(rootDir, args.agentSync);
+  const agentSyncJsonInput = readOptional(rootDir, args.agentSyncJson);
 
-  const { selected, allCandidates } = findAuditCandidate({
+  const { selected, allCandidates, excludedCandidates } = findAuditCandidate({
     rootDir,
     productText: productInput,
     pagesText: pagesInput,
     tasksText: tasksInput,
     contextLedgerText: contextLedgerInput.text,
+    agentSyncJsonText: agentSyncJsonInput.text,
+    agentSyncText: agentSyncInput.text,
   });
 
   const queueState = tasksInput.status === "present"
@@ -568,12 +680,15 @@ export function runAutoHermesWebsiteAudit(rawArgs = process.argv.slice(2)) {
       pagesIndexed: pageEntries.map((entry) => entry.displayLabel || entry.screen),
       contextLedgerPresent: Boolean(String(contextLedgerInput.text || "").trim()),
       totalAuditCandidates: allCandidates.length,
+      excludedRecentlyCompleted: excludedCandidates.length,
     },
     inputs: {
       tasks: tasksInput.path ? relativeFile(rootDir, tasksInput.path) : "",
       product: productInput.path ? relativeFile(rootDir, productInput.path) : "",
       pagesIndex: pagesInput.path ? relativeFile(rootDir, pagesInput.path) : "",
       contextLedger: contextLedgerInput.path ? relativeFile(rootDir, contextLedgerInput.path) : "",
+      agentSync: agentSyncInput.path ? relativeFile(rootDir, agentSyncInput.path) : "",
+      agentSyncJson: agentSyncJsonInput.path ? relativeFile(rootDir, agentSyncJsonInput.path) : "",
     },
   };
 
