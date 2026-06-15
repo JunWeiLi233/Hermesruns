@@ -129,15 +129,26 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
-    void importWellnessDataReturnsFalseWhenAlreadyRunning() {
+    void importWellnessDataReturnsFalseWhenAlreadyRunning() throws Exception {
         Runner runner = runner(1L);
+        CountDownLatch importEnteredRepository = new CountDownLatch(1);
+        CountDownLatch releaseImport = new CountDownLatch(1);
         when(wellnessSummaryRepository.findByRunnerAndProviderAndDate(any(), any(), any()))
-                .thenReturn(Optional.empty());
+                .thenAnswer(invocation -> {
+                    importEnteredRepository.countDown();
+                    releaseImport.await(2, TimeUnit.SECONDS);
+                    return Optional.empty();
+                });
         when(coachRunnerStateRepository.findByRunner(runner)).thenReturn(Optional.empty());
 
         Map<String, Object> dataPoint = Map.of("type", "wellness", "date", "2026-04-20", "restingHeartRate", 58);
-        assertThat(service.importWellnessData(runner, List.of(dataPoint))).isTrue();
-        assertThat(service.importWellnessData(runner, List.of(dataPoint))).isFalse();
+        try {
+            assertThat(service.importWellnessData(runner, List.of(dataPoint))).isTrue();
+            assertThat(importEnteredRepository.await(2, TimeUnit.SECONDS)).isTrue();
+            assertThat(service.importWellnessData(runner, List.of(dataPoint))).isFalse();
+        } finally {
+            releaseImport.countDown();
+        }
     }
 
     @Test

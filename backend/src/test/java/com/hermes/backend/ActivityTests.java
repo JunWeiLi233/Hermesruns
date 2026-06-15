@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ActivityTests {
@@ -150,5 +151,15 @@ class ActivityTests {
         assertEquals(now, a.getCreatedAt());
         a.prePersist();
         assertEquals(now, a.getCreatedAt());
+    }
+
+    @Test
+    void activityEntityKeepsOnlyDomainMethodsDeclaredLocally() {
+        long declaredMethodCount = Arrays.stream(Activity.class.getDeclaredMethods())
+                .filter(method -> !method.isSynthetic())
+                .count();
+
+        assertTrue(declaredMethodCount < 15,
+                "Activity.java should keep persistence boilerplate in mapped helper classes.");
     }
 }

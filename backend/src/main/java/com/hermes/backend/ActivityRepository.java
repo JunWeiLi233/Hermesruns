@@ -156,15 +156,22 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.distanceKm AS distanceKm,
               a.distanceMeters AS distanceMeters,
               a.movingTimeSeconds AS movingTimeSeconds,
+              a.durationSeconds AS durationSeconds,
               a.startDate AS startDate,
               a.startTime AS startTime,
               a.metrics.averageHeartRate AS averageHeartRate,
               a.metrics.maxHeartRate AS maxHeartRate,
               a.metrics.averageCadence AS averageCadence,
               a.metrics.maxSpeedMps AS maxSpeedMps,
+              a.metrics.totalElevationGain AS totalElevationGain,
               a.metrics.pacePenaltySecPerKm AS pacePenaltySecPerKm,
-              a.metrics.weatherAdjusted AS weatherAdjusted
+              a.metrics.weatherAdjusted AS weatherAdjusted,
+              shoe.id AS shoeId,
+              shoe.brand AS shoeBrand,
+              shoe.model AS shoeModel,
+              shoe.nickname AS shoeNickname
             FROM Activity a
+            LEFT JOIN a.shoe shoe
             WHERE a.runner = :runner
               AND a.activityType = :type
             ORDER BY COALESCE(a.startTime, a.createdAt) DESC, a.id DESC
@@ -181,15 +188,22 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.distanceKm AS distanceKm,
               a.distanceMeters AS distanceMeters,
               a.movingTimeSeconds AS movingTimeSeconds,
+              a.durationSeconds AS durationSeconds,
               a.startDate AS startDate,
               a.startTime AS startTime,
               a.metrics.averageHeartRate AS averageHeartRate,
               a.metrics.maxHeartRate AS maxHeartRate,
               a.metrics.averageCadence AS averageCadence,
               a.metrics.maxSpeedMps AS maxSpeedMps,
+              a.metrics.totalElevationGain AS totalElevationGain,
               a.metrics.pacePenaltySecPerKm AS pacePenaltySecPerKm,
-              a.metrics.weatherAdjusted AS weatherAdjusted
+              a.metrics.weatherAdjusted AS weatherAdjusted,
+              shoe.id AS shoeId,
+              shoe.brand AS shoeBrand,
+              shoe.model AS shoeModel,
+              shoe.nickname AS shoeNickname
             FROM Activity a
+            LEFT JOIN a.shoe shoe
             WHERE a.runner = :runner
               AND a.activityType = :type
             ORDER BY COALESCE(a.startTime, a.createdAt) DESC, a.id DESC
@@ -293,13 +307,19 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         Double getDistanceKm();
         Double getDistanceMeters();
         Integer getMovingTimeSeconds();
+        Long getDurationSeconds();
         String getStartDate();
         LocalDateTime getStartTime();
         Double getAverageHeartRate();
         Double getMaxHeartRate();
         Double getAverageCadence();
         Double getMaxSpeedMps();
+        Double getTotalElevationGain();
         Integer getPacePenaltySecPerKm();
         Boolean getWeatherAdjusted();
+        Long getShoeId();
+        String getShoeBrand();
+        String getShoeModel();
+        String getShoeNickname();
     }
 }

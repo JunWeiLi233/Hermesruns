@@ -6,7 +6,7 @@ export default function HermesMarkSvg({ tone = 'light', className = '' }) {
   const bg = tone === 'dark' ? '#ffffff' : '#10203d';
   const fg = tone === 'dark' ? '#10203d' : '#ffffff';
   const rail = tone === 'dark' ? '#5f748f' : '#c7d6e6';
-  const accent = '#ff6b2c';
+  const accent = tone === 'dark' ? '#5f748f' : '#c7d6e6';
 
   return (
     <svg

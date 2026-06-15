@@ -9,7 +9,8 @@ const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8')
 const splitLandingStyle = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
 const heroLegacyPngPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
-const heroWebpPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
+const heroPhotoPath = path.join(here, '../assets/generated/landing-cinematic-hero-runner-dawn.webp');
+const retiredHeroGridClassPattern = new RegExp(`className="${['landing-cinematic-hero-grid', 'landing-command-hero'].join('\\s+')}"`);
 
 assert.match(
   landingSource,
@@ -59,10 +60,16 @@ assert.doesNotMatch(
   'Strava CTA buttons should not keep the old runner glyph.',
 );
 
+assert.doesNotMatch(
+  landingSource,
+  retiredHeroGridClassPattern,
+  'Landing hero should not render the removed command hero grid class pair.',
+);
+
 assert.match(
   landingSource,
-  /className="landing-cinematic-hero-grid landing-command-hero"/,
-  'Landing hero grid should carry the command hero class targeted by the background image.',
+  /className="landing-cinematic-hero-copy landing-command-copy"/,
+  'Landing hero copy should remain as the visible first-fold text block.',
 );
 
 assert.match(
@@ -78,13 +85,13 @@ assert.doesNotMatch(
 );
 
 assert.ok(
-  existsSync(heroWebpPath),
-  'WebP variant of landing command hero background should exist as the primary hero asset.',
+  existsSync(heroPhotoPath),
+  'WebP variant of the documentary landing hero background should exist as the primary hero asset.',
 );
 
 assert.ok(
-  statSync(heroWebpPath).size < 200000,
-  'WebP variant should be under 200KB — keeps the hero payload tiny on first paint.',
+  statSync(heroPhotoPath).size < 200000,
+  'Documentary landing hero WebP should be under 200KB to keep first paint lean.',
 );
 
 // The original 1.97 MB PNG was retired because the image-set() fallback path
@@ -97,8 +104,8 @@ assert.ok(
 
 assert.match(
   styleSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*image-set\([\s\S]*landing-command-hero-background\.webp[\s\S]*type\("image\/webp"\)[\s\S]*\)/,
-  'Landing command hero grid should keep the WebP-only image-set() declaration.',
+  /\.landing-cinematic-hero-photo\s*\{[\s\S]*image-set\([\s\S]*landing-cinematic-hero-runner-dawn\.webp[\s\S]*type\("image\/webp"\)[\s\S]*\)/,
+  'Landing hero photo should use the generated documentary WebP image-set() declaration.',
 );
 
 assert.doesNotMatch(
@@ -115,7 +122,7 @@ assert.doesNotMatch(
 
 assert.match(
   styleSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
+  /\.landing-command-copy \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
   'Landing command hero title should stay light over the generated background.',
 );
 
@@ -129,14 +136,14 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.landing-command-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.92fr\)\s+minmax\(520px,\s*1\.08fr\);/,
-  'Landing command hero should keep the restored two-column command board composition.',
+  /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/,
+  'Landing command copy should keep the first-fold hero spacing after removing the grid wrapper.',
 );
 
-assert.match(
+assert.doesNotMatch(
   landingSource,
   /landing-command-board landing-cinematic-hero-proof/,
-  'Landing hero should render the command-board proof panel.',
+  'Landing hero should not render the removed command-board proof panel.',
 );
 
 assert.doesNotMatch(
