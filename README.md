@@ -5,9 +5,9 @@
 
 ## Activity
 
-[![Hermes GitHub commit activity](https://github-readme-activity-graph.vercel.app/graph?username=JunWeiLi233&theme=github-compact&custom_title=Hermes%20GitHub%20Commit%20Activity&hide_border=true&days=45)](https://github.com/520HXC/run/graphs/commit-activity)
+[![Hermes GitHub commit activity](docs/github-commit-activity.svg)](https://github.com/520HXC/run/graphs/commit-activity)
 
-This graph auto-updates from public GitHub activity and links to the repository commit activity view.
+This graph is generated from real repository commits with ISO calendar dates on the x-axis. GitHub Actions refreshes it daily and after pushes to `main`.
 
 ---
 
