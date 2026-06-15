@@ -205,7 +205,7 @@ public class ProfileController {
         // existing deferredEnrichment flow, (b) run the remaining independent
         // lookups concurrently so wall-clock time is close to the slowest
         // single op rather than the sum of all six.
-        List<Activity> activities = findRunnerRuns(runner);
+        List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
 
         java.util.concurrent.CompletableFuture<AutomatedCoachService.CoachStateDto> coachStateFuture =
                 java.util.concurrent.CompletableFuture.supplyAsync(() ->
@@ -218,7 +218,7 @@ public class ProfileController {
                         safeValue(() -> personalRecordService.buildForRunner(runner), null));
         java.util.concurrent.CompletableFuture<List<RaceEventResponse>> racesFuture =
                 java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> findRunnerRaces(runner, activities), List.<RaceEventResponse>of()));
+                        safeValue(() -> findRunnerRaces(runner), List.<RaceEventResponse>of()));
         java.util.concurrent.CompletableFuture<Object> quotaFuture =
                 java.util.concurrent.CompletableFuture.supplyAsync(() ->
                         safeValue(() -> quotaService.getQuotaStatus(runner), Map.<String, Object>of()));
@@ -232,7 +232,7 @@ public class ProfileController {
 
         return ResponseEntity.ok(new ProfileDashboardResponse(
                 toProfileResponse(runner),
-                toRunFeedItems(activities),
+                toRunSummaryFeedItems(activitySummaries),
                 coachState,
                 null,
                 personalRecordsFuture.join(),
@@ -253,13 +253,13 @@ public class ProfileController {
         }
 
         Runner runner = runnerOptional.get();
-        List<Activity> activities = findRunnerRuns(runner);
+        List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
         return ResponseEntity.ok(new TodayDashboardResponse(
                 toProfileResponse(runner),
-                toRunFeedItems(activities),
+                toRunSummaryFeedItems(activitySummaries),
                 safeValue(() -> automatedCoachService.getTodayWithReadiness(runner), null),
                 safeValue(() -> acclimatizationService.buildContext(runner), null),
-                safeValue(() -> findRunnerRaces(runner, activities), List.of()),
+                safeValue(() -> findRunnerRaces(runner), List.of()),
                 safeValue(() -> findRunnerShoes(runner), List.of())
         ));
     }
@@ -373,63 +373,55 @@ public class ProfileController {
         );
     }
 
-    private List<Map<String, Object>> toRunFeedItems(List<Activity> activities) {
+    private List<ActivityRepository.AnalysisActivitySummaryProjection> findRunnerRunSummaries(Runner runner) {
+        if (runner == null) {
+            return List.of();
+        }
+        return safeValue(
+                () -> activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN),
+                List.of()
+        );
+    }
+
+    private List<Map<String, Object>> toRunSummaryFeedItems(
+            List<ActivityRepository.AnalysisActivitySummaryProjection> activities
+    ) {
         if (activities == null || activities.isEmpty()) {
             return List.of();
         }
-        return activities.stream().map(this::toRunFeedItem).toList();
+        return activities.stream().map(this::toRunSummaryFeedItem).toList();
     }
 
-    private Map<String, Object> toRunFeedItem(Activity activity) {
+    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", activity.getId());
         body.put("name", activity.getName());
-        body.put("stravaId", activity.getStravaId());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
         body.put("startDate", activity.getStartDate());
-        body.put("provider", activity.getProvider() == null ? null : activity.getProvider().name());
-        body.put("activityType", activity.getActivityType() == null ? null : activity.getActivityType().name());
         body.put("startTime", activity.getStartTime());
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
-        body.put("sourceFileName", activity.getSourceFileName());
-        body.put("createdAt", activity.getCreatedAt());
         body.put("averageHeartRate", activity.getAverageHeartRate());
         body.put("maxHeartRate", activity.getMaxHeartRate());
         body.put("totalElevationGain", activity.getTotalElevationGain());
-        body.put("calories", activity.getCalories());
         body.put("averageCadence", activity.getAverageCadence());
-        body.put("averageWatts", activity.getAverageWatts());
         body.put("maxSpeedMps", activity.getMaxSpeedMps());
-        body.put("sufferScore", activity.getSufferScore());
         body.put("pacePenaltySecPerKm", activity.getPacePenaltySecPerKm());
         body.put("weatherAdjusted", activity.getWeatherAdjusted());
         body.put("shoeId", activity.getShoeId());
-        body.put("shoeName", activity.getShoeName());
-        body.put("routePreview", hasRoutePreview(activity)
-                ? Map.of(
-                        "path", activity.getRoutePreviewPath(),
-                        "startX", activity.getRoutePreviewStartX(),
-                        "startY", activity.getRoutePreviewStartY(),
-                        "finishX", activity.getRoutePreviewFinishX(),
-                        "finishY", activity.getRoutePreviewFinishY()
-                )
-                : null);
+        body.put("shoeName", formatShoeName(activity.getShoeBrand(), activity.getShoeModel(), activity.getShoeNickname()));
         return body;
     }
 
-    private boolean hasRoutePreview(Activity activity) {
-        return activity != null
-                && activity.getRoutePreviewPath() != null
-                && !activity.getRoutePreviewPath().isBlank()
-                && activity.getRoutePreviewStartX() != null
-                && activity.getRoutePreviewStartY() != null
-                && activity.getRoutePreviewFinishX() != null
-                && activity.getRoutePreviewFinishY() != null;
+    private String formatShoeName(String brand, String model, String nickname) {
+        String safeBrand = brand == null ? "" : brand;
+        String safeModel = model == null ? "" : model;
+        String combined = (safeBrand + " " + safeModel).trim();
+        return combined.isEmpty() ? nickname : combined;
     }
 
-    private List<RaceEventResponse> findRunnerRaces(Runner runner, List<Activity> runActivities) {
+    private List<RaceEventResponse> findRunnerRaces(Runner runner) {
         if (runner == null) {
             return List.of();
         }
@@ -437,7 +429,7 @@ public class ProfileController {
         if (races == null || races.isEmpty()) {
             return List.of();
         }
-        List<Activity> activities = runActivities == null ? List.of() : runActivities;
+        List<Activity> activities = findRunnerRuns(runner);
         return races.stream().map(race -> toRaceResponse(race, activities)).toList();
     }
 
