@@ -1397,6 +1397,12 @@ assert.match(
 );
 
 assert.match(
+  liveSharedVerifierSource,
+  /permanentZoneLabels = q\("\.terr-zone-label"\)[\s\S]*?permanentLeafletTooltips = q\("\.leaflet-tooltip-permanent"\)[\s\S]*?proof\.dom\.permanentZoneLabels === 0[\s\S]*?proof\.dom\.permanentLeafletTooltips === 0/,
+  'Live shared-account proof should fail if overlap-prone permanent Territory labels or Leaflet tooltips return.',
+);
+
+assert.match(
   cellRenderVerifierSource,
   /missingCellCount === 0[\s\S]*?rendered active fill has gaps over backend-owned cells/,
   'Cell-render proof should fail when frontend SVG fill drops backend-owned active territory cells.',

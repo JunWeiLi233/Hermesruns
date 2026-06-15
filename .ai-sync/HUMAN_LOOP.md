@@ -40,7 +40,7 @@ Humans can steer, pause, approve, reject, or reverse the loop here without editi
 - If you ask for a rollback, name the target commit, design version, or surface.
 
 ## Agent Writeback Format
-- Last round verdict: must-fix - 
-- Current owned surface: runner shell sidebar
-- Next intended round: [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots (active-task) on [file
-- Self-loop state: continue-self-loop - promoted next bounded round: [file-audit 2026-05-20] Prune historical auto-hermes tech-debt snapshots
+- Last round verdict: pass - Fix landing race map point projection
+- Current owned surface: Public landing race map
+- Next intended round: Improve Analysis page (active-task) on Analysis
+- Self-loop state: continue-self-loop - promoted next bounded round: Improve Analysis page

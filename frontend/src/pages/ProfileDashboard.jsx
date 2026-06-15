@@ -1080,20 +1080,35 @@ export default function ProfileDashboard() {
               </section>
             )}
             {loadState === 'ready' && runs.length === 0 && (
-              <section className="runner-dashboard-empty-state">
+              <section className="runner-dashboard-empty-state" aria-labelledby="profile-empty-title">
                 <div className="runner-dashboard-empty-hero">
                   <span className="material-symbols-outlined runner-dashboard-empty-icon" aria-hidden="true">directions_run</span>
-                  <h2>{t('profile.dashboard_empty_title')}</h2>
+                  <h2 id="profile-empty-title">{t('profile.dashboard_empty_title')}</h2>
                   <p>{t('profile.dashboard_empty_copy')}</p>
                 </div>
+                <ol className="runner-dashboard-empty-steps" aria-label={t('profile.dashboard_empty_steps_label')}>
+                  <li>
+                    <span>01</span>
+                    <p>{t('profile.dashboard_empty_step_sync')}</p>
+                  </li>
+                  <li>
+                    <span>02</span>
+                    <p>{t('profile.dashboard_empty_step_measure')}</p>
+                  </li>
+                  <li>
+                    <span>03</span>
+                    <p>{t('profile.dashboard_empty_step_unlock')}</p>
+                  </li>
+                </ol>
+                <p className="runner-dashboard-empty-trust">{t('profile.dashboard_empty_trust')}</p>
                 <div className="runner-dashboard-empty-actions">
                   <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--primary" onClick={() => navigate('/profile?linking=strava')}>
                     <span className="material-symbols-outlined" aria-hidden="true">sync</span>
                     {t('profile.dashboard_empty_cta_strava')}
                   </button>
-                  <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--secondary" onClick={() => navigate('/today-run')}>
-                    <span className="material-symbols-outlined" aria-hidden="true">today</span>
-                    {t('profile.dashboard_empty_cta_today')}
+                  <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--secondary" onClick={() => navigate('/settings/import-data')}>
+                    <span className="material-symbols-outlined" aria-hidden="true">upload_file</span>
+                    {t('profile.dashboard_empty_cta_files')}
                   </button>
                 </div>
               </section>

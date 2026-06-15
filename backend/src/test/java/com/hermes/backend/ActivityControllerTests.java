@@ -1,10 +1,13 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +27,66 @@ import static org.mockito.Mockito.when;
 class ActivityControllerTests {
 
     @Test
+    void autowiredConstructorKeepsDependencyCountBelowTarget() {
+        Constructor<?> injectedConstructor = null;
+        for (Constructor<?> constructor : ActivityController.class.getConstructors()) {
+            if (constructor.isAnnotationPresent(Autowired.class)) {
+                injectedConstructor = constructor;
+                break;
+            }
+        }
+
+        assertNotNull(injectedConstructor);
+        assertTrue(
+                injectedConstructor.getParameterCount() < 8,
+                "ActivityController should keep constructor dependencies grouped below 8"
+        );
+    }
+
+    @Test
+    void controllerKeepsDeclaredMethodCountBelowTarget() {
+        int methodCount = 0;
+        for (Method method : ActivityController.class.getDeclaredMethods()) {
+            if (!method.isSynthetic()) {
+                methodCount += 1;
+            }
+        }
+
+        assertTrue(
+                methodCount < 15,
+                "ActivityController should keep declared method count below 15, actual: " + methodCount
+        );
+    }
+
+    private static ActivityController newController(
+            AuthService authService,
+            ActivityRepository activityRepository,
+            ActivityPointRepository activityPointRepository,
+            RunnerRepository runnerRepository,
+            SecretEncryptionService secretEncryptionService,
+            ElevationCorrectionService elevationCorrectionService,
+            AcclimatizationService acclimatizationService,
+            ReadinessService readinessService,
+            RestTemplate restTemplate
+    ) {
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository);
+        ActivityStravaStreamService stravaStreamService = new ActivityStravaStreamService(
+                activityDataAccess,
+                runnerRepository,
+                secretEncryptionService,
+                restTemplate
+        );
+        return new ActivityController(
+                authService,
+                activityDataAccess,
+                stravaStreamService,
+                elevationCorrectionService,
+                acclimatizationService,
+                readinessService
+        );
+    }
+
+    @Test
     void getUserRunsReturnsDtoFeedItemsWithNormalizedMetricsAndShoeMetadata() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -35,7 +98,7 @@ class ActivityControllerTests {
         ReadinessService readinessService = mock(ReadinessService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService,
                 activityRepository,
                 activityPointRepository,
@@ -74,7 +137,7 @@ class ActivityControllerTests {
         ReadinessService readinessService = mock(ReadinessService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService,
                 activityRepository,
                 activityPointRepository,
@@ -142,7 +205,7 @@ class ActivityControllerTests {
         ReadinessService readinessService = mock(ReadinessService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService,
                 activityRepository,
                 activityPointRepository,
@@ -205,7 +268,7 @@ class ActivityControllerTests {
         ReadinessService readinessService = mock(ReadinessService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 runnerRepository, secretEncryptionService, elevationCorrectionService,
                 acclimatizationService, readinessService, restTemplate
@@ -236,7 +299,7 @@ class ActivityControllerTests {
         ReadinessService readinessService = mock(ReadinessService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService,
                 activityRepository,
                 activityPointRepository,
@@ -283,8 +346,8 @@ class ActivityControllerTests {
         assertInstanceOf(List.class, response.getBody());
 
         @SuppressWarnings("unchecked")
-        List<ActivityController.RoutePreviewBatchItem> body =
-                (List<ActivityController.RoutePreviewBatchItem>) response.getBody();
+        List<ActivityRoutePreviewHelper.RoutePreviewBatchItem> body =
+                (List<ActivityRoutePreviewHelper.RoutePreviewBatchItem>) response.getBody();
         assertEquals(2, body.size());
         assertEquals(19L, body.get(0).activityId());
         assertEquals(21L, body.get(1).activityId());
@@ -301,7 +364,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService,
                 activityRepository,
                 activityPointRepository,
@@ -338,7 +401,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -359,7 +422,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -387,7 +450,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -408,7 +471,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -434,7 +497,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -535,7 +598,7 @@ class ActivityControllerTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, activityRepository, activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
@@ -560,7 +623,7 @@ class ActivityControllerTests {
         AuthService authService = mock(AuthService.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
 
-        ActivityController controller = new ActivityController(
+        ActivityController controller = newController(
                 authService, mock(ActivityRepository.class), activityPointRepository,
                 mock(RunnerRepository.class), mock(SecretEncryptionService.class),
                 mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),

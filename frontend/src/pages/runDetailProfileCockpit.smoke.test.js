@@ -18,6 +18,8 @@ function assert(condition, message) {
 const runDetailSource = read('pages/RunDetail.jsx');
 const appIconSource = read('components/AppIcon.jsx');
 const styleSource = read('styles/style.css');
+const splitRunsStyleSource = read('styles/_split/runs.css');
+const splitLightThemeStyleSource = read('styles/_split/light-theme-overrides.css');
 
 assert(
   (runDetailSource.match(/run-detail-page run-detail-profile-cockpit/g) || []).length >= 3,
@@ -70,14 +72,53 @@ assert(
 );
 
 assert(
-  runDetailSource.includes("apiJson(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' })")
-    && !runDetailSource.includes("apiFetch(`/api/shoes/${shoeId}/assign/${run.id}`, { method: 'PATCH' })")
+  runDetailSource.includes("apiJson(`/api/shoes/${normalizedShoeId}/assign/${run.id}`, { method: 'PATCH' })")
+    && !runDetailSource.includes("apiFetch(`/api/shoes/${normalizedShoeId}/assign/${run.id}`, { method: 'PATCH' })")
+    && runDetailSource.includes("response?.activityId != null && String(response.activityId) !== String(run.id)")
+    && runDetailSource.includes("setShoeActionMessage(t('run_detail.shoe_assign_failed'))")
+    && runDetailSource.includes("t('run_detail.no_active_shoes')")
+    && runDetailSource.includes('activeShoes.length > 0 ? activeShoes.map')
     && runDetailSource.includes('setShoeDropdownOpen(false);'),
-  'Run Detail shoe linking should validate the assignment response before updating local gear state.',
+  'Run Detail shoe linking should validate the assignment response, expose failures, and show an empty shoe picker state.',
+);
+
+assert(
+  /\.run-detail-gear-copy\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(styleSource)
+    && /\.run-detail-gear-actions\s*\{[\s\S]*grid-column:\s*1;[\s\S]*justify-self:\s*stretch;[\s\S]*width:\s*100%;[\s\S]*margin-top:\s*12px;/.test(styleSource)
+    && /\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*flex:\s*1\s+1\s+0;[\s\S]*border-radius:\s*999px;[\s\S]*white-space:\s*nowrap;/.test(styleSource)
+    && /\.run-detail-gear-panel\s*>\s*\.run-detail-gear-actions,[\s\S]*\.run-detail-gear-panel\s*>\s*\.run-detail-dropdown,[\s\S]*\.run-detail-gear-panel\s*>\s*\.run-detail-gear-status\s*\{[\s\S]*margin-left:\s*0;[\s\S]*width:\s*100%;/.test(styleSource)
+    && /\.shoe-run-dropdown\.run-detail-dropdown\s*\{[\s\S]*position:\s*static;[\s\S]*left:\s*auto;[\s\S]*top:\s*auto;/.test(styleSource)
+    && /body\.theme-light\s+\.run-detail-gear-actions\s+\.run-detail-link-btn,[\s\S]*body\.theme-high-contrast-light\s+\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*background:\s*var\(--runner-profile-ink,\s*#17130f\);/.test(styleSource)
+    && /<\/div>\s*<\/div>\s*<div className="run-detail-gear-actions">/.test(runDetailSource)
+    && /\.run-detail-gear-copy\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(splitRunsStyleSource)
+    && /\.run-detail-gear-actions\s*\{[\s\S]*grid-column:\s*1;[\s\S]*justify-self:\s*stretch;[\s\S]*width:\s*100%;[\s\S]*margin-top:\s*12px;/.test(splitRunsStyleSource)
+    && /\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*flex:\s*1\s+1\s+0;[\s\S]*border-radius:\s*999px;[\s\S]*white-space:\s*nowrap;/.test(splitRunsStyleSource)
+    && /\.run-detail-gear-panel\s*>\s*\.run-detail-gear-actions,[\s\S]*\.run-detail-gear-panel\s*>\s*\.run-detail-dropdown,[\s\S]*\.run-detail-gear-panel\s*>\s*\.run-detail-gear-status\s*\{[\s\S]*margin-left:\s*0;[\s\S]*width:\s*100%;/.test(splitRunsStyleSource)
+    && /\.shoe-run-dropdown\.run-detail-dropdown\s*\{[\s\S]*position:\s*static;[\s\S]*left:\s*auto;[\s\S]*top:\s*auto;/.test(splitRunsStyleSource)
+    && /body\.theme-light\s+\.run-detail-gear-actions\s+\.run-detail-link-btn,[\s\S]*body\.theme-high-contrast-light\s+\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*background:\s*var\(--runner-profile-ink,\s*#17130f\);/.test(splitLightThemeStyleSource),
+  'Run Detail gear linking action should render as a full-width anchored pill under the shoe text, not as a floating red text label.',
+);
+
+assert(
+  /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-panel\s*\{[\s\S]*padding:\s*clamp\(18px,\s*1\.7vw,\s*24px\);/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-row\s*\{[\s\S]*grid-template-columns:\s*56px\s+minmax\(0,\s*1fr\);[\s\S]*gap:\s*12px;[\s\S]*max-width:\s*280px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-art\s*\{[\s\S]*width:\s*56px;[\s\S]*height:\s*56px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-actions\s*\{[\s\S]*max-width:\s*280px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*min-height:\s*34px;/.test(styleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-panel\s*\{[\s\S]*padding:\s*clamp\(18px,\s*1\.7vw,\s*24px\);/.test(splitRunsStyleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-row\s*\{[\s\S]*grid-template-columns:\s*56px\s+minmax\(0,\s*1fr\);[\s\S]*gap:\s*12px;[\s\S]*max-width:\s*280px;/.test(splitRunsStyleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-art\s*\{[\s\S]*width:\s*56px;[\s\S]*height:\s*56px;/.test(splitRunsStyleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-actions\s*\{[\s\S]*max-width:\s*280px;/.test(splitRunsStyleSource)
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-actions\s+\.run-detail-link-btn\s*\{[\s\S]*min-height:\s*34px;/.test(splitRunsStyleSource),
+  'Run Detail gear panel should keep the shoe grid compact under the gear panel.',
 );
 
 assert(
   runDetailSource.includes('const displaySample = getTelemetryDisplaySample(samples);')
+    && runDetailSource.includes('const telemetryTabDefinitions = useMemo(() => telemetryDefinitions')
+    && runDetailSource.includes('hasData: Boolean(displaySample)')
+    && runDetailSource.includes('if (a.hasData !== b.hasData) return a.hasData ? -1 : 1;')
+    && runDetailSource.includes('telemetryTabDefinitions.map((definition) =>')
     && runDetailSource.includes("icon: 'monitor_heart'")
     && runDetailSource.includes("icon: 'telemetry_cadence'")
     && runDetailSource.includes("icon: 'telemetry_stride'")
@@ -94,8 +135,11 @@ assert(
     && runDetailSource.includes('formatTelemetryValue(displaySample.value, definition.key)')
     && runDetailSource.includes('<em>{definition.unit}</em>')
     && !runDetailSource.includes("t('run_detail.telemetry_subtitle')")
+    && !runDetailSource.includes('training_' + 'effect_estimated')
+    && !runDetailSource.includes('trainingEffect?.basis')
     && !runDetailSource.includes('samples.length ? samples.length.toLocaleString()')
     && !runDetailSource.includes('run-detail-telemetry-resolution')
+    && !runDetailSource.includes("t('run_detail.decoupling')")
     && !styleSource.includes('run-detail-telemetry-resolution'),
   'Run Detail telemetry tabs should show values/units without sample counts, the resolution badge, or the old explanatory subtitle.',
 );

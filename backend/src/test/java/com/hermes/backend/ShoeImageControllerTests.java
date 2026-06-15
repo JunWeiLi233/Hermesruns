@@ -23,6 +23,31 @@ import static org.mockito.Mockito.when;
 
 class ShoeImageControllerTests {
 
+    private static ShoeImageController newController(
+            AuthService authService,
+            ShoeRepository shoeRepository,
+            AiUsageService aiUsageService,
+            QuotaService quotaService,
+            RestTemplate restTemplate,
+            SystemConfigService systemConfigService,
+            ApiRateLimiter apiRateLimiter,
+            BingImageScraper bingImageScraper,
+            AiShoeScanService aiShoeScanService
+    ) {
+        return new ShoeImageController(
+                authService,
+                shoeRepository,
+                aiUsageService,
+                quotaService,
+                systemConfigService,
+                apiRateLimiter,
+                bingImageScraper,
+                aiShoeScanService,
+                new ShoeRenderSourceService(restTemplate),
+                new ShoeScanUsageStatusService(aiUsageService, quotaService)
+        );
+    }
+
     @Test
     void setShoePhotoAcceptsImageDataUrl() {
         AuthService authService = mock(AuthService.class);
@@ -35,7 +60,7 @@ class ShoeImageControllerTests {
         BingImageScraper bingImageScraper = mock(BingImageScraper.class);
         AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
-        ShoeImageController controller = new ShoeImageController(
+        ShoeImageController controller = newController(
                 authService,
                 shoeRepository,
                 aiUsageService,
@@ -88,7 +113,7 @@ class ShoeImageControllerTests {
         BingImageScraper bingImageScraper = mock(BingImageScraper.class);
         AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
-        ShoeImageController controller = new ShoeImageController(
+        ShoeImageController controller = newController(
                 authService,
                 shoeRepository,
                 aiUsageService,
@@ -143,7 +168,7 @@ class ShoeImageControllerTests {
         BingImageScraper bingImageScraper = mock(BingImageScraper.class);
         AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
-        ShoeImageController controller = new ShoeImageController(
+        ShoeImageController controller = newController(
                 authService,
                 shoeRepository,
                 aiUsageService,
@@ -202,7 +227,7 @@ class ShoeImageControllerTests {
         BingImageScraper bingImageScraper = mock(BingImageScraper.class);
         AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
 
-        ShoeImageController controller = new ShoeImageController(
+        ShoeImageController controller = newController(
                 authService,
                 shoeRepository,
                 aiUsageService,

@@ -4887,6 +4887,27 @@ body.theme-high-contrast-light .run-detail-gear-usage {
   background: rgba(200, 205, 207, 0.42);
 }
 
+body.theme-light .run-detail-gear-actions .run-detail-link-btn,
+body.theme-high-contrast-light .run-detail-gear-actions .run-detail-link-btn {
+  border-color: rgba(17, 17, 17, 0.12);
+  background: var(--runner-profile-ink, #17130f);
+  color: #fff8ee;
+  box-shadow: 0 12px 24px rgba(24, 20, 16, 0.14);
+}
+
+body.theme-light .run-detail-gear-actions .run-detail-link-btn:hover,
+body.theme-high-contrast-light .run-detail-gear-actions .run-detail-link-btn:hover {
+  background: #2a2119;
+}
+
+body.theme-light .run-detail-gear-actions .run-detail-link-btn.is-danger,
+body.theme-high-contrast-light .run-detail-gear-actions .run-detail-link-btn.is-danger {
+  border-color: rgba(196, 80, 69, 0.22);
+  background: rgba(196, 80, 69, 0.1);
+  color: #9f4334;
+  box-shadow: none;
+}
+
 body.theme-light .run-detail-dropdown,
 body.theme-high-contrast-light .run-detail-dropdown {
   background: rgba(255, 255, 255, 0.7);
@@ -4901,6 +4922,13 @@ body.theme-high-contrast-light .run-detail-dropdown .shoe-run-option {
 body.theme-light .run-detail-dropdown .shoe-run-option:hover,
 body.theme-high-contrast-light .run-detail-dropdown .shoe-run-option:hover {
   background: rgba(240, 117, 97, 0.08);
+}
+
+body.theme-light .run-detail-dropdown .shoe-run-empty,
+body.theme-high-contrast-light .run-detail-dropdown .shoe-run-empty,
+body.theme-light .run-detail-gear-status,
+body.theme-high-contrast-light .run-detail-gear-status {
+  color: rgba(72, 76, 78, 0.66);
 }
 
 body.theme-light .run-detail-warning,
@@ -5287,7 +5315,11 @@ body.theme-light .runner-dashboard-feature-session-pill {
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-state {
-    padding: 48px 24px;
+    border-color: rgba(44, 47, 48, 0.1);
+    background:
+        radial-gradient(circle at top right, rgba(252, 76, 2, 0.1), transparent 30%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 233, 0.94));
+    box-shadow: 0 24px 48px rgba(44, 47, 48, 0.08);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-hero h2 {
@@ -5299,7 +5331,21 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-hero p
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-icon {
-    color: rgba(252, 76, 2, 0.35);
+    background: rgba(252, 76, 2, 0.1);
+    color: rgba(214, 70, 20, 0.86);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps li {
+    border-color: rgba(44, 47, 48, 0.1);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps p {
+    color: #2c2f30;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-trust {
+    color: #6b7280;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-cta--secondary {
