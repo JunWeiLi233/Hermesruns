@@ -33,6 +33,12 @@ function getRaceCountdownDays(isoDate, now = new Date()) {
   return Math.max(0, Math.ceil((parseRaceDate(isoDate) - today) / DAY_IN_MS));
 }
 
+function getMillisecondsUntilTomorrow(now = new Date()) {
+  const tomorrow = new Date(now);
+  tomorrow.setHours(24, 0, 1, 0);
+  return Math.max(1000, tomorrow.getTime() - now.getTime());
+}
+
 function RevealSection({ children, className = '', delay = 0, initialVisible = false, onClick }) {
   const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px', initialVisible });
   return (
@@ -414,6 +420,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeFormulaId, setActiveFormulaId] = useState(null);
+  const [raceCountdownNow, setRaceCountdownNow] = useState(() => new Date());
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -424,6 +431,18 @@ export default function Landing() {
     const handleScroll = () => setIsScrolled(window.scrollY > 24);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let timeoutId;
+    const scheduleNextCountdownRefresh = () => {
+      timeoutId = window.setTimeout(() => {
+        setRaceCountdownNow(new Date());
+        scheduleNextCountdownRefresh();
+      }, getMillisecondsUntilTomorrow());
+    };
+    scheduleNextCountdownRefresh();
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const startStrava = useCallback(() => {
@@ -537,7 +556,7 @@ export default function Landing() {
   ].map((race) => ({
     ...race,
     date: formatRaceDate(race.raceDate),
-    days: getRaceCountdownDays(race.raceDate),
+    days: getRaceCountdownDays(race.raceDate, raceCountdownNow),
   }));
 
   const compareRows = [
