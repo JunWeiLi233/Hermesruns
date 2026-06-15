@@ -30,6 +30,7 @@ const territoryRuntimeVerifierSources = [
   source: readFileSync(path.join(here, '..', '..', '..', '.tools', file), 'utf8'),
 }));
 const territoryServiceSource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryService.java'), 'utf8');
+const territoryMapBuilderServiceSource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryMapBuilderService.java'), 'utf8');
 const territoryPolygonRepositorySource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryPolygonRepository.java'), 'utf8');
 const activityPointRepositorySource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'ActivityPointRepository.java'), 'utf8');
 const backendApplicationProperties = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'resources', 'application.properties'), 'utf8');
@@ -115,7 +116,7 @@ assert.match(
 );
 
 assert.match(
-  territoryServiceSource,
+  territoryMapBuilderServiceSource,
   /private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v25-activity-split-render";/,
   'Territory map shell should invalidate cached leaderboard and center data when land masks split owner render sources by activity.',
 );
