@@ -8,6 +8,31 @@ import AppIcon from '../components/AppIcon';
 import HermesMarkSvg from '../components/HermesMarkSvg';
 import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.png';
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const landingRaceDateFormatter = new Intl.DateTimeFormat('en-US', {
+  day: '2-digit',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+function parseRaceDate(isoDate) {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function formatRaceDate(isoDate) {
+  const raceDate = new Date(parseRaceDate(isoDate));
+  const parts = landingRaceDateFormatter.formatToParts(raceDate);
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value.toUpperCase() ?? '';
+  return `${day} ${month}`;
+}
+
+function getRaceCountdownDays(isoDate, now = new Date()) {
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.ceil((parseRaceDate(isoDate) - today) / DAY_IN_MS));
+}
+
 function RevealSection({ children, className = '', delay = 0, initialVisible = false, onClick }) {
   const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px', initialVisible });
   return (
@@ -499,17 +524,21 @@ export default function Landing() {
   const activeFormula = formulaRows.find((row) => row.id === activeFormulaId);
 
   const races = [
-    { id: 'tokyo', name: t('landing.cinematic_race_tokyo'), date: '01 MAR', days: 380, goal: 'PB', geo: { lat: 35.6762, lng: 139.6503 } },
-    { id: 'boston', name: t('landing.cinematic_race_boston'), date: '20 APR', days: 430, goal: 'Q+8', geo: { lat: 42.3601, lng: -71.0589 } },
-    { id: 'london', name: t('landing.cinematic_race_london'), date: '26 APR', days: 436, goal: '2:58', geo: { lat: 51.5072, lng: -0.1276 } },
-    { id: 'berlin', name: t('landing.cinematic_race_berlin'), date: '21 SEP', days: 218, goal: '2:55', geo: { lat: 52.52, lng: 13.405 } },
-    { id: 'chicago', name: t('landing.cinematic_race_chicago'), date: '12 OCT', days: 239, goal: 'Sub-3', geo: { lat: 41.8781, lng: -87.6298 } },
-    { id: 'newYork', name: t('landing.cinematic_race_new_york'), date: '02 NOV', days: 260, goal: 'Sub-3', geo: { lat: 40.7128, lng: -74.006 } },
-    { id: 'paris', name: t('landing.cinematic_race_paris'), date: '12 APR', days: 422, goal: 'PB', geo: { lat: 48.8566, lng: 2.3522 } },
-    { id: 'valencia', name: t('landing.cinematic_race_valencia'), date: '07 DEC', days: 295, goal: '2:52', geo: { lat: 39.4699, lng: -0.3763 } },
-    { id: 'sydney', name: t('landing.cinematic_race_sydney'), date: '30 AUG', days: 196, goal: 'Major', geo: { lat: -33.8688, lng: 151.2093 } },
-    { id: 'comrades', name: t('landing.cinematic_race_comrades'), date: '08 JUN', days: 480, goal: 'Silver', geo: { lat: -29.8587, lng: 31.0218 } },
-  ];
+    { id: 'tokyo', name: t('landing.cinematic_race_tokyo'), raceDate: '2027-03-07', goal: 'PB', geo: { lat: 35.6762, lng: 139.6503 } },
+    { id: 'boston', name: t('landing.cinematic_race_boston'), raceDate: '2027-04-19', goal: 'Q+8', geo: { lat: 42.3601, lng: -71.0589 } },
+    { id: 'london', name: t('landing.cinematic_race_london'), raceDate: '2027-04-25', goal: '2:58', geo: { lat: 51.5072, lng: -0.1276 } },
+    { id: 'berlin', name: t('landing.cinematic_race_berlin'), raceDate: '2026-09-27', goal: '2:55', geo: { lat: 52.52, lng: 13.405 } },
+    { id: 'chicago', name: t('landing.cinematic_race_chicago'), raceDate: '2026-10-11', goal: 'Sub-3', geo: { lat: 41.8781, lng: -87.6298 } },
+    { id: 'newYork', name: t('landing.cinematic_race_new_york'), raceDate: '2026-11-01', goal: 'Sub-3', geo: { lat: 40.7128, lng: -74.006 } },
+    { id: 'paris', name: t('landing.cinematic_race_paris'), raceDate: '2027-04-11', goal: 'PB', geo: { lat: 48.8566, lng: 2.3522 } },
+    { id: 'valencia', name: t('landing.cinematic_race_valencia'), raceDate: '2026-12-06', goal: '2:52', geo: { lat: 39.4699, lng: -0.3763 } },
+    { id: 'sydney', name: t('landing.cinematic_race_sydney'), raceDate: '2026-08-30', goal: 'Major', geo: { lat: -33.8688, lng: 151.2093 } },
+    { id: 'comrades', name: t('landing.cinematic_race_comrades'), raceDate: '2027-06-13', goal: 'Silver', geo: { lat: -29.8587, lng: 31.0218 } },
+  ].map((race) => ({
+    ...race,
+    date: formatRaceDate(race.raceDate),
+    days: getRaceCountdownDays(race.raceDate),
+  }));
 
   const compareRows = [
     { feature: t('landing.cinematic_compare_decision'), note: t('landing.cinematic_compare_decision_note'), hermes: true, strava: 'partial', runna: 'partial' },
