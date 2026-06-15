@@ -4,15 +4,18 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl } from '../api';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import AppIcon from '../components/AppIcon';
 import HermesMarkSvg from '../components/HermesMarkSvg';
+import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.png';
 
-function RevealSection({ children, className = '', delay = 0, initialVisible = false }) {
+function RevealSection({ children, className = '', delay = 0, initialVisible = false, onClick }) {
   const { ref, isVisible } = useScrollReveal({ threshold: 0.16, rootMargin: '0px', initialVisible });
   return (
     <div
       ref={ref}
       className={`${className} ${isVisible ? 'reveal-visible' : 'reveal-hidden'}`}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+      onClick={onClick}
     >
       {children}
     </div>
@@ -57,6 +60,10 @@ function LandingGlyph({ name, className = '' }) {
     return <HermesMarkSvg tone="light" className={`${classNames} landing-cinematic-glyph--logo`} />;
   }
 
+  if (name === 'shoe') {
+    return <AppIcon name="shoe" className={classNames} />;
+  }
+
   return (
     <svg className={classNames} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       {name === 'runner' && (
@@ -84,8 +91,10 @@ function LandingGlyph({ name, className = '' }) {
       )}
       {name === 'vdot' && (
         <>
-          <path d="M4 20l5-12 4 8 6-14" />
-          <circle cx="19" cy="4" r="2" />
+          <path d="M4 18.5 8.8 12l4.1 3.8L20 5.5" />
+          <circle cx="8.8" cy="12" r="1.3" />
+          <circle cx="12.9" cy="15.8" r="1.3" />
+          <circle cx="20" cy="5.5" r="1.3" />
         </>
       )}
       {name === 'zones' && (
@@ -94,12 +103,6 @@ function LandingGlyph({ name, className = '' }) {
           <rect x="8.5" y="12" width="3" height="8" rx="1" />
           <rect x="13" y="8" width="3" height="12" rx="1" />
           <rect x="17.5" y="4" width="3" height="16" rx="1" />
-        </>
-      )}
-      {name === 'shoe' && (
-        <>
-          <path d="M4 18c1.5-4 4-6 6-8l2-1 3 2c1 1 1.5 2 1 3l-1 2" />
-          <path d="M8 8l2-2 6 4-2 2" />
         </>
       )}
       {name === 'sync' && (
@@ -128,26 +131,6 @@ function LandingGlyph({ name, className = '' }) {
   );
 }
 
-function ReadinessRing({ value }) {
-  const radius = 64;
-  const circumference = 2 * Math.PI * radius;
-  const dash = (value / 100) * circumference;
-
-  return (
-    <svg viewBox="0 0 160 160" className="landing-cinematic-ring" aria-hidden="true">
-      <circle cx="80" cy="80" r={radius} className="landing-cinematic-ring-track" />
-      <circle
-        cx="80"
-        cy="80"
-        r={radius}
-        className="landing-cinematic-ring-progress"
-        strokeDasharray={`${dash} ${circumference - dash}`}
-        strokeDashoffset={circumference / 4}
-      />
-    </svg>
-  );
-}
-
 function VdotSpark() {
   const points = [54.2, 54.6, 54.5, 55.1, 55.4, 55.8, 56, 56.4, 56.8, 57, 56.7, 57.2, 57.6, 58, 58.4];
   const min = 53.5;
@@ -163,37 +146,204 @@ function VdotSpark() {
   );
 }
 
-function WorldMap({ races }) {
-  const continents = [
-    [22, 30, 9, 10],
-    [27, 47, 5, 8],
-    [48, 28, 8, 10],
-    [56, 42, 8, 12],
-    [70, 30, 14, 11],
-    [82, 53, 5, 3],
-  ];
-  const dots = [];
-  const inContinent = (x, y) => continents.some(([cx, cy, rx, ry]) => ((x - cx) ** 2) / (rx * rx) + ((y - cy) ** 2) / (ry * ry) <= 1);
+const WORLD_MAP_GRATICULE = [
+  'M8 12.5H94',
+  'M6 25H96',
+  'M10 37.5H92',
+  'M25 3V47',
+  'M50 2V48',
+  'M75 3V47',
+];
 
-  for (let y = 4; y < 58; y += 1.6) {
-    for (let x = 2; x < 98; x += 1.6) {
-      if (inContinent(x, y)) dots.push([x, y]);
-    }
-  }
+const ROBINSON_X_COEFFICIENTS = [
+  1,
+  0.9986,
+  0.9954,
+  0.99,
+  0.9822,
+  0.973,
+  0.96,
+  0.9427,
+  0.9216,
+  0.8962,
+  0.8679,
+  0.835,
+  0.7986,
+  0.7597,
+  0.7186,
+  0.6732,
+  0.6213,
+  0.5722,
+  0.5322,
+];
+
+const ROBINSON_Y_COEFFICIENTS = [
+  0,
+  0.062,
+  0.124,
+  0.186,
+  0.248,
+  0.31,
+  0.372,
+  0.434,
+  0.4958,
+  0.5571,
+  0.6176,
+  0.6769,
+  0.7346,
+  0.7903,
+  0.8435,
+  0.8936,
+  0.9394,
+  0.9761,
+  1,
+];
+
+function interpolateRobinsonCoefficient(coefficients, absLat) {
+  const clampedLat = Math.max(0, Math.min(90, absLat));
+  const lowerIndex = Math.min(Math.floor(clampedLat / 5), coefficients.length - 2);
+  const localT = (clampedLat - lowerIndex * 5) / 5;
+
+  return coefficients[lowerIndex] + ((coefficients[lowerIndex + 1] - coefficients[lowerIndex]) * localT);
+}
+
+function projectWorldPoint({ lat, lng }) {
+  const absLat = Math.abs(lat);
+  const xCoefficient = interpolateRobinsonCoefficient(ROBINSON_X_COEFFICIENTS, absLat);
+  const yCoefficient = interpolateRobinsonCoefficient(ROBINSON_Y_COEFFICIENTS, absLat);
+  const robinsonX = 50 + ((lng / 360) * 100 * xCoefficient);
+  const robinsonY = 25 - (lat >= 0 ? yCoefficient : -yCoefficient) * 25;
+
+  return {
+    x: robinsonX,
+    y: robinsonY,
+  };
+}
+
+const RACE_MAP_CITY_ANCHORS = {
+  tokyo: { x: 83.65, y: 13.65 },
+  boston: { x: 29.85, y: 11.60 },
+  london: { x: 47.35, y: 8.95 },
+  berlin: { x: 51.55, y: 8.55 },
+  chicago: { x: 27.45, y: 12.15 },
+  newYork: { x: 29.60, y: 12.15 },
+  paris: { x: 49.45, y: 10.05 },
+  valencia: { x: 47.10, y: 12.40 },
+  sydney: { x: 85.25, y: 35.55 },
+  comrades: { x: 55.50, y: 34.40 },
+};
+
+function resolveRaceMapPoint(race) {
+  return RACE_MAP_CITY_ANCHORS[race.id] ?? projectWorldPoint(race.geo);
+}
+
+const RACE_MAP_CYCLE_STEP_SECONDS = 3;
+
+function getRaceCycleDuration(total) {
+  return `${Math.max(total, 1) * RACE_MAP_CYCLE_STEP_SECONDS}s`;
+}
+
+function getRaceTimelineDelay(index, total) {
+  if (!total) return '0s';
+
+  return `${index * RACE_MAP_CYCLE_STEP_SECONDS}s`;
+}
+
+function WorldMap({ races, metricLabels, flowLabels }) {
+  const racePins = races.map((race) => ({
+    ...race,
+    pin: race.pin ?? (race.geo ? resolveRaceMapPoint(race) : null),
+  }));
+  const getRacePhaseDelay = (index) => getRaceTimelineDelay(index, racePins.length);
+  const raceCycleDuration = getRaceCycleDuration(racePins.length);
+  const flowSteps = [
+    { key: 'locate', order: '01', label: flowLabels.select },
+    { key: 'read', order: '02', label: flowLabels.score },
+    { key: 'match', order: '03', label: flowLabels.plan },
+  ];
 
   return (
-    <div className="landing-cinematic-map" aria-hidden="true">
-      <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet">
-        {dots.map(([x, y], index) => (
-          <circle key={`${x}-${y}-${index}`} cx={x} cy={y} r="0.45" className="landing-cinematic-map-dot" />
-        ))}
-        {races.map((race) => (
-          <g key={race.name} transform={`translate(${race.pin.x} ${race.pin.y})`} className="landing-cinematic-map-pin">
-            <circle r="2.6" className="landing-cinematic-map-pulse" />
-            <circle r="0.9" className="landing-cinematic-map-core" />
+    <div className="landing-cinematic-map" style={{ '--race-cycle-duration': raceCycleDuration }} aria-hidden="true">
+      <svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
+        <g className="landing-cinematic-map-graticule">
+          {WORLD_MAP_GRATICULE.map((path) => <path key={path} d={path} />)}
+        </g>
+        <image
+          href={worldMapPoliticalDotted}
+          width="100"
+          height="50"
+          preserveAspectRatio="none"
+          className="landing-cinematic-map-reference"
+        />
+        <g className="landing-cinematic-map-selection-layer">
+          {racePins.map((race, index) => (
+            <g
+              key={`${race.name}-selection`}
+              transform={`translate(${race.pin.x} ${race.pin.y})`}
+              className="landing-cinematic-map-selection"
+              style={{ '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+            >
+              <circle r="1.2" className="landing-cinematic-map-selection-spread" />
+              <circle r="3.4" className="landing-cinematic-map-selection-ping" />
+              <circle r="2.55" className="landing-cinematic-map-selection-ring" />
+            </g>
+          ))}
+        </g>
+        {racePins.map((race, index) => (
+          <g
+            key={race.name}
+            transform={`translate(${race.pin.x} ${race.pin.y})`}
+            className="landing-cinematic-map-pin"
+            style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+          >
+            <circle r="1.35" className="landing-cinematic-map-badge" />
+            <circle r="0.42" className="landing-cinematic-map-core" />
+            <text x="0" y="0.34" textAnchor="middle" className="landing-cinematic-map-order">
+              {String(index + 1).padStart(2, '0')}
+            </text>
           </g>
         ))}
       </svg>
+      <div className="landing-cinematic-map-timeline">
+        {racePins.map((race, index) => (
+          <div
+            key={`${race.name}-timeline`}
+            className="landing-cinematic-map-timeline-item"
+            style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+          >
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <em>{race.date}</em>
+          </div>
+        ))}
+      </div>
+      <div className="landing-cinematic-map-bottom-deck">
+        <div className="landing-cinematic-map-guide">
+          {flowSteps.map((step) => (
+            <span key={step.key} className={`landing-cinematic-map-guide-step is-${step.key}`}>
+              <em>{step.order}</em>
+              <strong>{step.label}</strong>
+            </span>
+          ))}
+        </div>
+        <div className="landing-cinematic-map-caption-strip">
+          {racePins.map((race, index) => (
+            <div
+              key={`${race.name}-caption`}
+              className="landing-cinematic-map-caption"
+              style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+            >
+              <span className="landing-cinematic-map-caption-order">{String(index + 1).padStart(2, '0')}</span>
+              <strong>{race.name}</strong>
+              <span className="landing-cinematic-map-caption-verb">{flowLabels.score}</span>
+              <div className="landing-cinematic-map-caption-meta">
+                <em className="landing-cinematic-map-caption-field is-date"><span>{metricLabels.date}</span>{race.date}</em>
+                <small className="landing-cinematic-map-caption-field is-days"><span>{metricLabels.days}</span>{race.days}</small>
+                <b className="landing-cinematic-map-caption-field is-goal"><span>{metricLabels.goal}</span>{race.goal}</b>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -212,9 +362,25 @@ function AnswerCard({ number, title, body, children }) {
 }
 
 function CompareGlyph({ value }) {
-  if (value === true) return <LandingGlyph name="check" className="landing-cinematic-compare-icon is-yes" />;
-  if (value === 'partial') return <LandingGlyph name="minus" className="landing-cinematic-compare-icon is-partial" />;
-  return <LandingGlyph name="close" className="landing-cinematic-compare-icon is-no" />;
+  if (value === true) {
+    return (
+      <span className="landing-cinematic-compare-cell">
+        <LandingGlyph name="check" className="landing-cinematic-compare-icon is-yes" />
+      </span>
+    );
+  }
+  if (value === 'partial') {
+    return (
+      <span className="landing-cinematic-compare-cell">
+        <LandingGlyph name="minus" className="landing-cinematic-compare-icon is-partial" />
+      </span>
+    );
+  }
+  return (
+    <span className="landing-cinematic-compare-cell">
+      <LandingGlyph name="close" className="landing-cinematic-compare-icon is-no" />
+    </span>
+  );
 }
 
 export default function Landing() {
@@ -222,6 +388,7 @@ export default function Landing() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeFormulaId, setActiveFormulaId] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -241,7 +408,7 @@ export default function Landing() {
   const navLinks = [
     ['#features', t('landing.cinematic_nav_daily')],
     ['#answers', t('landing.cinematic_nav_method')],
-    ['#science', t('landing.cinematic_nav_races')],
+    ['#races', t('landing.cinematic_nav_races')],
     ['#compare', t('landing.cinematic_nav_compare')],
   ];
 
@@ -251,30 +418,23 @@ export default function Landing() {
       icon: 'zones',
       title: t('landing.cinematic_answer_1_title'),
       body: t('landing.cinematic_answer_1_body'),
-      metric: '4:21',
+      metric: '建议轻松跑',
     },
     {
       number: '02',
       icon: 'vdot',
       title: t('landing.cinematic_answer_2_title'),
       body: t('landing.cinematic_answer_2_body'),
-      metric: '58.4',
+      metric: '体能在进步',
     },
     {
       number: '03',
       icon: 'shoe',
       title: t('landing.cinematic_answer_3_title'),
       body: t('landing.cinematic_answer_3_body'),
-      metric: '68%',
+      metric: '轮换训练鞋',
     },
   ];
-
-  const heroWorkout = {
-    type: t('landing.cinematic_zone_threshold'),
-    distance: '8 km',
-    count: '8',
-    shoe: 'Endorphin Speed 4',
-  };
 
   const formulaValues = {
     vdot: '58.4',
@@ -282,33 +442,84 @@ export default function Landing() {
     h: '18',
     count: '6',
     date: '2026-05-17',
-    distance: heroWorkout.distance,
+    distance: '8 km',
     pace: '4:21 /km',
   };
 
   const formulaRows = [
-    [t('landing.cinematic_formula_vdot_label'), t('landing.cinematic_formula_vdot', formulaValues)],
-    [t('landing.cinematic_formula_acwr_label'), t('landing.cinematic_formula_acwr', formulaValues)],
-    [t('landing.cinematic_formula_recovery_label'), t('landing.cinematic_formula_recovery', formulaValues)],
-    [t('landing.cinematic_formula_paces_label'), t('landing.cinematic_formula_paces', formulaValues)],
+    {
+      id: 'vdot',
+      label: t('landing.cinematic_formula_vdot_label'),
+      copy: t('landing.cinematic_formula_vdot', formulaValues),
+      formula: t('landing.cinematic_formula_vdot_full'),
+      proof: t('landing.cinematic_formula_vdot_proof', formulaValues),
+      steps: [
+        t('landing.cinematic_formula_vdot_step_1'),
+        t('landing.cinematic_formula_vdot_step_2'),
+        t('landing.cinematic_formula_vdot_step_3', formulaValues),
+      ],
+    },
+    {
+      id: 'acwr',
+      label: t('landing.cinematic_formula_acwr_label'),
+      copy: t('landing.cinematic_formula_acwr', formulaValues),
+      formula: t('landing.cinematic_formula_acwr_full'),
+      proof: t('landing.cinematic_formula_acwr_proof', formulaValues),
+      steps: [
+        t('landing.cinematic_formula_acwr_step_1'),
+        t('landing.cinematic_formula_acwr_step_2'),
+        t('landing.cinematic_formula_acwr_step_3', formulaValues),
+      ],
+    },
+    {
+      id: 'recovery',
+      label: t('landing.cinematic_formula_recovery_label'),
+      copy: t('landing.cinematic_formula_recovery', formulaValues),
+      formula: t('landing.cinematic_formula_recovery_full'),
+      proof: t('landing.cinematic_formula_recovery_proof', formulaValues),
+      steps: [
+        t('landing.cinematic_formula_recovery_step_1'),
+        t('landing.cinematic_formula_recovery_step_2'),
+        t('landing.cinematic_formula_recovery_step_3', formulaValues),
+      ],
+    },
+    {
+      id: 'paces',
+      label: t('landing.cinematic_formula_paces_label'),
+      copy: t('landing.cinematic_formula_paces', formulaValues),
+      formula: t('landing.cinematic_formula_paces_full'),
+      proof: t('landing.cinematic_formula_paces_proof', formulaValues),
+      steps: [
+        t('landing.cinematic_formula_paces_step_1'),
+        t('landing.cinematic_formula_paces_step_2'),
+        t('landing.cinematic_formula_paces_step_3', formulaValues),
+      ],
+    },
   ];
+  const activeFormula = formulaRows.find((row) => row.id === activeFormulaId);
 
   const races = [
-    { name: t('landing.cinematic_race_berlin'), date: '21 SEP', days: 218, goal: '2:55', pin: { x: 52, y: 36 } },
-    { name: t('landing.cinematic_race_chicago'), date: '12 OCT', days: 239, goal: 'Sub-3', pin: { x: 24, y: 41 } },
-    { name: t('landing.cinematic_race_tokyo'), date: '01 MAR', days: 380, goal: 'PB', pin: { x: 86, y: 44 } },
-    { name: t('landing.cinematic_race_boston'), date: '20 APR', days: 430, goal: 'Q+8', pin: { x: 31, y: 38 } },
-    { name: t('landing.cinematic_race_comrades'), date: '08 JUN', days: 480, goal: 'Silver', pin: { x: 60, y: 72 } },
+    { id: 'tokyo', name: t('landing.cinematic_race_tokyo'), date: '01 MAR', days: 380, goal: 'PB', geo: { lat: 35.6762, lng: 139.6503 } },
+    { id: 'boston', name: t('landing.cinematic_race_boston'), date: '20 APR', days: 430, goal: 'Q+8', geo: { lat: 42.3601, lng: -71.0589 } },
+    { id: 'london', name: t('landing.cinematic_race_london'), date: '26 APR', days: 436, goal: '2:58', geo: { lat: 51.5072, lng: -0.1276 } },
+    { id: 'berlin', name: t('landing.cinematic_race_berlin'), date: '21 SEP', days: 218, goal: '2:55', geo: { lat: 52.52, lng: 13.405 } },
+    { id: 'chicago', name: t('landing.cinematic_race_chicago'), date: '12 OCT', days: 239, goal: 'Sub-3', geo: { lat: 41.8781, lng: -87.6298 } },
+    { id: 'newYork', name: t('landing.cinematic_race_new_york'), date: '02 NOV', days: 260, goal: 'Sub-3', geo: { lat: 40.7128, lng: -74.006 } },
+    { id: 'paris', name: t('landing.cinematic_race_paris'), date: '12 APR', days: 422, goal: 'PB', geo: { lat: 48.8566, lng: 2.3522 } },
+    { id: 'valencia', name: t('landing.cinematic_race_valencia'), date: '07 DEC', days: 295, goal: '2:52', geo: { lat: 39.4699, lng: -0.3763 } },
+    { id: 'sydney', name: t('landing.cinematic_race_sydney'), date: '30 AUG', days: 196, goal: 'Major', geo: { lat: -33.8688, lng: 151.2093 } },
+    { id: 'comrades', name: t('landing.cinematic_race_comrades'), date: '08 JUN', days: 480, goal: 'Silver', geo: { lat: -29.8587, lng: 31.0218 } },
   ];
 
   const compareRows = [
-    [t('landing.cinematic_compare_daily'), true, false, 'partial'],
-    [t('landing.cinematic_compare_vdot'), true, false, false],
-    [t('landing.cinematic_compare_acwr'), true, false, 'partial'],
-    [t('landing.cinematic_compare_shoes'), true, false, false],
-    [t('landing.cinematic_compare_local'), true, false, false],
-    [t('landing.cinematic_compare_noise'), true, false, true],
-    [t('landing.cinematic_compare_bilingual'), true, false, false],
+    { feature: t('landing.cinematic_compare_decision'), note: t('landing.cinematic_compare_decision_note'), hermes: true, strava: 'partial', runna: 'partial' },
+    { feature: t('landing.cinematic_compare_race_plan'), note: t('landing.cinematic_compare_race_plan_note'), hermes: 'partial', strava: 'partial', runna: true },
+    { feature: t('landing.cinematic_compare_formula'), note: t('landing.cinematic_compare_formula_note'), hermes: true, strava: false, runna: false },
+    { feature: t('landing.cinematic_compare_sync'), note: t('landing.cinematic_compare_sync_note'), hermes: true, strava: true, runna: 'partial' },
+    { feature: t('landing.cinematic_compare_acwr'), note: t('landing.cinematic_compare_acwr_note'), hermes: true, strava: 'partial', runna: 'partial' },
+    { feature: t('landing.cinematic_compare_shoes'), note: t('landing.cinematic_compare_shoes_note'), hermes: true, strava: 'partial', runna: false },
+    { feature: t('landing.cinematic_compare_local'), note: t('landing.cinematic_compare_local_note'), hermes: true, strava: false, runna: false },
+    { feature: t('landing.cinematic_compare_noise'), note: t('landing.cinematic_compare_noise_note'), hermes: true, strava: false, runna: true },
   ];
 
   const zones = [
@@ -320,11 +531,6 @@ export default function Landing() {
     [t('landing.cinematic_zone_repetition'), '>105%', t('landing.cinematic_zone_repetition_desc'), '3:30 /km'],
   ];
 
-  const footerColumns = [
-    [t('landing.cinematic_footer_product'), ['Today Run', 'Analysis', 'Heatmap', 'Shoes', 'Races']],
-    [t('landing.cinematic_footer_method'), ['VDOT', 'ACWR', t('landing.cinematic_footer_training_paces'), t('landing.cinematic_footer_citations')]],
-    [t('landing.cinematic_footer_connect'), ['Strava', 'Garmin Connect', 'COROS', 'FIT / GPX / TCX']],
-  ];
   const footerUtilityLinks = [
     { label: t('landing.stitch_footer_terms'), to: '/terms' },
     { label: t('landing.stitch_footer_privacy'), to: '/privacy' },
@@ -368,73 +574,29 @@ export default function Landing() {
           </div>
 
           <PageWidth className="landing-cinematic-hero-inner">
-            <RevealSection className="landing-cinematic-hero-grid landing-command-hero" initialVisible>
-              <div className="landing-cinematic-hero-copy landing-command-copy">
-                <span className="landing-cinematic-kicker landing-command-kicker">{t('landing.badge')}</span>
-                <h1 className="landing-cinematic-hero-title">
-                  <span>{t('landing.cinematic_hero_line_1')}</span>
-                  <span>{t('landing.cinematic_hero_line_2')}</span>
-                  <span className="is-accent">{t('landing.cinematic_hero_line_3')}</span>
-                </h1>
-                <p>{t('landing.cinematic_hero_text')}</p>
+            <div className="landing-cinematic-hero-copy landing-command-copy">
+              <h1 className="landing-cinematic-hero-title">
+                <span>{t('landing.cinematic_hero_line_1')}</span>
+                <span>{t('landing.cinematic_hero_line_2')}</span>
+                <span className="is-accent">{t('landing.cinematic_hero_line_3')}</span>
+              </h1>
+              <p>{t('landing.cinematic_hero_text')}</p>
 
-                <div className="landing-cinematic-hero-actions">
-                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
-                    <StravaLogo />
-                    <span>{t('landing.cta_strava')}</span>
-                  </button>
-                  <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--ghost is-large">
-                    <span>{t('landing.get_started')}</span>
-                    <LandingGlyph name="arrow" />
-                  </Link>
-                </div>
-
-                <div className="landing-cinematic-trust">
-                  <span>{t('landing.cinematic_trust_local')}</span>
-                  <span>{t('landing.cinematic_trust_method')}</span>
-                </div>
+              <div className="landing-cinematic-hero-actions">
+                <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
+                  <StravaLogo />
+                  <span>{t('landing.cta_strava')}</span>
+                </button>
+                <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--ghost is-large">
+                  <span>{t('landing.get_started')}</span>
+                  <LandingGlyph name="arrow" />
+                </Link>
               </div>
-              <aside className="landing-command-board landing-cinematic-hero-proof" aria-label={t('landing.cinematic_hud_label')}>
-                <div className="landing-command-board-head">
-                  <span>{t('landing.cinematic_hud_kicker')}</span>
-                  <strong>{t('landing.cinematic_hud_workout_title', heroWorkout)}</strong>
-                  <p>{t('landing.cinematic_hud_workout_copy', heroWorkout)}</p>
-                </div>
-                <div className="landing-command-board-map" aria-hidden="true">
-                  <span className="landing-command-map-line" />
-                  <span className="landing-command-map-line is-secondary" />
-                  <span className="landing-command-map-pin is-start" />
-                  <span className="landing-command-map-pin is-finish" />
-                  <span className="landing-command-scanline" />
-                </div>
-                <div className="landing-command-board-metrics">
-                  <article className="landing-cinematic-proof-card">
-                    <ReadinessRing value={82} />
-                    <div>
-                      <span>{t('landing.cinematic_hud_readiness')}</span>
-                      <strong>82</strong>
-                      <em>{t('landing.cinematic_formula_recovery', formulaValues)}</em>
-                    </div>
-                  </article>
-                  <article className="landing-cinematic-proof-card">
-                    <LandingGlyph name="vdot" className="landing-cinematic-proof-icon" />
-                    <div>
-                      <span>{t('landing.cinematic_formula_vdot_label')}</span>
-                      <strong>{formulaValues.vdot}</strong>
-                      <em>{t('landing.cinematic_formula_paces', formulaValues)}</em>
-                    </div>
-                  </article>
-                  <article className="landing-cinematic-proof-card">
-                    <LandingGlyph name="shoe" className="landing-cinematic-proof-icon" />
-                    <div>
-                      <span>{t('landing.cinematic_hud_shoe', heroWorkout)}</span>
-                      <strong>{formulaValues.distance}</strong>
-                      <em>{formulaValues.pace}</em>
-                    </div>
-                  </article>
-                </div>
-              </aside>
-            </RevealSection>
+
+              <div className="landing-cinematic-trust">
+                <span>{t('landing.cinematic_trust_local')}</span>
+              </div>
+            </div>
           </PageWidth>
         </section>
 
@@ -448,7 +610,6 @@ export default function Landing() {
                     <span>{card.number}</span>
                     <LandingGlyph name={card.icon} />
                   </div>
-                  <small>{t('landing.cinematic_ticker_label')}</small>
                   <h3>{card.title}</h3>
                   <p>{card.body}</p>
                   <strong>{card.metric}</strong>
@@ -456,18 +617,46 @@ export default function Landing() {
               ))}
             </RevealSection>
 
-            <RevealSection className="landing-command-rhythm" delay={90}>
+            <RevealSection className="landing-command-rhythm" delay={90} onClick={() => setActiveFormulaId(null)}>
               <span className="landing-cinematic-kicker">{t('landing.cinematic_formula_kicker')}</span>
               <h2>{t('landing.cinematic_formula_title')}</h2>
               <p>{t('landing.cinematic_formula_copy')}</p>
               <div className="landing-command-rhythm-list">
-                {formulaRows.map(([label, copy], index) => (
-                  <div key={label} style={{ '--rhythm-index': index }}>
-                    <span>{label}</span>
-                    <p>{copy}</p>
-                  </div>
+                {formulaRows.map((row, index) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className={`landing-command-rhythm-card${activeFormulaId === row.id ? ' is-active' : ''}`}
+                    style={{ '--rhythm-index': index }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setActiveFormulaId(row.id);
+                    }}
+                    aria-pressed={activeFormulaId === row.id ? 'true' : 'false'}
+                  >
+                    <span>{row.label}</span>
+                    <p>{row.copy}</p>
+                  </button>
                 ))}
               </div>
+              {activeFormula ? (
+                <div className="landing-command-formula-detail" aria-live="polite">
+                  <div className="landing-command-formula-detail-head">
+                    <span>{activeFormula.label}</span>
+                    <strong>{activeFormula.copy}</strong>
+                  </div>
+                  <code>{activeFormula.formula}</code>
+                  <p>{activeFormula.proof}</p>
+                  <ol className="landing-command-formula-steps">
+                    {activeFormula.steps.map((step, index) => (
+                      <li key={step}>
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                        <p>{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
             </RevealSection>
           </PageWidth>
         </section>
@@ -479,7 +668,6 @@ export default function Landing() {
               <div className="landing-cinematic-quote-mark" aria-hidden="true">"</div>
               <blockquote>
                 <p>{t('landing.cinematic_coach_quote')}</p>
-                <p className="is-muted">{t('landing.cinematic_coach_muted')}</p>
               </blockquote>
               <div className="landing-cinematic-coach-meta">
                 <span>{t('landing.cinematic_coach_kicker')}</span>
@@ -492,9 +680,9 @@ export default function Landing() {
         {/* ── 4. Three Daily Answers ── */}
         <section id="answers" className="landing-cinematic-answers">
           <PageWidth>
-            <RevealSection className="landing-cinematic-section-head">
+            <RevealSection className="landing-cinematic-section-head landing-cinematic-section-head--answers">
               <span className="landing-cinematic-kicker">{t('landing.cinematic_answers_kicker')}</span>
-              <h2>{t('landing.cinematic_answers_title')} <span>{t('landing.cinematic_answers_title_muted')}</span></h2>
+              <h2 className="landing-cinematic-answers-title">{t('landing.cinematic_answers_title')} <span>{t('landing.cinematic_answers_title_muted')}</span></h2>
             </RevealSection>
 
             <div className="landing-cinematic-answer-grid">
@@ -548,10 +736,10 @@ export default function Landing() {
               <h2>{t('landing.cinematic_formula_title')}</h2>
               <p>{t('landing.cinematic_formula_copy')}</p>
               <div className="landing-cinematic-formula-list">
-                {formulaRows.map(([label, copy]) => (
-                  <div key={label}>
-                    <span>{label}</span>
-                    <p>{copy}</p>
+                {formulaRows.map((row) => (
+                  <div key={row.id}>
+                    <span>{row.label}</span>
+                    <p>{row.copy}</p>
                   </div>
                 ))}
               </div>
@@ -618,20 +806,51 @@ export default function Landing() {
             </RevealSection>
 
             <div className="landing-cinematic-race-stage">
-              <WorldMap races={races} />
+              <WorldMap
+                races={races}
+                metricLabels={{
+                  date: t('landing.cinematic_race_col_date'),
+                  days: t('landing.cinematic_race_col_days'),
+                  goal: t('landing.cinematic_race_col_goal'),
+                }}
+                flowLabels={{
+                  select: t('landing.cinematic_race_flow_select'),
+                  score: t('landing.cinematic_race_flow_score'),
+                  plan: t('landing.cinematic_race_flow_plan'),
+                }}
+              />
               <RevealSection className="landing-cinematic-race-list" delay={70}>
                 <div className="landing-cinematic-race-head">
+                  <span aria-hidden="true" />
                   <span>{t('landing.cinematic_race_col_race')}</span>
                   <span>{t('landing.cinematic_race_col_date')}</span>
                   <span>{t('landing.cinematic_race_col_days')}</span>
                   <span>{t('landing.cinematic_race_col_goal')}</span>
                 </div>
                 {races.map((race, index) => (
-                  <div key={race.name} className="landing-cinematic-race-row">
+                  <div
+                    key={race.name}
+                    className="landing-cinematic-race-row"
+                    style={{
+                      '--race-index': index,
+                      '--race-delay': getRaceTimelineDelay(index, races.length),
+                      '--race-cycle-duration': getRaceCycleDuration(races.length),
+                    }}
+                  >
+                    <span className="landing-cinematic-race-order">{String(index + 1).padStart(2, '0')}</span>
                     <span>{race.name}</span>
-                    <span>{race.date}</span>
-                    <strong>{race.days}</strong>
-                    <em className={index === 0 ? 'is-primary' : ''}>{race.goal}</em>
+                    <span data-label={t('landing.cinematic_race_col_date')}>
+                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_date')}: </span>
+                      {race.date}
+                    </span>
+                    <strong data-label={t('landing.cinematic_race_col_days')}>
+                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_days')}: </span>
+                      {race.days}
+                    </strong>
+                    <em data-label={t('landing.cinematic_race_col_goal')} className={index === 0 ? 'is-primary' : ''}>
+                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_goal')}: </span>
+                      {race.goal}
+                    </em>
                   </div>
                 ))}
               </RevealSection>
@@ -654,12 +873,15 @@ export default function Landing() {
                 <span>{t('landing.cinematic_compare_social')}</span>
                 <span>{t('landing.cinematic_compare_device')}</span>
               </div>
-              {compareRows.map(([feature, hermes, social, device]) => (
+              {compareRows.map(({ feature, note, hermes, strava, runna }) => (
                 <div key={feature} className="landing-cinematic-compare-row">
-                  <span>{feature}</span>
+                  <span className="landing-cinematic-compare-feature">
+                    <strong>{feature}</strong>
+                    <small>{note}</small>
+                  </span>
                   <CompareGlyph value={hermes} />
-                  <CompareGlyph value={social} />
-                  <CompareGlyph value={device} />
+                  <CompareGlyph value={strava} />
+                  <CompareGlyph value={runna} />
                 </div>
               ))}
             </RevealSection>
@@ -702,27 +924,15 @@ export default function Landing() {
             <strong>HERMES</strong>
             <span>{t('landing.footer')}</span>
           </div>
-          <div className="landing-cinematic-footer-cols">
-            {footerColumns.map(([title, links]) => (
-              <div key={title}>
-                <span>{title}</span>
-                {links.map((label) => <span key={label} className="landing-cinematic-footer-link">{label}</span>)}
-              </div>
+          <div className="landing-cinematic-footer-links">
+            {footerUtilityLinks.map((link) => (
+              link.to ? (
+                <Link key={link.label} to={link.to} className="landing-cinematic-footer-link">{link.label}</Link>
+              ) : (
+                <a key={link.label} href={link.href} className="landing-cinematic-footer-link">{link.label}</a>
+              )
             ))}
-            <div>
-              <span>{t('landing.cinematic_footer_company')}</span>
-              <div className="landing-cinematic-footer-links">
-                {footerUtilityLinks.map((link) => (
-                  link.to ? (
-                    <Link key={link.label} to={link.to} className="landing-cinematic-footer-link">{link.label}</Link>
-                  ) : (
-                    <a key={link.label} href={link.href} className="landing-cinematic-footer-link">{link.label}</a>
-                  )
-                ))}
-              </div>
-            </div>
           </div>
-          <p>{t('landing.stitch_footer_copy')}</p>
         </PageWidth>
       </footer>
     </div>

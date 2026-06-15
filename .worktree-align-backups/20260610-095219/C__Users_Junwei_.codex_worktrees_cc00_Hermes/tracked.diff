@@ -1,0 +1,12 @@
+﻿diff --git a/backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java b/backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java
+index e2eb6e6c..675abf1a 100644
+--- a/backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java
++++ b/backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java
+@@ -57,6 +57,7 @@ public class AdminSecurityFilter implements Filter {
+         // Broad prefix matching for known admin surfaces
+         return path.startsWith("/api/admin/") || 
+                path.equals("/api/admin") ||
++               path.startsWith("/api/config/admin") ||
+                path.startsWith("/api/auth/runners") ||
+                path.startsWith("/api/shoe-catalog/admin");
+     }

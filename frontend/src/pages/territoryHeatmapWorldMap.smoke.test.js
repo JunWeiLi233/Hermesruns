@@ -158,6 +158,18 @@ assert.doesNotMatch(
   'Territory map should not render broad fallback territory blobs from coarse zone cells.',
 );
 
+assert.doesNotMatch(
+  territorySource,
+  /bindTooltip\(|permanent:\s*true|terr-zone-label/,
+  'Territory should not restore overlap-prone permanent Leaflet zone labels over dense real data.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /terr-zone-label/,
+  'Territory split CSS should not keep styles for removed permanent zone labels.',
+);
+
 assert.match(
   territorySource,
   /const ownerPolygons = renderCellMaskPolygonsBySource\(polygons\);/,

@@ -2940,6 +2940,55 @@ check("website audit emits one bounded candidate from website signals when queue
   }
 });
 
+check("website audit skips recently completed fallback candidates", async () => {
+  const moduleUrl = pathToFileURL(path.resolve(".tools/auto-hermes-website-audit.mjs")).href;
+  const { runAutoHermesWebsiteAudit } = await import(moduleUrl);
+
+  const fixture = makeFixture();
+  fs.writeFileSync(fixture.files.tasks, `# Hermes Tasks
+
+## Active Tasks
+
+## Tech Debt Tasks
+
+## Suggested Next Tasks
+`, "utf8");
+
+  writeFixtureFile(fixture.dir, "PRODUCT.md", "# Product\n\n## Screen table\n- Profile: trend and readiness\n- Analysis: trust and insight\n");
+  writeFixtureFile(
+    fixture.dir,
+    ".ai-codex/pages.md",
+    "Profile -> frontend/src/pages/Profile.jsx\nAnalysis -> frontend/src/pages/Analysis.jsx\n",
+  );
+  writeFixtureFile(fixture.dir, "frontend/src/pages/Profile.jsx", "export default function Profile(){ return null; }\n");
+  writeFixtureFile(fixture.dir, "frontend/src/pages/Analysis.jsx", "export default function Analysis(){ return null; }\n");
+  writeFixtureFile(fixture.dir, ".ai-sync/CONTEXT_LEDGER.md", "Profile Profile Profile Profile\nAnalysis\n");
+  writeFixtureFile(fixture.dir, ".ai-sync/AGENT_SYNC.json", JSON.stringify({
+    recentlyCompleted: [
+      {
+        task: "Improve Profile page",
+        surface: "Profile",
+        status: "completed",
+        files: ["frontend/src/pages/ProfileDashboard.jsx"],
+      },
+    ],
+  }, null, 2));
+
+  const { report } = runAutoHermesWebsiteAudit({
+    rootDir: fixture.dir,
+    tasks: "TASKS.md",
+    product: "PRODUCT.md",
+    contextLedger: ".ai-sync/CONTEXT_LEDGER.md",
+    pagesIndex: ".ai-codex/pages.md",
+    agentSyncJson: ".ai-sync/AGENT_SYNC.json",
+  });
+
+  assert.equal(report.mode, "website-audit");
+  assert.equal(report.candidate.surface, "Analysis");
+  assert.deepEqual(report.candidate.files, ["frontend/src/pages/Analysis.jsx"]);
+  assert.equal(report.signals.excludedRecentlyCompleted, 1);
+});
+
 check("auto-hermes-max writes explorer markdown and parallel lanes declare parent-owned writeback with worktree isolation", () => {
   const fixture = makeFixture();
   const planPath = path.join(fixture.dir, ".ai-sync", "AUTO_HERMES_MAX_PLAN.json");

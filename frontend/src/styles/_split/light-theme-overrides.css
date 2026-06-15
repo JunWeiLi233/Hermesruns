@@ -5315,7 +5315,11 @@ body.theme-light .runner-dashboard-feature-session-pill {
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-state {
-    padding: 48px 24px;
+    border-color: rgba(44, 47, 48, 0.1);
+    background:
+        radial-gradient(circle at top right, rgba(252, 76, 2, 0.1), transparent 30%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 233, 0.94));
+    box-shadow: 0 24px 48px rgba(44, 47, 48, 0.08);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-hero h2 {
@@ -5327,7 +5331,21 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-hero p
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-icon {
-    color: rgba(252, 76, 2, 0.35);
+    background: rgba(252, 76, 2, 0.1);
+    color: rgba(214, 70, 20, 0.86);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps li {
+    border-color: rgba(44, 47, 48, 0.1);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps p {
+    color: #2c2f30;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-trust {
+    color: #6b7280;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-cta--secondary {

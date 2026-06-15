@@ -30,6 +30,7 @@ const territoryRuntimeVerifierSources = [
   source: readFileSync(path.join(here, '..', '..', '..', '.tools', file), 'utf8'),
 }));
 const territoryServiceSource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryService.java'), 'utf8');
+const territoryMapBuilderServiceSource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryMapBuilderService.java'), 'utf8');
 const territoryPolygonRepositorySource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'TerritoryPolygonRepository.java'), 'utf8');
 const activityPointRepositorySource = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'java', 'com', 'hermes', 'backend', 'ActivityPointRepository.java'), 'utf8');
 const backendApplicationProperties = readFileSync(path.join(here, '..', '..', '..', 'backend', 'src', 'main', 'resources', 'application.properties'), 'utf8');
@@ -115,7 +116,7 @@ assert.match(
 );
 
 assert.match(
-  territoryServiceSource,
+  territoryMapBuilderServiceSource,
   /private static final String TERRITORY_MAP_CACHE_VERSION = "territory-map-v25-activity-split-render";/,
   'Territory map shell should invalidate cached leaderboard and center data when land masks split owner render sources by activity.',
 );
@@ -1394,6 +1395,12 @@ assert.match(
   liveSharedVerifierSource,
   /proof\.dom\.activeConcreteStyle\?\.fillRule === "nonzero"[\s\S]*?active concrete fill should use nonzero[\s\S]*?proof\.dom\.activeConcreteSubpathCount >= proof\.dom\.activeConcreteMoveCommandCount/,
   'Live shared-account proof should require nonzero active fills while allowing legitimate multi-region active territory.',
+);
+
+assert.match(
+  liveSharedVerifierSource,
+  /permanentZoneLabels = q\("\.terr-zone-label"\)[\s\S]*?permanentLeafletTooltips = q\("\.leaflet-tooltip-permanent"\)[\s\S]*?proof\.dom\.permanentZoneLabels === 0[\s\S]*?proof\.dom\.permanentLeafletTooltips === 0/,
+  'Live shared-account proof should fail if overlap-prone permanent Territory labels or Leaflet tooltips return.',
 );
 
 assert.match(
