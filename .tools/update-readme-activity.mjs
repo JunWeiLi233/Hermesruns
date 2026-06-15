@@ -72,6 +72,14 @@ function pathForSeries(series, width, height, pad) {
     .join(" ");
 }
 
+function selectDateLabels(series) {
+  const labelCount = Math.min(5, series.length);
+  return Array.from({ length: labelCount }, (_, index) => {
+    const seriesIndex = Math.round((index * (series.length - 1)) / (labelCount - 1 || 1));
+    return { ...series[seriesIndex], seriesIndex, labelIndex: index, labelCount };
+  });
+}
+
 function renderSvg(series) {
   const width = 900;
   const height = 300;
@@ -79,7 +87,7 @@ function renderSvg(series) {
   const max = Math.max(1, ...series.map((item) => item.commits));
   const plotWidth = width - pad.left - pad.right;
   const plotHeight = height - pad.top - pad.bottom;
-  const labels = series.filter((_, index) => index % 7 === 0 || index === series.length - 1);
+  const labels = selectDateLabels(series);
   const points = series
     .map((item, index) => {
       const x = pad.left + (plotWidth * index) / (series.length - 1);
@@ -88,10 +96,9 @@ function renderSvg(series) {
     })
     .join("\n      ");
   const labelSvg = labels
-    .map((item, index) => {
-      const seriesIndex = series.indexOf(item);
-      const x = pad.left + (plotWidth * seriesIndex) / (series.length - 1);
-      const anchor = index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle";
+    .map((item) => {
+      const x = pad.left + (plotWidth * item.seriesIndex) / (series.length - 1);
+      const anchor = item.labelIndex === 0 ? "start" : item.labelIndex === item.labelCount - 1 ? "end" : "middle";
       return `<text x="${x.toFixed(2)}" y="${height - 24}" text-anchor="${anchor}">${escapeXml(item.date)}</text>`;
     })
     .join("\n      ");
