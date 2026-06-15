@@ -341,6 +341,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M12 11.5c1.2 1.2 1.8 2.3 1.8 3.5A1.8 1.8 0 0 1 12 16.8 1.8 1.8 0 0 1 10.2 15c0-1 .5-2.1 1.8-3.5Z" />
         </>
       );
+    case 'mountain':
     case 'summit':
       return titled(
         <>

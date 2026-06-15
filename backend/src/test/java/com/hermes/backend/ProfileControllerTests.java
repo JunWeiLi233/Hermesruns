@@ -244,7 +244,7 @@ class ProfileControllerTests {
         RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of());
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(List.of());
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
                 authService,
@@ -292,9 +292,11 @@ class ProfileControllerTests {
         activity.setDistanceKm(10.0);
         activity.setMovingTimeSeconds(3100);
         activity.setStartTime(LocalDateTime.of(2026, 4, 30, 6, 15));
+        ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(activitySummary));
         when(personalRecordService.buildForRunner(runner)).thenThrow(new IllegalStateException("records unavailable"));
         when(quotaService.getQuotaStatus(runner)).thenThrow(new IllegalStateException("quota unavailable"));
         when(automatedCoachService.getCoachState(runner)).thenThrow(new IllegalStateException("coach state unavailable"));
@@ -399,9 +401,11 @@ class ProfileControllerTests {
                 )
         );
         MusclePlanDto musclePlan = new MusclePlanDto(null, List.of(), List.of(), List.of(), null, "COACH_SCHEDULE");
+        ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(activitySummary));
         when(personalRecordService.buildForRunner(runner)).thenReturn(personalRecords);
         when(quotaService.getQuotaStatus(runner)).thenReturn(quota);
         when(automatedCoachService.getCoachState(runner)).thenReturn(coachState);
@@ -450,6 +454,59 @@ class ProfileControllerTests {
     }
 
     @Test
+    void profileDashboardUsesActivitySummaryProjectionForPayload() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        Runner runner = runner();
+        ActivityRepository.AnalysisActivitySummaryProjection summary = activitySummary(
+                201L,
+                "Lean dashboard run",
+                12.3,
+                12300.0,
+                3600,
+                LocalDateTime.of(2026, 5, 2, 7, 15),
+                11,
+                true
+        );
+
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(summary));
+        when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                mock(AutomatedCoachService.class),
+                raceEventRepository,
+                mock(MuscleTrainingPlannerService.class),
+                mock(AcclimatizationService.class),
+                mock(ShoeRepository.class)
+        );
+
+        ResponseEntity<?> response = controller.profileDashboard("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.ProfileDashboardResponse body = (ProfileController.ProfileDashboardResponse) response.getBody();
+        assertThat(body.activities()).hasSize(1);
+        assertThat(body.activities().get(0))
+                .containsEntry("id", 201L)
+                .containsEntry("name", "Lean dashboard run")
+                .containsEntry("distanceKm", 12.3)
+                .containsEntry("movingTimeSeconds", 3600)
+                .containsEntry("pacePenaltySecPerKm", 11)
+                .containsEntry("weatherAdjusted", true);
+        assertThat(body.activities().get(0)).doesNotContainKeys("sourceFileName", "calories", "sufferScore");
+        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN);
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
+    }
+
+    @Test
     void profileDashboardPreservesWeatherAdjustedActivityFields() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -463,9 +520,11 @@ class ProfileControllerTests {
         activity.setStartTime(LocalDateTime.of(2026, 4, 29, 7, 30));
         activity.setPacePenaltySecPerKm(12);
         activity.setWeatherAdjusted(true);
+        ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(activitySummary));
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
                 authService,
@@ -511,7 +570,7 @@ class ProfileControllerTests {
         ShoeRepository shoeRepository = mock(ShoeRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of());
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(List.of());
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         when(shoeRepository.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
@@ -597,9 +656,11 @@ class ProfileControllerTests {
                         "moderate",
                         "Heat adjustment active"
                 );
+        ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(activitySummary));
         when(activityRepository.sumDistanceKmByRunner(runner)).thenReturn(List.<Object[]>of(new Object[]{12L, 43.25}));
         when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(coachToday);
         when(acclimatizationService.buildContext(runner)).thenReturn(weatherContext);
@@ -632,6 +693,65 @@ class ProfileControllerTests {
         assertThat(body.races()).isEmpty();
         assertThat(body.shoes()).hasSize(1);
         assertThat(body.shoes().get(0).getCurrentDistanceKm()).isEqualTo(163.75);
+    }
+
+    @Test
+    void todayDashboardUsesActivitySummaryProjectionForPayload() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
+        ShoeRepository shoeRepository = mock(ShoeRepository.class);
+        Runner runner = runner();
+        ActivityRepository.AnalysisActivitySummaryProjection summary = activitySummary(
+                202L,
+                "Today lean run",
+                8.0,
+                8000.0,
+                2400,
+                LocalDateTime.of(2026, 5, 3, 6, 30),
+                9,
+                true
+        );
+
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+                .thenReturn(List.of(summary));
+        when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(null);
+        when(acclimatizationService.buildContext(runner)).thenReturn(null);
+        when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
+        when(shoeRepository.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(runner)).thenReturn(List.of());
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                automatedCoachService,
+                raceEventRepository,
+                mock(MuscleTrainingPlannerService.class),
+                acclimatizationService,
+                shoeRepository
+        );
+
+        ResponseEntity<?> response = controller.todayDashboard("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.TodayDashboardResponse body = (ProfileController.TodayDashboardResponse) response.getBody();
+        assertThat(body.activities()).hasSize(1);
+        assertThat(body.activities().get(0))
+                .containsEntry("id", 202L)
+                .containsEntry("name", "Today lean run")
+                .containsEntry("distanceKm", 8.0)
+                .containsEntry("movingTimeSeconds", 2400)
+                .containsEntry("pacePenaltySecPerKm", 9)
+                .containsEntry("weatherAdjusted", true);
+        assertThat(body.activities().get(0)).doesNotContainKeys("sourceFileName", "calories", "sufferScore");
+        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN);
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
     }
 
     private ProfileController controller(AuthService authService) {
@@ -712,6 +832,55 @@ class ProfileControllerTests {
         runner.setStravaAthleteId(99L);
         runner.setStravaRefreshToken("refresh-token");
         return runner;
+    }
+
+    private ActivityRepository.AnalysisActivitySummaryProjection activitySummary(
+            Long id,
+            String name,
+            Double distanceKm,
+            Double distanceMeters,
+            Integer movingTimeSeconds,
+            LocalDateTime startTime,
+            Integer pacePenaltySecPerKm,
+            Boolean weatherAdjusted
+    ) {
+        ActivityRepository.AnalysisActivitySummaryProjection projection =
+                mock(ActivityRepository.AnalysisActivitySummaryProjection.class);
+        when(projection.getId()).thenReturn(id);
+        when(projection.getName()).thenReturn(name);
+        when(projection.getDistanceKm()).thenReturn(distanceKm);
+        when(projection.getDistanceMeters()).thenReturn(distanceMeters);
+        when(projection.getMovingTimeSeconds()).thenReturn(movingTimeSeconds);
+        when(projection.getStartDate()).thenReturn(startTime == null ? null : startTime.toLocalDate().toString());
+        when(projection.getStartTime()).thenReturn(startTime);
+        when(projection.getAverageHeartRate()).thenReturn(142.0);
+        when(projection.getMaxHeartRate()).thenReturn(171.0);
+        when(projection.getAverageCadence()).thenReturn(174.0);
+        when(projection.getMaxSpeedMps()).thenReturn(5.2);
+        when(projection.getPacePenaltySecPerKm()).thenReturn(pacePenaltySecPerKm);
+        when(projection.getWeatherAdjusted()).thenReturn(weatherAdjusted);
+        return projection;
+    }
+
+    private ActivityRepository.AnalysisActivitySummaryProjection activitySummary(Activity activity) {
+        ActivityRepository.AnalysisActivitySummaryProjection projection =
+                activitySummary(
+                        activity.getId(),
+                        activity.getName(),
+                        activity.getDistanceKm(),
+                        activity.getDistanceMeters(),
+                        activity.getMovingTimeSeconds(),
+                        activity.getStartTime(),
+                        activity.getPacePenaltySecPerKm(),
+                        activity.getWeatherAdjusted()
+                );
+        when(projection.getDurationSeconds()).thenReturn(activity.getDurationSeconds());
+        when(projection.getTotalElevationGain()).thenReturn(activity.getTotalElevationGain());
+        when(projection.getShoeId()).thenReturn(activity.getShoeId());
+        when(projection.getShoeBrand()).thenReturn(activity.getShoe() == null ? null : activity.getShoe().getBrand());
+        when(projection.getShoeModel()).thenReturn(activity.getShoe() == null ? null : activity.getShoe().getModel());
+        when(projection.getShoeNickname()).thenReturn(activity.getShoe() == null ? null : activity.getShoe().getNickname());
+        return projection;
     }
 
     @SuppressWarnings("unchecked")

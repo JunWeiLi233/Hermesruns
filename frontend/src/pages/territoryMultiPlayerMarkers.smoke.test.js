@@ -11,7 +11,7 @@ const territorySource = readFileSync(path.join(here, 'Territory.jsx'), 'utf8');
 // territory center; explicit recenter actions should still animate to full bounds.
 assert.match(
   territorySource,
-  /if \(recenterSignal > 0\) \{[\s\S]*map\.flyToBounds\([\s\S]*?duration:\s*0\.8/,
+  /if \(recenterSignal > 0\) \{[\s\S]*map\.flyToBounds\([\s\S]*?duration:\s*focusedEntries\.length > 0 \? 0\.65 : 0\.8/,
   'Territory map should keep flyToBounds animation for explicit recenter actions.',
 );
 assert.match(
