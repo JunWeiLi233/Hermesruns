@@ -3,6 +3,12 @@
 > A local-first runner analytics platform. **React** frontend, **Spring Boot** backend.
 > Combines daily training guidance, VDOT analysis, heatmaps, race planning, shoe management, and AI-powered import pipelines — all running on your own machine.
 
+## Activity
+
+[![Hermes GitHub commit activity](https://github-readme-activity-graph.vercel.app/graph?username=JunWeiLi233&theme=github-compact&custom_title=Hermes%20GitHub%20Commit%20Activity&hide_border=true&days=45)](https://github.com/520HXC/run/graphs/commit-activity)
+
+This graph auto-updates from public GitHub activity and links to the repository commit activity view.
+
 ---
 
 <a id="toc"></a>
