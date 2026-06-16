@@ -16,8 +16,8 @@ jobs:
     name: repository-hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
@@ -41,8 +41,8 @@ jobs:
     name: frontend-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
@@ -56,8 +56,8 @@ jobs:
     name: tooling-tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: '20'
           cache: npm
@@ -72,7 +72,8 @@ jobs:
             .tools/auto-hermes-finish.test.mjs \
             .tools/auto-hermes-prompt-compact.test.mjs \
             .tools/auto-hermes-push-main.test.mjs \
-            .tools/auto-hermes-security.test.mjs
+            .tools/auto-hermes-security.test.mjs \
+            .tools/ci-workflow-hygiene.test.mjs
           do
             echo "Running ${test_file}"
             node "${test_file}" || exit 1
@@ -82,8 +83,8 @@ jobs:
     name: backend-compile
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: temurin
