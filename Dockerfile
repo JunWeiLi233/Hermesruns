@@ -17,7 +17,7 @@ COPY frontend/src ./src
 RUN node scripts/run-vite-build.mjs
 
 # Stage 2 - Build backend (with frontend bundle already in static/)
-FROM eclipse-temurin:17-jdk-alpine AS backend-build
+FROM eclipse-temurin:25-jdk-alpine AS backend-build
 WORKDIR /backend
 
 COPY backend/pom.xml ./
@@ -32,7 +32,7 @@ COPY --from=frontend-build /backend/src/main/resources/static \
 RUN chmod +x ./mvnw && ./mvnw -q -DskipTests package
 
 # Stage 3 - Runtime
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 COPY --from=backend-build /backend/target/*.jar app.jar
