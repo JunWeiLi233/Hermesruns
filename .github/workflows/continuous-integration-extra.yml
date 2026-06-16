@@ -73,7 +73,8 @@ jobs:
             .tools/auto-hermes-prompt-compact.test.mjs \
             .tools/auto-hermes-push-main.test.mjs \
             .tools/auto-hermes-security.test.mjs \
-            .tools/ci-workflow-hygiene.test.mjs
+            .tools/ci-workflow-hygiene.test.mjs \
+            .tools/dependabot-config.test.mjs
           do
             echo "Running ${test_file}"
             node "${test_file}" || exit 1
