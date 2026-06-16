@@ -4,6 +4,12 @@ import path from "node:path";
 
 const rootDir = process.cwd();
 const configPath = path.join(rootDir, ".github", "dependabot.yml");
+const cleanupWorkflowPath = path.join(
+  rootDir,
+  ".github",
+  "workflows",
+  "delete-merged-dependabot-branch.yml",
+);
 
 assert.equal(
   fs.existsSync(configPath),
@@ -35,3 +41,32 @@ for (const snippet of requiredSnippets) {
 }
 
 console.log("[PASS] Dependabot config guard passed.");
+
+assert.equal(
+  fs.existsSync(cleanupWorkflowPath),
+  true,
+  "Dependabot branch cleanup workflow should exist.",
+);
+
+const cleanupWorkflow = fs.readFileSync(cleanupWorkflowPath, "utf8");
+
+const cleanupSnippets = [
+  "pull_request:",
+  "types: [closed]",
+  "contents: write",
+  "if: >",
+  "github.event.pull_request.merged == true",
+  "dependabot[bot]",
+  "pull_request.head.ref",
+  "git/refs/heads/",
+];
+
+for (const snippet of cleanupSnippets) {
+  assert.match(
+    cleanupWorkflow,
+    new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    `delete-merged-dependabot-branch.yml should contain ${snippet}`,
+  );
+}
+
+console.log("[PASS] Dependabot cleanup workflow guard passed.");
