@@ -147,6 +147,22 @@ public class GoogleHealthImportService {
                     entity.setSourceChecksum("manual-import");
                     hrvDataRepository.save(entity);
                     savedCount++;
+                } else if ("stress".equals(type)) {
+                    Optional<DailyStressData> existing = stressDataRepository.findByRunnerAndProviderAndDate(runner, provider, date);
+                    DailyStressData entity = existing.orElse(new DailyStressData());
+                    entity.setRunner(runner);
+                    entity.setDate(date);
+                    entity.setProvider(provider);
+
+                    if (entry.containsKey("overallStressLevel")) entity.setOverallStressLevel(intVal(entry.get("overallStressLevel")));
+                    if (entry.containsKey("restStressDuration")) entity.setRestStressDuration(intVal(entry.get("restStressDuration")));
+                    if (entry.containsKey("lowStressDuration")) entity.setLowStressDuration(intVal(entry.get("lowStressDuration")));
+                    if (entry.containsKey("mediumStressDuration")) entity.setMediumStressDuration(intVal(entry.get("mediumStressDuration")));
+                    if (entry.containsKey("highStressDuration")) entity.setHighStressDuration(intVal(entry.get("highStressDuration")));
+
+                    entity.setSourceChecksum("manual-import");
+                    stressDataRepository.save(entity);
+                    savedCount++;
                 }
             } catch (Exception e) {
                 log.warn("Skipping Google Health entry for runner {}: {}", runner.getId(), e.getMessage());
