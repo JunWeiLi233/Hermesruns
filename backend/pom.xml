@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.6</version>
+		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.hermes</groupId>
@@ -84,25 +84,25 @@
 		<dependency>
 			<groupId>com.garmin</groupId>
 			<artifactId>fit</artifactId>
-			<version>21.195.0</version>
+			<version>21.205.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.stripe</groupId>
 			<artifactId>stripe-java</artifactId>
-			<version>28.4.0</version>
+			<version>33.0.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.ibm.icu</groupId>
 			<artifactId>icu4j</artifactId>
-			<version>76.1</version>
+			<version>78.3</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
-			<version>3.0.4</version>
+			<version>3.0.7</version>
 		</dependency>
 
 		<dependency>
