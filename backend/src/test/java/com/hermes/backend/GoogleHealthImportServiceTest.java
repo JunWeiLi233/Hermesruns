@@ -203,6 +203,30 @@ class GoogleHealthImportServiceTest {
     }
 
     @Test
+    void processDataPointsSavesStressEntry() throws InterruptedException {
+        Runner runner = runner(1L);
+        when(stressDataRepository.findByRunnerAndProviderAndDate(any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(coachRunnerStateRepository.findByRunner(runner)).thenReturn(Optional.empty());
+
+        Map<String, Object> stressPoint = Map.of(
+                "type", "stress",
+                "date", "2026-04-20",
+                "overallStressLevel", 44,
+                "restStressDuration", 90,
+                "lowStressDuration", 150,
+                "mediumStressDuration", 60,
+                "highStressDuration", 25
+        );
+
+        service.importWellnessData(runner, List.of(stressPoint));
+
+        Thread.sleep(2000);
+
+        verify(stressDataRepository).save(any(DailyStressData.class));
+    }
+
+    @Test
     void processDataPointsUpdatesExistingRecord() throws InterruptedException {
         Runner runner = runner(1L);
         DailySleepData existing = new DailySleepData();
