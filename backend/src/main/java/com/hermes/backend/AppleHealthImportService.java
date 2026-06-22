@@ -230,6 +230,7 @@ public class AppleHealthImportService {
             running = true;
             failed = false;
             processed = 0;
+            lastMessage = "";
             return true;
         }
 
