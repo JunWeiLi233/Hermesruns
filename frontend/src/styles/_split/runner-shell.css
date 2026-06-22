@@ -903,12 +903,6 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
   justify-content: flex-end;
 }
 
-.runner-shell-topnav--command .territory-mode-pill {
-  min-height: 32px;
-  margin: 0;
-  white-space: nowrap;
-}
-
 @media (max-width: 520px) {
   .runner-shell-topnav-identity {
     grid-template-columns: 1fr;

@@ -219,14 +219,6 @@ export default function AppIcon({ name, className = '', title }) {
           <circle cx="12" cy="11" r="2" />
         </>
       );
-    case 'territory':
-      return titled(
-        <>
-          <path d="M4.5 7.5 9 5l6 2.5 4.5-2.2v11.2L15 19l-6-2.5-4.5 2.2Z" />
-          <path d="M9 5v11.5" />
-          <path d="M15 7.5V19" />
-        </>
-      );
     case 'account_tree':
       return titled(
         <>

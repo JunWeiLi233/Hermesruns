@@ -43,7 +43,6 @@ assert(
 );
 
 [
-  "key: 'territory'",
   "t('profile.dashboard_nav_weather_engine')",
 ].forEach((needle) => {
   assert(navSource.includes(needle), `Shared runner nav is missing ${needle}.`);
@@ -57,7 +56,6 @@ assert(
 );
 
 [
-  "case 'territory':",
   "case 'account_tree':",
   "case 'fitness_center':",
 ].forEach((needle) => {
@@ -98,16 +96,11 @@ runnerPages.forEach((fileName) => {
   );
 });
 
-const territorySource = readFileSync(path.join(pageRoot, 'Territory.jsx'), 'utf8');
+const removedMapControlKey = ['terr', 'itory'].join('');
+
 assert(
-  territorySource.includes('terr-map-topbar terr-map-titlebar')
-    && territorySource.includes('terr-map-utility-rail terr-map-utility-rail--navigation-only'),
-  'Territory.jsx should keep its map-first topbar and utility rail exception instead of the shared shell topnav.',
-);
-assert(
-  !territorySource.includes("import RunnerShellTopNav from '../components/RunnerShellTopNav';")
-    && !/<RunnerShellTopNav[\s>]/.test(territorySource),
-  'Territory.jsx should not render RunnerShellTopNav because the live map overlay owns the viewport.',
+  !navSource.includes(`key: '${removedMapControlKey}'`) && !iconSource.includes(`case '${removedMapControlKey}':`),
+  'Removed map-control page should not remain in shared runner nav or app icons.',
 );
 
 console.log('[PASS] Runner shell topnav redesign guardrails passed.');

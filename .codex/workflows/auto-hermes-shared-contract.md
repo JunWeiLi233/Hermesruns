@@ -202,8 +202,9 @@ If Reviewer emits `reverse-recommended`:
 - Treat `/auto-hermes` as a repo workflow/command convention, not a guaranteed native app feature.
 - For self-loop, subagent, coordinator, executor, ECC, and RTK claims: use the shared claim taxonomy instead of raw yes/no wording.
 - Prefer executor-backed loop ownership over prompt-only continuation whenever an executor path is configured.
-- In the default Codex executor-backed path, worker agents run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the bundled Codex fallback uses `--dangerously-bypass-approvals-and-sandbox`.
-- Generated coordinator and worker briefs must expose the executor permission mode so full-permission agent spawning is visible as configuration, not claimed as proof that a child agent already executed.
+- In the default Codex executor-backed path for standard `/auto-hermes`, worker agents run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the Codex fallback prefers the installed `codex` CLI with `--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust` when supported before falling back to bundled `codex-local`.
+- `/auto-hermes-self` is the exception: the self-loop helper owns state and briefs only, while the parent Codex session executes locally or spawns native subagents with `multi_agent_v1.spawn_agent`; do not use `.tools/generate-codex.js` or helper-generated agent spawning for Codex self rounds.
+- Generated coordinator and worker briefs for workflows that use generated workers must expose the executor permission mode so full-permission agent spawning is visible as configuration, not claimed as proof that a child agent already executed.
 
 ## Autonomous Decision Contract
 

@@ -18,7 +18,6 @@ const Runs = React.lazy(() => import('./pages/Runs'));
 const RunDetail = React.lazy(() => import('./pages/RunDetail'));
 const Analysis = React.lazy(() => import('./pages/Analysis'));
 const Heatmap = React.lazy(() => import('./pages/Heatmap'));
-const Territory = React.lazy(() => import('./pages/Territory'));
 const WeatherEngine = React.lazy(() => import('./pages/WeatherEngine'));
 const AnalysisInsightDetail = React.lazy(() => import('./pages/AnalysisInsightDetail'));
 const AddShoes = React.lazy(() => import('./pages/AddShoes'));
@@ -104,7 +103,6 @@ function App() {
                   <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                   <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
                   <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
-                  <Route path="/territory" element={<UserOnlyRoute><Territory /></UserOnlyRoute>} />
                   <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
                   <Route path="/weather-engine" element={<Navigate to="/weather" replace />} />
                   <Route path="/analysis/vo2max" element={<Navigate to="/analysis" replace />} />

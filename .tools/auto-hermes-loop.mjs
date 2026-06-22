@@ -84,6 +84,7 @@ function parseArgs(argv) {
     executorConfig: ".ai-sync/AUTO_HERMES_EXECUTOR.json",
     omxBridgeJson: ".ai-sync/OMX_AUTO_HERMES_BRIDGE.json",
     executorCommand: "",
+    parentCodexCoordinatorOnly: false,
     loopStateJson: ".ai-sync/AUTO_HERMES_LOOP_STATE.json",
     roundResultJson: ".ai-sync/AUTO_HERMES_ROUND_RESULT.json",
     roundResultMd: ".ai-sync/AUTO_HERMES_ROUND_RESULT.md",
@@ -96,6 +97,7 @@ function parseArgs(argv) {
     if (arg === "--write") args.write = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--dry-run") args.dryRun = true;
+    else if (arg === "--parent-codex-coordinator-only" || arg === "--parentCodexCoordinatorOnly") args.parentCodexCoordinatorOnly = true;
     else if (arg.startsWith("--")) {
       const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
       if (key in args) args[key] = argv[++i] || args[key];
@@ -433,6 +435,9 @@ function getCurrentGitHead() {
 }
 
 function loadExecutorConfig(args) {
+  if (args.parentCodexCoordinatorOnly && normalizeRuntime(args.runtime) === "codex") {
+    return null;
+  }
   if (isRuntimeNativeManaged(args.runtime)) {
     return null; // Native runtimes must use their own model/agent surface instead of Codex fallbacks.
   }
@@ -463,7 +468,7 @@ function loadExecutorConfig(args) {
     return omxRalphExecutor;
   }
 
-  return detectBundledCodexExecutor();
+  return detectCodexExecutor();
 }
 
 function detectOmxRalphExecutor(args) {
@@ -490,13 +495,57 @@ function detectOmxRalphExecutor(args) {
   };
 }
 
-function detectBundledCodexExecutor() {
+function readCodexHelp(codexCommand) {
+  try {
+    return execFileSync(
+      "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      ["-Command", `& ${shellQuote(codexCommand)} --help`],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
+function codexSupportsFlag(codexCommand, flag) {
+  const help = readCodexHelp(codexCommand);
+  if (help == null) return null;
+  return help.includes(flag);
+}
+
+function findCodexExecutorCandidate() {
   const localCodex = resolveFromRoot(".tools/codex-local.exe");
-  if (!fs.existsSync(localCodex)) return null;
+  const globalCodex = commandExists("codex");
+  const candidates = [
+    globalCodex ? { command: globalCodex, source: "global" } : null,
+    fs.existsSync(localCodex) ? { command: localCodex, source: "bundled" } : null,
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => codexSupportsFlag(candidate.command, "--dangerously-bypass-hook-trust") === true)
+    || candidates.find((candidate) => candidate.source === "global" && codexSupportsFlag(candidate.command, "--dangerously-bypass-hook-trust") == null)
+    || candidates.find((candidate) => codexSupportsFlag(candidate.command, YOLO_EXECUTOR_PERMISSION.codexFlag) !== false)
+    || null;
+}
+
+function detectCodexExecutor() {
+  const codexCandidate = findCodexExecutorCandidate();
+  if (!codexCandidate) return null;
+  const codexCommand = codexCandidate.command;
   const localCodexHome = resolveFromRoot(".tmp/codex-home");
   const userCodexHome = path.join(process.env.USERPROFILE || process.env.HOME || "", ".codex");
   const authSeedFiles = ["auth.json", "config.toml", "cap_sid", "installation_id"];
   const proxyVars = ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "all_proxy", "no_proxy"];
+  const supportsHookTrustBypass = codexSupportsFlag(codexCommand, "--dangerously-bypass-hook-trust");
+  const codexPermissionFlags = [
+    YOLO_EXECUTOR_PERMISSION.codexFlag,
+    supportsHookTrustBypass === true || (supportsHookTrustBypass == null && codexCandidate.source === "global")
+      ? "--dangerously-bypass-hook-trust"
+      : "",
+  ].filter(Boolean);
   const seedCommands = authSeedFiles
     .map((name) => {
       const source = path.join(userCodexHome, name);
@@ -509,11 +558,11 @@ function detectBundledCodexExecutor() {
     .join("; ");
 
   return {
-    label: "bundled-codex-local-yolo",
+    label: `${codexCandidate.source}-codex-yolo-noninteractive`,
     permissionMode: YOLO_EXECUTOR_PERMISSION.mode,
-    permissionFlag: YOLO_EXECUTOR_PERMISSION.codexFlag,
+    permissionFlag: codexPermissionFlags.join(" "),
     permissionDescription: YOLO_EXECUTOR_PERMISSION.description,
-    command: `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(localCodex)} exec ${YOLO_EXECUTOR_PERMISSION.codexFlag} --ephemeral -C {cwd} -`,
+    command: `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(codexCommand)} ${codexPermissionFlags.join(" ")} exec --ephemeral --color never -C {cwd} -`,
   };
 }
 
@@ -1538,6 +1587,11 @@ function buildCoordinatorBrief(state, promptText, latestControllerResult, execut
   } else if ((state.status === "executor-unconfigured" || state.status === "codex-live-awaiting-coordinator") && args.runtime === "codex-live") {
     nextAction = "codex-coordinator-execute-round";
     mustNotReplyYet = true;
+  } else if (state.status === "executor-unconfigured" && args.parentCodexCoordinatorOnly && args.runtime === "codex") {
+    nextAction = controllerResult.loopDecision === "continue-self-loop"
+      ? "codex-coordinator-execute-round"
+      : "stop";
+    mustNotReplyYet = nextAction !== "stop";
   } else if (
     runtimeNativeExecution &&
     (
@@ -1619,6 +1673,7 @@ function buildCoordinatorBrief(state, promptText, latestControllerResult, execut
     executorPermissionFlag: executor?.permissionFlag || state.executorPermissionFlag || "",
     executorPermissionDescription: executor?.permissionDescription || state.executorPermissionDescription || "",
     runtimeNativeExecution,
+    parentCodexCoordinatorOnly: Boolean(args.parentCodexCoordinatorOnly && args.runtime === "codex"),
     rtk,
     eccProfile,
     memoryPlan,
@@ -1775,16 +1830,27 @@ function renderCoordinatorMarkdown(brief) {
         : []),
       ...brief.subagentPlan.notes.map((note) => `- note: ${note}`),
       "",
-      "## Repo-Local External Codex Agents",
-      `- mode: ${brief.externalCatalog?.mode || "repo-local-codex-only"}`,
-      `- installed count: ${brief.externalCatalog?.installedCount ?? 0}`,
-      `- recommended this round: ${brief.externalCatalog?.recommended?.length ? brief.externalCatalog.recommended.map((entry) => entry.installedName).join(", ") : "none"}`,
-      `- installed agents: ${brief.externalCatalog?.installedNames?.length ? brief.externalCatalog.installedNames.join(", ") : "none"}`,
-      "- These are repo-local installed agents, not proof of live execution.",
-      ...(brief.runtimeNativeExecution ? ["- Native-runtime lanes must not call these Codex agents; use the runtime-native agent surface above."] : []),
-      ...(Array.isArray(brief.externalCatalog?.notes)
-        ? brief.externalCatalog.notes.map((note) => `- note: ${note}`)
-        : []),
+      ...(brief.parentCodexCoordinatorOnly && brief.runtime === "codex"
+        ? [
+            "## Repo-Local / Generated Agents Disabled",
+            "- mode: parent-codex-native-subagents-only",
+            "- generated-agent helpers are disabled for this Codex coordinator path.",
+            "- Do not run `.tools/generate-codex.js`, external repo agent generators, helper-generated executor agents, or repo-local external Codex agents.",
+            "- If delegation is safe and useful, the parent Codex session must spawn Codex-native subagents with `multi_agent_v1.spawn_agent`; otherwise execute locally.",
+            "- Repo-local installed agents may be listed as static reference material only; they are not proof of live execution and are not an execution surface for this path.",
+          ]
+        : [
+            "## Repo-Local External Codex Agents",
+            `- mode: ${brief.externalCatalog?.mode || "repo-local-codex-only"}`,
+            `- installed count: ${brief.externalCatalog?.installedCount ?? 0}`,
+            `- recommended this round: ${brief.externalCatalog?.recommended?.length ? brief.externalCatalog.recommended.map((entry) => entry.installedName).join(", ") : "none"}`,
+            `- installed agents: ${brief.externalCatalog?.installedNames?.length ? brief.externalCatalog.installedNames.join(", ") : "none"}`,
+            "- These are repo-local installed agents, not proof of live execution.",
+            ...(brief.runtimeNativeExecution ? ["- Native-runtime lanes must not call these Codex agents; use the runtime-native agent surface above."] : []),
+            ...(Array.isArray(brief.externalCatalog?.notes)
+              ? brief.externalCatalog.notes.map((note) => `- note: ${note}`)
+              : []),
+          ]),
       "",
       "## Evolved Trace Skill",
       `- mode: ${brief.traceToSkill?.evolvedSkill?.mode || "none"}`,
@@ -1822,7 +1888,13 @@ function renderCoordinatorMarkdown(brief) {
           ]
         : []),
       "- If next action is `claude-execute-round`, Claude Code is the active Ralph executor — immediately execute the next bounded round using the team model (dispatch specialist agents, collect results, run merge gate, verify, round-close). Do NOT stop or wait for the user. Keep looping until Next Action is `stop`.",
-      "- If next action is `codex-coordinator-execute-round`, that is now a fallback only when no executor-owned loop path is available.",
+      ...(brief.parentCodexCoordinatorOnly && brief.runtime === "codex"
+        ? [
+            "- If next action is `codex-coordinator-execute-round`, the parent Codex session executes the round directly and may use `multi_agent_v1.spawn_agent` only for safely separable lanes; generated-agent helpers remain disabled.",
+          ]
+        : [
+            "- If next action is `codex-coordinator-execute-round`, that is now a fallback only when no executor-owned loop path is available.",
+          ]),
       "- The loop owner now persists live Ralph grounding artifacts and supervisor continuity state in repo-local `.ai-sync` files.",
       "- The current work unit in this brief is authoritative for execution. Treat any stale `HUMAN_LOOP` / `LOOP_STATE` narrative writeback as non-operative background context unless it matches the controller-selected task.",
       "- Stop only when the rerun coordinator brief says `stop` or a real blocker/human gate fires. On stop, auto-publish: push branch + create PR via `node .tools/auto-hermes-push-main.mjs --execute --write`. Skip PR if no product changes.",
@@ -2161,6 +2233,9 @@ export function runAutoHermesLoop(rawArgs = process.argv.slice(2)) {
       } else if (args.runtime === "codex-live") {
         state.status = "codex-live-awaiting-coordinator";
         state.stopReason = "live Codex coordinator should execute this round directly using the emitted coordinator brief";
+      } else if (args.runtime === "codex" && args.parentCodexCoordinatorOnly) {
+        state.status = "executor-unconfigured";
+        state.stopReason = "parent Codex session should execute this round directly using native Codex subagents only for safely separable lanes; helper-generated executor agents are disabled";
       } else {
         state.status = "executor-unconfigured";
         state.stopReason = "no executor command is configured for unattended worker rounds";
@@ -2171,6 +2246,8 @@ export function runAutoHermesLoop(rawArgs = process.argv.slice(2)) {
         title: controllerResult.title || "",
         status: state.status,
       });
+      if (activeClaimKey) releaseTaskClaim({ claimDir: args.claimDir, key: activeClaimKey, ownerId: args.claimOwner });
+      activeClaimKey = "";
       persistLoopState({ status: state.status, lastWorkUnitSignature: signature });
       break;
     }

@@ -8,7 +8,6 @@ export function getRunnerShellNavItems({ t, lang, activeKey = null }) {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory', icon: 'territory' },
     { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
