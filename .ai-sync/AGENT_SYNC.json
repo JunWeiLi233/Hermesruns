@@ -1,61 +1,32 @@
 {
-  "updatedAt": "2026-06-15T13:32:34.761Z",
+  "updatedAt": "2026-06-19T04:49:43.529Z",
   "activeClaims": [],
-  "recentlyCompleted": [
+  "recentlyCompleted": [],
+  "mustFixQueue": [
     {
-      "key": "public-landing-race-map-fix-landing-race-map-point-projection",
-      "task": "Fix landing race map point projection",
-      "surface": "Public landing race map",
+      "key": "territory-auto-hermes-self-fix-territory-filled-land-algorithm-and-codex-native-",
+      "task": "Fix territory filled-land algorithm and Codex-native auto-hermes-self delegation",
+      "surface": "Territory / auto-hermes-self",
       "agent": "codex",
-      "owner": "",
-      "status": "completed",
-      "completedAt": "2026-06-15T13:32:34.761Z",
-      "startedAt": "",
+      "owner": "codex",
+      "status": "must-fix",
+      "completedAt": "",
+      "startedAt": "2026-06-19T04:49:43.529Z",
       "verify": [
-        "landing editorial smoke PASS, lint PASS with existing Territory warnings, frontend build PASS after sandbox EPERM elevated rerun, runtime sync PASS, in-app browser #races proof PASS"
+        "node frontend/src/pages/territoryBackendWiring.smoke.test.js; node frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js; cd frontend && node scripts/run-vite-build.mjs; node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/Territory.jsx frontend/src/pages/territoryBackendWiring.smoke.test.js .tools/verify-territory-filled-land-runtime.mjs; node .tools/verify-territory-filled-land-runtime.mjs --url http://localhost:8080 --coverage-samples 240 --screenshot task-images/territory-filled-land-runtime-proof.jpg"
       ],
       "files": [
-        "frontend/src/pages/Landing.jsx",
-        "frontend/src/pages/landingCommandEditorial.smoke.test.js",
-        "DESIGN_VERSIONS.md",
-        ".ai-sync/CONTEXT_LEDGER.md"
+        "frontend/src/pages/Territory.jsx",
+        "frontend/src/pages/territoryBackendWiring.smoke.test.js",
+        ".tools/verify-territory-filled-land-runtime.mjs",
+        ".codex/commands/auto-hermes-self.md"
       ],
       "rollbackTarget": "",
       "rollbackFiles": [],
-      "review": "approve-next-round",
+      "review": "ralph-gate-must-fix",
       "note": "",
       "next": ""
     },
-    {
-      "key": "public-landing-race-map-add-famous-marathons-to-landing-race-map",
-      "task": "Add famous marathons to landing race map",
-      "surface": "Public landing race map",
-      "agent": "codex",
-      "owner": "frontend",
-      "status": "completed",
-      "startedAt": "",
-      "completedAt": "2026-06-15T13:17:38.417Z",
-      "verify": [
-        "landing editorial smoke PASS, hero background smoke PASS, translation parity PASS, eslint PASS with existing Territory warnings, frontend build PASS after sandbox EPERM elevated rerun, runtime sync PASS, in-app browser #races proof PASS"
-      ],
-      "files": [
-        "frontend/src/pages/Landing.jsx",
-        "frontend/src/i18n/locales/en/pages.js",
-        "frontend/src/i18n/locales/zh-CN/pages.js",
-        "frontend/src/styles/_split/landing.css",
-        "frontend/src/styles/style.css",
-        "frontend/src/pages/landingCommandEditorial.smoke.test.js",
-        "DESIGN_VERSIONS.md",
-        ".ai-sync/CONTEXT_LEDGER.md"
-      ],
-      "rollbackTarget": "",
-      "rollbackFiles": [],
-      "review": "approve-next-round",
-      "note": "",
-      "next": ""
-    }
-  ],
-  "mustFixQueue": [
     {
       "key": "profile-fix-profile-empty-state",
       "task": "Fix Profile empty state",
@@ -63,8 +34,8 @@
       "agent": "codex",
       "owner": "",
       "status": "must-fix",
-      "startedAt": "2026-06-15T11:39:21.377Z",
       "completedAt": "",
+      "startedAt": "2026-06-17T06:53:44.434Z",
       "verify": [
         "`cd frontend && npm run lint && npm run build`"
       ],

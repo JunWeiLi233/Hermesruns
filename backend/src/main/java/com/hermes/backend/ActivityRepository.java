@@ -109,37 +109,9 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             JOIN a.runner runner
             WHERE a.activityType = :activityType
               AND runner.deleted = false
-              AND (
-                runner.email IS NULL
-                OR lower(runner.email) NOT LIKE 'territory-%@hermes.local'
-              )
             """)
-    Object[] findRealUserGlobalActivitySetSignatureByActivityType(
+    Object[] findRegisteredGlobalActivitySetSignatureByActivityType(
             @Param("activityType") ActivityType activityType
-    );
-
-    @Query("""
-            SELECT a.id
-            FROM Activity a
-            JOIN a.runner runner
-            WHERE a.activityType = :activityType
-              AND runner.deleted = false
-              AND runner.id <> :excludedRunnerId
-              AND (
-                runner.email IS NULL
-                OR lower(runner.email) NOT LIKE 'territory-%@hermes.local'
-              )
-              AND a.id NOT IN (
-                SELECT polygon.activityId
-                FROM TerritoryPolygon polygon
-                WHERE polygon.activityId IS NOT NULL
-              )
-            ORDER BY COALESCE(a.startTime, a.createdAt) DESC, a.id DESC
-            """)
-    List<Long> findMissingRealUserTerritoryActivityIdsExcludingRunner(
-            @Param("activityType") ActivityType activityType,
-            @Param("excludedRunnerId") Long excludedRunnerId,
-            Pageable pageable
     );
 
     @Query("""

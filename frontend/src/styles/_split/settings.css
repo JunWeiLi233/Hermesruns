@@ -1547,7 +1547,6 @@
 }
 
 .settings-command-hero-metric,
-.settings-command-territory-card,
 .settings-command-matrix-card,
 .settings-command-action-row,
 .settings-command-priority-row {
@@ -1568,8 +1567,7 @@
 .settings-command-action-copy strong,
 .settings-command-priority-copy strong,
 .settings-command-territories-route span,
-.settings-command-territories-stats span,
-.settings-command-territory-card span {
+.settings-command-territories-stats span {
   display: block;
   font-size: 0.64rem;
   font-weight: 800;
@@ -1579,8 +1577,7 @@
 
 .settings-command-hero-metric span,
 .settings-command-matrix-card span,
-.settings-command-territories-stats span,
-.settings-command-territory-card span {
+.settings-command-territories-stats span {
   color: rgba(232, 226, 220, 0.44);
 }
 
@@ -1793,8 +1790,7 @@
 
 .settings-command-account-intro strong,
 .settings-command-ecosystem-copy strong,
-.settings-command-territories-route strong,
-.settings-command-territory-card strong {
+.settings-command-territories-route strong {
   display: block;
   color: #f5efea;
   font-family: "Manrope", var(--font-display);
@@ -2047,21 +2043,6 @@
   color: #f4ede7;
   font-size: 1rem;
   font-weight: 800;
-}
-
-.settings-command-territory-card {
-  padding: 22px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.settings-command-territory-card.is-accent {
-  background: linear-gradient(145deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.05));
-}
-
-.settings-command-territory-card strong {
-  margin-top: 12px;
-  font-size: 2rem;
 }
 
 @media (max-width: 1220px) {
@@ -2860,8 +2841,7 @@
 }
 
 .settings-command-hero-badge,
-.settings-command-hero-pill,
-.settings-command-territory-card span {
+.settings-command-hero-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2916,7 +2896,6 @@
 
 .settings-command-hero-metric,
 .settings-command-card,
-.settings-command-territory-card,
 .settings-command-territories-map {
   border-radius: 24px;
   background:
@@ -2948,7 +2927,6 @@
 .settings-command-ecosystem-copy strong,
 .settings-command-ecosystem-stat strong,
 .settings-command-priority-level,
-.settings-command-territory-card strong,
 .settings-command-territories-route strong,
 .settings-command-territories-stats strong {
   display: block;
@@ -3329,19 +3307,6 @@
 
 .settings-command-territories-side {
   align-content: stretch;
-}
-
-.settings-command-territory-card {
-  padding: 22px 20px;
-}
-
-.settings-command-territory-card.is-accent {
-  background: linear-gradient(180deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.04));
-}
-
-.settings-command-territory-card strong {
-  margin-top: 14px;
-  font-size: clamp(1.6rem, 2.4vw, 2.4rem);
 }
 
 .settings-control-account-actions {

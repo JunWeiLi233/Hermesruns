@@ -11,6 +11,37 @@ function makeFixture() {
 }
 
 {
+  const finish = runAutoHermesFinish({
+    json: true,
+    task: "runtime sync helper",
+    surface: "Runner shell",
+    summary: "include shared runtime sync verifier",
+    gitRunner: (args) => {
+      const key = args.join(" ");
+      if (key === "status --short --untracked-files=all") {
+        return [
+          "?? .tools/verify-frontend-runtime-sync.mjs",
+          "?? .tools/verify-backend-runtime-sync.mjs",
+        ].join("\n");
+      }
+      if (key === "branch --show-current") return "codex/test-runtime-sync-helper";
+      return "";
+    },
+  }).result;
+
+  [
+    ".tools/verify-frontend-runtime-sync.mjs",
+    ".tools/verify-backend-runtime-sync.mjs",
+  ].forEach((file) => {
+    assert.equal(finish.files.includes(file), true);
+    assert.equal(
+      finish.policies.find((policy) => policy.path === file)?.bucket,
+      "publishable",
+    );
+  });
+}
+
+{
   const fixture = makeFixture();
   fs.writeFileSync(path.join(fixture, ".ai-sync", "AUTO_HERMES_DOCKER_GATE.json"), JSON.stringify({
     generatedAt: new Date().toISOString(),

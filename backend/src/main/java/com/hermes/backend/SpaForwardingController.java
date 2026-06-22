@@ -30,7 +30,6 @@ public class SpaForwardingController {
         "/profile",
         "/runs",
         "/heatmap",
-        "/territory",
         "/run",
         "/run/{id}",
         "/analysis",
