@@ -173,7 +173,7 @@ function pickRouteTileZoom(latSpan, lngSpan) {
   return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
 }
 
-  // Mirror Heatmap / Territory choice but use no-labels variant — at thumb
+  // Mirror Heatmap map tiles but use the no-labels variant at thumbnail scale.
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }

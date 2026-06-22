@@ -26,7 +26,7 @@ assert.match(
 assert.match(
   runsSource,
   /basemaps\.cartocdn\.com/,
-  'Runs page should source thumbnail tiles from the same CartoDB CDN used by Heatmap and Territory pages.',
+  'Runs page should source thumbnail tiles from the same CartoDB CDN used by Heatmap.',
 );
 
 assert.match(

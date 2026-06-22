@@ -13,6 +13,7 @@ set "SYNC_CONFIG=%ROOT%.tools\hermes_sync_config.json"
 set "BOOT_SCRIPT=%TEMP%\hermes_boot_%RANDOM%.cmd"
 set "LOCAL_ENV_PS1=%ROOT%Hermes.local.env.ps1"
 set "LOCAL_ENV_BOOT=%TEMP%\hermes_env_%RANDOM%.cmd"
+set "BACKEND_RETRY_DONE="
 
 if exist "%LOCAL_ENV_PS1%" (
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
@@ -153,6 +154,12 @@ if defined PYTHON_EXE (
 )
 
 :: 4. Wait until Spring Boot serves the site before opening the browser
+goto :wait_for_backend
+
+:retry_backend
+echo [2/4] Waking up Spring Boot (Java)...
+start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
+:wait_for_backend
 echo [4/4] Waiting for Spring Boot on localhost:8080...
 for /l %%I in (1,1,30) do (
     powershell -NoProfile -Command ^
@@ -161,6 +168,16 @@ for /l %%I in (1,1,30) do (
         goto :open_app
     )
     timeout /t 1 /nobreak > nul
+)
+
+if not defined BACKEND_RETRY_DONE (
+    findstr /C:"NoClassDefFoundError: com/hermes/backend/" /C:"ClassNotFoundException: com.hermes.backend." "%HERMES_BACKEND_LOG%" >nul 2>nul
+    if not errorlevel 1 (
+        echo [Hermes] Spring Boot hit a stale backend class error. Retrying once...
+        set "BACKEND_RETRY_DONE=1"
+        timeout /t 2 /nobreak > nul
+        goto :retry_backend
+    )
 )
 
 echo [Warn] Spring Boot did not answer on localhost:8080 within 30 seconds.

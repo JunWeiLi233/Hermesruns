@@ -94,6 +94,20 @@ class AppleHealthImportServiceTest {
     }
 
     @Test
+    void healthSyncTrackerTryBeginClearsPreviousTerminalMessage() {
+        AppleHealthImportService.HealthSyncTracker tracker = new AppleHealthImportService.HealthSyncTracker();
+        tracker.tryBegin();
+        tracker.markFailed("Previous run failed");
+
+        assertThat(tracker.tryBegin()).isTrue();
+
+        AppleHealthImportService.HealthSyncStatus snapshot = tracker.snapshot();
+        assertThat(snapshot.running()).isTrue();
+        assertThat(snapshot.failed()).isFalse();
+        assertThat(snapshot.message()).isEmpty();
+    }
+
+    @Test
     void healthSyncTrackerAddProcessedAccumulates() {
         AppleHealthImportService.HealthSyncTracker tracker = new AppleHealthImportService.HealthSyncTracker();
         tracker.tryBegin();

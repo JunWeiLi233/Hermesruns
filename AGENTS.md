@@ -58,6 +58,8 @@ powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 
 & 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
 ```
 
+Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+
 Then read:
 
 - `.ai-codex/optimized-codex.md`

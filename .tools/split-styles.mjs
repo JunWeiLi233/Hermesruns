@@ -128,7 +128,6 @@ function classifyClass(cls) {
   if (cls.startsWith('runs-dashboard') || cls.startsWith('runs-page')) return 'runs';
   if (cls.startsWith('recent-runs') || cls.startsWith('run-detail') || cls.startsWith('history-')) return 'runs';
   if (cls.startsWith('weekly-flashcard') || cls === 'weekly') return 'runs';
-  if (cls.startsWith('territory-') || cls.startsWith('terr-')) return 'territory';
   if (cls.startsWith('rewards-') || cls.startsWith('reward-')) return 'rewards';
   if (cls.startsWith('workflow-') || cls.startsWith('wf-')) return 'workflow';
   if (cls.startsWith('glass-') || cls === 'theme-light' || cls === 'theme-midnight') return 'tokens';
@@ -248,7 +247,6 @@ const importOrder = [
   'schedule',
   'shoes',
   'muscle-training',
-  'territory',
   'heatmap',
   'weather',
   'rewards',

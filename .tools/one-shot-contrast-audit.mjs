@@ -32,7 +32,6 @@ const ROUTES = [
   "/muscle-training",
   "/races",
   "/shoes",
-  "/territory",
   "/heatmap",
   "/schedule",
   "/today-run",

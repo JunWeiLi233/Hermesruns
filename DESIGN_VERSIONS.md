@@ -4130,3 +4130,138 @@ What changed: Replaced the decorative race-map packet/hub motion with a projecte
 Why: The user reported the current animation felt weird and meaningless, and wanted motion that helps explain the diagram.
 Rollback target: `DV-2026-06-14-03`
 Notes: This changes the landing map animation only; race copy, navigation, authentication, and formula panels are unchanged.
+
+### Version: DV-2026-06-18-01
+Date: 2026-06-18
+Surface: Territory own-land render on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-browser-quality-runtime.mjs`, `.tools/verify-territory-filled-land-runtime.mjs`
+What changed: Active owner fill now runs per connected territory component instead of one cross-city owner box, so Queens, Manhattan, and Brooklyn islands fill their real interiors without one large scan aborting the fill pass. The active coverage/exact layers use bounded visual expansion plus small blur, filled paths no longer draw internal strokes, and the browser proof now rejects the prior under-filled render.
+Why: The user supplied a reference where My territory reads as held land, not a border-only outline or a cell-seam grid.
+Rollback target: working tree before this round
+Notes: No synthetic hulls or fake district plates were added; the filled footprint is still based on backend-owned cells and route-derived masks.
+
+### Version: DV-2026-06-18-02
+Date: 2026-06-18
+Surface: Territory own-land quality pass on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-browser-quality-runtime.mjs`, `.tools/verify-territory-filled-land-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`
+What changed: Active territory now keeps broad coverage/source/exact helper geometry hidden, renders the main owned land as the visible coral fill, and uses closed route-loop geometry as a thin outline for distant owned islands. Active fill excludes route-corridor components and uses bounded active bay collapse with angular corners to avoid both rounded blobs and overfilled route slabs.
+Why: The reference target shows solid owned land for the main territory, faint outlines for distant islands, and no visible helper-cell slabs or internal seam lines.
+Rollback target: `DV-2026-06-18-01`
+Notes: Helper geometry remains in the DOM and cache proof for backend-cell coverage, but its fill opacity is zero so it cannot visually overestimate owned land.
+
+### Version: DV-2026-06-18-03
+Date: 2026-06-18
+Surface: Territory own-land reference alignment on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-browser-quality-runtime.mjs`, `.tools/verify-territory-filled-land-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Active owned land now uses cache v135, angular active-fill loops, an elongated-loop filter, a medium primary land underlay, and stronger exact backend-cell reinforcement. Broad coverage/source helper layers stay hidden, exact supplements stay hidden, and closed route-loop islands remain outline-only.
+Why: The user supplied a reference where My territory should read as filled held land with blocky owned-cell edges, not as a rounded blob, a border-only trace, or broad helper-cell slabs.
+Rollback target: `DV-2026-06-18-02`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v135-midfill.jpg`.
+
+### Version: DV-2026-06-18-04
+Date: 2026-06-18
+Surface: Territory own-land dense route alignment on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-browser-quality-runtime.mjs`, `.tools/verify-territory-filled-land-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Active route-corridor owner groups now keep source tiles for ownership/cache coverage but derive visible fill from dense-supported tiles only. Sparse route arms and distant islands stay outline-like, the central Queens owned footprint remains filled, and source/exact/coverage helper layers are hidden so internal backend-cell scars do not draw over the land.
+Why: The user reference shows My territory as solid held land with route-like outlying outlines, not fake filled route slabs, border-only traces, or visible internal helper-cell lines.
+Rollback target: `DV-2026-06-18-03`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v136-clean-fill.jpg`; cache proof screenshot: `task-images/territory-cache-proof-v136-clean-fill.jpg`.
+
+### Version: DV-2026-06-18-05
+Date: 2026-06-18
+Surface: Territory own-land blocky active fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Active filled territory now preserves raw owned-mask contours after dense route filtering, so the visible central land keeps blockier owned-cell edges instead of being over-smoothed into a rounded mass. A selected-owner asymmetric padding experiment was rejected after browser proof because it zoomed too far out and made the territory less like the reference.
+Why: The user reference shows a solid but blocky held-land footprint with route-like outlying outlines, not a smooth blob or a tiny zoomed-out territory.
+Rollback target: `DV-2026-06-18-04`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v137-final-raw-active-fill.jpg`; rejected experiment screenshot: `task-images/territory-browser-quality-proof-v138-framed-raw-fill.jpg`.
+
+### Version: DV-2026-06-18-06
+Date: 2026-06-18
+Surface: Territory own-land route-adjacent block fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Active fill now carries component area/aspect/density metadata and admits only nearby substantial route-adjacent blocks through a separate low-density gate, while keeping distant Manhattan/Brooklyn route islands outline-only and hidden helper-cell layers invisible.
+Why: The reference requires owned land to read as filled held territory, but prior gating dropped nearby block fragments while broad helper visibility reintroduced scars or false slabs.
+Rollback target: `DV-2026-06-18-05`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v145-low-density-near-block-fill.jpg`. In the verifier account, the large western filled block from the reference corresponds to a rival land owner in Global scope, so Own scope correctly does not recolor that owner as active.
+
+### Version: DV-2026-06-18-07
+Date: 2026-06-18
+Surface: Territory own-land seam cleanup on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the failed own-scope supplement experiment that painted nearby rival bounds as fake active rectangles, restored Own scope to real selected-owner cells only, strengthened the active coral land fill, and kept active contour strokes disabled so internal mask seams do not draw over held land.
+Why: The reference requires held land interiors, not border-only loops, fake nearby-owner slabs, or bright internal contour scars.
+Rollback target: `DV-2026-06-18-06`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v150-hidden-active-contours.jpg`.
+
+### Version: DV-2026-06-18-08
+Date: 2026-06-18
+Surface: Territory Own local-demo footprint on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryControllerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-browser-quality-runtime.mjs`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Own scope now adds the local Flushing demo held-land footprint as active land without merging it into the runner route-corridor union, clips the oversized northern fixture cells out of that active fill, and keeps helper/source/exact geometry hidden while the primary coral land carries the visible territory.
+Why: The user reference requires the large west/central Queens landmass to read as held territory, while skinny route-like northern fragments should not become dotted filled land or a fake border-only loop.
+Rollback target: `DV-2026-06-18-07`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v155-cell-clipped-land.jpg`; API proof shows active Own land bounds `40.731209..40.769694`, `-73.856724..-73.779993`.
+
+### Version: DV-2026-06-18-09
+Date: 2026-06-18
+Surface: Territory Own shaped held-land footprint on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `.tools/verify-territory-browser-quality-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Own scope now clips the local Flushing demo footprint at cell level into shaped west, central, lower, and east held-land blocks instead of copying the full overestimated fixture row or cutting it with one horizontal latitude line. The frontend keeps active land repair from filling non-route land gaps, excludes hidden helper geometry from map fit bounds, and frames Own scope wider so Manhattan/Brooklyn route-loop islands remain visible context.
+Why: The user reference requires My territory to read as held land with the wider NYC framing, not a giant slab, border-only loop, or rectangle crop with internal helper scars.
+Rollback target: `DV-2026-06-18-08`
+Notes: Live browser proof screenshot: `task-images/territory-browser-quality-proof-v164-shaped-final.jpg`; active Own land proof renders `13,684` active pixels with hidden coverage/source/exact helpers and route-loop outlines only.
+
+### Version: DV-2026-06-18-10
+Date: 2026-06-18
+Surface: Territory route-detail filled land on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/TerritoryPolygonComputer.java`, `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/TerritoryPolygonComputerTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-cache-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Closed route-detail layers now generate filled land masks even when activity summary distance reflects repeated or compressed sampling, and local shared-runner outline seeds are no longer forced into border-only route corridors. The land mask cache and frontend territory cache were bumped so stale route-corridor rows do not suppress the new filled land.
+Why: `/territory` must match the filled territory implied by the actual `run/:runDetail` route layers, including Central Park, Brooklyn harbor, and Queens north border outlines.
+Rollback target: `DV-2026-06-18-09`
+Notes: API proof on the shared-runner account returned active `land` masks for Central Park outline (`5702` cells), Brooklyn harbor outline (`7210` cells), and Queens north border outline (`34795` cells). Browser Use proof on `/territory` rendered `119` active concrete land paths with visible filled land.
+
+### Version: DV-2026-06-18-11
+Date: 2026-06-18
+Surface: Territory coverage-only land rendering on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the separate contour and route-corridor line painters so `/territory` renders backend cell-backed land coverage as the only visible ownership layer. Route-detail masks with cells now flow through the same filled land pipeline as normal land masks, while route-only previews no longer qualify as drawable territory.
+Why: The land coverage is accurate enough to carry the territory view, and keeping a separate border/route outline could imply ownership where the backend has no concrete cells.
+Rollback target: `DV-2026-06-18-10`
+Notes: Browser proof on the shared-runner account rendered `331` active concrete land paths and `0` contour/route-line paths. API proof returned `187` active cell-backed polygons, `120598` active cells, `187` active route-detail polygons with cells, and `0` active route-only polygons. Route-render proof found `77961` full cells and `0` route/contour DOM paths; filled-land proof sampled `300` backend cells with `300/300` visible coverage. Aggregate run-detail audit covered `679` activities and route traces tied to `365` unique activity ids, all backed by cells.
+
+### Version: DV-2026-06-18-12
+Date: 2026-06-18
+Surface: Territory zoom performance on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-zoom-performance-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Removed zoom/pan viewport state from the polygon paint effect and batched each owner’s land regions into grouped multipolygon paths. Ordinary map navigation now keeps the existing territory layer instead of rebuilding hundreds of region paths.
+Why: Zooming in and out of the territory map should feel responsive before further border, coverage, and conflict-border improvements are layered on top.
+Rollback target: `DV-2026-06-18-11`
+Notes: Zoom proof on the shared-runner account reduced active land DOM paths from `331` to `23`, preserved all `23` tagged paths through zoom in/out, and kept `0` route/contour paths. Filled-land proof still covered `300/300` sampled backend cells from `120598` active cells, and route-render proof still returned `77961` full cells with `0` active route/contour paths.
+
+### Version: DV-2026-06-18-13
+Date: 2026-06-18
+Surface: Territory coverage-only ownership on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-route-render-runtime.mjs`, `.tools/verify-territory-zoom-performance-runtime.mjs`, `DESIGN_VERSIONS.md`
+What changed: Removed the dedicated conflict-border layer and conflict-border styling after validating that filled land coverage is the ownership surface users should read. Overlapping cells still resolve before paint through latest-wins concrete ownership, but the DOM now exposes only filled land paths for territory ownership, with legacy route/contour paths hidden and rejected by runtime proof.
+Why: The land coverage is accurate enough, and a separate border can overstate precision or imply a second ownership layer.
+Rollback target: `DV-2026-06-18-12`
+Notes: Runtime proof rendered `10` active land paths, `0` route paths, `0` contour paths, and `0` conflict-border paths. Filled-land proof covered `300/300` sampled backend cells; zoom proof preserved all `10` tagged land paths across zoom in/out with max step duration `2233ms`.
+
+### Version: DV-2026-06-18-14
+Date: 2026-06-18
+Surface: Territory border-first Own territory on `/territory`
+Files: `backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java`, `backend/src/main/java/com/hermes/backend/TerritoryService.java`, `backend/src/test/java/com/hermes/backend/LocalSharedRunnerBootstrapServiceTests.java`, `frontend/src/pages/Territory.jsx`, `frontend/src/styles/_split/territory.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the local shared-runner Own view to a border-first model: the three outline activities persist and render as route-corridor traces, raw local seed rows are hidden from active land, and the visible held territory is six calibrated pure-land blocks with no route trace metadata or internal contour strokes.
+Why: The user reference requires correctly aligned border lines first, then held land inside. Filling the border outlines as land produced fake slabs, while rendering only borders made the territory look empty.
+Rollback target: `DV-2026-06-18-13`
+Notes: API proof returned `6` active `land` masks with `0` traces and `3` active `route-corridor` masks with `3` traces. In-app browser proof at 837x673 rendered `6` active land layers, `3` active route traces, `0` visible route surfaces, and `0` visible contours; screenshot: `task-images/territory-border-first-v14-837.png`.
+
+### Version: DV-2026-06-22-01
+Date: 2026-06-22
+Surface: Territory completed-run ownership fill on `/territory`
+Files: `frontend/src/pages/Territory.jsx`, `frontend/src/pages/territoryBackendWiring.smoke.test.js`, `.tools/verify-territory-api-geometry.mjs`, `DESIGN_VERSIONS.md`
+What changed: Active owner fill repair now disables component bridging after backend ownership has been unioned, so separate backend-backed regions remain separate during rendering. Source-level mask repair can still bridge short broken seams before ownership resolution, but the post-union active fill path cannot reconnect separate completed-run regions into one synthetic landmass.
+Why: My Territory must preserve separate completed-run regions and must not connect distant or detached clusters while trying to repair the ownership-style fill.
+Rollback target: `DV-2026-06-18-14`
+Notes: Non-browser proof passed: backend wiring smoke, Heatmap world-map smoke, production build, frontend runtime sync, HTTP marker proof against served `assets/Territory-CnhNwNL4.js`, and live API geometry proof with `556` polygons, `369468` active cells, and `319` detached land regions preserved. Browser screenshot/scorer acceptance remains pending under the browser-proof restriction.

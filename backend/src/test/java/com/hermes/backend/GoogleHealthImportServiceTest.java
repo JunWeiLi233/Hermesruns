@@ -93,6 +93,20 @@ class GoogleHealthImportServiceTest {
     }
 
     @Test
+    void healthSyncTrackerTryBeginClearsPreviousTerminalMessage() {
+        GoogleHealthImportService.HealthSyncTracker tracker = new GoogleHealthImportService.HealthSyncTracker();
+        tracker.tryBegin();
+        tracker.markFailed("Previous run failed");
+
+        assertThat(tracker.tryBegin()).isTrue();
+
+        GoogleHealthImportService.HealthSyncStatus snapshot = tracker.snapshot();
+        assertThat(snapshot.running()).isTrue();
+        assertThat(snapshot.failed()).isFalse();
+        assertThat(snapshot.message()).isEmpty();
+    }
+
+    @Test
     void healthSyncStatusIdleReturnsDefaultState() {
         GoogleHealthImportService.HealthSyncStatus idle = GoogleHealthImportService.HealthSyncStatus.idle();
         assertThat(idle.running()).isFalse();
