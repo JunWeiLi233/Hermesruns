@@ -35,10 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "strava.sync.enabled=false",
         "garmin.wellness.sync.enabled=false",
         "app.coach.nightly.enabled=false",
-        "app.local-shared-runner.enabled=false",
-        "app.local-territory-flushing.enabled=false",
-        "app.local-territory-flushing-inner.enabled=false",
-        "app.local-territory-berlin.enabled=false"
+        "app.local-shared-runner.enabled=false"
 })
 @Transactional
 class MuscleTrainingControllerTests {

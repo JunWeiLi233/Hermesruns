@@ -34,17 +34,27 @@ const CLAUDE_CODE_TEAM_AGENT_POLICY = {
 const CODEX_LIVE_CHILD_AGENT_POLICY = {
   runtime: "codex-live",
   agentOwner: "Codex",
-  agentLabel: "Codex live child agents",
+  agentLabel: "Codex-live native subagents",
   model: "gpt-5.5",
   reasoningEffort: "medium",
-  modelPolicy: "use GPT-5.5 with medium reasoning effort for Codex live child agents",
-  executorPolicy: "native-runtime-agents-only",
+  modelPolicy: "use GPT-5.5 with medium reasoning effort for Codex-live native subagents",
+  executorPolicy: "codex-live-native-subagents-only",
   codexFallbackAllowed: false,
-  fallback: "If child-agent delegation is unavailable, the live Codex coordinator executes the bounded round directly while preserving the same GPT-5.5 medium-thinking policy.",
+  fallback: "If Codex-live native subagent delegation is unavailable, the live Codex coordinator executes the bounded round directly while preserving the same GPT-5.5 medium-thinking policy.",
+};
+
+const CODEX_NATIVE_SUBAGENT_POLICY = {
+  runtime: "codex",
+  agentOwner: "Codex parent session",
+  agentLabel: "Codex-native subagents",
+  modelPolicy: "use multi_agent_v1.spawn_agent from the current parent Codex session to spawn Codex-native subagents for disjoint delegated lanes",
+  executorPolicy: "parent-codex-native-subagents-only",
+  forbiddenGenerators: [".tools/generate-codex.js", ".tools/auto-hermes-loop.mjs helper-generated agents", "external repo agent-generation helpers"],
+  fallback: "If Codex-native subagents are unavailable or the lane is not safely separable, execute locally in the parent Codex session.",
 };
 const RALPH_LOOP_STRENGTH = {
   mode: "strict-ralph-loop",
-  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; the configured executor-backed runtime must actively re-enter the loop after each round",
+  completionPromise: "continue until a real stop gate fires; never treat one successful bounded round as natural completion; the parent Codex self-runtime must execute locally or through native Codex subagents and then re-enter after each round",
   requiredRoundEvidence: [
     "verify-result pass with fresh command evidence",
     "runtime-proof pass when source changes affect a live/runtime surface",
@@ -70,8 +80,8 @@ const RALPH_LOOP_STRENGTH = {
       "read coordinator brief for current work unit",
       "read controller JSON for subagent plan and route",
       "run pre-round Ralph integrity gate (check previous task did not break loop-critical files)",
-      "dispatch specialist agents per team model (parallel where safe, sequential for review/QA gates)",
-      "collect specialist results and run merge gate",
+      "execute locally or dispatch runtime-native subagents per the selected runtime policy (parallel where safe, sequential for review/QA gates)",
+      "collect delegated results when present and run merge gate",
       "execute verification from task Verify field",
       "run post-round Ralph integrity fix if pre-round gate found breakage",
       "run round-close with real evidence (pass or fail verdict, include ralph-integrity-fix if applied)",
@@ -137,8 +147,13 @@ function resolveSelfExecutionContract(runtime) {
   const normalized = normalizeRuntime(runtime || DEFAULT_SELF_RUNTIME);
   if (normalized === "codex-live") return "coordinator-awaiting";
   if (normalized === "claude") return "claude-self-executing";
+  if (normalized === "codex") return "parent-codex-native-subagents";
   if (["gemini", "opencode"].includes(normalized)) return "native-runtime-owned";
   return "executor-backed";
+}
+
+function isDefaultCodexSelfRuntime(runtime) {
+  return normalizeRuntime(runtime || DEFAULT_SELF_RUNTIME) === "codex";
 }
 
 function parseArgs(argv) {
@@ -176,6 +191,7 @@ function parseArgs(argv) {
     maxExecutorRetries: "",
     executorRetryBackoff: "",
     maxSelfReentries: "",
+    parentCodexCoordinatorOnly: "",
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -198,6 +214,9 @@ function applySelfDefaults(rawArgs = {}) {
     ...rawArgs,
     mode: "self-ralph",
     runtime: rawArgs.runtime || DEFAULT_SELF_RUNTIME,
+    parentCodexCoordinatorOnly: rawArgs.parentCodexCoordinatorOnly === "" || rawArgs.parentCodexCoordinatorOnly == null
+      ? isDefaultCodexSelfRuntime(rawArgs.runtime || DEFAULT_SELF_RUNTIME)
+      : rawArgs.parentCodexCoordinatorOnly !== false && String(rawArgs.parentCodexCoordinatorOnly).toLowerCase() !== "false",
     tasks: rawArgs.tasks || "TASKS.md",
     humanLoop: rawArgs.humanLoop || ".ai-sync/HUMAN_LOOP.md",
     agentSync: rawArgs.agentSync || ".ai-sync/AGENT_SYNC.md",
@@ -337,12 +356,12 @@ function renderRuntimeNativePolicyLines(runtimeNativeExecution) {
   if (!runtimeNativeExecution) return [];
   if (runtimeNativeExecution.runtime === "codex-live") {
     return [
-      "## Codex Live Child-Agent Policy",
+      "## Codex Live Native Subagent Policy",
       `- Runtime: ${runtimeNativeExecution.runtime}`,
       `- Agent surface: ${runtimeNativeExecution.agentLabel}`,
       `- Model: ${runtimeNativeExecution.model}`,
       `- Reasoning effort: ${runtimeNativeExecution.reasoningEffort}`,
-      "- Apply this policy to delegated child agents for `/auto-hermes-self`.",
+      "- Apply this policy to delegated Codex-live native subagents for `/auto-hermes-self`.",
       "",
     ];
   }
@@ -364,8 +383,23 @@ function renderRuntimeNativePolicyLines(runtimeNativeExecution) {
   }
   return [];
 }
-
-function decoratePrompt(promptText, runtimeNativeExecution = null) {
+function renderCodexNativeSubagentPolicyLines(runtime) {
+  if (!isDefaultCodexSelfRuntime(runtime)) return [];
+  const policy = CODEX_NATIVE_SUBAGENT_POLICY;
+  return [
+    "## Codex Native Subagent Policy",
+    `- Runtime: ${policy.runtime}`,
+    `- Owner: ${policy.agentOwner}`,
+    `- Agent surface: ${policy.agentLabel}`,
+    `- Model policy: ${policy.modelPolicy}`,
+    `- Executor policy: ${policy.executorPolicy}`,
+    `- Forbidden generators: ${policy.forbiddenGenerators.join(", ")}`,
+    `- Fallback: ${policy.fallback}`,
+    "- Apply this policy to every `/auto-hermes-self` Codex round and emitted self-loop artifact.",
+    "",
+  ];
+}
+function decoratePrompt(promptText, runtimeNativeExecution = null, runtime = DEFAULT_SELF_RUNTIME) {
   const header = [
     "# Auto-Hermes Self Loop",
     "",
@@ -378,11 +412,20 @@ function decoratePrompt(promptText, runtimeNativeExecution = null) {
   const body = String(promptText || "").includes("# Auto-Hermes Self Loop")
     ? String(promptText || "")
     : `${header}${String(promptText || "")}`;
-  if (body.includes("## Strict Ralph Loop Gates")) return body;
-  const codexLivePolicyText = renderRuntimeNativePolicyLines(runtimeNativeExecution).join("\n");
+  const codexPolicyText = renderCodexNativeSubagentPolicyLines(runtime).join("\n");
+  const runtimePolicyText = renderRuntimeNativePolicyLines(runtimeNativeExecution).join("\n");
+  const missingPolicyText = [
+    codexPolicyText && !body.includes("## Codex Native Subagent Policy") ? codexPolicyText.trimEnd() : "",
+    runtimePolicyText && !body.includes("## Codex Live Native Subagent Policy") && !body.includes("## Claude Code Team Model") ? runtimePolicyText.trimEnd() : "",
+  ].filter(Boolean).join("\n\n");
+  if (body.includes("## Strict Ralph Loop Gates")) {
+    if (!missingPolicyText) return body;
+    return body.replace("## Strict Ralph Loop Gates", `${missingPolicyText}\n\n## Strict Ralph Loop Gates`);
+  }
+  const policyText = missingPolicyText ? `${missingPolicyText}\n\n` : "";
   const strengthText = `${renderRalphLoopStrengthLines().join("\n")}\n\n`;
-  if (body.includes(header)) return body.replace(header, `${header}${codexLivePolicyText}${strengthText}`);
-  return `${body.trimEnd()}\n\n${codexLivePolicyText}${strengthText}`;
+  if (body.includes(header)) return body.replace(header, `${header}${policyText}${strengthText}`);
+  return `${body.trimEnd()}\n\n${policyText}${strengthText}`;
 }
 
 function renderSelfLoopMarkdown(state) {
@@ -411,6 +454,9 @@ function renderSelfLoopMarkdown(state) {
     "It keeps iterating until a real stop gate fires instead of treating a bounded round as the finish state.",
   ];
 
+  const codexPolicyLines = renderCodexNativeSubagentPolicyLines(state.selfExecutionRuntime || state.runtime);
+  if (codexPolicyLines.length) lines.push("", ...codexPolicyLines);
+
   if (runtimeNativeExecution?.runtime === "claude") {
     const team = runtimeNativeExecution.teamDispatch || {};
     lines.push(
@@ -428,7 +474,7 @@ function renderSelfLoopMarkdown(state) {
   } else if (runtimeNativeExecution?.runtime === "codex-live") {
     lines.push(
       "",
-      "## Codex Live Child-Agent Policy",
+      "## Codex Live Native Subagent Policy",
       `- Runtime: ${runtimeNativeExecution.runtime}`,
       `- Agent surface: ${runtimeNativeExecution.agentLabel}`,
       `- Model: ${runtimeNativeExecution.model}`,
@@ -519,6 +565,7 @@ function writeSelfArtifacts(args, state) {
   const promptText = decoratePrompt(
     fs.existsSync(promptPath) ? fs.readFileSync(promptPath, "utf8") : "",
     runtimeNativeExecution,
+    state.selfExecutionRuntime || state.runtime || args.runtime,
   );
   fs.writeFileSync(promptPath, promptText, "utf8");
 
@@ -530,6 +577,7 @@ function writeSelfArtifacts(args, state) {
     selfExecutionRuntime: state.selfExecutionRuntime || state.runtime || DEFAULT_SELF_RUNTIME,
     selfExecutionContract,
     unbounded: true,
+    codexNativeSubagentPolicy: isDefaultCodexSelfRuntime(state.selfExecutionRuntime || state.runtime || args.runtime) ? CODEX_NATIVE_SUBAGENT_POLICY : null,
     runtimeNativeExecution: runtimeNativeExecution || coordinator.runtimeNativeExecution || null,
     maxRounds: null,
     maxSameWorkUnitRepeats: state.maxSameWorkUnitRepeats,
@@ -560,6 +608,9 @@ function writeSelfArtifacts(args, state) {
     "This is the true Ralph self-loop version of `/auto-hermes`.",
     "Keep iterating until a real stop gate fires.",
     "If the queue is empty, use the standard find-the-task path before stopping, including the website-audit fallback when the controller reports no promotable work.",
+    ...(isDefaultCodexSelfRuntime(state.selfExecutionRuntime || state.runtime || args.runtime)
+      ? ["", ...renderCodexNativeSubagentPolicyLines(state.selfExecutionRuntime || state.runtime || args.runtime)]
+      : []),
     ...(runtimeNativeExecution?.runtime === "claude"
       ? [
           "",
@@ -578,7 +629,7 @@ function writeSelfArtifacts(args, state) {
     ...(runtimeNativeExecution?.runtime === "codex-live"
       ? [
           "",
-          "## Codex Live Child-Agent Policy",
+          "## Codex Live Native Subagent Policy",
           `- Runtime: ${runtimeNativeExecution.runtime}`,
           `- Agent surface: ${runtimeNativeExecution.agentLabel}`,
           `- Model: ${runtimeNativeExecution.model}`,
@@ -601,12 +652,13 @@ function writeSelfArtifacts(args, state) {
       ? [
           "",
           "## Codex Self-Loop Protocol (Active Execution)",
-          "Description: Codex runs through the executor-backed self-loop owner, executes or delegates authorized bounded rounds, records real gate evidence, and re-enters without waiting for user input until a true stop gate fires.",
+          "Description: Codex uses the self-loop owner for state and coordinator briefs only; the parent Codex session executes bounded rounds locally or with Codex-native subagents, records real gate evidence, and re-enters without waiting for user input until a true stop gate fires.",
           "Loop body:",
           "  read coordinator brief for current work unit",
           "  read controller JSON for subagent plan, route, files, and verification contract",
           "  run pre-round Ralph integrity gate for loop-critical files",
-          "  execute locally or delegate authorized disjoint lanes",
+          "  execute locally or spawn Codex-native subagents through multi_agent_v1.spawn_agent for safely separable lanes",
+          "  never run .tools/generate-codex.js, external repo agent generators, or helper-generated agent execution paths",
           "  run required verification and runtime proof when needed",
           "  run review/merge gate with an explicit verdict",
           "  run round-close with real evidence",
@@ -626,6 +678,7 @@ function writeSelfArtifacts(args, state) {
     selfExecutionRuntime: state.selfExecutionRuntime || state.runtime || DEFAULT_SELF_RUNTIME,
     selfExecutionContract,
     unbounded: true,
+    codexNativeSubagentPolicy: isDefaultCodexSelfRuntime(state.selfExecutionRuntime || state.runtime || args.runtime) ? CODEX_NATIVE_SUBAGENT_POLICY : null,
     runtimeNativeExecution: runtimeNativeExecution || null,
     maxRounds: null,
     maxSameWorkUnitRepeats: state.maxSameWorkUnitRepeats,
@@ -658,6 +711,7 @@ function normalizeResult(result, args) {
     runtime: selfExecutionRuntime,
     selfExecutionRuntime,
     selfExecutionContract,
+    codexNativeSubagentPolicy: isDefaultCodexSelfRuntime(selfExecutionRuntime) ? CODEX_NATIVE_SUBAGENT_POLICY : null,
     runtimeNativeExecution,
   };
 

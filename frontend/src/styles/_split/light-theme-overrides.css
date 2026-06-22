@@ -6335,7 +6335,6 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-card,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-map,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-hero-metric,
-body:is(.theme-light, .theme-high-contrast-light) .settings-command-territory-card,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-matrix-card,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-action-row,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-priority-row {
@@ -6381,8 +6380,7 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-action-copy 
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-priority-copy strong,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-head h2,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-route strong,
-body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-stats strong,
-body:is(.theme-light, .theme-high-contrast-light) .settings-command-territory-card strong {
+body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-stats strong {
   color: var(--text-strong);
 }
 
@@ -6400,7 +6398,6 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-hero-metric 
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-ecosystem-copy span,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-route span,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-stats span,
-body:is(.theme-light, .theme-high-contrast-light) .settings-command-territory-card span,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-matrix-card span,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-action-cta,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-priority-level {
@@ -6410,7 +6407,6 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-command-priority-lev
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-hero-badge,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-hero-pill,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-link,
-body:is(.theme-light, .theme-high-contrast-light) .settings-command-territory-card span,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-action-icon,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-ecosystem-stat,
 body:is(.theme-light, .theme-high-contrast-light) .settings-command-territories-stats > div,

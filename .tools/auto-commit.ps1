@@ -87,10 +87,6 @@ function Get-PathPolicy {
         return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Placeholder local environment documentation may ship; real local env files remain blocked.'
     }
 
-    if ($normalized -eq 'territory-reference-weight-closeup.jpg') {
-        return New-PolicyResult -Path $normalized -Bucket 'publishable' -Reason 'Reference image used by the checked-in territory visual proof harness.'
-    }
-
     # Shared AI workflow files - NOW PUBLISHABLE
     $sharedAiWorkflowRegexes = @(
         '^AGENTS\.md$',
@@ -198,7 +194,7 @@ function Get-PathPolicy {
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
         '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.(mjs|test\.mjs)|auto-hermes-push-main\.(mjs|test\.mjs)|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$',
         '^\.tools/audit-marathon-coursemaps\.mjs$',
-        '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test|territory-live-proof-command|territory-visual-proof-server|verify-territory-border-runtime)\.mjs$',
+        '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test)\.mjs$',
         '^docs/repo-rules/',
         '^docs/superpowers/plans/',
         '^start_hermes\.bat$'

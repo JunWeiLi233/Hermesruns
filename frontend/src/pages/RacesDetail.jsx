@@ -648,7 +648,6 @@ export default function RacesDetail() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'territory', icon: 'territory', label: t('profile.dashboard_nav_territory'), route: '/territory' },
     { key: 'weather_engine', icon: 'thermostat', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races', active: true },

@@ -284,12 +284,6 @@ export default {
     "stitch_slide_4_copy": "Hover or drag the HR chart to see exact BPM by km — no more guessing whether you went out too hard.",
     "stitch_slide_4_stat_one": "Lap-by-lap",
     "stitch_slide_4_stat_two": "Pinpoint pace",
-    "stitch_slide_5_kicker": "Your conquered space",
-    "stitch_slide_5_line_one": "Run any GPS route.",
-    "stitch_slide_5_line_two": "The land lights up.",
-    "stitch_slide_5_copy": "Every GPS run paints a concrete land mask on the real map. Closed routes flood-fill the enclosed land; open routes claim the path you covered.",
-    "stitch_slide_5_stat_one": "Total area",
-    "stitch_slide_5_stat_two": "Land-mask cells",
     "stitch_slide_6_kicker": "Shoes that know when to retire",
     "stitch_slide_6_line_one": "Snap a photo.",
     "stitch_slide_6_line_two": "We track every mile.",
@@ -365,7 +359,6 @@ export default {
     "dashboard_nav_analysis": "Analysis",
     "dashboard_nav_activities": "Runs",
     "dashboard_nav_heatmap": "Heatmap",
-    "dashboard_nav_territory": "Territory",
     "dashboard_nav_shoes": "Shoes",
     "dashboard_nav_races": "Races",
     "dashboard_nav_schedule": "Schedule",
@@ -1210,7 +1203,7 @@ export default {
     "acwr_state_high_title": "Load has climbed above your safe zone — injury prevention today",
     "acwr_state_high_body": "Your last 7 days are about {delta}% above baseline — an injury-prevention signal. An easy day keeps this block absorbable and protects tendons and ligaments from cumulative overload.",
     "acwr_state_danger_title": "This load spike is now carrying real injury risk",
-    "acwr_state_danger_body": "Your last 7 days are about {delta}% above baseline — clear injury-prevention territory. Taking impact down today and choosing rest or low-impact work protects you from overuse injuries that derail weeks of training.",
+    "acwr_state_danger_body": "Your last 7 days are about {delta}% above baseline — clear injury-prevention risk. Taking impact down today and choosing rest or low-impact work protects you from overuse injuries that derail weeks of training.",
     "coaching_intelligence_shoe_label": "Recommended shoe",
 "coaching_intelligence_no_shoe": "—",
     "readiness_label": "Today's Readiness",
@@ -1373,8 +1366,6 @@ export default {
     "stitch_check_identity_note": "Identity note is filled in",
     "stitch_check_strava": "Strava sync is connected",
     "stitch_check_digest": "Weekly brief is enabled",
-    "stitch_territory_card_profile": "Profile completion",
-    "stitch_territory_card_language": "Interface language",
     "stitch_account_identity_placeholder": "Write a short training identity note, season focus, or rhythm preference you want Hermes to remember.",
     "appearance_title": "Appearance",
     "language_title": "Language",
@@ -2031,7 +2022,7 @@ export default {
     "route_elevation_hilly": "Hilly (>12 m/km)",
     "routeZone": {
       "core": "Your running neighborhood",
-      "extended": "Extended territory"
+      "extended": "Extended range"
     },
     "routeAnchoredRuns": {
       "waiting": "Waiting for run history",

@@ -48,17 +48,6 @@ const authBrandSlides = [
     ],
   },
   {
-    id: 'territory-polygons',
-    kickerKey: 'index.stitch_slide_5_kicker',
-    lineOneKey: 'index.stitch_slide_5_line_one',
-    lineTwoKey: 'index.stitch_slide_5_line_two',
-    copyKey: 'index.stitch_slide_5_copy',
-    stats: [
-      { value: 'km²', labelKey: 'index.stitch_slide_5_stat_one' },
-      { value: 'Loops', labelKey: 'index.stitch_slide_5_stat_two' },
-    ],
-  },
-  {
     id: 'shoe-rotation',
     kickerKey: 'index.stitch_slide_6_kicker',
     lineOneKey: 'index.stitch_slide_6_line_one',

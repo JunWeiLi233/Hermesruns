@@ -13,6 +13,8 @@ powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 
 & 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
 ```
 
+Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+
 Then read:
 
 - `.ai-codex/optimized-codex.md`
@@ -66,7 +68,7 @@ Working boundaries:
 
 For deep `/auto-hermes` behavior, read the owning workflow/helper instead of inflating `AGENTS.md`.
 
-Executor-backed Codex rounds default to YOLO/full-permission worker execution. The loop helper selects OMX Ralph with `--madmax` when OMX is auto-ready, otherwise the bundled Codex fallback uses `--dangerously-bypass-approvals-and-sandbox`. Generated briefs must show this as executor configuration, and child-agent lanes inherit that context unless an explicit executor override is configured.
+Executor-backed Codex rounds for standard `/auto-hermes` default to YOLO/full-permission worker execution. The loop helper selects OMX Ralph with `--madmax` when OMX is auto-ready, otherwise the Codex fallback prefers the installed `codex` CLI with `--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust` when supported before falling back to bundled `codex-local`. Generated briefs must show this as executor configuration, and child-agent lanes inherit that context unless an explicit executor override is configured. `/auto-hermes-self` is the exception: its helper owns state and briefs only, and the parent Codex session executes locally or spawns native subagents with `multi_agent_v1.spawn_agent`.
 
 ## Loop And Batch Rules
 

@@ -14,6 +14,8 @@ Use this guide for everyday local operation of the Hermes autonomous loops.
 
 Use when you want one continuous bounded improvement loop that can pull work from the queue and, when needed, fall back to website audit.
 
+This guide is for standard `/auto-hermes`. For `/auto-hermes-self`, do not run `.tools/generate-codex.js`; use the self command/skill and spawn parent-session Codex subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+
 Typical operator flow:
 
 1. Refresh repo context:

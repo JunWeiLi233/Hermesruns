@@ -83,38 +83,6 @@ function normalizePointPayload(payload) {
     : [];
 }
 
-function distanceMeters(point, cell) {
-  const [lat, lng] = point;
-  const cellLat = Number(cell?.latitude);
-  const cellLng = Number(cell?.longitude);
-  if (![lat, lng, cellLat, cellLng].every(Number.isFinite)) {
-    return Number.POSITIVE_INFINITY;
-  }
-  const metersPerDegLat = 111_320;
-  const cosLat = Math.cos((((lat + cellLat) * 0.5) * Math.PI) / 180);
-  return Math.hypot((cellLng - lng) * cosLat * metersPerDegLat, (cellLat - lat) * metersPerDegLat);
-}
-
-function sampledNearestCellProof(points, cells) {
-  const stride = Math.max(1, Math.floor(points.length / 120));
-  const samplePoints = points.filter((_, index) => index % stride === 0).slice(0, 140);
-  const nearestMeters = samplePoints
-    .map((point) => Math.min(...cells.map((cell) => distanceMeters(point, cell))))
-    .filter(Number.isFinite)
-    .sort((a, b) => a - b);
-  const percentile = (ratio) => (
-    nearestMeters.length
-      ? nearestMeters[Math.min(nearestMeters.length - 1, Math.floor(nearestMeters.length * ratio))]
-      : null
-  );
-  return {
-    samples: nearestMeters.length,
-    p50: percentile(0.5) == null ? null : Math.round(percentile(0.5)),
-    p90: percentile(0.9) == null ? null : Math.round(percentile(0.9)),
-    max: nearestMeters.length ? Math.round(nearestMeters[nearestMeters.length - 1]) : null,
-  };
-}
-
 const browser = await chromium.launch({ headless: true });
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -164,18 +132,6 @@ try {
       .map((item) => [String(item?.activityId), item])
       .filter(([id]) => id && id !== 'undefined'),
   );
-
-  const polygonResponse = await page.request.get(`${baseUrl}/api/territory/polygons`, {
-    headers: { Authorization: `Bearer ${loginBody.token}` },
-  });
-  if (!polygonResponse.ok()) {
-    throw new Error(`territory polygons request failed ${polygonResponse.status()}`);
-  }
-  const polygonData = await polygonResponse.json();
-  const polygons = Array.isArray(polygonData?.polygons) ? polygonData.polygons : [];
-  const activeCells = polygons
-    .filter((polygon) => polygon?.active === true)
-    .flatMap((polygon) => (Array.isArray(polygon.cells) ? polygon.cells : []));
 
   const visibleRunProofs = [];
   for (const id of visibleRunIds) {
@@ -243,17 +199,6 @@ try {
       const tiles = Array.from(card?.querySelectorAll('.recent-runs-thumb-route-tile[data-route-tile-layer]') || []);
       return tiles.length > 0 && tiles.every((tile) => tile.complete && tile.naturalWidth === 256 && tile.naturalHeight === 256);
     }, id);
-
-    const matchingSource = polygons.find((polygon) => String(polygon?.activityId) === String(id));
-    const routeTerritoryProof = matchingSource && activeCells.length > 0
-      ? sampledNearestCellProof(points, activeCells)
-      : null;
-    if (routeTerritoryProof) {
-      const requiredTerritorySamples = Math.min(20, points.length);
-      if (routeTerritoryProof.samples < requiredTerritorySamples || routeTerritoryProof.p90 == null || routeTerritoryProof.p90 > 24) {
-        throw new Error(`visible run ${id} route is not aligned with active territory cells: ${JSON.stringify(routeTerritoryProof)}`);
-      }
-    }
 
     const cardProof = await page.evaluate(({ runId: currentRunId, expected }) => {
       const card = document.querySelector(`button.recent-runs-card[data-run-id="${CSS.escape(currentRunId)}"]`);
@@ -361,10 +306,6 @@ try {
       thumbAspect: thumbAspectProof.aspect,
       routePointCount: points.length,
       previewPointCount: previewPoints.length,
-      territorySourcePresent: Boolean(matchingSource),
-      territorySourceCells: Array.isArray(matchingSource?.cells) ? matchingSource.cells.length : 0,
-      territorySourceRouteTraces: Array.isArray(matchingSource?.routeTraces) ? matchingSource.routeTraces.length : 0,
-      activeTerritoryNearestCellMeters: routeTerritoryProof,
     });
   }
 
@@ -392,11 +333,6 @@ try {
     runsProof,
     visibleRunProofs,
     detailProof,
-    territoryProof: {
-      polygonCount: polygons.length,
-      activeCellCount: activeCells.length,
-      etag: polygonResponse.headers()['etag'] || null,
-    },
   }, null, 2));
 } finally {
   await browser.close();
