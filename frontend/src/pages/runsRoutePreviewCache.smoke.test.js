@@ -23,7 +23,7 @@ assert.match(
 assert.match(
   runsSource,
   /const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT \+ \(RECENT_RUNS_LOAD_BATCH_SIZE \* 2\);/,
-  'Runs page should prewarm route previews for the initial history window before the page flips to ready.',
+  'Runs page should keep the initial route-preview window bounded while loading previews after the list paints.',
 );
 
 assert.match(
@@ -41,13 +41,13 @@ assert.match(
 assert.match(
   runsSource,
   /slice\(0,\s*ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT\)/,
-  'Runs page should preload the initial route-preview batch before showing the history cards.',
+  'Runs page should still request route previews for the initial history window.',
 );
 
 assert.match(
   runsSource,
   /setLoadState\('ready'\)/,
-  'Runs page should still explicitly flip to ready after the initial preload work completes.',
+  'Runs page should explicitly flip to ready when run history data is available.',
 );
 
 assert.match(
@@ -110,8 +110,20 @@ assert.match(
 
 assert.match(
   runsSource,
-  /setStravaStatus\(hit\.stravaStatus\);[\s\S]*const preloadIds = sorted[\s\S]*slice\(0,\s*ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT\)[\s\S]*setLoadState\('ready'\);/,
-  'Runs page should prewarm cached history route previews before it flips the page to ready.',
+  /setStravaStatus\(hit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);[\s\S]*const preloadIds = sorted[\s\S]*fetchRoutePreviewBatch\(preloadIds\)/,
+  'Runs page should paint cached history before prewarming route previews.',
+);
+
+assert.match(
+  runsSource,
+  /setAllRuns\(list\);[\s\S]*setLoadState\('ready'\);[\s\S]*if \(preloadIds\.length > 0\) \{[\s\S]*fetchRoutePreviewBatch\(preloadIds\)/,
+  'Runs page should paint fresh /api/activities results before route-preview enrichment finishes.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /return \(preloadIds\.length > 0[\s\S]*fetchRoutePreviewBatch\(preloadIds\)[\s\S]*setLoadState\('ready'\)/,
+  'Runs page must not block the ready state behind initial route-preview preloading.',
 );
 
 assert.doesNotMatch(

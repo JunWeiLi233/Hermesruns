@@ -3734,7 +3734,7 @@ export default function MuscleTraining() {
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
-            <span>{t('analysis.stitch_brand_subtitle')}</span>
+            <span>{t('analysis.stitch_brand_subtitle_muscle')}</span>
           </div>
           <button
             type="button"

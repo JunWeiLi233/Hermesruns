@@ -4265,3 +4265,39 @@ What changed: Active owner fill repair now disables component bridging after bac
 Why: My Territory must preserve separate completed-run regions and must not connect distant or detached clusters while trying to repair the ownership-style fill.
 Rollback target: `DV-2026-06-18-14`
 Notes: Non-browser proof passed: backend wiring smoke, Heatmap world-map smoke, production build, frontend runtime sync, HTTP marker proof against served `assets/Territory-CnhNwNL4.js`, and live API geometry proof with `556` polygons, `369468` active cells, and `319` detached land regions preserved. Browser screenshot/scorer acceptance remains pending under the browser-proof restriction.
+
+### Version: DV-2026-06-23-01
+Date: 2026-06-23
+Surface: Runs history cockpit sizing on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/style.css`, `DESIGN_VERSIONS.md`
+What changed: Tightened the profile-aligned `/runs` cockpit so the hero and signal rail fit a normal laptop viewport more comfortably. The desktop split now gives the text column a bit more room while reducing cockpit padding, hero headline scale, action button height, and the signal-card min-heights, spacing, and radii.
+Why: The previous cockpit grid read oversized in the live Runs history header, making the top surface feel too tall and heavy before the actual run list.
+Rollback target: `DV-2026-06-11-04`
+Notes: This is a proportional sizing pass only; no routing, data wiring, import actions, or user-facing copy changed.
+
+### Version: DV-2026-06-23-02
+Date: 2026-06-23
+Surface: Shoe scan import modal on `/shoes`
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/styles/style.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Resized the image-import scan modal so its body scrolls instead of clipping, uses safer desktop columns, caps the preview/results height, and collapses to a single column before the controls squeeze together.
+Why: Clicking the image-import button from Shoes could open a cramped two-column modal where upload controls and parsed result fields appeared squeezed together on narrower laptop viewports.
+Rollback target: `DV-2026-06-23-01`
+Notes: Layout-only fix; no routing, scan API behavior, or user-facing copy changed.
+
+### Version: DV-2026-06-23-03
+Date: 2026-06-23
+Surface: Shoe scan import cockpit on `/shoes`
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/styles/style.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Redesigned the image-import modal into a dual-mode scan cockpit with an atmospheric visual rail, calibrated scan preview, stronger upload drop zone, clearer quota/status/result cards, and mobile-safe duplicate-resolution actions.
+Why: The previous modal fit better after the sizing fix but still read as a generic split form instead of a premium Hermes scanning workflow.
+Rollback target: `DV-2026-06-23-02`
+Notes: CSS-only redesign; scan API behavior, routing, file selection, quota handling, duplicate actions, and user-facing copy are preserved.
+
+### Version: DV-2026-06-23-04
+Date: 2026-06-23
+Surface: Shoe scan import modal repair on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/_split/shoes.css`, `frontend/src/styles/style.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the overbuilt scan cockpit styling with a compact responsive modal, removed the decorative upload pseudo-element, hid horizontal overflow, and made the visible preview upload pill a real file input.
+Why: The previous redesign looked messy on narrow viewports and the visible upload-looking control in the preview did not open the file picker.
+Rollback target: `DV-2026-06-23-03`
+Notes: Scan API behavior, quota handling, duplicate-resolution actions, and existing form upload remain preserved.

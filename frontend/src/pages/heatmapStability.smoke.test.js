@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const heatmapSource = readFileSync(path.join(here, 'Heatmap.jsx'), 'utf8');
+const heatmapStyleSource = readFileSync(path.join(here, '../styles/_split/heatmap.css'), 'utf8');
 
 assert.match(
   heatmapSource,
@@ -14,8 +15,8 @@ assert.match(
 
 assert.match(
   heatmapSource,
-  /const \{ isAuthenticated, authHydrated \} = useAuth\(\);/,
-  'Heatmap should read auth hydration state before deciding whether to redirect to login.',
+  /const \{ isAuthenticated, authHydrated, email: authEmail \} = useAuth\(\);/,
+  'Heatmap should read auth hydration and account email state before deciding whether to redirect or cache heatmap GPS data.',
 );
 
 assert.match(
@@ -27,31 +28,255 @@ assert.match(
 assert.match(
   heatmapSource,
   /if \(!authHydrated \|\| !isAuthenticated\) return undefined;/,
-  'Heatmap should not request heatmap data until auth hydration has completed.',
+  'Heatmap should not request heatmap data until auth hydration has completed and should rerun if the authenticated account changes.',
 );
 
 assert.match(
   heatmapSource,
-  /}, \[bounds, heatmapState, points\]\);/,
-  'Heatmap map-mount effect should depend on the memoized points collection rather than a fresh array built every render.',
+  /}, \[hasBounds, heatmapState\]\);/,
+  'Heatmap map-mount effect should not remount while progressive GPS pages append or bounds object identity changes.',
+);
+assert.match(
+  heatmapSource,
+  /const boundsRef = useRef\(null\);[\s\S]*?const hasBounds = Boolean\(bounds\);[\s\S]*?boundsRef\.current = bounds;[\s\S]*?if \(!mapRef\.current \|\| !boundsRef\.current \|\| !hasBounds \|\| heatmapState !== 'ready'\) return undefined;[\s\S]*?const latestBounds = boundsRef\.current;[\s\S]*?latestBounds\.minLatitude/,
+  'Heatmap should keep latest bounds in a ref so Leaflet is not torn down during fast zoom when GPS payloads update.',
 );
 
 assert.match(
   heatmapSource,
-  /function buildVisibleGpsDots\(points, zoom\) \{[\s\S]*?visibleDots/,
-  'Heatmap should build a sampled GPS-dot overlay for visible points on top of the heat layer.',
+  /function isValidGpsCoordinate\(latitude, longitude\) \{[\s\S]*?latitude >= -90[\s\S]*?latitude <= 90[\s\S]*?longitude >= -180[\s\S]*?longitude <= 180/,
+  'Heatmap should reject out-of-range coordinates before drawing GPS dots.',
+);
+assert.match(
+  heatmapSource,
+  /function buildVisibleGpsDots\(points\) \{[\s\S]*?return points\.filter\(\(point\) => isValidGpsCoordinate\(point\?\.latitude, point\?\.longitude\)\)/,
+  'Heatmap should render only real backend GPS points with valid coordinates.',
+);
+assert.match(
+  heatmapSource,
+  /function normalizeRawHeatPoint\(point\) \{[\s\S]*?Array\.isArray\(point\)[\s\S]*?activityId: Number\(point\[0\]\)[\s\S]*?latitude: Number\(point\[1\]\)[\s\S]*?longitude: Number\(point\[2\]\)[\s\S]*?speedRatio: Number\(point\[3\]\)/,
+  'Heatmap should accept compact backend GPS point arrays without dropping coordinates.',
+);
+assert.match(
+  heatmapSource,
+  /function normalizeHeatPointForRender\(point\)[\s\S]*?visualSpeedRatio: Number\.isFinite\(speedRatio\) \? clamp\(speedRatio, 0, 1\) : 0\.5/,
+  'Heatmap should normalize compact array points once while receiving pages.',
+);
+assert.match(
+  heatmapSource,
+  /if \(points\[0\] && Number\.isFinite\(points\[0\]\.visualSpeedRatio\)\) return points;/,
+  'Heatmap should not re-normalize the full all-points payload after background loading completes.',
+);
+assert.match(
+  heatmapSource,
+  /function buildMergedHeatmapPayload\(basePayload, points, loadPhase = 'complete'\)[\s\S]*?loadPhase,[\s\S]*?complete: hasCompleteGps/,
+  'Heatmap should carry an explicit GPS load phase so coverage previews are not presented as full received totals.',
+);
+assert.match(
+  heatmapSource,
+  /HEATMAP_REQUEST_TIMEOUT_MS = 120000/,
+  'Heatmap all-point fetch should not use the old short timeout that aborts large GPS payloads.',
+);
+assert.match(
+  heatmapSource,
+  /const HEATMAP_INITIAL_PAGE_SIZE = 5000;[\s\S]*?const HEATMAP_INITIAL_COVERAGE_LIMIT = 60000;[\s\S]*?async function fetchHeatmapCoverage\(limit, signal\)[\s\S]*?\/api\/profile\/heatmap\?coverage=true&limit=\$\{limit\}[\s\S]*?fetchHeatmapCoverage\(HEATMAP_INITIAL_COVERAGE_LIMIT, signal\)[\s\S]*?onProgress\(coverageProgress\)[\s\S]*?nextLimit = HEATMAP_BACKGROUND_PAGE_SIZE/,
+  'Heatmap should render a small first GPS page, seed spatial coverage with real GPS points, then continue loading all remaining GPS pages in the background.',
+);
+assert.match(
+  heatmapSource,
+  /fetchCompleteHeatmap\(heatmapController\.signal, \(partialHeatmap\) => \{[\s\S]*?setHeatmap\(partialHeatmap\);[\s\S]*?setHeatmapState\('ready'\);/,
+  'Heatmap should switch to ready state on the first progressive page instead of waiting for every GPS point.',
+);assert.match(
+  heatmapSource,
+  /HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1'[\s\S]*?HEATMAP_CACHE_STORE_NAME = 'heatmaps'[\s\S]*?HEATMAP_CACHE_MAX_AGE_MS = 7 \* 24 \* 60 \* 60 \* 1000/,
+  'Heatmap should define a durable IndexedDB cache for complete GPS payloads.',
+);
+assert.match(
+  heatmapSource,
+  /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:\$\{normalizedEmail\}/,
+  'Heatmap cache should be keyed from the authenticated account email so every official-site user gets an isolated cache.',
+);
+assert.match(
+  heatmapSource,
+  /function openHeatmapCacheDb\(\)[\s\S]*?window\.indexedDB\.open\(HEATMAP_CACHE_DB_NAME, HEATMAP_CACHE_DB_VERSION\)[\s\S]*?createObjectStore\(HEATMAP_CACHE_STORE_NAME, \{ keyPath: 'key' \}\)/,
+  'Heatmap should use IndexedDB instead of localStorage for large GPS point caches.',
+);
+assert.match(
+  heatmapSource,
+  /function markCachedHeatmapPayload\(payload, savedAt\)[\s\S]*?loadPhase: 'cachedComplete'[\s\S]*?complete: true[\s\S]*?cacheHit: true/,
+  'Heatmap should mark cached complete GPS payloads distinctly from partial preview pages.',
+);
+assert.match(
+  heatmapSource,
+  /const cacheKey = getHeatmapCacheKey\(authEmail\)[\s\S]*?const cachedHeatmapPromise = readCachedHeatmapPayload\(cacheKey\)\.catch\(\(\) => null\)[\s\S]*?const cachedHeatmap = await cachedHeatmapPromise[\s\S]*?setHeatmap\(cachedHeatmap\);[\s\S]*?setHeatmapState\('ready'\);[\s\S]*?if \(cancelled \|\| servedCachedHeatmap\) return;[\s\S]*?writeCachedHeatmapPayload\(cacheKey, completeHeatmap\)\.catch\(\(\) => \{\}\);/,
+  'Heatmap should render a cached complete GPS payload immediately, refresh in the background, and rewrite the cache after a complete backend load.',
+);
+assert.match(
+  heatmapSource,
+  /if \(!database \|\| !key \|\| !payload \|\| payload\.diagnostics\?\.complete === false \|\| !Array\.isArray\(payload\.points\)\)/,
+  'Heatmap cache writes should reject missing keys, partial payloads, and non-point payloads.',
+);
+assert.match(
+  heatmapSource,
+  /const firstProgress = buildMergedHeatmapPayload\(mergedPayload, points\.slice\(\), 'recentPreview'\);[\s\S]*?onProgress\(firstProgress\);[\s\S]*?const coverageProgress = buildMergedHeatmapPayload\(coveragePayload, coveragePoints, 'coveragePreview'\);[\s\S]*?onProgress\(coverageProgress\);/,
+  'Heatmap should limit React progress updates to first-page and spatial coverage previews, not every full background page.',
+);
+assert.match(
+  heatmapSource,
+  /HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500[\s\S]*?HEATMAP_FULL_RENDER_POINT_LIMIT = 12000[\s\S]*?buildHeatmapRenderPointPool\(points, limit\)[\s\S]*?const stride = Math\.max\(1, Math\.ceil\(points\.length \/ cappedLimit\)\)[\s\S]*?latestPreviewRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_PREVIEW_RENDER_POINT_LIMIT\)[\s\S]*?latestFullRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_FULL_RENDER_POINT_LIMIT\)[\s\S]*?const renderPoints = renderMode === 'preview'[\s\S]*?latestPreviewRenderPointsRef\.current[\s\S]*?latestFullRenderPointsRef\.current[\s\S]*?for \(const point of renderPoints\)/,
+  'Heatmap canvas should draw from capped preview/full render pools so zoom never scans the full GPS array.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /for \(const point of latestPointsRef\.current\)|for \(let index = 0; index < allPoints\.length; index \+= stride\)/,
+  'Heatmap zoom rendering should not iterate the full GPS array during canvas paints.',
+);
+assert.match(
+  heatmapSource,
+  /HEATMAP_FULL_DRAW_CHUNK_SIZE = 320[\s\S]*?const bufferCanvas = document\.createElement\('canvas'\)[\s\S]*?const bufferContext = bufferCanvas\.getContext\('2d'\)[\s\S]*?const cancelFullDraw = \(\) => \{[\s\S]*?activeFullDrawToken \+= 1[\s\S]*?cancelFullDrawFrame\(fullDrawFrameId\)[\s\S]*?const scheduleFullDrawChunk = \(callback\) => \{[\s\S]*?requestIdleCallback\(callback, \{ timeout: 420 \}\)[\s\S]*?window\.setTimeout\(\(\) => callback\(\{ timeRemaining: \(\) => 4, didTimeout: true \}\), 24\)[\s\S]*?scheduleFullDrawChunk\(drawFullChunk\)[\s\S]*?dotContext\.drawImage\(bufferCanvas, 0, 0\)/,
+  'Heatmap full GPS redraws should be chunked into an offscreen canvas and swapped only after completion so zoom animation frames stay responsive.',
+);
+assert.match(
+  heatmapSource,
+  /const scheduleZoomStart = \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?cancelFullDraw\(\)[\s\S]*?zoomSettleTimeoutId = window\.setTimeout\(finishZoomRender, 480\);[\s\S]*?destroy: \(\) => \{[\s\S]*?cancelFullDraw\(\);/,
+  'Heatmap should cancel stale chunked full redraw work on zoom start and unmount.',
+);assert.doesNotMatch(
+  heatmapSource,
+  /requestAnimationFrame\(drawFullChunk\)|cancelAnimationFrame\(fullDrawFrameId\)/,
+  'Heatmap full GPS redraw chunks should not run on animation frames because that competes with zoom animation.',
+);
+assert.match(
+  heatmapSource,
+  /latestPointsRef\.current = points;[\s\S]*?const renderMode = heatmap\?\.diagnostics\?\.complete === false \? 'preview' : 'full';[\s\S]*?requestAnimationFrame\(\(\) => overlay\.syncRouteDots\(renderMode\)\)[\s\S]*?}, \[heatmap\?\.diagnostics\?\.complete, points\]\);[\s\S]*?}, \[hasBounds, heatmapState\]\);/,
+  'Heatmap should use preview redraws while GPS pages append and reserve full redraws for complete payloads without remounting Leaflet on bounds object changes.',
+);
+assert.match(
+  heatmapSource,
+  /let zoomDotFrameId = null;[\s\S]*?let activeCanvasLayerOrigin = null;[\s\S]*?const getDotCanvasAnimatedScale = \(\) => \{[\s\S]*?window\.getComputedStyle\(dotCanvas\)\.transform[\s\S]*?const radiusScale = clamp\(1 \/ animatedScale, 0\.18, 1\.9\)[\s\S]*?drawRoutePoint\(dotContext, point, zoom, 'preview', activeCanvasLayerOrigin, radiusScale\)[\s\S]*?const startZoomRadiusCompensation = \(\) => \{[\s\S]*?requestAnimationFrame\(runZoomRadiusCompensation\)[\s\S]*?isZoomingMap = false;[\s\S]*?stopZoomRadiusCompensation\(\);[\s\S]*?dotCanvas\.style\.opacity = '0\.62';[\s\S]*?startZoomRadiusCompensation\(\);/,
+  'Heatmap should repaint preview GPS dots with inverse radius scaling during animated zoom so marker size stays visually stable.',
+);
+assert.match(
+  heatmapSource,
+  /let isZoomingMap = false;[\s\S]*?let skipNextMovePreview = false;[\s\S]*?let zoomSettleTimeoutId = null;[\s\S]*?const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?classList\.remove\('is-map-zooming'\)[\s\S]*?const animateRouteDotsZoom = \(event\) => \{[\s\S]*?getZoomScale\(event\.zoom\)[\s\S]*?_latLngToNewLayerPoint\(viewportNorthWest, event\.zoom, event\.center\)[\s\S]*?L\.DomUtil\.setTransform\(dotCanvas, offset, scale\);[\s\S]*?const scheduleZoomStart = \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?classList\.add\('is-map-zooming'\)[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '0\.62';[\s\S]*?zoomSettleTimeoutId = window\.setTimeout\(finishZoomRender, 480\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?finishZoomRender\(\);[\s\S]*?const scheduleMoveEnd = \(\) => \{[\s\S]*?isZoomingMap \|\| skipNextMovePreview[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('zoomstart', scheduleZoomStart\);[\s\S]*?map\.on\('zoomanim', animateRouteDotsZoom\);[\s\S]*?map\.on\('zoomend', scheduleZoomEnd\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);/,
+  'Heatmap zooming should transform the GPS canvas during Leaflet zoom animation, then repaint the full rendered pool when zoom settles.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /HEATMAP_FULL_REDRAW_DELAY_MS|fullRedrawTimeoutId/,
+  'Heatmap zooming should not use the old delayed full-redraw path that can stutter after zoom.',
+);
+assert.match(
+  heatmapSource,
+  new RegExp(String.raw`wheelDebounceTime: 24[\s\S]*?wheelPxPerZoomLevel: 96[\s\S]*?zoomAnimation: true[\s\S]*?fadeAnimation: false[\s\S]*?markerZoomAnimation: false[\s\S]*?preferCanvas: true[\s\S]*?updateWhenZooming: false[\s\S]*?updateWhenIdle: false[\s\S]*?keepBuffer: 10[\s\S]*?className: 'heatmap-page-dark-tile-layer'[\s\S]*?errorTileUrl: 'data:image/svg\+xml,`),
+  'Heatmap should preserve existing dark tiles through zoom and use a dark fallback for unloaded map tiles.',
+);
+assert.match(
+  heatmapSource,
+  /const scheduleMoveEnd = \(\) => \{[\s\S]*?skipNextMovePreview = false;[\s\S]*?return;[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);[\s\S]*?map\.on\('resize', \(\) => scheduleRouteDots\('preview'\)\);[\s\S]*?scheduleRouteDots\('preview'\);/,
+  'Heatmap should keep ordinary map movement redraws on the lightweight preview pool without replacing the post-zoom full repaint.',
+);
+assert.match(
+  heatmapSource,
+  /if \(renderMode === 'full'\) \{[\s\S]*?updateViewBounds\(mapBounds\);[\s\S]*?\}/,
+  'Heatmap preview paints should not update React viewport state during zoom or movement.',
+);
+assert.match(
+  heatmapStyleSource,
+  /is-map-zooming :is\([\s\S]*?backdrop-filter: none[\s\S]*?box-shadow: none/,
+  'Heatmap zoom mode should reduce heavy overlay compositing without hiding visible bars.',
+);
+assert.doesNotMatch(
+  heatmapStyleSource,
+  /heatmap-page-map-canvas \{[^}]*?\n\s*filter:|is-map-zooming \.heatmap-page-map-canvas[^}]*?\n\s*filter:|leaflet-zoom-animated[\s\S]*?transition: none/,
+  'Heatmap should not filter the full-screen map or disable Leaflet native zoom transitions because both make zoom visibly laggy.',
+);assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-map-shell \{[\s\S]*?isolation: isolate;[\s\S]*?\.heatmap-page-map-canvas \{[\s\S]*?position: relative;[\s\S]*?z-index: 0;[\s\S]*?\.heatmap-page-topbar,[\s\S]*?\.heatmap-page-utility-rail,[\s\S]*?\.heatmap-sessions-card,[\s\S]*?z-index: 30;/,
+  'Heatmap overlay bars should stay above Leaflet panes without relying on expensive full-map filters.',
+);
+assert.doesNotMatch(
+  heatmapStyleSource,
+  /is-map-zooming \.heatmap-sessions-card[^{}]*\{[^}]*visibility: hidden|is-map-zooming[^{}]*heatmap-page-utility-rail[^{}]*\{[^}]*display: none|is-map-zooming[^{}]*heatmap-page-legend-card[^{}]*\{[^}]*display: none/,
+  'Heatmap zoom mode should not make the visible overlay bars disappear.',
+);assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-map-canvas \{[\s\S]*?background: #05070a[\s\S]*?leaflet-container,[\s\S]*?leaflet-tile-pane,[\s\S]*?leaflet-tile-container,[\s\S]*?heatmap-page-dark-tile-layer[\s\S]*?background: #05070a !important[\s\S]*?leaflet-tile:not\(\.leaflet-tile-loaded\)[\s\S]*?opacity: 0 !important/,
+  'Heatmap map tiles should use a dark backing and hide unloaded tile images so zooming cannot flash white.',
 );
 
 assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-dot-canvas \{[\s\S]*?will-change: transform, opacity[\s\S]*?transform: translateZ\(0\)[\s\S]*?\.heatmap-page-map-shell\.is-map-zooming \.heatmap-page-dot-canvas[\s\S]*?opacity: 0\.62/,
+  'Heatmap GPS dot canvas should remain GPU-composited and visible during zoom.',
+);
+assert.doesNotMatch(
   heatmapSource,
-  /L\.circleMarker\(\[point\.latitude, point\.longitude\],[\s\S]*?getGpsDotStyle\(point\.visualSpeedRatio, zoom\)[\s\S]*?renderer: canvasRenderer[\s\S]*?\)\.addTo\(routeDotsLayer\);/,
-  'Heatmap should render visible GPS samples as Leaflet circle markers.',
+  /dotCanvas\.style\.display = 'none'/,
+  'Heatmap zooming should not hide GPS points while the user zooms.',
+);
+assert.match(
+  heatmapSource,
+  /dotOverlayRef\.current = \{[\s\S]*?destroy: \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?if \(dotOverlayRef\.current\?\.destroy\) \{[\s\S]*?dotOverlayRef\.current\.destroy\(\);/,
+  'Heatmap should cancel scheduled zoom animation-frame work when the map unmounts.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /apiJson\('\/api\/profile\/heatmap', \{ signal: heatmapController\.signal \}\)/,
+  'Heatmap should not rely on the old single massive GPS response.',
+);
+assert.match(
+  heatmapSource,
+  /const diagnostics = heatmap\?\.diagnostics \|\| null;[\s\S]*?const gpsLoadComplete = diagnostics\?\.complete !== false;[\s\S]*?const gpsReceivedLabel = gpsLoadComplete && sourceGpsPointCount > 0[\s\S]*?: t\('heatmap\.page_gps_loading_full'\);/,
+  'Heatmap should show received/source GPS diagnostics only after full loading completes, not for preview coverage.',
+);
+assert.match(
+  heatmapSource,
+  /const gpsLoadingLabelRoot = gpsReceivedLabel\.replace\(\/\\\.\{3\}\$\/, ''\);[\s\S]*?const gpsLoadingLabelPieces = Array\.from\(gpsLoadingLabelRoot\);[\s\S]*?className="heatmap-page-gps-loading-text"[\s\S]*?gpsLoadingLabelPieces\.map[\s\S]*?className="heatmap-page-gps-loading-piece"[\s\S]*?className="heatmap-page-gps-loading-dots"[\s\S]*?<span>\.<\/span>[\s\S]*?<span>\.<\/span>[\s\S]*?<span>\.<\/span>/,
+  'Heatmap loading GPS label should split the three periods so only the dots animate visually.',
+);
+
+assert.match(
+  heatmapStyleSource,
+  /heatmap-page-gps-loading-piece:nth-child\(6n \+ 2\)[\s\S]*?--jump-high: -0\.34em[\s\S]*?heatmap-page-gps-loading-piece:nth-child\(6n\)[\s\S]*?--jump-high: -0\.38em[\s\S]*?@keyframes heatmapGpsPieceJump[\s\S]*?translateY\(var\(--jump-high, -0\.24em\)\)[\s\S]*?transform: translateY\(0\);[\s\S]*?@keyframes heatmapGpsDotOne[\s\S]*?translate\(0, -0\.16em\)[\s\S]*?@keyframes heatmapGpsDotTwo[\s\S]*?translate\(0\.28em, -0\.3em\)[\s\S]*?@keyframes heatmapGpsDotThree[\s\S]*?translate\(0\.58em, -0\.12em\)[\s\S]*?prefers-reduced-motion: reduce[\s\S]*?heatmap-page-gps-loading-piece/,
+  'Heatmap loading GPS pieces should jump at staggered heights, return to one shared baseline, and keep the moving-dot reduced-motion fallback.',
+);
+
+assert.doesNotMatch(
+  heatmapSource,
+  /L\.heatLayer|leaflet\.heat|buildHeatLayerPoints|getHeatLayerOptions|getGpsDotStride|getGpsDotTargetCount|L\.circleMarker|layerGroup\(\)\.addTo\(map\)/,
+  'Heatmap should not draw synthetic heat-layer blobs, sample away GPS dots, or allocate one Leaflet marker per GPS point.',
+);
+assert.match(
+  heatmapSource,
+  /L\.DomUtil\.create\('canvas', 'heatmap-page-dot-canvas leaflet-zoom-animated'\)[\s\S]*?const drawRoutePoint = \(context, point, zoom, renderMode, canvasLayerOrigin, radiusScale = 1\) => \{[\s\S]*?latLngToLayerPoint\(\[point\.latitude, point\.longitude\]\)\.subtract\(canvasLayerOrigin\)[\s\S]*?const scaledRadius = style\.radius \* radiusScale[\s\S]*?context\.arc\(projected\.x, projected\.y, scaledRadius/,
+  'Heatmap should render all GPS dots through one canvas overlay in Leaflet layer coordinates instead of one marker per point.',
+);
+assert.match(
+  heatmapSource,
+  /const canvasLayerOrigin = layerTopLeft;[\s\S]*?L\.DomUtil\.setPosition\(dotCanvas, canvasLayerOrigin\);[\s\S]*?drawRoutePoint\(dotContext, point, zoom, renderMode, canvasLayerOrigin\)/,
+  'Heatmap canvas dots should share the same Leaflet layer origin as the positioned canvas so they stay attached to the map after zoom.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /latLngToContainerPoint\(\[point\.latitude, point\.longitude\]\)/,
+  'Heatmap dot projection should not use container coordinates inside Leaflet overlayPane because zoom transforms can offset the canvas.',
 );
 
 assert.match(
   heatmapSource,
   /function getGpsDotStyle\(speedRatio, zoom\) \{[\s\S]*?radius[\s\S]*?fillOpacity[\s\S]*?weight/,
   'Heatmap should derive visible dot styling from speed ratio and zoom.',
+);
+assert.match(
+  heatmapSource,
+  /const radius = clamp\(0\.9 \+ \(\(normalizedZoom - 8\) \/ 10\) \* 1\.7, 0\.9, 2\.6\);/,
+  'Heatmap GPS dots should stay compact instead of using oversized point markers.',
+);
+
+assert.match(
+  heatmapSource,
+  /weight: clamp\(radius \* 0\.28, 0\.35, 0\.85\),/,
+  'Heatmap GPS dot stroke should shrink with the compact marker radius.',
 );
 
 assert.doesNotMatch(

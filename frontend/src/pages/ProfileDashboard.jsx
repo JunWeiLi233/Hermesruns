@@ -40,6 +40,8 @@ function getDashboardCacheKey(email) {
 // 5 MB quota. The background revalidate still hydrates the full list into
 // memory, so derived stats stay correct after the first paint.
 const DASHBOARD_CACHE_RUN_LIMIT = 500;
+const DASHBOARD_FIRST_PAINT_RUN_LIMIT = 60;
+const PROFILE_DASHBOARD_BATCH_TIMEOUT_MS = 1400;
 
 function buildDashboardCacheSnapshot(dashboardData) {
   if (!dashboardData || !dashboardData.profile) return null;
@@ -75,6 +77,13 @@ function writeJsonStorage(key, value) {
   } catch {
     // Ignore storage failures so the dashboard still loads.
   }
+}
+function withProfileDashboardTimeout(promise) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error('profile_dashboard_batch_timeout')), PROFILE_DASHBOARD_BATCH_TIMEOUT_MS);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
 }
 
 function resolveRunDistanceKm(run) {
@@ -494,7 +503,7 @@ async function loadProfileDashboardFallbackEnrichmentData() {
 
 async function loadProfileDashboardData() {
   try {
-    const batchPayload = await apiJson('/api/profile/dashboard');
+    const batchPayload = await withProfileDashboardTimeout(apiJson('/api/profile/dashboard'));
     const normalized = normalizeProfileDashboardPayload(batchPayload);
     if (normalized) return normalized;
   } catch {
@@ -502,6 +511,11 @@ async function loadProfileDashboardData() {
   }
 
   return loadProfileDashboardFallbackData();
+}
+
+async function loadProfileDashboardFullHistoryData() {
+  const activities = await apiJson('/api/activities');
+  return sortRunsByMostRecent(Array.isArray(activities) ? activities : []);
 }
 
 function getUpcomingRace(racesData) {
@@ -565,6 +579,7 @@ export default function ProfileDashboard() {
   const [_musclePlan, setMusclePlan] = useState(null);
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
+  const [useFullDashboardMetrics, setUseFullDashboardMetrics] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -606,6 +621,7 @@ export default function ProfileDashboard() {
     }
 
     async function loadDashboard() {
+      setUseFullDashboardMetrics(false);
       if (!hasUsableCache) setLoadState('loading');
       try {
         const dashboardData = await loadProfileDashboardData();
@@ -664,6 +680,23 @@ export default function ProfileDashboard() {
         const primarySnapshot = buildDashboardCacheSnapshot(dashboardData);
         if (primarySnapshot) writeJsonStorage(cacheKey, primarySnapshot);
 
+        if (dashboardData.source === 'batch') {
+          const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 160));
+          scheduleIdle(() => {
+            void loadProfileDashboardFullHistoryData().then((fullRuns) => {
+              if (cancelled || fullRuns.length <= list.length) return;
+              setRuns(fullRuns);
+              const fullSnapshot = buildDashboardCacheSnapshot({
+                ...dashboardData,
+                runs: fullRuns,
+              });
+              if (fullSnapshot) writeJsonStorage(cacheKey, fullSnapshot);
+            }).catch(() => {
+              // Full history is an enhancement; the bounded dashboard payload is enough to render.
+            });
+          });
+        }
+
         const query = new URLSearchParams(window.location.search);
         if (query.get('source') === 'strava') {
           setBanner({
@@ -678,15 +711,11 @@ export default function ProfileDashboard() {
         if (dashboardData.source === 'batch') {
           applyDashboardEnrichment(dashboardData);
           if (dashboardData.deferredEnrichment) {
-            // The batch already includes coachState, personalRecords, races,
-            // musclePlan, and quota. Only coachToday was intentionally omitted
-            // to avoid blocking the batch on the Open-Meteo HTTP call.
-            // Fetch just that one endpoint instead of all six enrichment calls.
-            void apiJson('/api/coach/today').then((todayData) => {
-              if (!cancelled && todayData && typeof todayData === 'object') {
-                setCoachToday(todayData);
-              }
-            }).catch(() => {});
+            void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+              if (!cancelled) applyDashboardEnrichment(enrichmentData);
+            }).catch(() => {
+              // Optional dashboard enrichments should not block the first render.
+            });
           }
         } else {
           void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
@@ -699,7 +728,7 @@ export default function ProfileDashboard() {
         if (!cancelled && !hasUsableCache) {
           // Only show the error card when there's no cached snapshot to fall
           // back on. With cache, we silently keep the stale dashboard visible
-          // and let the next mount retry — better than blanking the user.
+          // and let the next mount retry - better than blanking the user.
           setLoadState('error');
         }
       }
@@ -710,6 +739,25 @@ export default function ProfileDashboard() {
       cancelled = true;
     };
   }, [isAuthenticated, navigate, t, authEmail]);
+
+  useEffect(() => {
+    if (loadState !== 'ready' || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) {
+      setUseFullDashboardMetrics(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 120));
+    const cancelIdle = window.cancelIdleCallback || window.clearTimeout;
+    const handle = scheduleIdle(() => {
+      if (!cancelled) setUseFullDashboardMetrics(true);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelIdle(handle);
+    };
+  }, [loadState, runs.length]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -806,20 +854,24 @@ export default function ProfileDashboard() {
     });
   }, [lang]);
 
-  const todayBundle = useMemo(() => getTodayRunRecommendation({ runs, t, lang }), [runs, t, lang]);
+  const dashboardMetricRuns = useMemo(() => {
+    if (useFullDashboardMetrics || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) return runs;
+    return runs.slice(0, DASHBOARD_FIRST_PAINT_RUN_LIMIT);
+  }, [runs, useFullDashboardMetrics]);
+  const todayBundle = useMemo(() => getTodayRunRecommendation({ runs: dashboardMetricRuns, t, lang }), [dashboardMetricRuns, t, lang]);
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
-  const weeklyBars = useMemo(() => buildWeekBars(runs, lang), [lang, runs]);
-  const profileVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
-  const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
-  const streak = useMemo(() => calculateStreaks(runs), [runs]);
-  const daysOff = useMemo(() => getDaysSinceLastRun(runs), [runs]);
+  const weeklyBars = useMemo(() => buildWeekBars(dashboardMetricRuns, lang), [lang, dashboardMetricRuns]);
+  const profileVdot = useMemo(() => estimateCurrentVdot(dashboardMetricRuns), [dashboardMetricRuns]);
+  const vdotTrend = useMemo(() => computeVdotTrend(dashboardMetricRuns), [dashboardMetricRuns]);
+  const streak = useMemo(() => calculateStreaks(dashboardMetricRuns), [dashboardMetricRuns]);
+  const daysOff = useMemo(() => getDaysSinceLastRun(dashboardMetricRuns), [dashboardMetricRuns]);
   const shouldShowComebackCard = (
     loadState === 'ready'
     && !dismissedComeback
     && todayBundle.recommendation?.intent === 'comeback'
     && runs.length > 0
   );
-  const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [runs, lang]);
+  const rewardShowcase = useMemo(() => buildRewardShowcase(dashboardMetricRuns, lang), [dashboardMetricRuns, lang]);
   const rewardEarnedCount = rewardShowcase.earnedRewards.length;
   const rewardTotalCount = rewardShowcase.allRewards.length;
   const rewardCompletionPct = rewardTotalCount > 0
@@ -833,7 +885,7 @@ export default function ProfileDashboard() {
   const racePredictions = useMemo(() => {
     const vdotValue = profileVdot.representativeVdot;
     if (vdotValue <= 0) return [];
-    return buildOrderedRacePredictions(vdotValue, runs).map((d) => {
+    return buildOrderedRacePredictions(vdotValue, dashboardMetricRuns).map((d) => {
       const timeMin = d.timeMin;
       if (!timeMin || timeMin <= 0) return null;
       const totalSec = Math.round(timeMin * 60);
@@ -843,7 +895,7 @@ export default function ProfileDashboard() {
       const display = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
       return { key: d.key, label: lang === 'zh-CN' ? d.labelZh : d.labelEn, time: display };
     }).filter(Boolean);
-  }, [profileVdot, runs, lang]);
+  }, [profileVdot, dashboardMetricRuns, lang]);
 
   const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
 
@@ -880,8 +932,8 @@ export default function ProfileDashboard() {
   const staminaScorePercent = Math.max(0, Math.min(100, Number(stamina.scorePercent || 0)));
   const staminaCapPercent = Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent || 0)));
   const progressionAtlas = useMemo(
-    () => buildProgressionAtlas(runs, activeProgressionFrame, lang),
-    [activeProgressionFrame, lang, runs],
+    () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang),
+    [activeProgressionFrame, lang, dashboardMetricRuns],
   );
   useEffect(() => {
     if (progressionAtlas.chartPoints.length === 0) {
@@ -948,7 +1000,7 @@ export default function ProfileDashboard() {
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
-            <span>{t('analysis.stitch_brand_subtitle')}</span>
+            <span>{t('analysis.stitch_brand_subtitle_profile')}</span>
           </div>
           <button
             type="button"

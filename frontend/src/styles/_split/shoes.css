@@ -314,7 +314,7 @@
 }
 
 .shoe-scan-modal-card {
-  width: min(100%, 1120px);
+  width: min(100%, 1180px);
   max-height: min(calc(100vh - 32px), 900px);
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -363,18 +363,20 @@
 
 .shoe-scan-modal-card .modal-form {
   padding: 0;
-  overflow: hidden;
+  max-height: min(calc(100vh - 32px), 900px);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .shoe-scan-modal-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
-  min-height: min(820px, calc(100vh - 32px));
+  grid-template-columns: minmax(460px, 1fr) minmax(420px, 0.9fr);
+  min-height: auto;
 }
 
 .shoe-scan-modal-visual {
   position: relative;
-  padding: 34px;
+  padding: 30px;
   background:
     linear-gradient(145deg, rgba(28, 31, 32, 0.98), rgba(12, 15, 16, 0.98));
   border-right: 1px solid rgba(255, 255, 255, 0.05);
@@ -411,7 +413,7 @@
 
 .shoe-scan-modal-preview {
   position: relative;
-  min-height: 360px;
+  min-height: clamp(240px, 34vh, 340px);
   border-radius: 28px;
   overflow: hidden;
   background:
@@ -555,7 +557,7 @@
 }
 
 .shoe-scan-modal-panel {
-  padding: 34px;
+  padding: 30px;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -683,7 +685,7 @@
 .shoe-scan-results-cards {
   display: grid;
   gap: 14px;
-  max-height: 520px;
+  max-height: min(52vh, 520px);
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -828,7 +830,7 @@
   color: rgba(232, 226, 220, 0.56);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1080px) {
   .shoe-scan-modal-layout {
     grid-template-columns: 1fr;
   }
@@ -4712,4 +4714,401 @@
 
 .shoes-dashboard-page .shoe-inventory-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)) !important;
+}
+
+/* Shoe scan import compact repair */
+.shoe-scan-modal-shell {
+  background: rgba(246, 244, 240, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-shell {
+  background: rgba(7, 10, 12, 0.82);
+}
+
+.shoe-scan-modal-card {
+  width: min(960px, calc(100vw - 32px));
+  max-height: min(880px, calc(100vh - 32px));
+  border: 0;
+  border-radius: 30px;
+  background: #f6f3ee;
+  box-shadow: 0 36px 90px rgba(39, 42, 43, 0.18);
+  overflow: hidden;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-card {
+  background: #151819;
+  box-shadow: 0 42px 110px rgba(0, 0, 0, 0.48);
+}
+
+.shoe-scan-modal-card .modal-form {
+  max-height: min(880px, calc(100vh - 32px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.shoe-scan-modal-card .modal-close {
+  top: 4px;
+  right: 4px;
+  width: 42px;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(44, 47, 48, 0.72);
+  box-shadow: 0 12px 30px rgba(44, 47, 48, 0.12);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(246, 241, 235, 0.72);
+}
+
+.shoe-scan-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.shoe-scan-modal-visual,
+.shoe-scan-modal-panel {
+  min-width: 0;
+  padding: clamp(20px, 3vw, 34px);
+}
+
+.shoe-scan-modal-visual {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(240, 117, 97, 0.14), transparent 32%),
+    linear-gradient(145deg, #faf8f4, #eceae5);
+  border-right: 0;
+  border-bottom: 1px solid rgba(44, 47, 48, 0.08);
+  display: grid;
+  gap: 18px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-visual,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-visual {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(240, 117, 97, 0.16), transparent 34%),
+    linear-gradient(145deg, #1c2021, #101213);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.shoe-scan-modal-kicker-row {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  background: rgba(240, 117, 97, 0.08);
+  color: #a0392a;
+}
+
+.shoe-scan-modal-kicker-line {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: radial-gradient(circle, #fff 0 22%, #f07561 25% 58%, rgba(240, 117, 97, 0.22) 60% 100%);
+}
+
+.shoe-scan-modal-preview {
+  min-height: clamp(230px, 34vh, 340px);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(246, 243, 238, 0.72)),
+    linear-gradient(145deg, #eee8e1, #d9d8d4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 24px 56px rgba(44, 47, 48, 0.12);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.32)),
+    linear-gradient(145deg, #2b2624, #151414);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 56px rgba(0, 0, 0, 0.26);
+}
+
+.shoe-scan-modal-preview-empty {
+  min-height: inherit;
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.shoe-scan-modal-preview-empty .runner-dashboard-side-link-icon {
+  color: #f07561;
+  font-size: 2.35rem;
+}
+
+.shoe-scan-modal-preview-empty strong {
+  max-width: 9ch;
+  color: #2c2f30;
+  font-size: clamp(2.25rem, 6vw, 4.2rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview-empty strong,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview-empty strong {
+  color: #f8f1eb;
+}
+
+.shoe-scan-modal-preview-empty p {
+  max-width: 22rem;
+  color: rgba(89, 92, 93, 0.74);
+  font-weight: 700;
+  line-height: 1.65;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview-empty p,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview-empty p {
+  color: rgba(232, 226, 220, 0.68);
+}
+
+.shoe-scan-modal-preview-overlay {
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  pointer-events: none;
+}
+
+.shoe-scan-modal-scan-line {
+  top: 58%;
+  background: linear-gradient(90deg, transparent, rgba(240, 117, 97, 0.68), transparent);
+}
+
+.shoe-scan-modal-chip,
+.shoe-scan-modal-preview-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  max-width: 100%;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 117, 97, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+  color: #a0392a;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(44, 47, 48, 0.08);
+}
+
+.shoe-scan-modal-preview-upload {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.shoe-scan-modal-preview-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-chip,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-chip,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview-upload {
+  background: rgba(10, 12, 13, 0.76);
+  color: #ffb4a7;
+  box-shadow: none;
+}
+
+.shoe-scan-modal-metrics {
+  gap: 12px;
+}
+
+.shoe-scan-modal-metrics > div,
+.shoe-scan-modal-note,
+.shoe-scan-modal-status,
+.shoe-scan-modal-upload,
+.shoe-scan-result-card,
+.shoe-scan-modal-quota-after,
+.shoe-scan-modal-upgrade-card {
+  border: 0;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74), 0 16px 38px rgba(44, 47, 48, 0.07);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-metrics > div,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-note,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-status,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upload,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-result-card,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-quota-after,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upgrade-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-metrics > div,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-note,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-status,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-result-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-quota-after,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upgrade-card {
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.shoe-scan-modal-copy h4 {
+  max-width: 14ch;
+  color: #2c2f30;
+  font-size: clamp(2rem, 4.5vw, 3.4rem);
+  font-style: normal;
+  line-height: 0.92;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-copy h4,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy h4 {
+  color: #f8f1eb;
+}
+
+.shoe-scan-modal-copy p {
+  color: rgba(89, 92, 93, 0.76);
+  font-weight: 650;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-copy p,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p {
+  color: rgba(232, 226, 220, 0.68);
+}
+
+.shoe-scan-modal-upload {
+  padding: 18px;
+  border-radius: 22px;
+  outline: 1px dashed rgba(240, 117, 97, 0.34);
+  outline-offset: -8px;
+}
+
+.shoe-scan-modal-upload::after {
+  content: none;
+}
+
+.shoe-scan-modal-upload input {
+  width: 100%;
+  min-width: 0;
+}
+
+.shoe-scan-modal-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shoe-scan-results-cards {
+  max-height: min(48vh, 460px);
+  overflow-x: hidden;
+}
+
+.shoe-scan-result-fields input {
+  min-width: 0;
+}
+
+@media (min-width: 981px) {
+  .shoe-scan-modal-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 0.82fr);
+  }
+
+  .shoe-scan-modal-visual {
+    border-right: 1px solid rgba(44, 47, 48, 0.08);
+    border-bottom: 0;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-visual,
+  body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-visual {
+    border-right-color: rgba(255, 255, 255, 0.06);
+    border-bottom-color: transparent;
+  }
+}
+
+@media (max-width: 640px) {
+  .shoe-scan-modal-card {
+    width: calc(100vw - 20px);
+    border-radius: 24px;
+  }
+
+  .shoe-scan-modal-visual,
+  .shoe-scan-modal-panel {
+    padding: 18px;
+  }
+
+  .shoe-scan-modal-preview {
+    min-height: 240px;
+  }
+
+  .shoe-scan-modal-preview-empty strong {
+    max-width: 12ch;
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .shoe-scan-modal-preview-overlay {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .shoe-scan-modal-preview-upload,
+  .shoe-scan-modal-chip {
+    width: fit-content;
+  }
+
+  .shoe-scan-modal-actions,
+  .shoe-scan-modal-metrics,
+  .shoe-scan-result-fields,
+  .shoe-scan-result-compare,
+  .shoe-scan-result-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Shoe scan narrow viewport hard stop: keep only the functional import form. */
+@media (max-width: 980px) {
+  .shoe-scan-modal-card {
+    width: min(520px, calc(100vw - 24px));
+  }
+
+  .shoe-scan-modal-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .shoe-scan-modal-visual {
+    display: none !important;
+  }
+
+  .shoe-scan-modal-panel {
+    padding: clamp(22px, 5vw, 34px);
+  }
+
+  .shoe-scan-modal-stack {
+    min-height: auto;
+  }
+
+  .shoe-scan-modal-copy h4 {
+    max-width: none;
+    font-size: clamp(1.8rem, 8vw, 2.7rem);
+    line-height: 0.98;
+  }
+
+  .shoe-scan-modal-copy p {
+    max-width: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .shoe-scan-modal-card {
+    width: calc(100vw - 16px);
+    border-radius: 22px;
+  }
+
+  .shoe-scan-modal-panel {
+    padding: 20px;
+  }
+
+  .shoe-scan-modal-upload {
+    min-height: auto;
+  }
 }

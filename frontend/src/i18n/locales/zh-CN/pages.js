@@ -1897,6 +1897,8 @@ export default {
     "page_runs_label": "跑步次数",
     "page_points_label": "GPS 采样点",
     "page_density_label": "每次跑步密度",
+    "page_gps_received_label": "GPS 已接收",
+    "page_gps_loading_full": "正在加载全部 GPS...",
     "page_focus_collapse": "收起地图焦点",
     "page_focus_expand": "展开地图焦点",
     "page_legend_title": "速度图例",
