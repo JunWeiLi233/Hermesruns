@@ -105,7 +105,7 @@ function buildHeatmapRenderPointPool(points, limit) {
       renderPoints.push(point);
     }
   }
-  return renderPoints;
+  return buildVisibleGpsDots(renderPoints);
 }
 
 function normalizePointSpeedRatios(points) {
@@ -124,12 +124,13 @@ function isValidGpsCoordinate(latitude, longitude) {
     && longitude <= 180;
 }
 
+
+
 function buildVisibleGpsDots(points) {
   if (!Array.isArray(points) || points.length === 0) return [];
 
   return points.filter((point) => isValidGpsCoordinate(point?.latitude, point?.longitude));
 }
-
 
 function buildMergedHeatmapPayload(basePayload, points, loadPhase = 'complete') {
   if (!basePayload) return null;
@@ -260,12 +261,13 @@ async function fetchHeatmapCoverage(limit, signal) {
 async function fetchCompleteHeatmap(signal, onProgress) {
   const points = [];
   let offset = 0;
+  let mergedPayload = null;
   let nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
 
   const firstPagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
   if (!firstPagePayload) return null;
 
-  const mergedPayload = firstPagePayload;
+  mergedPayload = firstPagePayload;
   const firstPagePoints = Array.isArray(firstPagePayload.points) ? firstPagePayload.points : [];
   for (const point of firstPagePoints) {
     points.push(normalizeHeatPointForRender(point));
@@ -447,7 +449,7 @@ export default function Heatmap() {
 
   const points = useMemo(
     () => normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []),
-    [heatmap],
+    [heatmap?.points],
   );
   const bounds = heatmap?.bounds || null;
   const hasBounds = Boolean(bounds);
@@ -472,6 +474,7 @@ export default function Heatmap() {
     if (!mapRef.current || !boundsRef.current || !hasBounds || heatmapState !== 'ready') return undefined;
 
     let disposed = false;
+    const mapShellElement = mapShellRef.current;
 
     async function mountMap() {
       try {
@@ -481,8 +484,8 @@ export default function Heatmap() {
         if (dotOverlayRef.current?.destroy) {
           dotOverlayRef.current.destroy();
         }
-        mapShellRef.current?.classList.remove('is-map-zooming');
-      if (mapInstanceRef.current) {
+        mapShellElement?.classList.remove('is-map-zooming');
+        if (mapInstanceRef.current) {
           mapInstanceRef.current.remove();
           mapInstanceRef.current = null;
         }
@@ -769,7 +772,7 @@ export default function Heatmap() {
           dotCanvas.style.opacity = '1';
           scheduleRouteDots('full');
           window.setTimeout(() => {
-            if (!disposed) mapShellRef.current?.classList.remove('is-map-zooming');
+            if (!disposed) mapShellElement?.classList.remove('is-map-zooming');
           }, 120);
         };
 
@@ -852,7 +855,7 @@ export default function Heatmap() {
         dotOverlayRef.current.destroy();
       }
       dotOverlayRef.current = null;
-      mapShellRef.current?.classList.remove('is-map-zooming');
+      mapShellElement?.classList.remove('is-map-zooming');
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
