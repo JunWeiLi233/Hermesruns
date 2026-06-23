@@ -20,7 +20,6 @@ import targetChestUrl from '../assets/muscle-training/target-chest.webp';
 import targetCoreUrl from '../assets/muscle-training/target-core.webp';
 import targetLegsUrl from '../assets/muscle-training/target-legs.webp';
 import targetShouldersUrl from '../assets/muscle-training/target-shoulders.webp';
-import anatomyNeonSelectorUrl from '../assets/muscle-training/anatomy-neon-selector.png';
 
 const EXERCISE_DB_IMAGE_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const exerciseDbImage = (imagePath) => `${EXERCISE_DB_IMAGE_BASE}${imagePath}`;
@@ -92,8 +91,6 @@ const DEFAULT_PROFILE = {
 
 const CHECK_IN_RUN_TYPES = ['REST', 'EASY', 'RECOVERY', 'QUALITY', 'LONG_RUN', 'CROSS_TRAIN'];
 const CHECK_IN_ENTRY_STATES = ['PLANNED', 'ACTUAL'];
-const STRENGTH_FOCUS_OPTIONS = ['COACH_PICK', 'LEG_DAY', 'POSTERIOR_CHAIN', 'CALVES_ANKLES', 'CORE_STABILITY', 'MOBILITY_RESET'];
-const STRENGTH_DOSE_OPTIONS = ['MICRO', 'STANDARD', 'STRONG'];
 function compoundLibraryExercise({
   key,
   zhName,
@@ -174,22 +171,52 @@ const TARGET_AREA_GROUPS = [
   },
 ];
 
-const TOP_MUSCLE_HIT_ZONES = [
-  { id: 'chest-front', key: 'chest', left: '19%', top: '25%', width: '24%', height: '15%' },
-  { id: 'core-front', key: 'core', left: '22%', top: '39%', width: '18%', height: '18%' },
-  { id: 'back-rear', key: 'back', left: '62%', top: '22%', width: '26%', height: '30%' },
-  { id: 'shoulders-front-left', key: 'shoulders', left: '16%', top: '22%', width: '12%', height: '12%' },
-  { id: 'shoulders-front-right', key: 'shoulders', left: '35%', top: '22%', width: '12%', height: '12%' },
-  { id: 'shoulders-rear-left', key: 'shoulders', left: '61%', top: '23%', width: '11%', height: '11%' },
-  { id: 'shoulders-rear-right', key: 'shoulders', left: '79%', top: '23%', width: '11%', height: '11%' },
-  { id: 'arms-front-left', key: 'arms', left: '5%', top: '30%', width: '16%', height: '28%' },
-  { id: 'arms-front-right', key: 'arms', left: '42%', top: '30%', width: '14%', height: '28%' },
-  { id: 'arms-rear-left', key: 'arms', left: '55%', top: '31%', width: '13%', height: '27%' },
-  { id: 'arms-rear-right', key: 'arms', left: '83%', top: '31%', width: '13%', height: '27%' },
-  { id: 'legs-front', key: 'legs', left: '16%', top: '52%', width: '28%', height: '36%' },
-  { id: 'legs-rear', key: 'legs', left: '63%', top: '50%', width: '26%', height: '34%' },
-];
+const TOP_MUSCLE_SELECTOR_GROUPS = {
+  chest: ['chest'],
+  back: ['upper-back', 'lower-back', 'trapezius'],
+  legs: ['quadriceps', 'hamstring', 'calves', 'gluteal', 'adductors', 'tibialis'],
+  shoulders: ['deltoids', 'trapezius'],
+  arms: ['biceps', 'triceps', 'forearm', 'hands'],
+  core: ['abs', 'obliques'],
+};
 
+const TOP_MUSCLE_SELECTOR_SLUG_TARGETS = new Map([
+  ['chest', 'chest'],
+  ['upper-back', 'back'],
+  ['lower-back', 'back'],
+  ['trapezius', 'shoulders'],
+  ['deltoids', 'shoulders'],
+  ['biceps', 'arms'],
+  ['triceps', 'arms'],
+  ['forearm', 'arms'],
+  ['hands', 'arms'],
+  ['abs', 'core'],
+  ['obliques', 'core'],
+  ['quadriceps', 'legs'],
+  ['hamstring', 'legs'],
+  ['calves', 'legs'],
+  ['gluteal', 'legs'],
+  ['adductors', 'legs'],
+  ['tibialis', 'legs'],
+]);
+
+function buildTopMuscleSelectorData(activeTarget) {
+  const activeSlugs = TOP_MUSCLE_SELECTOR_GROUPS[activeTarget] || TOP_MUSCLE_SELECTOR_GROUPS.legs;
+  return activeSlugs.map((slug) => ({
+    slug,
+    intensity: 3,
+    styles: {
+      fill: 'var(--mtpa-muscle-active-fill)',
+      stroke: 'var(--mtpa-muscle-active-stroke)',
+      strokeWidth: 1.65,
+      opacity: 0.94,
+    },
+  }));
+}
+
+function resolveTopMuscleTargetFromSlug(slug) {
+  return TOP_MUSCLE_SELECTOR_SLUG_TARGETS.get(slug) || '';
+}
 
 const EXERCISE_VIDEO_EMBEDS = {
   'barbell-bench-press': 'https://www.youtube-nocookie.com/embed/0cXAp6WhSj4',
@@ -216,21 +243,25 @@ const EXERCISE_VIDEO_EMBEDS = {
   'front-rack-carry': 'https://www.youtube-nocookie.com/embed/Q5kuuxaNDDM',
   'hanging-leg-raise': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
   'barbell-rollout': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
-  // Backend-generated plan exercises (issue #36). Each entry is either a
-  // vetted demo for the exercise itself or, where no vetted demo exists yet,
-  // a safe fallback mapped to the closest already-vetted demonstration.
-  'hip-airplanes': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
-  'dead-bug': 'https://www.youtube-nocookie.com/embed/ndc391RFNUM',
-  'split-squat': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
-  'single-leg-romanian-deadlift': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
-  'standing-calf-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
-  'side-plank': 'https://www.youtube-nocookie.com/embed/2n4UqRIJyk4',
-  'glute-bridge-pause-at-top': 'https://www.youtube-nocookie.com/embed/5zmlnbWb-g4',
-  'tibialis-wall-raise': 'https://www.youtube-nocookie.com/embed/z7E_YU9P1jU',
-  'pogo-hops': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
-  'skipping-a-drill': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
-  'box-step-up-explosive': 'https://www.youtube-nocookie.com/embed/ep30avTSMB0',
-  'single-leg-hop-low-amplitude': 'https://www.youtube-nocookie.com/embed/uODWo4YqbT8',
+  'hip-airplanes': 'https://www.youtube-nocookie.com/embed/U5f8h7FDEa0',
+  'calf-raises-slow-tempo': 'https://www.youtube-nocookie.com/embed/2GHbuiYS50I',
+  'dead-bug': 'https://www.youtube-nocookie.com/embed/o4GKiEoYClI',
+  'split-squat': 'https://www.youtube-nocookie.com/embed/YuLqw3kHPaw',
+  'single-leg-romanian-deadlift': 'https://www.youtube-nocookie.com/embed/s32cCgmRV3I',
+  'standing-calf-raise': 'https://www.youtube-nocookie.com/embed/eMTy3qylqnE',
+  'side-plank': 'https://www.youtube-nocookie.com/embed/fzLeV8X0Gb8',
+  'glute-bridge-pause-at-top': 'https://www.youtube-nocookie.com/embed/nBTdW5N8Cl4',
+  'tibialis-wall-raise': 'https://www.youtube-nocookie.com/embed/VzIcGAgBiaM',
+  'world-s-greatest-stretch': 'https://www.youtube-nocookie.com/embed/-CiWQ2IvY34',
+  'ankle-dorsiflexion-rocks': 'https://www.youtube-nocookie.com/embed/dr1FYumuGC4',
+  'step-down-knee-tracking': 'https://www.youtube-nocookie.com/embed/LRdfjaG3L8I',
+  'hamstring-curl-slider-or-machine': 'https://www.youtube-nocookie.com/embed/0zCjuSI1IQI',
+  'pallof-press': 'https://www.youtube-nocookie.com/embed/5aZ0IhJS8O8',
+  'farmer-carry-suitcase': 'https://www.youtube-nocookie.com/embed/iTjwbts8Djw',
+  'pogo-hops': 'https://www.youtube-nocookie.com/embed/L_khHgMz9uU',
+  'skipping-a-drill': 'https://www.youtube-nocookie.com/embed/O9wh-huxbxU',
+  'box-step-up-explosive': 'https://www.youtube-nocookie.com/embed/rEK4E5TaxWU',
+  'single-leg-hop-low-amplitude': 'https://www.youtube-nocookie.com/embed/6A6Ynz_Y0Vo',
 };
 
 const COMPOUND_TARGET_LIBRARY = {
@@ -703,39 +734,11 @@ const COMPOUND_TARGET_LIBRARY = {
     }),
   ],
 };
-const TARGET_MUSCLE_SLUGS = {
-  chest: ['chest'],
-  back: ['upper-back', 'lower-back', 'trapezius'],
-  legs: ['quadriceps', 'hamstring', 'gluteal', 'calves'],
-  shoulders: ['deltoids', 'trapezius'],
-  arms: ['biceps', 'triceps', 'forearm'],
-  core: ['abs', 'obliques'],
-};
-
-const MUSCLE_SLUG_LABEL = {
-  chest: { zh: '胸部', en: 'Chest' },
-  'upper-back': { zh: '上背', en: 'Upper Back' },
-  'lower-back': { zh: '下背', en: 'Lower Back' },
-  trapezius: { zh: '斜方肌', en: 'Trapezius' },
-  quadriceps: { zh: '股四头肌', en: 'Quads' },
-  hamstring: { zh: '腘绳肌', en: 'Hamstrings' },
-  gluteal: { zh: '臀部', en: 'Glutes' },
-  calves: { zh: '小腿', en: 'Calves' },
-  deltoids: { zh: '三角肌', en: 'Deltoids' },
-  biceps: { zh: '二头肌', en: 'Biceps' },
-  triceps: { zh: '三头肌', en: 'Triceps' },
-  forearm: { zh: '前臂', en: 'Forearms' },
-  abs: { zh: '腹肌', en: 'Abs' },
-  obliques: { zh: '腹斜肌', en: 'Obliques' },
-};
-
 const DEFAULT_CHECK_IN_DRAFT = {
   runType: 'EASY',
   entryState: 'PLANNED',
   distanceKm: '',
   durationMinutes: '',
-  strengthFocus: 'COACH_PICK',
-  strengthDose: 'STANDARD',
 };
 const KM_PER_MILE = 1.60934;
 
@@ -759,17 +762,6 @@ function createLibraryProtocolItem(targetKey, definition, exerciseIndex, globalI
     globalIndex,
     libraryContent: definition.content,
   };
-}
-
-function pickStrengthSessionLabel(copy, sessionType) {
-  const customMatch = /^CUSTOM_(.+)_(MICRO|STANDARD|STRONG)$/.exec(sessionType || '');
-  if (customMatch) {
-    const [, focus, dose] = customMatch;
-    const focusLabel = pickLabel(copy.strengthFocusOptions, focus, focus);
-    const doseLabel = pickLabel(copy.strengthDoseOptions, dose, dose);
-    return `${focusLabel} · ${doseLabel}`;
-  }
-  return pickLabel(copy.sessionTypes, sessionType, sessionType || '');
 }
 
 function exerciseMatchesTargetArea(exercise, isZh, targetKey) {
@@ -1257,6 +1249,53 @@ const LOCALIZED_EXERCISE_LIBRARY = {
   },
 };
 
+const EXERCISE_HEATMAP_SLUGS = {
+  'barbell-bench-press': ['chest', 'triceps', 'deltoids'],
+  'incline-dumbbell-press': ['chest', 'deltoids', 'triceps'],
+  'weighted-dip': ['chest', 'triceps', 'deltoids'],
+  'push-up': ['chest', 'triceps', 'deltoids', 'abs'],
+  'pull-up': ['upper-back', 'biceps', 'forearm', 'abs'],
+  'barbell-row': ['upper-back', 'lower-back', 'biceps', 'forearm', 'abs'],
+  'romanian-deadlift': ['hamstring', 'gluteal', 'lower-back'],
+  'chest-supported-row': ['upper-back', 'biceps', 'forearm'],
+  'barbell-squat': ['quadriceps', 'gluteal', 'hamstring', 'adductors', 'abs', 'lower-back'],
+  'front-squat': ['quadriceps', 'gluteal', 'adductors', 'abs', 'upper-back', 'lower-back'],
+  deadlift: ['hamstring', 'gluteal', 'quadriceps', 'lower-back', 'upper-back', 'forearm'],
+  'bulgarian-split-squat': ['quadriceps', 'gluteal', 'hamstring', 'adductors', 'abs'],
+  'standing-overhead-press': ['deltoids', 'triceps', 'trapezius', 'abs'],
+  'push-press': ['deltoids', 'triceps', 'quadriceps', 'gluteal', 'calves', 'abs'],
+  'landmine-press': ['deltoids', 'chest', 'triceps', 'abs', 'obliques'],
+  'dumbbell-clean-press': ['deltoids', 'triceps', 'quadriceps', 'gluteal', 'hamstring', 'calves', 'abs', 'trapezius'],
+  'chin-up': ['biceps', 'upper-back', 'forearm', 'abs'],
+  'close-grip-bench': ['triceps', 'chest', 'deltoids'],
+  'weighted-triceps-dip': ['triceps', 'chest', 'deltoids'],
+  'farmer-carry': ['forearm', 'hands', 'trapezius', 'upper-back', 'abs', 'obliques'],
+  'turkish-get-up': ['abs', 'obliques', 'deltoids', 'triceps', 'quadriceps', 'gluteal'],
+  'front-rack-carry': ['abs', 'obliques', 'upper-back', 'trapezius', 'quadriceps', 'gluteal'],
+  'hanging-leg-raise': ['abs', 'obliques', 'forearm', 'upper-back'],
+  'barbell-rollout': ['abs', 'obliques', 'deltoids', 'triceps'],
+
+  'Hip airplanes': ['gluteal', 'hamstring', 'abs', 'obliques'],
+  'Calf raises (slow tempo)': ['calves'],
+  'Dead bug': ['abs', 'obliques'],
+  'Split squat': ['quadriceps', 'gluteal', 'hamstring', 'adductors'],
+  'Single-leg Romanian deadlift': ['hamstring', 'gluteal', 'lower-back', 'calves'],
+  'Standing calf raise': ['calves'],
+  'Side plank': ['obliques', 'abs', 'deltoids'],
+  'Glute bridge (pause at top)': ['gluteal', 'hamstring', 'abs'],
+  'Tibialis wall raise': ['tibialis'],
+  "World's greatest stretch": ['gluteal', 'hamstring', 'abs', 'obliques', 'chest'],
+  'Ankle dorsiflexion rocks': ['ankles', 'tibialis', 'calves'],
+  'Step-down (knee tracking)': ['quadriceps', 'gluteal', 'hamstring', 'adductors'],
+  'Hamstring curl (slider or machine)': ['hamstring', 'gluteal'],
+  'Pallof press': ['abs', 'obliques'],
+  'Farmer carry (suitcase)': ['forearm', 'hands', 'abs', 'obliques', 'trapezius', 'gluteal'],
+  'Pogo hops': ['calves'],
+  'Skipping A-drill': ['quadriceps', 'gluteal', 'calves', 'tibialis', 'abs'],
+  'Box step-up (explosive)': ['quadriceps', 'gluteal', 'hamstring', 'calves'],
+  'Single-leg hop (low amplitude)': ['calves', 'quadriceps', 'gluteal', 'tibialis', 'abs'],
+};
+
 const EXERCISE_COPY_FIELDS = ['name', 'muscles', 'steps', 'intent', 'regression', 'progression'];
 
 function normalizeExerciseName(name) {
@@ -1344,19 +1383,6 @@ function formatShortDate(date, displayLang) {
   } catch {
     return date;
   }
-}
-
-function formatDayLabel(date, fallbackDay, displayLang) {
-  if (date) {
-    try {
-      const locale = displayLang === 'zh-CN' ? 'zh-CN' : 'en-US';
-      return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(`${date}T12:00:00`));
-    } catch {
-      /* ignore */
-    }
-  }
-  const match = DAY_OPTIONS.find((option) => option.value === fallbackDay);
-  return match ? (displayLang === 'zh-CN' ? match.zh : match.en) : (fallbackDay || '-');
 }
 
 function formatDistance(km, isZh, isMile) {
@@ -1462,6 +1488,16 @@ function getExerciseContentForItem(item, isZh) {
     };
   }
   return getExerciseCardContent(item?.exercise, isZh);
+}
+
+function getExerciseHeatmapSlugs(item, exerciseCopy) {
+  const possibleKeys = [
+    item?.libraryKey,
+    normalizeExerciseName(item?.exercise?.name),
+    slugExerciseName(item?.exercise?.name),
+  ].filter(Boolean);
+  const explicitSlugs = possibleKeys.map((key) => EXERCISE_HEATMAP_SLUGS[key]).find(Boolean);
+  return explicitSlugs || muscleSlugsForExercise(exerciseCopy?.muscles);
 }
 
 function resolveExerciseVisualKey(name, muscles = []) {
@@ -2823,8 +2859,6 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
-  const [selectedMuscleHitZoneId, setSelectedMuscleHitZoneId] = useState('legs-front');
-  const [clickedMuscleSlug, setClickedMuscleSlug] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -2971,24 +3005,6 @@ export default function MuscleTraining() {
       INTERVALS: t('muscle_training.workout_intervals'),
       LONG_RUN: t('muscle_training.workout_long_run'),
       CROSS_TRAIN: t('muscle_training.workout_cross_train'),
-    },
-    strengthComposerTitle: t('muscle_training.strength_composer_title'),
-    strengthComposerHint: t('muscle_training.strength_composer_hint'),
-    strengthComposerSafety: t('muscle_training.strength_composer_safety'),
-    strengthFocusLabel: t('muscle_training.strength_focus_label'),
-    strengthDoseLabel: t('muscle_training.strength_dose_label'),
-    strengthFocusOptions: {
-      COACH_PICK: t('muscle_training.strength_focus_coach_pick'),
-      LEG_DAY: t('muscle_training.strength_focus_leg_day'),
-      POSTERIOR_CHAIN: t('muscle_training.strength_focus_posterior_chain'),
-      CALVES_ANKLES: t('muscle_training.strength_focus_calves_ankles'),
-      CORE_STABILITY: t('muscle_training.strength_focus_core_stability'),
-      MOBILITY_RESET: t('muscle_training.strength_focus_mobility_reset'),
-    },
-    strengthDoseOptions: {
-      MICRO: t('muscle_training.strength_dose_micro'),
-      STANDARD: t('muscle_training.strength_dose_standard'),
-      STRONG: t('muscle_training.strength_dose_strong'),
     },
     loadStatus: {
       CONSERVATIVE: t('muscle_training.load_status_conservative'),
@@ -3212,7 +3228,7 @@ export default function MuscleTraining() {
     [t, lang],
   );
   // Count how many strength sessions are planned in the 7-day rolling window
-  const weekDoseStats = useMemo(() => {
+  const _weekDoseStats = useMemo(() => {
     if (!plan) return { planned: 0, recommended: 0, completedToday: false };
     const days = plan.days || [];
     const planned = days.filter((d) => !!d.strength).length;
@@ -3321,6 +3337,11 @@ export default function MuscleTraining() {
     [buildTopRecommendationItems, selectedMuscleTarget],
   );
 
+  const topMuscleSelectorData = useMemo(
+    () => buildTopMuscleSelectorData(selectedMuscleTarget),
+    [selectedMuscleTarget],
+  );
+
   const selectedProtocolItem = useMemo(() => (
     visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
     || visibleExerciseItems[0]
@@ -3366,43 +3387,6 @@ export default function MuscleTraining() {
     ),
     [selectedProtocolItem, selectedRailTargetCard],
   );
-
-  const volumeCompletion = useMemo(() => {
-    const recommended = Math.max(weekDoseStats.recommended || weekDoseStats.planned || 1, 1);
-    return Math.min(100, Math.round((weekDoseStats.planned / recommended) * 100));
-  }, [weekDoseStats]);
-
-  const nextStrengthSummary = useMemo(() => {
-    const days = plan?.days || [];
-    const nextStrengthIndex = days.findIndex((day) => !!day.strength);
-    if (nextStrengthIndex < 0) {
-      return {
-        label: stitchCopy.noStrengthTitle,
-        meta: stitchCopy.noStrengthHint,
-      };
-    }
-    const strengthDay = days[nextStrengthIndex];
-    const dayLabel = nextStrengthIndex === 0
-      ? stitchCopy.todayBadge
-      : formatDayLabel(strengthDay.date, strengthDay.dayLabel, displayLang);
-    const sessionLabel = pickStrengthSessionLabel(copy, strengthDay.strength?.sessionType)
-      || stitchCopy.strengthDayBadge;
-    const durationLabel = strengthDay.strength?.durationMinutes
-      ? formatMinutes(strengthDay.strength.durationMinutes, isZh)
-      : '';
-    return {
-      label: [dayLabel, sessionLabel].filter(Boolean).join(' - '),
-      meta: [durationLabel, strengthDay.strength?.targetRpe != null ? `RPE ${strengthDay.strength.targetRpe}` : ''].filter(Boolean).join(' · ') || stitchCopy.weekAlignLabel,
-    };
-  }, [copy, displayLang, isZh, plan, stitchCopy]);
-
-  const currentSplitLabel = useMemo(() => (
-    pickLabel(copy.currentFocus, plan?.weekContext?.currentFocus, featuredSession?.emphasis || stitchCopy.strength)
-  ), [copy.currentFocus, featuredSession, plan, stitchCopy.strength]);
-
-  const weeklyStrengthMinutes = useMemo(() => (
-    (plan?.days || []).reduce((sum, day) => sum + (Number(day.strength?.durationMinutes) || 0), 0)
-  ), [plan]);
 
   const profilePreferredDayLabel = useMemo(() => {
     const activeDays = new Set(draft.preferredStrengthDays || []);
@@ -3523,20 +3507,13 @@ export default function MuscleTraining() {
     const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
     if (nextTargetKey !== 'all') {
       setSelectedMuscleTarget(nextTargetKey);
-      setSelectedMuscleHitZoneId(getPrimaryTopMuscleHitZoneId(nextTargetKey));
     }
     setSelectedExerciseKey(getProtocolItemKey(item));
   }
 
-  function getPrimaryTopMuscleHitZoneId(targetKey) {
-    return TOP_MUSCLE_HIT_ZONES.find((zone) => zone.key === targetKey)?.id || 'legs-front';
-  }
-
-  function handleTopMuscleSelect(targetKey, hitZoneId = getPrimaryTopMuscleHitZoneId(targetKey)) {
+  function handleTopMuscleSelect(targetKey) {
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
-    setSelectedMuscleHitZoneId(hitZoneId);
-    setClickedMuscleSlug(TARGET_MUSCLE_SLUGS[targetKey]?.[0] || null);
     setActiveTarget(targetKey);
     setExpandedExerciseIdx(null);
     if (nextItems[0]) {
@@ -3686,8 +3663,6 @@ export default function MuscleTraining() {
         entryState: checkInDraft.entryState,
         distanceKm: distanceValue != null ? (isMile ? distanceValue * KM_PER_MILE : distanceValue) : null,
         durationMinutes: parseOptionalInteger(checkInDraft.durationMinutes),
-        strengthFocus: checkInDraft.strengthFocus,
-        strengthDose: checkInDraft.strengthDose,
       };
       await apiJson('/api/training/muscle/today', {
         method: 'PUT',
@@ -3734,7 +3709,7 @@ export default function MuscleTraining() {
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
-            <span>{t('analysis.stitch_brand_subtitle')}</span>
+            <span>{t('analysis.stitch_brand_subtitle_muscle')}</span>
           </div>
           <button
             type="button"
@@ -3814,40 +3789,20 @@ export default function MuscleTraining() {
                   <h2 id="mt-top-muscle-title">{stitchCopy.topMuscleTitle}</h2>
                 </div>
                 <div className="mt-muscle-visual-shell">
-                  <figure
-                    className="mt-muscle-heatmap-visual"
-                    aria-label={stitchCopy.topMuscleTitle}
-                  >
-                    <img src={anatomyNeonSelectorUrl} alt="" aria-hidden="true" />
-                    <div className="mt-muscle-hit-zone-layer" aria-label={stitchCopy.topMuscleHint}>
-                      {TOP_MUSCLE_HIT_ZONES.map((zone) => (
-                        <button
-                          key={zone.id}
-                          type="button"
-                          className={`mt-muscle-hit-zone mt-muscle-hit-zone--${zone.id}${selectedMuscleHitZoneId === zone.id ? ' is-active' : ''}`}
-                          style={{
-                            left: zone.left,
-                            top: zone.top,
-                            width: zone.width,
-                            height: zone.height,
-                          }}
-                          onClick={() => handleTopMuscleSelect(zone.key, zone.id)}
-                          aria-label={targetAreaCards.find((target) => target.key === zone.key)?.label || zone.key}
-                          aria-pressed={selectedMuscleHitZoneId === zone.id}
-                        />
-                      ))}
-                    </div>
-                  </figure>
-                  {clickedMuscleSlug && MUSCLE_SLUG_LABEL[clickedMuscleSlug] && (
-                    <div className="mt-muscle-click-callout" aria-live="polite">
-                      <span className="mt-muscle-click-icon">→</span>
-                      <span className="mt-muscle-click-label">
-                        {isZh
-                          ? `${MUSCLE_SLUG_LABEL[clickedMuscleSlug].zh} · 推荐动作`
-                          : `${MUSCLE_SLUG_LABEL[clickedMuscleSlug].en} · Exercises`}
-                      </span>
-                    </div>
-                  )}
+                  <div className="mt-muscle-visual mt-muscle-visual--svg">
+                    <MuscleHeatmap
+                      data={topMuscleSelectorData}
+                      side="both"
+                      scale={0.64}
+                      ariaLabel={stitchCopy.topMuscleTitle}
+                      frontLabel={t('common.heatmap_front')}
+                      backLabel={t('common.heatmap_back')}
+                      onMuscleClick={(part) => {
+                        const targetKey = resolveTopMuscleTargetFromSlug(part?.slug);
+                        if (targetKey) handleTopMuscleSelect(targetKey);
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
                   {targetAreaCards.map((target) => {
@@ -3945,150 +3900,6 @@ export default function MuscleTraining() {
                 </div>
               </aside>
             </section>
-
-            {/* ── Hero ── */}
-            <section className="mt-hero" aria-labelledby="mt-hero-title">
-              <div className="mt-hero-left">
-                <span className="mt-kicker">{t('muscle_training.stitch_mt_hero_kicker')}</span>
-                <h1 id="mt-hero-title" className="mt-hero-title">{t('muscle_training.stitch_mt_hero_title')}</h1>
-                <p className="mt-hero-desc">{t('muscle_training.stitch_mt_hero_copy')}</p>
-                <div className="mt-hero-chips">
-                  <span className="mt-chip">
-                    <AppIcon name="directions_run" />
-                    {currentSplitLabel || stitchCopy.currentSplitBadge}
-                  </span>
-                  <span className="mt-chip">
-                    <AppIcon name="schedule" />
-                    {weeklyStrengthMinutes ? formatMinutes(weeklyStrengthMinutes, isZh) : '-'}
-                    &nbsp;{t('muscle_training.stitch_mt_hero_total_time')}
-                  </span>
-                  <span className="mt-chip">
-                    <AppIcon name="calendar_today" />
-                    {`${weekDoseStats.planned}/${weekDoseStats.recommended || 0}`}&nbsp;{t('muscle_training.stitch_mt_hero_sessions')}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-hero-right">
-                <button type="button" className="mt-hero-cta" onClick={scrollToControls}>
-                  <span className="mt-hero-cta-label">{stitchCopy.startWorkout}</span>
-                  <AppIcon name="arrow_forward" />
-                </button>
-                <div className="mt-ring-wrap" aria-label={`${stitchCopy.weeklyCompletion} ${volumeCompletion}%`}>
-                  <svg className="mt-ring-svg" viewBox="0 0 88 88" role="img" aria-hidden="true">
-                    <circle cx="44" cy="44" r="34" className="mt-ring-track" />
-                    <circle
-                      cx="44"
-                      cy="44"
-                      r="34"
-                      className="mt-ring-progress"
-                      style={{
-                        strokeDasharray: 2 * Math.PI * 34,
-                        strokeDashoffset: 2 * Math.PI * 34 - (volumeCompletion / 100) * 2 * Math.PI * 34,
-                      }}
-                    />
-                  </svg>
-                  <div className="mt-ring-center">
-                    <strong>{volumeCompletion}%</strong>
-                    <span>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</span>
-                  </div>
-                </div>
-                <div className="mt-ring-meta">
-                  <span>{t('muscle_training.stitch_mt_hero_sessions')}</span>
-                  <strong>{weekDoseStats.planned}/{weekDoseStats.recommended || 0}</strong>
-                </div>
-              </div>
-            </section>
-
-            {/* ── Recommendation Banner ── */}
-            <section className="mt-recommend">
-              <div className="mt-recommend-inner">
-                <div className="mt-recommend-left">
-                  <span className="mt-kicker">{t('muscle_training.stitch_mt_recommend_tag')}</span>
-                  <p className="mt-recommend-title">{nextStrengthSummary.label || stitchCopy.guideSubtitle}</p>
-                  <div className="mt-recommend-tags">
-                    {nextStrengthSummary.meta && (
-                      <span className="mt-chip mt-chip--sm">{nextStrengthSummary.meta}</span>
-                    )}
-                  </div>
-                </div>
-                <button type="button" className="mt-recommend-btn" onClick={scrollToControls}>
-                  <AppIcon name="play_arrow" />
-                  {t('muscle_training.stitch_mt_recommend_start')}
-                </button>
-              </div>
-            </section>
-
-            {/* ── Side Grid: Today Session + Target Areas ── */}
-            <div className="mt-side-grid">
-              {/* Today Session card */}
-              <article className="mt-card mt-session-card">
-                <div className="mt-card-head">
-                  <span className="mt-kicker">{t('muscle_training.stitch_mt_session_kicker')}</span>
-                  <h2 className="mt-card-title">{nextStrengthSummary.label || stitchCopy.readyTitle}</h2>
-                </div>
-                <div className="mt-session-meta">
-                  <span>
-                    <AppIcon name="schedule" />
-                    {featuredSession?.durationMinutes ? formatMinutes(featuredSession.durationMinutes, isZh) : '-'}
-                  </span>
-                </div>
-                <p className="mt-session-purpose">{todayCoachNarrative || stitchCopy.guideSubtitle}</p>
-                <div className="mt-session-targets">
-                  {targetAreaCards.filter((ta) => ta.planCount > 0).slice(0, 3).map((ta) => (
-                    <button
-                      key={ta.key}
-                      type="button"
-                      className={`mt-target-pill${activeTarget === ta.key ? ' is-active' : ''}`}
-                      onClick={() => handleTargetAreaSelect(ta.key)}
-                    >
-                      {ta.label}
-                    </button>
-                  ))}
-                </div>
-              </article>
-
-              {/* Target Areas card */}
-              <article className="mt-card mt-targets-card" aria-labelledby="mt-targets-title">
-                <div className="mt-card-head">
-                  <span className="mt-kicker">{t('muscle_training.stitch_mt_targets_kicker')}</span>
-                  <h2 id="mt-targets-title" className="mt-card-title">{stitchCopy.targetAreasTitle}</h2>
-                </div>
-                <div className="mt-target-grid">
-                  {targetAreaCards.map((ta) => {
-                    // Body-part-specific Heroicons-style outline icons. Each
-                    // name maps to a dedicated case in AppIcon.jsx so the
-                    // target-area grid no longer falls back to the generic
-                    // dumbbell or running-figure glyph.
-                    const iconMap = {
-                      chest: 'chest',
-                      shoulders: 'shoulders',
-                      legs: 'legs',
-                      core: 'core',
-                      arms: 'arms',
-                      back: 'back',
-                    };
-                    const icon = iconMap[ta.key] || 'fitness_center';
-                    return (
-                      <button
-                        key={ta.key}
-                        type="button"
-                        className={`mt-target-area${activeTarget === ta.key ? ' is-active' : ''}`}
-                        onClick={() => handleTargetAreaSelect(ta.key)}
-                        aria-pressed={activeTarget === ta.key}
-                      >
-                        <div className="mt-target-icon">
-                          <AppIcon name={icon} />
-                        </div>
-                        <div className="mt-target-info">
-                          <strong>{ta.label}</strong>
-                          <span>{ta.planCount}&nbsp;{t('muscle_training.stitch_mt_targets_exercises')}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </article>
-            </div>
 
             {/* ── Exercise List ── */}
             <section className="mt-exercises" aria-labelledby="mt-exercises-title">
@@ -4189,7 +4000,7 @@ export default function MuscleTraining() {
                               )}
                             </div>
                             {(() => {
-                              const heatmapSlugs = muscleSlugsForExercise(exerciseCopy.muscles);
+                              const heatmapSlugs = getExerciseHeatmapSlugs(item, exerciseCopy);
                               if (heatmapSlugs.length === 0) return null;
                               const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
                               const muscleLabel = exerciseCopy.muscles.join(' / ');
@@ -4365,40 +4176,6 @@ export default function MuscleTraining() {
                           </button>
                         ))}
                       </div>
-                    </label>
-
-                    <label className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide mt-strength-composer">
-                      <span>{copy.strengthComposerTitle}</span>
-                      <p>{copy.strengthComposerHint}</p>
-                      <strong>{copy.strengthFocusLabel}</strong>
-                      <div className="muscle-choice-row">
-                        {STRENGTH_FOCUS_OPTIONS.map((focus) => (
-                          <button
-                            key={focus}
-                            type="button"
-                            className={`muscle-day-chip${checkInDraft.strengthFocus === focus ? ' active' : ''}`}
-                            onClick={() => updateCheckInDraft('strengthFocus', focus)}
-                            aria-pressed={checkInDraft.strengthFocus === focus}
-                          >
-                            {pickLabel(copy.strengthFocusOptions, focus, focus)}
-                          </button>
-                        ))}
-                      </div>
-                      <strong>{copy.strengthDoseLabel}</strong>
-                      <div className="muscle-choice-row">
-                        {STRENGTH_DOSE_OPTIONS.map((dose) => (
-                          <button
-                            key={dose}
-                            type="button"
-                            className={`muscle-day-chip${checkInDraft.strengthDose === dose ? ' active' : ''}`}
-                            onClick={() => updateCheckInDraft('strengthDose', dose)}
-                            aria-pressed={checkInDraft.strengthDose === dose}
-                          >
-                            {pickLabel(copy.strengthDoseOptions, dose, dose)}
-                          </button>
-                        ))}
-                      </div>
-                      <em>{copy.strengthComposerSafety}</em>
                     </label>
 
                     <label className="muscle-pref-field">

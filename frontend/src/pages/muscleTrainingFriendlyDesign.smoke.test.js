@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,12 +9,62 @@ const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training
 const contrastSource = readFileSync(path.join(here, '../styles/contrast-fixes.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
-const anatomyAssetPath = path.join(here, '../assets/muscle-training/anatomy-neon-selector.png');
 const controlDeckCssMatch = cssSource.match(
   /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck[\s\S]*?@media \(max-width:\s*980px\)/,
 );
 assert.ok(controlDeckCssMatch, 'The strength settings control deck should keep a dedicated CSS scope.');
 const controlDeckCss = controlDeckCssMatch[0];
+
+function extractObjectBlock(source, declarationName) {
+  const declarationStart = source.indexOf(`const ${declarationName} = {`);
+  assert.notEqual(declarationStart, -1, `${declarationName} should be declared.`);
+  const objectStart = source.indexOf('{', declarationStart);
+  let depth = 0;
+  for (let index = objectStart; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(objectStart, index + 1);
+    }
+  }
+  assert.fail(`${declarationName} object should close.`);
+}
+
+function extractTopLevelQuotedKeys(objectSource) {
+  const keys = [];
+  const keyPattern = /^\s{2}(['"])((?:\\.|(?!\1).)+)\1\s*:/gm;
+  let match;
+  while ((match = keyPattern.exec(objectSource))) {
+    keys.push(match[2].replace(/\\'/g, "'").replace(/\\"/g, '"'));
+  }
+  return keys;
+}
+
+function slugExerciseNameForTest(name) {
+  return name
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function objectBlockHasTopLevelKey(objectSource, key) {
+  const escaped = escapeRegExp(key);
+  return new RegExp(`(^|\\n)\\s{2}(?:['"]${escaped}['"]|${escaped})\\s*:`).test(objectSource);
+}
+
+const videoEmbedKeys = new Set(extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_VIDEO_EMBEDS')));
+const compoundExerciseKeys = [
+  ...pageSource.matchAll(/compoundLibraryExercise\(\{\s*key:\s*'([^']+)'/g),
+].map((match) => match[1]);
+const runnerExerciseNames = extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_LIBRARY'));
+const runnerExerciseKeys = runnerExerciseNames.map(
+  slugExerciseNameForTest,
+);
 
 // ── New mt-* card-based redesign presence ──────────────────────────────────
 assert.match(
@@ -62,15 +111,16 @@ assert.doesNotMatch(
 );
 
 // ── Hero ring ──────────────────────────────────────────────────────────────
-assert.ok(
-  existsSync(anatomyAssetPath),
-  'The top anatomy workbench should use a local anatomy image asset instead of a hotlinked image.',
-);
-
 assert.match(
   pageSource,
-  /anatomyNeonSelectorUrl/,
-  'The page should import the local neon anatomy image asset.',
+  /className="mt-muscle-visual mt-muscle-visual--svg"[\s\S]*<MuscleHeatmap[\s\S]*side="both"/,
+  'The top anatomy workbench should use the MIT SVG muscle diagram component instead of the old raster anatomy image.',
+);
+
+assert.doesNotMatch(
+  pageSource,
+  /anatomyNeonSelectorUrl|anatomy-neon-selector\.png/,
+  'The page should not keep the replaced neon anatomy PNG import.',
 );
 
 assert.match(
@@ -85,45 +135,22 @@ assert.doesNotMatch(
   'The anatomy image should not render misaligned clickable hotspot circles.',
 );
 
-assert.match(
+assert.doesNotMatch(
   pageSource,
-  /const TOP_MUSCLE_HIT_ZONES = \[/,
-  'The anatomy selector should define aligned transparent body-part hit zones.',
+  /TOP_MUSCLE_HIT_ZONES|mt-muscle-hit-zone-layer|selectedMuscleHitZoneId|getPrimaryTopMuscleHitZoneId/,
+  'The top anatomy selector should not render a separate floating hit-zone overlay; the SVG paths are the hit zones.',
 );
 
 assert.match(
   pageSource,
-  /id: 'shoulders-front-left', key: 'shoulders', left: '16%', top: '22%', width: '12%', height: '12%'/,
-  'The shoulder hit zone should be aligned to the actual shoulder area, not the abdomen.',
+  /<MuscleHeatmap[\s\S]*?data=\{topMuscleSelectorData\}[\s\S]*?onMuscleClick=\{\(part\) => \{[\s\S]*?resolveTopMuscleTargetFromSlug\(part\?\.slug\)[\s\S]*?handleTopMuscleSelect\(targetKey\);/,
+  'The anatomy diagram should use the real react-muscle-highlighter SVG muscle paths for click selection.',
 );
 
 assert.match(
   pageSource,
-  /className="mt-muscle-hit-zone-layer"/,
-  'The anatomy image should restore a transparent clickable body-part layer.',
-);
-
-assert.match(
-  pageSource,
-  /className=\{`mt-muscle-hit-zone/,
-  'The anatomy body-part layer should render real buttons for image clicks.',
-);
-
-assert.match(
-  pageSource,
-  /getPrimaryTopMuscleHitZoneId/,
-  'The anatomy selector should map each bottom muscle button to a persistent primary hit-zone ring.',
-);
-
-assert.ok(
-  (pageSource.match(/onClick=\{\(\) => handleTopMuscleSelect\(zone\.key,\s*zone\.id\)\}/g) || []).length >= 1,
-  'Anatomy image hit zones should call the top-muscle selection handler.',
-);
-
-assert.match(
-  pageSource,
-  /selectedMuscleHitZoneId === zone\.id/,
-  'Only the specific selected anatomy hit zone should keep a persistent active ring.',
+  /function buildTopMuscleSelectorData\(activeTarget\)[\s\S]*?const activeSlugs = TOP_MUSCLE_SELECTOR_GROUPS\[activeTarget\] \|\| TOP_MUSCLE_SELECTOR_GROUPS\.legs;[\s\S]*?fill: 'var\(--mtpa-muscle-active-fill\)',[\s\S]*?stroke: 'var\(--mtpa-muscle-active-stroke\)',[\s\S]*?strokeWidth: 1\.65,[\s\S]*?opacity: 0\.94,/,
+  'The selected top muscle target should use Hermes-themed SVG path fill/stroke styles so the highlight is visible without neon color.',
 );
 
 assert.match(
@@ -165,6 +192,17 @@ assert.match(
   pageSource,
   /className="mt-card mt-video-card"/,
   'The lower right rail should render an exercise video card.',
+);
+
+assert.deepEqual(
+  [...new Set([...compoundExerciseKeys, ...runnerExerciseKeys])].filter((key) => !videoEmbedKeys.has(key)),
+  [],
+  'Every compound and runner-specific training exercise should have a nocookie video embed.',
+);
+
+assert.ok(
+  videoEmbedKeys.size >= 43,
+  'Video embeds should cover the compound library and the runner-specific exercise library.',
 );
 
 assert.match(
@@ -227,51 +265,21 @@ assert.doesNotMatch(
 );
 
 assert.ok(
-  pageSource.indexOf('className="mt-top-workbench"') < pageSource.indexOf('className="mt-hero"'),
-  'Top anatomy workbench should appear before the existing hero.',
+  pageSource.indexOf('className="mt-top-workbench"') < pageSource.indexOf('className="mt-exercises"'),
+  'Top anatomy workbench should appear before the exercise list.',
 );
 
-assert.match(
+assert.doesNotMatch(
   pageSource,
-  /className="mt-hero"/,
-  'The page should start with an mt-hero section.',
+  /className="mt-hero"|mt-hero-title|mt-hero-cta|mt-ring-wrap/,
+  'The removed mt-hero section and its progress-ring/CTA children should not render.',
 );
 
-assert.match(
+// ── Removed recommendation/grid panels ─────────────────────────────────────
+assert.doesNotMatch(
   pageSource,
-  /className="mt-ring-wrap"/,
-  'The hero should include a progress ring (mt-ring-wrap) showing weekly completion.',
-);
-
-assert.match(
-  pageSource,
-  /<button type="button" className="mt-hero-cta" onClick=\{scrollToControls\}>[\s\S]*className="mt-hero-cta-label"[\s\S]*\{stitchCopy\.startWorkout\}/,
-  'The hero CTA text should use a dedicated label wrapper so Chinese copy cannot collapse into stacked lines.',
-);
-
-assert.match(
-  cssSource,
-  /\.mt-hero-cta-label\s*\{[\s\S]*white-space:\s*nowrap;/,
-  'The hero CTA label should force one-line text layout.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.mt-hero-cta > svg,[\s\S]*width:\s*1\.35em;[\s\S]*height:\s*1\.35em;/,
-  'The hero CTA arrow should keep a fixed visible size beside the label.',
-);
-
-assert.match(
-  pageSource,
-  /volumeCompletion/,
-  'The progress ring should display volumeCompletion percentage.',
-);
-
-// ── Recommendation banner ──────────────────────────────────────────────────
-assert.match(
-  pageSource,
-  /className="mt-recommend"/,
-  'The page should include an mt-recommend recommendation banner.',
+  /className="mt-recommend"|className="mt-card mt-session-card"|className="mt-card mt-targets-card"|className="mt-target-grid"/,
+  'The removed recommendation band and target/session grid cards should not render.',
 );
 
 // ── Exercise list structure ────────────────────────────────────────────────
@@ -505,17 +513,11 @@ assert.match(
 );
 
 assert.ok(
-  pageSource.indexOf('className="mt-exercises"') > pageSource.indexOf('className="mt-hero"'),
-  'Exercise list should appear after the hero section.',
+  pageSource.indexOf('className="mt-exercises"') > pageSource.indexOf('className="mt-top-workbench"'),
+  'Exercise list should appear after the top anatomy workbench.',
 );
 
 // ── Card layout ────────────────────────────────────────────────────────────
-assert.match(
-  pageSource,
-  /className="mt-card mt-session-card"/,
-  'Today\'s session should be displayed as an mt-card mt-session-card.',
-);
-
 assert.match(
   pageSource,
   /className="mt-side-grid mt-media-rail"/,
@@ -568,6 +570,39 @@ assert.match(
   'Optional library exercises should be labelled as not participating in today recommendation calculation.',
 );
 
+// ── Exercise-specific anatomy heatmaps ─────────────────────────────────────
+const heatmapSlugSource = extractObjectBlock(pageSource, 'EXERCISE_HEATMAP_SLUGS');
+for (const key of compoundExerciseKeys) {
+  assert.ok(
+    objectBlockHasTopLevelKey(heatmapSlugSource, key),
+    `Compound exercise ${key} should have explicit heatmap muscle slugs.`,
+  );
+}
+for (const name of runnerExerciseNames) {
+  assert.ok(
+    objectBlockHasTopLevelKey(heatmapSlugSource, name),
+    `Runner exercise ${name} should have explicit heatmap muscle slugs.`,
+  );
+}
+
+assert.match(
+  pageSource,
+  /'Standing calf raise': \['calves'\]/,
+  'Standing calf raise should highlight only the calves, not the whole leg group.',
+);
+
+assert.match(
+  pageSource,
+  /'Step-down \(knee tracking\)': \['quadriceps', 'gluteal', 'hamstring', 'adductors'\]/,
+  'Step-down should highlight the actual stance-leg muscles rather than generic core/glute text.',
+);
+
+assert.match(
+  pageSource,
+  /const heatmapSlugs = getExerciseHeatmapSlugs\(item, exerciseCopy\);/,
+  'Exercise detail anatomy panels should use explicit per-exercise heatmap slugs before falling back to text parsing.',
+);
+
 // ── API endpoints ──────────────────────────────────────────────────────────
 assert.match(
   pageSource,
@@ -582,12 +617,6 @@ assert.doesNotMatch(
 );
 
 // ── CSS: new mt-* classes present in split CSS file ───────────────────────
-assert.match(
-  cssSource,
-  /\.mt-hero\s*\{/,
-  'muscle-training.css should define .mt-hero for the gradient hero section.',
-);
-
 assert.match(
   cssSource,
   /\.mt-top-workbench\s*\{/,
@@ -608,38 +637,68 @@ assert.doesNotMatch(
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone-layer\s*\{[\s\S]*position:\s*absolute;[\s\S]*inset:\s*0;[\s\S]*pointer-events:\s*none;/,
-  'The anatomy image should use an overlay layer for transparent body-part hit zones.',
+  /\.mt-muscle-hit-zone-layer\s*\{[\s\S]*display:\s*none !important;/,
+  'Any legacy external anatomy overlay should be hidden so it cannot float between the SVG bodies.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone\s*\{[\s\S]*min-width:\s*44px;[\s\S]*min-height:\s*44px;[\s\S]*border:\s*0;[\s\S]*background:\s*transparent;[\s\S]*cursor:\s*pointer;/,
-  'Anatomy hit zones should be transparent by default and still meet touch target requirements.',
+  /\.mt-muscle-visual--svg \.muscle-heatmap__body--interactive svg path\s*\{[\s\S]*cursor:\s*pointer;[\s\S]*vector-effect:\s*non-scaling-stroke;[\s\S]*transition:\s*filter 150ms ease, opacity 150ms ease, stroke-width 150ms ease;/,
+  'The real SVG muscle paths should be the clickable hit zones.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:hover,[\s\S]*\.mt-muscle-hit-zone:focus-visible,[\s\S]*\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.12\);[\s\S]*outline-color:\s*rgba\(191,\s*255,\s*0,\s*0\.88\);/,
-  'Anatomy hit zones should reveal feedback on hover, keyboard focus, and the selected persistent ring.',
+  /\.mt-muscle-visual--svg \.muscle-heatmap__body--interactive svg path:hover\s*\{[\s\S]*filter:\s*brightness\(1\.28\) drop-shadow\(0 0 5px rgba\(191,\s*255,\s*0,\s*0\.52\)\);/,
+  'The real SVG muscle paths should show visible hover feedback instead of relying on rectangular overlays.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone\.is-active\s*\{[\s\S]*box-shadow:\s*0 0 0 2px rgba\(191,\s*255,\s*0,\s*0\.78\) inset/,
-  'The selected anatomy hit zone should keep a persistent visible ring after click or bottom-button selection.',
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.runner-shell-canvas\.muscle-training-canvas\s*\{[\s\S]*width:\s*100% !important;[\s\S]*max-width:\s*none !important;[\s\S]*min-height:\s*calc\(100vh - 68px\);/,
+  'The Muscle Training route canvas should fill the available viewport instead of using a boxed content width.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-hit-zone:active\s*\{[\s\S]*background:\s*rgba\(191,\s*255,\s*0,\s*0\.18\);/,
-  'Anatomy hit zones should show pressed feedback without persistent default circles.',
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.mt-content\s*\{[\s\S]*width:\s*100%;[\s\S]*max-width:\s*none;[\s\S]*min-height:\s*calc\(100vh - 68px\);[\s\S]*grid-template-columns:\s*minmax\(0,\s*1\.72fr\) minmax\(360px,\s*0\.88fr\);/,
+  'The Muscle Training route content grid should be full-screen width with no max-width clamp.',
 );
 
 assert.match(
   cssSource,
-  /\.mt-muscle-target-buttons\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);[\s\S]*gap:\s*10px;/,
-  'Visible muscle-target shortcut buttons should use a compact desktop grid.',
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.mt-top-workbench\s*\{[\s\S]*width:\s*100%;[\s\S]*max-width:\s*none;[\s\S]*grid-template-columns:\s*minmax\(320px,\s*1\.05fr\) minmax\(420px,\s*1\.2fr\) minmax\(340px,\s*0\.95fr\);/,
+  'The top muscle workbench should stretch its three grid lanes across the full route width.',
+);
+
+assert.match(
+  cssSource,
+  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.mt-protocol-board \.strength-plan-content-grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1\.6fr\) minmax\(340px,\s*0\.8fr\);/,
+  'The lower protocol grid should also use full-width route proportions.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-muscle-target-buttons\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);[\s\S]*grid-auto-rows:\s*minmax\(52px,\s*auto\);[\s\S]*gap:\s*10px;/,
+  'Visible muscle-target shortcut buttons should use a concrete 3-column desktop grid with stable row sizing.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-top-muscle-card\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-rows:\s*auto minmax\(300px,\s*1fr\) auto auto;[\s\S]*gap:\s*14px;/,
+  'The top muscle card should be a concrete four-row grid: title, anatomy selector, target grid, hint.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-muscle-visual-shell\s*\{[\s\S]*position:\s*relative;[\s\S]*display:\s*grid;[\s\S]*place-items:\s*center;[\s\S]*background:[\s\S]*linear-gradient\(rgba\(191,\s*255,\s*0,\s*0\.045\) 1px, transparent 1px\)[\s\S]*background-size:\s*32px 32px,\s*32px 32px,\s*auto,\s*auto;[\s\S]*min-height:\s*clamp\(280px,\s*34vw,\s*420px\);/,
+  'The anatomy visual shell should be the positioned grid container for the absolute hit-zone layer.',
+);
+
+assert.match(
+  cssSource,
+  /\.mt-muscle-visual\s*\{[\s\S]*position:\s*relative;[\s\S]*z-index:\s*1;[\s\S]*width:\s*min\(100%,\s*430px\);[\s\S]*object-fit:\s*contain;/,
+  'The anatomy image should be bounded inside the concrete selector grid instead of relying on intrinsic image sizing.',
 );
 
 assert.match(
