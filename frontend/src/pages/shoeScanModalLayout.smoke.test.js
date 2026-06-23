@@ -24,7 +24,7 @@ assert.doesNotMatch(
 );
 
 for (const [label, filePath] of sources) {
-  const source = readFileSync(filePath, 'utf8');
+  const source = readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
 
   assertContains(source, '/* Shoe scan import compact repair */', label);
   assertContains(source, 'width: min(960px, calc(100vw - 32px));', label);
