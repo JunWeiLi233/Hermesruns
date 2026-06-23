@@ -6,11 +6,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
-const splitLandingStyle = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
+const landingSplitSource = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
-const heroLegacyPngPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
-const heroPhotoPath = path.join(here, '../assets/generated/landing-cinematic-hero-runner-dawn.webp');
-const retiredHeroGridClassPattern = new RegExp(`className="${['landing-cinematic-hero-grid', 'landing-command-hero'].join('\\s+')}"`);
+const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
 
 assert.match(
   landingSource,
@@ -60,16 +58,10 @@ assert.doesNotMatch(
   'Strava CTA buttons should not keep the old runner glyph.',
 );
 
-assert.doesNotMatch(
-  landingSource,
-  retiredHeroGridClassPattern,
-  'Landing hero should not render the removed command hero grid class pair.',
-);
-
 assert.match(
   landingSource,
-  /className="landing-cinematic-hero-copy landing-command-copy"/,
-  'Landing hero copy should remain as the visible first-fold text block.',
+  /<section className="landing-cinematic-hero">[\s\S]*className="landing-cinematic-hero-photo"/,
+  'Landing hero should render the photo layer targeted by the generated background image.',
 );
 
 assert.match(
@@ -85,59 +77,49 @@ assert.doesNotMatch(
 );
 
 assert.ok(
-  existsSync(heroPhotoPath),
-  'WebP variant of the documentary landing hero background should exist as the primary hero asset.',
+  existsSync(heroAssetPath),
+  'Generated landing command hero background asset should exist in the repo asset pipeline.',
 );
 
 assert.ok(
-  statSync(heroPhotoPath).size < 200000,
-  'Documentary landing hero WebP should be under 200KB to keep first paint lean.',
+  statSync(heroAssetPath).size > 50000,
+  'Landing command hero background should be a real generated raster asset, not an empty placeholder.',
 );
 
-// The original 1.97 MB PNG was retired because the image-set() fallback path
-// was never hit by any modern browser (every browser that supports image-set
-// also supports WebP). Re-introducing it would re-add ~1.9 MB to the bundle.
-assert.ok(
-  !existsSync(heroLegacyPngPath),
-  'Legacy 1.97 MB landing-command-hero-background.png should stay removed — image-set() now ships WebP-only.',
+assert.match(
+  landingSplitSource,
+  /\.landing-cinematic-hero-photo\s*\{[\s\S]*url\("\/src\/assets\/generated\/landing-command-hero-background\.webp"\)/,
+  'Landing hero photo layer should use a Vite-resolvable generated hero image path.',
 );
 
 assert.match(
   styleSource,
-  /\.landing-cinematic-hero-photo\s*\{[\s\S]*image-set\([\s\S]*landing-cinematic-hero-runner-dawn\.webp[\s\S]*type\("image\/webp"\)[\s\S]*\)/,
-  'Landing hero photo should use the generated documentary WebP image-set() declaration.',
-);
-
-assert.doesNotMatch(
-  styleSource,
-  /landing-command-hero-background\.png/,
-  'Bundled style.css should not reference the retired PNG fallback.',
-);
-
-assert.doesNotMatch(
-  splitLandingStyle,
-  /landing-command-hero-background\.png/,
-  'Split landing.css should not reference the retired PNG fallback.',
-);
-
-assert.match(
-  styleSource,
-  /\.landing-command-copy \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
+  /\.landing-cinematic-hero-grid\.landing-command-hero \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
   'Landing command hero title should stay light over the generated background.',
 );
 
-// Removed two `.landing-cinematic-glyph--logo` stroke assertions — the CSS rules
-// they pinned were retired with legacy-frame.css in commit 0c921aef. The Hermes
-// brand mark now ships via HermesMarkSvg with inline color, not a global override.
-
-// Removed `.landing-strava-logo` width assertion — the rule was retired with
-// legacy-frame.css in commit 0c921aef. The Strava CTA logo now scales via
-// the in-component SVG viewBox.
+assert.match(
+  styleSource,
+  /\.landing-cinematic-glyph--logo\s*\{[\s\S]*stroke:\s*none/,
+  'Landing Hermes logo should disable the generic red stroked glyph treatment.',
+);
 
 assert.match(
   styleSource,
-  /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/,
-  'Landing command copy should keep the first-fold hero spacing after removing the grid wrapper.',
+  /\.landing-cinematic-glyph--logo \*:not\(\[stroke\]\)\s*\{[\s\S]*stroke:\s*none/,
+  'Landing Hermes logo filled child paths/rects should not inherit the generic red glyph stroke.',
+);
+
+assert.match(
+  styleSource,
+  /\.landing-strava-logo\s*\{[\s\S]*width:\s*78px/,
+  'Landing Strava logo should have a stable CTA-sized badge style.',
+);
+
+assert.match(
+  styleSource,
+  /\.hermes-site-frame\[data-gpt-taste-system="gpt-taste"\]\.is-public \.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s*!important/,
+  'Landing command hero should collapse to a single hero column after removing the proof board.',
 );
 
 assert.doesNotMatch(

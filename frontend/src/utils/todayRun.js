@@ -431,10 +431,11 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
   } else if ((sleep != null && sleep < 50) || (stress != null && stress > 75)) {
     const isSleepIssue = sleep != null && sleep < 50;
     const isStressIssue = stress != null && stress > 75;
-    let fallbackPurpose = '';
-    if (isSleepIssue && isStressIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep and high stress. Prioritize recovery today.';
-    else if (isSleepIssue) fallbackPurpose = 'Garmin wellness sync shows poor sleep. Prioritize recovery today.';
-    else fallbackPurpose = 'Garmin wellness sync shows high stress. Prioritize recovery today.';
+    const fallbackPurpose = isSleepIssue && isStressIssue
+      ? 'Garmin wellness sync shows poor sleep and high stress. Prioritize recovery today.'
+      : isSleepIssue
+        ? 'Garmin wellness sync shows poor sleep. Prioritize recovery today.'
+        : 'Garmin wellness sync shows high stress. Prioritize recovery today.';
 
     let purpose = t('today_run.wellness_alert_purpose');
     if (!purpose || purpose === 'today_run.wellness_alert_purpose') purpose = fallbackPurpose;

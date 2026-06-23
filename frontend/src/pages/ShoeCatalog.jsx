@@ -251,12 +251,12 @@ export default function ShoeCatalog() {
 
   const visibleCatalogModels = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    let source = [];
-    if (selectedBrand) {
-      source = selectedBrand.models || [];
-    } else if (q) {
-      source = catalog.flatMap((brand) => (brand.models || []).map((m) => ({ ...m, brandName: brand.brand })));
-    } else {
+    const source = selectedBrand
+      ? (selectedBrand.models || [])
+      : q
+        ? catalog.flatMap((brand) => (brand.models || []).map((m) => ({ ...m, brandName: brand.brand })))
+        : null;
+    if (!source) {
       return [];
     }
 

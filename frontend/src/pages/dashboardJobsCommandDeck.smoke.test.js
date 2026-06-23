@@ -8,12 +8,10 @@ const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 const translationsSource = [
   '../i18n/translations.js',
-  '../i18n/locales/en.js',
-  '../i18n/locales/zh-CN.js',
+  '../i18n/locales/en/index.js',
   '../i18n/locales/en/components.js',
+  '../i18n/locales/zh-CN/index.js',
   '../i18n/locales/zh-CN/components.js',
-  '../i18n/locales/en/pages.js',
-  '../i18n/locales/zh-CN/pages.js',
 ].map((file) => readFileSync(path.join(here, file), 'utf8')).join('\n');
 
 assert.match(
