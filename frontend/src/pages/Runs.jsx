@@ -571,24 +571,25 @@ const Runs = memo(function Runs() {
         setAllRuns(sorted);
         setProfile(hit.profile);
         setStravaStatus(hit.stravaStatus);
+        setLoadState('ready');
         const preloadIds = sorted
           .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
           .map((run) => run?.id)
           .filter((id) => Number.isFinite(Number(id)));
         if (preloadIds.length > 0) {
-          try {
-            const { previewUpdates, bboxUpdates } = await fetchRoutePreviewBatch(preloadIds);
-            if (Object.keys(previewUpdates).length > 0) {
-              setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
-            }
-            if (Object.keys(bboxUpdates).length > 0) {
-              setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
-            }
-          } catch {
-            // Ignore cache-prewarm failures and let the visible-run effect retry.
-          }
+          fetchRoutePreviewBatch(preloadIds)
+            .then(({ previewUpdates, bboxUpdates }) => {
+              if (Object.keys(previewUpdates).length > 0) {
+                setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+              }
+              if (Object.keys(bboxUpdates).length > 0) {
+                setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+              }
+            })
+            .catch(() => {
+              // Ignore cache-prewarm failures and let the visible-run effect retry.
+            });
         }
-        setLoadState('ready');
       }
     }
 
@@ -609,19 +610,22 @@ const Runs = memo(function Runs() {
           .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
           .map((run) => run?.id)
           .filter((id) => Number.isFinite(Number(id)));
-        return (preloadIds.length > 0
-          ? fetchRoutePreviewBatch(preloadIds).catch(() => ({ previewUpdates: {}, bboxUpdates: {} }))
-          : Promise.resolve({ previewUpdates: {}, bboxUpdates: {} }))
-          .then(({ previewUpdates, bboxUpdates }) => {
-            if (Object.keys(previewUpdates).length > 0) {
-              setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
-            }
-            if (Object.keys(bboxUpdates).length > 0) {
-              setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
-            }
-            setAllRuns(list);
-            setLoadState('ready');
-          });
+        setAllRuns(list);
+        setLoadState('ready');
+        if (preloadIds.length > 0) {
+          fetchRoutePreviewBatch(preloadIds)
+            .then(({ previewUpdates, bboxUpdates }) => {
+              if (Object.keys(previewUpdates).length > 0) {
+                setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+              }
+              if (Object.keys(bboxUpdates).length > 0) {
+                setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+              }
+            })
+            .catch(() => {
+              // Visible-run effect retries preview hydration; do not block run history paint.
+            });
+        }
       })
       .catch((err) => {
         runsFailed = true;
@@ -1045,7 +1049,7 @@ const Runs = memo(function Runs() {
           <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
               <HermesLogo dark />
-              <span>{t('analysis.stitch_brand_subtitle')}</span>
+              <span>{t('analysis.stitch_brand_subtitle_runs')}</span>
             </div>
             <button
               type="button"
@@ -1205,7 +1209,7 @@ const Runs = memo(function Runs() {
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
             <HermesLogo dark />
-            <span>{t('analysis.stitch_brand_subtitle')}</span>
+            <span>{t('analysis.stitch_brand_subtitle_runs')}</span>
           </div>
           <button
             type="button"

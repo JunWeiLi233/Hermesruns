@@ -5070,11 +5070,48 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 .runner-dashboard-page .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+  position: relative;
+  display: inline-block;
   max-width: 12ch;
   color: var(--runner-nav-muted);
   font-size: 0.54rem;
   line-height: 1.35;
   letter-spacing: 0.16em;
+  transform: translate3d(-3px, 0, 0);
+  opacity: 0;
+  animation: runner-brand-subtitle-reveal 360ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1), transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.runner-dashboard-page .runner-shell-brand:hover .runner-dashboard-brand-copy > span:not(.hermes-logo),
+.runner-dashboard-page .runner-shell-brand:focus-within .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+  color: var(--runner-nav-ink);
+  transform: translate3d(1px, 0, 0);
+}
+
+@keyframes runner-brand-subtitle-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(-6px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runner-dashboard-page .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .runner-dashboard-page .runner-shell-brand:hover .runner-dashboard-brand-copy > span:not(.hermes-logo),
+  .runner-dashboard-page .runner-shell-brand:focus-within .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+    transform: none;
+  }
 }
 
 .runner-dashboard-page .runner-dashboard-sidebar-toggle {

@@ -1,46 +1,22 @@
 {
-  "updatedAt": "2026-06-19T04:49:43.529Z",
+  "updatedAt": "2026-06-22T18:16:22.108Z",
   "activeClaims": [],
   "recentlyCompleted": [],
   "mustFixQueue": [
     {
-      "key": "territory-auto-hermes-self-fix-territory-filled-land-algorithm-and-codex-native-",
-      "task": "Fix territory filled-land algorithm and Codex-native auto-hermes-self delegation",
-      "surface": "Territory / auto-hermes-self",
+      "key": "addshoes-add-shoes-page-throws-in-the-browser-before-the-brand-deck-finishes-loa",
+      "task": "Add Shoes page throws in the browser before the brand deck finishes loading",
+      "surface": "AddShoes",
       "agent": "codex",
-      "owner": "codex",
+      "owner": "frontend",
       "status": "must-fix",
       "completedAt": "",
-      "startedAt": "2026-06-19T04:49:43.529Z",
+      "startedAt": "2026-06-22T18:16:22.108Z",
       "verify": [
-        "node frontend/src/pages/territoryBackendWiring.smoke.test.js; node frontend/src/pages/territoryHeatmapWorldMap.smoke.test.js; cd frontend && node scripts/run-vite-build.mjs; node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/Territory.jsx frontend/src/pages/territoryBackendWiring.smoke.test.js .tools/verify-territory-filled-land-runtime.mjs; node .tools/verify-territory-filled-land-runtime.mjs --url http://localhost:8080 --coverage-samples 240 --screenshot task-images/territory-filled-land-runtime-proof.jpg"
+        "cd frontend && npm run build"
       ],
       "files": [
-        "frontend/src/pages/Territory.jsx",
-        "frontend/src/pages/territoryBackendWiring.smoke.test.js",
-        ".tools/verify-territory-filled-land-runtime.mjs",
-        ".codex/commands/auto-hermes-self.md"
-      ],
-      "rollbackTarget": "",
-      "rollbackFiles": [],
-      "review": "ralph-gate-must-fix",
-      "note": "",
-      "next": ""
-    },
-    {
-      "key": "profile-fix-profile-empty-state",
-      "task": "Fix Profile empty state",
-      "surface": "Profile",
-      "agent": "codex",
-      "owner": "",
-      "status": "must-fix",
-      "completedAt": "",
-      "startedAt": "2026-06-17T06:53:44.434Z",
-      "verify": [
-        "`cd frontend && npm run lint && npm run build`"
-      ],
-      "files": [
-        "frontend/src/pages/Profile.jsx"
+        "frontend/src/pages/AddShoes.jsx"
       ],
       "rollbackTarget": "",
       "rollbackFiles": [],

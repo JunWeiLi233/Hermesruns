@@ -8,7 +8,6 @@ export function calculateStreaks(runs) {
 
   if (sortedDays.length === 0) return { current: 0, best: 0 };
 
-  let currentStreak = 0;
   let bestStreak = 0;
   let runningStreak = 1;
 
@@ -30,9 +29,9 @@ export function calculateStreaks(runs) {
   const lastRunDate = new Date(sortedDays[sortedDays.length - 1]);
   const diffFromToday = Math.round((today.getTime() - lastRunDate.getTime()) / 86400000);
 
+  let currentStreak = diffFromToday <= 1 ? 1 : 0;
   if (diffFromToday <= 1) {
     // Walk backward from the end to find current streak
-    currentStreak = 1;
     for (let i = sortedDays.length - 2; i >= 0; i -= 1) {
       const diffDays = Math.round((sortedDays[i + 1] - sortedDays[i]) / 86400000);
       if (diffDays === 1) currentStreak += 1;

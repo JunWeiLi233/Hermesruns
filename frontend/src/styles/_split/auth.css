@@ -874,6 +874,14 @@
   line-height: 1.5;
 }
 
+.auth-flow-field-note {
+  margin: 10px 0 0;
+  color: #9d3b2f; /* tokens-ok */
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .auth-flow-btn {
   width: 100%;
   min-height: 54px;

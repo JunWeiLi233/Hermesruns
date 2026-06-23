@@ -1,6 +1,8 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,10 +22,13 @@ import java.util.function.Supplier;
 @RestController
 @RequestMapping("/api")
 public class ProfileController {
-    private static final int MAX_HEATMAP_POINTS = 24000;
-    private static final int GUARANTEED_RECENT_HEATMAP_ACTIVITIES = 5;
     private static final Duration HEATMAP_CACHE_TTL = Duration.ofMinutes(5);
+    private static final String HEATMAP_CACHE_VERSION = "all-points-paged-v4";
+    private static final int DEFAULT_HEATMAP_PAGE_LIMIT = 50000;
+    private static final int DEFAULT_HEATMAP_COVERAGE_LIMIT = 60000;
+    private static final int MAX_HEATMAP_PAGE_LIMIT = 100000;
     private static final int MAX_SETTINGS_MANTRA_LENGTH = 180;
+    private static final int PROFILE_DASHBOARD_INITIAL_RUN_LIMIT = 180;
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
@@ -196,49 +201,21 @@ public class ProfileController {
         }
 
         Runner runner = runnerOptional.get();
-        // The original layout ran 8 expensive ops sequentially. The long-pole
-        // was `automatedCoachService.getTodayWithReadiness`, which makes a
-        // synchronous HTTP call to Open-Meteo through AcclimatizationService
-        // and could block the entire endpoint for up to the RestTemplate read
-        // timeout. Two wins now: (a) drop the Today payload from the eager
-        // response and let the frontend lazy-load `/api/coach/today` via the
-        // existing deferredEnrichment flow, (b) run the remaining independent
-        // lookups concurrently so wall-clock time is close to the slowest
-        // single op rather than the sum of all six.
+        // Keep first paint bounded to the data the Profile route needs to
+        // render. Coach, PR, race, muscle, and quota widgets lazy-load behind
+        // deferredEnrichment so intermittent slow dependencies do not hold the
+        // whole dashboard response open.
         List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
-
-        java.util.concurrent.CompletableFuture<AutomatedCoachService.CoachStateDto> coachStateFuture =
-                java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> automatedCoachService.getCoachState(runner), null));
-        java.util.concurrent.CompletableFuture<List<AutomatedCoachService.CoachScheduledWorkoutDto>> scheduleFuture =
-                java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> automatedCoachService.getSchedule(runner, 7), List.<AutomatedCoachService.CoachScheduledWorkoutDto>of()));
-        java.util.concurrent.CompletableFuture<Object> personalRecordsFuture =
-                java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> personalRecordService.buildForRunner(runner), null));
-        java.util.concurrent.CompletableFuture<List<RaceEventResponse>> racesFuture =
-                java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> findRunnerRaces(runner), List.<RaceEventResponse>of()));
-        java.util.concurrent.CompletableFuture<Object> quotaFuture =
-                java.util.concurrent.CompletableFuture.supplyAsync(() ->
-                        safeValue(() -> quotaService.getQuotaStatus(runner), Map.<String, Object>of()));
-
-        AutomatedCoachService.CoachStateDto coachState = coachStateFuture.join();
-        List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = scheduleFuture.join();
-        // Muscle plan depends on coachState + schedule, so it runs after the
-        // first wave resolves. Still on the request thread but bounded.
-        Object musclePlan =
-                safeValue(() -> muscleTrainingPlannerService.getPlan(runner, coachState, schedule), null);
 
         return ResponseEntity.ok(new ProfileDashboardResponse(
                 toProfileResponse(runner),
                 toRunSummaryFeedItems(activitySummaries),
-                coachState,
                 null,
-                personalRecordsFuture.join(),
-                racesFuture.join(),
-                musclePlan,
-                quotaFuture.join(),
+                null,
+                null,
+                List.of(),
+                null,
+                Map.of(),
                 true
         ));
     }
@@ -263,10 +240,20 @@ public class ProfileController {
                 safeValue(() -> findRunnerShoes(runner), List.of())
         ));
     }
+    public ResponseEntity<?> heatmap(String authorizationHeader) {
+        return heatmap(authorizationHeader, null, null, null);
+    }
+
+    public ResponseEntity<?> heatmap(String authorizationHeader, Long offset, Integer limit) {
+        return heatmap(authorizationHeader, offset, limit, null);
+    }
 
     @GetMapping("/profile/heatmap")
     public ResponseEntity<?> heatmap(
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "offset", required = false) Long offset,
+            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "coverage", required = false) Boolean coverage
     ) {
         Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
         if (runnerOptional.isEmpty()) {
@@ -278,15 +265,11 @@ public class ProfileController {
             activityNormalizationService.backfillActivityTypes(runner);
         }
 
-        String heatmapCacheKey = String.valueOf(runner.getId());
-        HeatmapResponse cached = cacheStore.get("profile-heatmap", heatmapCacheKey, HeatmapResponse.class).orElse(null);
-        if (cached != null) {
-            return ResponseEntity.ok(cached);
-        }
+        String heatmapCacheKey = HEATMAP_CACHE_VERSION + ":" + runner.getId();
 
         long activityCount = activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN);
         if (activityCount <= 0) {
-            HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, 0, null);
+            HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, 0, null, new HeatmapDiagnostics(0, 0, 0, true), null);
             cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
             return ResponseEntity.ok(response);
         }
@@ -296,62 +279,93 @@ public class ProfileController {
                 ActivityType.RUN.name()
         );
         if (sourcePointCount <= 0) {
-            HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, activityCount, null);
+            HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, activityCount, null, new HeatmapDiagnostics(0, 0, 0, true), null);
             cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
             return ResponseEntity.ok(response);
         }
 
-        List<Long> recentActivityIds = activityRepository.findRecentIdsByRunnerAndActivityType(
+        HeatmapBounds bounds = buildBoundsFromAggregateRows(activityPointRepository.findHeatmapBoundsByRunnerAndType(
                 runner.getId(),
-                ActivityType.RUN.name(),
-                GUARANTEED_RECENT_HEATMAP_ACTIVITIES
+                ActivityType.RUN.name()
+        ));
+
+        if (Boolean.TRUE.equals(coverage)) {
+            int safeLimit = Math.max(1, Math.min(MAX_HEATMAP_PAGE_LIMIT, limit == null ? DEFAULT_HEATMAP_COVERAGE_LIMIT : limit));
+            int stride = Math.max(1, (int) Math.ceil(sourcePointCount * 1.0 / safeLimit));
+            List<Object[]> activityPoints = activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(
+                    runner.getId(),
+                    ActivityType.RUN.name(),
+                    stride,
+                    safeLimit
+            );
+            List<Object[]> validActivityPoints = filterValidHeatmapRows(activityPoints);
+            List<HeatPoint> points = buildHeatPoints(validActivityPoints);
+            HeatmapResponse response = new HeatmapResponse(
+                    points,
+                    sourcePointCount,
+                    points.size(),
+                    activityCount,
+                    bounds,
+                    new HeatmapDiagnostics(sourcePointCount, activityPoints.size(), points.size(), points.size() >= sourcePointCount),
+                    new HeatmapPage(0L, safeLimit, points.size(), points.size() < sourcePointCount)
+            );
+            return ResponseEntity.ok(response);
+        }
+
+        if (offset != null || limit != null) {
+            long safeOffset = Math.max(0L, offset == null ? 0L : offset);
+            int safeLimit = Math.max(1, Math.min(MAX_HEATMAP_PAGE_LIMIT, limit == null ? DEFAULT_HEATMAP_PAGE_LIMIT : limit));
+            List<Object[]> activityPoints = activityPointRepository.findHeatmapPointsPageByRunnerAndType(
+                    runner.getId(),
+                    ActivityType.RUN.name(),
+                    safeLimit,
+                    safeOffset
+            );
+            List<Object[]> validActivityPoints = filterValidHeatmapRows(activityPoints);
+            List<HeatPoint> points = buildHeatPoints(validActivityPoints);
+            HeatmapResponse response = new HeatmapResponse(
+                    points,
+                    sourcePointCount,
+                    points.size(),
+                    activityCount,
+                    bounds,
+                    new HeatmapDiagnostics(sourcePointCount, activityPoints.size(), points.size(), safeOffset + points.size() >= sourcePointCount),
+                    new HeatmapPage(safeOffset, safeLimit, points.size(), safeOffset + points.size() < sourcePointCount)
+            );
+            return ResponseEntity.ok(response);
+        }
+
+        HeatmapResponse cached = cacheStore.get("profile-heatmap", heatmapCacheKey, HeatmapResponse.class).orElse(null);
+        if (isCompleteHeatmapResponse(cached, sourcePointCount)) {
+            return ResponseEntity.ok(cached);
+        }
+        if (cached != null) {
+            cacheStore.evict("profile-heatmap", heatmapCacheKey);
+        }
+
+        List<Object[]> activityPoints = activityPointRepository.findAllHeatmapPointsByRunnerAndType(
+                runner.getId(),
+                ActivityType.RUN.name()
         );
-        List<Object[]> activityPoints = new ArrayList<>();
-        if (!recentActivityIds.isEmpty()) {
-            activityPoints.addAll(activityPointRepository.findHeatmapPointsByActivityIds(recentActivityIds));
-        }
-
-        if (activityPoints.size() < MAX_HEATMAP_POINTS) {
-            int remainingBudget = MAX_HEATMAP_POINTS - activityPoints.size();
-            long olderPointCount = recentActivityIds.isEmpty()
-                    ? sourcePointCount
-                    : activityPointRepository.countHeatmapPointsByRunnerAndTypeExcludingActivities(
-                            runner.getId(),
-                            ActivityType.RUN.name(),
-                            recentActivityIds
-                    );
-
-            if (olderPointCount > 0 && remainingBudget > 0) {
-                long olderActivityCount = Math.max(0L, activityCount - recentActivityIds.size());
-                int targetPointsPerActivity = olderActivityCount > 0
-                        ? (int) Math.max(6L, Math.min(40L, remainingBudget / olderActivityCount))
-                        : remainingBudget;
-                activityPoints.addAll(activityPointRepository.findHeatmapSamplesByRunnerAndType(
-                        runner.getId(),
-                        ActivityType.RUN.name(),
-                        recentActivityIds,
-                        targetPointsPerActivity,
-                        remainingBudget
-                ));
-            }
-        } else if (activityPoints.size() > MAX_HEATMAP_POINTS) {
-            activityPoints = new ArrayList<>(activityPoints.subList(0, MAX_HEATMAP_POINTS));
-        }
-
-        HeatmapBounds bounds = buildBoundsFromSamples(activityPoints);
-        List<HeatPoint> points = buildHeatPoints(activityPoints);
+        List<Object[]> validActivityPoints = filterValidHeatmapRows(activityPoints);
+        List<HeatPoint> points = buildHeatPoints(validActivityPoints);
 
         HeatmapResponse response = new HeatmapResponse(
                 points,
                 sourcePointCount,
                 points.size(),
                 activityCount,
-                bounds
+                bounds,
+                new HeatmapDiagnostics(sourcePointCount, activityPoints.size(), points.size(), points.size() == sourcePointCount),
+                null
         );
-        cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+        if (isCompleteHeatmapResponse(response, sourcePointCount)) {
+            cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+        } else {
+            cacheStore.evict("profile-heatmap", heatmapCacheKey);
+        }
         return ResponseEntity.ok(response);
     }
-
     @GetMapping("/profile/personal-records")
     public ResponseEntity<?> personalRecords(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
@@ -378,7 +392,11 @@ public class ProfileController {
             return List.of();
         }
         return safeValue(
-                () -> activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN),
+                () -> activityRepository.findAnalysisSummariesByRunnerAndActivityType(
+                        runner,
+                        ActivityType.RUN,
+                        PageRequest.of(0, PROFILE_DASHBOARD_INITIAL_RUN_LIMIT)
+                ),
                 List.of()
         );
     }
@@ -589,6 +607,26 @@ public class ProfileController {
         }
     }
 
+    private HeatmapBounds buildBoundsFromAggregateRows(List<Object[]> boundsRows) {
+        if (boundsRows == null || boundsRows.isEmpty()) {
+            return null;
+        }
+        return buildBoundsFromSamples(boundsRows.get(0));
+    }
+    private HeatmapBounds buildBoundsFromSamples(Object[] boundsRow) {
+        if (boundsRow == null || boundsRow.length < 4) {
+            return null;
+        }
+        Double minLatitude = toNullableDouble(boundsRow[0]);
+        Double minLongitude = toNullableDouble(boundsRow[1]);
+        Double maxLatitude = toNullableDouble(boundsRow[2]);
+        Double maxLongitude = toNullableDouble(boundsRow[3]);
+        if (!isValidGpsCoordinate(minLatitude, minLongitude) || !isValidGpsCoordinate(maxLatitude, maxLongitude)) {
+            return null;
+        }
+        return new HeatmapBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
+    }
+
     private HeatmapBounds buildBoundsFromSamples(List<Object[]> points) {
         if (points.isEmpty()) {
             return null;
@@ -600,15 +638,57 @@ public class ProfileController {
         double maxLongitude = -Double.MAX_VALUE;
 
         for (Object[] point : points) {
-            double lat = toDouble(point[1]);
-            double lng = toDouble(point[2]);
+            Double lat = toNullableDouble(point[1]);
+            Double lng = toNullableDouble(point[2]);
+            if (!isValidGpsCoordinate(lat, lng)) {
+                continue;
+            }
             minLatitude = Math.min(minLatitude, lat);
             maxLatitude = Math.max(maxLatitude, lat);
             minLongitude = Math.min(minLongitude, lng);
             maxLongitude = Math.max(maxLongitude, lng);
         }
 
+        if (minLatitude == Double.MAX_VALUE) {
+            return null;
+        }
+
         return new HeatmapBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
+    }
+
+    private boolean isCompleteHeatmapResponse(HeatmapResponse response, long sourcePointCount) {
+        if (response == null || response.pointCount() != sourcePointCount || response.sampledPointCount() != sourcePointCount) {
+            return false;
+        }
+        return response.points() != null && response.points().size() == sourcePointCount;
+    }
+
+    private List<Object[]> filterValidHeatmapRows(List<Object[]> activityPoints) {
+        if (activityPoints.isEmpty()) {
+            return List.of();
+        }
+
+        List<Object[]> validRows = new ArrayList<>(activityPoints.size());
+        for (Object[] point : activityPoints) {
+            if (point == null || point.length < 3) {
+                continue;
+            }
+            if (isValidGpsCoordinate(toNullableDouble(point[1]), toNullableDouble(point[2]))) {
+                validRows.add(point);
+            }
+        }
+        return validRows;
+    }
+
+    private boolean isValidGpsCoordinate(Double latitude, Double longitude) {
+        return latitude != null
+                && longitude != null
+                && Double.isFinite(latitude)
+                && Double.isFinite(longitude)
+                && latitude >= -90.0
+                && latitude <= 90.0
+                && longitude >= -180.0
+                && longitude <= 180.0;
     }
 
     private List<HeatPoint> buildHeatPoints(List<Object[]> activityPoints) {
@@ -658,8 +738,8 @@ public class ProfileController {
                     : 0.5;
             points.add(new HeatPoint(
                     toLong(point[0]),
-                    toDouble(point[1]),
-                    toDouble(point[2]),
+                    toNullableDouble(point[1]),
+                    toNullableDouble(point[2]),
                     1.0,
                     speedRatio
             ));
@@ -724,8 +804,20 @@ public class ProfileController {
         return clamp((double) insertionIndex / (sortedSpeeds.size() - 1), 0.0, 1.0);
     }
 
-    private double toDouble(Object value) {
-        return value instanceof Number number ? number.doubleValue() : 0.0;
+    private Double toNullableDouble(Object value) {
+        if (value instanceof Number number) {
+            double parsed = number.doubleValue();
+            return Double.isFinite(parsed) ? parsed : null;
+        }
+        if (value instanceof String text) {
+            try {
+                double parsed = Double.parseDouble(text);
+                return Double.isFinite(parsed) ? parsed : null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private long toLong(Object value) {
@@ -808,6 +900,10 @@ public class ProfileController {
     }
 
     public record HeatPoint(long activityId, double latitude, double longitude, double intensity, double speedRatio) {
+        @JsonValue
+        public Object[] toJson() {
+            return new Object[]{activityId, latitude, longitude, speedRatio};
+        }
     }
 
     public record HeatmapBounds(
@@ -818,12 +914,29 @@ public class ProfileController {
     ) {
     }
 
+    public record HeatmapDiagnostics(
+            long sourceGpsPointCount,
+            int queriedGpsPointCount,
+            int returnedGpsPointCount,
+            boolean complete
+    ) {
+    }
+    public record HeatmapPage(
+            long offset,
+            int limit,
+            int returnedPointCount,
+            boolean hasMore
+    ) {
+    }
+
     public record HeatmapResponse(
             List<HeatPoint> points,
             long pointCount,
             int sampledPointCount,
             long activityCount,
-            HeatmapBounds bounds
+            HeatmapBounds bounds,
+            HeatmapDiagnostics diagnostics,
+            HeatmapPage page
     ) {
     }
 
