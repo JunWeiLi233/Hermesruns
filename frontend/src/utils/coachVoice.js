@@ -24,7 +24,7 @@ export function generateMorningBriefing({ recommendation, metrics, lang }) {
   }
 
   // 2. State Summary (VDOT, ACWR, Recovery)
-  let stateSentence = '';
+  let stateSentence;
   if (isZh) {
     stateSentence = hasAcwr
       ? `你的 VDOT 保持在 ${metrics.bestVdot.toFixed(1)}，训练负荷 (ACWR) 处于 ${metrics.acwr.toFixed(2)} 的健康区间。`
@@ -46,7 +46,7 @@ export function generateMorningBriefing({ recommendation, metrics, lang }) {
   }
 
   // 3. The "Why" for Today
-  let whySentence = '';
+  let whySentence;
   if (isZh) {
     if (recommendation.type.includes('质量') || recommendation.type.includes('Quality')) {
       whySentence = `根据你最近的节奏，今天是一个适合提升强度的日子，让我们来一点 ${recommendation.type}。`;

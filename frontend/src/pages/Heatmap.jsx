@@ -283,7 +283,7 @@ export default function Heatmap() {
 
   const points = useMemo(
     () => normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []),
-    [heatmap?.points],
+    [heatmap],
   );
   const bounds = heatmap?.bounds || null;
 
