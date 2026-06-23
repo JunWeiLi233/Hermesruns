@@ -8,7 +8,7 @@ const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 const landingSplitSource = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
-const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.png');
+const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
 
 assert.match(
   landingSource,
@@ -60,8 +60,8 @@ assert.doesNotMatch(
 
 assert.match(
   landingSource,
-  /className="landing-cinematic-hero-grid landing-command-hero"/,
-  'Landing hero grid should carry the command hero class targeted by the background image.',
+  /<section className="landing-cinematic-hero">[\s\S]*className="landing-cinematic-hero-photo"/,
+  'Landing hero should render the photo layer targeted by the generated background image.',
 );
 
 assert.match(
@@ -82,14 +82,14 @@ assert.ok(
 );
 
 assert.ok(
-  statSync(heroAssetPath).size > 250000,
+  statSync(heroAssetPath).size > 50000,
   'Landing command hero background should be a real generated raster asset, not an empty placeholder.',
 );
 
 assert.match(
   landingSplitSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero\s*\{[\s\S]*url\("\.\/assets\/generated\/landing-command-hero-background\.png"\)/,
-  'Landing command hero grid should use a Vite-resolvable generated hero image path.',
+  /\.landing-cinematic-hero-photo\s*\{[\s\S]*url\("\/src\/assets\/generated\/landing-command-hero-background\.webp"\)/,
+  'Landing hero photo layer should use a Vite-resolvable generated hero image path.',
 );
 
 assert.match(
