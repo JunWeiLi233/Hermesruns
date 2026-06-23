@@ -470,8 +470,8 @@ const Shoes = memo(function Shoes() {
   // Stats
   const activeShoes = shoes.filter(s => !s.retired);
   const retiredShoes = shoes.filter(s => s.retired);
-  const shoeSignal = useMemo(() => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }), [shoes, runs]);
-  const rotationHealth = useMemo(() => calculateRotationHealth(shoes, runs), [shoes, runs]);
+  const shoeSignal = buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true });
+  const rotationHealth = calculateRotationHealth(shoes, runs);
   const retireSoonCount = activeShoes.filter((shoe) => {
     const current = Number(shoe.currentDistanceKm || 0);
     const max = Number(shoe.maxDistanceKm || 650);
@@ -482,7 +482,7 @@ const Shoes = memo(function Shoes() {
   }).length;
   const recentRunsWindow = shoeSignal.recentRuns;
   const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
-  const shoePerformanceInsights = useMemo(() => {
+  const shoePerformanceInsights = (() => {
     const topInsight = shoeSignal.performanceInsights.topInsight;
     if (!topInsight) return shoeSignal.performanceInsights;
 
@@ -505,12 +505,9 @@ const Shoes = memo(function Shoes() {
           }),
       },
     };
-  }, [lang, shoeSignal.performanceInsights, shoes, t, unit]);
-  const recentTaggedRuns = useMemo(
-    () => recentRunsWindow.filter((run) => run?.shoeId),
-    [recentRunsWindow],
-  );
-  const recentUsageByShoe = useMemo(() => {
+  })();
+  const recentTaggedRuns = recentRunsWindow.filter((run) => run?.shoeId);
+  const recentUsageByShoe = (() => {
     const usage = new Map();
     for (const run of recentTaggedRuns) {
       const shoeId = run?.shoeId;
@@ -523,7 +520,7 @@ const Shoes = memo(function Shoes() {
       });
     }
     return usage;
-  }, [recentTaggedRuns]);
+  })();
   const usageByShoe = useMemo(() => {
     const usage = new Map();
     for (const run of runs) {
@@ -761,7 +758,7 @@ const Shoes = memo(function Shoes() {
     return Array.from(brands).sort();
   }, [shoes]);
 
-  const inventoryShoes = useMemo(() => {
+  const inventoryShoes = (() => {
     const source = inventoryTab === 'retired'
       ? retiredShoes
       : inventoryTab === 'all'
@@ -795,7 +792,7 @@ const Shoes = memo(function Shoes() {
       return rightUsage.latest - leftUsage.latest;
     });
     return ranked;
-  }, [activeShoes, inventoryCategory, inventoryQuery, inventorySort, inventoryTab, lang, lockerBrandFilter, retiredShoes, shoes, usageByShoe]);
+  })();
   function openEditForm(shoe) {
     setEditingShoe(shoe);
     setFormBrand(shoe.brand || '');

@@ -1,7 +1,4 @@
-/* Hermes design-system CSS, split per-surface from the original
-   `styles/style.css` (~80k lines) by `.tools/split-styles.mjs`.
-   Cascade order: tokens → shared shell → surface files → theme overrides
-   → quarantined legacy-frame block → recent per-surface redesigns. */
+@import 'tailwindcss';
 @import './styles/_split/tokens.css';
 @import './styles/_split/runner-shell.css';
 @import './styles/_split/shared.css';
@@ -32,7 +29,4 @@
 @import './styles/contrast-fixes.css';
 @import './styles/admin-kinetic-editorial.css';
 @import './styles/dark-mode-final-fixes.css';
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@config '../tailwind.config.js';

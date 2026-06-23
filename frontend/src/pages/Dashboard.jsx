@@ -864,7 +864,7 @@ const Dashboard = memo(function Dashboard() {
   const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
   const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
   const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
-  const courseMapUploadInputRef = useRef(null);
+  const courseMapUploadInputId = 'dashboard-course-map-upload-input';
   const courseMapDetailRequestRef = useRef(0);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
 
@@ -1598,7 +1598,7 @@ const Dashboard = memo(function Dashboard() {
   }
 
   function openCourseMapUploadPicker() {
-    courseMapUploadInputRef.current?.click();
+    document.getElementById(courseMapUploadInputId)?.click();
   }
 
   async function acceptCourseMapLive(raceId) {
@@ -1687,7 +1687,7 @@ const Dashboard = memo(function Dashboard() {
         job = await apiJson(`/api/admin/jobs/${jobId}`, { signal: pollSignal });
       } catch (error) {
         if (error?.name === 'AbortError' || error?.name === 'TimeoutError') {
-          throw new Error('Timed out checking course-map job status.');
+          throw new Error('Timed out checking course-map job status.', { cause: error });
         }
         throw error;
       }
@@ -1753,6 +1753,26 @@ const Dashboard = memo(function Dashboard() {
         break;
       case 'accept':
         acceptCourseMapLive(selectedCourseMapId);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function runCourseMapSecondaryAction(actionKey) {
+    if (!selectedCourseMapId) return;
+    switch (actionKey) {
+      case 'scan':
+        scanCourseMapSources(selectedCourseMapId);
+        break;
+      case 'upload':
+        openCourseMapUploadPicker();
+        break;
+      case 'reanalyze':
+        reanalyzeCourseMap(selectedCourseMapId);
+        break;
+      case 'pipeline':
+        runMarathonPipeline(selectedCourseMapId);
         break;
       default:
         break;
@@ -1900,25 +1920,21 @@ const Dashboard = memo(function Dashboard() {
         key: 'scan',
         label: t('dashboard.course_maps_source_scan'),
         disabled: courseMapActionIsSelected,
-        onClick: () => scanCourseMapSources(selectedCourseMapId),
       },
       {
         key: 'upload',
         label: t('dashboard.course_maps_upload'),
         disabled: courseMapActionIsSelected,
-        onClick: openCourseMapUploadPicker,
       },
       {
         key: 'reanalyze',
         label: t('dashboard.course_maps_reanalyze'),
         disabled: !pendingCourseMapPreview || courseMapActionIsSelected,
-        onClick: () => reanalyzeCourseMap(selectedCourseMapId),
       },
       {
         key: 'pipeline',
         label: t('dashboard.course_maps_run_pipeline'),
         disabled: !courseMapSourcePreview || courseMapActionIsSelected,
-        onClick: () => runMarathonPipeline(selectedCourseMapId),
       },
     ]
       .filter((action) => action.key !== courseMapRecommendation.action)
@@ -3417,7 +3433,7 @@ const Dashboard = memo(function Dashboard() {
                       </div>
 
                       <div className="admin-track-hub-workspace-stack">
-                        <input ref={courseMapUploadInputRef} className="hidden" type="file" accept={COURSE_MAP_UPLOAD_ACCEPT} onChange={handleCourseMapUploadSelection} />
+                        <input id={courseMapUploadInputId} className="hidden" type="file" accept={COURSE_MAP_UPLOAD_ACCEPT} onChange={handleCourseMapUploadSelection} />
 
                         <div className="admin-coursemap-publish-layout admin-coursemap-publish-layout--bridge admin-track-hub-footer-grid">
                           <section className="admin-track-hub-review-shell admin-track-hub-footer-panel admin-track-hub-footer-panel--review">
@@ -3512,7 +3528,7 @@ const Dashboard = memo(function Dashboard() {
                                       type="button"
                                       className="btn-secondary btn-inline-md"
                                       disabled={action.disabled}
-                                      onClick={action.onClick}
+                                      onClick={() => runCourseMapSecondaryAction(action.key)}
                                     >
                                       {action.label}
                                     </button>

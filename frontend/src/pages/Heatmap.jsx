@@ -210,7 +210,7 @@ function markCachedHeatmapPayload(payload, savedAt) {
     ...payload,
     diagnostics: {
       ...(payload.diagnostics || {}),
-      sourceGpsPointCount,
+      sourceGpsPointCount: sourcePointCount,
       queriedGpsPointCount: cachedPointCount,
       returnedGpsPointCount: cachedPointCount,
       loadPhase: 'cachedComplete',
@@ -260,13 +260,12 @@ async function fetchHeatmapCoverage(limit, signal) {
 async function fetchCompleteHeatmap(signal, onProgress) {
   const points = [];
   let offset = 0;
-  let mergedPayload = null;
   let nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
 
   const firstPagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
   if (!firstPagePayload) return null;
 
-  mergedPayload = firstPagePayload;
+  const mergedPayload = firstPagePayload;
   const firstPagePoints = Array.isArray(firstPagePayload.points) ? firstPagePayload.points : [];
   for (const point of firstPagePoints) {
     points.push(normalizeHeatPointForRender(point));
@@ -448,7 +447,7 @@ export default function Heatmap() {
 
   const points = useMemo(
     () => normalizePointSpeedRatios(Array.isArray(heatmap?.points) ? heatmap.points : []),
-    [heatmap?.points],
+    [heatmap],
   );
   const bounds = heatmap?.bounds || null;
   const hasBounds = Boolean(bounds);

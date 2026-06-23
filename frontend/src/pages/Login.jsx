@@ -7,6 +7,8 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 import authBrandSlides from '../data/authBrandSlides';
 
+const LOCAL_SHARED_RUNNER_EMAIL = 'strava+140971747@hermes.local';
+
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
@@ -169,6 +171,7 @@ export default function Login() {
     ? `Strava OAuth is off on this server: ${stravaStatusReason}`
     : t('index.stitch_strava_hint');
   const googleUnavailableHint = t('common.google_not_configured');
+  const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   return (
     <div className="auth-page auth-page--login">
@@ -325,6 +328,11 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                {isLocalSharedRunnerEmail && (
+                  <p className="auth-flow-field-note" aria-live="polite">
+                    {t('index.local_mock_password_hint')}
+                  </p>
+                )}
               </div>
 
               <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>

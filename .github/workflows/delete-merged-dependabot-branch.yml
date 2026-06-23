@@ -1,0 +1,28 @@
+name: Delete Merged Dependabot Branch
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  delete-merged-dependabot-branch:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged Dependabot head branch
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            core.info(`Deleting merged Dependabot branch ${branchName}`);
+            await github.request("DELETE /repos/{owner}/{repo}/git/refs/heads/{ref}", {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: branchName,
+            });

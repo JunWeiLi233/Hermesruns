@@ -17,6 +17,47 @@ const controlDeckCssMatch = cssSource.match(
 assert.ok(controlDeckCssMatch, 'The strength settings control deck should keep a dedicated CSS scope.');
 const controlDeckCss = controlDeckCssMatch[0];
 
+function extractObjectBlock(source, declarationName) {
+  const declarationStart = source.indexOf(`const ${declarationName} = {`);
+  assert.notEqual(declarationStart, -1, `${declarationName} should be declared.`);
+  const objectStart = source.indexOf('{', declarationStart);
+  let depth = 0;
+  for (let index = objectStart; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(objectStart, index + 1);
+    }
+  }
+  assert.fail(`${declarationName} object should close.`);
+}
+
+function extractTopLevelQuotedKeys(objectSource) {
+  const keys = [];
+  const keyPattern = /^\s{2}(['"])((?:\\.|(?!\1).)+)\1\s*:/gm;
+  let match;
+  while ((match = keyPattern.exec(objectSource))) {
+    keys.push(match[2].replace(/\\'/g, "'").replace(/\\"/g, '"'));
+  }
+  return keys;
+}
+
+function slugExerciseNameForTest(name) {
+  return name
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+const videoEmbedKeys = new Set(extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_VIDEO_EMBEDS')));
+const compoundExerciseKeys = [
+  ...pageSource.matchAll(/compoundLibraryExercise\(\{\s*key:\s*'([^']+)'/g),
+].map((match) => match[1]);
+const runnerExerciseKeys = extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_LIBRARY')).map(
+  slugExerciseNameForTest,
+);
+
 // ── New mt-* card-based redesign presence ──────────────────────────────────
 assert.match(
   pageSource,
@@ -165,6 +206,17 @@ assert.match(
   pageSource,
   /className="mt-card mt-video-card"/,
   'The lower right rail should render an exercise video card.',
+);
+
+assert.deepEqual(
+  [...new Set([...compoundExerciseKeys, ...runnerExerciseKeys])].filter((key) => !videoEmbedKeys.has(key)),
+  [],
+  'Every compound and runner-specific training exercise should have a nocookie video embed.',
+);
+
+assert.ok(
+  videoEmbedKeys.size >= 43,
+  'Video embeds should cover the compound library and the runner-specific exercise library.',
 );
 
 assert.match(

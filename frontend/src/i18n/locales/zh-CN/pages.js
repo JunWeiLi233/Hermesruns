@@ -249,6 +249,7 @@ export default {
   "password_placeholder": "输入你的密码",
   "submit": "登录",
   "submit_loading": "正在登录...",
+  "local_mock_password_hint": "本地测试账号密码是 HermesLocal1!，不是 README 里的 <set-local-password> 占位符。",
   "divider": "或",
   "strava": "使用 Strava 继续",
   "google": "使用 Google 继续",

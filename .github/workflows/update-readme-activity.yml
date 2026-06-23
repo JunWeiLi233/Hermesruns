@@ -1,0 +1,42 @@
+name: Update README Activity Graph
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *"
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: readme-activity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-activity-graph:
+    name: update-activity-graph
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+      - name: Generate README activity graph
+        run: node .tools/update-readme-activity.mjs
+      - name: Commit updated graph
+        run: |
+          if git diff --quiet -- docs/github-commit-activity.svg; then
+            echo "README activity graph is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/github-commit-activity.svg
+          git commit -m "docs: refresh readme activity graph"
+          git push

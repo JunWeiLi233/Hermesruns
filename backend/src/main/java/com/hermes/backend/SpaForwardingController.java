@@ -3,6 +3,8 @@ package com.hermes.backend;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -52,17 +54,26 @@ public class SpaForwardingController {
         "/workflows"
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward() throws IOException {
+        Path localStaticIndex = Path.of("target", "classes", "static", "index.html");
+        if (Files.isRegularFile(localStaticIndex)) {
+            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8));
+        }
+
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {
             if (in == null) {
                 return ResponseEntity.notFound().build();
             }
             String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
-                    .header(HttpHeaders.PRAGMA, "no-cache")
-                    .header(HttpHeaders.EXPIRES, "0")
-                    .contentType(MediaType.TEXT_HTML)
-                    .body(html);
+            return htmlResponse(html);
         }
+    }
+
+    private ResponseEntity<String> htmlResponse(String html) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
+                .contentType(MediaType.TEXT_HTML)
+                .body(html);
     }
 }

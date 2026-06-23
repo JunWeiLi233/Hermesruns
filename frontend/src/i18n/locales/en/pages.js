@@ -249,6 +249,7 @@ export default {
     "password_placeholder": "Enter your password",
     "submit": "Sign In",
     "submit_loading": "Signing in...",
+    "local_mock_password_hint": "For this local mock account, use HermesLocal1!. Do not type the README placeholder <set-local-password>.",
     "divider": "Or",
     "strava": "Continue with Strava",
     "google": "Continue with Google",
