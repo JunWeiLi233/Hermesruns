@@ -1,9 +1,13 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -182,7 +186,237 @@ class ProfileControllerTests {
         ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isEqualTo(new ProfileController.HeatmapResponse(List.of(), 0, 0, 0, null));
+        assertThat(response.getBody()).isEqualTo(new ProfileController.HeatmapResponse(List.of(), 0, 0, 0, null, new ProfileController.HeatmapDiagnostics(0, 0, 0, true), null));
+    }
+
+    @Test
+    void heatmapReturnsAllGpsPointsWithoutSamplingOlderRuns() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(3L);
+        when(activityPointRepository.findHeatmapBoundsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{40.0, -74.0, 41.0, -73.0}));
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{11L, 41.0, -74.0, 0.0, 0}
+                ));
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(ProfileController.HeatmapResponse.class);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(3L);
+        assertThat(body.sampledPointCount()).isEqualTo(3);
+        assertThat(body.activityCount()).isEqualTo(2L);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::activityId).containsExactly(12L, 12L, 11L);
+        assertThat(body.bounds()).isEqualTo(new ProfileController.HeatmapBounds(40.0, -74.0, 41.0, -73.0));
+        verify(activityPointRepository).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
+        verify(activityRepository, never()).findRecentIdsByRunnerAndActivityType(runner.getId(), ActivityType.RUN.name(), 5);
+    }
+
+    @Test
+    void heatmapReturnsPagedGpsPointsWithoutFullPayloadQuery() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(5L);
+        when(activityPointRepository.findHeatmapBoundsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{40.0, -74.0, 41.0, -73.0}));
+        when(activityPointRepository.findHeatmapPointsPageByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 2, 1L))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{11L, 41.0, -74.0, 0.0, 0}
+                ));
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token", 1L, 2);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(5L);
+        assertThat(body.sampledPointCount()).isEqualTo(2);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::activityId).containsExactly(12L, 11L);
+        assertThat(body.page()).isEqualTo(new ProfileController.HeatmapPage(1L, 2, 2, true));
+        assertThat(body.diagnostics()).isEqualTo(new ProfileController.HeatmapDiagnostics(5L, 2, 2, false));
+        verify(activityPointRepository).findHeatmapPointsPageByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 2, 1L);
+        verify(activityPointRepository, never()).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
+    }
+
+    @Test
+    void heatmapIgnoresCachedSampledPayloadFromPreviousCacheVersion() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        Runner runner = runner();
+        cacheStore.put(
+                "profile-heatmap",
+                String.valueOf(runner.getId()),
+                new ProfileController.HeatmapResponse(
+                        List.of(new ProfileController.HeatPoint(99L, 1.0, 2.0, 1.0, 0.5)),
+                        100L,
+                        1,
+                        1L,
+                        new ProfileController.HeatmapBounds(1.0, 2.0, 1.0, 2.0),
+                        new ProfileController.HeatmapDiagnostics(100L, 1, 1, false),
+                        null
+                ),
+                Duration.ofMinutes(5)
+        );
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(1L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(2L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300}
+                ));
+        ProfileController controller = new ProfileController(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                mock(AutomatedCoachService.class),
+                mock(RaceEventRepository.class),
+                mock(MuscleTrainingPlannerService.class),
+                mock(AcclimatizationService.class),
+                mock(ShoeRepository.class),
+                cacheStore
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(2L);
+        assertThat(body.sampledPointCount()).isEqualTo(2);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::activityId).containsExactly(12L, 12L);
+        verify(activityPointRepository).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
+    }
+
+    @Test
+    void heatmapEvictsIncompleteCurrentCachePayloadBeforeReturning() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        Runner runner = runner();
+        cacheStore.put(
+                "profile-heatmap",
+                "all-points-paged-v4:" + runner.getId(),
+                new ProfileController.HeatmapResponse(
+                        List.of(new ProfileController.HeatPoint(99L, 1.0, 2.0, 1.0, 0.5)),
+                        3L,
+                        1,
+                        1L,
+                        new ProfileController.HeatmapBounds(1.0, 2.0, 1.0, 2.0),
+                        new ProfileController.HeatmapDiagnostics(100L, 1, 1, false),
+                        null
+                ),
+                Duration.ofMinutes(5)
+        );
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(1L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(3L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{12L, 40.2, -73.2, 2000.0, 600}
+                ));
+        ProfileController controller = new ProfileController(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                mock(AutomatedCoachService.class),
+                mock(RaceEventRepository.class),
+                mock(MuscleTrainingPlannerService.class),
+                mock(AcclimatizationService.class),
+                mock(ShoeRepository.class),
+                cacheStore
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(3L);
+        assertThat(body.sampledPointCount()).isEqualTo(3);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::activityId).containsExactly(12L, 12L, 12L);
+        verify(activityPointRepository).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
+    }
+
+    @Test
+    void heatmapRejectsOutOfRangeRowsBeforeRenderingDots() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(1L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(2L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 140.0, -73.1, 1000.0, 300}
+                ));
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(2L);
+        assertThat(body.sampledPointCount()).isEqualTo(1);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::latitude).containsExactly(40.0);
+        assertThat(body.diagnostics()).isEqualTo(new ProfileController.HeatmapDiagnostics(2L, 2, 1, false));
     }
 
     @Test
@@ -244,7 +478,7 @@ class ProfileControllerTests {
         RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(List.of());
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180))).thenReturn(List.of());
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
                 authService,
@@ -295,7 +529,7 @@ class ProfileControllerTests {
         ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(activitySummary));
         when(personalRecordService.buildForRunner(runner)).thenThrow(new IllegalStateException("records unavailable"));
         when(quotaService.getQuotaStatus(runner)).thenThrow(new IllegalStateException("quota unavailable"));
@@ -330,13 +564,17 @@ class ProfileControllerTests {
         assertThat(body.races()).isEmpty();
         assertThat(body.musclePlan()).isNull();
         assertThat(body.quota()).isEqualTo(Map.of());
-        // coachToday now deferred even when batch enrichment fails — the frontend
-        // always lazy-loads /api/coach/today behind the deferredEnrichment flag.
         assertThat(body.deferredEnrichment()).isTrue();
+        verify(personalRecordService, never()).buildForRunner(runner);
+        verify(quotaService, never()).getQuotaStatus(runner);
+        verify(automatedCoachService, never()).getCoachState(runner);
+        verify(automatedCoachService, never()).getTodayWithReadiness(runner);
+        verify(raceEventRepository, never()).findByRunnerOrderByEventDateAsc(runner);
+        verify(muscleTrainingPlannerService, never()).getPlan(runner, null, List.of());
     }
 
     @Test
-    void profileDashboardReturnsBatchEnrichmentForAuthenticatedRunner() {
+    void profileDashboardDefersOptionalEnrichmentForAuthenticatedRunner() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         PersonalRecordService personalRecordService = mock(PersonalRecordService.class);
@@ -404,7 +642,7 @@ class ProfileControllerTests {
         ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(activitySummary));
         when(personalRecordService.buildForRunner(runner)).thenReturn(personalRecords);
         when(quotaService.getQuotaStatus(runner)).thenReturn(quota);
@@ -433,24 +671,20 @@ class ProfileControllerTests {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         ProfileController.ProfileDashboardResponse body = (ProfileController.ProfileDashboardResponse) response.getBody();
         assertThat(body.activities()).hasSize(1);
-        assertThat(body.coachState()).isEqualTo(coachState);
-        // coachToday is deferred (null in the eager payload) so the
-        // synchronous Open-Meteo dew-point fetch no longer blocks first paint.
-        // The frontend lazy-loads it via /api/coach/today when
-        // deferredEnrichment=true.
+        assertThat(body.coachState()).isNull();
         assertThat(body.coachToday()).isNull();
-        assertThat(body.personalRecords()).isEqualTo(personalRecords);
+        assertThat(body.personalRecords()).isNull();
         assertThat(body.races()).isEmpty();
-        assertThat(body.musclePlan()).isEqualTo(musclePlan);
-        assertThat(body.quota()).isEqualTo(quota);
+        assertThat(body.musclePlan()).isNull();
+        assertThat(body.quota()).isEqualTo(Map.of());
         assertThat(body.deferredEnrichment()).isTrue();
-        verify(personalRecordService).buildForRunner(runner);
-        verify(quotaService).getQuotaStatus(runner);
-        verify(automatedCoachService).getCoachState(runner);
+        verify(personalRecordService, never()).buildForRunner(runner);
+        verify(quotaService, never()).getQuotaStatus(runner);
+        verify(automatedCoachService, never()).getCoachState(runner);
         verify(automatedCoachService, never()).getTodayWithReadiness(runner);
-        verify(automatedCoachService).getSchedule(runner, 7);
-        verify(raceEventRepository).findByRunnerOrderByEventDateAsc(runner);
-        verify(muscleTrainingPlannerService).getPlan(runner, coachState, schedule);
+        verify(automatedCoachService, never()).getSchedule(runner, 7);
+        verify(raceEventRepository, never()).findByRunnerOrderByEventDateAsc(runner);
+        verify(muscleTrainingPlannerService, never()).getPlan(runner, coachState, schedule);
     }
 
     @Test
@@ -471,7 +705,7 @@ class ProfileControllerTests {
         );
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(summary));
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
@@ -502,7 +736,7 @@ class ProfileControllerTests {
                 .containsEntry("pacePenaltySecPerKm", 11)
                 .containsEntry("weatherAdjusted", true);
         assertThat(body.activities().get(0)).doesNotContainKeys("sourceFileName", "calories", "sufferScore");
-        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN);
+        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180));
         verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
     }
 
@@ -523,7 +757,7 @@ class ProfileControllerTests {
         ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(activitySummary));
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
@@ -570,7 +804,7 @@ class ProfileControllerTests {
         ShoeRepository shoeRepository = mock(ShoeRepository.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(List.of());
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180))).thenReturn(List.of());
         when(raceEventRepository.findByRunnerOrderByEventDateAsc(runner)).thenReturn(List.of());
         when(shoeRepository.findByRunnerAndRetiredFalseOrderByCreatedAtDesc(runner)).thenReturn(List.of());
         ProfileController controller = controller(
@@ -659,7 +893,7 @@ class ProfileControllerTests {
         ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(activitySummary));
         when(activityRepository.sumDistanceKmByRunner(runner)).thenReturn(List.<Object[]>of(new Object[]{12L, 43.25}));
         when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(coachToday);
@@ -716,7 +950,7 @@ class ProfileControllerTests {
         );
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN))
+        when(activityRepository.findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180)))
                 .thenReturn(List.of(summary));
         when(automatedCoachService.getTodayWithReadiness(runner)).thenReturn(null);
         when(acclimatizationService.buildContext(runner)).thenReturn(null);
@@ -750,7 +984,7 @@ class ProfileControllerTests {
                 .containsEntry("pacePenaltySecPerKm", 9)
                 .containsEntry("weatherAdjusted", true);
         assertThat(body.activities().get(0)).doesNotContainKeys("sourceFileName", "calories", "sufferScore");
-        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN);
+        verify(activityRepository).findAnalysisSummariesByRunnerAndActivityType(runner, ActivityType.RUN, PageRequest.of(0, 180));
         verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
     }
 

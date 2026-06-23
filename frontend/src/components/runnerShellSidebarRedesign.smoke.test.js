@@ -59,6 +59,29 @@ assert.match(
   /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.runner-dashboard-brand-copy > span:not\(\.hermes-logo\)\s*\{[\s\S]*display:\s*none;/,
   'Collapsed runner sidebar should remove non-logo brand text from layout.',
 );
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page \.runner-shell-brand \.runner-dashboard-brand-copy > span:not\(\.hermes-logo\)\s*\{[\s\S]*animation:\s*runner-brand-subtitle-reveal\s+360ms/,
+  'Runner sidebar subtitle should use a short one-time reveal tied to the brand label entering the page.',
+);
+
+assert.match(
+  styleSource,
+  /\.runner-dashboard-page \.runner-shell-brand:hover \.runner-dashboard-brand-copy > span:not\(\.hermes-logo\),\s*\n\.runner-dashboard-page \.runner-shell-brand:focus-within \.runner-dashboard-brand-copy > span:not\(\.hermes-logo\)\s*\{[\s\S]*transform:\s*translate3d\(1px, 0, 0\)/,
+  'Runner sidebar subtitle motion should respond to brand hover/focus instead of running as decoration.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /runner-brand-cue-inbound|runner-brand-text-arrive|runner-dashboard-brand-copy > span:not\(\.hermes-logo\)::before[\s\S]*animation:[^;]*infinite/,
+  'Runner sidebar subtitle should not use a looping inbound dash animation.',
+);
+
+assert.match(
+  styleSource,
+  /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*runner-brand-subtitle-reveal[\s\S]*animation:\s*none;/,
+  'Runner sidebar subtitle animation should respect reduced-motion preferences.',
+);
 
 assert.match(
   styleSource,

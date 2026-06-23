@@ -127,25 +127,16 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             join activities a on a.id = ap.activity_id
             where a.runner_id = :runnerId
               and a.activity_type = :activityType
+              and ap.latitude is not null
+              and ap.longitude is not null
+              and ap.latitude between -90 and 90
+              and ap.longitude between -180 and 180
             """, nativeQuery = true)
     long countHeatmapPointsByRunnerAndType(
             @Param("runnerId") Long runnerId,
             @Param("activityType") String activityType
     );
 
-    @Query(value = """
-            select count(*)
-            from activity_points ap
-            join activities a on a.id = ap.activity_id
-            where a.runner_id = :runnerId
-              and a.activity_type = :activityType
-              and a.id not in (:excludedActivityIds)
-            """, nativeQuery = true)
-    long countHeatmapPointsByRunnerAndTypeExcludingActivities(
-            @Param("runnerId") Long runnerId,
-            @Param("activityType") String activityType,
-            @Param("excludedActivityIds") List<Long> excludedActivityIds
-    );
 
     @Query(value = """
             select ap.activity_id, ap.latitude, ap.longitude, ap.distance_meters, ap.elapsed_seconds
@@ -155,6 +146,87 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             """, nativeQuery = true)
     List<Object[]> findHeatmapPointsByActivityIds(
             @Param("activityIds") List<Long> activityIds
+    );
+
+    @Query(value = """
+            select ap.activity_id, ap.latitude, ap.longitude, ap.distance_meters, ap.elapsed_seconds
+            from activity_points ap
+            join activities a on a.id = ap.activity_id
+            where a.runner_id = :runnerId
+              and a.activity_type = :activityType
+              and ap.latitude is not null
+              and ap.longitude is not null
+              and ap.latitude between -90 and 90
+              and ap.longitude between -180 and 180
+            order by coalesce(a.start_time, a.created_at) desc, ap.activity_id desc, ap.sequence_index asc
+            """, nativeQuery = true)
+    List<Object[]> findAllHeatmapPointsByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType
+    );
+    @Query(value = """
+            select ap.activity_id, ap.latitude, ap.longitude, ap.distance_meters, ap.elapsed_seconds
+            from activity_points ap
+            join activities a on a.id = ap.activity_id
+            where a.runner_id = :runnerId
+              and a.activity_type = :activityType
+              and ap.latitude is not null
+              and ap.longitude is not null
+              and ap.latitude between -90 and 90
+              and ap.longitude between -180 and 180
+            order by coalesce(a.start_time, a.created_at) desc, ap.activity_id desc, ap.sequence_index asc
+            limit :limitValue offset :offsetValue
+            """, nativeQuery = true)
+    List<Object[]> findHeatmapPointsPageByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType,
+            @Param("limitValue") int limitValue,
+            @Param("offsetValue") long offsetValue
+    );
+
+    @Query(value = """
+            select min(ap.latitude), min(ap.longitude), max(ap.latitude), max(ap.longitude)
+            from activity_points ap
+            join activities a on a.id = ap.activity_id
+            where a.runner_id = :runnerId
+              and a.activity_type = :activityType
+              and ap.latitude is not null
+              and ap.longitude is not null
+              and ap.latitude between -90 and 90
+              and ap.longitude between -180 and 180
+            """, nativeQuery = true)
+    List<Object[]> findHeatmapBoundsByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType
+    );
+    @Query(value = """
+            with ordered_points as (
+                select ap.activity_id,
+                       ap.latitude,
+                       ap.longitude,
+                       ap.distance_meters,
+                       ap.elapsed_seconds,
+                       row_number() over (order by ap.longitude asc, ap.latitude asc, ap.activity_id desc, ap.sequence_index asc) as point_ordinal
+                from activity_points ap
+                join activities a on a.id = ap.activity_id
+                where a.runner_id = :runnerId
+                  and a.activity_type = :activityType
+                  and ap.latitude is not null
+                  and ap.longitude is not null
+                  and ap.latitude between -90 and 90
+                  and ap.longitude between -180 and 180
+            )
+            select activity_id, latitude, longitude, distance_meters, elapsed_seconds
+            from ordered_points
+            where mod(point_ordinal - 1, :strideValue) = 0
+            order by longitude asc, latitude asc, activity_id desc
+            limit :limitValue
+            """, nativeQuery = true)
+    List<Object[]> findHeatmapCoveragePointsByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType,
+            @Param("strideValue") int strideValue,
+            @Param("limitValue") int limitValue
     );
 
     @Query(value = """
@@ -218,45 +290,5 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             """, nativeQuery = true)
     List<Object[]> findHrSamplesByActivityIdOrdered(@Param("activityId") Long activityId);
 
-    @Query(value = """
-            with ranked_points as (
-                select
-                    ap.activity_id,
-                    ap.latitude,
-                    ap.longitude,
-                    ap.distance_meters,
-                    ap.elapsed_seconds,
-                    ap.sequence_index,
-                    coalesce(a.start_time, a.created_at) as effective_started_at,
-                    row_number() over (partition by ap.activity_id order by ap.sequence_index asc) as point_ordinal,
-                    count(*) over (partition by ap.activity_id) as activity_point_count
-                from activity_points ap
-                join activities a on a.id = ap.activity_id
-                where a.runner_id = :runnerId
-                  and a.activity_type = :activityType
-                  and a.id not in (:excludedActivityIds)
-            )
-            select activity_id, latitude, longitude, distance_meters, elapsed_seconds
-            from ranked_points
-            where point_ordinal = 1
-               or point_ordinal = activity_point_count
-               or mod(
-                    point_ordinal - 1,
-                    case
-                        when :targetPointsPerActivity <= 2 then 1
-                        when activity_point_count <= :targetPointsPerActivity then 1
-                        else cast(ceiling(activity_point_count * 1.0 / :targetPointsPerActivity) as integer)
-                    end
-                  ) = 0
-            order by effective_started_at desc, activity_id desc, sequence_index asc
-            limit :limitValue
-            """, nativeQuery = true)
-    List<Object[]> findHeatmapSamplesByRunnerAndType(
-            @Param("runnerId") Long runnerId,
-            @Param("activityType") String activityType,
-            @Param("excludedActivityIds") List<Long> excludedActivityIds,
-            @Param("targetPointsPerActivity") int targetPointsPerActivity,
-            @Param("limitValue") int limitValue
-    );
 
 }
