@@ -11,6 +11,87 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-06-23-09
+Date: 2026-06-23
+Surface: Muscle Training exercise anatomy mapping on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added explicit `EXERCISE_HEATMAP_SLUGS` mappings for every compound-library action and runner-specific action, then changed the exercise detail anatomy panel to use those mappings before falling back to display-text parsing.
+Why: Display labels like “Legs”, “Core”, or localized muscle names could over-broaden or miss the actual muscles used by a specific action. Every action now has a deliberate front/back muscle highlight target.
+Rollback target: working tree before this change
+Notes: Exercise list behavior, top muscle selector, media rail, coach controls, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-08
+Date: 2026-06-23
+Surface: Muscle Training recommendation/grid removal on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the visible `mt-recommend` recommendation band and the standalone target/session `mt-side-grid` cards shown below the top muscle workbench, so the page now moves directly from the anatomy workbench into the exercise protocol list and media rail.
+Why: The displayed grid panels duplicated information and did not fit the desired page composition.
+Rollback target: working tree before this change
+Notes: Top muscle selector, exercise filters, exercise rows, media rail, coach controls, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-07
+Date: 2026-06-23
+Surface: Muscle Training heatmap highlight palette on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the top anatomy selector's neon yellow/green SVG path highlight with Hermes coral/warm red CSS-variable-driven fill and stroke tokens, and added route-scoped heatmap defaults/hover styling so selected muscles read as part of the Profile-aligned visual system.
+Why: The bright neon highlight looked disconnected from the rest of the website and made the selected muscles feel like a separate overlay instead of anatomical focus.
+Rollback target: working tree before this change
+Notes: Muscle selection behavior, SVG path click handling, exercise recommendations, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-06
+Date: 2026-06-23
+Surface: Muscle Training hero removal on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `mt-hero` section and its weekly-completion ring/CTA from the Muscle Training route, then cleaned the profile-alignment stylesheet and smoke guardrail so the page now flows from the top muscle workbench directly into the recommendation banner.
+Why: The route should not render the separate `mt-hero` block.
+Rollback target: working tree before this change
+Notes: Top muscle selector, recommendation banner, target cards, exercise rows, media rail, coach controls, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-05
+Date: 2026-06-23
+Surface: Muscle Training profile-aligned design language on `/muscle-training`
+Files: `frontend/src/index.css`, `frontend/src/styles/muscle-training-profile-alignment.css`, `DESIGN_VERSIONS.md`
+What changed: Added a late-loaded profile-alignment stylesheet scoped to the existing Muscle Training route markers that translates the page from the separate black/neon strength-lab dialect into the Profile Dashboard's Kinetic Editorial system: warm light canvas, matching dark-mode tokens, profile-style sidebar/topbar, rounded vellum cards, cinematic dark hero, coral accent states, restored recommendation/support cards, and profile-like exercise/control surfaces.
+Why: The Muscle Training route shared the runner shell but visually diverged from `/profile`; it needed to read as the same product surface without changing coaching logic.
+Rollback target: working tree before this change
+Notes: Muscle plan APIs, exercise selection, SVG heatmap interactions, localized copy, check-in form behavior, and backend training behavior are unchanged.
+
+### Version: DV-2026-06-23-04
+Date: 2026-06-23
+Surface: Muscle Training full-screen grid layout on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed width caps from the Muscle Training route canvas/content, made the page grid fill the available viewport height, stretched the top workbench across the full route width, and expanded the lower protocol grid/control sections to full-width route proportions.
+Why: The Muscle Training page grids felt boxed in; the route should use the full runner-shell screen rather than a centered 1360px content island.
+Rollback target: working tree before this change
+Notes: Muscle selection logic, SVG highlighting, exercise recommendations, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-03
+Date: 2026-06-23
+Surface: Muscle Training top muscle selector on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the raster `anatomy-neon-selector.png` inside `mt-muscle-visual` with the existing MIT `react-muscle-highlighter` SVG body diagram, using front/back views and target-group highlight data while preserving the transparent hit-zone layer and target buttons.
+Why: The top selector needed a license-clear, scalable muscle diagram instead of a user-provided PNG asset.
+Rollback target: working tree before this change
+Notes: Target area selection state, recommendation logic, exercise library, APIs, and backend behavior are unchanged.
+
+### Version: DV-2026-06-23-02
+Date: 2026-06-23
+Surface: Muscle Training top muscle selector on `/muscle-training`
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made `mt-top-panel mt-top-muscle-card` a concrete four-row grid, added a visible neon grid/backplate around the anatomy image, bounded the image sizing, and gave the target shortcut grid stable row sizing. Removed the separate floating hit-zone overlay from the top anatomy selector; the live `react-muscle-highlighter` SVG muscle paths are now the visual and clickable hit zones. Added SVG-path hover feedback, a hard CSS fallback that hides any legacy overlay markup if it reappears, and direct selected-path styling so the active muscle group visibly lights up.
+Why: The top selector now renders a live SVG anatomy map. A separate absolute overlay can drift between the front/back bodies and break apart visually, so the only reliable hit-zone is the actual SVG muscle path. The previous selected-state styling was too weak on this diagram, so the active target now gets explicit SVG path styling.
+Rollback target: working tree before this change
+Notes: Exercise recommendation logic, target selection state, copy, APIs, and backend muscle-training behavior are unchanged.
+
+### Version: DV-2026-06-23-01
+Date: 2026-06-23
+Surface: Runner Heatmap on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `frontend/src/pages/heatmapMobileOverlay.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/styles/_split/heatmap.css`, `DESIGN_VERSIONS.md`
+What changed: Reworked the current-view sessions drawer so it is always present on desktop, summarizes runs and distance inside the visible map viewport, and derives those sessions from real heatmap GPS `activityId` coverage instead of unavailable activity start coordinates. Stabilized zoom rendering with a padded GPS canvas and Leaflet renderer-style `_getNewPixelOrigin` transform so the dot layer follows the map during zoom and repaints after zoom settles.
+Why: The previous sessions drawer could stay empty because the activity feed does not expose `startLatitude`/`startLongitude`, and the zoom animation could swap visible dots from full to preview styling, making the heatmap feel unstable.
+Rollback target: working tree before this change
+Notes: Heatmap point loading, caching, Leaflet mount lifecycle, speed color legend, route-dot canvas drawing, and backend heatmap APIs are unchanged.
+
 ### Version: DV-2026-06-15-59
 Date: 2026-06-15
 Surface: Public landing final CTA on `/`
