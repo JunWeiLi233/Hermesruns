@@ -152,6 +152,7 @@
 
 .heatmap-page-map-shell {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   min-height: 100vh;
   background:
@@ -166,8 +167,45 @@
 }
 
 .heatmap-page-map-canvas {
+  position: relative;
+  z-index: 0;
   min-height: 100vh;
-  filter: saturate(0.9) contrast(1.16) brightness(0.84);
+  background: #05070a;
+}
+.heatmap-page-map-shell .leaflet-container,
+.heatmap-page-map-shell .leaflet-pane,
+.heatmap-page-map-shell .leaflet-map-pane,
+.heatmap-page-map-shell .leaflet-tile-pane,
+.heatmap-page-map-shell .leaflet-layer,
+.heatmap-page-map-shell .leaflet-tile-container,
+.heatmap-page-map-shell .leaflet-tile,
+.heatmap-page-dark-tile-layer {
+  background: #05070a !important;
+}
+
+.heatmap-page-map-shell .leaflet-tile {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.heatmap-page-map-shell .leaflet-tile:not(.leaflet-tile-loaded) {
+  opacity: 0 !important;
+}
+.heatmap-page-dot-canvas {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  transition: opacity 120ms ease;
+}
+
+.heatmap-page-map-shell.is-map-zooming .heatmap-page-dot-canvas {
+  opacity: 0.62;
+}
+
+.heatmap-page-map-shell.is-map-zooming :is(.heatmap-page-topbar, .heatmap-page-legend-card, .heatmap-page-utility-rail, .heatmap-sessions-card) {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
 }
 
 .heatmap-page-map-vignette {
@@ -181,8 +219,9 @@
 .heatmap-page-topbar,
 .heatmap-page-legend-card,
 .heatmap-page-utility-rail,
+.heatmap-sessions-card,
 .heatmap-page-empty {
-  z-index: 2;
+  z-index: 30;
 }
 
 .heatmap-page-topbar {
@@ -452,7 +491,7 @@
   box-shadow: 0 24px 62px rgba(23, 19, 15, 0.22);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  z-index: 2;
+  z-index: 30;
   overflow: hidden;
   color: #171512;
 }
@@ -591,6 +630,103 @@
 .heatmap-page-legend-meta > div.is-density strong {
   font-size: 1.55rem;
 }
+.heatmap-page-gps-loading-text {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.heatmap-page-gps-loading-words {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.heatmap-page-gps-loading-piece {
+  display: inline-block;
+  animation: heatmapGpsPieceJump 1.08s cubic-bezier(0.55, 0, 0.2, 1) infinite;
+  animation-delay: calc((var(--jump-index, 0) % 6) * -0.11s);
+  transform: translateY(0);
+  will-change: transform;
+}
+
+.heatmap-page-gps-loading-piece:nth-child(6n + 1) { --jump-index: 0; --jump-high: -0.2em; }
+.heatmap-page-gps-loading-piece:nth-child(6n + 2) { --jump-index: 1; --jump-high: -0.34em; }
+.heatmap-page-gps-loading-piece:nth-child(6n + 3) { --jump-index: 2; --jump-high: -0.13em; }
+.heatmap-page-gps-loading-piece:nth-child(6n + 4) { --jump-index: 3; --jump-high: -0.28em; }
+.heatmap-page-gps-loading-piece:nth-child(6n + 5) { --jump-index: 4; --jump-high: -0.18em; }
+.heatmap-page-gps-loading-piece:nth-child(6n) { --jump-index: 5; --jump-high: -0.38em; }
+
+.heatmap-page-gps-loading-dots {
+  display: inline-flex;
+  margin-left: 0.02em;
+}
+
+.heatmap-page-gps-loading-dots span {
+  display: inline-block;
+  transform: translate(0, 0);
+  will-change: transform;
+}
+
+.heatmap-page-gps-loading-dots span:nth-child(1) {
+  animation: heatmapGpsDotOne 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
+}
+
+.heatmap-page-gps-loading-dots span:nth-child(2) {
+  animation: heatmapGpsDotTwo 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
+}
+
+.heatmap-page-gps-loading-dots span:nth-child(3) {
+  animation: heatmapGpsDotThree 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
+}
+
+@keyframes heatmapGpsPieceJump {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  42% {
+    transform: translateY(var(--jump-high, -0.24em));
+  }
+  72% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes heatmapGpsDotOne {
+  0%, 18%, 100% {
+    transform: translate(0, 0);
+  }
+  48%, 68% {
+    transform: translate(0, -0.16em);
+  }
+}
+
+@keyframes heatmapGpsDotTwo {
+  0%, 18%, 100% {
+    transform: translate(0, 0);
+  }
+  48%, 68% {
+    transform: translate(0.28em, -0.3em);
+  }
+}
+
+@keyframes heatmapGpsDotThree {
+  0%, 18%, 100% {
+    transform: translate(0, 0);
+  }
+  48%, 68% {
+    transform: translate(0.58em, -0.12em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heatmap-page-gps-loading-piece,
+  .heatmap-page-gps-loading-dots span:nth-child(1),
+  .heatmap-page-gps-loading-dots span:nth-child(2),
+  .heatmap-page-gps-loading-dots span:nth-child(3) {
+    animation: none;
+  }
+}
+
 
 .heatmap-page-legend-card {
   right: 26px;

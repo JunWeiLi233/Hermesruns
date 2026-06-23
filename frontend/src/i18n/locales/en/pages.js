@@ -1900,6 +1900,8 @@ export default {
     "page_runs_label": "Runs",
     "page_points_label": "GPS points",
     "page_density_label": "Density per run",
+    "page_gps_received_label": "GPS received",
+    "page_gps_loading_full": "Loading all GPS...",
     "page_focus_collapse": "Collapse map focus",
     "page_focus_expand": "Expand map focus",
     "page_legend_title": "Speed legend",

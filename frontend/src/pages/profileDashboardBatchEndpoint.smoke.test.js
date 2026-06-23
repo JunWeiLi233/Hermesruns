@@ -18,4 +18,10 @@ assert.match(
   'Profile dashboard should keep the individual endpoint fallback path.',
 );
 
+
+assert.match(
+  pageSource,
+  /if \(dashboardData\.deferredEnrichment\)[\s\S]*loadProfileDashboardFallbackEnrichmentData\(\)/,
+  'Profile dashboard should lazy-load optional batch enrichment when deferredEnrichment is true.',
+);
 console.log('[PASS] Profile dashboard batch endpoint guard passed.');
