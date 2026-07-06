@@ -4382,3 +4382,30 @@ What changed: Replaced the overbuilt scan cockpit styling with a compact respons
 Why: The previous redesign looked messy on narrow viewports and the visible upload-looking control in the preview did not open the file picker.
 Rollback target: `DV-2026-06-23-03`
 Notes: Scan API behavior, quota handling, duplicate-resolution actions, and existing form upload remain preserved.
+
+### Version: DV-2026-07-06-01
+Date: 2026-07-06
+Surface: Landing final CTA command grid on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the final landing CTA from a centered gray slab into an asymmetric command grid with left-aligned editorial copy, a right-side image rail, sharper CTA hierarchy, and chip-style trust notes that collapse safely on mobile.
+Why: The previous final grid looked visually broken and generic in the live landing page, with weak hierarchy and large unused space around the primary action.
+Rollback target: `DV-2026-06-23-04`
+Notes: CSS-only redesign; Strava login, email signup routing, translations, and existing CTA copy are preserved.
+
+### Version: DV-2026-07-06-02
+Date: 2026-07-06
+Surface: Landing final CTA image rail cleanup on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the translucent glass strip from the final CTA image rail while keeping the image rail, grid texture, CTA hierarchy, and responsive command-grid layout.
+Why: The glass strip read as an unintended floating block over the image and distracted from the final call to action.
+Rollback target: `DV-2026-07-06-01`
+Notes: CSS-only cleanup; Strava login, email signup routing, translations, and existing CTA copy are preserved.
+
+### Version: DV-2026-07-06-03
+Date: 2026-07-06
+Surface: Landing final CTA image rail grid cleanup on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the grid texture overlay from the final CTA image rail while keeping the underlying image, CTA hierarchy, and responsive command-grid layout.
+Why: The grid lines over the image read as unwanted decoration after the glass strip was removed.
+Rollback target: `DV-2026-07-06-02`
+Notes: CSS-only cleanup; Strava login, email signup routing, translations, and existing CTA copy are preserved.

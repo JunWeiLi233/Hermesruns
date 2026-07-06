@@ -10,6 +10,7 @@ export default {
     "logo_mark": "RUN",
     "strava_coming_soon": "Strava login is coming soon!",
     "connection_failed": "Cannot connect to the server. Is Spring Boot running?",
+    "recaptcha_failed": "Human verification could not start. Refresh the page and try again.",
     "google_login_failed": "Google sign-in failed. Please try again later.",
     "google_not_configured": "Google sign-in is not configured.",
     "strava_login_failed": "Strava sign-in failed. Please try again later.",

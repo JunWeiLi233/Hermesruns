@@ -59241,15 +59241,18 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 
 .landing-cinematic-compare-table {
     display: grid;
+    border: 1px solid rgba(33, 30, 27, 0.1);
+    border-radius: 18px;
+    overflow: hidden;
 }
 
 .landing-cinematic-compare-row {
     display: grid;
-    grid-template-columns: minmax(280px, 2fr) repeat(3, minmax(110px, 1fr));
+    grid-template-columns: minmax(190px, 1.35fr) repeat(3, minmax(92px, 0.7fr));
     gap: 16px;
     align-items: center;
     min-height: 58px;
-    padding: 14px 8px;
+    padding: 14px 16px;
     box-shadow: inset 0 1px 0 var(--lc-rule);
 }
 
@@ -59275,8 +59278,26 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
     font-size: 1rem;
 }
 
+.landing-cinematic-compare-feature {
+    display: grid;
+    gap: 5px;
+    justify-items: start;
+}
+
+.landing-cinematic-compare-feature small {
+    color: rgba(33, 30, 27, 0.56);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
 .landing-cinematic-compare-icon {
-    font-size: 1.55rem;
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    font-size: 1.25rem;
+    background: rgba(33, 30, 27, 0.05);
 }
 
 .landing-cinematic-compare-icon.is-yes {
@@ -59288,7 +59309,7 @@ body:is(.theme-midnight, .theme-high-contrast) .shoes-dashboard-page .shoe-healt
 }
 
 .landing-cinematic-compare-icon.is-no {
-    color: rgba(255, 255, 255, 0.28); /* tokens-ok */
+    color: rgba(33, 30, 27, 0.42);
 }
 
 .landing-cinematic-zone-grid {
@@ -75361,12 +75382,12 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
   padding: clamp(120px, 19vh, 218px) 0 clamp(40px, 8vh, 92px);
 }
 
-.landing-command-hero .landing-cinematic-hero-title > span {
+.landing-command-copy .landing-cinematic-hero-title > span {
   /* The global design system balances headings; these spans are the intended line breaks. */
   text-wrap: nowrap;
 }
 
-.landing-command-hero .landing-cinematic-hero-title > span:not(.is-accent) {
+.landing-command-copy .landing-cinematic-hero-title > span:not(.is-accent) {
   color: rgba(255, 250, 243, 0.82);
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.3);
 }
@@ -83206,5 +83227,325 @@ body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p {
 
   .shoe-scan-modal-upload {
     min-height: auto;
+  }
+}
+
+/* Landing race map motion contract */
+.landing-cinematic-map-selection-spread,
+.landing-cinematic-map-selection-ping,
+.landing-cinematic-map-selection-ring {
+  animation-duration: var(--race-cycle-duration, 15s);
+  animation-delay: var(--race-delay);
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+  transform-origin: center;
+}
+
+.landing-cinematic-map-selection-spread {
+  animation-name: landing-cinematic-map-selection-spread-step;
+  fill: rgba(240, 117, 97, 0.14);
+  stroke: var(--lc-coral);
+  stroke-width: 1.4;
+}
+
+.landing-cinematic-map-selection-ping {
+  animation-name: landing-cinematic-map-selection-ping-step;
+  fill: rgba(240, 117, 97, 0.12);
+  stroke: rgba(240, 117, 97, 0.52);
+}
+
+.landing-cinematic-map-selection-ring {
+  animation-name: landing-cinematic-map-selection-ring-step;
+  fill: none;
+  stroke: var(--lc-coral);
+  stroke-width: 1.2;
+}
+
+@keyframes landing-cinematic-map-selection-spread-step {
+  0%, 3%, 24%, 100% { opacity: 0; r: 1.2; }
+  6%, 16% { opacity: 0.72; r: 86; }
+}
+
+@keyframes landing-cinematic-map-selection-ping-step {
+  0%, 4%, 22%, 100% { opacity: 0; transform: scale(0.7); }
+  7%, 18% { opacity: 0.82; transform: scale(1); }
+}
+
+@keyframes landing-cinematic-map-selection-ring-step {
+  0%, 4%, 24%, 100% { opacity: 0; transform: scale(0.86); }
+  7%, 18% { opacity: 0.92; transform: scale(1); }
+}
+
+.landing-cinematic-map-bottom-deck {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 22px;
+  display: grid;
+  grid-template-columns: minmax(220px, 278px) minmax(0, 388px);
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  pointer-events: none;
+}
+
+.landing-cinematic-map-guide {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.landing-cinematic-map-guide-step {
+  animation-duration: 3s;
+  animation-fill-mode: both;
+  animation-timing-function: ease-in-out;
+}
+
+.landing-cinematic-map-guide-step.is-locate { animation-name: landing-cinematic-map-guide-locate-step; }
+.landing-cinematic-map-guide-step.is-read { animation-name: landing-cinematic-map-guide-read-step; }
+.landing-cinematic-map-guide-step.is-match { animation-name: landing-cinematic-map-guide-match-step; }
+
+@keyframes landing-cinematic-map-guide-locate-step {
+  0%, 100% { transform: translateX(0); opacity: 0.58; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+@keyframes landing-cinematic-map-guide-read-step {
+  0%, 100% { transform: translateX(0); opacity: 0.58; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+@keyframes landing-cinematic-map-guide-match-step {
+  0%, 100% { transform: translateX(0); opacity: 0.58; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+.landing-cinematic-map-timeline {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  display: flex;
+  flex-wrap: wrap;
+  width: min(430px, calc(100% - 36px));
+  transform: translateX(-50%);
+  gap: 6px;
+}
+
+.landing-cinematic-map-timeline-item {
+  animation: landing-cinematic-map-timeline-step var(--race-cycle-duration, 15s) ease-in-out var(--race-delay) both;
+}
+
+@keyframes landing-cinematic-map-timeline-step {
+  0%, 4%, 23%, 100% { color: rgba(33, 30, 27, 0.48); }
+  8%, 18% { color: var(--lc-coral); }
+}
+
+.landing-cinematic-race-row::before,
+.landing-cinematic-race-row::after {
+  animation-duration: var(--race-cycle-duration, 15s);
+  animation-delay: var(--race-delay);
+  animation-fill-mode: both;
+}
+
+.landing-cinematic-race-row::after {
+  animation-name: landing-cinematic-race-row-panel-step;
+}
+
+@keyframes landing-cinematic-race-row-panel-step {
+  0%, 8%, 28%, 100% { opacity: 0; }
+  14%, 20% { opacity: 1; }
+}
+
+.landing-cinematic-race-row strong::after {
+  animation: landing-cinematic-race-days-meter-step var(--race-cycle-duration, 15s) ease-in-out var(--race-delay) both;
+}
+
+@keyframes landing-cinematic-race-days-meter-step {
+  0%, 8%, 28%, 100% { transform: scaleX(0.24); }
+  14%, 20% { transform: scaleX(1); }
+}
+
+.landing-cinematic-race-row em {
+  animation: landing-cinematic-race-goal-step var(--race-cycle-duration, 15s) ease-in-out var(--race-delay) both;
+}
+
+@keyframes landing-cinematic-race-goal-step {
+  0%, 8%, 28%, 100% { color: rgba(33, 30, 27, 0.64); }
+  14%, 20% { color: var(--lc-coral); }
+}
+
+.landing-cinematic-map-caption-strip {
+  position: relative;
+  width: 100%;
+  min-height: 58px;
+}
+
+.landing-cinematic-map-caption {
+  animation: landing-cinematic-map-caption-step var(--race-cycle-duration, 15s) ease-in-out var(--race-delay) both;
+}
+
+.landing-cinematic-map-caption:first-child {
+  opacity: 1;
+}
+
+.landing-cinematic-map-caption-order {
+  font-size: 0.68rem;
+}
+
+.landing-cinematic-map-caption-verb {
+  font-size: 0.52rem;
+}
+
+.landing-cinematic-map-caption-meta {
+  display: grid;
+  grid-template-columns: auto;
+  gap: 3px;
+}
+
+.landing-cinematic-map-caption-meta em,
+.landing-cinematic-map-caption-meta small,
+.landing-cinematic-map-caption-meta b {
+  font-size: 0.6rem;
+}
+
+.landing-cinematic-map-caption-field.is-date { animation-name: landing-cinematic-map-caption-date-step; }
+.landing-cinematic-map-caption-field.is-days { animation-name: landing-cinematic-map-caption-days-step; }
+.landing-cinematic-map-caption-field.is-goal { animation-name: landing-cinematic-map-caption-goal-step; }
+
+@keyframes landing-cinematic-map-caption-step {
+  0%, 5%, 24%, 100% { opacity: 0; }
+  8%, 19% { opacity: 1; }
+}
+
+@keyframes landing-cinematic-map-caption-date-step {
+  0%, 3%, 12%, 100% { opacity: 0.45; }
+  4%, 8% { opacity: 1; }
+}
+
+@keyframes landing-cinematic-map-caption-days-step {
+  0%, 7%, 15%, 100% { opacity: 0.45; }
+  9%, 12% { opacity: 1; }
+}
+
+@keyframes landing-cinematic-map-caption-goal-step {
+  0%, 11%, 22%, 100% { opacity: 0.45; }
+  13%, 18% { opacity: 1; }
+}
+
+.landing-cinematic-map-caption-meta em span,
+.landing-cinematic-map-caption-meta small span,
+.landing-cinematic-map-caption-meta b span {
+  color: rgba(33, 30, 27, 0.48);
+}
+
+@media (max-width: 760px) {
+  .landing-cinematic-race-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 92px;
+  }
+
+  .landing-cinematic-map-timeline {
+    top: 8px;
+    width: min(320px, calc(100% - 28px));
+  }
+
+  .landing-cinematic-map-bottom-deck {
+    left: 50%;
+    right: auto;
+    grid-template-columns: minmax(0, 1fr);
+    width: min(320px, calc(100% - 28px));
+    transform: translateX(-50%);
+  }
+
+  .landing-cinematic-map-guide {
+    position: static;
+  }
+
+  .landing-cinematic-map-caption-strip {
+    position: relative;
+  }
+
+  .landing-cinematic-race-row span[data-label]::before,
+  .landing-cinematic-race-row strong[data-label]::before,
+  .landing-cinematic-race-row em[data-label]::before {
+    content: attr(data-label);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cinematic-map-selection-spread,
+  .landing-cinematic-map-selection-ping,
+  .landing-cinematic-map-selection-ring,
+  .landing-cinematic-map-guide-step,
+  .landing-cinematic-map-timeline-item,
+  .landing-cinematic-race-row::before,
+  .landing-cinematic-race-row::after,
+  .landing-cinematic-race-row strong::after,
+  .landing-cinematic-race-row em,
+  .landing-cinematic-map-caption {
+    animation: none;
+  }
+}
+
+.landing-cinematic-race-head {
+  border-bottom: 1px solid rgba(33, 30, 27, 0.1);
+  color: rgba(33, 30, 27, 0.56);
+  font-weight: 820;
+}
+
+.landing-cinematic-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Landing final CTA centered contract */
+.landing-cinematic-final-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  min-height: 390px;
+  border-radius: 32px;
+  padding: 72px 48px;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(240, 117, 97, 0.18), transparent 30%),
+    linear-gradient(135deg, rgba(255, 253, 248, 0.96), rgba(244, 239, 230, 0.94));
+}
+
+.landing-cinematic-final-copy {
+  display: grid;
+  justify-items: center;
+  position: relative;
+  z-index: 1;
+  width: min(100%, 940px);
+  max-width: none;
+  text-align: center;
+}
+
+.landing-cinematic-final-copy h2 {
+  color: var(--lc-ink);
+  white-space: nowrap;
+}
+
+.landing-cinematic-final-copy > p {
+  color: rgba(33, 30, 27, 0.64);
+}
+
+.landing-cinematic-final-trust {
+  justify-content: center;
+}
+
+@media (max-width: 840px) {
+  .landing-cinematic-final-copy h2 {
+    white-space: normal;
   }
 }

@@ -10,6 +10,7 @@ export default {
     "logo_mark": "跑",
     "strava_coming_soon": "Strava 登录即将上线，敬请期待！",
     "connection_failed": "无法连接到服务器，请确认 Spring Boot 服务已启动。",
+    "recaptcha_failed": "真人验证无法启动，请刷新页面后重试。",
     "google_login_failed": "Google 登录失败，请稍后再试。",
     "google_not_configured": "Google 登录尚未配置。",
     "strava_login_failed": "Strava 登录失败，请稍后再试。",
