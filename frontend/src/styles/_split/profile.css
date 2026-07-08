@@ -4976,7 +4976,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .runner-dashboard-page {
   --runner-nav-expanded-width: clamp(156px, 9.2vw, 178px);
-  --runner-nav-collapsed-width: 84px;
+  --runner-nav-collapsed-width: 96px;
   --runner-nav-ink: #201a17;
   --runner-nav-muted: rgba(32, 26, 23, 0.62);
   --runner-nav-line: rgba(112, 61, 46, 0.13);

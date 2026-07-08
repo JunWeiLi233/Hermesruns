@@ -21,6 +21,8 @@ export default {
     "weather_forecast": "未来几小时气温与天气",
     "weather_loading": "正在加载天气…",
     "weather_error": "天气暂时不可用",
+    "heatmap_front": "正面",
+    "heatmap_back": "背面",
     "close_notifications": "关闭通知",
     "show_details": "查看说明",
   },
