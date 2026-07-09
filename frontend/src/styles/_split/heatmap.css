@@ -198,7 +198,7 @@
 }
 
 .heatmap-page-map-shell.is-map-zooming .heatmap-page-dot-canvas {
-  opacity: 0.62;
+  opacity: 1;
 }
 
 .heatmap-page-map-shell.is-map-zooming :is(.heatmap-page-topbar, .heatmap-page-legend-card, .heatmap-page-utility-rail, .heatmap-sessions-card) {
@@ -496,6 +496,54 @@
   color: #171512;
 }
 
+.heatmap-sessions-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.heatmap-sessions-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.heatmap-sessions-summary-grid > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(43, 32, 24, 0.08);
+}
+
+.heatmap-sessions-summary-grid strong {
+  color: #171512;
+  font-family: "Manrope", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 850;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heatmap-sessions-summary-grid span,
+.heatmap-sessions-empty {
+  color: rgba(43, 32, 24, 0.58);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.heatmap-sessions-empty {
+  margin: 0;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .heatmap-sessions-list {
   display: flex;
   flex-direction: column;
@@ -597,9 +645,12 @@
 }
 
 .heatmap-page-legend-card .heatmap-page-card-kicker,
-.heatmap-sessions-card .heatmap-page-card-kicker,
 .heatmap-page-legend-card .heatmap-page-legend-meta span {
   color: rgba(244, 238, 232, 0.68);
+}
+
+.heatmap-sessions-card .heatmap-page-card-kicker {
+  color: rgba(43, 32, 24, 0.56);
 }
 
 .heatmap-page-empty-copy h3 {

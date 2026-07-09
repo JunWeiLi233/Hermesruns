@@ -296,6 +296,7 @@
   gap: 14px;
   padding: 18px;
   box-sizing: border-box;
+  white-space: normal;
   border-radius: 24px;
   background:
     linear-gradient(180deg, rgba(18, 19, 24, 0.92), rgba(9, 10, 14, 0.96)),
@@ -310,6 +311,7 @@
 .runner-shell-notification-popover.is-zh {
   width: min(404px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
+  line-break: anywhere;
 }
 
 .runner-shell-notification-popover::before {
@@ -401,10 +403,18 @@
   padding: 14px 14px 15px;
   box-sizing: border-box;
   border-radius: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.028)),
     rgba(255, 255, 255, 0.03);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.runner-shell-notification-card-copy {
+  min-width: 0;
 }
 
 .runner-shell-notification-card span {
@@ -434,6 +444,54 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.runner-shell-notification-delete {
+  width: 50px;
+  height: 42px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #a0392a;
+  color: #fffaf7;
+  box-shadow: 0 12px 24px rgba(160, 57, 42, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  transition: background var(--transition), color var(--transition), transform var(--transition), box-shadow var(--transition);
+}
+
+.runner-shell-notification-delete .runner-dashboard-side-link-icon {
+  width: 28px;
+  height: 28px;
+  color: currentColor;
+  stroke-width: 2.55;
+}
+
+.runner-shell-notification-delete:hover,
+.runner-shell-notification-delete:focus-visible {
+  background: #7f2a20;
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(160, 57, 42, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.runner-shell-notification-empty {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(236, 232, 226, 0.66);
+}
+
+.runner-shell-notification-empty strong {
+  display: block;
+  color: #f8f4ef;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.runner-shell-notification-empty p {
+  margin: 5px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.55;
 }
 
 .runner-shell-notification-link {

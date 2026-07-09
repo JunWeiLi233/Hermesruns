@@ -16,7 +16,7 @@ function assert(condition, message) {
 }
 
 const heatmapSource = read('pages/Heatmap.jsx');
-const styleSource = read('styles/style.css');
+const styleSource = read('styles/_split/heatmap.css');
 
 assert(
   heatmapSource.includes("aria-label={t('heatmap.page_recenter')}"),

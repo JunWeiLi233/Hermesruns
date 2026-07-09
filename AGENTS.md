@@ -5,12 +5,13 @@ Use this file as the short entrypoint for work in this repository.
 ## Read Order
 
 1. `AGENTS.md`
-2. `docs/auto-hermes/index.md`
-3. `docs/repo-rules/index.md`
-4. `.ai-codex/optimized-codex.md`
-5. `.ai-sync/CONTEXT_LEDGER.md`
-6. `.ai-sync/AGENT_SYNC.md`
-7. Read deeper owners only when needed.
+2. `docs/PROJECT_MAP.md`
+3. `docs/auto-hermes/index.md`
+4. `docs/repo-rules/index.md`
+5. `.ai-codex/optimized-codex.md`
+6. `.ai-sync/CONTEXT_LEDGER.md`
+7. `.ai-sync/AGENT_SYNC.md`
+8. Read deeper owners only when needed.
 
 ## Core Policy
 
@@ -18,7 +19,7 @@ Use this file as the short entrypoint for work in this repository.
 - Treat `/auto-hermes` as the official repo shortcut for the bounded autonomous Hermes workflow.
 - Treat `/auto-hermes-max` as the repo-local parallel extension for one bounded parent round with a merge gate.
 - Older `hermes-auto:` or `/hermes-auto` wording is deprecated; prefer `/auto-hermes`.
-- `AGENTS.md` owns policy. `docs/` and workflow files own deeper durable detail.
+- `AGENTS.md` owns policy. `docs/PROJECT_MAP.md` owns the durable project architecture map. `docs/` and workflow files own deeper durable detail.
 
 ## Skill And Runtime Map
 
@@ -62,6 +63,7 @@ Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self co
 
 Then read:
 
+- `docs/PROJECT_MAP.md`
 - `.ai-codex/optimized-codex.md`
 - `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md`
 - `.ai-sync/CONTEXT_LEDGER.md`
