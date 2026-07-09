@@ -5479,9 +5479,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 
 /* Content wrapper */
 .mt-content {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
   padding: 28px 28px 40px;
-  max-width: 1400px;
-  margin: 0 auto;
 }
 
 /* Kicker label */
@@ -5601,6 +5603,13 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
   min-width: 0;
 }
 
+.mt-top-muscle-card {
+  display: grid;
+  grid-template-rows: auto minmax(300px, 1fr) auto auto;
+  gap: 14px;
+  align-content: start;
+}
+
 .mt-top-workbench .mt-top-panel-head h2,
 .mt-top-workbench .mt-top-actions-head h2,
 .mt-top-workbench .mt-top-reference-head h2 {
@@ -5617,14 +5626,77 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 }
 
 .mt-muscle-visual-shell {
-  margin-top: 18px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin-top: 4px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(rgba(191, 255, 0, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(191, 255, 0, 0.045) 1px, transparent 1px),
+    radial-gradient(circle at 50% 34%, rgba(240, 117, 97, 0.16), transparent 18rem),
+    #050606;
+  background-size: 32px 32px, 32px 32px, auto, auto;
+  border: 1px solid rgba(191, 255, 0, 0.16);
+  border-radius: 18px;
+  padding: 18px 12px;
+  min-height: clamp(280px, 34vw, 420px);
+}
+
+.mt-muscle-visual-shell::before,
+.mt-muscle-visual-shell::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  pointer-events: none;
+  border: 1px solid rgba(191, 255, 0, 0.14);
+  border-radius: 14px;
+  z-index: 0;
+}
+
+.mt-muscle-visual-shell::after {
+  inset: auto 18px 50% 18px;
+  height: 1px;
+  border: 0;
+  border-top: 1px dashed rgba(191, 255, 0, 0.24);
+  border-radius: 0;
+}
+
+.mt-muscle-visual {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: min(100%, 430px);
+  max-height: 380px;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 46px rgba(0, 0, 0, 0.55));
+}
+
+.mt-muscle-visual--svg {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  background: #050606;
-  border-radius: 10px;
-  padding: 12px 8px;
-  min-height: 180px;
+  justify-content: center;
+  max-height: none;
+  object-fit: initial;
+}
+
+.mt-muscle-visual--svg .muscle-heatmap-figure {
+  width: 100%;
+  justify-content: center;
+  gap: clamp(10px, 2.5vw, 24px);
+}
+
+.mt-muscle-visual--svg .muscle-heatmap-cell {
+  min-width: 0;
+}
+
+.mt-muscle-visual--svg .muscle-heatmap__body svg {
+  max-height: clamp(260px, 30vw, 350px);
+}
+
+.mt-muscle-visual--svg .muscle-heatmap-caption {
+  color: rgba(229, 238, 212, 0.72);
 }
 
 .mt-muscle-heatmap-visual {
@@ -5689,42 +5761,164 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
   min-height: 44px;
   padding: 0;
   border: 0;
-  border-radius: 18px;
   background: transparent;
   color: inherit;
   cursor: pointer;
   pointer-events: auto;
   touch-action: manipulation;
   appearance: none;
-  outline: 2px solid transparent;
-  outline-offset: -2px;
-  transition: background-color 150ms ease, box-shadow 150ms ease, outline-color 150ms ease, transform 150ms ease;
+  outline: none;
+  transform-origin: 50% 50%;
 }
 
-.mt-muscle-hit-zone:hover,
-.mt-muscle-hit-zone:focus-visible,
-.mt-muscle-hit-zone.is-active {
-  background: rgba(191, 255, 0, 0.12);
-  box-shadow: 0 0 0 1px rgba(191, 255, 0, 0.72) inset, 0 0 24px rgba(191, 255, 0, 0.28);
-  outline-color: rgba(191, 255, 0, 0.88);
+.mt-muscle-hit-zone-shape {
+  position: absolute;
+  inset: 6%;
+  display: block;
+  border: 1px solid rgba(191, 255, 0, 0.34);
+  background:
+    radial-gradient(circle at 50% 48%, rgba(191, 255, 0, 0.26), rgba(191, 255, 0, 0.06) 58%, transparent 72%);
+  box-shadow:
+    inset 0 0 18px rgba(191, 255, 0, 0.08),
+    0 0 0 1px rgba(6, 8, 7, 0.66),
+    0 0 18px rgba(191, 255, 0, 0.12);
+  opacity: 0.44;
+  transform: rotate(var(--mt-hit-rotate, 0deg)) scale(0.92);
+  transition: opacity 150ms ease, transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.mt-muscle-hit-zone.is-active {
-  background: rgba(191, 255, 0, 0.12);
-  box-shadow: 0 0 0 2px rgba(191, 255, 0, 0.78) inset, 0 0 22px rgba(191, 255, 0, 0.24);
+.mt-muscle-hit-zone-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(191, 255, 0, 0.92);
+  box-shadow: 0 0 14px rgba(191, 255, 0, 0.52);
+  opacity: 0.58;
+  transform: translate(-50%, -50%) scale(0.9);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.mt-muscle-hit-zone-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  z-index: 3;
+  max-width: 92px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(6, 8, 7, 0.84);
+  color: rgba(224, 255, 170, 0.92);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -2px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.mt-muscle-hit-zone:is(:hover, :focus-visible, .is-active) .mt-muscle-hit-zone-shape {
+  border-color: rgba(191, 255, 0, 0.9);
+  box-shadow:
+    inset 0 0 22px rgba(191, 255, 0, 0.18),
+    0 0 0 1px rgba(191, 255, 0, 0.36),
+    0 0 26px rgba(191, 255, 0, 0.3);
+  opacity: 0.92;
+  transform: rotate(var(--mt-hit-rotate, 0deg)) scale(1);
+}
+
+.mt-muscle-hit-zone:is(:hover, :focus-visible, .is-active) .mt-muscle-hit-zone-pin,
+.mt-muscle-hit-zone:is(:hover, :focus-visible, .is-active) .mt-muscle-hit-zone-label {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.mt-muscle-hit-zone.is-active .mt-muscle-hit-zone-shape {
+  background:
+    radial-gradient(circle at 50% 48%, rgba(191, 255, 0, 0.36), rgba(191, 255, 0, 0.12) 58%, transparent 74%);
 }
 
 .mt-muscle-hit-zone:active {
-  background: rgba(191, 255, 0, 0.18);
-  box-shadow: 0 0 0 1px rgba(191, 255, 0, 0.86) inset, 0 0 30px rgba(191, 255, 0, 0.36);
   transform: scale(0.985);
+}
+
+.mt-muscle-hit-zone--chest-front .mt-muscle-hit-zone-shape {
+  border-radius: 44% 44% 54% 54%;
+  clip-path: polygon(12% 18%, 88% 18%, 78% 84%, 22% 84%);
+}
+
+.mt-muscle-hit-zone--core-front .mt-muscle-hit-zone-shape {
+  border-radius: 50% 50% 46% 46%;
+  clip-path: ellipse(42% 48% at 50% 50%);
+}
+
+.mt-muscle-hit-zone--back-rear .mt-muscle-hit-zone-shape {
+  border-radius: 46% 46% 40% 40%;
+  clip-path: polygon(15% 8%, 85% 8%, 92% 58%, 70% 96%, 30% 96%, 8% 58%);
+}
+
+.mt-muscle-hit-zone--shoulders-front-left .mt-muscle-hit-zone-shape,
+.mt-muscle-hit-zone--shoulders-rear-left .mt-muscle-hit-zone-shape {
+  border-radius: 62% 42% 48% 62%;
+  clip-path: ellipse(44% 36% at 58% 50%);
+  --mt-hit-rotate: -18deg;
+}
+
+.mt-muscle-hit-zone--shoulders-front-right .mt-muscle-hit-zone-shape,
+.mt-muscle-hit-zone--shoulders-rear-right .mt-muscle-hit-zone-shape {
+  border-radius: 42% 62% 62% 48%;
+  clip-path: ellipse(44% 36% at 42% 50%);
+  --mt-hit-rotate: 18deg;
+}
+
+.mt-muscle-hit-zone--arms-front-left .mt-muscle-hit-zone-shape,
+.mt-muscle-hit-zone--arms-rear-left .mt-muscle-hit-zone-shape {
+  border-radius: 999px;
+  clip-path: polygon(40% 0%, 76% 8%, 64% 100%, 26% 92%);
+  --mt-hit-rotate: 6deg;
+}
+
+.mt-muscle-hit-zone--arms-front-right .mt-muscle-hit-zone-shape,
+.mt-muscle-hit-zone--arms-rear-right .mt-muscle-hit-zone-shape {
+  border-radius: 999px;
+  clip-path: polygon(24% 8%, 60% 0%, 74% 92%, 36% 100%);
+  --mt-hit-rotate: -6deg;
+}
+
+.mt-muscle-hit-zone--legs-front .mt-muscle-hit-zone-shape,
+.mt-muscle-hit-zone--legs-rear .mt-muscle-hit-zone-shape {
+  border-radius: 999px 999px 54% 54%;
+  clip-path: polygon(18% 0%, 44% 0%, 48% 100%, 24% 100%, 18% 52%, 56% 52%, 62% 0%, 86% 0%, 78% 100%, 54% 100%, 50% 52%, 12% 52%);
+}
+
+.mt-muscle-hit-zone-layer {
+  display: none !important;
+}
+
+.mt-muscle-visual--svg .muscle-heatmap__body--interactive svg path {
+  cursor: pointer;
+  vector-effect: non-scaling-stroke;
+  transition: filter 150ms ease, opacity 150ms ease, stroke-width 150ms ease;
+}
+
+.mt-muscle-visual--svg .muscle-heatmap__body--interactive svg path:hover {
+  filter: brightness(1.28) drop-shadow(0 0 5px rgba(191, 255, 0, 0.52));
+  opacity: 1;
 }
 
 .mt-muscle-target-buttons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(52px, auto);
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .mt-muscle-target-button {
@@ -5732,8 +5926,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
   padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(255, 255, 255, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  color: rgba(255, 255, 255, 0.82);
   cursor: pointer;
   font: inherit;
   font-size: 0.84rem;
@@ -6901,6 +7096,8 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-recommend-title {
 }
 
 .runner-dashboard-page:has(.mt-top-workbench) .runner-shell-main {
+  min-width: 0;
+  min-height: 100vh;
   background: #080808 !important;
 }
 
@@ -6911,8 +7108,11 @@ body:is(.theme-midnight, .theme-high-contrast) .mt-recommend-title {
 }
 
 .runner-dashboard-page:has(.mt-top-workbench) .runner-shell-canvas.muscle-training-canvas {
+  display: block;
   width: 100% !important;
   max-width: none !important;
+  min-width: 0;
+  min-height: calc(100vh - 68px);
   padding: 0 !important;
   background: #080808 !important;
 }
@@ -6929,21 +7129,32 @@ body:has(.runner-dashboard-page .mt-top-workbench) #root {
 
 .runner-dashboard-page:has(.mt-top-workbench) .mt-content {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 0.95fr);
+  width: 100%;
+  max-width: none;
+  min-height: calc(100vh - 68px);
+  grid-template-columns: minmax(0, 1.72fr) minmax(360px, 0.88fr);
   grid-template-areas:
     "top top"
     "hero rail"
     "workbench rail"
     "controls controls";
-  gap: 20px 32px;
-  max-width: 1360px;
-  padding: 24px 40px 56px;
+  align-content: start;
+  gap: clamp(18px, 1.7vw, 32px);
+  margin: 0;
+  padding: clamp(18px, 2vw, 36px);
+  box-sizing: border-box;
   background: #080808;
 }
 
 .runner-dashboard-page:has(.mt-top-workbench) .mt-top-workbench {
   grid-area: top;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  grid-template-columns: minmax(320px, 1.05fr) minmax(420px, 1.2fr) minmax(340px, 0.95fr);
+  gap: clamp(16px, 1.35vw, 28px);
   margin-bottom: 0;
+  box-sizing: border-box;
 }
 
 .runner-dashboard-page:has(.mt-top-workbench) .mt-hero {
@@ -7490,6 +7701,26 @@ body:has(.runner-dashboard-page .mt-top-workbench) #root {
   color: #ff6565;
 }
 
+.runner-dashboard-page:has(.mt-top-workbench) .mt-protocol-board,
+.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck,
+.runner-dashboard-page:has(.mt-top-workbench) .muscle-panel,
+.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-content-grid {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-protocol-board {
+  grid-area: controls;
+  margin: 0;
+}
+
+.runner-dashboard-page:has(.mt-top-workbench) .mt-protocol-board .strength-plan-content-grid {
+  grid-template-columns: minmax(0, 1.6fr) minmax(340px, 0.8fr);
+  gap: clamp(18px, 1.5vw, 28px);
+}
+
 .runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck {
   grid-area: controls;
 }
@@ -7503,6 +7734,10 @@ body:has(.runner-dashboard-page .mt-top-workbench) #root {
       "workbench"
       "rail"
       "controls";
+  }
+
+  .runner-dashboard-page:has(.mt-top-workbench) .mt-protocol-board .strength-plan-content-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .runner-dashboard-page:has(.mt-top-workbench) .mt-exercises-filter {
@@ -7800,12 +8035,22 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(
   color: var(--brand-accent-strong, #8f2f22) !important;
 }
 
-.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone:hover,
-.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone:focus-visible,
-.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone.is-active {
-  background: rgba(192, 70, 43, 0.14);
-  box-shadow: 0 0 0 2px rgba(192, 70, 43, 0.76) inset, 0 0 24px rgba(192, 70, 43, 0.24);
-  outline-color: rgba(192, 70, 43, 0.86);
+.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone:is(:hover, :focus-visible, .is-active) .mt-muscle-hit-zone-shape {
+  border-color: rgba(192, 70, 43, 0.86);
+  box-shadow:
+    inset 0 0 20px rgba(192, 70, 43, 0.16),
+    0 0 0 1px rgba(192, 70, 43, 0.34),
+    0 0 24px rgba(192, 70, 43, 0.22);
+}
+
+.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone:is(:hover, :focus-visible, .is-active) .mt-muscle-hit-zone-pin {
+  background: rgba(192, 70, 43, 0.94);
+  box-shadow: 0 0 14px rgba(192, 70, 43, 0.38);
+}
+
+.runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-muscle-hit-zone-label {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--brand-accent-strong, #8f2f22);
 }
 
 .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-reference-media figcaption {

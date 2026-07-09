@@ -54,6 +54,26 @@ assert.match(
 );
 assert.match(
   heatmapSource,
+  /function getGpsDotStyle\(speedRatio\) \{[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity: 0\.92,[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
+  'Heatmap GPS dot style should use a stable screen-space radius and opacity instead of changing dot design when the zoom level changes.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /normalizedZoom|normalizedZoom - 8|getGpsDotStyle\(speedRatio, zoom\)/,
+  'Heatmap GPS dot style should not depend on zoom-specific radius or opacity formulas.',
+);
+assert.match(
+  heatmapSource,
+  /const visibleRuns = useMemo\(\(\) => \{[\s\S]*?const activityIdsInView = new Set\(\);[\s\S]*?const activityId = Number\(point\?\.activityId\);[\s\S]*?isValidGpsCoordinate\(point\?\.latitude, point\?\.longitude\)[\s\S]*?activityIdsInView\.add\(activityId\)[\s\S]*?return runs\.filter\(\(run\) => activityIdsInView\.has\(Number\(run\.id\)\)\);[\s\S]*?\}, \[viewBounds, runs, points\]\);/,
+  'Heatmap sessions-in-view should be derived from real GPS activity IDs inside the current viewport, not unavailable activity start coordinates.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /run\.startLatitude|run\.startLongitude/,
+  'Heatmap should not depend on startLatitude/startLongitude because the activity feed item does not expose those fields.',
+);
+assert.match(
+  heatmapSource,
   /function normalizeRawHeatPoint\(point\) \{[\s\S]*?Array\.isArray\(point\)[\s\S]*?activityId: Number\(point\[0\]\)[\s\S]*?latitude: Number\(point\[1\]\)[\s\S]*?longitude: Number\(point\[2\]\)[\s\S]*?speedRatio: Number\(point\[3\]\)/,
   'Heatmap should accept compact backend GPS point arrays without dropping coordinates.',
 );
@@ -118,7 +138,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const firstProgress = buildMergedHeatmapPayload\(mergedPayload, points\.slice\(\), 'recentPreview'\);[\s\S]*?onProgress\(firstProgress\);[\s\S]*?const coverageProgress = buildMergedHeatmapPayload\(coveragePayload, coveragePoints, 'coveragePreview'\);[\s\S]*?onProgress\(coverageProgress\);/,
+  /const firstProgress = buildMergedHeatmapPayload\(firstPagePayload, points\.slice\(\), 'recentPreview'\);[\s\S]*?onProgress\(firstProgress\);[\s\S]*?const coverageProgress = buildMergedHeatmapPayload\(coveragePayload, coveragePoints, 'coveragePreview'\);[\s\S]*?onProgress\(coverageProgress\);/,
   'Heatmap should limit React progress updates to first-page and spatial coverage previews, not every full background page.',
 );
 assert.match(
@@ -150,14 +170,14 @@ assert.match(
   /latestPointsRef\.current = points;[\s\S]*?const renderMode = heatmap\?\.diagnostics\?\.complete === false \? 'preview' : 'full';[\s\S]*?requestAnimationFrame\(\(\) => overlay\.syncRouteDots\(renderMode\)\)[\s\S]*?}, \[heatmap\?\.diagnostics\?\.complete, points\]\);[\s\S]*?}, \[hasBounds, heatmapState\]\);/,
   'Heatmap should use preview redraws while GPS pages append and reserve full redraws for complete payloads without remounting Leaflet on bounds object changes.',
 );
-assert.match(
+assert.doesNotMatch(
   heatmapSource,
-  /let zoomDotFrameId = null;[\s\S]*?let activeCanvasLayerOrigin = null;[\s\S]*?const getDotCanvasAnimatedScale = \(\) => \{[\s\S]*?window\.getComputedStyle\(dotCanvas\)\.transform[\s\S]*?const radiusScale = clamp\(1 \/ animatedScale, 0\.18, 1\.9\)[\s\S]*?drawRoutePoint\(dotContext, point, zoom, 'preview', activeCanvasLayerOrigin, radiusScale\)[\s\S]*?const startZoomRadiusCompensation = \(\) => \{[\s\S]*?requestAnimationFrame\(runZoomRadiusCompensation\)[\s\S]*?isZoomingMap = false;[\s\S]*?stopZoomRadiusCompensation\(\);[\s\S]*?dotCanvas\.style\.opacity = '0\.62';[\s\S]*?startZoomRadiusCompensation\(\);/,
-  'Heatmap should repaint preview GPS dots with inverse radius scaling during animated zoom so marker size stays visually stable.',
+  /paintZoomRadiusCompensatedDots|getDotCanvasAnimatedScale|getZoomStableRenderPoints|startZoomRadiusCompensation|activeCanvasLayerOrigin|zoomDotFrameId/,
+  'Heatmap should not repaint GPS dots during Leaflet zoom animation because canvas redraws can desync the dot layer from map tiles.',
 );
 assert.match(
   heatmapSource,
-  /let isZoomingMap = false;[\s\S]*?let skipNextMovePreview = false;[\s\S]*?let zoomSettleTimeoutId = null;[\s\S]*?const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?classList\.remove\('is-map-zooming'\)[\s\S]*?const animateRouteDotsZoom = \(event\) => \{[\s\S]*?getZoomScale\(event\.zoom\)[\s\S]*?_latLngToNewLayerPoint\(viewportNorthWest, event\.zoom, event\.center\)[\s\S]*?L\.DomUtil\.setTransform\(dotCanvas, offset, scale\);[\s\S]*?const scheduleZoomStart = \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?classList\.add\('is-map-zooming'\)[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '0\.62';[\s\S]*?zoomSettleTimeoutId = window\.setTimeout\(finishZoomRender, 480\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?finishZoomRender\(\);[\s\S]*?const scheduleMoveEnd = \(\) => \{[\s\S]*?isZoomingMap \|\| skipNextMovePreview[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('zoomstart', scheduleZoomStart\);[\s\S]*?map\.on\('zoomanim', animateRouteDotsZoom\);[\s\S]*?map\.on\('zoomend', scheduleZoomEnd\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);/,
+  /let isZoomingMap = false;[\s\S]*?let skipNextMovePreview = false;[\s\S]*?let zoomSettleTimeoutId = null;[\s\S]*?let canvasViewState = null;[\s\S]*?const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?classList\.remove\('is-map-zooming'\)[\s\S]*?const animateRouteDotsZoom = \(event\) => \{[\s\S]*?if \(!canvasViewState\) return;[\s\S]*?getZoomScale\(event\.zoom, canvasViewState\.zoom\)[\s\S]*?0\.5 \+ HEATMAP_CANVAS_PADDING[\s\S]*?map\.project\(canvasViewState\.center, event\.zoom\)[\s\S]*?_getNewPixelOrigin\(event\.center, event\.zoom\)[\s\S]*?L\.DomUtil\.setTransform\(dotCanvas, offset, scale\);[\s\S]*?const scheduleZoomStart = \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?classList\.add\('is-map-zooming'\)[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?zoomSettleTimeoutId = window\.setTimeout\(finishZoomRender, 480\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?finishZoomRender\(\);[\s\S]*?const scheduleMoveEnd = \(\) => \{[\s\S]*?isZoomingMap \|\| skipNextMovePreview[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('zoomstart', scheduleZoomStart\);[\s\S]*?map\.on\('zoomanim', animateRouteDotsZoom\);[\s\S]*?map\.on\('zoomend', scheduleZoomEnd\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);/,
   'Heatmap zooming should transform the GPS canvas during Leaflet zoom animation, then repaint the full rendered pool when zoom settles.',
 );
 assert.doesNotMatch(
@@ -206,7 +226,7 @@ assert.doesNotMatch(
 
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-dot-canvas \{[\s\S]*?will-change: transform, opacity[\s\S]*?transform: translateZ\(0\)[\s\S]*?\.heatmap-page-map-shell\.is-map-zooming \.heatmap-page-dot-canvas[\s\S]*?opacity: 0\.62/,
+  /\.heatmap-page-dot-canvas \{[\s\S]*?will-change: transform, opacity[\s\S]*?transform: translateZ\(0\)[\s\S]*?\.heatmap-page-map-shell\.is-map-zooming \.heatmap-page-dot-canvas[\s\S]*?opacity: 1/,
   'Heatmap GPS dot canvas should remain GPU-composited and visible during zoom.',
 );
 assert.doesNotMatch(
@@ -264,19 +284,13 @@ assert.doesNotMatch(
 
 assert.match(
   heatmapSource,
-  /function getGpsDotStyle\(speedRatio, zoom\) \{[\s\S]*?radius[\s\S]*?fillOpacity[\s\S]*?weight/,
-  'Heatmap should derive visible dot styling from speed ratio and zoom.',
+  /function getGpsDotStyle\(speedRatio\) \{[\s\S]*?const speedBand = getSpeedBand\(speedRatio\);[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity: 0\.92,[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
+  'Heatmap should derive visible dot color from speed ratio while keeping radius, opacity, and stroke stable across zoom levels.',
 );
-assert.match(
+assert.doesNotMatch(
   heatmapSource,
-  /const radius = clamp\(0\.9 \+ \(\(normalizedZoom - 8\) \/ 10\) \* 1\.7, 0\.9, 2\.6\);/,
-  'Heatmap GPS dots should stay compact instead of using oversized point markers.',
-);
-
-assert.match(
-  heatmapSource,
-  /weight: clamp\(radius \* 0\.28, 0\.35, 0\.85\),/,
-  'Heatmap GPS dot stroke should shrink with the compact marker radius.',
+  /const radius = clamp\(0\.9 \+ \(\(normalizedZoom - 8\) \/ 10\) \* 1\.7|getGpsDotStyle\(speedRatio, zoom\)|weight: clamp\(radius \* 0\.28/,
+  'Heatmap GPS dots should not restore zoom-dependent marker radius or stroke formulas.',
 );
 
 assert.doesNotMatch(

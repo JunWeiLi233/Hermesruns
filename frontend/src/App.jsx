@@ -97,6 +97,7 @@ function App() {
                   <Route path="/privacy" element={<LegalPage variant="privacy" />} />
                   <Route path="/admin" element={<AdminLogin />} />
                   <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
+                  <Route path="/workflows" element={<Navigate to="/dashboard/workflows" replace />} />
                   <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
                   <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
                   <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />

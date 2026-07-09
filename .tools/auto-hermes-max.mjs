@@ -1434,7 +1434,7 @@ export function runAutoHermesMax(rawArgs = process.argv.slice(2)) {
     mode: args.mode,
     status: validation.ok && launchSelection.selectedLaneCount > 0 ? "ready-to-launch" : "invalid-plan",
     nextAction: validation.ok && launchSelection.selectedLaneCount > 0
-      ? `${args.runtime}-launch-lanes`
+      ? `${args.runtime}-launch-${launchSelection.selectedLaneCount === 1 ? "single-lane" : "lanes"}`
       : "stop",
     mustNotReplyYet: validation.ok && launchSelection.selectedLaneCount > 0,
     planSource: websiteAuditMetadata.usedFallback

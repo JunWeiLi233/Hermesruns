@@ -17,6 +17,7 @@ function assert(condition, message) {
 
 const landingSource = read('pages/Landing.jsx');
 const styleSource = read('styles/style.css');
+const landingStyleSource = read('styles/_split/landing.css');
 const retiredHeroGridClassPair = ['landing-cinematic-hero-grid', 'landing-command-hero'].join(' ');
 
 assert(
@@ -330,6 +331,26 @@ assert(
 );
 
 assert(
+  /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*1\.18px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
+    && !/@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*86/.test(landingStyleSource)
+    && /@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*5\.6;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-timeline-item\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*font-size:\s*0\.58rem;/.test(landingStyleSource),
+  'Landing race map active split CSS should keep SVG pin labels and selection pulses bounded inside the map.',
+);
+
+assert(
+  /\.landing-command-rhythm\s*\{[\s\S]*display:\s*grid;/.test(landingStyleSource)
+    && /\.landing-command-rhythm::after\s*\{[\s\S]*right:\s*clamp\(16px,\s*4vw,\s*42px\);[\s\S]*bottom:\s*clamp\(16px,\s*4vw,\s*42px\);[\s\S]*width:\s*min\(430px,\s*78%\);[\s\S]*aspect-ratio:\s*1;/.test(landingStyleSource)
+    && /\.landing-command-rhythm-card\s*\{[\s\S]*appearance:\s*none;[\s\S]*transform:\s*translateY\(calc\(var\(--rhythm-index\) \* 5px\)\)/.test(landingStyleSource)
+    && !/\.landing-command-rhythm-list div\s*\{/.test(landingStyleSource)
+    && /\.landing-command-formula-detail\s*\{[\s\S]*display:\s*grid;[\s\S]*border:\s*1px solid rgba\(53,\s*43,\s*33,\s*0\.12\)/.test(landingStyleSource)
+    && /\.landing-command-formula-detail code\s*\{[\s\S]*overflow-wrap:\s*anywhere;/.test(landingStyleSource)
+    && /\.landing-command-formula-steps li\s*\{[\s\S]*grid-template-columns:\s*34px minmax\(0,\s*1fr\)/.test(landingStyleSource),
+  'Landing command rhythm split CSS should style the rendered button cards and expanded formula grid instead of falling back to unstyled text.',
+);
+
+assert(
   !landingSource.includes('className="landing-cinematic-final-proof"')
     && !landingSource.includes('landing-cinematic-final-proof')
     && !styleSource.includes('landing-cinematic-final-proof')
@@ -338,14 +359,17 @@ assert(
     && !landingSource.includes('cinematic_final_proof_ready')
     && !landingSource.includes('<strong>2:52</strong>')
     && !landingSource.includes('<strong>82%</strong>')
-    && /\.landing-cinematic-final-card\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*1fr;[\s\S]*radial-gradient\(circle at 14% 18%/.test(styleSource)
-    && /\.landing-cinematic-final-card\s*\{[\s\S]*place-items:\s*center;[\s\S]*min-height:\s*390px/.test(styleSource)
-    && /\.landing-cinematic-final-copy\s*\{[\s\S]*display:\s*grid;[\s\S]*justify-items:\s*center;[\s\S]*width:\s*min\(100%,\s*940px\)/.test(styleSource)
-    && /\.landing-cinematic-final-copy h2\s*\{[\s\S]*color:\s*var\(--lc-ink\);[\s\S]*white-space:\s*nowrap/.test(styleSource)
-    && /\.landing-cinematic-final-copy > p\s*\{[\s\S]*color:\s*rgba\(33,\s*30,\s*27,\s*0\.64\)/.test(styleSource)
-    && /@media \(max-width:\s*840px\)\s*\{[\s\S]*\.landing-cinematic-final-copy h2\s*\{[\s\S]*white-space:\s*normal/.test(styleSource)
-    && /\.landing-cinematic-final-trust\s*\{[\s\S]*justify-content:\s*center/.test(styleSource),
-  'Landing final CTA should remove the three proof grids, keep centered content, and hold the desktop Chinese title on one line.',
+    && /\.landing-cinematic-final-card\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.92fr\) minmax\(280px,\s*0\.58fr\);/.test(landingStyleSource)
+    && /\.landing-cinematic-final-bg\s*\{[\s\S]*grid-column:\s*2;[\s\S]*url\("\/src\/assets\/generated\/landing-command-hero-background\.webp"\)/.test(landingStyleSource)
+    && /\.landing-cinematic-final-bg::before\s*\{[\s\S]*content:\s*none;[\s\S]*\}/.test(landingStyleSource)
+    && /\.landing-cinematic-final-bg::after\s*\{[\s\S]*content:\s*none;[\s\S]*\}/.test(landingStyleSource)
+    && /\.landing-cinematic-final-copy\s*\{[\s\S]*justify-items:\s*start;[\s\S]*text-align:\s*left/.test(landingStyleSource)
+    && /\.landing-cinematic-final-copy h2\s*\{[\s\S]*letter-spacing:\s*0;[\s\S]*white-space:\s*normal/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card \.landing-cinematic-btn--primary\s*\{[\s\S]*linear-gradient\(135deg,\s*#a0392a 0%,\s*#fc7e69 100%\)/.test(landingStyleSource)
+    && /\.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/.test(landingStyleSource)
+    && /@media \(max-width:\s*900px\)\s*\{[\s\S]*\.landing-cinematic-final-card\s*\{[\s\S]*grid-template-columns:\s*1fr/.test(landingStyleSource)
+    && /@media \(max-width:\s*640px\)\s*\{[\s\S]*\.landing-cinematic-final-card \.landing-cinematic-hero-actions,[\s\S]*\.landing-cinematic-final-card \.landing-cinematic-btn\s*\{[\s\S]*width:\s*100%;/.test(landingStyleSource),
+  'Landing final CTA should use the active split CSS command grid with an image rail, left-aligned copy, clear CTA hierarchy, and mobile-safe collapse.',
 );
 
 console.log('[PASS] Landing command editorial guardrails passed.');

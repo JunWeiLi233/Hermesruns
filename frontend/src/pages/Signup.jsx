@@ -65,6 +65,66 @@ function formatLocalCopy(template, vars = {}) {
   return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
 
+function loadRecaptchaScript(siteKey) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.reject(new Error('recaptcha_unavailable'));
+  }
+  if (!siteKey) {
+    return Promise.reject(new Error('recaptcha_missing_site_key'));
+  }
+  if (window.grecaptcha?.execute && window.grecaptcha?.ready) {
+    return Promise.resolve();
+  }
+
+  const scriptId = 'hermes-recaptcha-v3';
+  const existing = document.getElementById(scriptId);
+  if (existing) {
+    if (existing.dataset.loaded === 'true') {
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error('recaptcha_script_failed')), { once: true });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(siteKey)}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    script.onerror = () => reject(new Error('recaptcha_script_failed'));
+    document.head.appendChild(script);
+  });
+}
+
+async function getSignupCaptchaToken({ required, siteKey }) {
+  if (!required) return '';
+
+  await loadRecaptchaScript(siteKey);
+  const grecaptcha = window.grecaptcha;
+  if (!grecaptcha?.ready || !grecaptcha?.execute) {
+    throw new Error('recaptcha_unavailable');
+  }
+
+  return new Promise((resolve, reject) => {
+    grecaptcha.ready(async () => {
+      try {
+        const token = await grecaptcha.execute(siteKey, { action: 'signup' });
+        if (!token) throw new Error('recaptcha_empty_token');
+        resolve(token);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
 export default function Signup() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -84,6 +144,10 @@ export default function Signup() {
 
   const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
+  const recaptchaRequired = authProviders?.recaptchaRequired === true;
+  const recaptchaSiteKey = typeof authProviders?.recaptchaSiteKey === 'string'
+    ? authProviders.recaptchaSiteKey.trim()
+    : '';
 
   useEffect(() => {
     fetchPasswordRules().then(setPwRules);
@@ -173,10 +237,14 @@ export default function Signup() {
 
     setLoading(true);
     try {
+      const captchaToken = await getSignupCaptchaToken({
+        required: recaptchaRequired,
+        siteKey: recaptchaSiteKey,
+      });
       const res = await apiFetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ email: email.trim(), password, captchaToken }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -194,8 +262,9 @@ export default function Signup() {
         verificationRequired: !!data.verificationRequired,
         message: data.message,
       });
-    } catch {
-      setError(t('common.connection_failed'));
+    } catch (err) {
+      const recaptchaFailed = err instanceof Error && err.message.startsWith('recaptcha_');
+      setError(t(recaptchaFailed ? 'common.recaptcha_failed' : 'common.connection_failed'));
     } finally {
       setLoading(false);
     }

@@ -593,12 +593,7 @@ export default function AppIcon({ name, className = '', title }) {
     case 'delete_sweep':
       return titled(
         <>
-          <path d="M5 8h10v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z" />
-          <path d="M3.5 6h13" />
-          <path d="M8 5h4" />
-          <path d="M18 4h3" />
-          <path d="M18 8h3" />
-          <path d="M18 12h3" />
+          <path fill="currentColor" stroke="none" d="M8 21c-1.1 0-2-.9-2-2V8h12v11c0 1.1-.9 2-2 2H8Zm1.15-9.7v6.35h1.65V11.3H9.15Zm4.05 0v6.35h1.65V11.3H13.2ZM5 6V4.35h4.25L10.35 3h3.3l1.1 1.35H19V6H5Z" />
         </>
       );
     case 'favorite':
