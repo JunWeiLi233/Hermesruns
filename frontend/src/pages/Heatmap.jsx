@@ -21,6 +21,7 @@ const ACTIVITIES_REQUEST_TIMEOUT_MS = 15000;
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 320;
+const HEATMAP_CANVAS_PADDING = 0.5;
 const HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1';
 const HEATMAP_CACHE_STORE_NAME = 'heatmaps';
 const HEATMAP_CACHE_DB_VERSION = 1;
@@ -50,18 +51,15 @@ function getSpeedBand(speedRatio) {
   return SPEED_BANDS[0];
 }
 
-function getGpsDotStyle(speedRatio, zoom) {
-  const safeZoom = Number.isFinite(zoom) ? zoom : 12;
-  const normalizedZoom = clamp(safeZoom, 8, 18);
-  const radius = clamp(0.9 + ((normalizedZoom - 8) / 10) * 1.7, 0.9, 2.6);
+function getGpsDotStyle(speedRatio) {
   const speedBand = getSpeedBand(speedRatio);
   return {
     color: speedBand.color,
-    radius,
+    radius: 1.65,
     fillColor: speedBand.color,
-    fillOpacity: clamp(0.86 + ((normalizedZoom - 8) / 10) * 0.1, 0.86, 0.96),
-    opacity: clamp(0.34 + ((normalizedZoom - 8) / 10) * 0.1, 0.34, 0.44),
-    weight: clamp(radius * 0.28, 0.35, 0.85),
+    fillOpacity: 0.92,
+    opacity: 0.38,
+    weight: 0.48,
     interactive: false,
     bubblingMouseEvents: false,
   };
@@ -261,20 +259,18 @@ async function fetchHeatmapCoverage(limit, signal) {
 async function fetchCompleteHeatmap(signal, onProgress) {
   const points = [];
   let offset = 0;
-  let mergedPayload = null;
   let nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
 
   const firstPagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
   if (!firstPagePayload) return null;
 
-  mergedPayload = firstPagePayload;
   const firstPagePoints = Array.isArray(firstPagePayload.points) ? firstPagePayload.points : [];
   for (const point of firstPagePoints) {
     points.push(normalizeHeatPointForRender(point));
   }
 
   if (typeof onProgress === 'function') {
-    const firstProgress = buildMergedHeatmapPayload(mergedPayload, points.slice(), 'recentPreview');
+    const firstProgress = buildMergedHeatmapPayload(firstPagePayload, points.slice(), 'recentPreview');
     if (firstProgress) onProgress(firstProgress);
   }
 
@@ -296,7 +292,7 @@ async function fetchCompleteHeatmap(signal, onProgress) {
     }
 
     const pagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
-    if (!pagePayload) return buildMergedHeatmapPayload(mergedPayload, points, 'partialFull');
+    if (!pagePayload) return buildMergedHeatmapPayload(firstPagePayload, points, 'partialFull');
 
     const pagePoints = Array.isArray(pagePayload.points) ? pagePayload.points : [];
     for (const point of pagePoints) {
@@ -316,7 +312,7 @@ async function fetchCompleteHeatmap(signal, onProgress) {
     offset = (Number.isFinite(pageOffset) ? pageOffset : offset) + step;
   }
 
-  return buildMergedHeatmapPayload(mergedPayload, points);
+  return buildMergedHeatmapPayload(firstPagePayload, points);
 }
 
 function formatCoordinate(value, positiveSuffix, negativeSuffix) {
@@ -325,6 +321,13 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
   }
   const suffix = value >= 0 ? positiveSuffix : negativeSuffix;
   return `${Math.abs(value).toFixed(3)}\u00b0${suffix}`;
+}
+
+function getRunDistanceKm(run) {
+  const distanceKm = Number(run?.distanceKm);
+  if (Number.isFinite(distanceKm) && distanceKm > 0) return distanceKm;
+  const distanceMeters = Number(run?.distanceMeters);
+  return Number.isFinite(distanceMeters) && distanceMeters > 0 ? distanceMeters / 1000 : 0;
 }
 
 export default function Heatmap() {
@@ -549,8 +552,7 @@ export default function Heatmap() {
         let isZoomingMap = false;
         let skipNextMovePreview = false;
         let zoomSettleTimeoutId = null;
-        let zoomDotFrameId = null;
-        let activeCanvasLayerOrigin = null;
+        let canvasViewState = null;
         const canvasSize = { width: 0, height: 0, pixelRatio: 0 };
         const bufferCanvas = document.createElement('canvas');
         const bufferContext = bufferCanvas.getContext('2d');
@@ -610,15 +612,17 @@ export default function Heatmap() {
 
           const zoom = map.getZoom();
           const mapBounds = map.getBounds();
+          const center = map.getCenter();
           const size = map.getSize();
+          const paddedSize = size.multiplyBy(1 + HEATMAP_CANVAS_PADDING * 2).round();
           const pixelRatio = window.devicePixelRatio || 1;
-          const layerTopLeft = map.containerPointToLayerPoint([0, 0]);
+          const layerTopLeft = map.containerPointToLayerPoint(size.multiplyBy(-HEATMAP_CANVAS_PADDING)).round();
           const canvasLayerOrigin = layerTopLeft;
-          activeCanvasLayerOrigin = canvasLayerOrigin;
           L.DomUtil.setPosition(dotCanvas, canvasLayerOrigin);
+          canvasViewState = { center, zoom };
 
-          const canvasWidth = Math.max(1, Math.round(size.x * pixelRatio));
-          const canvasHeight = Math.max(1, Math.round(size.y * pixelRatio));
+          const canvasWidth = Math.max(1, Math.round(paddedSize.x * pixelRatio));
+          const canvasHeight = Math.max(1, Math.round(paddedSize.y * pixelRatio));
           if (canvasSize.width !== canvasWidth || canvasSize.height !== canvasHeight || canvasSize.pixelRatio !== pixelRatio) {
             canvasSize.width = canvasWidth;
             canvasSize.height = canvasHeight;
@@ -627,14 +631,19 @@ export default function Heatmap() {
             dotCanvas.height = canvasHeight;
             bufferCanvas.width = canvasWidth;
             bufferCanvas.height = canvasHeight;
-            dotCanvas.style.width = `${size.x}px`;
-            dotCanvas.style.height = `${size.y}px`;
+            dotCanvas.style.width = `${paddedSize.x}px`;
+            dotCanvas.style.height = `${paddedSize.y}px`;
           }
 
-          const west = mapBounds.getWest();
-          const east = mapBounds.getEast();
-          const north = mapBounds.getNorth();
-          const south = mapBounds.getSouth();
+          const paddedSouthEast = layerTopLeft.add(paddedSize);
+          const paddedBounds = L.latLngBounds(
+            map.layerPointToLatLng(layerTopLeft),
+            map.layerPointToLatLng(paddedSouthEast),
+          );
+          const west = paddedBounds.getWest();
+          const east = paddedBounds.getEast();
+          const north = paddedBounds.getNorth();
+          const south = paddedBounds.getSouth();
           const renderPoints = renderMode === 'preview'
             ? latestPreviewRenderPointsRef.current
             : latestFullRenderPointsRef.current;
@@ -647,7 +656,7 @@ export default function Heatmap() {
           if (renderMode !== 'full' || renderPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
             dotCanvas.style.opacity = renderMode === 'preview' ? '0.82' : '1';
             dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-            dotContext.clearRect(0, 0, size.x, size.y);
+            dotContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
             for (const point of renderPoints) {
               if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
               if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
@@ -662,7 +671,7 @@ export default function Heatmap() {
           bufferCanvas.style.width = visibleStyleWidth;
           bufferCanvas.style.height = visibleStyleHeight;
           bufferContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-          bufferContext.clearRect(0, 0, size.x, size.y);
+          bufferContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
           let pointIndex = 0;
 
           const drawFullChunk = (deadline) => {
@@ -712,61 +721,9 @@ export default function Heatmap() {
           });
         };
 
-        const getDotCanvasAnimatedScale = () => {
-          const transform = window.getComputedStyle(dotCanvas).transform;
-          if (!transform || transform === 'none') return 1;
-          const matrix = transform.match(/^matrix\(([^,]+)/);
-          const matrix3d = transform.match(/^matrix3d\(([^,]+)/);
-          const rawScale = matrix?.[1] || matrix3d?.[1];
-          const scale = Number(rawScale);
-          return Number.isFinite(scale) && scale > 0 ? scale : 1;
-        };
-
-        const paintZoomRadiusCompensatedDots = () => {
-          if (disposed || !isZoomingMap || !activeCanvasLayerOrigin) return;
-          const size = map.getSize();
-          const pixelRatio = window.devicePixelRatio || 1;
-          const animatedScale = getDotCanvasAnimatedScale();
-          const radiusScale = clamp(1 / animatedScale, 0.18, 1.9);
-          const zoom = map.getZoom();
-          const mapBounds = map.getBounds();
-          const west = mapBounds.getWest();
-          const east = mapBounds.getEast();
-          const north = mapBounds.getNorth();
-          const south = mapBounds.getSouth();
-
-          dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-          dotContext.clearRect(0, 0, size.x, size.y);
-          for (const point of latestPreviewRenderPointsRef.current) {
-            if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
-            if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
-            drawRoutePoint(dotContext, point, zoom, 'preview', activeCanvasLayerOrigin, radiusScale);
-          }
-        };
-
-        const stopZoomRadiusCompensation = () => {
-          if (zoomDotFrameId !== null) {
-            window.cancelAnimationFrame(zoomDotFrameId);
-            zoomDotFrameId = null;
-          }
-        };
-
-        const runZoomRadiusCompensation = () => {
-          zoomDotFrameId = null;
-          paintZoomRadiusCompensatedDots();
-          if (!disposed && isZoomingMap) {
-            zoomDotFrameId = window.requestAnimationFrame(runZoomRadiusCompensation);
-          }
-        };
-
-        const startZoomRadiusCompensation = () => {
-          stopZoomRadiusCompensation();
-          zoomDotFrameId = window.requestAnimationFrame(runZoomRadiusCompensation);
-        };
         const finishZoomRender = () => {
           if (disposed) return;
           isZoomingMap = false;
-          stopZoomRadiusCompensation();
           zoomSettleTimeoutId = null;
           dotCanvas.style.display = 'block';
           dotCanvas.style.opacity = '1';
@@ -777,9 +734,14 @@ export default function Heatmap() {
         };
 
         const animateRouteDotsZoom = (event) => {
-          const scale = map.getZoomScale(event.zoom);
-          const viewportNorthWest = map.containerPointToLatLng([0, 0]);
-          const offset = map._latLngToNewLayerPoint(viewportNorthWest, event.zoom, event.center);
+          if (!canvasViewState) return;
+          const scale = map.getZoomScale(event.zoom, canvasViewState.zoom);
+          const viewHalf = map.getSize().multiplyBy(0.5 + HEATMAP_CANVAS_PADDING);
+          const currentCenterPoint = map.project(canvasViewState.center, event.zoom);
+          const offset = viewHalf
+            .multiplyBy(-scale)
+            .add(currentCenterPoint)
+            .subtract(map._getNewPixelOrigin(event.center, event.zoom));
           L.DomUtil.setTransform(dotCanvas, offset, scale);
         };
 
@@ -796,8 +758,7 @@ export default function Heatmap() {
           isZoomingMap = true;
           skipNextMovePreview = true;
           dotCanvas.style.display = 'block';
-          dotCanvas.style.opacity = '0.62';
-          startZoomRadiusCompensation();
+          dotCanvas.style.opacity = '1';
           zoomSettleTimeoutId = window.setTimeout(finishZoomRender, 480);
         };
 
@@ -828,7 +789,6 @@ export default function Heatmap() {
               zoomSettleTimeoutId = null;
             }
             cancelFullDraw();
-            stopZoomRadiusCompensation();
           },
         };
         map.on('zoomstart', scheduleZoomStart);
@@ -881,20 +841,44 @@ export default function Heatmap() {
     ? `${formatCoordinate(centerLatitude, 'N', 'S')} / ${formatCoordinate(centerLongitude, 'E', 'W')}`
     : '--';
 
-  const filteredRuns = useMemo(() => {
-    if (!viewBounds || !runs.length) return [];
-    return runs.filter((run) => {
-      const lat = Number(run.startLatitude);
-      const lng = Number(run.startLongitude);
-      if (!lat || !lng) return false;
-      return (
-        lat >= viewBounds.south
-        && lat <= viewBounds.north
-        && lng >= viewBounds.west
-        && lng <= viewBounds.east
-      );
-    }).slice(0, 10);
-  }, [viewBounds, runs]);
+  const visibleRuns = useMemo(() => {
+    if (!viewBounds || !runs.length || !points.length) return [];
+
+    const visibleGpsPoints = buildVisibleGpsDots(points);
+    if (visibleGpsPoints.length === 0) return [];
+
+    const knownRunIds = new Set(
+      runs
+        .map((run) => Number(run.id))
+        .filter((id) => Number.isFinite(id)),
+    );
+    if (knownRunIds.size === 0) return [];
+
+    const activityIdsInView = new Set();
+    for (const point of visibleGpsPoints) {
+      const activityId = Number(point?.activityId);
+      if (!knownRunIds.has(activityId)) continue;
+      if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
+      if (
+        point.latitude >= viewBounds.south
+        && point.latitude <= viewBounds.north
+        && point.longitude >= viewBounds.west
+        && point.longitude <= viewBounds.east
+      ) {
+        activityIdsInView.add(activityId);
+        if (activityIdsInView.size >= knownRunIds.size) break;
+      }
+    }
+
+    return runs.filter((run) => activityIdsInView.has(Number(run.id)));
+  }, [viewBounds, runs, points]);
+
+  const visibleRunRows = useMemo(() => visibleRuns.slice(0, 10), [visibleRuns]);
+  const visibleRunDistanceKm = useMemo(
+    () => visibleRuns.reduce((total, run) => total + getRunDistanceKm(run), 0),
+    [visibleRuns],
+  );
+  const viewSummaryReady = Boolean(viewBounds);
 
   const speedLegendLabels = {
     slow: t('heatmap.page_legend_slow'),
@@ -1082,11 +1066,24 @@ export default function Heatmap() {
               </div>
             </aside>
 
-            {filteredRuns.length > 0 && (
-              <section className="heatmap-sessions-card">
+            <section className={cx('heatmap-sessions-card', visibleRunRows.length === 0 && 'is-empty')}>
+              <div className="heatmap-sessions-summary">
                 <span className="heatmap-page-card-kicker">{t('heatmap.page_sessions_in_view')}</span>
+                <div className="heatmap-sessions-summary-grid">
+                  <div>
+                    <strong>{viewSummaryReady ? visibleRuns.length : '--'}</strong>
+                    <span>{t('heatmap.page_runs_in_view_label')}</span>
+                  </div>
+                  <div>
+                    <strong>{viewSummaryReady ? formatDistance(visibleRunDistanceKm, 1, lang, unit) : '--'}</strong>
+                    <span>{t('heatmap.page_distance_in_view_label')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {viewSummaryReady && visibleRunRows.length > 0 ? (
                 <div className="heatmap-sessions-list">
-                  {filteredRuns.map((run) => (
+                  {visibleRunRows.map((run) => (
                     <button
                       key={run.id}
                       type="button"
@@ -1098,14 +1095,18 @@ export default function Heatmap() {
                         <span>{formatDate(run.startTime || run.startDate, lang === 'zh-CN' ? 'zh-CN' : 'en-US')}</span>
                       </div>
                       <div className="heatmap-session-meta">
-                        <strong>{formatDistance(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0), 1, lang, unit)}</strong>
+                        <strong>{formatDistance(getRunDistanceKm(run), 1, lang, unit)}</strong>
                         <span>{t('heatmap.page_view_session')}</span>
                       </div>
                     </button>
                   ))}
                 </div>
-              </section>
-            )}
+              ) : (
+                <p className="heatmap-sessions-empty">
+                  {viewSummaryReady ? t('heatmap.page_no_sessions_in_view') : t('heatmap.page_area_syncing')}
+                </p>
+              )}
+            </section>
           </>
         ) : null}
 

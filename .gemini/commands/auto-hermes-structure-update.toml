@@ -1,0 +1,3 @@
+name = "auto-hermes-structure-update"
+description = "Run the Hermes structure-governance pass for runtime adapters, command registrations, and steering briefs."
+command = "node .tools/auto-hermes-structure-update.mjs --write"

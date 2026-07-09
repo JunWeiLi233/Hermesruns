@@ -43,7 +43,7 @@ if exist "%ROOT%.venv\Scripts\python.exe" (
 )
 
 powershell -NoProfile -Command ^
-    "try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -UseBasicParsing -TimeoutSec 2; if ($r.StatusCode -ge 200) { exit 0 } else { exit 1 } } catch { exit 1 }"
+    "$listener = netstat -ano | Select-String ':8080\s+.*LISTENING'; if ($listener) { exit 0 } else { exit 1 }"
 if not errorlevel 1 (
     echo [Hermes] Stopping old backend on localhost:8080...
     powershell -NoProfile -Command ^
@@ -58,12 +58,23 @@ if not errorlevel 1 (
     )
 )
 
-:: 1. Check backend requirements before opening any windows
-echo [1/4] Checking Spring Boot requirements...
+:: 1. Build frontend static assets before any backend window can serve an old app shell.
+echo [1/5] Building frontend static assets...
+pushd "%ROOT%frontend"
+node scripts\run-vite-build.mjs
+if errorlevel 1 (
+    echo [Hermes] Frontend build failed. Fix Vite/build errors before starting Hermes.
+    popd
+    goto :startup_failed
+)
+popd
+
+:: 2. Check backend requirements before opening any windows
+echo [2/5] Checking Spring Boot requirements...
 call .tools\run-backend.cmd --check-only
 if errorlevel 1 goto :startup_failed
 
-:: 2. Build a temp boot script that carries all env vars into the new window
+:: 3. Build a temp boot script that carries all env vars into the new window
 echo @echo off > "%BOOT_SCRIPT%"
 if defined APP_DB_URL               echo set "APP_DB_URL=%APP_DB_URL%">> "%BOOT_SCRIPT%"
 if defined APP_DB_DRIVER            echo set "APP_DB_DRIVER=%APP_DB_DRIVER%">> "%BOOT_SCRIPT%"
