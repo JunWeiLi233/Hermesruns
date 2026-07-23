@@ -35,9 +35,9 @@ assert(
 assert(
   landingSource.includes('landing-command-deck')
     && landingSource.includes('landing-command-card-stack')
-    && landingSource.includes('landing-command-rhythm')
+    && !landingSource.includes('landing-command-rhythm')
     && !landingSource.includes('landing-cinematic-feature-grid'),
-  'Landing should use the command deck instead of the old equal feature grid.',
+  'Landing should use the command deck card stack without the removed interactive formula rhythm panel.',
 );
 
 assert(
@@ -47,10 +47,13 @@ assert(
 );
 
 assert(
-  styleSource.includes('Landing command editorial redesign')
-    && /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/.test(styleSource)
-    && /\.landing-command-deck-grid\s*\{[\s\S]*grid-template-columns:\s*minmax\(320px,\s*0\.9fr\)\s+minmax\(0,\s*1\.1fr\);/.test(styleSource),
-  'Landing command CSS should define the hero copy spacing and command deck grid.',
+  landingStyleSource.includes('Landing command editorial redesign')
+    && /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/.test(landingStyleSource)
+    && /\.landing-command-deck-grid\s*\{[\s\S]*display:\s*block;/.test(landingStyleSource)
+    && /\.landing-command-card-stack\s*\{[\s\S]*grid-template-columns:\s*repeat\(12,\s*minmax\(0,\s*1fr\)\);/.test(landingStyleSource)
+    && /\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;[\s\S]*grid-row:\s*1\s*\/\s*span\s*2;/.test(landingStyleSource)
+    && /\.landing-command-card:nth-child\(2\),\s*\.landing-command-card:nth-child\(3\)\s*\{[\s\S]*grid-column:\s*8\s*\/\s*-1;/.test(landingStyleSource),
+  'Landing command CSS should use the full-width asymmetric feature deck without reserving an empty column.',
 );
 
 assert(
@@ -80,13 +83,13 @@ assert(
 );
 
 assert(
-  landingSource.includes('const formulaValues =')
-    && landingSource.includes("t('landing.cinematic_formula_vdot', formulaValues)")
-    && landingSource.includes("t('landing.cinematic_formula_acwr', formulaValues)")
-    && landingSource.includes("t('landing.cinematic_formula_recovery', formulaValues)")
-    && landingSource.includes("t('landing.cinematic_formula_paces', formulaValues)")
-    && landingSource.includes("t('landing.cinematic_formula_last_input_value', formulaValues)"),
-  'Landing formula copy should provide replacements for every public placeholder token.',
+  !landingSource.includes('const formulaValues =')
+    && !landingSource.includes('const formulaRows =')
+    && !landingSource.includes('const activeFormula =')
+    && !landingSource.includes('landing-cinematic-coach')
+    && !landingSource.includes('landing-cinematic-zones')
+    && !landingSource.includes('landing-cinematic-formula'),
+  'Minimal landing should remove the dense formula explorer, coach-quote, science, and training-zones sections.',
 );
 
 assert(

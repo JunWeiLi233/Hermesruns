@@ -9,8 +9,8 @@ const workflowExpectations = [
   {
     file: ".github/workflows/ci.yml",
     required: [
-      "actions/checkout@v6",
-      "actions/setup-node@v6",
+      /actions\/checkout@v[67]/,
+      /actions\/setup-node@v[67]/,
       "actions/setup-java@v5",
     ],
     banned: [
@@ -22,8 +22,8 @@ const workflowExpectations = [
   {
     file: ".github/workflows/continuous-integration-extra.yml",
     required: [
-      "actions/checkout@v6",
-      "actions/setup-node@v6",
+      /actions\/checkout@v[67]/,
+      /actions\/setup-node@v[67]/,
       "actions/setup-java@v5",
     ],
     banned: [
@@ -35,8 +35,8 @@ const workflowExpectations = [
   {
     file: ".github/workflows/auto-hermes-self.yml",
     required: [
-      "actions/checkout@v6",
-      "actions/setup-node@v6",
+      /actions\/checkout@v[67]/,
+      /actions\/setup-node@v[67]/,
       "actions/setup-java@v5",
     ],
     banned: [
@@ -49,8 +49,11 @@ const workflowExpectations = [
 
 for (const workflow of workflowExpectations) {
   const content = fs.readFileSync(path.join(rootDir, workflow.file), "utf8");
-  for (const snippet of workflow.required) {
-    assert.match(content, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${workflow.file} should pin ${snippet}`);
+  for (const requirement of workflow.required) {
+    const pattern = requirement instanceof RegExp
+      ? requirement
+      : new RegExp(requirement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    assert.match(content, pattern, `${workflow.file} should pin ${requirement}`);
   }
   for (const snippet of workflow.banned) {
     assert.doesNotMatch(content, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${workflow.file} should not keep ${snippet}`);

@@ -60,8 +60,14 @@ assert.doesNotMatch(
 
 assert.match(
   landingSource,
-  /<section className="landing-cinematic-hero">[\s\S]*className="landing-cinematic-hero-photo"/,
-  'Landing hero should render the photo layer targeted by the generated background image.',
+  /className="landing-cinematic-hero landing-cinematic-hero--minimal"/,
+  'Landing hero should use the minimal flat hero surface after the minimalist refresh.',
+);
+
+assert.doesNotMatch(
+  landingSource,
+  /className="landing-cinematic-hero-photo"/,
+  'Minimal landing hero should not render the removed photo/scrim plate layer.',
 );
 
 assert.match(
@@ -88,14 +94,20 @@ assert.ok(
 
 assert.match(
   landingSplitSource,
-  /\.landing-cinematic-hero-photo\s*\{[\s\S]*url\("\/src\/assets\/generated\/landing-command-hero-background\.webp"\)/,
-  'Landing hero photo layer should use a Vite-resolvable generated hero image path.',
+  /\.landing-cinematic-hero--minimal[\s\S]*background-color:\s*#f4efe6/,
+  'Minimal landing hero should paint a flat warm-paper surface instead of the photo layer.',
 );
 
 assert.match(
-  styleSource,
-  /\.landing-cinematic-hero-grid\.landing-command-hero \.landing-cinematic-hero-title\s*\{[\s\S]*#fff7ea !important/,
-  'Landing command hero title should stay light over the generated background.',
+  landingSplitSource,
+  /\.landing-cinematic-hero--minimal \.landing-cinematic-hero-plate[\s\S]*display:\s*none !important/,
+  'Minimal landing hero should hide the removed photo/scrim plate layer.',
+);
+
+assert.match(
+  landingSplitSource,
+  /\.landing-cinematic-hero--minimal \.landing-cinematic-hero-title \.is-accent[\s\S]*color:\s*#d85f4c/,
+  'Minimal landing hero accent line should use plain coral instead of a multi-stop text gradient.',
 );
 
 assert.match(
