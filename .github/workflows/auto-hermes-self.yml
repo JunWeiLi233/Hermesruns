@@ -104,7 +104,7 @@ jobs:
           echo "sha=$(git rev-parse HEAD)"
 
       - name: Setup Node 20
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
           cache: npm
