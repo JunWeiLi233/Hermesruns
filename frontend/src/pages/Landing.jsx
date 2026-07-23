@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -7,8 +7,22 @@ import { useScrollReveal } from '../hooks/useScrollReveal';
 import AppIcon from '../components/AppIcon';
 import HermesMarkSvg from '../components/HermesMarkSvg';
 import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.png';
+import shoeRunMaster from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const SHOE_GAIT_MOTION_STOPS = [
+  { progress: 0, phase: 'ready', x: 0, y: 0, rotate: 0, scaleX: 1, scaleY: 1, originX: 50, originY: 70 },
+  { progress: 0.08, phase: 'loading', x: -1, y: 1.8, rotate: 0, scaleX: 1.015, scaleY: 0.965, originX: 50, originY: 70 },
+  { progress: 0.18, phase: 'midstance', x: -2.5, y: 1.2, rotate: 0.8, scaleX: 1.02, scaleY: 0.96, originX: 68, originY: 70 },
+  { progress: 0.31, phase: 'heel-rise', x: -1.5, y: -1, rotate: 6, scaleX: 1, scaleY: 0.99, originX: 84, originY: 70 },
+  { progress: 0.38, phase: 'toe-off', x: 1, y: -5, rotate: 13, scaleX: 0.985, scaleY: 0.985, originX: 88, originY: 70 },
+  { progress: 0.5, phase: 'early-flight', x: 3, y: -11, rotate: 6, scaleX: 0.98, scaleY: 0.98, originX: 55, originY: 68 },
+  { progress: 0.68, phase: 'flight', x: 1, y: -15, rotate: -1, scaleX: 0.985, scaleY: 0.985, originX: 50, originY: 68 },
+  { progress: 0.82, phase: 'terminal-swing', x: -1, y: -11, rotate: -7, scaleX: 0.99, scaleY: 0.99, originX: 24, originY: 70 },
+  { progress: 0.94, phase: 'initial-contact', x: -2, y: -4, rotate: -9, scaleX: 1, scaleY: 1, originX: 16, originY: 70 },
+  { progress: 1, phase: 'landed', x: 0, y: 0, rotate: 0, scaleX: 1, scaleY: 1, originX: 50, originY: 70 },
+];
+const HERO_FOCUS_SCROLL_FRACTION = 0.14;
 const landingRaceDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   month: 'short',
@@ -55,6 +69,210 @@ function RevealSection({ children, className = '', delay = 0, initialVisible = f
 
 function PageWidth({ children, className = '' }) {
   return <div className={`landing-cinematic-width ${className}`}>{children}</div>;
+}
+
+function getShoeGaitMotion(progress) {
+  const nextStopIndex = SHOE_GAIT_MOTION_STOPS.findIndex((stop) => stop.progress >= progress);
+  const endIndex = nextStopIndex === -1 ? SHOE_GAIT_MOTION_STOPS.length - 1 : nextStopIndex;
+  const startIndex = Math.max(0, endIndex - 1);
+  const start = SHOE_GAIT_MOTION_STOPS[startIndex];
+  const end = SHOE_GAIT_MOTION_STOPS[endIndex];
+  const stopDistance = end.progress - start.progress;
+  const localProgress = stopDistance === 0 ? 0 : (progress - start.progress) / stopDistance;
+  const easedProgress = localProgress * localProgress * (3 - (2 * localProgress));
+  const interpolate = (from, to) => from + ((to - from) * easedProgress);
+
+  return {
+    phase: localProgress < 0.5 ? start.phase : end.phase,
+    transform: `translate3d(${interpolate(start.x, end.x)}%, ${interpolate(start.y, end.y)}%, 0) rotate(${interpolate(start.rotate, end.rotate)}deg) scale(${interpolate(start.scaleX, end.scaleX)}, ${interpolate(start.scaleY, end.scaleY)})`,
+    transformOrigin: `${interpolate(start.originX, end.originX)}% ${interpolate(start.originY, end.originY)}%`,
+  };
+}
+
+function ShoeRunCycle({ scrollContainerRef }) {
+  const [isReady, setIsReady] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => (
+    typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ));
+  const canvasRef = useRef(null);
+  const figureRef = useRef(null);
+  const runnerRef = useRef(null);
+  const decodedShoeRef = useRef(null);
+
+  const drawShoe = useCallback(() => {
+    const canvas = canvasRef.current;
+    const image = decodedShoeRef.current;
+    if (!canvas || !image || canvas.clientWidth <= 0 || canvas.clientHeight <= 0) return;
+
+    const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
+    const canvasWidth = Math.max(1, Math.round(canvas.clientWidth * pixelRatio));
+    const canvasHeight = Math.max(1, Math.round(canvas.clientHeight * pixelRatio));
+    if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+    }
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    const scale = Math.min(canvasWidth / image.naturalWidth, canvasHeight / image.naturalHeight);
+    const drawWidth = image.naturalWidth * scale;
+    const drawHeight = image.naturalHeight * scale;
+    const drawX = (canvasWidth - drawWidth) / 2;
+    const drawY = (canvasHeight - drawHeight) / 2;
+
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+    canvas.dataset.hasFrame = 'true';
+  }, []);
+
+  useEffect(() => {
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () => setPrefersReducedMotion(motionPreference.matches);
+
+    updateMotionPreference();
+    motionPreference.addEventListener('change', updateMotionPreference);
+    return () => motionPreference.removeEventListener('change', updateMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const image = new window.Image();
+    image.onload = async () => {
+      try {
+        await image.decode();
+      } catch {
+        // The loaded bitmap is still safe to display when decode() is unavailable.
+      }
+      if (cancelled) return;
+
+      decodedShoeRef.current = image;
+      drawShoe();
+      setIsReady(true);
+    };
+    image.src = shoeRunMaster;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [drawShoe]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
+    const redrawShoe = () => drawShoe();
+    if (typeof window.ResizeObserver !== 'function') {
+      window.addEventListener('resize', redrawShoe);
+      redrawShoe();
+      return () => window.removeEventListener('resize', redrawShoe);
+    }
+
+    const resizeObserver = new window.ResizeObserver(redrawShoe);
+    resizeObserver.observe(canvas);
+    redrawShoe();
+    return () => resizeObserver.disconnect();
+  }, [drawShoe]);
+
+  useEffect(() => {
+    if (!isReady) return undefined;
+
+    const scrollContainer = scrollContainerRef.current;
+    const figure = figureRef.current;
+    const runner = runnerRef.current;
+    const grid = figure?.closest('.landing-hero-shoe-grid');
+    const copy = grid?.querySelector('.landing-command-copy');
+    if (!scrollContainer || !figure || !runner || !grid || !copy) return undefined;
+
+    let animationFrameId;
+    const updateFromScroll = () => {
+      animationFrameId = undefined;
+      const usesCompactLayout = window.matchMedia('(max-width: 980px)').matches;
+
+      if (prefersReducedMotion) {
+        drawShoe();
+        copy.inert = false;
+        runner.style.transform = 'none';
+        runner.style.transformOrigin = '50% 70%';
+        figure.style.transform = 'none';
+        scrollContainer.style.setProperty('--hero-copy-opacity', '1');
+        scrollContainer.style.setProperty('--hero-copy-shift-x', '0px');
+        scrollContainer.style.setProperty('--hero-copy-blur', '0px');
+        scrollContainer.dataset.heroFocusState = 'intro';
+        figure.dataset.scrollState = 'reduced';
+        figure.dataset.scrollProgress = '0.000';
+        figure.dataset.gaitPhase = 'ready';
+        return;
+      }
+
+      const containerBounds = scrollContainer.getBoundingClientRect();
+      const scrollDistance = Math.max(1, scrollContainer.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -containerBounds.top / scrollDistance));
+      const gaitProgress = usesCompactLayout ? 0 : progress;
+      const gaitMotion = getShoeGaitMotion(gaitProgress);
+      const focusProgress = usesCompactLayout
+        ? 0
+        : Math.min(1, progress / HERO_FOCUS_SCROLL_FRACTION);
+      const copyOpacity = 1 - focusProgress;
+      const centeredFigureOffset = (grid.clientWidth - figure.offsetWidth) / 2;
+      const centerShiftX = centeredFigureOffset - figure.offsetLeft;
+
+      copy.inert = focusProgress >= 0.85;
+      scrollContainer.style.setProperty('--hero-copy-opacity', copyOpacity.toFixed(3));
+      scrollContainer.style.setProperty('--hero-copy-shift-x', `${(-48 * focusProgress).toFixed(1)}px`);
+      scrollContainer.style.setProperty('--hero-copy-blur', `${(2 * focusProgress).toFixed(1)}px`);
+      scrollContainer.dataset.heroFocusState = focusProgress <= 0
+        ? 'intro'
+        : focusProgress >= 1 ? 'focused' : 'transitioning';
+      figure.style.transform = usesCompactLayout
+        ? 'none'
+        : `translate3d(${(centerShiftX * focusProgress).toFixed(1)}px, 0, 0) scale(${(1 + (0.08 * focusProgress)).toFixed(3)})`;
+      runner.style.transformOrigin = gaitMotion.transformOrigin;
+      runner.style.transform = gaitMotion.transform;
+      figure.dataset.scrollState = progress <= 0 ? 'idle' : progress >= 1 ? 'complete' : 'scrubbing';
+      figure.dataset.scrollProgress = progress.toFixed(3);
+      figure.dataset.gaitPhase = gaitMotion.phase;
+    };
+
+    const scheduleScrollUpdate = () => {
+      if (animationFrameId === undefined) {
+        animationFrameId = window.requestAnimationFrame(updateFromScroll);
+      }
+    };
+
+    updateFromScroll();
+    window.addEventListener('scroll', scheduleScrollUpdate, { passive: true });
+    window.addEventListener('resize', scheduleScrollUpdate);
+    return () => {
+      window.removeEventListener('scroll', scheduleScrollUpdate);
+      window.removeEventListener('resize', scheduleScrollUpdate);
+      if (animationFrameId !== undefined) window.cancelAnimationFrame(animationFrameId);
+      copy.inert = false;
+    };
+  }, [drawShoe, isReady, prefersReducedMotion, scrollContainerRef]);
+
+  return (
+    <figure
+      ref={figureRef}
+      className={`landing-hero-shoe-cycle${isReady ? ' is-ready' : ''}`}
+      data-scroll-state="loading"
+      data-scroll-progress="0.000"
+      data-gait-phase="ready"
+      aria-hidden="true"
+    >
+      <div ref={runnerRef} className="landing-hero-shoe-cycle-runner">
+        <canvas
+          ref={canvasRef}
+          className="landing-hero-shoe-cycle-frame"
+          data-has-frame="false"
+        />
+      </div>
+    </figure>
+  );
 }
 
 function StravaLogo({ className = '' }) {
@@ -419,8 +637,8 @@ export default function Landing() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeFormulaId, setActiveFormulaId] = useState(null);
   const [raceCountdownNow, setRaceCountdownNow] = useState(() => new Date());
+  const heroScrollRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -462,85 +680,23 @@ export default function Landing() {
       icon: 'zones',
       title: t('landing.cinematic_answer_1_title'),
       body: t('landing.cinematic_answer_1_body'),
-      metric: '建议轻松跑',
+      metric: t('landing.command_card_1_metric'),
     },
     {
       number: '02',
       icon: 'vdot',
       title: t('landing.cinematic_answer_2_title'),
       body: t('landing.cinematic_answer_2_body'),
-      metric: '体能在进步',
+      metric: t('landing.command_card_2_metric'),
     },
     {
       number: '03',
       icon: 'shoe',
       title: t('landing.cinematic_answer_3_title'),
       body: t('landing.cinematic_answer_3_body'),
-      metric: '轮换训练鞋',
+      metric: t('landing.command_card_3_metric'),
     },
   ];
-
-  const formulaValues = {
-    vdot: '58.4',
-    acwr: '0.82',
-    h: '18',
-    count: '6',
-    date: '2026-05-17',
-    distance: '8 km',
-    pace: '4:21 /km',
-  };
-
-  const formulaRows = [
-    {
-      id: 'vdot',
-      label: t('landing.cinematic_formula_vdot_label'),
-      copy: t('landing.cinematic_formula_vdot', formulaValues),
-      formula: t('landing.cinematic_formula_vdot_full'),
-      proof: t('landing.cinematic_formula_vdot_proof', formulaValues),
-      steps: [
-        t('landing.cinematic_formula_vdot_step_1'),
-        t('landing.cinematic_formula_vdot_step_2'),
-        t('landing.cinematic_formula_vdot_step_3', formulaValues),
-      ],
-    },
-    {
-      id: 'acwr',
-      label: t('landing.cinematic_formula_acwr_label'),
-      copy: t('landing.cinematic_formula_acwr', formulaValues),
-      formula: t('landing.cinematic_formula_acwr_full'),
-      proof: t('landing.cinematic_formula_acwr_proof', formulaValues),
-      steps: [
-        t('landing.cinematic_formula_acwr_step_1'),
-        t('landing.cinematic_formula_acwr_step_2'),
-        t('landing.cinematic_formula_acwr_step_3', formulaValues),
-      ],
-    },
-    {
-      id: 'recovery',
-      label: t('landing.cinematic_formula_recovery_label'),
-      copy: t('landing.cinematic_formula_recovery', formulaValues),
-      formula: t('landing.cinematic_formula_recovery_full'),
-      proof: t('landing.cinematic_formula_recovery_proof', formulaValues),
-      steps: [
-        t('landing.cinematic_formula_recovery_step_1'),
-        t('landing.cinematic_formula_recovery_step_2'),
-        t('landing.cinematic_formula_recovery_step_3', formulaValues),
-      ],
-    },
-    {
-      id: 'paces',
-      label: t('landing.cinematic_formula_paces_label'),
-      copy: t('landing.cinematic_formula_paces', formulaValues),
-      formula: t('landing.cinematic_formula_paces_full'),
-      proof: t('landing.cinematic_formula_paces_proof', formulaValues),
-      steps: [
-        t('landing.cinematic_formula_paces_step_1'),
-        t('landing.cinematic_formula_paces_step_2'),
-        t('landing.cinematic_formula_paces_step_3', formulaValues),
-      ],
-    },
-  ];
-  const activeFormula = formulaRows.find((row) => row.id === activeFormulaId);
 
   const races = [
     { id: 'tokyo', name: t('landing.cinematic_race_tokyo'), raceDate: '2027-03-07', goal: 'PB', geo: { lat: 35.6762, lng: 139.6503 } },
@@ -568,15 +724,6 @@ export default function Landing() {
     { feature: t('landing.cinematic_compare_shoes'), note: t('landing.cinematic_compare_shoes_note'), hermes: true, strava: 'partial', runna: false },
     { feature: t('landing.cinematic_compare_local'), note: t('landing.cinematic_compare_local_note'), hermes: true, strava: false, runna: false },
     { feature: t('landing.cinematic_compare_noise'), note: t('landing.cinematic_compare_noise_note'), hermes: true, strava: false, runna: true },
-  ];
-
-  const zones = [
-    [t('landing.cinematic_zone_recovery'), '<59%', t('landing.cinematic_zone_recovery_desc'), '6:18 /km'],
-    [t('landing.cinematic_zone_easy'), '59-75%', t('landing.cinematic_zone_easy_desc'), '5:42 /km'],
-    [t('landing.cinematic_zone_marathon'), '75-83%', t('landing.cinematic_zone_marathon_desc'), '4:36 /km'],
-    [t('landing.cinematic_zone_threshold'), '83-92%', t('landing.cinematic_zone_threshold_desc'), '4:21 /km'],
-    [t('landing.cinematic_zone_interval'), '92-105%', t('landing.cinematic_zone_interval_desc'), '3:52 /km'],
-    [t('landing.cinematic_zone_repetition'), '>105%', t('landing.cinematic_zone_repetition_desc'), '3:30 /km'],
   ];
 
   const footerUtilityLinks = [
@@ -615,13 +762,8 @@ export default function Landing() {
 
       <main>
         {/* ── 1. Hero ── */}
-        <section className="landing-cinematic-hero">
-          <div className="landing-cinematic-hero-plate" aria-hidden="true">
-            <div className="landing-cinematic-hero-photo" />
-            <div className="landing-cinematic-hero-scrim" />
-          </div>
-
-          <PageWidth className="landing-cinematic-hero-inner">
+        <section ref={heroScrollRef} className="landing-cinematic-hero landing-cinematic-hero--minimal">
+          <PageWidth className="landing-cinematic-hero-inner landing-hero-shoe-grid">
             <div className="landing-cinematic-hero-copy landing-command-copy">
               <h1 className="landing-cinematic-hero-title">
                 <span>{t('landing.cinematic_hero_line_1')}</span>
@@ -635,9 +777,8 @@ export default function Landing() {
                   <StravaLogo />
                   <span>{t('landing.cta_strava')}</span>
                 </button>
-                <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--ghost is-large">
-                  <span>{t('landing.get_started')}</span>
-                  <LandingGlyph name="arrow" />
+                <Link to="/signup" className="landing-cinematic-hero-alt-link">
+                  {t('landing.get_started')}
                 </Link>
               </div>
 
@@ -645,6 +786,7 @@ export default function Landing() {
                 <span>{t('landing.cinematic_trust_local')}</span>
               </div>
             </div>
+            <ShoeRunCycle scrollContainerRef={heroScrollRef} />
           </PageWidth>
         </section>
 
@@ -664,68 +806,10 @@ export default function Landing() {
                 </article>
               ))}
             </RevealSection>
-
-            <RevealSection className="landing-command-rhythm" delay={90} onClick={() => setActiveFormulaId(null)}>
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_formula_kicker')}</span>
-              <h2>{t('landing.cinematic_formula_title')}</h2>
-              <p>{t('landing.cinematic_formula_copy')}</p>
-              <div className="landing-command-rhythm-list">
-                {formulaRows.map((row, index) => (
-                  <button
-                    key={row.id}
-                    type="button"
-                    className={`landing-command-rhythm-card${activeFormulaId === row.id ? ' is-active' : ''}`}
-                    style={{ '--rhythm-index': index }}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setActiveFormulaId(row.id);
-                    }}
-                    aria-pressed={activeFormulaId === row.id ? 'true' : 'false'}
-                  >
-                    <span>{row.label}</span>
-                    <p>{row.copy}</p>
-                  </button>
-                ))}
-              </div>
-              {activeFormula ? (
-                <div className="landing-command-formula-detail" aria-live="polite">
-                  <div className="landing-command-formula-detail-head">
-                    <span>{activeFormula.label}</span>
-                    <strong>{activeFormula.copy}</strong>
-                  </div>
-                  <code>{activeFormula.formula}</code>
-                  <p>{activeFormula.proof}</p>
-                  <ol className="landing-command-formula-steps">
-                    {activeFormula.steps.map((step, index) => (
-                      <li key={step}>
-                        <span>{String(index + 1).padStart(2, '0')}</span>
-                        <p>{step}</p>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              ) : null}
-            </RevealSection>
           </PageWidth>
         </section>
 
-        {/* ── 3. Coach Voice ── */}
-        <section className="landing-cinematic-coach">
-          <PageWidth>
-            <RevealSection className="landing-cinematic-coach-grid">
-              <div className="landing-cinematic-quote-mark" aria-hidden="true">"</div>
-              <blockquote>
-                <p>{t('landing.cinematic_coach_quote')}</p>
-              </blockquote>
-              <div className="landing-cinematic-coach-meta">
-                <span>{t('landing.cinematic_coach_kicker')}</span>
-                <strong>{t('landing.cinematic_coach_meta')}</strong>
-              </div>
-            </RevealSection>
-          </PageWidth>
-        </section>
-
-        {/* ── 4. Three Daily Answers ── */}
+        {/* ── 3. Three Daily Answers ── */}
         <section id="answers" className="landing-cinematic-answers">
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head landing-cinematic-section-head--answers">
@@ -776,73 +860,7 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        {/* ── 5. Science: VDOT + Formula ── */}
-        <section id="science" className="landing-cinematic-formula">
-          <PageWidth className="landing-cinematic-formula-grid">
-            <RevealSection className="landing-cinematic-formula-copy">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_formula_kicker')}</span>
-              <h2>{t('landing.cinematic_formula_title')}</h2>
-              <p>{t('landing.cinematic_formula_copy')}</p>
-              <div className="landing-cinematic-formula-list">
-                {formulaRows.map((row) => (
-                  <div key={row.id}>
-                    <span>{row.label}</span>
-                    <p>{row.copy}</p>
-                  </div>
-                ))}
-              </div>
-            </RevealSection>
-
-            <RevealSection className="landing-cinematic-paper" delay={80}>
-              <div className="landing-cinematic-paper-head">
-                <span>{t('landing.cinematic_formula_paper_kicker')}</span>
-                <span>{t('landing.cinematic_formula_paper_source')}</span>
-              </div>
-              <div className="landing-cinematic-equations">
-                <span>v = distance / time</span>
-                <span>VO2 = -4.60 + 0.182258v + 0.000104v2</span>
-                <span>%VO2max = 0.8 + 0.1894e-0.0128t + 0.2989e-0.1933t</span>
-                <strong>VDOT = VO2 / %VO2max</strong>
-              </div>
-              <div className="landing-cinematic-paper-foot">
-                <div>
-                  <span>{t('landing.cinematic_formula_last_input')}</span>
-                  <strong>{t('landing.cinematic_formula_last_input_value', formulaValues)}</strong>
-                </div>
-                <div>
-                  <span>{t('landing.cinematic_formula_result')}</span>
-                  <strong>VDOT 58.4</strong>
-                </div>
-              </div>
-            </RevealSection>
-          </PageWidth>
-        </section>
-
-        {/* ── 6. Training Zones ── */}
-        <section className="landing-cinematic-zones">
-          <PageWidth>
-            <RevealSection className="landing-cinematic-section-head">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_zones_kicker')}</span>
-              <h2>{t('landing.cinematic_zones_title')}</h2>
-            </RevealSection>
-
-            <div className="landing-cinematic-zone-grid">
-              {zones.map(([name, percent, desc, pace], index) => (
-                <RevealSection key={name} className={`landing-cinematic-zone ${index === 3 ? 'is-active' : ''}`} delay={index * 35}>
-                  <div>
-                    <h3>{name}</h3>
-                    <span>{percent} VO2</span>
-                  </div>
-                  <p>{desc}</p>
-                  <i><span style={{ width: `${22 + index * 12}%` }} /></i>
-                  <strong>{pace}</strong>
-                </RevealSection>
-              ))}
-            </div>
-          </PageWidth>
-        </section>
-
-        {/* ── 7. Races ── */}
+        {/* ── 4. Races ── */}
         <section id="races" className="landing-cinematic-races">
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head is-split">

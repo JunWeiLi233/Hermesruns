@@ -11,6 +11,83 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-07-22-08
+Date: 2026-07-22
+Surface: Public landing feature deck on `/` (`#features`)
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the feature deck's half-empty two-column shell with a full-width 12-column asymmetric composition. The primary “should I run?” decision now spans the full left side across both rows, while progress and shoe decisions form two compact supporting cards on the right. Cards use tonal surfaces, restrained ambient depth, larger editorial metrics, and subtle track-ring details; below 900px the layout collapses to a strict single column.
+Why: The deck had only one child inside a two-column outer grid, so the entire right half of the section was reserved but empty. The new composition uses the available width, keeps one clear decision hierarchy, and reduces vertical padding without adding copy or controls.
+Rollback target: `DV-2026-07-22-07`
+Notes: Computer Use browser proof confirmed the desktop deck fills the section with no dead column and the 400px responsive view collapses cleanly. The existing three bilingual content blocks, glyphs, metrics, anchor, hero handoff, navigation, and downstream sections are unchanged. Focused landing guards, ESLint, the production Vite build, and `git diff --check` passed; the repository's optional frontend runtime-sync verifier is absent on this checkout.
+
+### Version: DV-2026-07-22-07
+Date: 2026-07-22
+Surface: Public landing hero identity-locked running gait on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/assets/generated/run-gait-v2/evo-sl-side-master.png`, `frontend/src/assets/generated/run-gait-v2/evo-sl-side-master.webp`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the 11-image scroll scrub with one immutable, side-on EVO SL bitmap rendered on the existing persistent canvas. Scroll now rigs that single shoe through eased loading, midstance compression, forefoot-pivoted heel rise and toe-off, a flight arc, toe-up terminal swing, heel-first initial contact, and a flat final landing. The timeline assigns 38% to contact/stance and 62% to aerial/swing instead of distributing arbitrary product-photo poses evenly.
+Why: The supplied/generated frames changed camera perspective, shoe proportions, branding, and sole geometry, so the sequence read as different images replacing one another rather than one shoe running. One identity-locked rig preserves continuity and removes the frame boundary that caused visible blinking.
+Rollback target: `DV-2026-07-22-06`
+Notes: The side-on master was created with the built-in image workflow on a removable chroma background, converted locally to alpha, and validated with transparent corners and 21.75% subject coverage. Desktop browser proof at 1280×720 confirmed exact gait milestones at progress `0.380` (toe-off), `0.680` (flight), `0.939` (initial contact), and `1.000` (landed); the feature grid begins immediately afterward. Compact 390×844 remains static with copy visible and zero horizontal overflow. No console warning/error was produced.
+
+### Version: DV-2026-07-22-06
+Date: 2026-07-22
+Surface: Public landing hero scroll-focus transition on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Added a scroll-driven focus transition to the pinned hero. The opening two-column composition remains intact at rest; during the first 14% of desktop hero scrolling, the full left copy group fades, blurs, and shifts away while the shoe moves from the right column to the exact grid center and scales up slightly. The centered shoe then continues the existing one-way frame scrub to the landing pose before the next grid enters.
+Why: The user wanted the first grid to become a shoe-only stage once scrolling begins instead of keeping the headline, paragraph, and actions beside the animation.
+Rollback target: `DV-2026-07-22-05`
+Notes: Hidden hero controls become inert and pointer-inactive, then recover when scrolling back to the top. Compact layouts keep the stacked copy visible and do not apply the centering transform; reduced-motion behavior remains static. The single-canvas renderer and final-frame handoff are unchanged.
+
+### Version: DV-2026-07-22-05
+Date: 2026-07-22
+Surface: Public landing hero scroll sequence on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the autonomous 1.2-second shoe loop with a one-way, scroll-scrubbed sequence. The first pose remains still on entry, the desktop hero grid pins for a 240-viewport scroll track, all supplied and midpoint poses advance with scroll, the last supplied landing pose holds at completion, and the sticky grid then releases into the feature grid.
+Why: The user wanted the first grid to take over the viewport and make the shoe motion part of page progression instead of an endlessly running decoration.
+Rollback target: `DV-2026-07-22-04`
+Notes: The loop-closure pose is no longer imported, so the sequence cannot restart before the next grid. The persistent high-DPI canvas remains in place to prevent blinking. Smaller screens use normal document flow, reduced-motion users keep the first pose, and route-scoped `overflow-x: clip` preserves sticky positioning without horizontal overflow.
+
+### Version: DV-2026-07-22-04
+Date: 2026-07-22
+Surface: Public landing hero shoe run-cycle rendering on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the frame-by-frame `<img>` visibility stack with one persistent high-DPI canvas. All 12 WebP poses are loaded and decoded first, then drawn synchronously onto the same surface at the existing 100 ms cadence while the 1.2-second stride transform continues on its wrapper.
+Why: The user could see a blink between poses. Runtime probing confirmed that image source boundaries could briefly expose no decoded bitmap even after preloading; the canvas keeps the previous pixels mounted until the next decoded pose is drawn in the same browser task.
+Rollback target: `DV-2026-07-22-03`
+Notes: The shoe artwork, pose order, road-running cadence, responsive layout, and reduced-motion fallback are unchanged. The final renderer has one canvas and zero animated image layers, avoiding both blank gaps and crossfade ghosting.
+
+### Version: DV-2026-07-22-03
+Date: 2026-07-22
+Surface: Public landing hero shoe run-cycle cadence on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Slowed the synchronized 12-frame shoe animation from a 0.72-second loop to a 1.2-second loop. Each pose now holds for 100 ms instead of 60 ms, and the plant-push-flight-land transform uses the same 1.2-second duration so the shoe reads as one steady road-running stride rather than a rapidly advancing image sequence.
+Why: The user reported that the prior cadence moved too quickly and did not resemble running on a road.
+Rollback target: `DV-2026-07-22-02`
+Notes: The existing shoe assets, frame order, one-visible-frame contract, responsive layout, and reduced-motion fallback are unchanged.
+
+### Version: DV-2026-07-22-02
+Date: 2026-07-22
+Surface: Public landing hero shoe run-cycle on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/assets/generated/run-cycle/*.webp`, `frontend/src/pages/landingShoeRunCycle.smoke.test.js`, `.ai-sync/CUSTOMER_PLAYTEST_GATE.md`, `DESIGN_VERSIONS.md`
+What changed: Added a shoe-only 12-frame stride animation beside the “More Than / Just Tracking. / Every Stride.” hero headline. Six generated midpoint poses now sit between the six supplied keyframes—including the landing-to-next-heel-strike loop closure—while the hero keeps a responsive two-column stage on desktop, collapses the shoe beneath the copy on smaller screens, waits for every frame before looping, and moves one visible shoe through a synchronized plant-push-flight-land path. Reduced-motion users keep a static first pose.
+Why: The user supplied six run-cycle keyframes, asked for the shoe to be isolated and animated beside the landing-page headline, then requested additional frames so the motion reads as a smoother run rather than image swapping.
+Rollback target: `DV-2026-07-22-01`
+Notes: The source keyframes and six generated in-betweens were edited with the built-in image workflow onto a removable chroma background and converted to alpha WebP assets (about 511 KiB total). The final 0.72-second loop advances every 60 ms, deliberately avoids crossfade ghosting, and keeps exactly one shoe visible. Existing landing copy, auth actions, routing, feature sections, and data wiring are preserved.
+
+### Version: DV-2026-07-22-01
+Date: 2026-07-22
+Surface: Public landing page minimalist refresh on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `DESIGN_VERSIONS.md`
+What changed:
+- Removed three dense, unlocked sections from the landing: the Coach Voice giant-quote block, the interactive 4-toggle Formula explorer (VDOT/ACWR/recovery/paces with equation + proof + steps), and the 6-row Training Zones table.
+- Simplified the hero to a flat warm-paper surface (`#f4efe6`) with no photo/scrim plate, a single primary "Continue with Strava" CTA plus a quiet "Email sign-up" text link, and a plain coral (`#d85f4c`) accent headline line instead of the multi-stop text gradient.
+- Cut the dead legacy CSS layers (`.landing-page`, `.landing-page--notebook`, `.landing-page--notebooklm`, `.landing-v2`, `.landing-page--editorial`) — `landing.css` went from 5722 to ~3360 lines, ~42% reduction with zero rendered change to those layers.
+- Fixed a pre-existing bilingual bug: the three command-card metrics were hardcoded Chinese; they are now i18n keys (`landing.command_card_*_metric`) in both `en` and `zh-CN`.
+- Resulting landing structure: Nav → Hero (minimal) → Command Deck (3 cards) → Daily Answers (3 questions) → Races (locked) → Comparison (locked) → Final CTA (locked) → Footer.
+Why: The landing was maximalist (9 sections, ~7055px tall, dense data tables and an interactive formula widget competing for focus). The refresh targets `design.md §3.3` (cinematic hierarchy / one clear focal point) and §3.1 (tonal separation over hard lines) by reducing section count and visual load while preserving the locked race map, comparison chart, and final CTA contracts.
+Rollback target: working tree before this change
+Notes: Preserved exactly — auth redirect (`/dashboard` or `/profile`), Strava OAuth start, login/signup routes, the calibrated race map (anchors, spreading-circle animation, 10 labels), the objective comparison chart (honest Runna race-plan win + Strava import credit), and the warm-paper final CTA card with Strava + email actions and trust chips. No routing, backend, or data wiring changed. Locale copy updated in both languages.
+
 ### Version: DV-2026-06-23-09
 Date: 2026-06-23
 Surface: Muscle Training exercise anatomy mapping on `/muscle-training`
