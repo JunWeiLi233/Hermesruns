@@ -75,6 +75,8 @@ const LEGAL_COPY = {
     },
     backHome: 'Back to Hermes',
     backApp: 'Back to profile',
+    sectionsLabel: 'sections',
+    signoff: 'Do you run today?',
   },
   zh: {
     terms: {
@@ -143,6 +145,8 @@ const LEGAL_COPY = {
     },
     backHome: '返回 Hermes',
     backApp: '返回个人主页',
+    sectionsLabel: '小节',
+    signoff: '今天，你跑步了吗？',
   },
 };
 
@@ -180,23 +184,31 @@ export default function LegalPage({ variant = 'terms' }) {
         </header>
 
         <main className="legal-page-content">
-          <section className="legal-page-hero">
+          <section className="legal-page-hero legal-page-hero--editorial" aria-labelledby="legal-page-title">
             <div className="legal-page-hero-copy">
-              <span className="legal-page-eyebrow">{page.eyebrow}</span>
-              <h1>{page.title}</h1>
+              <span className="legal-page-kicker">
+                <i className="legal-page-kicker-dot" aria-hidden="true" />
+                {page.eyebrow}
+              </span>
+              <h1 id="legal-page-title">{page.title}</h1>
               <p>{page.intro}</p>
+              <div className="legal-page-hero-meta">
+                <span>{page.updated}</span>
+                <span aria-hidden="true">·</span>
+                <span>{page.sections.length} {dictionary.sectionsLabel}</span>
+              </div>
             </div>
 
             {isPrivacy && (
-              <aside className="privacy-hero-panel" aria-label={page.title}>
+              <aside className="privacy-hero-panel" aria-label={page.sections[2]?.heading || page.title}>
                 <div className="privacy-hero-panel-ring" aria-hidden="true">
-                  <ShieldCheck size={44} strokeWidth={1.7} />
+                  <ShieldCheck size={28} strokeWidth={1.7} />
                 </div>
-                <div>
+                <div className="privacy-hero-panel-copy">
                   <span>{page.updated}</span>
                   <strong>{page.sections[2]?.heading}</strong>
+                  <p>{page.sections[2]?.body}</p>
                 </div>
-                <p>{page.sections[2]?.body}</p>
               </aside>
             )}
           </section>
@@ -205,7 +217,7 @@ export default function LegalPage({ variant = 'terms' }) {
             <section className="privacy-signal-strip" aria-label={page.title}>
               {privacySignals.map((signal) => (
                 <article className="privacy-signal" key={signal.label}>
-                  {createElement(signal.icon, { size: 22, strokeWidth: 1.7, 'aria-hidden': true })}
+                  {createElement(signal.icon, { size: 18, strokeWidth: 1.7, 'aria-hidden': true })}
                   <span>{signal.value}</span>
                   <strong>{signal.label}</strong>
                 </article>
@@ -213,18 +225,23 @@ export default function LegalPage({ variant = 'terms' }) {
             </section>
           )}
 
-          <section className="legal-page-sections">
-            {page.sections.map((section) => (
-              <article key={section.heading} className="legal-page-card">
-                {isPrivacy && <span className="legal-page-card-index" aria-hidden="true" />}
-                <h2>{section.heading}</h2>
-                <p>{section.body}</p>
+          <section className="legal-page-sections legal-page-sections--editorial" aria-label={page.title}>
+            {page.sections.map((section, index) => (
+              <article key={section.heading} className="legal-page-row">
+                <span className="legal-page-row-index" aria-hidden="true">
+                  {String(index + 1).padStart(2, '0')} / {String(page.sections.length).padStart(2, '0')}
+                </span>
+                <div className="legal-page-row-copy">
+                  <h2>{section.heading}</h2>
+                  <p>{section.body}</p>
+                </div>
               </article>
             ))}
           </section>
         </main>
 
         <footer className="legal-page-footer">
+          <p className="legal-page-signoff">{dictionary.signoff}</p>
           <span>{page.updated}</span>
           <FooterNavLinks />
         </footer>

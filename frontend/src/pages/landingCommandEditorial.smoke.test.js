@@ -126,8 +126,6 @@ assert(
     && landingSource.includes('className="landing-cinematic-map-selection-ring"')
     && !landingSource.includes('<animateMotion')
     && !/pin:\s*\{/.test(landingSource)
-    && landingSource.includes('className="landing-cinematic-map-timeline"')
-    && landingSource.includes('className="landing-cinematic-map-timeline-item"')
     && landingSource.includes('className="landing-cinematic-map-guide"')
     && landingSource.includes('className={`landing-cinematic-map-guide-step is-${step.key}`}')
     && landingSource.includes('className="landing-cinematic-map-bottom-deck"')
@@ -261,9 +259,6 @@ assert(
     && /@keyframes landing-cinematic-map-guide-locate-step\s*\{[\s\S]*transform:\s*translateX\(3px\)/.test(styleSource)
     && /@keyframes landing-cinematic-map-guide-read-step\s*\{[\s\S]*transform:\s*translateX\(3px\)/.test(styleSource)
     && /@keyframes landing-cinematic-map-guide-match-step\s*\{[\s\S]*transform:\s*translateX\(3px\)/.test(styleSource)
-    && /\.landing-cinematic-map-timeline\s*\{[\s\S]*flex-wrap:\s*wrap;[\s\S]*width:\s*min\(430px,\s*calc\(100% - 36px\)\)/.test(styleSource)
-    && /\.landing-cinematic-map-timeline-item\s*\{[\s\S]*animation:\s*landing-cinematic-map-timeline-step var\(--race-cycle-duration,\s*15s\)/.test(styleSource)
-    && /@keyframes landing-cinematic-map-timeline-step\s*\{[\s\S]*color:\s*var\(--lc-coral\)/.test(styleSource)
     && /\.landing-cinematic-race-row::before,[\s\S]*\.landing-cinematic-race-row::after\s*\{[\s\S]*animation-duration:\s*var\(--race-cycle-duration,\s*15s\)/.test(styleSource)
     && /\.landing-cinematic-race-row::after\s*\{[\s\S]*animation-name:\s*landing-cinematic-race-row-panel-step/.test(styleSource)
     && /@keyframes landing-cinematic-race-row-panel-step\s*\{[\s\S]*14%,\s*20%/.test(styleSource)
@@ -289,11 +284,10 @@ assert(
 
 assert(
   /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-race-row\s*\{[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto;[\s\S]*min-height:\s*92px/.test(styleSource)
-    && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-timeline\s*\{[\s\S]*top:\s*8px;[\s\S]*width:\s*min\(320px,\s*calc\(100% - 28px\)\)/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-bottom-deck\s*\{[\s\S]*left:\s*50%;[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);[\s\S]*width:\s*min\(320px,\s*calc\(100% - 28px\)\)/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-guide\s*\{[\s\S]*position:\s*static/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-caption-strip\s*\{[\s\S]*position:\s*relative/.test(styleSource),
-  'Landing race sequence should keep compact mobile race cards plus centered mobile map timeline, guide, and caption.',
+  'Landing race sequence should keep compact mobile race cards plus centered mobile map guide and caption.',
 );
 
 assert(
@@ -337,8 +331,7 @@ assert(
   /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*1\.18px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
     && !/@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*86/.test(landingStyleSource)
     && /@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*5\.6;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-timeline-item\s*\{[\s\S]*display:\s*inline-flex;[\s\S]*font-size:\s*0\.58rem;/.test(landingStyleSource),
+    && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource),
   'Landing race map active split CSS should keep SVG pin labels and selection pulses bounded inside the map.',
 );
 
@@ -362,17 +355,16 @@ assert(
     && !landingSource.includes('cinematic_final_proof_ready')
     && !landingSource.includes('<strong>2:52</strong>')
     && !landingSource.includes('<strong>82%</strong>')
-    && /\.landing-cinematic-final-card\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.92fr\) minmax\(280px,\s*0\.58fr\);/.test(landingStyleSource)
-    && /\.landing-cinematic-final-bg\s*\{[\s\S]*grid-column:\s*2;[\s\S]*url\("\/src\/assets\/generated\/landing-command-hero-background\.webp"\)/.test(landingStyleSource)
-    && /\.landing-cinematic-final-bg::before\s*\{[\s\S]*content:\s*none;[\s\S]*\}/.test(landingStyleSource)
-    && /\.landing-cinematic-final-bg::after\s*\{[\s\S]*content:\s*none;[\s\S]*\}/.test(landingStyleSource)
-    && /\.landing-cinematic-final-copy\s*\{[\s\S]*justify-items:\s*start;[\s\S]*text-align:\s*left/.test(landingStyleSource)
-    && /\.landing-cinematic-final-copy h2\s*\{[\s\S]*letter-spacing:\s*0;[\s\S]*white-space:\s*normal/.test(landingStyleSource)
+    && landingSource.includes('landing-cinematic-final-card landing-cinematic-final-card--minimal')
+    && !landingSource.includes('className="landing-cinematic-final-bg"')
+    && /\.landing-cinematic-final-card--minimal\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*justify-items:\s*center/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal\s*\{[\s\S]*background:\s*#f4efe6/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-bg\s*\{[\s\S]*display:\s*none/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy\s*\{[\s\S]*text-align:\s*center/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy h2\s*\{[\s\S]*letter-spacing:\s*0;[\s\S]*font-size:\s*clamp/.test(landingStyleSource)
     && /\.landing-cinematic-final-card \.landing-cinematic-btn--primary\s*\{[\s\S]*linear-gradient\(135deg,\s*#a0392a 0%,\s*#fc7e69 100%\)/.test(landingStyleSource)
-    && /\.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/.test(landingStyleSource)
-    && /@media \(max-width:\s*900px\)\s*\{[\s\S]*\.landing-cinematic-final-card\s*\{[\s\S]*grid-template-columns:\s*1fr/.test(landingStyleSource)
-    && /@media \(max-width:\s*640px\)\s*\{[\s\S]*\.landing-cinematic-final-card \.landing-cinematic-hero-actions,[\s\S]*\.landing-cinematic-final-card \.landing-cinematic-btn\s*\{[\s\S]*width:\s*100%;/.test(landingStyleSource),
-  'Landing final CTA should use the active split CSS command grid with an image rail, left-aligned copy, clear CTA hierarchy, and mobile-safe collapse.',
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*flex;[\s\S]*justify-content:\s*center/.test(landingStyleSource),
+  'Landing final CTA should be a warm (#f4efe6) centered minimal card: single column, no photo panel, centered copy + actions, coral gradient primary button, and a centered row of mono trust chips. No proof grids or fake metrics.',
 );
 
 console.log('[PASS] Landing command editorial guardrails passed.');

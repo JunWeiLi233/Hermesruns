@@ -61,6 +61,8 @@ powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 
 
 Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
 
+Platform note: the Session Start and Runtime Proof commands above are written for the author's Windows host (`C:\Program Files\nodejs\node.exe`, PowerShell). On macOS/Linux use the plain `node` binary (`/opt/homebrew/bin/node` on this darwin checkout) and the equivalent POSIX shell invocation. Some referenced files are gitignored machine-local helpers and are absent on other hosts — on this checkout `generate-codex.js`, `optimize-agent-context.mjs`, `omx-auto-hermes-bridge.mjs`, `verify-frontend-runtime-sync.mjs`, `verify-backend-runtime-sync.mjs`, `.ai-codex/optimized-codex.md`, and `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md` do not exist and `.ai-codex/` is absent entirely. If a Session Start helper is missing, skip it and say `unverified` for that step rather than failing; do not fabricate the file. Backend compile also requires a JDK (`java`/`JAVA_HOME`) that is not installed on this host — install one before running `./mvnw`.
+
 Then read:
 
 - `docs/PROJECT_MAP.md`

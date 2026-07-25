@@ -14,19 +14,25 @@ public class MuscleTrainingPlannerService {
     private final MuscleTrainingMetricsService metricsService;
     private final MuscleTrainingSessionService sessionService;
     private final ActivityRepository activityRepository;
+    private final SorenessLogRepository sorenessLogRepository;
+    private final InjuryRiskService injuryRiskService;
 
     public MuscleTrainingPlannerService(
             MuscleTrainingProfileService profileService,
             MuscleTrainingCheckInService checkInService,
             MuscleTrainingMetricsService metricsService,
             MuscleTrainingSessionService sessionService,
-            ActivityRepository activityRepository
+            ActivityRepository activityRepository,
+            SorenessLogRepository sorenessLogRepository,
+            InjuryRiskService injuryRiskService
     ) {
         this.profileService = profileService;
         this.checkInService = checkInService;
         this.metricsService = metricsService;
         this.sessionService = sessionService;
         this.activityRepository = activityRepository;
+        this.sorenessLogRepository = sorenessLogRepository;
+        this.injuryRiskService = injuryRiskService;
     }
 
     @Transactional
@@ -73,13 +79,37 @@ public class MuscleTrainingPlannerService {
         List<MuscleDayPlanDto> days = assignSessions(effectiveSchedule, metrics, preference, todayCheckIn);
         List<SessionDefinitionDto> assignedSessions = assignedSessionDefinitions(days, preference, metrics);
 
+        // Today's recommended muscle-training area: derived from the plan metrics
+        // (recovery gate, load status, current focus, recent hard runs) plus today's
+        // soreness log and the injury-risk verdict. Consumes currentFocus so the
+        // area recommendation stays consistent with today's scheduled session.
+        LocalDate today = LocalDate.now();
+        String sorenessLevel = sorenessLogRepository.findByRunnerAndDate(runner, today)
+                .map(SorenessLog::getLevel)
+                .orElse(null);
+        String injuryRisk = null;
+        try {
+            injuryRisk = injuryRiskService.getRiskAssessment(runner).risk();
+        } catch (Exception ignored) {
+            // Injury-risk assessment is best-effort; never block the plan on it.
+        }
+        String todaySessionType = days.stream()
+                .filter(d -> today.equals(d.date()))
+                .map(d -> d.run() != null ? d.run().workoutType() : null)
+                .findFirst()
+                .orElse(null);
+        MuscleTrainingMetricsService.RecommendedArea recommendedArea =
+                metricsService.deriveRecommendedMuscleArea(metrics, sorenessLevel, injuryRisk, todaySessionType);
+
         return new MusclePlanDto(
                 metricsService.buildWeekContext(metrics),
                 days,
                 assignedSessions,
                 buildRationaleCodes(preference, metrics),
                 todayCheckIn,
-                resolvePlanSource(todayCheckIn)
+                resolvePlanSource(todayCheckIn),
+                recommendedArea.focus(),
+                recommendedArea.reasonCode()
         );
     }
 

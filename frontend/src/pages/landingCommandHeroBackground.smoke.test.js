@@ -72,7 +72,7 @@ assert.doesNotMatch(
 
 assert.match(
   landingSource,
-  /className="landing-command-deck"/,
+  /className="landing-command-deck(?:\s[^"]*)?"/,
   'Landing feature section should keep the newer command-deck design instead of the old feature-grid fallback.',
 );
 

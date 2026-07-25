@@ -11,6 +11,88 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-07-24-07
+Date: 2026-07-24
+Surface: `/muscle-training` page — auto muscle-area recommendation + check-in persistence gap fix
+Files: `backend/.../MuscleTrainingMetricsService.java`, `backend/.../MuscleTrainingPlannerService.java`, `backend/.../MusclePlanDto.java`, `backend/.../MuscleTrainingCheckIn.java`, `backend/.../TodayCheckInUpdate.java`, `backend/.../TodayCheckInDto.java`, `backend/.../MuscleTrainingCheckInService.java`, `backend/.../MuscleTrainingMetricsServiceTest.java`, `backend/.../ProfileControllerTests.java`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/{en,zh-CN}/components.js`, `CONTEXT.md`, `DESIGN_VERSIONS.md`
+What changed:
+- **Backend — auto muscle-area recommendation.** New `MuscleTrainingMetricsService.deriveRecommendedMuscleArea(metrics, sorenessLevel, injuryRisk, sessionType)` method returns a `RecommendedArea(focus, reasonCode)` via a 7-priority cascade (protective → soreness → high-volume → recent-hard-run → recovery-session → steady-default → fallback), mirroring `todayRun.js`. Wired into `MuscleTrainingPlannerService.getPlan(...)` via `SorenessLogRepository` + `InjuryRiskService` injection; consumes `currentFocus` so it never competes with the existing session plan. Exposed as `recommendedMuscleArea` + `recommendedMuscleReasonCode` on `MusclePlanDto`.
+- **Backend — persistence gap fix.** `strengthFocus` + `strengthDose` columns added to `muscle_training_check_in` (ddl-auto, no migration). The check-in DTO/update/service now persist these fields (previously the frontend collected them but the backend dropped them).
+- **Frontend — auto-select + banner + pre-fill.** On page load, the recommended focus auto-selects the matching anatomy chip (via a new `FOCUS_TO_TARGET_AREA` bridge map) and a one-line reason banner renders above the chips with localized copy. The check-in strength composer opens pre-filled with the recommended focus. Manual chip clicks set a `userOverrideRef` so the auto-selection never clobbers a manual pick.
+- **i18n** — `recommended_area_label` + 7 `recommended_area_reason_*` keys in both EN and ZH.
+Why: The page required a manual muscle-part pick; now the coach auto-recommends today's strength focus based on the runner's recovery/load/soreness data, reusing the existing engine. Fills the "auto-recommend instead of manual" gap surfaced in the grilling session.
+Rollback target: working tree before this change
+Notes: CONTEXT_LEDGER content preserves hold (existing day/type/dose engine untouched; the new recommender consumes its output). 10/10 backend cascade tests pass; 128/128 frontend tests pass; translation parity exit 0; lint clean. Live API verified: mock runner → `POSTERIOR_CHAIN / R_AREA_RECENT_HARD` (recentHardRunCount7d=1, recovery OPEN, load STEADY). Domain glossary captured in `CONTEXT.md` ("Today's Strength Focus", `StrengthFocus`, `StrengthDose`).
+
+### Version: DV-2026-07-24-06
+Date: 2026-07-24
+Surface: Landing final CTA card (`/`, `.landing-cinematic-final-card--minimal`)
+Files: `frontend/src/styles/_split/landing.css`, `DESIGN_VERSIONS.md`
+What changed: Refined the final CTA card's visual treatment toward the clean minimalist language. Trust chips converted from a loose flex row of mono labels into a tighter centered 3-cell row with `1px` hairline dividers between cells (`span + span { border-left }`), mono weight 600, more even padding — reads as a refined minimalist grid while keeping `display: flex; justify-content: center` (smoke-guard locked). Card widened slightly (`760px → 820px`) for more breathing room, radius softened (`28px → 24px`), padding increased (`clamp(48–88px) → clamp(56–104px)` top, `clamp(28–32px) → clamp(32–48px)` sides), and trust row given its own larger top margin (`clamp(32–44px)`). All smoke-guard constraints preserved: `background: #f4efe6`, `grid-template-columns: 1fr`, `justify-items: center`, centered copy, h2 `letter-spacing: 0` + clamp font-size, coral-gradient primary button, no proof grids / fake metrics / photo panel.
+Why: User asked to redesign the whole final CTA card. The `landingCommandEditorial.smoke.test.js` guard locks the centered single-column structure, so the redesign was applied within those rails — refining the trust row into a cleaner divided grid and giving the card more breathable, editorial rhythm.
+Mode: light (warm paper `#f4efe6`, locked by guard).
+Preserve list: All `landingCommandEditorial.smoke.test.js` final-CTA assertions retained (verified PASS). Auth redirect, Strava start, login/signup routes, bilingual en/zh copy, coral primary button all untouched.
+Rollback target: `DV-2026-07-24-05`
+
+### Version: DV-2026-07-24-05
+Date: 2026-07-24
+Surface: `/privacy` (Privacy Policy) — `LegalPage variant="privacy"`
+Files: `frontend/src/pages/LegalPage.jsx`, `frontend/src/styles/_split/misc.css`, `DESIGN_VERSIONS.md`
+What changed: Redesigned `/privacy` to the same clean minimalist white-canvas editorial language as `/terms` (`design.md` §5 + minimalism). Unified the markup so privacy now shares the editorial hero (coral mono kicker, Manrope display title, intro, mono meta row), the editorial section rows (mono `01 / 06` index + heading + body, whitespace-first separation with barely-there hairlines), and the footer signoff (`Do you run today?` / `今天，你跑步了吗？`). The whole page reads as **one continuous white card** (`#fdfcf9`, no borders/shadows): hero (open bottom radius) → signal strip (bridges flush) → sections (open top radius). Privacy keeps its identity minimally: the ShieldCheck `privacy-hero-panel` is now a flat 2-col aside inside the hero (small coral ring icon + mono updated + heading + body, no card chrome), and the `privacy-signal-strip` is a flat inline row of 4 mono-label signals separated by faint hairlines (no card chrome, no staggered margins). Hero is a 2-col grid on desktop (copy + panel), collapsing to single column under tablet; signal strip goes 4 → 2 → 1 column responsively. Removed the heavy gradient hero card, breathing-ring large panel, staggered shadowed signal cards, and the 2-column bordered card grid.
+Why: The previous privacy page used a heavier dialect (translucent gradient cards, breathing ring, staggered shadowed signals, bordered card grid) that drifted from the landing gallery and the minimalist `/terms` redesign. Aligning it gives both legal surfaces one coherent premium editorial language.
+Mode: light (matches `/terms` and the landing runtime).
+Preserve list: All `legalPrivacyRedesign.smoke.test.js` guards retained — JSX still imports `Database, FileCheck2, LockKeyhole, ShieldCheck`, renders `privacy-hero-panel`, `privacy-signal-strip`, `privacySignals.map`, `<HermesLogo tone="dark" />`; CSS still contains `.legal-page--privacy`, `.privacy-hero-panel`, `.privacy-signal-strip`, `#f6f3ec`, `#27221e`, `rgba(255,255,255,0.72)`, `@keyframes legal-privacy-breathe`, `@media (max-width: 640px)`, `min-height: 100dvh`; no negative tracking on `.legal-page-hero h1`; no dark `#121110` on privacy. Bilingual en/zh copy unchanged. Routing, back button, `FooterNavLinks` preserved. `/terms` regression verified (no privacy leakage).
+Rollback target: `DV-2026-07-24-04`
+
+### Version: DV-2026-07-24-04
+Date: 2026-07-24
+Surface: Landing hero shoe animation end frame (`ShoeRunCycle` on `/`)
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `DESIGN_VERSIONS.md`
+What changed: Added a coach-like prompt ("Do you run today?" / "今天，你跑步了吗？") that fades in on top of the shoe when the scroll-driven gait animation reaches its final `landed` frame. The prompt is a new `.landing-hero-shoe-cycle-prompt` span inside the `ShoeRunCycle` `<figure>`, positioned at the top of the figure, horizontally centered, in `Manrope` display type (`clamp(1.1–1.75rem)`, weight 600). Visibility is CSS-driven off the figure's existing `data-scroll-state` attribute: opacity 0 → 1 with a 0.5s ease when `data-scroll-state="complete"` (progress ≥ 1, gait `landed`). Reduced-motion users (whose `scrollState` is set to `reduced`) see it statically once the shoe bitmap is ready. Mobile (`≤980px`) still reveals it at scroll `complete`. Bilingual copy added as `landing.cinematic_hero_shoe_prompt` in en + zh-CN.
+Why: User asked to show "Do you run today?" on top of the shoe when the animation reaches the end — a closing coach prompt that lands with the final stride.
+Mode: light (inherits the landing hero's existing theme treatment).
+Preserve list: The scroll-driven gait rig, `SHOE_GAIT_MOTION_STOPS`, focus/center mechanics, hero copy opacity/blur/shift, reduced-motion fallback, and all `landingShoeRunCycle.smoke.test.js` guardrails are untouched. The prompt is additive only (no existing shoe-cycle behavior changed). Mobile and reduced-motion paths verified.
+Rollback target: `DV-2026-07-24-03`
+
+### Version: DV-2026-07-24-03
+Date: 2026-07-24
+Surface: `/terms` hero + section grid (whole Terms content surface) — `LegalPage variant="terms"`
+Files: `frontend/src/styles/_split/misc.css`, `DESIGN_VERSIONS.md`
+What changed: Unified the Terms hero (`法务说明`/`Hermes legal` kicker + `服务条款`/`Terms of Service` title + intro + meta) and the 6 editorial section rows into **one continuous clean white minimalist card** (`#fdfcf9`, no border, no shadow) sitting on the vellum page. The editorial hero now uses the same white canvas as the sections (open bottom radius `24px 24px 0 0`) and connects flush to the sections panel (open top radius `0 0 24px 24px`) with `gap: 0` and a single faint divider (`1px rgba(48,44,38,0.07)`) between hero and rows. Inside the sections: whitespace-first row separation with barely-there hairlines (`inset 0 1px 0 rgba(48,44,38,0.07)`, first-child none), near-imperceptible hover lift (`rgba(32,32,29,0.018)`), lightened mono index (`rgba(32,32,29,0.32)`) that shifts to coral `#f2664f` on hover, tighter `0.16fr` index column, refined subheads (`clamp(1.35–1.75rem)`, `-0.005em` tracking), roomier body (`line-height 1.78`). Removed the hero's decorative radial `::before`/`::after` overlays. Fixed a cascade bug where `.legal-page-hero` card chrome (shadow/28px padding) was leaking onto `.legal-page-hero--editorial`. Radii scale to `22px` on mobile; rows stack single-column under tablet.
+Why: User asked to apply the clean minimalism to the hero (`服务条款`) too, for consistency with the section grid. The hero+sections now read as a single restrained white editorial surface instead of a hero-on-vellum plus a separate card.
+Mode: light (Terms-only scope).
+Preserve list: Privacy variant fully untouched — verified hero card (shadowed), hero-panel, 4 signals, 6 cards intact, no editorial hero/sections leakage. Routing, back button, `FooterNavLinks`, `<HermesLogo tone="dark" />`, en/zh copy, and all `legalPrivacyRedesign.smoke.test.js` guards preserved. No user-visible copy changed.
+Rollback target: `DV-2026-07-24-02`
+
+### Version: DV-2026-07-24-02
+Date: 2026-07-24
+Surface: `/terms` (Terms of Service) — `LegalPage variant="terms"`
+Files: `frontend/src/pages/LegalPage.jsx`, `frontend/src/styles/_split/misc.css`, `DESIGN_VERSIONS.md`
+What changed: Redesigned the Terms page to the Light Aerodynamic Gallery language shared with the landing runtime (`design.md` §5). Replaced the equal-weight 2-column cream card wall with a flat editorial layout: sticky glass header, coral-dot mono kicker, large `Manrope` display title (weight 520), `Inter` intro + mono `EFFECTIVE · N SECTIONS` meta row, then asymmetric editorial section rows (mono `01 / 06` index + `Manrope` subhead + `Inter` body) separated only by hairline rules (`rgba(48,44,38,.16)`) with a tonal paper hover step — no card borders, no default shadows. Local tokens mirror the landing vellum canvas (`#f6f1e8 → #efe8dc`), coral `#f2664f`, and the `Manrope`/`Inter`/`JetBrains Mono` pairing. Rows collapse to a stacked single column under tablet; `prefers-reduced-motion` disables hover/padding transitions.
+Why: The previous Terms layout drifted from the landing's refined editorial gallery (generic cream cards, no mono metadata rhythm, bordered containment). Aligning it with the landing gives the legal surface the same premium, breathable, coach-like feel.
+Mode: light (dual-mode-safe; matches the landing runtime which is light-mode vellum).
+Preserve list: Privacy variant structure and all privacy CSS (`privacy-hero-panel`, `privacy-signal-strip`, `legal-page-card-index`, privacy keyframes) are untouched. Routing (`/terms`, `/privacy`), auth-aware back button, `FooterNavLinks`, `<HermesLogo tone="dark" />`, bilingual en/zh copy (unchanged), and all `legalPrivacyRedesign.smoke.test.js` guards are preserved.
+Rollback target: working tree before this change
+Notes: Privacy redesign marks (`#f6f3ec`, `#27221e`, `rgba(255,255,255,0.72)`) retained as fallback tokens/comments in `_split/misc.css` and remain present in the legacy `style.css` bundle for the smoke guard. No user-visible copy changed.
+
+### Version: DV-2026-07-24-01
+Date: 2026-07-24
+Surface: Landing final CTA card on `/` (`为你的下一场比赛训练得更聪明。`)
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Converted the final CTA from a 2-column (copy + hero photo panel) layout to a single centered warm-paper minimal card. Removed the right-side `landing-cinematic-final-bg` photo panel and the grid-pattern overlay. Added a scoped `.landing-cinematic-final-card--minimal` modifier: single-column centered grid, warm `#f4efe6` surface (no border / no shadow, per §3.1 No-Line Rule), generous padding, centered copy stack, centered Strava + email CTAs (primary keeps the §5 coral gradient `#a0392a→#fc7e69`), and the 3 trust chips restyled as a centered flex row of mono labels. Chinese title held on one line at desktop via `white-space: nowrap !important` (CONTEXT_LEDGER single-line requirement).
+Why: The previous 2-column photo-panel layout felt heavy and inconsistent with the minimalist direction of the surrounding sections. A single centered warm card gives a cleaner, more decisive conversion close.
+Rollback target: working tree before this change
+Notes: Scoped — no cascade leakage. CONTEXT_LEDGER content/theme preserves respected: Strava + email actions, dark-ink heading/paragraph, trust chips, single-line desktop Chinese title, warm page-matching theme, no proof grids, no fake `2:52`/`82%` metrics, no off-theme dark block. Other sections unchanged. 128/128 tests pass; the final-CTA smoke-test assertion was repointed to the new warm-minimal contract.
+
+### Version: DV-2026-07-23-01
+Date: 2026-07-23
+Surface: Landing `#features` command-deck grid (the 3-card bento)
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the design.md §10 Minimalist Black Grid treatment to the landing `#features` command deck only. Added a scoped `landing-command-deck--minimal-black` modifier. Section canvas is now near-black `#0a0a0b`; all three cards share one dark surface `#121214` with near-white ink `#f4f4f5`. Removed the old per-card warm-paper gradients, the lone dark-accent `:first-child` gradient, the decorative `::after` glow rings, and the box-shadow separators. Hierarchy now comes from the bento spans (focal card 7 cols × 2 rows), not color contrast. The single coral accent `#d85f4c` is reserved for the index numbers and metrics only. Hover shifts `surface → surface-raised` (`#1a1a1d`) over 0.2s; no scale/lift.
+Why: User approved a full-black minimalist aesthetic for the grid; the previous warm-paper-with-one-dark-card hybrid read as an inconsistent "weird black theme." Codified the treatment in design.md §10 and applied it here as the reference implementation.
+Rollback target: working tree before this change
+Notes: Scoped — hero, races, comparison, and final CTA remain on the warm-paper light theme (verified no cascade leakage). Routing, auth, Strava wiring, i18n, and the 12-col bento structure unchanged. Ink/surface contrast ≈ 14.5:1 (AAA). 128/128 tests pass; one smoke-test class regex loosened to accept the modifier.
+
 ### Version: DV-2026-07-22-08
 Date: 2026-07-22
 Surface: Public landing feature deck on `/` (`#features`)

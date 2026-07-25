@@ -52,6 +52,8 @@ public class MuscleTrainingCheckInService {
         checkIn.setEntryState(parseEnum(MuscleTrainingCheckIn.EntryState.class, update.entryState(), "entryState"));
         checkIn.setDistanceKm(update.distanceKm());
         checkIn.setDurationMinutes(update.durationMinutes());
+        checkIn.setStrengthFocus(update.strengthFocus());
+        checkIn.setStrengthDose(update.strengthDose());
 
         return toTodayCheckInDto(checkInRepository.save(checkIn));
     }
@@ -72,6 +74,8 @@ public class MuscleTrainingCheckInService {
                 checkIn.getEntryState().name(),
                 checkIn.getDistanceKm(),
                 checkIn.getDurationMinutes(),
+                checkIn.getStrengthFocus(),
+                checkIn.getStrengthDose(),
                 checkIn.getUpdatedAt()
         );
     }

@@ -638,7 +638,7 @@ class ProfileControllerTests {
                         false
                 )
         );
-        MusclePlanDto musclePlan = new MusclePlanDto(null, List.of(), List.of(), List.of(), null, "COACH_SCHEDULE");
+        MusclePlanDto musclePlan = new MusclePlanDto(null, List.of(), List.of(), List.of(), null, "COACH_SCHEDULE", "LEG_DAY", "R_AREA_FALLBACK");
         ActivityRepository.AnalysisActivitySummaryProjection activitySummary = activitySummary(activity);
 
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));

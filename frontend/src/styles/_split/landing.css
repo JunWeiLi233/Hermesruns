@@ -3497,6 +3497,40 @@ body:has(.landing-page--cinematic),
   backface-visibility: hidden;
 }
 
+/* "Do you run today?" — fades in on top of the shoe when the gait animation
+   reaches its final (landed) frame. Driven by the figure's data-scroll-state. */
+.landing-hero-shoe-cycle-prompt {
+  position: absolute;
+  top: clamp(8%, 12vh, 16%);
+  left: 50%;
+  z-index: 3;
+  margin: 0;
+  max-width: 80%;
+  text-align: center;
+  transform: translate(-50%, -8px);
+  color: var(--lc-ink, #20201d);
+  font-family: "Manrope", "Inter", sans-serif;
+  font-size: clamp(1.1rem, 2.2vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-hero-shoe-cycle[data-scroll-state="complete"] .landing-hero-shoe-cycle-prompt,
+.landing-hero-shoe-cycle[data-scroll-state="reduced"] .landing-hero-shoe-cycle-prompt[data-prompt-ready="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-hero-shoe-cycle-prompt {
+    transition: none;
+  }
+}
+
 /* Demoted email CTA becomes a quiet text link, not a second button. */
 .landing-cinematic-hero-alt-link {
   display: inline-flex;
@@ -3611,4 +3645,319 @@ body:has(.landing-page--cinematic),
   .landing-hero-shoe-cycle {
     transform: none !important;
   }
+}
+
+/* ===================================================================
+   §10 Minimalist Black Grid — landing #features command deck.
+   Scoped behind .landing-command-deck--minimal-black so the hero,
+   races, comparison, and final-CTA sections keep their warm-paper theme.
+   Tokens per design.md §10.2; composition per §10.3; separation per §10.5.
+   =================================================================== */
+
+.landing-command-deck--minimal-black {
+  --mbg-canvas: #0a0a0b;
+  --mbg-surface: #121214;
+  --mbg-surface-raised: #1a1a1d;
+  --mbg-rule: rgba(255, 255, 255, 0.08);
+  --mbg-ink: #f4f4f5;
+  --mbg-ink-muted: rgba(244, 244, 245, 0.62);
+  --mbg-ink-faint: rgba(244, 244, 245, 0.40);
+  --mbg-accent: #d85f4c;
+
+  /* Drop the warm-paper radial gradients; paint the near-black canvas. */
+  background: var(--mbg-canvas);
+}
+
+/* All three cards share one dark surface. Hierarchy now comes from the
+   bento spans (focal card 7 cols × 2 rows per §10.3), not color contrast. */
+.landing-command-deck--minimal-black .landing-command-card,
+.landing-command-deck--minimal-black .landing-command-card:first-child,
+.landing-command-deck--minimal-black .landing-command-card:nth-child(2),
+.landing-command-deck--minimal-black .landing-command-card:nth-child(3) {
+  background: var(--mbg-surface);
+  color: var(--mbg-ink);
+  /* No box-shadow separator (§10.5); tonal step canvas→surface does the work.
+     A single 1px top inset is the maximum depth cue. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: background 0.2s ease;
+}
+
+/* Remove the warm-paper decorative glow rings (violates §10.5 "no glow"). */
+.landing-command-deck--minimal-black .landing-command-card::after,
+.landing-command-deck--minimal-black .landing-command-card:first-child::after {
+  content: none;
+}
+
+/* Hover: surface → surface-raised (§10.6). No scale, no lift. */
+.landing-command-deck--minimal-black .landing-command-card:hover {
+  background: var(--mbg-surface-raised);
+}
+
+/* Typography: title near-white, body muted, metadata faint. */
+.landing-command-deck--minimal-black .landing-command-card h3 {
+  color: var(--mbg-ink);
+}
+
+.landing-command-deck--minimal-black .landing-command-card p,
+.landing-command-deck--minimal-black .landing-command-card:first-child p,
+.landing-command-deck--minimal-black .landing-command-card:first-child small {
+  color: var(--mbg-ink-muted);
+}
+
+/* The single allowed chromatic accent (§10.2/§10.7): coral on the index
+   number and the metric only. One accent per card. */
+.landing-command-deck--minimal-black .landing-command-card-index span,
+.landing-command-deck--minimal-black .landing-command-card > strong,
+.landing-command-deck--minimal-black .landing-command-card:first-child > strong {
+  color: var(--mbg-accent);
+}
+
+/* Section-head ink (kicker + title) when the deck opens with one. */
+.landing-command-deck--minimal-black .landing-cinematic-kicker {
+  color: var(--mbg-ink-faint);
+}
+
+/* Keep the daily-answers section title on one line on wide screens.
+   The Chinese headline ("每天打开 Hermes 10 秒内得到答案") wraps awkwardly
+   at the title/muted-span boundary; nowrap holds it together. Mobile still
+   wraps below 900px (existing breakpoint) to avoid horizontal overflow. */
+.landing-cinematic-answers-title {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .landing-cinematic-answers-title {
+    white-space: normal;
+  }
+}
+
+/* Interactive VO2max sparkline — cursor inspection (Am I improving? card).
+   Works on the minimal-black deck surface and the light answers surface. */
+.landing-cinematic-vdot-spark-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.landing-cinematic-vdot-spark {
+  display: block;
+  width: 100%;
+  height: 86px;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.landing-cinematic-vdot-guide {
+  stroke: var(--lc-ink, #20201d);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0;
+  pointer-events: none;
+  /* Glide with the cursor via transform (GPU-accelerated, cheap). */
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+}
+
+.landing-cinematic-vdot-guide.is-active {
+  opacity: 0.4;
+}
+
+/* On the minimal-black deck the ink token is light; flip the guide to match. */
+.landing-command-deck--minimal-black .landing-cinematic-vdot-guide {
+  stroke: var(--mbg-ink, #f4f4f5);
+}
+
+.landing-cinematic-vdot-dot.is-active {
+  fill: var(--lc-coral, #d85f4c);
+  stroke: var(--lc-surface-low, rgba(255, 253, 248, 0.92));
+  stroke-width: 2;
+  /* Glide along the trend line with the cursor. */
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), r 0.18s ease;
+}
+
+.landing-cinematic-vdot-dot.is-active.is-hover {
+  r: 4.5;
+}
+
+.landing-command-deck--minimal-black .landing-cinematic-vdot-dot.is-active {
+  stroke: var(--mbg-surface, #121214);
+}
+
+.landing-cinematic-vdot-tooltip {
+  position: absolute;
+  top: -6px;
+  /* Horizontal position rides the cursor; the -50% keeps it centered over the point.
+     translateX is transitioned for a smooth glide; translateY + opacity fade it in/out. */
+  transform: translate(-50%, calc(-100% + 4px));
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--lc-ink, #20201d);
+  color: var(--lc-bg, #f4efe6);
+  font-family: var(--lc-font-mono);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease;
+}
+
+.landing-cinematic-vdot-tooltip.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -100%);
+}
+
+.landing-cinematic-vdot-tooltip strong {
+  font-family: var(--lc-font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.landing-cinematic-vdot-tooltip span {
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-cinematic-vdot-guide,
+  .landing-cinematic-vdot-dot.is-active,
+  .landing-cinematic-vdot-tooltip {
+    /* Keep the inline transform for positioning; just drop the glide animation. */
+    transition: opacity 0.18s ease;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing-cinematic-vdot-spark {
+    cursor: default;
+  }
+}
+
+/* ===================================================================
+   Final CTA — warm minimal centered card (design.md §3.1/§3.3/§5).
+   Scoped behind .landing-cinematic-final-card--minimal. Drops the old
+   2-column copy+photo layout for a single centered warm-paper column
+   with generous breathing room. CONTEXT_LEDGER content/theme preserves
+   hold: Strava + email actions, dark-ink copy, trust chips, single-line
+   desktop Chinese title, warm theme, no proof grids / fake metrics.
+   =================================================================== */
+
+.landing-cinematic-final-card--minimal {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  gap: 0;
+  max-width: min(100%, 820px);
+  margin-inline: auto;
+  /* Horizontal padding tuned so the 15-char Chinese title fits one line at an
+     editorial font-size. */
+  padding: clamp(56px, 8vw, 104px) clamp(32px, 4vw, 48px);
+  /* !important to override the earlier command-layer card rule which sets a
+     radial+linear warm gradient + box-shadow with !important. */
+  background: #f4efe6 !important;
+  border: 0;
+  border-radius: 24px;
+  /* §3.1 No-Line Rule: separation via surface + spacing, not borders/shadows. */
+  box-shadow: none !important;
+  min-height: 0;
+}
+
+/* Neutralize the earlier command-layer grid-pattern overlay. */
+.landing-cinematic-final-card--minimal::before {
+  content: none;
+}
+
+/* The photo panel element was removed from JSX; hide defensively. */
+.landing-cinematic-final-card--minimal .landing-cinematic-final-bg {
+  display: none;
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-copy {
+  display: grid;
+  /* Single 1fr column so the grid track equals the container width (not the
+     widest item's width). Without this, an auto-sized track fits the nowrap
+     h2 (~1000px) and every centered item aligns to that wider track, shifting
+     the whole stack right of the card center. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  text-align: center;
+  width: 100%;
+  /* Wider than the old 620px so the 15-char Chinese title fits on one line at
+     an editorial font-size without overflowing the card. */
+  max-width: 720px;
+}
+
+/* Each direct child centers as a box (justify-items: center alone leaves
+   block children stretched full-width with only their text centered). */
+.landing-cinematic-final-card--minimal .landing-cinematic-final-copy > * {
+  justify-self: center;
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-copy h2 {
+  margin-top: 14px;
+  color: rgba(33, 28, 22, 0.92);
+  letter-spacing: 0;
+  /* Size the title to fit one line inside the 720px copy column. The 15-char
+     Chinese title advances ~0.765em per char, so it fits one line at up to
+     ~62px; clamp() scales it down on narrower viewports and lets it wrap only
+     if a small viewport truly can't fit it (mobile). */
+  font-size: clamp(2rem, 4.6vw, 3.5rem) !important;
+  line-height: 1.05;
+  max-width: 100%;
+  /* nowrap keeps the fixed Chinese title on one line; the clamp() font-size
+     above already guarantees it fits the card width, so wrapping is never
+     needed. (text-wrap: balance was forcing a 2-line split even though the
+     string fits one line.) */
+  white-space: nowrap;
+  text-wrap: nowrap;
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-copy > p {
+  max-width: 48ch;
+  color: rgba(33, 28, 22, 0.72);
+}
+
+/* Center the two CTAs; primary keeps the §5 coral gradient (locked). */
+.landing-cinematic-final-card--minimal .landing-cinematic-hero-actions {
+  justify-content: center;
+  margin-top: 32px;
+}
+
+/* Trust chips: clean minimalist centered row with hairline dividers between
+   cells — tonal separation, no card chrome. Keeps display:flex + centered
+   (smoke guard) while reading as a refined 3-cell grid. */
+.landing-cinematic-final-card--minimal .landing-cinematic-final-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0;
+  margin-top: clamp(32px, 4vw, 44px);
+  padding: 0;
+  max-width: 560px;
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-trust span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px clamp(16px, 2vw, 26px);
+  color: rgba(33, 28, 22, 0.6);
+  font-family: var(--lc-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-trust span + span {
+  border-left: 1px solid rgba(33, 28, 22, 0.14);
+}
+
+.landing-cinematic-final-card--minimal .landing-cinematic-final-trust span::before {
+  content: none;
 }

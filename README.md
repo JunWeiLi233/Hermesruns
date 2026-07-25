@@ -292,6 +292,8 @@ Hermes/
 #### macOS / Linux
 
 ```bash
+./start_hermes.sh        # one-shot: builds frontend, starts backend, opens browser
+# …or start the backend directly:
 cd backend
 ./mvnw spring-boot:run
 ```
@@ -307,7 +309,7 @@ Open `http://localhost:8080`, sign up with email, and you're in. No database set
 Hermes setup instructions are split by platform from now on:
 
 - **Windows users** should use PowerShell examples, `.bat` launchers, and `Hermes.local.env.ps1`.
-- **macOS / Linux users** should use Bash/Zsh examples, `./mvnw`, and exported environment variables.
+- **macOS / Linux users** should use Bash/Zsh examples, `./mvnw`, and exported environment variables. One-shot launchers are also available: `./start_hermes.sh`, `./stop_hermes.sh`, and `./migrate_h2_to_postgres.sh`.
 - When adding new setup steps, include both command forms whenever shell syntax differs.
 
 ---
@@ -662,6 +664,8 @@ The `/auto-hermes-*` commands ship inside this repository at [.claude/commands/]
 ```powershell
 powershell -ExecutionPolicy Bypass -File .tools/install-hermes-codex-commands.ps1 -SkipWsl
 ```
+
+> macOS / Linux: this installer is Windows-only. `/auto-hermes-*` is available out of the box via Claude Code's automatic project-command discovery (no installer needed); Codex CLI users can copy the files from `.codex/commands/` into their own `prompts`/`commands` directory manually.
 
 Verify after a fresh clone:
 
@@ -1103,6 +1107,13 @@ Email/password sign-up sends a verification link via SMTP. Leave `SPRING_MAIL_HO
 - **Java 17+** — [Adoptium Temurin 17 LTS](https://adoptium.net) recommended
 - **Node.js 18+** — [nodejs.org](https://nodejs.org)
 
+macOS via Homebrew:
+
+```bash
+brew install openjdk@17 node
+brew link --force openjdk@17        # puts java on PATH
+```
+
 #### Frontend Dev
 
 Windows:
@@ -1201,11 +1212,19 @@ cd backend
 
 #### Migrate H2 → PostgreSQL
 
+Windows:
+
 ```powershell
 .\migrate_h2_to_postgres.bat
 ```
 
-For macOS / Linux, use the PostgreSQL env block above and run the backend against PostgreSQL directly. The current migration helper is Windows-only.
+macOS / Linux:
+
+```bash
+./migrate_h2_to_postgres.sh
+```
+
+Both helpers require the H2 and PostgreSQL JDBC drivers under `~/.m2/repository` — run the backend once first (e.g. `./start_hermes.sh`) so Maven downloads them.
 
 ---
 
@@ -1350,7 +1369,8 @@ Supports `GPX`, `TCX`, `FIT`, `ZIP`. Automatic folder watching.
 
 | Problem | Fix |
 |---|---|
-| `ERR_CONNECTION_REFUSED` | Windows: `.\start_hermes.bat`; macOS/Linux: `cd backend && ./mvnw spring-boot:run` |
+| `ERR_CONNECTION_REFUSED` | Windows: `.\start_hermes.bat`; macOS/Linux: `./start_hermes.sh` (or `cd backend && ./mvnw spring-boot:run`) |
+| Port 8080 stuck / stale process | Windows: `.\stop_hermes.bat`; macOS/Linux: `./stop_hermes.sh` |
 | `java` not found | Install Java 17 from [adoptium.net](https://adoptium.net) |
 | OAuth callback fails | Backend must run on `localhost:8080`, redirect URIs must match exactly |
 | Frontend changes not showing | Run `npm run build` in `frontend/`, then refresh |
@@ -1588,6 +1608,8 @@ Hermes/
 #### macOS / Linux
 
 ```bash
+./start_hermes.sh        # 一键：构建前端、启动后端、打开浏览器
+# 或直接启动后端：
 cd backend
 ./mvnw spring-boot:run
 ```
@@ -1601,7 +1623,7 @@ cd backend
 ### 平台说明
 
 - **Windows 用户**：使用 PowerShell 示例、`.bat` 启动器和 `Hermes.local.env.ps1`。
-- **macOS / Linux 用户**：使用 Bash/Zsh 示例、`./mvnw` 和导出的环境变量。
+- **macOS / Linux 用户**：使用 Bash/Zsh 示例、`./mvnw` 和导出的环境变量。也提供一键启动器：`./start_hermes.sh`、`./stop_hermes.sh` 和 `./migrate_h2_to_postgres.sh`。
 - 新增安装步骤时，当 shell 语法不同时，请同时提供两种命令形式。
 
 ---
@@ -1973,6 +1995,13 @@ cd backend
 - **Java 17+** — 推荐 [Adoptium Temurin 17 LTS](https://adoptium.net)
 - **Node.js 18+** — [nodejs.org](https://nodejs.org)
 
+macOS 用 Homebrew 安装：
+
+```bash
+brew install openjdk@17 node
+brew link --force openjdk@17        # 让 java 出现在 PATH
+```
+
 #### 前端开发
 
 Windows：
@@ -2071,11 +2100,19 @@ cd backend
 
 #### H2 迁移至 PostgreSQL
 
+Windows：
+
 ```powershell
 .\migrate_h2_to_postgres.bat
 ```
 
-macOS / Linux 用户请使用上方的 PostgreSQL 环境变量块，直接以 PostgreSQL 模式运行后端。当前迁移脚本仅适用于 Windows。
+macOS / Linux：
+
+```bash
+./migrate_h2_to_postgres.sh
+```
+
+两个脚本都需要 `~/.m2/repository` 下存在 H2 和 PostgreSQL 的 JDBC 驱动——先用 `./start_hermes.sh` 跑一次后端，让 Maven 下载驱动。
 
 ---
 
@@ -2416,7 +2453,8 @@ pip install -r .tools/requirements-garmin.txt
 
 | 问题 | 解决方案 |
 |---|---|
-| `ERR_CONNECTION_REFUSED` | Windows：运行 `.\start_hermes.bat`；macOS/Linux：`cd backend && ./mvnw spring-boot:run` |
+| `ERR_CONNECTION_REFUSED` | Windows：运行 `.\start_hermes.bat`；macOS/Linux：运行 `./start_hermes.sh`（或 `cd backend && ./mvnw spring-boot:run`） |
+| 8080 端口被占用 / 残留进程 | Windows：运行 `.\stop_hermes.bat`；macOS/Linux：运行 `./stop_hermes.sh` |
 | `java` 找不到 | 安装 Java 17：[adoptium.net](https://adoptium.net) |
 | OAuth 回调失败 | 确认后端运行在 `localhost:8080`，回调地址完全匹配 |
 | 前端修改未生效 | 运行 `npm run build`，然后刷新页面 |

@@ -8,5 +8,7 @@ public record MusclePlanDto(
         List<SessionDefinitionDto> sessions,
         List<String> rationale,
         TodayCheckInDto todayCheckIn,
-        String planSource
+        String planSource,
+        String recommendedMuscleArea,
+        String recommendedMuscleReasonCode
 ) {}
