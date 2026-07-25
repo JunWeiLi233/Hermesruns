@@ -68,6 +68,8 @@ Use this order:
 4. the existing approved surface baseline from `.ai-sync/CONTEXT_LEDGER.md`
 5. fallback to both-mode-safe styling when the change is shared infrastructure
 
+Default when no signal is present: **light mode** (§5 Aerodynamic Gallery) is the Hermes default for new product surfaces and the public landing. The one exception is the explicit Minimalist Black Grid treatment (§10) — apply it only when the user requests a minimalist / black / dark-grid look or points at a dark bento reference, and then follow §10 exactly instead of guessing dark tones.
+
 Before non-trivial frontend implementation, `/auto-hermes` must define:
 - target surface
 - target mode:
@@ -419,3 +421,87 @@ Don't:
 - ship a "light shell, dark cards" hybrid unless the user explicitly wants that contrast
 - solve theme separation with borders
 - claim a theme redesign is complete until the actual affected surfaces read coherently in the target mode
+
+## 10. Minimalist Black Grid (Approved Surface Treatment)
+
+This section defines an explicit, user-approved minimalist aesthetic: **full-black canvas, white type, grid-driven composition**. It is a first-class Hermes surface treatment, not a bug and not a fallback. When the user asks for "minimalist," "black grid," "dark minimalist," or points at a dark bento/grid reference, `/auto-hermes` must use this section as the canonical spec and stop falling back to the §4 Cinematic Athlete charcoal palette.
+
+References that anchor this treatment (verified 2026-07):
+- Dark bento / modular grid pattern — [bentogrids.com](https://bentogrids.com/), [Dribbble "bento grid dark"](https://dribbble.com/search/bento-grid-dark)
+- Linear / Vercel Geist monochrome discipline — restrained palette, consistent radius tokens, generous spacing
+- Minimalist white-space + grid rhythm — [NN/g: Characteristics of Minimalism](https://www.nngroup.com/articles/characteristics-of-minimalism/)
+- Accessibility note: pure `#000`/`#FFF` is too harsh — [Imperavi UI Typography](https://imperavi.com/books/ui-typography/principles/accessibility/)
+
+### 10.1 When To Apply
+
+Apply Minimalist Black Grid when any of these is true:
+- the user explicitly requests a minimalist, black, or dark-grid look
+- the target surface is a landing, marketing, or editorial surface where the user supplied a dark bento/grid reference
+- the existing approved surface baseline in `.ai-sync/CONTEXT_LEDGER.md` is already this treatment
+
+Do not apply it to the logged-in product dashboard, charts, or data surfaces unless the user explicitly asks — those stay on the mode-aware §4/§5 system.
+
+### 10.2 Canvas And Ink
+
+The canvas is full near-black; the ink is full near-white. Never use pure `#000000` or pure `#FFFFFF` — they cause harsh halation and over-contrast eye strain.
+
+Tokens (set these on the surface root):
+- `--mbg-canvas: #0a0a0b` — page background (near-black, not pure)
+- `--mbg-surface: #121214` — card / module background, one tonal step up
+- `--mbg-surface-raised: #1a1a1d` — hover / raised module
+- `--mbg-rule: rgba(255, 255, 255, 0.08)` — hairline separator (used sparingly, see 10.5)
+- `--mbg-ink: #f4f4f5` — primary text (near-white, not pure)
+- `--mbg-ink-muted: rgba(244, 244, 245, 0.62)` — secondary text
+- `--mbg-ink-faint: rgba(244, 244, 245, 0.40)` — metadata / labels
+- `--mbg-accent: #d85f4c` — the single allowed chromatic accent (Hermes coral); use sparingly
+
+### 10.3 Grid Composition
+
+Use a **modular bento grid**: a 12-column base with asymmetric module spans, not equal-weight card walls.
+- primary module spans 6-7 columns (the focal card)
+- secondary modules span 3-5 columns
+- allow one module to span 2 rows for vertical asymmetry
+- module gap: `clamp(12px, 1.2vw, 16px)` — tight enough to read as one surface, loose enough to breathe
+
+The landing's existing `.landing-command-card-stack` (12-col grid, first card spanning 7 cols × 2 rows) is the reference implementation of this pattern.
+
+### 10.4 Typography
+
+Single sans-serif family at restrained scale. Hermes uses Manrope/Inter — keep them.
+- `--mbg-font: "Manrope", "Inter", system-ui, sans-serif`
+- display: Manrope, weight 600-700, tight `letter-spacing: -0.02em`
+- body: Inter/Manrope, weight 400, `line-height: 1.6`
+- metadata: Inter, weight 500, `font-size: 0.75rem`, `letter-spacing: 0.04em`, `text-transform: uppercase` for labels
+
+Hierarchy comes from **scale and spacing contrast only** — no bold-everything, no color coding.
+
+### 10.5 Separation Discipline
+
+This treatment is minimalist: separation comes from **tonal steps and whitespace, not borders or shadows**.
+- prefer the `canvas → surface → surface-raised` tonal step (10.2) for containment
+- use `--mbg-rule` hairlines only where a tonal step is insufficient (e.g. table rows, dividers inside a module)
+- no box shadows as a primary separator; a single subtle `0 1px 0 rgba(255,255,255,0.04)` top inset is the maximum depth cue
+- no glow, no neon, no gradients — except the single coral accent which may be a solid fill, never a glow
+
+### 10.6 Motion
+
+Restraint is the rule. One subtle cue per surface.
+- modules fade-up on first viewport entry (`opacity 0 → 1`, `translateY(12px) → 0`, 0.4s ease) — once only, not on every scroll
+- hover: a module shifts from `surface → surface-raised` over 0.2s; no scale, no lift
+- no looping animations, no scanlines, no auto-cycling carousels
+- all motion gated by `@media (prefers-reduced-motion: reduce)`
+
+### 10.7 Minimalist Black Grid Do / Don't
+
+Do:
+- use softened near-black/near-white, never pure `#000`/`#FFF`
+- let one focal module dominate the grid; keep others restrained
+- reserve the coral accent for a single CTA or active state per viewport
+- keep typography to one family with scale-based hierarchy
+
+Don't:
+- introduce a second accent color — coral is the only chromatic allow
+- pile on borders, shadows, or glow to separate modules
+- use pure black slabs (violates §3.6 anti-generic rule and 10.2)
+- animate layout properties (`top`/`left`/`width`/`height`); use `transform`/`opacity` only
+- apply this treatment to data/dashboard surfaces unless explicitly requested

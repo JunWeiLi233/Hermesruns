@@ -90,6 +90,7 @@ function getShoeGaitMotion(progress) {
 }
 
 function ShoeRunCycle({ scrollContainerRef }) {
+  const { t } = useI18n();
   const [isReady, setIsReady] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => (
     typeof window !== 'undefined'
@@ -271,6 +272,9 @@ function ShoeRunCycle({ scrollContainerRef }) {
           data-has-frame="false"
         />
       </div>
+      <span className="landing-hero-shoe-cycle-prompt" data-prompt-ready={isReady ? 'true' : 'false'}>
+        {t('landing.cinematic_hero_shoe_prompt')}
+      </span>
     </figure>
   );
 }
@@ -385,13 +389,65 @@ function VdotSpark() {
   const min = 53.5;
   const max = 59;
   const coord = (value, index) => `${(index / (points.length - 1)) * 270 + 5},${75 - ((value - min) / (max - min)) * 65}`;
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const svgRef = useRef(null);
+
+  const handleMove = useCallback((event) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    // Map the cursor's horizontal pixel position into the viewBox's 0–280 space.
+    const ratio = (event.clientX - rect.left) / rect.width;
+    const viewBoxX = ratio * 280;
+    // Snap to the nearest data point (each point sits at x = index/(n-1)*270 + 5).
+    const nearest = Math.round(((viewBoxX - 5) / 270) * (points.length - 1));
+    setHoverIndex(Math.max(0, Math.min(points.length - 1, nearest)));
+  }, [points.length]);
+
+  const handleLeave = useCallback(() => setHoverIndex(null), []);
+
+  const isHovering = hoverIndex !== null;
+  const activeIndex = hoverIndex ?? points.length - 1;
+  const activeValue = points[activeIndex];
+  const [activeX, activeY] = coord(activeValue, activeIndex).split(',').map(Number);
+  // Position the guide/dot/tooltip via CSS transform (GPU-accelerated, smooth)
+  // instead of mutating SVG geometry attributes, which can't be transitioned.
+  const translate = `translate(${activeX}px, ${activeY}px)`;
+  const tooltipLeftPct = (activeX / 280) * 100;
 
   return (
-    <svg viewBox="0 0 280 80" className="landing-cinematic-vdot-spark" aria-hidden="true">
-      <polygon points={`${points.map(coord).join(' ')} 275,80 5,80`} className="landing-cinematic-vdot-fill" />
-      <polyline points={points.map(coord).join(' ')} className="landing-cinematic-vdot-line" />
-      <circle cx="275" cy={75 - ((58.4 - min) / (max - min)) * 65} r="3.5" className="landing-cinematic-vdot-dot" />
-    </svg>
+    <div className="landing-cinematic-vdot-spark-wrap">
+      <svg
+        ref={svgRef}
+        viewBox="0 0 280 80"
+        className="landing-cinematic-vdot-spark"
+        role="img"
+        aria-label={`VO2max trend: latest ${points[points.length - 1]}`}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
+      >
+        <polygon points={`${points.map(coord).join(' ')} 275,80 5,80`} className="landing-cinematic-vdot-fill" />
+        <polyline points={points.map(coord).join(' ')} className="landing-cinematic-vdot-line" />
+        {/* guide + highlighted marker — positioned with transform so they glide. */}
+        <line
+          x1="0" y1="6" x2="0" y2="80"
+          className={`landing-cinematic-vdot-guide${isHovering ? ' is-active' : ''}`}
+          style={{ transform: `translateX(${activeX}px)` }}
+        />
+        <circle
+          cx="0" cy="0" r="3.5"
+          className={`landing-cinematic-vdot-dot is-active${isHovering ? ' is-hover' : ''}`}
+          style={{ transform: translate }}
+        />
+      </svg>
+      <div
+        className={`landing-cinematic-vdot-tooltip${isHovering ? ' is-visible' : ''}`}
+        style={{ left: `${tooltipLeftPct}%` }}
+      >
+        <strong>{activeValue.toFixed(1)}</strong>
+        <span>VO2max · day {activeIndex + 1}</span>
+      </div>
+    </div>
   );
 }
 
@@ -553,23 +609,10 @@ function WorldMap({ races, metricLabels, flowLabels }) {
           </g>
         ))}
       </svg>
-      <div className="landing-cinematic-map-timeline">
-        {racePins.map((race, index) => (
-          <div
-            key={`${race.name}-timeline`}
-            className="landing-cinematic-map-timeline-item"
-            style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
-          >
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <em>{race.date}</em>
-          </div>
-        ))}
-      </div>
       <div className="landing-cinematic-map-bottom-deck">
         <div className="landing-cinematic-map-guide">
           {flowSteps.map((step) => (
             <span key={step.key} className={`landing-cinematic-map-guide-step is-${step.key}`}>
-              <em>{step.order}</em>
               <strong>{step.label}</strong>
             </span>
           ))}
@@ -791,7 +834,7 @@ export default function Landing() {
         </section>
 
         {/* ── 2. Feature Grid ── */}
-        <section id="features" className="landing-command-deck">
+        <section id="features" className="landing-command-deck landing-command-deck--minimal-black">
           <PageWidth className="landing-command-deck-grid">
             <RevealSection className="landing-command-card-stack">
               {commandCards.map((card) => (
@@ -957,8 +1000,7 @@ export default function Landing() {
         {/* ── 9. Final CTA ── */}
         <section className="landing-cinematic-final">
           <PageWidth>
-            <RevealSection className="landing-cinematic-final-card">
-              <div className="landing-cinematic-final-bg" aria-hidden="true" />
+            <RevealSection className="landing-cinematic-final-card landing-cinematic-final-card--minimal">
               <div className="landing-cinematic-final-copy">
                 <span className="landing-cinematic-kicker">{t('landing.cinematic_final_kicker')}</span>
                 <h2>{t('landing.cinematic_cta_title')}</h2>

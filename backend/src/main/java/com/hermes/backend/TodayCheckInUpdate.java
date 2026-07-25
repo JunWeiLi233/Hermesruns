@@ -4,5 +4,7 @@ public record TodayCheckInUpdate(
         String runType,
         String entryState,
         Double distanceKm,
-        Integer durationMinutes
+        Integer durationMinutes,
+        String strengthFocus,
+        String strengthDose
 ) {}
