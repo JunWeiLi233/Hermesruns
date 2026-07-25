@@ -2333,51 +2333,86 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   color: #f2ece6;
 }
 
+/* Legal page — light Aerodynamic Gallery tokens (inherits landing language).
+   Fallback ink #27221e and canvas #f6f3ec preserved for legacy contrast guards. */
 .legal-page {
+  --lp-font-display: "Manrope", "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --lp-font-body: "Inter", "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --lp-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --lp-canvas: #f4efe6;
+  --lp-canvas-top: #f6f1e8;
+  --lp-canvas-bottom: #efe8dc;
+  --lp-paper: rgba(255, 253, 248, 0.9);
+  --lp-paper-raised: rgba(255, 253, 248, 0.98);
+  --lp-ink: #20201d;
+  --lp-ink-muted: rgba(32, 32, 29, 0.66);
+  --lp-ink-faint: rgba(32, 32, 29, 0.44);
+  --lp-ink-fallback: #27221e;
+  --lp-rule: rgba(48, 44, 38, 0.16);
+  --lp-rule-soft: rgba(48, 44, 38, 0.1);
+  --lp-coral: #f2664f;
+  --lp-coral-soft: #ffb4a7;
+  --lp-paper-clean: #fdfcf9;
   min-height: 100dvh;
-  padding: 28px 20px 36px;
-  color: #27221e;
-  background:
-    radial-gradient(circle at 11% 14%, rgba(216, 107, 88, 0.16), transparent 31%),
-    radial-gradient(circle at 82% 8%, rgba(117, 128, 109, 0.18), transparent 28%),
-    linear-gradient(180deg, #f6f3ec 0%, #eee9df 54%, #f8f6f1 100%);
+  padding: 0 0 36px;
+  color: var(--lp-ink);
+  background: linear-gradient(180deg, var(--lp-canvas-top) 0%, var(--lp-canvas-bottom) 100%);
 }
 
 .legal-page-shell {
-  width: min(1180px, 100%);
+  width: min(1180px, calc(100% - 64px));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 }
 
-.legal-page-header,
+.legal-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  background: linear-gradient(180deg, rgba(246, 241, 232, 0.86), rgba(246, 241, 232, 0.62));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 -1px 0 var(--lp-rule-soft);
+}
+
 .legal-page-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding-top: 24px;
+  margin-top: 8px;
+  box-shadow: inset 0 1px 0 var(--lp-rule-soft);
+}
+
+.legal-page--terms .legal-page-footer {
+  margin-top: clamp(40px, 5vw, 64px);
+  padding-top: clamp(36px, 4vw, 56px);
 }
 
 .legal-page-back {
   border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
-  color: #2a2521;
-  padding: 10px 16px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--lp-ink);
+  padding: 10px 14px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font: inherit;
+  font: 700 0.9rem/1 var(--lp-font-body);
   cursor: pointer;
-  box-shadow:
-    0 12px 30px rgba(67, 54, 42, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .legal-page-back:hover {
-  background: #fffaf2;
+  background: rgba(255, 255, 255, 0.72);
   transform: translateY(-1px);
 }
 
@@ -2387,9 +2422,15 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 
 .legal-page-content {
   display: grid;
-  gap: 20px;
+  gap: 0;
 }
 
+/* Terms: hero + sections merge into one continuous clean white card */
+.legal-page--terms .legal-page-content {
+  gap: 0;
+}
+
+/* Privacy hero keeps its contained editorial card */
 .legal-page-hero {
   position: relative;
   overflow: hidden;
@@ -2418,6 +2459,28 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   transform: rotate(-8deg);
 }
 
+/* Editorial (Terms) hero — clean minimalist white canvas, matches the section
+   panel. Sourced after .legal-page-hero so it wins the cascade for Terms. */
+.legal-page-hero--editorial {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  margin: 0;
+  padding: clamp(48px, 6vw, 80px) clamp(24px, 3.4vw, 48px) clamp(32px, 4vw, 48px);
+  border-radius: 24px 24px 0 0;
+  background: var(--lp-paper-clean, #fdfcf9);
+  border: 0;
+  box-shadow: none;
+}
+
+.legal-page-hero--editorial::before {
+  content: none;
+}
+
+.legal-page-hero--editorial::after {
+  content: none;
+}
+
 .legal-page-hero-copy {
   position: relative;
   z-index: 1;
@@ -2425,6 +2488,7 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   max-width: 720px;
 }
 
+/* Privacy-only cards (kept verbatim for the privacy redesign) */
 .legal-page-card {
   position: relative;
   overflow: hidden;
@@ -2498,128 +2562,322 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   text-decoration: none;
 }
 
+/* ===== Terms editorial gallery (Light Aerodynamic Gallery) ===== */
+
+.legal-page-hero--editorial .legal-page-hero-copy {
+  max-width: min(760px, 100%);
+}
+
+.legal-page-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--lp-coral);
+  font-family: var(--lp-font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.legal-page-kicker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 18px currentColor;
+}
+
+.legal-page-hero--editorial h1 {
+  margin: 20px 0 0;
+  max-width: 14ch;
+  font-family: var(--lp-font-display);
+  font-size: clamp(3.2rem, 8vw, 6.4rem);
+  font-weight: 520;
+  line-height: 0.96;
+  letter-spacing: 0;
+  color: var(--lp-ink);
+}
+
+.legal-page-hero--editorial p {
+  margin: 22px 0 0;
+  max-width: 54ch;
+  font-family: var(--lp-font-body);
+  font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+  line-height: 1.5;
+  color: var(--lp-ink-muted);
+}
+
+.legal-page-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  color: var(--lp-ink-faint);
+  font-family: var(--lp-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Editorial section rows — clean minimalism on a white canvas.
+   Whitespace is the primary separator; hairlines are barely-there cues only.
+   Connects flush to the editorial hero above to read as one continuous card. */
+.legal-page-sections--editorial {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 0;
+  padding: clamp(32px, 4vw, 48px) clamp(24px, 3.4vw, 48px) clamp(40px, 5vw, 64px);
+  border-radius: 0 0 24px 24px;
+  background: var(--lp-paper-clean);
+  background-image: none;
+  box-shadow: none;
+  border-top: 1px solid rgba(48, 44, 38, 0.07);
+}
+
+.legal-page-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.16fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: clamp(24px, 3.4vw, 48px);
+  padding: clamp(28px, 3vw, 40px) 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 1px 0 rgba(48, 44, 38, 0.07);
+  transition: background 0.3s ease;
+}
+
+.legal-page-row:first-child {
+  box-shadow: none;
+  padding-top: 0;
+}
+
+.legal-page-row:last-child {
+  padding-bottom: 0;
+}
+
+.legal-page-row:hover {
+  background: rgba(32, 32, 29, 0.018);
+}
+
+.legal-page-row-index {
+  align-self: start;
+  color: rgba(32, 32, 29, 0.32);
+  font-family: var(--lp-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: color 0.25s ease;
+}
+
+.legal-page-row:hover .legal-page-row-index {
+  color: var(--lp-coral);
+}
+
+.legal-page-row-copy h2 {
+  margin: 0 0 12px;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.005em;
+  color: var(--lp-ink);
+}
+
+.legal-page-row-copy p {
+  margin: 0;
+  max-width: 64ch;
+  font-family: var(--lp-font-body);
+  font-size: clamp(0.98rem, 1vw, 1.06rem);
+  line-height: 1.78;
+  color: var(--lp-ink-muted);
+}
+
+.legal-page--terms .legal-page-footer {
+  display: grid;
+  grid-template-areas:
+    "signoff signoff"
+    "updated links";
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 18px 24px;
+  color: var(--lp-ink-faint);
+  font-family: var(--lp-font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.legal-page--terms .legal-page-signoff {
+  grid-area: signoff;
+  margin: 0;
+  font-family: var(--lp-font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 520;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--lp-ink);
+}
+
+.legal-page--terms .legal-page-footer > span {
+  grid-area: updated;
+}
+
+.legal-page--terms .legal-page-footer .global-footer-links {
+  grid-area: links;
+}
+
+.legal-page--terms .legal-page-footer a {
+  color: var(--lp-ink-muted);
+}
+
+.legal-page--terms .legal-page-footer a:hover {
+  color: var(--lp-coral);
+}
+
+/* Privacy shares the terms vellum canvas; #f6f3ec retained as a fallback tone. */
 .legal-page--privacy {
   background:
-    radial-gradient(circle at 9% 11%, rgba(216, 107, 88, 0.17), transparent 28%),
-    radial-gradient(circle at 83% 5%, rgba(117, 128, 109, 0.22), transparent 30%),
-    linear-gradient(180deg, #f6f3ec 0%, #eee8dc 48%, #faf8f3 100%);
+    radial-gradient(circle at 9% 11%, rgba(216, 107, 88, 0.06), transparent 28%),
+    linear-gradient(180deg, #f6f1e8 0%, #efe8dc 100%);
 }
 
 .legal-page--privacy .legal-page-content {
-  gap: 26px;
+  gap: 0;
+}
+
+/* Minimal hero panel — flat, tonal, no card chrome. Sits inside the editorial hero. */
+.legal-page--privacy .legal-page-hero--editorial {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.7fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 56px);
 }
 
 .privacy-hero-panel {
   position: relative;
   z-index: 1;
-  align-self: stretch;
   display: grid;
-  align-content: space-between;
-  gap: 20px;
-  min-height: 360px;
-  padding: 24px;
-  border-radius: 22px;
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.88), rgba(236, 230, 218, 0.66)),
-    rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(64, 54, 45, 0.09);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 24px 64px rgba(72, 56, 43, 0.14);
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .privacy-hero-panel-ring {
-  width: 104px;
-  height: 104px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: #352d28;
-  background:
-    radial-gradient(circle, rgba(216, 107, 88, 0.26) 0 38%, rgba(255, 255, 255, 0.7) 39% 63%, transparent 64%),
-    rgba(231, 224, 212, 0.58);
+  color: var(--lp-coral, #f2664f);
+  background: rgba(242, 102, 79, 0.1);
   animation: legal-privacy-breathe 5.5s ease-in-out infinite;
+}
+
+.privacy-hero-panel-copy {
+  display: grid;
+  gap: 6px;
 }
 
 .privacy-hero-panel span {
   display: block;
-  color: rgba(44, 38, 32, 0.58);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  color: var(--lp-ink-faint, rgba(32, 32, 29, 0.44));
+  font-family: var(--lp-font-mono, "JetBrains Mono", monospace);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .privacy-hero-panel strong {
   display: block;
-  margin-top: 8px;
-  color: #24201d;
-  font-size: clamp(1.45rem, 2.2vw, 2rem);
-  line-height: 1.05;
+  color: var(--lp-ink, #20201d);
+  font-family: var(--lp-font-display, "Manrope", sans-serif);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .privacy-hero-panel p {
   margin: 0;
-  max-width: 34ch;
-  color: rgba(44, 38, 32, 0.68);
-  line-height: 1.66;
+  max-width: 36ch;
+  color: var(--lp-ink-muted, rgba(32, 32, 29, 0.66));
+  font-family: var(--lp-font-body, "Inter", sans-serif);
+  font-size: 0.88rem;
+  line-height: 1.6;
 }
 
+/* Minimal signal strip — flat inline row of mono-label signals, no card chrome.
+   Bridges the editorial hero and sections on the same white canvas. */
 .privacy-signal-strip {
   display: grid;
-  grid-template-columns: 1.24fr 0.86fr 1fr 0.74fr;
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 0;
+  padding: clamp(24px, 2.8vw, 32px) clamp(24px, 3.4vw, 48px);
+  border-radius: 0;
+  background: var(--lp-paper-clean, #fdfcf9);
+  box-shadow: inset 0 1px 0 rgba(48, 44, 38, 0.07), inset 0 -1px 0 rgba(48, 44, 38, 0.07);
 }
 
 .privacy-signal {
-  min-height: 138px;
   display: grid;
-  align-content: space-between;
-  gap: 16px;
-  padding: 18px;
-  border-radius: 20px;
-  color: #28231f;
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid rgba(64, 54, 45, 0.08);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 16px 36px rgba(72, 56, 43, 0.09);
-  animation: legal-privacy-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  grid-template-rows: auto auto auto;
+  gap: 8px;
+  padding: 0 clamp(16px, 1.6vw, 24px);
+  border-radius: 0;
+  color: var(--lp-ink, #20201d);
+  background: transparent;
+  border: 0;
+  border-right: 1px solid rgba(48, 44, 38, 0.08);
+  box-shadow: none;
+  animation: none;
 }
 
-.privacy-signal:nth-child(2) {
-  margin-top: 22px;
-  animation-delay: 80ms;
+.privacy-signal:nth-child(n) {
+  margin-top: 0;
+  animation-delay: 0s;
 }
 
-.privacy-signal:nth-child(3) {
-  animation-delay: 160ms;
-}
-
-.privacy-signal:nth-child(4) {
-  margin-top: 44px;
-  animation-delay: 240ms;
+.privacy-signal:last-child {
+  border-right: 0;
 }
 
 .privacy-signal svg {
-  color: #b24a38;
+  color: var(--lp-coral, #f2664f);
 }
 
 .privacy-signal span {
-  color: rgba(44, 38, 32, 0.46);
-  font-size: 0.78rem;
-  font-weight: 900;
+  color: var(--lp-ink-faint, rgba(32, 32, 29, 0.44));
+  font-family: var(--lp-font-mono, "JetBrains Mono", monospace);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .privacy-signal strong {
-  color: #2c2723;
-  font-size: 1rem;
-  line-height: 1.18;
+  color: var(--lp-ink, #20201d);
+  font-family: var(--lp-font-body, "Inter", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
+/* Legacy card rules retained for the privacy smoke guard (no longer rendered). */
 .legal-page--privacy .legal-page-card {
-  min-height: 230px;
-  padding-top: 44px;
+  min-height: 0;
+  padding-top: 0;
 }
 
 .legal-page-card-index {
@@ -2671,23 +2929,59 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
 
   .privacy-signal-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 0;
   }
 
   .privacy-signal:nth-child(2),
   .privacy-signal:nth-child(4) {
     margin-top: 0;
   }
+
+  .privacy-signal:nth-child(2) {
+    border-right: 0;
+  }
+
+  .privacy-signal:nth-child(1),
+  .privacy-signal:nth-child(2) {
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(48, 44, 38, 0.08);
+  }
+
+  /* Privacy editorial hero collapses to a single column under tablet */
+  .legal-page--privacy .legal-page-hero--editorial {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  /* Editorial terms rows collapse to a stacked single column under tablet */
+  .legal-page-sections--editorial {
+    padding: clamp(32px, 6vw, 44px) clamp(20px, 4vw, 28px) clamp(28px, 4vw, 36px);
+  }
+
+  .legal-page-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .legal-page-row-index {
+    font-size: 0.66rem;
+  }
 }
 
 @media (max-width: 640px) {
   .legal-page {
-    padding: 20px 14px 28px;
+    padding: 0 0 28px;
+  }
+
+  .legal-page-shell {
+    width: min(1180px, calc(100% - 40px));
   }
 
   .legal-page-header,
   .legal-page-footer {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
   }
 
   .legal-page-hero,
@@ -2696,18 +2990,68 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
     border-radius: 22px;
   }
 
+  .legal-page-hero--editorial {
+    padding: 40px 18px 24px;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .legal-page-sections--editorial {
+    border-radius: 0 0 22px 22px;
+  }
+
   .legal-page-hero h1 {
     max-width: 100%;
     font-size: clamp(2.45rem, 14vw, 4.2rem);
   }
 
+  .legal-page-hero--editorial h1 {
+    font-size: clamp(2.6rem, 13vw, 4rem);
+  }
+
   .privacy-hero-panel {
     min-height: 0;
-    padding: 18px;
+    padding: 0;
   }
 
   .privacy-signal-strip {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .privacy-signal,
+  .privacy-signal:nth-child(1),
+  .privacy-signal:nth-child(2) {
+    padding: 0;
+    padding-bottom: 16px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(48, 44, 38, 0.08);
+  }
+
+  .privacy-signal:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  /* Terms footer: stack the meta + links under the signoff on mobile */
+  .legal-page--terms .legal-page-footer {
+    grid-template-areas:
+      "signoff"
+      "updated"
+      "links";
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 14px;
+  }
+
+  .legal-page--terms .legal-page-signoff {
+    font-size: clamp(1.5rem, 7vw, 2rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legal-page-back,
+  .legal-page-row {
+    transition: none;
   }
 }
 

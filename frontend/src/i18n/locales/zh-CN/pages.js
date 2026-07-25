@@ -65,6 +65,7 @@ export default {
     "cinematic_hero_line_2": "更懂你的",
     "cinematic_hero_line_3": "每一步",
     "cinematic_hero_text": "每一次打开，都是属于你的训练决策时刻。",
+    "cinematic_hero_shoe_prompt": "今天，你跑步了吗？",
     "cinematic_primary_cta": "开始训练",
     "cinematic_secondary_cta": "查看教练",
     "cinematic_proof_label": "训练信号概览",

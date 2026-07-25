@@ -68,6 +68,12 @@ public class MuscleTrainingCheckIn {
 
     private Integer durationMinutes;
 
+    @Column(name = "strength_focus", length = 48)
+    private String strengthFocus;
+
+    @Column(name = "strength_dose", length = 24)
+    private String strengthDose;
+
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
@@ -127,6 +133,22 @@ public class MuscleTrainingCheckIn {
 
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
+    }
+
+    public String getStrengthFocus() {
+        return strengthFocus;
+    }
+
+    public void setStrengthFocus(String strengthFocus) {
+        this.strengthFocus = strengthFocus;
+    }
+
+    public String getStrengthDose() {
+        return strengthDose;
+    }
+
+    public void setStrengthDose(String strengthDose) {
+        this.strengthDose = strengthDose;
     }
 
     public LocalDateTime getUpdatedAt() {

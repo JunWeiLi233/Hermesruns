@@ -65,6 +65,7 @@ export default {
     "cinematic_hero_line_2": "Just Tracking.",
     "cinematic_hero_line_3": "Every Stride.",
     "cinematic_hero_text": "Private running intelligence for the next decision.",
+    "cinematic_hero_shoe_prompt": "Do you run today?",
     "cinematic_primary_cta": "Start training",
     "cinematic_secondary_cta": "See the coach",
     "cinematic_proof_label": "Training proof points",

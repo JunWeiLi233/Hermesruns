@@ -189,6 +189,19 @@ const TOP_MUSCLE_SELECTOR_GROUPS = {
   core: ['abs', 'obliques'],
 };
 
+// Bridge the purpose-oriented StrengthFocus enum (the backend recommendation
+// vocabulary) to the 6 anatomy target-area keys that drive the heatmap chip +
+// highlight. The backend emits POSTERIOR_CHAIN / CALVES_ANKLES / etc.; the UI
+// highlights the matching anatomy region via this map.
+const FOCUS_TO_TARGET_AREA = {
+  LEG_DAY: 'legs',
+  POSTERIOR_CHAIN: 'legs',   // glutes/hamstrings live under the 'legs' anatomy group
+  CALVES_ANKLES: 'legs',     // calves/tibialis live under 'legs'
+  CORE_STABILITY: 'core',
+  MOBILITY_RESET: 'core',
+  COACH_PICK: 'legs',
+};
+
 const TOP_MUSCLE_SELECTOR_SLUG_TARGETS = new Map([
   ['chest', 'chest'],
   ['upper-back', 'back'],
@@ -1393,7 +1406,9 @@ function buildCheckInDraft(plan, isMile) {
     entryState: 'PLANNED',
     distanceKm: today?.run?.plannedDistanceKm != null ? (isMile ? today.run.plannedDistanceKm / KM_PER_MILE : today.run.plannedDistanceKm) : '',
     durationMinutes: today?.run?.plannedDurationMinutes ?? '',
-    strengthFocus: inferStrengthFocus(sessionType),
+    // Pre-fill the coach's recommended focus (Today's Strength Focus) when no
+    // check-in exists yet; the user can still override in the composer.
+    strengthFocus: plan?.recommendedMuscleArea || inferStrengthFocus(sessionType),
     strengthDose: inferStrengthDose(sessionType),
   };
 }
@@ -2900,6 +2915,9 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
+  const [recommendedArea, setRecommendedArea] = useState(null);
+  const [recommendedReasonCode, setRecommendedReasonCode] = useState(null);
+  const userOverrideRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -3572,6 +3590,7 @@ export default function MuscleTraining() {
   }
 
   function handleTopMuscleSelect(targetKey) {
+    userOverrideRef.current = true;
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
     setActiveTarget(targetKey);
@@ -3615,6 +3634,25 @@ export default function MuscleTraining() {
     setDraft(normalized);
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
+
+    // Today's recommended muscle area comes from the backend plan. Apply it as
+    // the default anatomy selection on first load (so the heatmap + chip auto-
+    // highlight the coach's pick) unless the user has already chosen manually.
+    const area = nextPlan?.recommendedMuscleArea;
+    const reason = nextPlan?.recommendedMuscleReasonCode;
+    setRecommendedArea(area || null);
+    setRecommendedReasonCode(reason || null);
+    if (area && !userOverrideRef.current) {
+      const targetKey = FOCUS_TO_TARGET_AREA[area] || 'legs';
+      const nextItems = buildTopRecommendationItems(targetKey);
+      setSelectedMuscleTarget(targetKey);
+      setActiveTarget(targetKey);
+      setExpandedExerciseIdx(null);
+      if (nextItems[0]) {
+        setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTopRecommendationItems omitted to prevent infinite re-render loop
   }, [isMile]);
 
   function applyPlanOnly(nextPlan) {
@@ -3866,6 +3904,15 @@ export default function MuscleTraining() {
                     />
                   </div>
                 </div>
+                {recommendedArea && (
+                  <p className="mt-recommended-area-banner" role="note">
+                    <span>{t('muscle_training.recommended_area_label')}</span>
+                    <strong>{pickLabel(copy.strengthFocusOptions, recommendedArea, recommendedArea)}</strong>
+                    {recommendedReasonCode && (
+                      <span>{t(`muscle_training.recommended_area_reason_${recommendedReasonCode.toLowerCase()}`)}</span>
+                    )}
+                  </p>
+                )}
                 <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
                   {targetAreaCards.map((target) => {
                     const isActive = selectedMuscleTarget === target.key;

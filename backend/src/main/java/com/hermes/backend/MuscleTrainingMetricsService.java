@@ -190,6 +190,60 @@ public class MuscleTrainingMetricsService {
         return "POSTERIOR_CHAIN_STABILITY";
     }
 
+    /**
+     * Recommend today's muscle-training area (a {@code StrengthFocus} token) from
+     * the already-computed plan metrics, today's soreness, the injury-risk verdict,
+     * and today's session type. The cascade is priority-ordered and mirrors the
+     * decision style of the "should I run today" engine (frontend todayRun.js):
+     * protective/recovery cases win first, then load-driven injury-proofing, then
+     * the steady-state default.
+     *
+     * This consumes {@link PlanMetrics#currentFocus()} (priority 5) so the area
+     * recommendation stays consistent with the day's scheduled session type — it
+     * never competes with the existing day/type/dose engine.
+     *
+     * Returns a {@link RecommendedArea} carrying the focus token plus a
+     * locale-agnostic reason code the frontend resolves via i18n.
+     */
+    public RecommendedArea deriveRecommendedMuscleArea(
+            PlanMetrics metrics,
+            String sorenessLevel,
+            String injuryRisk,
+            String todaySessionType
+    ) {
+        String recoveryGate = metrics != null ? metrics.recoveryGate() : "OPEN";
+        String loadStatus = metrics != null ? metrics.loadStatus() : "STEADY";
+        String currentFocus = metrics != null ? metrics.currentFocus() : null;
+        int recentHardRuns = metrics != null ? metrics.recentHardRunCount7d() : 0;
+
+        // 1. Protective: recovery gate PROTECT, race week, or high injury risk.
+        if ("PROTECT".equals(recoveryGate) || "RACE_WEEK".equals(loadStatus) || "HIGH".equals(injuryRisk)) {
+            return new RecommendedArea("CALVES_ANKLES", "R_AREA_PROTECT");
+        }
+        // 2. Today's soreness is HIGH → train the antagonist/support area instead.
+        if ("HIGH".equalsIgnoreCase(sorenessLevel)) {
+            return new RecommendedArea("POSTERIOR_CHAIN", "R_AREA_SORENESS");
+        }
+        // 3. High training volume → injury-proof the lower leg.
+        if ("HIGH_VOLUME".equals(loadStatus)) {
+            return new RecommendedArea("CALVES_ANKLES", "R_AREA_HIGH_VOLUME");
+        }
+        // 4. Recent hard run (HR zone 4/5 or ≥16km in last 7d) → posterior chain support.
+        if (recentHardRuns >= 1) {
+            return new RecommendedArea("POSTERIOR_CHAIN", "R_AREA_RECENT_HARD");
+        }
+        // 5. Session-plan coupling: a recovery-capacity session → core + mobility.
+        if ("RECOVERY_CAPACITY".equals(currentFocus)) {
+            return new RecommendedArea("CORE_STABILITY", "R_AREA_RECOVERY_SESSION");
+        }
+        // 6. Steady + open recovery → default leg day.
+        if ("OPEN".equals(recoveryGate)) {
+            return new RecommendedArea("LEG_DAY", "R_AREA_STEADY_DEFAULT");
+        }
+        // 7. Fallback (new user / insufficient data) → legs (matches the prior hardcoded default).
+        return new RecommendedArea("LEG_DAY", "R_AREA_FALLBACK");
+    }
+
     private boolean isKeyRun(String workoutType) {
         return Objects.equals(workoutType, MuscleTrainingCheckIn.RunType.QUALITY.name())
                 || Objects.equals(workoutType, CoachWorkoutType.THRESHOLD.name())
@@ -316,4 +370,11 @@ public class MuscleTrainingMetricsService {
             Double nextLongRunKm,
             int recentHardRunCount7d
     ) {}
+
+    /**
+     * Today's recommended muscle-training focus + the locale-agnostic reason code
+     * that explains why. The frontend resolves the reason code to localized copy
+     * via the {@code muscle_training.recommended_area_reason_*} i18n keys.
+     */
+    public record RecommendedArea(String focus, String reasonCode) {}
 }

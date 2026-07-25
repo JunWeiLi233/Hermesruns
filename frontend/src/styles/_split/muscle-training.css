@@ -5913,6 +5913,39 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
   opacity: 1;
 }
 
+.mt-recommended-area-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 12px 0 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(216, 95, 76, 0.10);
+  border: 1px solid rgba(216, 95, 76, 0.22);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.mt-recommended-area-banner > span:first-child {
+  color: rgba(33, 28, 22, 0.56);
+  font-family: var(--lc-font-mono, ui-monospace, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mt-recommended-area-banner > strong {
+  color: #d85f4c;
+  font-family: var(--lc-font-display, "Manrope", sans-serif);
+  font-weight: 700;
+}
+
+.mt-recommended-area-banner > span:last-child {
+  color: rgba(33, 28, 22, 0.72);
+  flex-basis: 100%;
+}
+
 .mt-muscle-target-buttons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
