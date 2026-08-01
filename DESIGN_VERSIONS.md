@@ -4568,3 +4568,12 @@ What changed: Removed the grid texture overlay from the final CTA image rail whi
 Why: The grid lines over the image read as unwanted decoration after the glass strip was removed.
 Rollback target: `DV-2026-07-06-02`
 Notes: CSS-only cleanup; Strava login, email signup routing, translations, and existing CTA copy are preserved.
+
+### Version: DV-2026-08-02-13
+Date: 2026-08-02
+Surface: Shared liquid-glass material across authenticated, public, and utility surfaces
+Files: `frontend/src/index.css`, `frontend/src/styles/liquid-glass.css`, `DESIGN_VERSIONS.md`
+What changed: Added a shared translucent material layer with ambient page lighting, shell glass, consistent card/control surfaces, accent gradients, focus treatment, responsive radii, and dedicated Atlas settings contrast overrides while preserving image-led heroes and full-bleed map composition.
+Why: The app’s page families needed one coherent glass language instead of isolated one-off translucent treatments.
+Rollback target: `DV-2026-08-02-12`
+Notes: Presentation-only CSS import; routes, data wiring, authentication, and existing page layouts remain unchanged.

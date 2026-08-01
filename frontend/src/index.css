@@ -30,4 +30,5 @@
 @import './styles/admin-kinetic-editorial.css';
 @import './styles/dark-mode-final-fixes.css';
 @import './styles/muscle-training-profile-alignment.css';
+@import './styles/liquid-glass.css';
 @config '../tailwind.config.js';
