@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { List } from 'react-window';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -109,6 +109,27 @@ async function fileToOptimizedDataUrl(file, t) {
   }
 }
 
+/**
+ * Return `src` only when it is a scheme that is safe to bind to an <img>.
+ * Shoe images come from uploaded files (blob: / data:image/), the backend
+ * background-removal API (data:image/), or catalog https URLs. Rejecting
+ * anything else (notably `javascript:` and other navigable schemes) prevents
+ * DOM-based XSS where a tainted string is assigned to img.src.
+ */
+function safeImageSrc(src) {
+  if (typeof src !== 'string' || !src) return '';
+  const lower = src.trim().toLowerCase();
+  if (
+    lower.startsWith('https:') ||
+    lower.startsWith('http:') ||
+    lower.startsWith('data:image/') ||
+    lower.startsWith('blob:')
+  ) {
+    return src;
+  }
+  return '';
+}
+
 /** Shoe image component with auto background removal */
 function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   const [processed, setProcessed] = useState(null);
@@ -136,7 +157,7 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed} alt={alt} onError={onError} loading="lazy" decoding="async" />;
+  return <img className={className} src={safeImageSrc(processed)} alt={alt} onError={onError} loading="lazy" decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -1750,7 +1771,7 @@ const Shoes = memo(function Shoes() {
             </div>
             <div className="shoe-scan-modal-preview">
               {scanPreviewUrl ? (
-                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
+                <img src={safeImageSrc(scanPreviewUrl)} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
               ) : (
                 <div className="shoe-scan-modal-preview-empty">
                   <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />

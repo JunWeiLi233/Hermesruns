@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -47,10 +48,15 @@ public class RaceCourseMapSearchService {
             "logo", "icon", "badge", "hero", "banner", "sponsor", "partner", "medal", "podium"
     );
 
-    private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
+
+    @Autowired
+    public RaceCourseMapSearchService(SafeUrlExecutor safeUrlExecutor) {
+        this.safeUrlExecutor = safeUrlExecutor;
+    }
 
     public RaceCourseMapSearchService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        this(SafeUrlExecutor.permissiveForTests(restTemplate));
     }
 
     public LinkedHashMap<String, RaceCourseMapService.CourseMapCandidate> collectCandidates(String raceName, String city, String country, String websiteUrl, Double distanceKm) {
@@ -121,7 +127,7 @@ public class RaceCourseMapSearchService {
     }
 
     private void collectMetaCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = META_IMAGE_PATTERN.matcher(html);
+        Matcher matcher = META_IMAGE_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         while (matcher.find()) {
             String raw = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
             addCandidate(candidates, raw, baseUri, "official-page:" + pageUrl, baseScore + scoreText(raw));
@@ -129,7 +135,7 @@ public class RaceCourseMapSearchService {
     }
 
     private void collectImageCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = IMG_PATTERN.matcher(html);
+        Matcher matcher = IMG_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         while (matcher.find()) {
             String raw = matcher.group(1);
             int score = baseScore + scoreText(raw) + scoreText(matcher.group(0));
@@ -138,7 +144,7 @@ public class RaceCourseMapSearchService {
     }
 
     private void collectLinkedImageCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = HREF_PATTERN.matcher(html);
+        Matcher matcher = HREF_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         while (matcher.find()) {
             String raw = matcher.group(1);
             int score = baseScore + scoreText(raw);
@@ -149,7 +155,7 @@ public class RaceCourseMapSearchService {
     private void collectSearchCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String query) {
         String html = fetchHtml("https://www.bing.com/images/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&first=1");
         if (html == null || html.isBlank()) return;
-        Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
+        Matcher matcher = MEDIA_URL_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         int added = 0;
         while (matcher.find() && added < 4) {
             String decoded = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
@@ -207,7 +213,8 @@ public class RaceCourseMapSearchService {
 
     private String fetchHtml(String url) {
         try {
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildHtmlHeaders()), String.class);
+            ResponseEntity<String> response = safeUrlExecutor.exchange(url, HttpMethod.GET, new HttpEntity<>(buildHtmlHeaders()), String.class);
+            if (response == null) return null;
             return response.getBody();
         } catch (Exception ignored) {
             return null;

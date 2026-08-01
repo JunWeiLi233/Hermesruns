@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -68,7 +69,7 @@ public class RaceCourseMapImageService {
     private static final String LOCAL_COURSE_MAP_ROUTE_DIRECTORY = "routes";
     private static final String SUCCESSFUL_ROUTE_FILE_SUFFIX = "-successful-route.json";
 
-    private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
 
     @Value("${app.ai.course-map.pdf-render-page-limit:2}")
     private int pdfRenderPageLimit = DEFAULT_PDF_RENDER_PAGE_LIMIT;
@@ -76,8 +77,13 @@ public class RaceCourseMapImageService {
     @Value("${app.course-map.upload-dir:course-map-images}")
     private String courseMapUploadDirectory = "course-map-images";
 
+    @Autowired
+    public RaceCourseMapImageService(SafeUrlExecutor safeUrlExecutor) {
+        this.safeUrlExecutor = safeUrlExecutor;
+    }
+
     public RaceCourseMapImageService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        this(SafeUrlExecutor.permissiveForTests(restTemplate));
     }
 
     public List<RaceCourseMapService.ResolvedCandidateAsset> resolveCandidateAssets(RaceCourseMapService.CourseMapCandidate candidate) {
@@ -492,9 +498,7 @@ public class RaceCourseMapImageService {
     private byte[] fetchBinaryBytes(String url, int maxBytes) {
         try {
             validateImageUrl(url);
-            ResponseEntity<byte[]> response = url.contains("%")
-                    ? restTemplate.exchange(java.net.URI.create(url), HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class)
-                    : restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
+            ResponseEntity<byte[]> response = safeUrlExecutor.exchange(url, HttpMethod.GET, new HttpEntity<>(buildBinaryHeaders()), byte[].class);
             if (response == null) return null;
             byte[] body = response.getBody();
             if (body == null || body.length == 0 || body.length > maxBytes) return null;

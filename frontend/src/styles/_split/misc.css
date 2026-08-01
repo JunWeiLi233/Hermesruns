@@ -3055,6 +3055,72 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   }
 }
 
+/* Legal surfaces share the login page's quiet dot field and liquid-glass
+   hierarchy while keeping the legal copy and reading order unchanged. */
+.legal-page {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #f7f2ea;
+}
+
+.legal-page .auth-login-dot-field {
+  --auth-dot-rgb: 50, 44, 38;
+  --auth-dot-opacity: 0.3;
+  --auth-dot-color: rgba(50, 44, 38, 0.3);
+}
+
+.legal-page-shell {
+  position: relative;
+  z-index: 1;
+}
+
+.legal-page-header {
+  background: rgba(247, 242, 234, 0.72);
+  box-shadow: inset 0 -1px 0 rgba(72, 56, 48, 0.1);
+}
+
+.legal-page-header .hermes-logo--dark .hermes-logo__word {
+  color: var(--lp-ink);
+}
+
+.legal-page-hero--editorial,
+.legal-page-sections--editorial,
+.privacy-signal-strip {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 249, 242, 0.44)),
+    rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 30px 78px rgba(94, 72, 61, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -1px 0 rgba(160, 120, 96, 0.08);
+  backdrop-filter: blur(32px) saturate(1.35);
+  -webkit-backdrop-filter: blur(32px) saturate(1.35);
+}
+
+.legal-page-hero--editorial {
+  border-radius: 34px 34px 0 0;
+}
+
+.legal-page-sections--editorial {
+  border-top-color: rgba(255, 255, 255, 0.48);
+  border-radius: 0 0 34px 34px;
+}
+
+.privacy-signal-strip {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.legal-page-row:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.legal-page-footer {
+  color: var(--lp-ink-faint);
+}
+
 /* Auth Trust Hardening */
 
 .password-rules-display {
