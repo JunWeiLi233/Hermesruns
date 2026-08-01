@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ChevronRight, Sparkles } from 'lucide-react';
 import { useI18n } from '../contexts/I18nContext';
 import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';

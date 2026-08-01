@@ -884,7 +884,7 @@ public class RaceCourseMapBulkSeedService {
         if (gpxXml == null || gpxXml.isBlank()) {
             return List.of();
         }
-        Matcher matcher = GPX_ROUTE_POINT_PATTERN.matcher(gpxXml);
+        Matcher matcher = GPX_ROUTE_POINT_PATTERN.matcher(HtmlScanLimiter.bounded(gpxXml));
         List<RoutePoint> routePoints = new ArrayList<>();
         while (matcher.find()) {
             try {

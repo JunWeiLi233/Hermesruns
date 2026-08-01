@@ -47,17 +47,17 @@ public class RaceOfficialImageService {
             "noscript"
     );
 
-    private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
     private final TtlCacheStore cacheStore;
 
     @Autowired
-    public RaceOfficialImageService(RestTemplate restTemplate, TtlCacheStore cacheStore) {
-        this.restTemplate = restTemplate;
+    public RaceOfficialImageService(SafeUrlExecutor safeUrlExecutor, TtlCacheStore cacheStore) {
+        this.safeUrlExecutor = safeUrlExecutor;
         this.cacheStore = cacheStore;
     }
 
     public RaceOfficialImageService(RestTemplate restTemplate) {
-        this(restTemplate, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+        this(SafeUrlExecutor.permissiveForTests(restTemplate), TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public String resolveOfficialImage(String websiteUrl) {
@@ -84,13 +84,14 @@ public class RaceOfficialImageService {
         headers.set(HttpHeaders.USER_AGENT, "HermesRaceImageBot/1.0 (+https://hermes.local)");
         headers.set(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9");
 
-        ResponseEntity<String> response = restTemplate.exchange(
+        ResponseEntity<String> response = safeUrlExecutor.exchange(
                 websiteUrl,
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class
         );
 
+        if (response == null) return null;
         String html = response.getBody();
         if (html == null || html.isBlank()) return null;
 
@@ -101,7 +102,7 @@ public class RaceOfficialImageService {
     }
 
     private String firstMetaImage(String html, URI baseUri) {
-        Matcher matcher = META_IMAGE_PATTERN.matcher(html);
+        Matcher matcher = META_IMAGE_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         while (matcher.find()) {
             String raw = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
             String image = sanitizeCandidate(raw, baseUri);
@@ -111,7 +112,7 @@ public class RaceOfficialImageService {
     }
 
     private String firstInlineImage(String html, URI baseUri) {
-        Matcher matcher = IMG_PATTERN.matcher(html);
+        Matcher matcher = IMG_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         while (matcher.find()) {
             String image = sanitizeCandidate(matcher.group(1), baseUri);
             if (image != null) return image;

@@ -116,7 +116,10 @@ public class MarathonRouteExtractionService {
         } finally {
             if (isTemporaryFile) {
                 try {
-                    Files.deleteIfExists(Path.of(actualFilePath));
+                    Path tempPath = SafeTempFileGuard.tempFileOrNull(actualFilePath);
+                    if (tempPath != null) {
+                        Files.deleteIfExists(tempPath);
+                    }
                 } catch (IOException ignored) {
                 }
             }
@@ -507,8 +510,11 @@ public class MarathonRouteExtractionService {
         if (imageFilePathOrDataUrl.startsWith("data:image/")) {
             return "data:" + imageFilePathOrDataUrl.length() + ":" + Integer.toHexString(imageFilePathOrDataUrl.hashCode());
         }
-        Path path = Path.of(imageFilePathOrDataUrl);
-        if (!Files.exists(path)) {
+        // Only stat files we actually created inside the temp dir; treat any
+        // other path as an opaque fingerprint so a crafted reference can never
+        // be used as a path-traversal oracle against arbitrary files.
+        Path path = SafeTempFileGuard.tempFileOrNull(imageFilePathOrDataUrl);
+        if (path == null || !Files.exists(path)) {
             return imageFilePathOrDataUrl;
         }
         try {
