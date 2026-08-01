@@ -395,7 +395,11 @@ public class StravaSyncService {
         activity.setDistanceMeters(distanceMeters > 0d ? distanceMeters : null);
         activity.setDistanceKm(distanceMeters > 0d ? distanceMeters / 1000d : 0d);
         activity.setDurationSeconds(movingTimeSeconds > 0L ? movingTimeSeconds : null);
-        activity.setMovingTimeSeconds((int) movingTimeSeconds);
+        // movingTimeSeconds originates from the Strava activity payload (remote,
+        // user-influenced data). A raw (int) cast would silently wrap on values
+        // outside the int range, so clamp to the non-negative int window: a
+        // real moving-time in seconds always fits comfortably inside it.
+        activity.setMovingTimeSeconds(safeIntSeconds(movingTimeSeconds));
         activity.setStartDate(startDate);
         activity.setStartTime(parseDateTime(startDate));
 
@@ -614,6 +618,23 @@ public class StravaSyncService {
     private static Number numberAt(List<Number> list, int i) {
         if (list == null || i < 0 || i >= list.size()) return null;
         return list.get(i);
+    }
+
+    /**
+     * Clamp a remote moving-time-in-seconds value into the non-negative int
+     * range before it is stored as {@code movingTimeSeconds}. Strava payloads
+     * are user-influenced, so a raw {@code (int)} cast could wrap a malformed
+     * or absurdly large {@code long} into a nonsensical negative duration. A
+     * legitimate run's moving time always fits inside an int (max ~68 years).
+     */
+    private static int safeIntSeconds(long movingTimeSeconds) {
+        if (movingTimeSeconds <= 0L) {
+            return 0;
+        }
+        if (movingTimeSeconds > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) movingTimeSeconds;
     }
 
     private static String stringValue(Object value) {

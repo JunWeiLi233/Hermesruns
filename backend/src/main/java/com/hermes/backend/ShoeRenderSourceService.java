@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -21,10 +22,19 @@ public class ShoeRenderSourceService {
     private static final int MAX_PHOTO_REFERENCE_LENGTH = 2_000_000;
     private static final long MAX_RENDER_SOURCE_BYTES = 8L * 1024L * 1024L;
 
-    private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
 
+    @Autowired
+    public ShoeRenderSourceService(SafeUrlExecutor safeUrlExecutor) {
+        this.safeUrlExecutor = safeUrlExecutor;
+    }
+
+    /**
+     * Test-only constructor. Production must autowire the real
+     * {@link SafeUrlExecutor} bean so the SSRF DNS-resolution guard runs.
+     */
     public ShoeRenderSourceService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+        this(SafeUrlExecutor.permissiveForTests(restTemplate));
     }
 
     public ResponseEntity<?> render(String url) {
@@ -42,13 +52,19 @@ public class ShoeRenderSourceService {
             HttpHeaders headers = new HttpHeaders();
             headers.setAccept(List.of(MediaType.ALL));
             headers.set("User-Agent", "Hermes/1.0");
-            ResponseEntity<byte[]> response = restTemplate.exchange(
+            // Route through SafeUrlExecutor so the host is DNS-resolved and any
+            // resolved private / loopback / link-local address is rejected
+            // immediately before the outbound request (SSRF defense).
+            ResponseEntity<byte[]> response = safeUrlExecutor.exchange(
                     safeUrl,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     byte[].class
             );
 
+            if (response == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "url is not allowed."));
+            }
             MediaType contentType = response.getHeaders().getContentType();
             byte[] body = response.getBody();
             if (contentType == null || !contentType.toString().toLowerCase(Locale.ROOT).startsWith("image/")) {

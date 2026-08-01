@@ -59,15 +59,17 @@ public class BingImageScraper {
     );
 
     private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
     private final ShoeImagePixelAnalyzer shoeImagePixelAnalyzer;
 
     @Autowired
-    public BingImageScraper(RestTemplate restTemplate) {
-        this(restTemplate, new ShoeImagePixelAnalyzer());
+    public BingImageScraper(RestTemplate restTemplate, SafeUrlExecutor safeUrlExecutor) {
+        this(restTemplate, safeUrlExecutor, new ShoeImagePixelAnalyzer());
     }
 
-    BingImageScraper(RestTemplate restTemplate, ShoeImagePixelAnalyzer shoeImagePixelAnalyzer) {
+    BingImageScraper(RestTemplate restTemplate, SafeUrlExecutor safeUrlExecutor, ShoeImagePixelAnalyzer shoeImagePixelAnalyzer) {
         this.restTemplate = restTemplate;
+        this.safeUrlExecutor = safeUrlExecutor;
         this.shoeImagePixelAnalyzer = shoeImagePixelAnalyzer;
     }
 
@@ -232,11 +234,14 @@ public class BingImageScraper {
                 "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
         headers.set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
 
-        org.springframework.http.ResponseEntity<byte[]> response = restTemplate.exchange(
+        org.springframework.http.ResponseEntity<byte[]> response = safeUrlExecutor.exchange(
                 safeUrl,
                 org.springframework.http.HttpMethod.GET,
                 new org.springframework.http.HttpEntity<>(headers),
                 byte[].class);
+        if (response == null) {
+            return new byte[0];
+        }
 
         byte[] body = response.getBody();
         if (body == null || body.length == 0 || body.length > MAX_PIXEL_FILTER_IMAGE_BYTES) {
