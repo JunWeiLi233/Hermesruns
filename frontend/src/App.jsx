@@ -1,5 +1,5 @@
 import React, { Suspense, useLayoutEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';

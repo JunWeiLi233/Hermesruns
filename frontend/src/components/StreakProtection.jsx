@@ -1,7 +1,7 @@
 import React from 'react';
 import { useI18n } from '../contexts/I18nContext';
 import { Flame, Trophy, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 const StreakProtection = ({ current, best }) => {
   const { t } = useI18n();

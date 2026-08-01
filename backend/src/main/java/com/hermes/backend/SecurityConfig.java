@@ -21,6 +21,24 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // CSRF protection is intentionally disabled because this API is fully
+        // stateless and authenticates every mutating request with an
+        // `Authorization: Bearer <jwt>` header (see JwtAuthenticationFilter and
+        // the frontend `apiFetch` helper), never a session cookie:
+        //   - SessionCreationPolicy.STATELESS below means no HTTP session is
+        //     ever created, so there is no session-bound credential to forge.
+        //   - Browsers never attach an `Authorization` header automatically the
+        //     way they do a cookie, so a cross-site request cannot impersonate
+        //     an authenticated runner.
+        //   - formLogin / httpBasic / rememberMe / logout are all disabled, so
+        //     there is no cookie/session auth path that CSRF would protect.
+        // Spring Security's own reference docs and the CodeQL query help both
+        // recognise disabling CSRF as correct for a stateless, token-based API
+        // (see https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
+        // and https://codeql.github.com/codeql-query-help/java/java-spring-disabled-csrf-protection/).
+        // The CodeQL `java/spring-disabled-csrf-protection` alert is therefore a
+        // documented false positive for this architecture and is dismissed as
+        // such in the GitHub code-scanning UI.
         return http
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)

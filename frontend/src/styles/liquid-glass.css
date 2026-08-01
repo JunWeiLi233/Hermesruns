@@ -1,0 +1,646 @@
+/* Shared liquid-glass treatment for every Hermes surface. */
+
+:root {
+  --glass-radius-xl: 30px;
+  --glass-radius-lg: 24px;
+  --glass-radius-md: 18px;
+  --glass-blur: blur(24px) saturate(1.28);
+  --glass-blur-strong: blur(34px) saturate(1.36);
+  --glass-accent-gradient: linear-gradient(135deg, #a0392a, #fc7e69);
+  --glass-focus: rgba(160, 57, 42, 0.42);
+}
+
+body {
+  min-width: 320px;
+  isolation: isolate;
+  background: #f3f1ef;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(252, 126, 105, 0.18), transparent 27%),
+    radial-gradient(circle at 92% 12%, rgba(188, 215, 224, 0.2), transparent 25%),
+    radial-gradient(circle at 52% 96%, rgba(255, 255, 255, 0.72), transparent 38%);
+}
+
+#root {
+  position: relative;
+  z-index: 0;
+  min-height: 100dvh;
+}
+
+body.theme-light {
+  --glass-page: linear-gradient(140deg, rgba(247, 244, 241, 0.94), rgba(235, 240, 241, 0.9));
+  --glass-surface: rgba(255, 255, 255, 0.54);
+  --glass-surface-strong: rgba(255, 255, 255, 0.72);
+  --glass-surface-soft: rgba(255, 255, 255, 0.34);
+  --glass-line: rgba(255, 255, 255, 0.68);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 24px 68px rgba(72, 56, 48, 0.11);
+  --glass-shadow-soft: 0 14px 32px rgba(72, 56, 48, 0.07);
+  --glass-text: #2c2f30;
+  --glass-muted: #676c6d;
+}
+
+body.theme-midnight,
+body.theme-high-contrast {
+  --glass-page: linear-gradient(145deg, rgba(17, 20, 26, 0.98), rgba(8, 10, 15, 0.98));
+  --glass-surface: rgba(29, 34, 43, 0.62);
+  --glass-surface-strong: rgba(36, 42, 52, 0.78);
+  --glass-surface-soft: rgba(255, 255, 255, 0.055);
+  --glass-line: rgba(255, 255, 255, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.16);
+  --glass-shadow: 0 28px 78px rgba(0, 0, 0, 0.34);
+  --glass-shadow-soft: 0 16px 38px rgba(0, 0, 0, 0.22);
+  --glass-text: #f8f4ef;
+  --glass-muted: #aab5c4;
+}
+
+body.theme-midnight::before,
+body.theme-high-contrast::before {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(240, 117, 97, 0.16), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(98, 134, 184, 0.18), transparent 28%),
+    radial-gradient(circle at 50% 96%, rgba(255, 255, 255, 0.04), transparent 38%);
+}
+
+/* Page atmospheres stay transparent so the ambient depth can read behind glass. */
+body.theme-light :is(.dashboard-body, .runner-shell-page),
+body.theme-midnight :is(.dashboard-body, .runner-shell-page),
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) {
+  background: var(--glass-page) !important;
+  color: var(--glass-text);
+}
+
+body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-main,
+body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-main,
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) .runner-shell-main {
+  background: transparent;
+}
+
+/* Sidebar and topbar form one translucent instrument panel across product pages. */
+body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-sidebar,
+body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-sidebar,
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) .runner-shell-sidebar {
+  background: var(--glass-surface);
+  border: 0;
+  box-shadow:
+    inset -1px 0 var(--glass-line),
+    18px 0 48px rgba(44, 47, 48, 0.08);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+}
+
+body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-topbar,
+body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-topbar,
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) .runner-shell-topbar {
+  background: var(--glass-surface-strong);
+  border: 0;
+  box-shadow:
+    inset 0 -1px var(--glass-line),
+    0 12px 36px rgba(44, 47, 48, 0.07);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+}
+
+body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas,
+body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas,
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas {
+  position: relative;
+}
+
+body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas::before,
+body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas::before,
+body.theme-high-contrast :is(.dashboard-body, .runner-shell-page) .runner-shell-canvas::before {
+  position: absolute;
+  top: 0;
+  right: -18vw;
+  width: 34vw;
+  height: 260px;
+  content: '';
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(252, 126, 105, 0.1), transparent 68%);
+  filter: blur(18px);
+}
+
+/* Shared card families receive one material, while photographic heroes keep their imagery. */
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .card,
+    .section-card,
+    .table-card,
+    .modal-card,
+    .glass-card,
+    .st-card,
+    .st-service-card,
+    .analysis-overview-card,
+    .analysis-cinematic-card,
+    .analysis-insight-panel,
+    .analysis-insight-action-card,
+    .analysis-insight-intro-card,
+    .analysis-insight-signal-card,
+    .analysis-insight-spotlight-card,
+    .analysis-profile-bento-card,
+    .analysis-profile-reference-card,
+    .analysis-profile-table-card,
+    .premium-empty-state,
+    .rewards-access-card,
+    .runner-streak-card,
+    .runner-comeback-card,
+    .import-source-card,
+    .import-data-source-card,
+    .add-shoes-step-card,
+    .add-shoes-model-board,
+    .add-shoes-setup-payload,
+    .garmin-import-page-card,
+    .garmin-import-page-wellness,
+    .shoe-catalog-browser-panel,
+    .muscle-panel,
+    .muscle-control-card,
+    .muscle-checkin-panel,
+    .muscle-profile-panel,
+    .weather-engine-card,
+    .schedule-plan-day,
+    .schedule-plan-readiness-card,
+    .schedule-plan-next-card,
+    .schedule-plan-route-card,
+    .schedule-plan-coach-card,
+    .schedule-plan-gear-card,
+    .today-run-command-readiness-panel,
+    .today-run-coaching-strip,
+    .admin-overview-card,
+    .admin-jobs-detail,
+    .admin-track-hub-stage__shell,
+    .admin-track-hub-sidebar__panel,
+    .admin-track-hub-footer-panel,
+    .admin-users-command-hero__story-card
+  ) {
+  border: 1px solid var(--glass-line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.2), transparent 48%), var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .card,
+    .section-card,
+    .table-card,
+    .modal-card,
+    .glass-card,
+    .st-card,
+    .st-service-card,
+    .analysis-overview-card,
+    .analysis-cinematic-card,
+    .analysis-insight-panel,
+    .analysis-insight-action-card,
+    .analysis-insight-intro-card,
+    .analysis-insight-signal-card,
+    .analysis-insight-spotlight-card,
+    .analysis-profile-bento-card,
+    .analysis-profile-reference-card,
+    .analysis-profile-table-card,
+    .premium-empty-state,
+    .rewards-access-card,
+    .runner-streak-card,
+    .runner-comeback-card,
+    .import-source-card,
+    .import-data-source-card,
+    .add-shoes-step-card,
+    .add-shoes-model-board,
+    .add-shoes-setup-payload,
+    .garmin-import-page-card,
+    .garmin-import-page-wellness,
+    .shoe-catalog-browser-panel,
+    .muscle-panel,
+    .muscle-control-card,
+    .muscle-checkin-panel,
+    .muscle-profile-panel,
+    .weather-engine-card,
+    .schedule-plan-day,
+    .schedule-plan-readiness-card,
+    .schedule-plan-next-card,
+    .schedule-plan-route-card,
+    .schedule-plan-coach-card,
+    .schedule-plan-gear-card,
+    .today-run-command-readiness-panel,
+    .today-run-coaching-strip,
+    .admin-overview-card,
+    .admin-jobs-detail,
+    .admin-track-hub-stage__shell,
+    .admin-track-hub-sidebar__panel,
+    .admin-track-hub-footer-panel,
+    .admin-users-command-hero__story-card
+  ) {
+  border: 1px solid var(--glass-line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 48%), var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* Atlas settings uses semantic panel names instead of the shared card names. */
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-hero,
+    .settings-atlas-panel,
+    .settings-atlas-service-card,
+    .settings-atlas-import-drop,
+    .settings-atlas-service-state-card
+  ),
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-hero,
+    .settings-atlas-panel,
+    .settings-atlas-service-card,
+    .settings-atlas-import-drop,
+    .settings-atlas-service-state-card
+  ) {
+  border: 1px solid var(--glass-line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 52%), var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  color: var(--glass-text);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-hero-copy p,
+    .settings-atlas-panel-head span,
+    .settings-atlas-service-main p,
+    .settings-atlas-import-drop p,
+    .settings-atlas-quick-copy span,
+    .settings-atlas-sync-copy span,
+    .settings-atlas-checklist-item span,
+    .settings-atlas-build-meta strong,
+    .settings-atlas-brief-meta strong
+  ) {
+  color: var(--glass-muted);
+}
+
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-hero-stats article,
+    .settings-atlas-quick-card,
+    .settings-atlas-sync-row,
+    .settings-atlas-checklist-item
+  ) {
+  background: var(--glass-surface-soft);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-account-fields input,
+    .settings-atlas-account-fields textarea,
+    .settings-atlas-theme-grid button,
+    .settings-atlas-service-action,
+    .settings-atlas-action-btn,
+    .settings-atlas-digest-btn
+  ) {
+  color: var(--glass-text);
+}
+
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .settings-atlas-hero-stats article,
+    .settings-atlas-quick-card,
+    .settings-atlas-sync-row,
+    .settings-atlas-checklist-item
+  ) {
+  background: var(--glass-surface-soft);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+body.theme-light .runner-shell-page--loading,
+body.theme-midnight .runner-shell-page--loading,
+body.theme-high-contrast .runner-shell-page--loading {
+  min-height: 100dvh;
+  background: var(--glass-page);
+  color: var(--glass-text);
+}
+
+/* Page-specific panels keep their editorial composition while gaining the shared lens edge. */
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .weather-engine-hero-shell,
+    .weather-engine-forecast-panel,
+    .weather-engine-hud-card,
+    .race-center-card,
+    .race-center-agenda,
+    .race-center-pb-card,
+    .mt-top-panel,
+    .mt-card,
+    .muscle-map-panel,
+    .strength-plan-control-deck
+  ),
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .weather-engine-hero-shell,
+    .weather-engine-forecast-panel,
+    .weather-engine-hud-card,
+    .race-center-card,
+    .race-center-agenda,
+    .race-center-pb-card,
+    .mt-top-panel,
+    .mt-card,
+    .muscle-map-panel,
+    .strength-plan-control-deck
+  ) {
+  border: 1px solid var(--glass-line);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(20px) saturate(1.18);
+  -webkit-backdrop-filter: blur(20px) saturate(1.18);
+}
+
+/* The hero itself can remain image-led, but its surrounding controls share the material. */
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .hd-hero,
+    .today-run-command-hero,
+    .runs-dashboard-hero,
+    .schedule-plan-hero,
+    .add-shoes-editorial-hero,
+    .admin-jobs-command-deck__hero,
+    .admin-track-hub-stage
+  ) {
+  border-radius: var(--glass-radius-xl);
+  box-shadow: var(--glass-shadow);
+}
+
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .hd-hero,
+    .today-run-command-hero,
+    .runs-dashboard-hero,
+    .schedule-plan-hero,
+    .add-shoes-editorial-hero,
+    .admin-jobs-command-deck__hero,
+    .admin-track-hub-stage
+  ) {
+  border-radius: var(--glass-radius-xl);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Controls use a soft lens instead of a new hard-edged component language. */
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea,
+    .filter-dropdown,
+    .provider-pill,
+    .theme-select,
+    .view-btn,
+    .unit-toggle,
+    .unit-toggle button,
+    .btn-secondary,
+    .runner-shell-inline-btn,
+    .runner-shell-topbar-link
+  ),
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    input:not([type='checkbox']):not([type='radio']),
+    select,
+    textarea,
+    .filter-dropdown,
+    .provider-pill,
+    .theme-select,
+    .view-btn,
+    .unit-toggle,
+    .unit-toggle button,
+    .btn-secondary,
+    .runner-shell-inline-btn,
+    .runner-shell-topbar-link
+  ) {
+  border: 1px solid var(--glass-line);
+  background: var(--glass-surface-soft);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .btn-primary,
+    .runner-shell-workout-btn,
+    .add-shoes-primary-btn,
+    .today-run-primary-btn,
+    .today-run-marathon-cta-btn,
+    .weather-engine-btn,
+    .landing-cinematic-btn--primary
+  ),
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .btn-primary,
+    .runner-shell-workout-btn,
+    .add-shoes-primary-btn,
+    .today-run-primary-btn,
+    .today-run-marathon-cta-btn,
+    .weather-engine-btn
+  ) {
+  border: 0;
+  background: var(--glass-accent-gradient);
+  box-shadow:
+    0 14px 28px rgba(160, 57, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+body.theme-light
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .runner-shell-icon-btn,
+    .runner-shell-avatar,
+    .runner-dashboard-sidebar-toggle,
+    .runner-shell-topnav-link,
+    .runner-shell-section-tab
+  ),
+body.theme-midnight
+  :is(.dashboard-body, .runner-shell-page)
+  :is(
+    .runner-shell-icon-btn,
+    .runner-shell-avatar,
+    .runner-dashboard-sidebar-toggle,
+    .runner-shell-topnav-link,
+    .runner-shell-section-tab
+  ) {
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+
+body :is(input, select, textarea, button, a):focus-visible {
+  outline: 2px solid var(--glass-focus);
+  outline-offset: 3px;
+}
+
+/* Full-bleed map and weather experiences get floating glass instruments. */
+body.theme-light
+  :is(.heatmap-page, .weather-engine-page)
+  :is(
+    .heatmap-page-topbar,
+    .heatmap-page-brand-pill,
+    .heatmap-page-search-pill,
+    .heatmap-page-utility-btn,
+    .heatmap-page-legend-card,
+    .heatmap-page-empty,
+    .weather-engine-card,
+    .weather-temperature-bar
+  ),
+body.theme-midnight
+  :is(.heatmap-page, .weather-engine-page)
+  :is(
+    .heatmap-page-topbar,
+    .heatmap-page-brand-pill,
+    .heatmap-page-search-pill,
+    .heatmap-page-utility-btn,
+    .heatmap-page-legend-card,
+    .heatmap-page-empty,
+    .weather-engine-card,
+    .weather-temperature-bar
+  ) {
+  border-color: var(--glass-line);
+  background: var(--glass-surface-strong);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* Public surfaces keep their own editorial composition but share the lens material. */
+body.theme-light
+  :is(
+    .landing-cinematic-nav.is-scrolled,
+    .landing-command-card,
+    .landing-cinematic-final-card--minimal
+  ),
+body.theme-midnight
+  :is(
+    .landing-cinematic-nav.is-scrolled,
+    .landing-command-card,
+    .landing-cinematic-final-card--minimal
+  ) {
+  border-color: var(--glass-line);
+  background: var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+body.theme-light :is(.auth-page, .legal-page) .auth-flow-card,
+body.theme-midnight :is(.auth-page, .legal-page) .auth-flow-card,
+body.theme-light
+  .legal-page
+  :is(.legal-page-hero--editorial, .legal-page-sections--editorial, .privacy-signal-strip),
+body.theme-midnight
+  .legal-page
+  :is(.legal-page-hero--editorial, .legal-page-sections--editorial, .privacy-signal-strip) {
+  border-color: var(--glass-line);
+  background: var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+}
+
+/* Admin pages use their own command-deck vocabulary, but the same material still applies. */
+body.theme-light
+  .dashboard-body
+  :is(
+    .ad-metric-card,
+    .ad-ops-card,
+    .ad-card,
+    .ad-course-card,
+    .admin-overview-bento__panel,
+    .admin-overview-bento__workbench-card,
+    .admin-settings-studio__panel,
+    .admin-audit-terminal__metric-card,
+    .admin-audit-terminal__table-shell,
+    .admin-jobs-command-deck__summary-card,
+    .admin-jobs-detail
+  ),
+body.theme-midnight
+  .dashboard-body
+  :is(
+    .ad-metric-card,
+    .ad-ops-card,
+    .ad-card,
+    .ad-course-card,
+    .admin-overview-bento__panel,
+    .admin-overview-bento__workbench-card,
+    .admin-settings-studio__panel,
+    .admin-audit-terminal__metric-card,
+    .admin-audit-terminal__table-shell,
+    .admin-jobs-command-deck__summary-card,
+    .admin-jobs-detail
+  ) {
+  border: 1px solid var(--glass-line);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 52%), var(--glass-surface);
+  box-shadow:
+    var(--glass-shadow-soft),
+    inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+@media (max-width: 860px) {
+  body.theme-light :is(.dashboard-body, .runner-shell-page) .runner-shell-sidebar,
+  body.theme-midnight :is(.dashboard-body, .runner-shell-page) .runner-shell-sidebar {
+    box-shadow:
+      inset 0 -1px var(--glass-line),
+      0 12px 32px rgba(44, 47, 48, 0.08);
+  }
+
+  body.theme-light
+    :is(.dashboard-body, .runner-shell-page)
+    :is(.card, .section-card, .table-card, .modal-card),
+  body.theme-midnight
+    :is(.dashboard-body, .runner-shell-page)
+    :is(.card, .section-card, .table-card, .modal-card) {
+    border-radius: var(--glass-radius-md);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body :is(.card, .section-card, .table-card, .modal-card) {
+    transition: none !important;
+  }
+}

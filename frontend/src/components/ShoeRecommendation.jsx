@@ -1,7 +1,7 @@
 import React from 'react';
 import { useI18n } from '../contexts/I18nContext';
 import { Footprints, AlertTriangle, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 const ShoeRecommendation = ({ recommendedShoe }) => {
   const { t } = useI18n();

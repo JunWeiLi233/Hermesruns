@@ -132,7 +132,10 @@ public class QwenAnchorPixelClient {
         } finally {
             if (isTemporaryFile) {
                 try {
-                    Files.deleteIfExists(Path.of(actualImagePath));
+                    Path tempPath = SafeTempFileGuard.tempFileOrNull(actualImagePath);
+                    if (tempPath != null) {
+                        Files.deleteIfExists(tempPath);
+                    }
                 } catch (IOException ignored) {
                 }
             }

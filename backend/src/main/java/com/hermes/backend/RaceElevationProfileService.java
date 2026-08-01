@@ -45,17 +45,17 @@ public class RaceElevationProfileService {
     private static final List<String> REJECT_HINTS = List.of(
             "logo", "icon", "badge", "sponsor", "partner", "facebook", "instagram", "hero", "banner"
     );
-    private final RestTemplate restTemplate;
+    private final SafeUrlExecutor safeUrlExecutor;
     private final TtlCacheStore cacheStore;
 
     @Autowired
-    public RaceElevationProfileService(RestTemplate restTemplate, TtlCacheStore cacheStore) {
-        this.restTemplate = restTemplate;
+    public RaceElevationProfileService(SafeUrlExecutor safeUrlExecutor, TtlCacheStore cacheStore) {
+        this.safeUrlExecutor = safeUrlExecutor;
         this.cacheStore = cacheStore;
     }
 
     public RaceElevationProfileService(RestTemplate restTemplate) {
-        this(restTemplate, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+        this(SafeUrlExecutor.permissiveForTests(restTemplate), TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public RaceElevationProfileResult resolveProfile(String raceName, String city, String country, String websiteUrl) {
@@ -146,24 +146,26 @@ public class RaceElevationProfileService {
 
     private String firstProfileImageOnPage(String pageUrl) {
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
+            ResponseEntity<String> response = safeUrlExecutor.exchange(
                     pageUrl,
                     HttpMethod.GET,
                     new HttpEntity<>(buildHtmlHeaders()),
                     String.class
             );
+            if (response == null) return null;
             String html = response.getBody();
             if (html == null || html.isBlank()) return null;
 
             URI baseUri = URI.create(pageUrl);
-            Matcher matcher = IMG_PATTERN.matcher(html);
+            String boundedHtml = HtmlScanLimiter.bounded(html);
+            Matcher matcher = IMG_PATTERN.matcher(boundedHtml);
             while (matcher.find()) {
                 String raw = matcher.group(1);
                 String candidate = sanitizeImageCandidate(raw, baseUri);
                 if (candidate != null) return candidate;
             }
 
-            Matcher hrefMatcher = HREF_PATTERN.matcher(html);
+            Matcher hrefMatcher = HREF_PATTERN.matcher(boundedHtml);
             while (hrefMatcher.find()) {
                 String raw = hrefMatcher.group(1);
                 String candidate = sanitizeLinkedProfileCandidate(raw, baseUri);
@@ -263,15 +265,16 @@ public class RaceElevationProfileService {
 
     private String fetchBingImage(String query) {
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
+            ResponseEntity<String> response = safeUrlExecutor.exchange(
                     "https://www.bing.com/images/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&first=1",
                     HttpMethod.GET,
                     new HttpEntity<>(buildHtmlHeaders()),
                     String.class
             );
+            if (response == null) return null;
             String html = response.getBody();
             if (html == null || html.length() < 100) return null;
-            Matcher matcher = MEDIA_URL_PATTERN.matcher(html);
+            Matcher matcher = MEDIA_URL_PATTERN.matcher(HtmlScanLimiter.bounded(html));
             while (matcher.find()) {
                 String url = java.net.URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
                 if (isImageFileUrl(url)) {
@@ -302,12 +305,13 @@ public class RaceElevationProfileService {
             headers.set(HttpHeaders.USER_AGENT,
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                             "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-            ResponseEntity<byte[]> response = restTemplate.exchange(
+            ResponseEntity<byte[]> response = safeUrlExecutor.exchange(
                     imageUrl,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     byte[].class
             );
+            if (response == null) return List.of();
             byte[] body = response.getBody();
             if (body == null || body.length == 0) return List.of();
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(body));

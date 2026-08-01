@@ -68,12 +68,27 @@ function ensureSessionId(windowObj) {
   try {
     const existing = windowObj.sessionStorage.getItem(key);
     if (existing) return existing;
-    const created = `console-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const created = `console-${Date.now().toString(36)}-${randomToken(6)}`;
     windowObj.sessionStorage.setItem(key, created);
     return created;
   } catch {
     return `console-${Date.now().toString(36)}`;
   }
+}
+
+/**
+ * Cryptographically-strong random token for the console session id. Falls back
+ * to Math.random only when the WebCrypto CSPRNG is unavailable (very old
+ * browsers / non-secure contexts) so the tracker never crashes, but prefers
+ * crypto.getRandomValues so the id is not predictable.
+ */
+function randomToken(length) {
+  const cryptoObj = window?.crypto;
+  if (cryptoObj?.getRandomValues) {
+    const bytes = cryptoObj.getRandomValues(new Uint8Array(length));
+    return Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, length);
+  }
+  return Math.random().toString(36).slice(2, 2 + length);
 }
 
 function queuePayload(payload, sendReport) {

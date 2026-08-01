@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../api';
 import AuthenticatedPageChrome from '../components/AuthenticatedPageChrome';
 import { useI18n } from '../contexts/I18nContext';
