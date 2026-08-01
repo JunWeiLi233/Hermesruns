@@ -4,6 +4,7 @@ import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import AuthDotField from '../components/AuthDotField';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -170,6 +171,7 @@ export default function LegalPage({ variant = 'terms' }) {
 
   return (
     <div className={`legal-page legal-page--${variant}`}>
+      <AuthDotField />
       <div className="legal-page-shell">
         <header className="legal-page-header">
           <button
