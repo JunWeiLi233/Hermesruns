@@ -538,40 +538,40 @@
   isolation: isolate;
   min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 16% 14%, rgba(240, 117, 97, 0.24), transparent 30rem), /* tokens-ok */
-    radial-gradient(circle at 86% 78%, rgba(120, 88, 62, 0.22), transparent 34rem), /* tokens-ok */
-    linear-gradient(112deg, #161411 0%, #231d17 45%, #efe5d7 45.2%, #f8f1e8 100%); /* tokens-ok */
+  background: #201c19; /* tokens-ok */
   color: #f5efe9; /* tokens-ok */
 }
 
-.auth-page--login::before {
-  content: "";
+.auth-page--login::before,
+.auth-page--login::after {
+  display: none;
+}
+
+.auth-login-dot-field {
+  --auth-dot-rgb: 255, 244, 236;
+  --auth-dot-opacity: 0.28;
+  --auth-dot-color: rgba(255, 244, 236, 0.28);
   position: absolute;
   inset: 0;
   z-index: 0;
-  background:
-    linear-gradient(112deg, transparent 0 43%, rgba(255, 244, 236, 0.07) 43.1% 43.6%, transparent 43.8%), /* tokens-ok */
-    repeating-linear-gradient(90deg, rgba(255, 244, 236, 0.035) 0 1px, transparent 1px 96px); /* tokens-ok */
-  opacity: 0.78;
+  overflow: hidden;
   pointer-events: none;
+  background-image: radial-gradient(circle, var(--auth-dot-color) 1.1px, transparent 1.35px);
+  background-size: 20px 20px;
+  -webkit-mask-image: radial-gradient(ellipse 76% 74% at 50% 50%, rgba(0, 0, 0, 0.42) 0%, #000 100%);
+  mask-image: radial-gradient(ellipse 76% 74% at 50% 50%, rgba(0, 0, 0, 0.42) 0%, #000 100%);
 }
 
-.auth-page--login::after {
-  content: "";
+.auth-login-dot-field__canvas {
   position: absolute;
-  inset: auto -12vw -28vh auto;
-  z-index: 0;
-  width: min(58vw, 760px);
-  aspect-ratio: 1;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.52) 0 1px, transparent 2px), /* tokens-ok */
-    conic-gradient(from 110deg, rgba(160, 57, 42, 0.18), rgba(255, 244, 236, 0.1), rgba(160, 57, 42, 0.18)); /* tokens-ok */
-  background-size: 18px 18px, auto;
-  filter: blur(0.2px);
-  opacity: 0.42;
-  pointer-events: none;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.auth-login-dot-field.is-interactive {
+  background-image: none;
 }
 
 .auth-flow-shell {
@@ -645,6 +645,8 @@
   position: relative;
   height: clamp(360px, 48vh, 440px);
   overflow: hidden;
+  isolation: isolate;
+  clip-path: inset(0);
 }
 
 .auth-flow-slide-track {
@@ -654,7 +656,16 @@
   animation: authFlowSlideRoll 56s cubic-bezier(0.68, 0, 0.18, 1) infinite;
   transform: translate3d(0, 0, 0);
   will-change: transform;
-  backface-visibility: hidden;
+}
+
+/* Login renders one keyed slide at a time so outgoing copy cannot bleed into
+   the next frame while the window is moving. */
+.auth-flow-slide-track--single {
+  height: 100%;
+  display: block;
+  animation: none;
+  transform: none;
+  will-change: auto;
 }
 
 .auth-flow-slide {
@@ -666,6 +677,15 @@
   justify-content: center;
   gap: clamp(14px, 2.4vh, 22px);
   overflow: hidden;
+}
+
+.auth-flow-slide--single {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  flex: none;
+  animation: authFlowSlideEnter 460ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .auth-flow-kicker {
@@ -749,6 +769,12 @@
   margin-top: 10px;
 }
 
+/* The login page already has the ambient dot field; remove the carousel's
+   segmented progress bar so the welcome surface stays visually quiet. */
+.auth-page--login .auth-flow-dots {
+  display: none;
+}
+
 .auth-flow-dots span {
   width: 6px;
   height: 6px;
@@ -807,6 +833,12 @@
   pointer-events: none;
 }
 
+/* The login card is the only container this surface needs. Remove the larger
+   backing panel so the form does not read as a card inside another card. */
+.auth-page--login .auth-flow-formside::before {
+  display: none;
+}
+
 .auth-flow-card {
   position: relative;
   z-index: 1;
@@ -838,6 +870,46 @@
   pointer-events: none;
 }
 
+/* Keep the login welcome card focused on the form instead of a decorative
+   crosshair/grid ornament. Other auth surfaces retain their own treatment. */
+.auth-page--login .auth-flow-card::before {
+  display: none;
+}
+
+/* Login-only liquid glass: keep the card translucent enough for the dot field
+   to show through, while preserving a strong edge and readable form content. */
+.auth-page--login .auth-flow-card {
+  border-color: rgba(255, 244, 236, 0.24); /* tokens-ok */
+  background:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.14), rgba(31, 26, 22, 0.54)), /* tokens-ok */
+    rgba(24, 21, 18, 0.5); /* tokens-ok */
+  box-shadow:
+    0 34px 90px rgba(23, 17, 12, 0.3), /* tokens-ok */
+    inset 0 1px 0 rgba(255, 255, 255, 0.18), /* tokens-ok */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16); /* tokens-ok */
+  backdrop-filter: blur(30px) saturate(1.25);
+  -webkit-backdrop-filter: blur(30px) saturate(1.25);
+}
+
+.auth-page--login .auth-flow-card::after {
+  content: "";
+  position: absolute;
+  top: -34%;
+  right: -18%;
+  width: 76%;
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 68%); /* tokens-ok */
+  filter: blur(14px);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.auth-page--login .auth-flow-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 .auth-flow-header {
   margin-bottom: 28px;
 }
@@ -865,6 +937,37 @@
   flex-direction: column;
   gap: 10px;
   margin-bottom: 24px;
+}
+
+/* Keep optional providers compact and secondary to the primary credentials
+   form while giving each provider its own status-note column. */
+.auth-flow-social--row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin: 18px 0 16px;
+}
+
+.auth-flow-social-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.auth-flow-social--row .auth-flow-btn {
+  min-height: 46px;
+  padding-inline: 12px;
+  gap: 7px;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.auth-flow-social--row .auth-flow-status-note {
+  margin: 0 2px;
+  font-size: 0.72rem;
 }
 
 .auth-flow-status-note {
@@ -1038,6 +1141,31 @@
 .auth-page--login .form-group--auth input.error {
   border-color: rgba(248, 113, 113, 0.4); /* tokens-ok */
   box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.08); /* tokens-ok */
+}
+
+.auth-page--login .form-group--auth input {
+  border-color: rgba(255, 244, 236, 0.16); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.07); /* tokens-ok */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); /* tokens-ok */
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.auth-page--login .form-group--auth input:focus {
+  background: rgba(255, 255, 255, 0.12); /* tokens-ok */
+}
+
+.auth-page--login .auth-flow-btn--google {
+  border: 1px solid rgba(255, 244, 236, 0.14); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.08); /* tokens-ok */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); /* tokens-ok */
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+
+.auth-page--login .auth-flow-btn--strava,
+.auth-page--login .auth-flow-btn--submit {
+  border: 1px solid rgba(255, 255, 255, 0.22); /* tokens-ok */
 }
 
 /* 闁冲厜鍋撻柍鍏夊�?Signup Page Redesign 闁冲厜鍋撻柍鍏夊�?*/
@@ -1793,9 +1921,7 @@
 
 @media (max-width: 720px) {
   .auth-page--login {
-    background:
-      radial-gradient(circle at 12% 4%, rgba(240, 117, 97, 0.16), transparent 18rem), /* tokens-ok */
-      linear-gradient(180deg, rgba(12, 13, 14, 0.94) 0%, rgba(22, 23, 20, 0.88) 50%, rgba(14, 16, 19, 0.96) 100%); /* tokens-ok */
+    background: #201c19; /* tokens-ok */
   }
 
   .auth-page--login .lang-switcher {
@@ -1875,7 +2001,17 @@
   }
 }
 
+@media (max-width: 420px) {
+  .auth-flow-social--row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .auth-login-dot-field {
+    pointer-events: none;
+  }
+
   .auth-flow-slide-viewport {
     height: auto;
     overflow: visible;
@@ -1886,8 +2022,20 @@
     animation: none;
   }
 
+  .auth-flow-slide-track--single {
+    min-height: 360px;
+  }
+
   .auth-flow-slide {
     height: auto;
+  }
+
+  .auth-flow-slide--single {
+    position: static;
+    min-height: 360px;
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 
   .auth-flow-slide:not(:first-child) {
@@ -2006,6 +2154,115 @@
 
 .pwd-strength-rule.is-met .rule-icon {
   color: #4ade80;
+}
+
+/* Keep signup on the same restrained canvas and liquid-glass system as login.
+   The signup form keeps its own fields and password-strength behavior, but no
+   longer adds a second decorative background or backing panel. */
+.auth-page--signup {
+  background: #201c19; /* tokens-ok */
+  color: #f5efe9; /* tokens-ok */
+}
+
+.auth-page--signup::before {
+  display: none;
+}
+
+.auth-page--signup .auth-flow-formside::before,
+.auth-page--signup .auth-flow-card::before {
+  display: none;
+}
+
+.auth-page--signup .auth-flow-card {
+  border-color: rgba(255, 244, 236, 0.24); /* tokens-ok */
+  background:
+    linear-gradient(145deg, rgba(255, 244, 236, 0.14), rgba(31, 26, 22, 0.54)), /* tokens-ok */
+    rgba(24, 21, 18, 0.5); /* tokens-ok */
+  box-shadow:
+    0 34px 90px rgba(23, 17, 12, 0.3), /* tokens-ok */
+    inset 0 1px 0 rgba(255, 255, 255, 0.18), /* tokens-ok */
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16); /* tokens-ok */
+  backdrop-filter: blur(30px) saturate(1.25);
+  -webkit-backdrop-filter: blur(30px) saturate(1.25);
+}
+
+.auth-page--signup .auth-flow-card::after {
+  content: "";
+  position: absolute;
+  top: -34%;
+  right: -18%;
+  width: 76%;
+  height: 72%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 68%); /* tokens-ok */
+  filter: blur(14px);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.auth-page--signup .auth-flow-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Keep signup fields above every decorative glass layer so they remain
+   focusable and editable when the card is composited with backdrop-filter. */
+.auth-page--signup .auth-flow-form {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.auth-page--signup .auth-flow-form input {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+  cursor: text;
+}
+
+.auth-page--signup .auth-flow-dots {
+  display: none;
+}
+
+.auth-page--signup .form-group--auth input {
+  border-color: rgba(255, 244, 236, 0.16); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.07); /* tokens-ok */
+  color: #18202b; /* tokens-ok */
+  -webkit-text-fill-color: #18202b; /* tokens-ok */
+  caret-color: var(--accent-coral-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); /* tokens-ok */
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.auth-page--signup .form-group--auth input::placeholder {
+  color: rgba(71, 85, 105, 0.62); /* tokens-ok */
+  -webkit-text-fill-color: rgba(71, 85, 105, 0.62); /* tokens-ok */
+}
+
+.auth-page--signup .form-group--auth input:focus {
+  background: rgba(255, 255, 255, 0.12); /* tokens-ok */
+}
+
+.auth-page--signup .auth-flow-btn--google {
+  border: 1px solid rgba(255, 244, 236, 0.14); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.08); /* tokens-ok */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); /* tokens-ok */
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+
+.auth-page--signup .auth-flow-btn--strava,
+.auth-page--signup .auth-flow-btn--submit {
+  border: 1px solid rgba(255, 255, 255, 0.22); /* tokens-ok */
+}
+
+.auth-page--signup .pwd-strength-card {
+  border: 1px solid rgba(255, 244, 236, 0.12); /* tokens-ok */
+  background: rgba(255, 255, 255, 0.06); /* tokens-ok */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); /* tokens-ok */
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
 }
 
 @media (max-width: 480px) {
