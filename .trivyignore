@@ -1,0 +1,3 @@
+# GHSA-qwww-vcr4-c8h2 only affects React Router's unstable RSC APIs.
+# Hermes uses declarative BrowserRouter/Routes and does not enable RSC mode.
+GHSA-qwww-vcr4-c8h2
