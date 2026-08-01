@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useI18n } from '../contexts/I18nContext';
 
 export default function FooterNavLinks({ className = '', publicOnly = false }) {

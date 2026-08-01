@@ -1,5 +1,5 @@
 import { createElement, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
