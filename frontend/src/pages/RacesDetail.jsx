@@ -1079,7 +1079,7 @@ export default function RacesDetail() {
 
   if (loadState !== 'ready') {
     return (
-      <div className="runner-shell-page runner-shell-page--loading">
+      <div className="runner-shell-page runner-shell-page--loading race-detail-page--loading" data-loading-state={loadState}>
         <div className="runner-shell-loading">{t(loadState === 'error' ? 'races.stitch_load_error' : 'races.stitch_loading')}</div>
       </div>
     );

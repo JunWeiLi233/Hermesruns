@@ -12,6 +12,7 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import PageSkeleton from '../components/PageSkeleton';
 import { muscleSlugsForExercise } from '../utils/muscleSlugMapper';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
 import targetArmsUrl from '../assets/muscle-training/target-arms.webp';
@@ -3800,6 +3801,8 @@ export default function MuscleTraining() {
     document.getElementById('muscle-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  if (loading) return <PageSkeleton variant="muscle-training" />;
+
   return (
     <div
       className={`runner-shell-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}
@@ -3870,7 +3873,7 @@ export default function MuscleTraining() {
         <div className="runner-shell-canvas muscle-training-canvas">
           <div className="mt-content">
 
-        {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
+        {loading && <div className="muscle-training-loading-skeleton" role="status" aria-live="polite" aria-busy="true">{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
 
         {!loading && !error && !plan && (

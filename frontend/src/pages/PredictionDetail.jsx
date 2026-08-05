@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
@@ -272,11 +273,7 @@ export default function PredictionDetail() {
   );
 
   if (loadState === 'loading' || !distance) {
-    return (
-      <div className="runner-shell-page runner-shell-page--loading">
-        <div className="runner-shell-loading">{t('analysis.stitch_loading')}</div>
-      </div>
-    );
+    return <PageSkeleton variant="prediction" />;
   }
 
   const title = lang === 'zh-CN' ? distance.labelZh : distance.labelEn;
