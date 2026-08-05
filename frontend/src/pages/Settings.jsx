@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import SettingsAtlasLayout from '../components/SettingsAtlasLayout';
 import TopbarNotifications from '../components/TopbarNotifications';
@@ -305,7 +306,7 @@ export default function Settings() {
   ];
 
   if (loadState === 'loading') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_loading')}</div></div>;
+    return <PageSkeleton variant="settings" />;
   }
 
   if (loadState === 'error') {
@@ -427,8 +428,4 @@ export default function Settings() {
     </div>
   );
 }
-
-
-
-
 

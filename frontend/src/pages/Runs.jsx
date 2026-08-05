@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 
 const RUNS_CACHE_TTL_MS = 86400000;
@@ -22,6 +22,7 @@ function writeRunsCache(email, runs, profile, stravaStatus) {
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import PageSkeleton from '../components/PageSkeleton';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../utils/format';
 import HermesLogo from '../components/HermesLogo';
@@ -817,6 +818,7 @@ const Runs = memo(function Runs() {
     return Number.isNaN(latestTime) || runTime > latestTime ? run : latest;
   }, null);
   const latestSource = latestRun?.provider || t('runs.no_data');
+
   const visibleRuns = useMemo(
     () => filteredRuns.slice(0, visibleRunsCount),
     [filteredRuns, visibleRunsCount],
@@ -1041,6 +1043,8 @@ const Runs = memo(function Runs() {
       </Modal>
     );
   }
+
+  if (loadState === 'loading') return <PageSkeleton variant="runs" />;
 
   if (isAwaitingData) {
     return (
@@ -1371,7 +1375,7 @@ const Runs = memo(function Runs() {
               </section>
             ) : null}
             <section className="recent-runs-card-list" aria-label={t('runs.full_history')}>
-          {loadState === 'loading' ? <div className="recent-runs-status">{t('runs.loading')}</div> : null}
+          {loadState === 'loading' ? <div className="recent-runs-status recent-runs-status--loading">{t('runs.loading')}</div> : null}
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
           {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
           {loadState === 'ready' && filteredRuns.length > 0 ? (

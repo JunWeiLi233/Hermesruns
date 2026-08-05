@@ -11,6 +11,235 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-08-05-11
+Date: 2026-08-05
+Surface: `/` landing loading skeleton shoe geometry
+Files: `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the generic polygon shoe placeholder with the EVO SL master frame's alpha silhouette, preserving the shared shimmer while matching the live hero's `0.88fr / 1.12fr` copy-to-art grid, square canvas, visible shoe bounds, heel/toe profile, 1.08× heel-anchored scale, and ground shadow placement.
+Why: The skeleton's right-side placeholder was flatter, smaller, and positioned differently from the live landing hero, making the loading transition visibly jump.
+Preserve list: Landing copy, navigation/action landmarks, below-fold feature preview, responsive stacking, and reduced-motion-safe skeleton animation.
+Rollback target: `DV-2026-08-05-10`
+
+### Version: DV-2026-08-05-10
+Date: 2026-08-05
+Surface: `/` loading skeleton composition
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the landing skeleton around the actual first viewport: three-column navigation, editorial three-line hero, copy/actions/trust row, reserved shoe artwork and shadow, and the next feature section below the fold.
+Why: The previous landing placeholder was a generic title/stats/map layout, so it did not reserve the live hero's right-side shoe or keep the feature grid below the initial viewport.
+Preserve list: Hero scroll shoe interaction, navigation and CTA routes, landing sections, bilingual copy, responsive behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-09`
+
+### Version: DV-2026-08-05-09
+Date: 2026-08-05
+Surface: `/login` and `/signup` loading skeleton compositions
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the public auth skeletons to the live surfaces with a restrained dot field, left Hermes brand/carousel landmarks, liquid-glass form cards, password-field geometry, social status rows, cross-auth links, and legal footer geometry.
+Why: The login alias rendered, but signup still used the older root layout, so the two auth previews diverged and omitted the dotted field and lower auth landmarks.
+Preserve list: Login form behavior, OAuth availability states, authentication flow, responsive layout, reduced-motion behavior, and signup/admin/forgot-password skeleton variants.
+Rollback target: `DV-2026-08-05-08`
+
+### Version: DV-2026-08-05-08
+Date: 2026-08-05
+Surface: `/login` loading skeleton preview
+Files: `frontend/src/App.jsx`, `frontend/src/components/PageSkeleton.jsx`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the `skeleton-preview=login` alias so the login preview renders the existing two-panel authentication skeleton instead of falling through to the landing skeleton.
+Why: The preview query accepted `auth` but not the user-facing `login` name, so `/login` preview showed unrelated landing content.
+Preserve list: Login form behavior, OAuth availability states, authentication flow, responsive layout, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-07`
+
+### Version: DV-2026-08-05-07
+Date: 2026-08-05
+Surface: `/settings` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the Settings skeleton around the loaded page's compact identity hero, account/preferences row, checklist/weekly-brief row, and connected-services/wellness sections.
+Why: The previous placeholder used a generic oversized command hero and stacked the right column incorrectly, causing a visible layout jump while Settings data loaded.
+Preserve list: Settings form controls, service linking/import actions, wellness preferences, navigation, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-06`
+
+### Version: DV-2026-08-05-06
+Date: 2026-08-05
+Surface: `/schedule` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated the schedule skeleton to the loaded plan: a compact weekly-plan hero with two volume metrics, a seven-day training strip, and a lower three-column readiness/next-session/coach composition before the route and gear details.
+Why: The previous placeholder used three nested metric cards, an oversized hero, and a wider left rail, so its first viewport diverged from the real schedule page.
+Preserve list: Schedule hydration, workout editing and navigation, route planning, readiness and coach calculations, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-05`
+
+### Version: DV-2026-08-05-05
+Date: 2026-08-05
+Surface: `/muscle-training` loading skeleton first viewport
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the strength-training skeleton around the loaded page's three above-fold zones: muscle selector, recommended movements, and exercise reference, followed by the protocol workbench, movement demo, check-in, and tuning surfaces.
+Why: The previous skeleton introduced a command hero and omitted the right-hand exercise reference, creating a large layout jump before the real muscle-training page rendered.
+Preserve list: Muscle selection, exercise recommendations, movement guidance, check-in controls, plan tuning, route behavior, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-04`
+
+### Version: DV-2026-08-05-04
+Date: 2026-08-05
+Surface: Remaining route loading skeletons
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced generic placeholders across heatmap, weather, run detail, insight, prediction, schedule, today-run, strength training, rewards, settings, Garmin/import, add-shoes, catalog, and race-detail routes with compositions that reserve their loaded page landmarks; the heatmap now uses a dedicated full-screen map shell.
+Why: Computer Use comparison showed several routes still collapsed to a generic hero/chart or runner-frame layout, creating large geometry jumps while data loaded.
+Preserve list: Route data hydration, map behavior, navigation, forms, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-03`
+
+### Version: DV-2026-08-05-03
+Date: 2026-08-05
+Surface: `/shoes` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the legacy catalog placeholder for the Shoes route with the real rotation insight, inventory stage, health summary, management controls, and final horizontal shoe inventory grid.
+Why: The loaded Shoes page ends in a one-column inventory card grid, but its skeleton stopped at three generic product tiles and omitted the page's final data surface.
+Preserve list: Shoe hydration, image scanning, duplicate merging, filters, sorting, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-02`
+
+### Version: DV-2026-08-05-02
+Date: 2026-08-05
+Surface: `/profile` loading skeleton rewards section
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the final rewards progress, upcoming-milestone, and badge grid to the Profile loading skeleton.
+Why: Computer Use comparison showed the loaded Profile page continues below the bottom cards into a distinct Rewards section; ending the skeleton early caused the last grid to jump in during loading.
+Preserve list: Reward calculations, reward navigation, user data, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-05-01`
+
+### Version: DV-2026-08-05-01
+Date: 2026-08-05
+Surface: `/profile` loading skeleton geometry
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recalibrated the Profile skeleton against the live shell canvas, matching the runner topbar height and editorial content insets, adding the comeback card's inter-section spacing, mirroring the full-width weekly chart bars, and reserving all five recent-session rows, the view-all affordance, and five progression tabs.
+Why: Computer Use comparison showed the skeleton canvas was wider and higher than the loaded Profile page, while the chart and lower training grid used visibly different landmarks.
+Preserve list: Profile data hydration, dashboard actions, route navigation, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-04-03`
+
+### Version: DV-2026-08-04-03
+Date: 2026-08-04
+Surface: `/profile` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the Profile skeleton to mirror the editorial dashboard: date and greeting with readiness, comeback coach card, today's session hero, three-metric strip, weekly training/session panels, progression chart, weekly digest, and lower dashboard cards.
+Why: The previous avatar-and-generic-stat placeholder did not reserve the Profile page's real top-to-bottom composition while dashboard data loaded.
+Preserve list: Profile cache hydration, dashboard enrichment, coach actions, route navigation, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: working tree before this change
+
+### Version: DV-2026-08-04-02
+Date: 2026-08-04
+Surface: `/analysis` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the Analysis skeleton to mirror the live physiology cockpit: the VO2 trend card with chart and decision spine, the ACWR gauge/coach/trend rail, the intensity/injury/forecast bento row, prediction tables, and injury-prevention section.
+Why: The previous generic hero, gauge, and split chart skeleton did not preserve the Analysis page's actual hierarchy or the large VO2-first composition during the initial data wait.
+Preserve list: Analysis calculations, route actions, import flows, injury-risk loading, responsive collapse, theme behavior, and reduced-motion behavior.
+Rollback target: working tree before this change
+
+### Version: DV-2026-08-04-01
+Date: 2026-08-04
+Surface: `/runs` loading skeleton
+Files: `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/loadingSkeleton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the Runs skeleton to mirror the live history cockpit: the editorial hero and action row, two-up signal rail with status card, search/filter workbench, summary metrics, coaching insight strip, grouped month history, and route-preview run cards.
+Why: The previous generic hero/chart skeleton suggested a different page structure and left the loading state visibly disconnected from the loaded Runs experience.
+Preserve list: Runs data loading, cache behavior, Strava linking, imports, filtering, sorting, route previews, responsive collapse, and reduced-motion behavior.
+Rollback target: working tree before this change
+
+### Version: DV-2026-08-02-12
+Date: 2026-08-02
+Surface: Authenticated runner top navigation on narrow screens
+Files: `frontend/src/styles/_split/runner-shell.css`, `frontend/src/styles/_split/profile.css`, `frontend/src/components/runnerShellTopNavRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Constrained the remaining page label to the available identity track and enabled safe localized wrapping after the HERMES brand removal.
+Why: The narrow profile override still reserved the removed brand column, allowing page-label text to escape or clip inside the compact top-nav pill.
+Rollback target: `DV-2026-08-02-11`
+Notes: Active labels, parent breadcrumbs, desktop sizing, and shared navigation routes are preserved.
+
+### Version: DV-2026-08-02-11
+Date: 2026-08-02
+Surface: `/login` and `/signup` — expanded product-introduction carousel
+Files: `frontend/src/data/authBrandSlides.js`, `frontend/src/i18n/locales/{en,zh-CN}/pages.js`, `frontend/src/pages/loginBrandCarousel.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added three rotating stories that explain how Hermes works after sign-in: connect or import run data, bring wellness signals into recovery decisions, and review progress before choosing the next run. Each story includes localized detail and stat labels and participates in the existing randomized loop.
+Why: The auth rail introduced individual analytics features but did not explain the complete path from data connection to daily training decisions.
+Preserve list: Existing auth routes, form and OAuth behavior, random timing, reduced-motion handling, responsive layout, and prior carousel stories.
+Rollback target: `DV-2026-08-02-10`
+
+### Version: DV-2026-08-02-10
+Date: 2026-08-02
+Surface: `/login` and `/signup` — randomized brand intelligence carousel
+Files: `frontend/src/components/AuthBrandCarousel.jsx`, `frontend/src/data/authBrandSlides.js`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/i18n/locales/{en,zh-CN}/pages.js`, `frontend/src/pages/loginBrandCarousel.smoke.test.js`, `frontend/src/pages/authLiquidGlass.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the fixed CSS slide stack with one active brand frame that selects a different slide and a slightly varied display interval on each loop. Added compact localized detail rows to every frame, including PDF route tracing, elevation, and pacing/weather context for the course-map story. The active frame enters with a short fade-and-lift transition and remains readable for several seconds.
+Why: The previous loop exposed every slide to assistive technology and advanced through a predictable sequence, while the course-map story needed more concrete product information without expanding the auth layout.
+Preserve list: Existing auth routes, email/password and OAuth actions, bilingual copy, dot-field background, responsive layout, reduced-motion behavior, and form state.
+Rollback target: `DV-2026-08-02-09`
+
+### Version: DV-2026-08-02-09
+Date: 2026-08-02
+Surface: Authenticated runner top navigation
+Files: `frontend/src/components/RunnerShellTopNav.jsx`, `frontend/src/styles/_split/runner-shell.css`, `frontend/src/styles/_split/tokens.css`, `frontend/src/components/runnerShellTopNavRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the HERMES brand pill from the shared top bar and collapsed the remaining page identity into a single compact column.
+Why: The duplicated brand pill competed with the active page label and made the top bar feel unnecessarily heavy.
+Rollback target: `DV-2026-08-02-08`
+Notes: Shared navigation rendering, active labels, parent breadcrumbs, responsive behavior, and route data are preserved.
+
+### Version: DV-2026-08-02-07
+Date: 2026-08-02
+Surface: Local shared-runner login hint on `/login`
+Files: `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/loginLocalMockHint.smoke.test.js`, `README.md`, `DESIGN_VERSIONS.md`
+What changed: Corrected the documented local mock password to the backend default `HermesDev2026!` and clarified that `APP_LOCAL_SHARED_RUNNER_PASSWORD` can override it.
+Why: The login hint advertised `HermesLocal1!`, while the backend bootstrap accepted `HermesDev2026!` by default, causing local sign-in attempts to fail.
+Rollback target: `DV-2026-08-02-06`
+Notes: Authentication flow, account email, environment override, and production safety guards are preserved.
+
+### Version: DV-2026-08-02-06
+Date: 2026-08-02
+Surface: Public landing page `/` — race map marker scale refinement
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingAirlineAnimation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Tightened the race marker again: the dark badge is now `0.5` viewBox units with a `0.68px` map label, while the coral locator halo is reduced to `0.72` units and lowered in opacity. The marker keeps its small core and high-contrast edge without competing with the map or flight route.
+Why: The prior compact marker pass still read too large at the displayed map scale.
+Mode: warm liquid-glass landing map with minimal coral locator cues.
+Preserve list: Race ordering, route geometry, aircraft loop, race captions, bilingual copy, responsive behavior, and reduced-motion safeguards.
+Rollback target: `DV-2026-08-02-05`
+
+### Version: DV-2026-08-02-05
+Date: 2026-08-02
+Surface: Landing final CTA heading on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the final CTA heading's forced single-line behavior with a constrained fluid copy track and balanced wrapping, so long Chinese copy stays inside the card instead of widening the grid and clipping past its edge.
+Why: The Chinese CTA title exceeded its fixed copy column while `white-space: nowrap` prevented safe wrapping, which made the centered final grid visibly overflow.
+Rollback target: `DV-2026-08-02-04`
+Notes: CTA routing, bilingual copy, button hierarchy, trust chips, and responsive card structure are preserved.
+
+### Version: DV-2026-08-02-04
+Date: 2026-08-02
+Surface: Public landing page `/` — race map location markers
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingAirlineAnimation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reduced the map location badge radius from `1.35` to `0.88` viewBox units and scaled the order label with it so the markers no longer overpower the world map. Added a compact coral halo with sequenced pulse animation, a smaller center accent, and a higher-contrast badge edge to keep each destination visually discoverable.
+Why: The previous dark markers read as oversized dots in the map composition. The new treatment preserves location and order recognition while restoring the map's geography and route motion as the primary visual layer.
+Mode: warm liquid-glass landing map with restrained coral motion cues.
+Preserve list: Race ordering, route geometry, aircraft loop, race captions, bilingual copy, responsive behavior, and reduced-motion safeguards.
+Rollback target: `DV-2026-08-02-03`
+
+### Version: DV-2026-08-02-03
+Date: 2026-08-02
+Surface: All app shells — runner, admin, auth, legal, and shared dashboard pages
+Files: `frontend/src/index.css`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/allPagesLiquidGlass.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the landing page's liquid-glass material language to every shared surface: runner sidebars and topbars, page navigation, runner content cards, admin command workspaces, shared dashboard chrome, auth sheets, and legal reading frames. The layer adds warm-paper or midnight atmospheres, translucent tonal surfaces, inset edge highlights, coral focus/CTA states, and a backdrop-filter fallback. Maps, charts, media, modals, popovers, and form controls keep their existing specialized treatment so the information hierarchy stays clear.
+Why: Give the complete product one recognizable Hermes material system instead of limiting the new glass language to the public entry surfaces.
+Mode: Dual-mode safe; warm aerodynamic paper in light mode and charcoal cinematic glass in midnight mode.
+Preserve list: Route structure, authentication and admin guards, page-specific layouts, charts, maps, media, modals, controls, bilingual copy, responsive behavior, and reduced-motion support.
+Rollback target: `DV-2026-08-02-02`
+
+### Version: DV-2026-08-02-02
+Date: 2026-08-02
+Surface: Public landing page `/` — liquid glass treatment
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingLiquidGlass.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a route-scoped liquid-glass layer inspired by `rdev/liquid-glass-react`: the sticky navigation, command-deck cards, daily-answer cards, race/map surfaces, comparison table, and final CTA now use translucent blur/saturation, inset edge highlights, soft chromatic light, and hover depth. The hero keeps its existing warm-paper canvas and scroll-driven shoe interaction, with a restrained light-bend haze behind it. Added a CSS fallback for browsers without backdrop-filter/displacement support and preserved reduced-motion behavior.
+Why: Bring the public landing page into the same tactile glass direction as the authenticated entry surfaces without adding a runtime dependency or changing routing, auth actions, data, or the existing hero sequence.
+Mode: warm paper + black command deck with CSS-only liquid glass enhancement.
+Preserve list: Existing bilingual copy, Strava OAuth start, login/signup links, race countdown/map animation, scroll-rigged shoe, responsive layout, accessibility labels, and reduced-motion fallbacks.
+Rollback target: working tree before this change
+
+### Version: DV-2026-08-02-01
+Date: 2026-08-02
+Surface: `/login`, `/signup`, `/terms`, and `/privacy` — restored warm glass public surface
+Files: `frontend/src/components/AuthDotField.jsx`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/pages/LegalPage.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/authLiquidGlass.smoke.test.js`, `frontend/src/index.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the intended warm paper composition: a restrained, interactive dot field across the page; editorial Hermes copy on the left of auth pages; and a quiet form surface with clearly readable inputs. Removed the secondary outside form panel, outer auth card shell, and card crosshair so the page has one open form layout over the dot field instead of nested grid decorations. The desktop form now fills the right-hand auth column while retaining a small page-edge inset. Privacy now uses a compact reading frame and tighter section rhythm so its overview is easier to scan before scrolling. Desktop-sized auth viewports retain the two-column editorial rail even when display scaling reports less than 1024 CSS pixels, while mobile still stacks naturally. Email/password is the primary first action, while the Strava and Google actions are compact horizontal secondary actions below it. Terms and Privacy use the same quiet paper and translucent sheet without the extra panel.
+Why: A previous rollback replaced the intended light reference treatment with a dark neon glass variant, which no longer matched the approved login screenshot or the signup surface.
+Preserve list: Existing routes, auth redirects, email/password behavior, OAuth handlers and availability states, reCAPTCHA, bilingual copy, legal content, and accessible focus states.
+Rollback target: `DV-2026-07-24-07`
+
 ### Version: DV-2026-07-24-07
 Date: 2026-07-24
 Surface: `/muscle-training` page — auto muscle-area recommendation + check-in persistence gap fix
@@ -4568,3 +4797,12 @@ What changed: Removed the grid texture overlay from the final CTA image rail whi
 Why: The grid lines over the image read as unwanted decoration after the glass strip was removed.
 Rollback target: `DV-2026-07-06-02`
 Notes: CSS-only cleanup; Strava login, email signup routing, translations, and existing CTA copy are preserved.
+
+### Version: DV-2026-08-02-13
+Date: 2026-08-02
+Surface: Shared liquid-glass material across authenticated, public, and utility surfaces
+Files: `frontend/src/index.css`, `frontend/src/styles/liquid-glass.css`, `DESIGN_VERSIONS.md`
+What changed: Added a shared translucent material layer with ambient page lighting, shell glass, consistent card/control surfaces, accent gradients, focus treatment, responsive radii, and dedicated Atlas settings contrast overrides while preserving image-led heroes and full-bleed map composition.
+Why: The app’s page families needed one coherent glass language instead of isolated one-off translucent treatments.
+Rollback target: `DV-2026-08-02-12`
+Notes: Presentation-only CSS import; routes, data wiring, authentication, and existing page layouts remain unchanged.

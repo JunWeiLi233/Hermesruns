@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -17,6 +17,7 @@ import { formatDuration } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildAnalysisSnapshot, normalizeAnalysisList } from '../utils/analysisInsights';
+import PageSkeleton from '../components/PageSkeleton';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;
@@ -345,6 +346,8 @@ export default function Analysis() {
     }
   }
 
+  if (runsState === 'loading') return <PageSkeleton variant="analysis" />;
+
   return (
     <div
       className={`runner-shell-page runner-dashboard-page analysis-page-shell${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}
@@ -422,7 +425,7 @@ export default function Analysis() {
         <div className="runner-shell-canvas">
           {runsState === 'loading' ? (
             <section className="analysis-overview-empty-shell">
-              <div className="premium-empty-state analysis-overview-empty-state">
+              <div className="premium-empty-state analysis-overview-empty-state premium-empty-state--loading">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>

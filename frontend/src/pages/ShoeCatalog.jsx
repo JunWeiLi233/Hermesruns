@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -8,6 +8,7 @@ import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
+import PageSkeleton from '../components/PageSkeleton';
 
 function normalizeBrandKey(brand) {
   return (brand || '')
@@ -276,6 +277,8 @@ export default function ShoeCatalog() {
     }
     return filtered;
   }, [catalog, selectedBrand, selectedCategory, searchQuery]);
+
+  if (isLoading) return <PageSkeleton variant="shoe-catalog" />;
 
   function handlePickBrand(brand) {
     setSelectedBrand(brand);

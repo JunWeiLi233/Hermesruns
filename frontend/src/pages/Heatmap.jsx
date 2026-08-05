@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -8,6 +8,7 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import { formatDate, formatDistance } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import PageSkeleton from '../components/PageSkeleton';
 import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -922,6 +923,8 @@ export default function Heatmap() {
 
   const showMapOverlays = heatmapState === 'ready' && pointCount > 0 && !mapMountFailed;
 
+  if (heatmapState === 'loading') return <PageSkeleton variant="heatmap" />;
+
   return (
     <div className="heatmap-page">
       <div ref={mapShellRef} className="heatmap-page-map-shell">
@@ -1111,7 +1114,7 @@ export default function Heatmap() {
         ) : null}
 
         {heatmapState === 'loading' ? (
-          <div className="heatmap-page-empty">
+          <div className="heatmap-page-empty heatmap-page-empty--loading">
             <div className="heatmap-page-empty-copy">
               <span className="heatmap-page-card-kicker">{t('heatmap.page_map_kicker')}</span>
               <h3>{t('analysis.stitch_loading')}</h3>
