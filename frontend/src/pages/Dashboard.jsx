@@ -8,6 +8,7 @@ import { apiFetch, apiJson } from '../api';
 import Modal from '../components/Modal';
 import AdminCourseMapPreview from '../components/AdminCourseMapPreview';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import SectionCard from '../components/ui/SectionCard';
 import ActionBar from '../components/ui/ActionBar';
 import DataTable from '../components/ui/DataTable';
@@ -2350,7 +2351,7 @@ const Dashboard = memo(function Dashboard() {
     );
   }
 
-  if (loadState === 'loading') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_loading')}</div></div>;
+  if (loadState === 'loading') return <PageSkeleton variant="admin" />;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
   return (

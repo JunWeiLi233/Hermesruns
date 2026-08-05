@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
@@ -350,7 +351,7 @@ export default function AddShoes() {
   }
 
   if (loadState !== 'ready' && loadState !== 'error') {
-    return <div className="add-shoes-loading-shell"><div className="add-shoes-loading-card"><HermesLogo dark /><strong>{t('shoes.loading')}</strong><span>{t('shoes.add_page_loading_copy')}</span></div></div>;
+    return <PageSkeleton variant="add-shoes" />;
   }
 
   return (
