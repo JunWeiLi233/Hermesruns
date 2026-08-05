@@ -22,6 +22,7 @@ import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } fr
 import { calculateStreaks, getDaysSinceLastRun } from '../utils/streakUtils';
 import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 import ComebackMessage from '../components/ComebackMessage';
+import PageSkeleton from '../components/PageSkeleton';
 
 const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
 const PR_SNAPSHOT_VERSION = 1;
@@ -955,6 +956,8 @@ export default function ProfileDashboard() {
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
   ];
 
+  if (loadState === 'loading') return <PageSkeleton variant="profile" />;
+
   return (
     <div className={`runner-shell-page runner-dashboard-page profile-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <Modal
@@ -1121,7 +1124,7 @@ export default function ProfileDashboard() {
               />
             )}
             {loadState === 'loading' && (
-              <section className="runner-dashboard-loading-card">
+              <section className="runner-dashboard-loading-card runner-dashboard-loading-card--skeleton">
                 <strong>{t('runs.loading')}</strong>
               </section>
             )}

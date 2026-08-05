@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { WeatherGlyph } from '../components/WeatherGlyph';
@@ -446,11 +447,7 @@ export default function WeatherEngine() {
   const heroCondition = describeWeatherCode(liveWeather?.weather_code, t);
 
   if (loadState === 'loading') {
-    return (
-      <div className="runner-shell-page runner-shell-page--loading">
-        <div className="runner-shell-loading">{wt('loading')}</div>
-      </div>
-    );
+    return <PageSkeleton variant="weather" />;
   }
 
   if (loadState === 'error') {
@@ -589,7 +586,7 @@ export default function WeatherEngine() {
             </div>
             <div className="weather-engine-forecast-strip">
               {forecastState === 'loading' ? (
-                <div className="weather-engine-forecast-empty">{wt('loading')}</div>
+                <div className="weather-engine-forecast-empty weather-engine-forecast-empty--loading">{wt('loading')}</div>
               ) : forecast.length ? (
                 forecast.map((slot, index) => (
                   <article key={slot.key} className={`weather-engine-forecast-slot${index === 0 ? ' is-now' : ''}`}>
