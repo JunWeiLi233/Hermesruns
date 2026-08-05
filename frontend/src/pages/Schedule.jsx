@@ -9,6 +9,7 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import { formatDistance } from '../utils/format';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
@@ -1011,7 +1012,7 @@ export default function Schedule() {
   }, [routeWaypoints]);
 
   if (loadState === 'loading') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{s('loading')}</div></div>;
+    return <PageSkeleton variant="schedule" />;
   }
 
   if (loadState === 'error') {

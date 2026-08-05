@@ -8,6 +8,7 @@ import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration } from '../utils/format';
@@ -1339,8 +1340,9 @@ export default function AnalysisInsightDetail() {
   }
 
   if (loadState !== 'ready' || !detail) {
+    if (loadState === 'loading') return <PageSkeleton variant="analysis-insight" />;
     return (
-      <div className="runner-shell-page runner-shell-page--loading">
+      <div className="runner-shell-page runner-shell-page--loading" data-loading-state={loadState}>
         <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
       </div>
     );

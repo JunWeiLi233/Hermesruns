@@ -6,6 +6,7 @@ import { I18nProvider } from './contexts/I18nContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
 import AppErrorBoundary from './components/ErrorBoundary';
+import PageSkeleton from './components/PageSkeleton';
 
 const Landing = React.lazy(() => import('./pages/Landing'));
 const Login = React.lazy(() => import('./pages/Login'));
@@ -35,6 +36,21 @@ const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettin
 const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
 const LegalPage = React.lazy(() => import('./pages/LegalPage'));
 
+const SKELETON_PREVIEW_VARIANTS = new Set([
+  'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
+  'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data',
+  'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule',
+  'muscle-training', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'admin-login', 'legal',
+]);
+
+function getSkeletonPreviewVariant() {
+  if (typeof window === 'undefined') return null;
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (!import.meta.env.DEV && !isLocalHost) return null;
+  const variant = new URLSearchParams(window.location.search).get('skeleton-preview');
+  return SKELETON_PREVIEW_VARIANTS.has(variant) ? variant : null;
+}
+
 function ScrollToTop() {
   const location = useLocation();
 
@@ -58,7 +74,39 @@ function ScrollToTop() {
 }
 
 function RouteLoading() {
-  return <div className="route-loading">Loading...</div>;
+  const { pathname } = useLocation();
+  let variant = 'runner';
+  if (pathname === '/') variant = 'landing';
+  else if (pathname === '/login') variant = 'auth';
+  else if (pathname === '/signup') variant = 'signup';
+  else if (pathname === '/forgot-password') variant = 'forgot-password';
+  else if (pathname === '/admin') variant = 'admin-login';
+  else if (pathname === '/terms' || pathname === '/privacy') variant = 'legal';
+  else if (pathname.startsWith('/dashboard')) variant = 'admin';
+  else if (pathname === '/workflows') variant = 'admin';
+  else if (pathname === '/profile') variant = 'profile';
+  else if (pathname === '/runs') variant = 'runs';
+  else if (pathname === '/run' || pathname.startsWith('/run/')) variant = 'run-detail';
+  else if (pathname === '/analysis') variant = 'analysis';
+  else if (pathname === '/analysis/vo2max') variant = 'analysis';
+  else if (pathname.startsWith('/analysis/')) variant = 'analysis-insight';
+  else if (pathname.startsWith('/prediction/')) variant = 'prediction';
+  else if (pathname === '/heatmap') variant = 'heatmap';
+  else if (pathname === '/weather' || pathname === '/weather-engine') variant = 'weather';
+  else if (pathname === '/today-run') variant = 'today-run';
+  else if (pathname === '/rewards') variant = 'rewards';
+  else if (pathname === '/settings') variant = 'settings';
+  else if (pathname === '/settings/garmin-import') variant = 'garmin';
+  else if (pathname === '/settings/import-data') variant = 'import-data';
+  else if (pathname === '/shoes') variant = 'shoes';
+  else if (pathname === '/shoes/add' || pathname === '/add-shoes') variant = 'add-shoes';
+  else if (pathname === '/shoe-catalog') variant = 'shoe-catalog';
+  else if (pathname === '/races') variant = 'races';
+  else if (pathname.startsWith('/races/details/')) variant = 'race-detail';
+  else if (pathname === '/schedule') variant = 'schedule';
+  else if (pathname === '/muscle-training') variant = 'muscle-training';
+
+  return <PageSkeleton variant={variant} />;
 }
 
 function AdminOnlyRoute({ children }) {
@@ -80,13 +128,18 @@ function UserOnlyRoute({ children }) {
 }
 
 function App() {
+  const skeletonPreviewVariant = getSkeletonPreviewVariant();
+  if (skeletonPreviewVariant) {
+    return <PageSkeleton variant={skeletonPreviewVariant} />;
+  }
+
   return (
     <I18nProvider>
       <AppErrorBoundary>
         <ThemeProvider>
           <UnitProvider>
             <AuthProvider>
-              <Suspense fallback={<div className="route-loading">Loading...</div>}>
+              <Suspense fallback={<RouteLoading />}>
                 <ScrollToTop />
                 <Routes>
                   <Route path="/" element={<Landing />} />

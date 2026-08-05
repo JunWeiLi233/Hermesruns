@@ -6,6 +6,7 @@ import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
@@ -116,11 +117,7 @@ export default function Rewards() {
   }
 
   if (loadState === 'loading') {
-    return (
-      <div className="runner-shell-page runner-shell-page--loading">
-        <div className="runner-shell-loading">{t('rewards.loading')}</div>
-      </div>
-    );
+    return <PageSkeleton variant="rewards" />;
   }
 
   return (

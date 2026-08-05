@@ -7,6 +7,7 @@ import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import Modal from '../components/Modal';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatPace } from '../utils/format';
@@ -713,7 +714,7 @@ const Races = memo(function Races() {
   }, []);
 
   if (loadState === 'loading') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('races.loading')}</div></div>;
+    return <PageSkeleton variant="races" />;
   }
 
   if (loadState === 'error') {

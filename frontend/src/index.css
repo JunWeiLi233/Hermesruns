@@ -31,4 +31,5 @@
 @import './styles/dark-mode-final-fixes.css';
 @import './styles/muscle-training-profile-alignment.css';
 @import './styles/liquid-glass.css';
+@import './styles/loading-skeleton.css';
 @config '../tailwind.config.js';

@@ -20,6 +20,7 @@ import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
 import { kmOf } from '../utils/analysisInsights';
+import PageSkeleton from '../components/PageSkeleton';
 import {
   buildRecentShoeSignal,
   calculateRotationHealth,
@@ -1272,6 +1273,8 @@ const Shoes = memo(function Shoes() {
     );
   }
 
+  if (loadState === 'loading') return <PageSkeleton variant="shoes" />;
+
   return (
     <>
       <div className={`runner-shell-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
@@ -1478,7 +1481,7 @@ const Shoes = memo(function Shoes() {
                 </div>
               </div>
 
-              {loadState === 'loading' && <div className="shoe-inventory-status">{t('shoes.loading')}</div>}
+              {loadState === 'loading' && <div className="shoe-inventory-status shoe-inventory-status--loading">{t('shoes.loading')}</div>}
               {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
               {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
               {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
