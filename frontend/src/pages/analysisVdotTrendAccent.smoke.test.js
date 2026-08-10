@@ -6,11 +6,19 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const analysisSource = readFileSync(path.join(here, 'Analysis.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const analysisSplitStyleSource = readFileSync(path.join(here, '../styles/_split/analysis.css'), 'utf8');
+const liquidGlassStyleSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
   analysisSource,
   /<article className="analysis-overview-card analysis-overview-card--vo2 analysis-profile-primary">/,
   'Analysis VO2 trend grid should keep rendering as a static profile-cockpit article, not as a clickable navigation button.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--injury :is\(\s*\.analysis-overview-card-title-block,\s*\.analysis-overview-card-kicker,\s*\.analysis-overview-metric-title\s*\)\s*\{[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important/,
+  'The Analysis injury-risk card should keep its heading text on the parent surface instead of showing a glass-paper strip behind the words.',
 );
 
 assert.doesNotMatch(
@@ -50,9 +58,81 @@ assert.match(
 );
 
 assert.match(
+  liquidGlassStyleSource,
+  /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight \.analysis-overview-card-head,[\s\S]*?\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight \.analysis-overview-card-head > div\s*\{[^}]*background:\s*transparent\s*!important;/,
+  'The Analysis VDOT header reset must target the shared runner/analysis root instead of requiring a nonexistent descendant relationship.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /#root \.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight\s*\{[^}]*background:\s*radial-gradient\(circle at 85% 10%, var\(--accent-coral\) 0%, transparent 40%\),\s*var\(--bg-glass-strong\)\s*!important;/,
+  'The Analysis VDOT insight card must retain the same layered glass surface as the coach grid.',
+);
+
+assert.doesNotMatch(
+  liquidGlassStyleSource,
+  /\.runner-shell-page \.analysis-page-shell \.analysis-overview-card--vdot-insight/,
+  'The VDOT reset must not regress to a descendant selector because both shell classes live on the same root element.',
+);
+
+const analysisCardSweepIndex = liquidGlassStyleSource.lastIndexOf('[class*="-card"]');
+const analysisHeaderResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '.runner-shell-page.analysis-page-shell .analysis-overview-card--vdot-insight .analysis-overview-card-head,',
+);
+const analysisCardResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '#root .runner-shell-page.analysis-page-shell .analysis-overview-card--vdot-insight {',
+);
+assert.ok(
+  analysisHeaderResetIndex > analysisCardSweepIndex,
+  'The Analysis VDOT header reset must remain after the shared liquid-glass card sweep.',
+);
+assert.ok(
+  analysisCardResetIndex > analysisCardSweepIndex,
+  'The Analysis VDOT card reset must remain after the shared liquid-glass card sweep.',
+);
+
+const injuryHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '.runner-shell-page.analysis-page-shell .analysis-overview-card--injury :is(',
+);
+assert.ok(
+  injuryHeadingResetIndex > analysisCardSweepIndex,
+  'The Analysis injury-risk heading reset must remain after the shared liquid-glass card sweep.',
+);
+
+assert.match(
   styleSource,
   /body\.theme-light\s+\.analysis-overview-card--vdot-insight\s+\.analysis-overview-insight-copy,\s*body\.theme-high-contrast-light\s+\.analysis-overview-card--vdot-insight\s+\.analysis-overview-insight-copy\s*\{[^}]*color:\s*#2d0d08;/,
   'Analysis VDOT trend insight copy should use the same text color as the Hermes coach card headline on light surfaces.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
+  'Analysis VO2 hero should not paint a background strip behind the title and metric card.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
+  'Analysis VO2 hero background removal should survive the later specificity clamp.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /\.runner-dashboard-page \.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
+  'The shared liquid-glass layer should not repaint the Analysis VO2 hero as a cream panel.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-card-head,[\s\S]*?\.runner-dashboard-page \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-card-head\s*\{[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;/,
+  'The shared liquid-glass layer should not repaint a second strip around the Analysis VO2 header wrapper.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /#root \.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight\s*\{[\s\S]*background:\s*transparent\s*!important;/,
+  'The Analysis VDOT insight grid should remain transparent after the nested header reset.',
 );
 
 assert.match(

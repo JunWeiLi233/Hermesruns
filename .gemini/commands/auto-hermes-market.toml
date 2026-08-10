@@ -1,42 +1,49 @@
-# Gemini CLI custom command
+# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
 
 [command]
-description = "Run the Auto-Hermes market research pipeline. Launches 5 research agents to analyze TAM, competitors, pricing, social signals, and trends, then synthesizes the results into actionable TASKS.md items."
+description = "Hermes workflow: /auto-hermes-market"
 
 [command.prompt]
-text = """
-# Auto-Hermes Market 闂?Gemini Runtime
+text = '''
+<!-- Generated from .codex/commands/auto-hermes-market.md. Do not edit this adapter directly. -->
+<!-- Follow docs/ai/EDITING_CONTRACT.md for every code change. -->
 
-You are running the Auto-Hermes market research pipeline.
+---
+name: auto-hermes-market
+---
 
-Treat `/auto-hermes-market` as a one-shot research and task-generation pipeline.
+# Auto-Hermes Market — Codex Runtime
+
+Codex implementation note for the market research pipeline.
+
+**Canonical command**: `.claude/commands/auto-hermes-market.md` is the single source of truth for the full protocol, agent schemas, output files, and anti-hallucination gate. This file adapts execution to Codex's capabilities.
 
 ## Runtime Identity
 
-- **Runtime**: Gemini CLI (coordinator mode)
-- **Execution model**: Sequential research phases. Launches 5 specialist agents one after another, then synthesizes findings.
-- **Canonical command**: `.claude/commands/auto-hermes-market.md` is the source of truth for protocol and anti-hallucination gates.
+- **Runtime**: Codex (Ralph executor, parallel agent execution available)
+- **Execution model**: Run the 5 core research agents as parallel tasks via the Ralph executor when available. Add the optional SEO lane in the same parallel wave only when the scope is consumer-searchable. Fall back to sequential if executor is unavailable or scope does not warrant parallel search.
+- **Canonical command**: `.claude/commands/auto-hermes-market.md`
 
 ## Arguments
-{{args}}
-- `scope` 闂?required: market segment to research (e.g. `running analytics apps`)
-- No argument: infer from `PRODUCT.md` 闂?North Star section
+
+- `scope` — required: market segment to research (e.g. `running analytics apps`)
+- No argument: infer from `PRODUCT.md` → North Star section
 
 ---
 
 ## Session Start
 
-1. Check `.ai-sync/HUMAN_LOOP.md` 闂?if `pause/stop/must-ask`, stop immediately.
-2. Create `.ai-sync/market/` directory if absent.
-3. If no scope: read `PRODUCT.md` and extract the target market.
+1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+2. Create `.ai-sync/market/` directory if absent
+3. If no scope: read first 40 lines of `PRODUCT.md` and extract target market
 
 ---
 
 ## Execution
 
-### Phase 1 闂?Research (7 agents)
+### Phase 1 – Parallel Research (5 core agents + optional SEO lane)
 
-Launch the 7 research agents sequentially. Each must write its findings to its designated JSON file in `.ai-sync/market/`.
+Launch all 5 core research agents simultaneously. When the scope is consumer-searchable, also launch the SEO support lane. Each writes to its own JSON file:
 
 | Agent | Output file | Primary search queries |
 |---|---|---|
@@ -44,38 +51,39 @@ Launch the 7 research agents sequentially. Each must write its findings to its d
 | Competitor Hunter | `.ai-sync/market/competitor-hunter.json` | `best <scope> apps 2024`, `<scope> alternatives site:reddit.com` |
 | Pricing Engineer | `.ai-sync/market/pricing-engineer.json` | `<competitor>/pricing` for each verified competitor |
 | Social Signal | `.ai-sync/market/social-signal.json` | `site:reddit.com "<scope>"`, `"<scope>" "worth paying for"` |
-| User Needs Researcher | `.ai-sync/market/user-needs.json` | `"running app pain points"`, `"frustrations with Garmin/Strava site:reddit.com"`, `"marathon training unmet needs"` |
-| SEO Agent | `.ai-sync/market/seo-agent.json` | `high volume keywords "<scope>"`, `"marathon training plan SEO gaps"`, `"running tools organic opportunities"` |
 | Trend Validator | `.ai-sync/market/trend-validator.json` | `"<scope>" funding 2024 site:techcrunch.com`, `"<scope>" trend growing` |
+| SEO Agent (optional) | `.ai-sync/market/seo-agent.json` | `best <scope>`, `<scope> alternatives`, `<scope> vs`, `<scope> guide` |
 
-**Verification rule (all agents)**: Every number, competitor, or price point MUST have a fetched `sourceUrl`. No URL = mark `unverified`. Partial data is better than fabricated data.
+Full agent brief for each: see `.claude/commands/auto-hermes-market.md` → Agent Briefs section. The SEO lane should use `.codex/agents/seo-agent.md` as its Codex-side support identity.
 
-### Phase 2 闂?Synthesis
+**Verification rule (all agents)**: every number and competitor must have a fetched `sourceUrl`. No URL = mark `unverified`. Partial is better than fabricated.
 
-After all 7 reports are written (or marked failed):
-1. Read all files from `.ai-sync/market/`.
-2. Score opportunities (0闂?10) based on product fit and market potential.
-3. **Crucial**: Prioritize opportunities that solve the "Runner Needs" identified in the `user-needs.json` report.
-4. Write `MARKET_INTELLIGENCE.json` (raw data) and `MARKET_INTELLIGENCE.md` (summary report).
+### Phase 2 — Synthesis
 
-### Phase 3 闂?Task generation
+When all required files exist (or are marked `partial`/`failed`): run the synthesis step defined in `.claude/commands/auto-hermes-market.md` → Synthesis Step. The coordinator reads all required reports, scores opportunities, and writes `MARKET_INTELLIGENCE.json` + `MARKET_INTELLIGENCE.md`.
 
-Insert scored opportunities (>= 6/10) as concrete tasks into `TASKS.md` `## Suggested Next Tasks` under the correct tier section.
-Task format:
-- `[Market Opportunity] <Short description>`
-- `Context: <Link to report>`
-- `Rationale: <Why this opportunity scores high>`
+### Phase 3 — Task generation
 
-### Phase 4 闂?Reset Max Runaway
+Insert scored opportunities (≥ 6/10) as concrete tasks into `TASKS.md` `## Suggested Next Tasks` under the correct tier section. Follow the task format in `.claude/commands/auto-hermes-market.md` → Generate tasks.
 
-Write `{"count": 0}` to `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json` to allow execution loops to resume with the new data.
+### Phase 4 — Reset runaway counter
+
+Write `{"count": 0}` to `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json`.
+
+---
+
+## Codex-Specific Notes
+
+- Use the Ralph executor for parallel agent launch when the core market agents are independent. The SEO lane should be added only when the scope is consumer-searchable and should still keep its write scope isolated to `.ai-sync/market/seo-agent.json`.
+- If the executor is unavailable, run the 5 phases sequentially with no other behavioral change.
+- Do not use `.tools/auto-hermes-supervisor.mjs` for this command — market research is a one-shot pipeline, not a loop.
+- After tasks are written, optionally hand off to `/auto-hermes-max` for execution.
 
 ---
 
 ## Output
 
-Final user-facing report must include:
-- Summary of TAM and Top 3 Competitors.
-- List of 3-5 generated tasks in `TASKS.md`.
-- Confirmation that Max Runaway has been reset.
-"""
+Reference `.claude/commands/auto-hermes-market.md` → Output Files for the full file list.
+
+Final user-facing report format: see `.claude/commands/auto-hermes-market.md` → Coordinator Reply Rules.
+'''

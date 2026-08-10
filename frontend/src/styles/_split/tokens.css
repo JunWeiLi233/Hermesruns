@@ -302,10 +302,6 @@ body.theme-midnight .polarized-target-marker {
   84%, 100% { width: 24px; background: var(--accent-coral-strong); }
 }
 
-body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--editorial-detail .runner-shell-topnav-brand {
-    color: #f49787;
-}
-
 body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-topnav--editorial-detail .runner-shell-topnav-link {
     color: rgba(232, 226, 220, 0.62);
 }

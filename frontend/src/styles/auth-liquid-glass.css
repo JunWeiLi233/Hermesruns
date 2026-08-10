@@ -1,0 +1,752 @@
+/* Warm liquid-glass surface shared by public auth and legal routes. */
+#root .auth-page--liquid-glass {
+  --auth-dot-color: 91, 77, 66;
+  --auth-dot-opacity: 0.16;
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: #172033;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(246, 187, 163, 0.22), transparent 24rem),
+    radial-gradient(circle at 89% 90%, rgba(217, 135, 113, 0.13), transparent 30rem),
+    linear-gradient(135deg, #f7f2e9 0%, #fbf8f3 48%, #f2ece2 100%);
+}
+
+#root .auth-page--liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(124deg, rgba(255, 255, 255, 0.54), transparent 34% 67%, rgba(242, 171, 147, 0.08)),
+    radial-gradient(circle at 78% 15%, rgba(255, 255, 255, 0.74), transparent 18rem);
+}
+
+#root .auth-page--liquid-glass > .auth-dot-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.86;
+  pointer-events: none;
+}
+
+#root .auth-page--liquid-glass > .auth-dot-field .auth-dot-field__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#root .auth-page--liquid-glass .auth-flow-shell {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1440px);
+  min-height: 100dvh;
+  gap: clamp(28px, 5vw, 80px);
+  padding: clamp(26px, 4vw, 64px);
+}
+
+#root .auth-page--liquid-glass .auth-flow-brand {
+  justify-content: center;
+  padding: clamp(22px, 4vw, 54px) 0;
+}
+
+#root .auth-page--liquid-glass .auth-flow-brand-inner {
+  max-width: 660px;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-brand-inner::before,
+#root .auth-page--liquid-glass .auth-flow-brand-inner::after {
+  content: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-dots {
+  display: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-viewport {
+  height: clamp(360px, 48vh, 440px);
+  overflow: hidden;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-track {
+  position: relative;
+  height: 100%;
+  display: block;
+  animation: none;
+  transform: none;
+  will-change: contents;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide {
+  position: relative;
+  inset: auto;
+  display: flex;
+  height: 100%;
+  flex: none;
+  opacity: 1;
+  transform: none;
+  animation: authGlassSlideEnter 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes authGlassSlideEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: -2px;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(102, 117, 143, 0.24);
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-detail strong {
+  overflow: hidden;
+  color: #172033;
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-detail small {
+  color: #66758f;
+  font-size: 0.62rem;
+  line-height: 1.3;
+}
+
+#root .auth-page--liquid-glass .auth-flow-wordmark {
+  color: #9d3428;
+  letter-spacing: 0.1em;
+  text-shadow: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-pulse,
+#root .auth-page--liquid-glass .auth-flow-kicker {
+  color: #71463d;
+}
+
+#root .auth-page--liquid-glass .auth-flow-kicker {
+  background: rgba(168, 57, 43, 0.08);
+  border: 1px solid rgba(157, 52, 40, 0.1);
+  box-shadow: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-hero,
+#root .auth-page--liquid-glass .auth-flow-stats strong {
+  color: #172033;
+  text-shadow: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-hero .is-accent {
+  color: #ad3c2d;
+  text-shadow: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-text,
+#root .auth-page--liquid-glass .auth-flow-stats span {
+  color: #66758f;
+}
+
+#root .auth-page--liquid-glass .auth-flow-formside {
+  align-items: center;
+  padding: clamp(22px, 4vw, 52px) 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-formside::before {
+  display: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-card {
+  width: min(100%, 540px);
+  isolation: isolate;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: visible;
+}
+
+#root .auth-page--liquid-glass .auth-flow-card::before {
+  content: none;
+}
+
+/* Admin keeps one deliberate glass sheet for the credential form. The public
+ * login/signup surfaces use an open form column; the admin surface benefits
+ * from a slightly denser boundary so operators can focus on the secure entry
+ * point without bringing back the old nested panel. */
+#root .auth-page--liquid-glass.auth-page--admin .auth-flow-formside {
+  align-items: center;
+  padding: clamp(22px, 4vw, 52px) clamp(12px, 2vw, 30px);
+}
+
+#root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin {
+  width: min(100%, 560px);
+  padding: clamp(30px, 4vw, 46px);
+  border: 1px solid rgba(93, 75, 57, 0.14);
+  border-radius: 30px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 248, 239, 0.42)),
+    rgba(255, 252, 247, 0.48);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 28px 68px rgba(75, 54, 38, 0.16);
+  backdrop-filter: blur(24px) saturate(126%);
+  -webkit-backdrop-filter: blur(24px) saturate(126%);
+}
+
+#root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin::before {
+  content: none;
+}
+
+#root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin .auth-flow-header {
+  max-width: 30rem;
+}
+
+#root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin .auth-flow-legal {
+  margin-top: 22px;
+}
+
+#root .auth-page--liquid-glass .auth-flow-card > :not(.auth-dot-field) {
+  position: relative;
+  z-index: 1;
+}
+
+#root .auth-page--liquid-glass .auth-flow-header h3 {
+  color: #172033;
+  text-shadow: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-header p,
+#root .auth-page--liquid-glass .auth-flow-field-note,
+#root .auth-page--liquid-glass .auth-flow-status-note,
+#root .auth-page--liquid-glass .auth-flow-legal,
+#root .auth-page--liquid-glass .signup-link--auth,
+#root .auth-page--liquid-glass .forgot-password--auth {
+  color: #66758f;
+}
+
+#root .auth-page--liquid-glass .auth-flow-form {
+  gap: 22px;
+}
+
+#root .auth-page--liquid-glass .form-group--auth label,
+#root .auth-page--liquid-glass .label-row--auth label {
+  color: #8f3026;
+}
+
+#root .auth-page--liquid-glass .form-group--auth input {
+  min-height: 58px;
+  border: 1px solid rgba(70, 85, 106, 0.13);
+  border-radius: 16px;
+  background: rgba(241, 244, 247, 0.76);
+  color: #172033;
+  caret-color: #ad3c2d;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.72);
+}
+
+#root .auth-page--liquid-glass .form-group--auth input::placeholder {
+  color: #aeb8c8;
+  opacity: 1;
+}
+
+#root .auth-page--liquid-glass .form-group--auth input:focus {
+  border-color: rgba(173, 60, 45, 0.66);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 3px rgba(173, 60, 45, 0.13);
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn {
+  min-height: 52px;
+  border: 1px solid rgba(93, 75, 57, 0.12);
+  border-radius: 15px;
+  color: #26334a;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn:hover:not(:disabled) {
+  border-color: rgba(173, 60, 45, 0.36);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 24px rgba(75, 54, 38, 0.1);
+  transform: translateY(-1px);
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn--submit {
+  min-height: 60px;
+  border-color: rgba(161, 50, 38, 0.24);
+  color: #fffaf6;
+  background: linear-gradient(106deg, #9d3428 0%, #bd4a39 45%, #f27664 100%);
+  box-shadow:
+    0 14px 28px rgba(173, 60, 45, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn--submit:hover:not(:disabled) {
+  background: linear-gradient(106deg, #8d2e25 0%, #b54232 44%, #e8695a 100%);
+}
+
+#root .auth-page--liquid-glass .auth-flow-social {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 20px;
+}
+
+#root .auth-page--liquid-glass .auth-flow-social .auth-flow-btn {
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn--strava {
+  grid-column: 1;
+  grid-row: 1;
+  color: #8f3026;
+  background: rgba(249, 203, 193, 0.72);
+  border-color: rgba(203, 82, 63, 0.18);
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn--google {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+#root .auth-page--liquid-glass .auth-flow-status-note {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+#root .auth-page--liquid-glass .auth-flow-status-note--strava {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#root .auth-page--liquid-glass .auth-flow-status-note--google {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+#root .auth-page--liquid-glass .auth-flow-divider {
+  display: none;
+}
+
+#root .auth-page--liquid-glass :is(.forgot-password--auth:hover, .signup-link--auth a, .auth-flow-legal a) {
+  color: #a73b2e;
+}
+
+#root .auth-page--liquid-glass .signup-link--auth {
+  margin-top: 22px;
+}
+
+#root .auth-page--liquid-glass .error-alert {
+  color: #852d24;
+  border-color: rgba(173, 60, 45, 0.2);
+  background: rgba(255, 237, 231, 0.8);
+}
+
+/* Legal pages use the same quiet paper, dot field, and translucent sheet. */
+#root .legal-page.auth-page--liquid-glass {
+  overflow: auto;
+  padding: clamp(20px, 4vw, 56px);
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(18px, 4vw, 48px);
+  border: 1px solid rgba(93, 75, 57, 0.13);
+  border-radius: 30px;
+  background: rgba(255, 252, 247, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 28px 70px rgba(75, 54, 38, 0.12);
+  backdrop-filter: blur(24px) saturate(116%);
+  -webkit-backdrop-filter: blur(24px) saturate(116%);
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-header {
+  background: transparent;
+  border-color: rgba(93, 75, 57, 0.1);
+  box-shadow: none;
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-hero--editorial,
+#root .legal-page.auth-page--liquid-glass .legal-page-sections--editorial,
+#root .legal-page.auth-page--liquid-glass .privacy-signal-strip {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-hero--editorial {
+  border: 1px solid rgba(93, 75, 57, 0.1);
+  border-bottom: 0;
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-sections--editorial {
+  border: 1px solid rgba(93, 75, 57, 0.1);
+  border-top: 0;
+}
+
+#root .legal-page.auth-page--liquid-glass .privacy-signal-strip {
+  border-inline: 1px solid rgba(93, 75, 57, 0.1);
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-hero h1,
+#root .legal-page.auth-page--liquid-glass .legal-page-row-copy h2,
+#root .legal-page.auth-page--liquid-glass .privacy-signal strong {
+  color: #172033;
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-hero p,
+#root .legal-page.auth-page--liquid-glass .legal-page-row-copy p,
+#root .legal-page.auth-page--liquid-glass .legal-page-footer,
+#root .legal-page.auth-page--liquid-glass .legal-page-footer a {
+  color: #66758f;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass {
+  padding: clamp(14px, 2vw, 28px);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-shell {
+  width: min(1040px, 100%);
+  padding: clamp(18px, 2.5vw, 32px);
+  border-radius: 24px;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial {
+  padding: clamp(30px, 4vw, 48px) clamp(24px, 3vw, 40px) clamp(24px, 3vw, 36px);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial h1 {
+  font-size: clamp(2.8rem, 5vw, 5rem);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial p {
+  margin-top: 14px;
+  font-size: clamp(0.96rem, 1.2vw, 1.1rem);
+  line-height: 1.5;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-hero-meta {
+  margin-top: 18px;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-sections--editorial {
+  padding: clamp(24px, 3vw, 36px) clamp(24px, 3vw, 40px) clamp(30px, 3.5vw, 44px);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-row {
+  gap: clamp(18px, 2.6vw, 36px);
+  padding: clamp(20px, 2.4vw, 30px) 0;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-row-copy h2 {
+  margin-bottom: 8px;
+  font-size: clamp(1.18rem, 1.7vw, 1.5rem);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-row-copy p {
+  font-size: clamp(0.92rem, 0.95vw, 1rem);
+  line-height: 1.62;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-footer {
+  margin-top: 28px;
+  padding-top: 28px;
+}
+
+/* Privacy is information-dense by design: keep its overview easy to scan
+   before the detailed sections continue below. */
+#root .legal-page--privacy.auth-page--liquid-glass {
+  padding: clamp(14px, 2vw, 28px);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-shell {
+  width: min(1040px, 100%);
+  padding: clamp(18px, 2.5vw, 32px);
+  border-radius: 24px;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-header {
+  padding: 10px 0;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-hero--editorial {
+  gap: clamp(20px, 3vw, 40px);
+  padding: clamp(26px, 3.2vw, 44px) clamp(22px, 3.2vw, 42px) clamp(22px, 2.8vw, 36px);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-hero--editorial h1 {
+  font-size: clamp(2.7rem, 5.2vw, 4.8rem);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-hero--editorial p {
+  margin-top: 16px;
+  font-size: clamp(1rem, 1.25vw, 1.18rem);
+  line-height: 1.45;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-hero-meta {
+  margin-top: 18px;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .privacy-hero-panel p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .privacy-signal-strip {
+  padding: 18px clamp(22px, 3.2vw, 42px);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-sections--editorial {
+  padding: 22px clamp(22px, 3.2vw, 42px) 30px;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-row {
+  padding: 20px 0;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-row-copy h2 {
+  margin-bottom: 8px;
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-row-copy p {
+  font-size: clamp(0.95rem, 0.95vw, 1rem);
+  line-height: 1.62;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-footer {
+  padding-top: 14px;
+  margin-top: 0;
+}
+
+/* Keep the editorial rail visible on desktop-sized auth viewports, including
+   browser windows rendered below 1024 CSS pixels by OS display scaling. */
+@media (min-width: 760px) {
+  #root .auth-page--liquid-glass .auth-flow-shell {
+    grid-template-columns: minmax(0, 1.08fr) minmax(420px, 0.92fr);
+    gap: clamp(18px, 3vw, 48px);
+    padding: clamp(22px, 3.2vw, 48px);
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-brand {
+    justify-content: flex-start;
+    padding: clamp(32px, 5vw, 72px) clamp(14px, 3vw, 54px);
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-formside {
+    align-items: stretch;
+    padding: clamp(32px, 5vw, 72px) clamp(8px, 2vw, 28px) clamp(32px, 5vw, 72px) 0;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-card {
+    width: min(100%, 560px);
+    margin-left: auto;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-legal {
+    align-self: center;
+  }
+}
+
+/* The public login is the primary action on this route. On desktop, lower the
+   credential block into the optical center and give its heading a restrained
+   focal cue without restoring the removed outer card surface. */
+@media (min-width: 760px) and (min-height: 640px) {
+  #root .auth-page--liquid-glass.auth-page--login .auth-flow-formside::after {
+    content: '';
+    position: absolute;
+    inset: 16% -4% 8% 6%;
+    z-index: 0;
+    border-radius: 48%;
+    background: radial-gradient(
+      circle at 54% 48%,
+      rgba(240, 117, 97, 0.14),
+      rgba(255, 255, 255, 0.16) 38%,
+      transparent 70%
+    );
+    filter: blur(18px);
+    pointer-events: none;
+  }
+
+  #root .auth-page--liquid-glass.auth-page--login .auth-flow-card {
+    transform: translateY(clamp(22px, 4vh, 36px));
+  }
+
+  #root .auth-page--liquid-glass.auth-page--login .auth-flow-legal {
+    position: relative;
+    z-index: 1;
+  }
+
+  #root .auth-page--liquid-glass.auth-page--login .auth-flow-header {
+    position: relative;
+    padding-left: 18px;
+  }
+
+  #root .auth-page--liquid-glass.auth-page--login .auth-flow-header::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    width: 3px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #9d3428, #f07561);
+    box-shadow: 0 8px 22px rgba(173, 60, 45, 0.24);
+  }
+}
+
+@media (max-width: 1024px) {
+  #root .auth-page--liquid-glass .auth-flow-shell {
+    gap: 12px;
+    padding: 22px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-brand {
+    padding-bottom: 8px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-formside::before {
+    inset: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  #root .auth-page--liquid-glass .auth-flow-shell {
+    padding: 12px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-slide-viewport {
+    height: 380px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-brand {
+    padding: 30px 18px 8px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-hero {
+    font-size: clamp(2.2rem, 12vw, 3.7rem);
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-formside {
+    padding: 14px 6px 34px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-card {
+    padding: 30px 20px;
+    border-radius: 24px;
+  }
+
+  #root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin {
+    padding: 28px 20px;
+    border-radius: 24px;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-social {
+    grid-template-columns: 1fr;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-btn--strava,
+  #root .auth-page--liquid-glass .auth-flow-btn--google,
+  #root .auth-page--liquid-glass .auth-flow-status-note--strava,
+  #root .auth-page--liquid-glass .auth-flow-status-note--google {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  #root .legal-page.auth-page--liquid-glass {
+    padding: 12px;
+  }
+
+  #root .legal-page.auth-page--liquid-glass .legal-page-shell {
+    padding: 20px;
+    border-radius: 24px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass {
+    padding: 8px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-shell {
+    padding: 14px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial {
+    padding: 24px 18px 20px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial h1 {
+    font-size: clamp(2.4rem, 13vw, 4rem);
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-sections--editorial {
+    padding: 18px 18px 26px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-row {
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .auth-page--liquid-glass * {
+    scroll-behavior: auto;
+  }
+
+  #root .auth-page--liquid-glass .auth-flow-slide {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

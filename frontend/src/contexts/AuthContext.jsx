@@ -17,6 +17,7 @@ import {
 const AuthContext = createContext(null);
 
 const ROLE_STORAGE_KEY = 'hermes_role';
+const AUTH_PING_TIMEOUT_MS = 12000;
 
 function readAuthFromUrl() {
   try {
@@ -113,11 +114,16 @@ export function AuthProvider({ children }) {
     }
 
     let cancelled = false;
+    const authController = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => authController.abort(),
+      AUTH_PING_TIMEOUT_MS,
+    );
     setAuthHydrated(false);
 
     (async () => {
       try {
-        const session = await apiJson('/api/auth/protected/ping');
+        const session = await apiJson('/api/auth/protected/ping', { signal: authController.signal });
         if (cancelled) return;
         const r = normalizeRole(session.role);
         setRole(r);
@@ -128,11 +134,16 @@ export function AuthProvider({ children }) {
         setRole('USER');
         localStorage.setItem(ROLE_STORAGE_KEY, 'USER');
       } finally {
+        window.clearTimeout(timeoutId);
         if (!cancelled) setAuthHydrated(true);
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      authController.abort();
+    };
   }, [token]);
 
   useEffect(() => {

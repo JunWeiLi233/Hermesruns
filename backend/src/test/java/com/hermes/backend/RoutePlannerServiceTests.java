@@ -2,17 +2,24 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -81,7 +88,7 @@ class RoutePlannerServiceTests {
     @Test
     void fallbackRouteShouldReturnNoDrawableWaypointsWhenOsmIsEmpty() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
+        stubOverpassResponse(restTemplate, "");
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 5.0, "rolling");
@@ -96,7 +103,7 @@ class RoutePlannerServiceTests {
     @Test
     void fallbackRouteShouldReturnNoDrawableWaypointsOnRestClientFailure() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                 .thenThrow(new RestClientException("Connection refused"));
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
@@ -198,6 +205,39 @@ class RoutePlannerServiceTests {
         assertThat(elements).isEmpty();
     }
 
+    @Test
+    void queryOverpassShouldUseRunnableLoopRadiusAndFailOverProviders() {
+        List<String> requestedUrls = new ArrayList<>();
+        RoutePlannerService service = new RoutePlannerService(new RestTemplate(), objectMapper) {
+            @Override
+            String fetchOverpass(String url) {
+                requestedUrls.add(url);
+                if (requestedUrls.size() == 1) {
+                    throw new RestClientException("Read timed out");
+                }
+                return "{\"elements\":[{\"type\":\"way\",\"id\":1,\"geometry\":["
+                        + "{\"lat\":40.7488,\"lon\":-73.8068},"
+                        + "{\"lat\":40.7490,\"lon\":-73.8066}]}]}";
+            }
+        };
+
+        service.queryOverpass(40.7488, -73.8068, 8.0);
+
+        assertThat(requestedUrls).hasSize(2);
+        List<String> decodedUrls = requestedUrls.stream().map(this::decodeUrl).toList();
+        assertThat(decodedUrls.get(0))
+                .startsWith("https://maps.mail.ru/osm/tools/overpass/api/interpreter")
+                .contains("around:1000,40.7488,-73.8068");
+        assertThat(decodedUrls.get(1))
+                .startsWith("https://overpass-api.de/api/interpreter")
+                .contains("around:1000,40.7488,-73.8068");
+        assertThat(decodedUrls).allSatisfy(url -> {
+            assertThat(url).contains("[timeout:8]");
+            assertThat(url).doesNotContain("primary|steps");
+        });
+        assertThat(requestedUrls).noneSatisfy(url -> assertThat(url).contains("%255E"));
+    }
+
     // --- Graph building ---
 
     @Test
@@ -280,6 +320,79 @@ class RoutePlannerServiceTests {
         assertThat(result).isNull();
     }
 
+    @Test
+    void findClosestNodeShouldPreferNearbyRunnableNetworkOverTinyDriveway() {
+        RoutePlannerService service = new RoutePlannerService();
+        Map<Long, RoutePlannerService.GraphNode> graph = new HashMap<>();
+
+        RoutePlannerService.GraphNode drivewayStart = graphNode(1L, 40.7488, -73.8068);
+        RoutePlannerService.GraphNode drivewayEnd = graphNode(2L, 40.7489, -73.8068);
+        graph.put(drivewayStart.id, drivewayStart);
+        graph.put(drivewayEnd.id, drivewayEnd);
+        connectBidirectional(drivewayStart, drivewayEnd, 11.0);
+
+        RoutePlannerService.GraphNode[][] streetGrid = new RoutePlannerService.GraphNode[5][5];
+        long nextId = 100L;
+        for (int row = 0; row < streetGrid.length; row++) {
+            for (int column = 0; column < streetGrid[row].length; column++) {
+                RoutePlannerService.GraphNode node = graphNode(
+                        nextId++,
+                        40.7495 + (row * 0.0007),
+                        -73.8061 + (column * 0.0007)
+                );
+                streetGrid[row][column] = node;
+                graph.put(node.id, node);
+                if (row > 0) {
+                    connectBidirectional(node, streetGrid[row - 1][column], 78.0);
+                }
+                if (column > 0) {
+                    connectBidirectional(node, streetGrid[row][column - 1], 59.0);
+                }
+            }
+        }
+
+        Long selectedNodeId = service.findClosestNode(graph, 40.7488, -73.8068);
+
+        assertThat(selectedNodeId).isNotIn(drivewayStart.id, drivewayEnd.id);
+        assertThat(selectedNodeId).isGreaterThanOrEqualTo(100L);
+    }
+
+    @Test
+    void findClosestNodeShouldNotRelocateRunnerToDistantNetwork() {
+        RoutePlannerService service = new RoutePlannerService();
+        Map<Long, RoutePlannerService.GraphNode> graph = new HashMap<>();
+
+        RoutePlannerService.GraphNode drivewayStart = graphNode(1L, 40.7488, -73.8068);
+        RoutePlannerService.GraphNode drivewayEnd = graphNode(2L, 40.7489, -73.8068);
+        graph.put(drivewayStart.id, drivewayStart);
+        graph.put(drivewayEnd.id, drivewayEnd);
+        connectBidirectional(drivewayStart, drivewayEnd, 11.0);
+
+        RoutePlannerService.GraphNode[][] distantGrid = new RoutePlannerService.GraphNode[5][5];
+        long nextId = 100L;
+        for (int row = 0; row < distantGrid.length; row++) {
+            for (int column = 0; column < distantGrid[row].length; column++) {
+                RoutePlannerService.GraphNode node = graphNode(
+                        nextId++,
+                        40.7700 + (row * 0.0007),
+                        -73.7850 + (column * 0.0007)
+                );
+                distantGrid[row][column] = node;
+                graph.put(node.id, node);
+                if (row > 0) {
+                    connectBidirectional(node, distantGrid[row - 1][column], 78.0);
+                }
+                if (column > 0) {
+                    connectBidirectional(node, distantGrid[row][column - 1], 59.0);
+                }
+            }
+        }
+
+        Long selectedNodeId = service.findClosestNode(graph, 40.7488, -73.8068);
+
+        assertThat(selectedNodeId).isEqualTo(drivewayStart.id);
+    }
+
     // --- A* search with real graph ---
 
     @Test
@@ -319,6 +432,119 @@ class RoutePlannerServiceTests {
     }
 
     @Test
+    void aStarSearchShouldPreferARealLoopOverRepeatingTheSameTinyCircuit() {
+        RoutePlannerService service = new RoutePlannerService();
+        Map<Long, RoutePlannerService.GraphNode> graph = new java.util.HashMap<>();
+
+        RoutePlannerService.GraphNode start = graphNode(1, 40.7128, -74.0060);
+        RoutePlannerService.GraphNode shortEast = graphNode(2, 40.7128, -74.0052);
+        RoutePlannerService.GraphNode shortNorth = graphNode(3, 40.7135, -74.0060);
+        RoutePlannerService.GraphNode longEast = graphNode(4, 40.7128, -74.0042);
+        RoutePlannerService.GraphNode longNorthEast = graphNode(5, 40.7146, -74.0042);
+        RoutePlannerService.GraphNode longNorth = graphNode(6, 40.7146, -74.0060);
+        List.of(start, shortEast, shortNorth, longEast, longNorthEast, longNorth)
+                .forEach(node -> graph.put(node.id, node));
+
+        connectBidirectional(start, shortEast, 100.0);
+        connectBidirectional(shortEast, shortNorth, 100.0);
+        connectBidirectional(shortNorth, start, 100.0);
+
+        connectBidirectional(start, longEast, 210.0);
+        connectBidirectional(longEast, longNorthEast, 210.0);
+        connectBidirectional(longNorthEast, longNorth, 210.0);
+        connectBidirectional(longNorth, start, 210.0);
+
+        RoutePlannerService.AStarResult result = service.aStarSearch(graph, start.id, 900.0, "rolling");
+
+        assertThat(result).isNotNull();
+        assertThat(result.totalDistanceM).isBetween(765.0, 1_035.0);
+        assertThat(hasRepeatedUndirectedEdge(result.path)).isFalse();
+        assertThat(result.path).contains(longEast.id, longNorthEast.id, longNorth.id);
+    }
+
+    @Test
+    void anchorLoopSearchShouldBuildAClosedNonRepeatingGridRoute() {
+        RoutePlannerService service = new RoutePlannerService();
+        Map<Long, RoutePlannerService.GraphNode> graph = new java.util.HashMap<>();
+        RoutePlannerService.GraphNode[][] nodes = new RoutePlannerService.GraphNode[11][11];
+        long id = 1;
+
+        for (int row = 0; row < nodes.length; row++) {
+            for (int column = 0; column < nodes[row].length; column++) {
+                RoutePlannerService.GraphNode node = graphNode(
+                        id++,
+                        40.7128 + ((row - 5) * 0.0008),
+                        -74.0060 + ((column - 5) * 0.0010)
+                );
+                nodes[row][column] = node;
+                graph.put(node.id, node);
+                if (row > 0) {
+                    connectBidirectional(node, nodes[row - 1][column], 89.0);
+                }
+                if (column > 0) {
+                    connectBidirectional(node, nodes[row][column - 1], 84.0);
+                }
+            }
+        }
+
+        long startNodeId = nodes[5][5].id;
+        RoutePlannerService.AStarResult result = service.anchorLoopSearch(
+                graph,
+                startNodeId,
+                3_000.0,
+                "rolling"
+        );
+
+        assertThat(result).isNotNull();
+        assertThat(result.totalDistanceM).isBetween(2_250.0, 3_750.0);
+        assertThat(result.path.get(0)).isEqualTo(startNodeId);
+        assertThat(result.path.get(result.path.size() - 1)).isEqualTo(startNodeId);
+        assertThat(hasRepeatedUndirectedEdge(result.path)).isFalse();
+    }
+
+    @Test
+    void planRouteShouldKeepNearbyStreetsWhenDenseOsmDataStartsFarAway() {
+        List<RoutePlannerService.OsmElement> elements = new ArrayList<>();
+
+        RoutePlannerService.OsmElement farWay = new RoutePlannerService.OsmElement();
+        farWay.type = "way";
+        farWay.id = 1;
+        farWay.geometry = new ArrayList<>();
+        for (int i = 0; i <= 12_000; i++) {
+            farWay.geometry.add(new double[]{41.0 + (i * 0.0000001), -75.0});
+        }
+        elements.add(farWay);
+
+        RoutePlannerService.OsmElement localLoop = new RoutePlannerService.OsmElement();
+        localLoop.type = "way";
+        localLoop.id = 2;
+        localLoop.geometry = List.of(
+                new double[]{40.7128, -74.0060},
+                new double[]{40.7128, -74.0045},
+                new double[]{40.7140, -74.0045},
+                new double[]{40.7140, -74.0060},
+                new double[]{40.7128, -74.0060}
+        );
+        elements.add(localLoop);
+
+        RoutePlannerService service = new RoutePlannerService() {
+            @Override
+            List<RoutePlannerService.OsmElement> queryOverpass(double lat, double lng, double targetDistanceKm) {
+                return elements;
+            }
+        };
+
+        RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 0.52, "rolling");
+
+        assertThat(result.streetGraphBacked).isTrue();
+        assertThat(result.waypoints).hasSizeGreaterThanOrEqualTo(5);
+        assertThat(result.waypoints).allSatisfy(point -> {
+            assertThat(point[0]).isBetween(40.7127, 40.7141);
+            assertThat(point[1]).isBetween(-74.0061, -74.0044);
+        });
+    }
+
+    @Test
     void aStarSearchShouldReturnNullWhenTargetTooSmall() {
         RoutePlannerService service = new RoutePlannerService();
         Map<Long, RoutePlannerService.GraphNode> graph = buildGridGraph(0.01, 0.01, 3, 3);
@@ -341,7 +567,7 @@ class RoutePlannerServiceTests {
     void planRouteWithFlatPrefShouldPreferFlatterRoutes() {
         // When OSM is empty, the service uses a fallback
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
+        stubOverpassResponse(restTemplate, "");
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
 
@@ -355,7 +581,7 @@ class RoutePlannerServiceTests {
     @Test
     void planRouteWithHillyPrefShouldNotThrow() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
+        stubOverpassResponse(restTemplate, "");
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
 
@@ -431,7 +657,7 @@ class RoutePlannerServiceTests {
                 """;
 
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(osmResponse);
+        stubOverpassResponse(restTemplate, osmResponse);
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
         RoutePlannerService.RoutePlanResult result = service.planRoute(
@@ -446,7 +672,7 @@ class RoutePlannerServiceTests {
     @Test
     void invalidElevationPreferenceShouldDefaultToRolling() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
+        stubOverpassResponse(restTemplate, "");
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
 
@@ -465,40 +691,36 @@ class RoutePlannerServiceTests {
                     {
                       "type": "way", "id": 1,
                       "geometry": [
-                        {"lat": 40.7120, "lon": -74.0060},
-                        {"lat": 40.7130, "lon": -74.0060},
-                        {"lat": 40.7140, "lon": -74.0060},
-                        {"lat": 40.7150, "lon": -74.0060}
+                        {"lat": 40.7130, "lon": -74.0065},
+                        {"lat": 40.7140, "lon": -74.0065}
                       ],
                       "tags": {"highway": "residential"}
                     },
                     {
                       "type": "way", "id": 2,
                       "geometry": [
-                        {"lat": 40.7120, "lon": -74.0065},
-                        {"lat": 40.7130, "lon": -74.0065},
-                        {"lat": 40.7140, "lon": -74.0065},
-                        {"lat": 40.7150, "lon": -74.0065}
+                        {"lat": 40.7130, "lon": -73.9990},
+                        {"lat": 40.7140, "lon": -73.9990}
                       ],
                       "tags": {"highway": "residential"}
                     },
                     {
                       "type": "way", "id": 3,
                       "geometry": [
-                        {"lat": 40.7130, "lon": -74.0070},
                         {"lat": 40.7130, "lon": -74.0065},
-                        {"lat": 40.7130, "lon": -74.0060},
-                        {"lat": 40.7130, "lon": -74.0055}
+                        {"lat": 40.7130, "lon": -74.0040},
+                        {"lat": 40.7130, "lon": -74.0015},
+                        {"lat": 40.7130, "lon": -73.9990}
                       ],
                       "tags": {"highway": "residential"}
                     },
                     {
                       "type": "way", "id": 4,
                       "geometry": [
-                        {"lat": 40.7140, "lon": -74.0070},
                         {"lat": 40.7140, "lon": -74.0065},
-                        {"lat": 40.7140, "lon": -74.0060},
-                        {"lat": 40.7140, "lon": -74.0055}
+                        {"lat": 40.7140, "lon": -74.0040},
+                        {"lat": 40.7140, "lon": -74.0015},
+                        {"lat": 40.7140, "lon": -73.9990}
                       ],
                       "tags": {"highway": "residential"}
                     }
@@ -507,7 +729,7 @@ class RoutePlannerServiceTests {
                 """;
 
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(osmResponse);
+        stubOverpassResponse(restTemplate, osmResponse);
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
         RoutePlannerService.RoutePlanResult result = service.planRoute(
@@ -518,6 +740,7 @@ class RoutePlannerServiceTests {
         assertThat(result.waypoints).isNotEmpty();
         assertThat(result.actualDistanceKm).isPositive();
         assertThat(result.estimatedTimeMinutes).isPositive();
+        assertThat(RoutePlannerService.hasRepeatedStreetSegment(result.waypoints)).isFalse();
     }
 
     // --- Plan route with distance accuracy ---
@@ -525,7 +748,7 @@ class RoutePlannerServiceTests {
     @Test
     void planRouteShouldReturnDistanceAccuracy() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        when(restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("");
+        stubOverpassResponse(restTemplate, "");
 
         RoutePlannerService service = new RoutePlannerService(restTemplate, objectMapper);
         RoutePlannerService.RoutePlanResult result = service.planRoute(40.7128, -74.0060, 5.0, "rolling");
@@ -599,5 +822,37 @@ class RoutePlannerServiceTests {
                 .filter(Objects::nonNull)
                 .map(node -> new double[]{node.lat, node.lng})
                 .toList();
+    }
+
+    private RoutePlannerService.GraphNode graphNode(long id, double lat, double lng) {
+        return new RoutePlannerService.GraphNode(id, lat, lng, Double.NaN);
+    }
+
+    private void connectBidirectional(RoutePlannerService.GraphNode first,
+                                      RoutePlannerService.GraphNode second,
+                                      double distanceM) {
+        first.neighbors.add(new RoutePlannerService.GraphNode.Edge(second.id, distanceM, 0.0));
+        second.neighbors.add(new RoutePlannerService.GraphNode.Edge(first.id, distanceM, 0.0));
+    }
+
+    private boolean hasRepeatedUndirectedEdge(List<Long> path) {
+        java.util.Set<String> edges = new java.util.HashSet<>();
+        for (int i = 1; i < path.size(); i++) {
+            long first = Math.min(path.get(i - 1), path.get(i));
+            long second = Math.max(path.get(i - 1), path.get(i));
+            if (!edges.add(first + ":" + second)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void stubOverpassResponse(RestTemplate restTemplate, String response) {
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
+                .thenReturn(ResponseEntity.ok(response));
+    }
+
+    private String decodeUrl(String url) {
+        return URLDecoder.decode(url, StandardCharsets.UTF_8);
     }
 }
