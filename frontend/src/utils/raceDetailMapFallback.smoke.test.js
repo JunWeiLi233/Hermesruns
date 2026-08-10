@@ -26,20 +26,14 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /layer\.on\('tileerror', \(\) => \{[\s\S]*if \(url === fallbackTileUrl\) return;[\s\S]*switchToFallbackTiles\(\);[\s\S]*\}\);/,
-  'RacesDetail should switch to fallback tiles when the primary tile layer emits tile errors, while avoiding loops once already on the direct OSM fallback.',
+  /layer\.on\('tileerror', \(\) => \{[\s\S]*if \(isFallback\) return;[\s\S]*switchToFallbackTiles\(\);[\s\S]*\}\);/,
+  'RacesDetail should switch to fallback tiles when the primary tile layer emits tile errors, while ignoring errors from the direct OSM fallback itself.',
 );
 
 assert.match(
   racesDetailSource,
-  /tileFallbackTimer = setTimeout\(\(\) => \{[\s\S]*if \(!tileLoadConfirmed && !switchedToFallbackTiles\) \{[\s\S]*activeTileLayer\?\.redraw\?\.\(\);[\s\S]*\}[\s\S]*\},\s*\d+\);/,
-  'RacesDetail should retry the same-origin proxy basemap on a short timeout instead of immediately switching to a browser-direct tile source that can leave the stage blank.',
-);
-
-assert.match(
-  racesDetailSource,
-  /layer\.on\('tileload', \(\) => \{[\s\S]*tileLoadConfirmed = true;/,
-  'RacesDetail should record successful tile loads so the timeout fallback only fires when the basemap is genuinely blank.',
+  /const ensureFallbackTiles = \(\) => \{[\s\S]*fallbackTileLayer = attachTileLayer\(fallbackTileUrl, \{ isFallback: true \}\);[\s\S]*ensureFallbackTiles\(\);/,
+  'RacesDetail should mount the native direct OSM layer during initial map setup so it is already warm before the first zoom.',
 );
 
 assert.doesNotMatch(
@@ -50,14 +44,26 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailSource,
-  /const buildStreetTileFallbackSnapshot = \(map, tileUrlTemplate\) => \{/,
-  'RacesDetail should define a real street-tile fallback snapshot builder so the map can still show actual OSM streets when Leaflet tiles fail to paint.',
+  /const switchToFallbackTiles = \(\) => \{[\s\S]*?const layer = ensureFallbackTiles\(\);/,
+  'RacesDetail should reuse the warm native Leaflet fallback layer instead of painting a static DOM snapshot outside Leaflet view transforms.',
 );
 
 assert.match(
   racesDetailSource,
-  /className="race-detail-map-street-fallback"/,
-  'RacesDetail should render a dedicated street-tile fallback layer rather than dropping to a pure color map stage.',
+  /map\.on\('zoomstart moveend', refreshWarmFallbackTiles\)/,
+  'RacesDetail should refresh the warm fallback layer on every zoom or pan instead of waiting for a one-time startup timeout.',
+);
+
+assert.doesNotMatch(
+  racesDetailSource,
+  /streetTileFallback|buildStreetTileFallbackSnapshot|race-detail-map-street-fallback/,
+  'RacesDetail should not render a React-managed tile snapshot that can remain pinned while the Leaflet map moves.',
+);
+
+assert.doesNotMatch(
+  racesDetailSource,
+  /map\.on\('moveend zoomend resize viewreset', refreshStreetTileFallbackOnViewChange\)/,
+  'RacesDetail should not maintain a separate DOM fallback viewport listener once Leaflet owns every tile layer.',
 );
 
 assert.doesNotMatch(

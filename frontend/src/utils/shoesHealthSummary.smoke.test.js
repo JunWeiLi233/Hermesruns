@@ -2,7 +2,7 @@
  * Smoke test: Shoes health summary row is wired into the locker.
  *
  * Verifies that:
- * 1. Shoes.jsx uses the shoe-health-summary-row class (the summary row exists).
+ * 1. Shoes.jsx uses the shoe-inventory-summary-strip class (the summary strip exists).
  * 2. Shoes.jsx references the health_summary_active translation key.
  * 3. Shoes.jsx references the health_summary_retire_soon key.
  * 4. The brand filter state and locker brand bar are present.
@@ -17,8 +17,8 @@ const shoesSource = readFileSync(path.join(here, '..', 'pages', 'Shoes.jsx'), 'u
 
 assert.match(
   shoesSource,
-  /shoe-health-summary-row/,
-  'Shoes.jsx should render the shoe-health-summary-row element.'
+  /shoe-inventory-summary-strip/,
+  'Shoes.jsx should render the shoe-inventory-summary-strip element.'
 );
 
 assert.match(

@@ -118,13 +118,17 @@ assert(
     && landingSource.includes("style={{ '--race-cycle-duration': raceCycleDuration }}")
     && !landingSource.includes('className="landing-cinematic-map-readout-layer"')
     && !landingSource.includes('className="landing-cinematic-map-readout-line"')
-    && !landingSource.includes('pathLength="1"')
-    && landingSource.includes('className="landing-cinematic-map-selection-layer"')
-    && landingSource.includes('className="landing-cinematic-map-selection"')
-    && landingSource.includes('className="landing-cinematic-map-selection-spread"')
-    && landingSource.includes('className="landing-cinematic-map-selection-ping"')
-    && landingSource.includes('className="landing-cinematic-map-selection-ring"')
-    && !landingSource.includes('<animateMotion')
+    && landingSource.includes('function buildCurvedFlightPath(points)')
+    && landingSource.includes('const flightPath = buildCurvedFlightPath')
+    && landingSource.includes('className="landing-cinematic-map-flight-route"')
+    && landingSource.includes('className="landing-cinematic-map-flight-route-live"')
+    && landingSource.includes('className="landing-cinematic-map-aircraft"')
+    && landingSource.includes('<animateMotion')
+    && !landingSource.includes('className="landing-cinematic-map-selection-layer"')
+    && !landingSource.includes('className="landing-cinematic-map-selection"')
+    && !landingSource.includes('className="landing-cinematic-map-selection-spread"')
+    && !landingSource.includes('className="landing-cinematic-map-selection-ping"')
+    && !landingSource.includes('className="landing-cinematic-map-selection-ring"')
     && !/pin:\s*\{/.test(landingSource)
     && landingSource.includes('className="landing-cinematic-map-guide"')
     && landingSource.includes('className={`landing-cinematic-map-guide-step is-${step.key}`}')
@@ -328,11 +332,12 @@ assert(
 );
 
 assert(
-  /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*1\.18px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
-    && !/@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*86/.test(landingStyleSource)
-    && /@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*5\.6;/.test(landingStyleSource)
+  /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*0\.68px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-dasharray:\s*0\.7 1\.25;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(landingStyleSource)
+    && /\.landing-cinematic-map-aircraft-shape\s*\{[\s\S]*stroke:\s*#fffaf3;/.test(landingStyleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource),
-  'Landing race map active split CSS should keep SVG pin labels and selection pulses bounded inside the map.',
+  'Landing race map active split CSS should keep SVG pin labels and the moving airline route bounded inside the map.',
 );
 
 assert(
@@ -360,8 +365,9 @@ assert(
     && /\.landing-cinematic-final-card--minimal\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*justify-items:\s*center/.test(landingStyleSource)
     && /\.landing-cinematic-final-card--minimal\s*\{[\s\S]*background:\s*#f4efe6/.test(landingStyleSource)
     && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-bg\s*\{[\s\S]*display:\s*none/.test(landingStyleSource)
-    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy\s*\{[\s\S]*text-align:\s*center/.test(landingStyleSource)
-    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy h2\s*\{[\s\S]*letter-spacing:\s*0;[\s\S]*font-size:\s*clamp/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy\s*\{[\s\S]*min-width:\s*0;[\s\S]*max-width:\s*min\(100%,\s*920px\);[\s\S]*text-align:\s*center/.test(landingStyleSource)
+    && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy h2\s*\{[\s\S]*letter-spacing:\s*0;[\s\S]*font-size:\s*clamp[\s\S]*white-space:\s*normal;[\s\S]*text-wrap:\s*balance;[\s\S]*overflow-wrap:\s*anywhere;/.test(landingStyleSource)
+    && !/\.landing-cinematic-final-card--minimal \.landing-cinematic-final-copy h2\s*\{[\s\S]*white-space:\s*nowrap;/.test(landingStyleSource)
     && /\.landing-cinematic-final-card \.landing-cinematic-btn--primary\s*\{[\s\S]*linear-gradient\(135deg,\s*#a0392a 0%,\s*#fc7e69 100%\)/.test(landingStyleSource)
     && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*flex;[\s\S]*justify-content:\s*center/.test(landingStyleSource),
   'Landing final CTA should be a warm (#f4efe6) centered minimal card: single column, no photo panel, centered copy + actions, coral gradient primary button, and a centered row of mono trust chips. No proof grids or fake metrics.',

@@ -40,11 +40,21 @@ const DB_URL = "jdbc:h2:file:./backend/hermes_db_v2;AUTO_SERVER=TRUE";
 
 const TRUSTED_OFFICIAL_WAYPOINT_SOURCES = new Set([
   "nyc-official-course",
+  "boston-official-course",
+  "chicago-official-course",
   "tokyo-official-course",
   "la-official-course",
   "osaka-official-course",
   "athens-official-course",
+  "wuxi-official-course",
 ]);
+
+function isTrustedOfficialSource(source) {
+  return TRUSTED_OFFICIAL_WAYPOINT_SOURCES.has(source)
+    || source.startsWith("known-official-course:")
+    || source.startsWith("verified-official-map:")
+    || source.startsWith("verified-official-gpx:");
+}
 
 function parseArgs(argv) {
   const parsed = {};
@@ -296,6 +306,7 @@ function normalizePoints(rawPoints, flags) {
 function auditCatalogRace(catalogRace, row) {
   const flags = [];
   const source = cleanString(row?.live_source).toLowerCase();
+  const quarantined = source.startsWith("quarantined-unverified-course:");
   const liveImageUrl = cleanString(row?.live_image_url);
   const rawPoints = parseJsonField(row?.live_route_points_json);
   const points = normalizePoints(rawPoints, flags);
@@ -306,19 +317,15 @@ function auditCatalogRace(catalogRace, row) {
 
   if (!row) flags.push("missing-backend-record");
   if (!source) flags.push("missing-live-source");
-  if (!nonBlank(liveImageUrl)) flags.push("missing-live-source-map-image");
-  if (points.length === 0) flags.push("missing-live-route");
-  if (points.length > 0 && points.length < routePointMinimum) {
+  if (!quarantined && !nonBlank(liveImageUrl) && !isTrustedOfficialSource(source)) flags.push("missing-live-source-map-image");
+  if (!quarantined && points.length === 0) flags.push("missing-live-route");
+  if (!quarantined && points.length > 0 && points.length < routePointMinimum) {
     flags.push(`sparse-${points.length}-waypoints-need-${routePointMinimum}`);
   }
 
   if (source.includes("synthetic")) flags.push("synthetic-route");
   if (source.includes("hand-corrected")) flags.push("hand-corrected-route-needs-official-upload");
   if (source.includes("auto-acquire")) flags.push("auto-acquired-route-needs-visual-review");
-  if (TRUSTED_OFFICIAL_WAYPOINT_SOURCES.has(source) && !nonBlank(liveImageUrl)) {
-    flags.push("official-waypoints-without-uploaded-map");
-  }
-
   if (latitude != null && longitude != null && points.length > 0) {
     const farthest = maxDistanceFromAnchor(points, latitude, longitude);
     if (farthest > 60) flags.push(`anchor-far-${Math.round(farthest)}km`);
@@ -363,6 +370,7 @@ function auditCatalogRace(catalogRace, row) {
     startFinishKm: startFinishKm == null ? null : round1(startFinishKm),
     waypointCount: points.length,
     confidence: safeNumber(row?.live_confidence),
+    quarantined,
     flags: [...new Set(flags)],
     severity: severityForFlags(flags),
   };
@@ -445,8 +453,9 @@ async function main() {
     .filter((row) => !catalogIds.has(row.race_id))
     .map(auditBackendOnlyRow)
     .sort((a, b) => b.severity - a.severity || a.raceId.localeCompare(b.raceId));
-  const needsWork = audited.filter((item) => item.flags.length > 0);
-  const clean = audited.filter((item) => item.flags.length === 0);
+  const quarantined = audited.filter((item) => item.quarantined);
+  const needsWork = audited.filter((item) => !item.quarantined && item.flags.length > 0);
+  const clean = audited.filter((item) => !item.quarantined && item.flags.length === 0);
 
   const summary = {
     catalogMarathons: catalogMarathons.length,
@@ -456,11 +465,13 @@ async function main() {
     auditedCatalogMarathons: audited.length,
     marathonsNeedingWork: needsWork.length,
     marathonsClean: clean.length,
+    marathonsQuarantined: quarantined.length,
     backendOnlyRoutes: backendOnly.length,
     topPriority: needsWork.slice(0, 25),
     flagHistogram: histogramFlags(needsWork),
     sourceHistogram: histogramSources(audited),
     cleanIds: clean.map((item) => item.raceId),
+    quarantinedIds: quarantined.map((item) => item.raceId),
   };
 
   process.stdout.write(JSON.stringify({ summary, all: audited, backendOnly }, null, 2) + "\n");

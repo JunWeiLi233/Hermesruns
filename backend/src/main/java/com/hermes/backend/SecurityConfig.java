@@ -67,6 +67,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/auth/admin-login").permitAll()
                         .requestMatchers("/api/billing/stripe/webhook").permitAll()
+                        // Leaflet requests basemap tiles as image URLs and cannot attach the
+                        // runner's bearer token. The proxy only returns public OSM tiles, so
+                        // keep this read-only endpoint available without authentication.
+                        .requestMatchers("/api/maps/tiles/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

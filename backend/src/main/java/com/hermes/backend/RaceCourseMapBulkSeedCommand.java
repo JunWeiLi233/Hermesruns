@@ -14,8 +14,9 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 
 /**
- * One-shot CLI runner that bulk-seeds synthetic geographic-loop course maps
- * for every catalog race, so each {@code /races/details/<raceId>} page has a
+ * One-shot CLI runner that bulk-seeds checked course geometry (and an
+ * explicitly labelled synthetic fallback where no checked route exists) for
+ * every catalog race, so each {@code /races/details/<raceId>} page has a
  * working map + elevation chart even without the admin portal upload flow.
  *
  * <p>Activate by starting the backend with

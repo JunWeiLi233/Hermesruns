@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const profileSource = readFileSync(path.join(here, 'ProfileDashboard.jsx'), 'utf8');
 const comebackSource = readFileSync(path.join(here, '../components/ComebackMessage.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 const translationsSource = [
   readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8'),
   readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8'),
@@ -52,6 +53,18 @@ assert.match(
   styleSource,
   /\.runner-comeback-card__close\s*\{[\s\S]*z-index:\s*2;/,
   'Comeback dismiss control should sit above the card body so it can actually receive clicks.',
+);
+
+assert.match(
+  liquidGlassSource,
+  /\.runner-comeback-card__body,[\s\S]*\.runner-comeback-card__tips[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important/,
+  'Liquid-glass card sweeping must not paint paper strips behind comeback text.',
+);
+
+assert.match(
+  liquidGlassSource,
+  /\.runner-shell-page \.hd-content :is\(\s*\.hd-card-head,\s*\.hd-card-head > div,[\s\S]*\.hd-card-title\s*\)\s*\{[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important/,
+  'Liquid-glass card sweeping must not paint paper strips behind profile card headings.',
 );
 
 assert.match(

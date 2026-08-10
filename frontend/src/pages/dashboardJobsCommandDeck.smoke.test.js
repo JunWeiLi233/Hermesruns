@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = [
+  '../styles/style.css',
+  '../styles/admin-monitoring-dashboard.css',
+].map((file) => readFileSync(path.join(here, file), 'utf8')).join('\n');
 const translationsSource = [
   '../i18n/translations.js',
   '../i18n/locales/en/index.js',
@@ -51,6 +54,30 @@ assert.match(
 );
 
 assert.match(
+  dashboardSource,
+  /function JobQueueRowComponent\(/,
+  'Dashboard jobs should isolate terminal row rendering for bounded virtualization.',
+);
+
+assert.match(
+  dashboardSource,
+  /rowComponent=\{JobQueueRowComponent\}/,
+  'Dashboard jobs should virtualize each actor stream instead of mounting every historical row at once.',
+);
+
+assert.match(
+  dashboardSource,
+  /admin-jobs-terminal__row-shell/,
+  'Virtualized jobs rows should keep the existing terminal row layout inside a positioned shell.',
+);
+
+assert.match(
+  dashboardSource,
+  /className="admin-jobs-terminal__row-shell" \{\.\.\.ariaAttributes\}/,
+  'Virtualized jobs rows should keep list semantics on the wrapper so the inner control remains a native button.',
+);
+
+assert.match(
   styleSource,
   /\.admin-jobs-command-deck\s*\{/,
   'Dashboard styles should define the jobs command-deck shell.',
@@ -72,6 +99,18 @@ assert.match(
   styleSource,
   /\.admin-jobs-terminal__group\s*\{/,
   'Dashboard styles should define grouped user sections inside the jobs terminal.',
+);
+
+assert.match(
+  styleSource,
+  /admin-jobs-terminal__group-list[\s\S]*max-height:\s*560px/,
+  'Dashboard jobs should bound the historical stream height for predictable scrolling.',
+);
+
+assert.match(
+  styleSource,
+  /body\.theme-light \.admin-command-page \.admin-jobs-terminal__status-badge\.is-completed[\s\S]*color:\s*#475569/,
+  'Dashboard jobs should keep completed status pills readable in the light theme.',
 );
 
 assert.match(
