@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "canonicalRuntime": "codex",
+  "canonicalCommandsDirectory": ".codex/commands",
+  "editingContract": "docs/ai/EDITING_CONTRACT.md",
+  "runtimes": {
+    "claude": { "directory": ".claude/commands", "extension": ".md" },
+    "gemini": { "directory": ".gemini/commands", "extension": ".toml" },
+    "opencode": { "directory": ".opencode/commands", "extension": ".md" }
+  },
+  "commands": [
+    "auto-hermes",
+    "auto-hermes-attack",
+    "auto-hermes-find-shoe",
+    "auto-hermes-market",
+    "auto-hermes-max",
+    "auto-hermes-pull-main",
+    "auto-hermes-push-main",
+    "auto-hermes-security",
+    "auto-hermes-self",
+    "auto-hermes-structure-update",
+    "auto-hermes-tech-debt",
+    "autoresearch",
+    "autoresearch/debug",
+    "autoresearch/evals",
+    "autoresearch/fix",
+    "autoresearch/improve",
+    "autoresearch/learn",
+    "autoresearch/plan",
+    "autoresearch/predict",
+    "autoresearch/probe",
+    "autoresearch/reason",
+    "autoresearch/scenario",
+    "autoresearch/security",
+    "autoresearch/ship"
+  ]
+}

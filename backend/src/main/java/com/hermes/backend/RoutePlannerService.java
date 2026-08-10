@@ -5,10 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.*;
@@ -20,9 +27,15 @@ public class RoutePlannerService {
     private static final double EARTH_RADIUS_M = 6_371_000.0;
     private static final double DISTANCE_TOLERANCE_FACTOR = 0.15;
     private static final int MAX_SEARCH_ITERATIONS = 15_000;
-    private static final double OVERPASS_RADIUS_FACTOR = 800.0;
-    private static final double MIN_OVERPASS_RADIUS_M = 1_500.0;
-    private static final double MAX_OVERPASS_RADIUS_M = 25_000.0;
+    private static final double OVERPASS_RADIUS_FACTOR = 125.0;
+    private static final double MIN_OVERPASS_RADIUS_M = 1_000.0;
+    private static final double MAX_OVERPASS_RADIUS_M = 15_000.0;
+    private static final double OVERPASS_EXPANSION_RADIUS_FACTOR = 1.5;
+    private static final List<String> OVERPASS_ENDPOINTS = List.of(
+            "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+            "https://overpass-api.de/api/interpreter"
+    );
+    private static final String OVERPASS_USER_AGENT = "Hermesruns-route-planner/1.0";
     /*
      * Graph + waypoint sizing. The previous 3_000-node cap was too small for
      * any dense urban area (a 4 km radius of a city typically yields tens of
@@ -55,6 +68,8 @@ public class RoutePlannerService {
     private static final double DISTANCE_BUCKET_M = 50.0;
     private static final int MIN_ROUTE_SHAPE_POINTS = 4;
     private static final int MIN_ROUTE_DIRECTION_CHANGES = 2;
+    private static final int MIN_RUNNABLE_COMPONENT_NODES = 20;
+    private static final double MAX_START_SNAP_DISTANCE_M = 1_000.0;
     private static final double MIN_ROUTE_TURN_SEGMENT_M = 20.0;
     private static final double MIN_ROUTE_TURN_DEGREES = 25.0;
     private static final double MAX_ROUTE_TURN_DEGREES = 155.0;
@@ -78,7 +93,9 @@ public class RoutePlannerService {
     }
 
     @Autowired
-    public RoutePlannerService(RestTemplate restTemplate, ObjectMapper objectMapper, TtlCacheStore cacheStore) {
+    public RoutePlannerService(@Qualifier("routePlannerRestTemplate") RestTemplate restTemplate,
+                               ObjectMapper objectMapper,
+                               TtlCacheStore cacheStore) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.cacheStore = cacheStore;
@@ -114,13 +131,13 @@ public class RoutePlannerService {
         }
 
         // Step 2: Build graph
-        Map<Long, GraphNode> graph = buildGraph(osmElements);
+        Map<Long, GraphNode> graph = buildGraph(osmElements, startLat, startLng);
         if (graph == null || graph.isEmpty() || graph.size() < 3) {
             log.warn("Graph too small ({} nodes); using fallback.", graph == null ? 0 : graph.size());
             return generateFallbackRoute(startLat, startLng, targetDistanceKm);
         }
 
-        // Step 3: Find start node (closest node to user's position)
+        // Step 3: Snap to a nearby cyclic street network rather than an isolated driveway.
         Long startNodeId = findClosestNode(graph, startLat, startLng);
         if (startNodeId == null) {
             log.warn("Could not find start node near ({}, {}); using fallback.", startLat, startLng);
@@ -129,8 +146,11 @@ public class RoutePlannerService {
 
         // Step 4: Run A* search for a loop route
         AStarResult aStarResult = aStarSearch(graph, startNodeId, targetDistanceM, pref);
+        if (aStarResult == null) {
+            aStarResult = anchorLoopSearch(graph, startNodeId, targetDistanceM, pref);
+        }
         if (aStarResult == null || aStarResult.path == null || aStarResult.path.size() < 2) {
-            log.warn("A* search found no valid route; using fallback.");
+            log.warn("Route searches found no valid street loop; using fallback.");
             return generateFallbackRoute(startLat, startLng, targetDistanceKm);
         }
 
@@ -241,30 +261,58 @@ public class RoutePlannerService {
     List<OsmElement> queryOverpass(double lat, double lng, double targetDistanceKm) {
         double radiusM = Math.max(MIN_OVERPASS_RADIUS_M,
                 Math.min(MAX_OVERPASS_RADIUS_M, targetDistanceKm * OVERPASS_RADIUS_FACTOR));
-        long radius = Math.round(radiusM);
+        long primaryRadius = Math.round(radiusM);
+        long expandedRadius = Math.round(Math.min(MAX_OVERPASS_RADIUS_M,
+                radiusM * OVERPASS_EXPANSION_RADIUS_FACTOR));
+        LinkedHashSet<Long> radii = new LinkedHashSet<>(List.of(primaryRadius, expandedRadius));
 
-        String highwayFilter = "%5E(footway%7Cpath%7Ctrack%7Cresidential%7Cservice%7Cliving_street%7Cpedestrian%7Ccycleway%7Cbridleway%7Cunclassified%7Ctertiary%7Csecondary%7Cprimary%7Csteps)%24";
-        String query = "[out:json];way[highway~\""
-                + highwayFilter
-                + "\"](around:" + radius + "," + lat + "," + lng + ");out geom;";
-
-        String url = "https://overpass-api.de/api/interpreter?data=" + query;
-
-        try {
-            Optional<String> cachedResponse = cacheStore.get("overpass", url, String.class);
-            if (cachedResponse.isPresent()) {
-                return parseOverpassResponse(cachedResponse.get());
+        for (long radius : radii) {
+            for (String endpoint : OVERPASS_ENDPOINTS) {
+                String url = buildOverpassUrl(endpoint, lat, lng, radius);
+                try {
+                    Optional<String> cachedResponse = cacheStore.get("overpass", url, String.class);
+                    String response = cachedResponse.orElseGet(() -> fetchOverpass(url));
+                    if (response == null || response.isBlank()) {
+                        continue;
+                    }
+                    List<OsmElement> elements = parseOverpassResponse(response);
+                    if (elements.isEmpty()) {
+                        continue;
+                    }
+                    if (cachedResponse.isEmpty()) {
+                        cacheStore.put("overpass", url, response, OVERPASS_CACHE_TTL);
+                    }
+                    return elements;
+                } catch (RestClientException e) {
+                    log.warn("Overpass API call failed for {} at {}m radius: {}", endpoint, radius, e.getMessage());
+                }
             }
-            String response = restTemplate.getForObject(url, String.class);
-            if (response == null || response.isBlank()) {
-                return List.of();
-            }
-            cacheStore.put("overpass", url, response, OVERPASS_CACHE_TTL);
-            return parseOverpassResponse(response);
-        } catch (RestClientException e) {
-            log.warn("Overpass API call failed: {}", e.getMessage());
-            return List.of();
         }
+        return List.of();
+    }
+
+    String fetchOverpass(String url) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.USER_AGENT, OVERPASS_USER_AGENT);
+        ResponseEntity<String> response = restTemplate.exchange(
+                URI.create(url),
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class
+        );
+        return response.getBody();
+    }
+
+    private String buildOverpassUrl(String endpoint, double lat, double lng, long radius) {
+        String highwayFilter = "^(footway|path|track|residential|service|living_street|pedestrian|cycleway|bridleway|unclassified|tertiary)$";
+        String query = "[out:json][timeout:8];way[highway~\""
+                + highwayFilter
+                + "\"](around:" + radius + "," + lat + "," + lng + ");out geom qt;";
+        return UriComponentsBuilder.fromUriString(endpoint)
+                .queryParam("data", query)
+                .build()
+                .encode()
+                .toUriString();
     }
 
     List<OsmElement> parseOverpassResponse(String json) {
@@ -324,23 +372,32 @@ public class RoutePlannerService {
     // --- Graph building ---
 
     Map<Long, GraphNode> buildGraph(List<OsmElement> elements) {
+        return buildGraph(elements, null, null);
+    }
+
+    Map<Long, GraphNode> buildGraph(List<OsmElement> elements, Double startLat, Double startLng) {
         Map<Long, GraphNode> graph = new HashMap<>();
         Map<String, Long> coordinateIndex = new HashMap<>();
         long syntheticId = -1;
 
-        for (OsmElement el : elements) {
-            if (!"way".equals(el.type) || el.geometry == null || el.geometry.size() < 2) {
-                continue;
-            }
+        List<OsmElement> orderedWays = elements.stream()
+                .filter(this::isRunnableWay)
+                .sorted(Comparator.comparingDouble(element -> distanceFromStart(element, startLat, startLng)))
+                .toList();
 
-            // Stop accepting NEW ways once the cap is reached, but always finish
-            // the current way atomically (nodes + edges) so a way is never left
-            // half-connected. The previous implementation returned mid-way and
-            // left orphan nodes that the A* search could not traverse — which
-            // produced visible shortcut polylines whenever the renderer drew a
-            // straight line between two disconnected fragments of the network.
+        for (OsmElement el : orderedWays) {
+
             if (graph.size() >= MAX_GRAPH_NODES) {
                 break;
+            }
+
+            long newNodeCount = el.geometry.stream()
+                    .map(point -> coordinateKey(point[0], point[1]))
+                    .distinct()
+                    .filter(key -> !coordinateIndex.containsKey(key))
+                    .count();
+            if (graph.size() + newNodeCount > MAX_GRAPH_NODES) {
+                continue;
             }
 
             List<GraphNode> wayNodes = new ArrayList<>(el.geometry.size());
@@ -380,7 +437,62 @@ public class RoutePlannerService {
         return graph;
     }
 
+    private boolean isRunnableWay(OsmElement element) {
+        if (element == null || !"way".equals(element.type)
+                || element.geometry == null || element.geometry.size() < 2) {
+            return false;
+        }
+        if (element.tags == null || element.tags.isEmpty()) {
+            return true;
+        }
+
+        String highway = element.tags.getOrDefault("highway", "").toLowerCase(Locale.ROOT);
+        String access = element.tags.getOrDefault("access", "").toLowerCase(Locale.ROOT);
+        String foot = element.tags.getOrDefault("foot", "").toLowerCase(Locale.ROOT);
+        return !Set.of("construction", "proposed", "motorway", "motorway_link").contains(highway)
+                && !Set.of("no", "private").contains(access)
+                && !Set.of("no", "private").contains(foot);
+    }
+
+    private double distanceFromStart(OsmElement element, Double startLat, Double startLng) {
+        if (startLat == null || startLng == null) {
+            return 0.0;
+        }
+        return element.geometry.stream()
+                .mapToDouble(point -> haversineM(startLat, startLng, point[0], point[1]))
+                .min()
+                .orElse(Double.POSITIVE_INFINITY);
+    }
+
     Long findClosestNode(Map<Long, GraphNode> graph, double lat, double lng) {
+        Set<Long> remainingNodeIds = new HashSet<>(graph.keySet());
+        Long closestRunnableNode = null;
+        double closestRunnableDistance = Double.POSITIVE_INFINITY;
+
+        while (!remainingNodeIds.isEmpty()) {
+            Long componentStart = remainingNodeIds.iterator().next();
+            Set<Long> componentNodeIds = connectedNodeIds(graph, componentStart);
+            remainingNodeIds.removeAll(componentNodeIds);
+            if (componentNodeIds.size() < MIN_RUNNABLE_COMPONENT_NODES
+                    || !componentHasCycle(graph, componentNodeIds)) {
+                continue;
+            }
+            for (Long nodeId : componentNodeIds) {
+                GraphNode node = graph.get(nodeId);
+                if (node == null) {
+                    continue;
+                }
+                double distance = haversineM(lat, lng, node.lat, node.lng);
+                if (distance < closestRunnableDistance) {
+                    closestRunnableDistance = distance;
+                    closestRunnableNode = node.id;
+                }
+            }
+        }
+        if (closestRunnableNode != null && closestRunnableDistance <= MAX_START_SNAP_DISTANCE_M) {
+            return closestRunnableNode;
+        }
+
         Long closest = null;
         double minDist = Double.POSITIVE_INFINITY;
         for (GraphNode node : graph.values()) {
@@ -391,6 +503,17 @@ public class RoutePlannerService {
             }
         }
         return closest;
+    }
+
+    private boolean componentHasCycle(Map<Long, GraphNode> graph, Set<Long> componentNodeIds) {
+        long directedEdgeCount = componentNodeIds.stream()
+                .map(graph::get)
+                .filter(Objects::nonNull)
+                .mapToLong(node -> node.neighbors.stream()
+                        .filter(edge -> componentNodeIds.contains(edge.targetId))
+                        .count())
+                .sum();
+        return directedEdgeCount / 2 >= componentNodeIds.size();
     }
 
     // --- A* Search ---
@@ -454,6 +577,7 @@ public class RoutePlannerService {
             for (GraphNode.Edge edge : node.neighbors) {
                 GraphNode neighbor = graph.get(edge.targetId);
                 if (neighbor == null) continue;
+                if (hasTraversedEdge(current, nodeId, edge.targetId)) continue;
 
                 double edgeCost = edge.distanceM + elevationWeight * Math.max(0, edge.elevationGainM);
                 double newDistanceM = current.distanceM + edge.distanceM;
@@ -515,6 +639,294 @@ public class RoutePlannerService {
         return new AStarResult(path, goalState.distanceM);
     }
 
+    private boolean hasTraversedEdge(SearchState state, long firstNodeId, long secondNodeId) {
+        long edgeStart = Math.min(firstNodeId, secondNodeId);
+        long edgeEnd = Math.max(firstNodeId, secondNodeId);
+        SearchState current = state;
+        while (current != null && current.parent != null) {
+            long traversedStart = Math.min(current.nodeId, current.parent.nodeId);
+            long traversedEnd = Math.max(current.nodeId, current.parent.nodeId);
+            if (edgeStart == traversedStart && edgeEnd == traversedEnd) {
+                return true;
+            }
+            current = current.parent;
+        }
+        return false;
+    }
+
+    AStarResult anchorLoopSearch(Map<Long, GraphNode> graph,
+                                 Long startNodeId,
+                                 double targetDistanceM,
+                                 String elevationPref) {
+        GraphNode startNode = graph.get(startNodeId);
+        if (startNode == null || graph.size() < 4) {
+            return null;
+        }
+        Set<Long> connectedNodeIds = connectedNodeIds(graph, startNodeId);
+        if (connectedNodeIds.size() < 4) {
+            return null;
+        }
+
+        AStarResult best = null;
+        double bestErrorM = Double.POSITIVE_INFINITY;
+        int[] anchorCounts = {4, 6, 8};
+        double[] radiusFactors = {0.14, 0.16, 0.18, 0.20};
+
+        for (int anchorCount : anchorCounts) {
+            double bearingStep = 360.0 / anchorCount;
+            for (double radiusFactor : radiusFactors) {
+                double radiusM = targetDistanceM * radiusFactor;
+                for (double orientation : new double[]{0.0, bearingStep / 2.0}) {
+                    for (int direction : new int[]{1, -1}) {
+                        List<Long> anchors = selectAnchorNodes(
+                                graph,
+                                connectedNodeIds,
+                                startNode,
+                                startNodeId,
+                                anchorCount,
+                                radiusM,
+                                orientation,
+                                direction
+                        );
+                        if (anchors.size() != anchorCount) {
+                            continue;
+                        }
+
+                        AStarResult candidate = connectAnchorLoop(
+                                graph,
+                                startNodeId,
+                                anchors
+                        );
+                        if (candidate == null) {
+                            continue;
+                        }
+
+                        double errorM = Math.abs(candidate.totalDistanceM - targetDistanceM);
+                        if (errorM < bestErrorM) {
+                            best = candidate;
+                            bestErrorM = errorM;
+                        }
+                    }
+                }
+            }
+        }
+
+        double maxErrorM = Math.max(500.0, targetDistanceM * 0.25);
+        if (best == null || bestErrorM > maxErrorM) {
+            if (best == null) {
+                log.info("Anchor loop search found no viable candidate");
+            } else {
+                log.info("Anchor loop search found no route within tolerance (best error={}m)",
+                        Math.round(bestErrorM));
+            }
+            return null;
+        }
+
+        log.info("Anchor loop search selected {}m route for {}m target",
+                Math.round(best.totalDistanceM), Math.round(targetDistanceM));
+        return best;
+    }
+
+    private List<Long> selectAnchorNodes(Map<Long, GraphNode> graph,
+                                         Set<Long> connectedNodeIds,
+                                         GraphNode startNode,
+                                         long startNodeId,
+                                         int anchorCount,
+                                         double radiusM,
+                                         double orientation,
+                                         int direction) {
+        List<Long> anchors = new ArrayList<>(anchorCount);
+        Set<Long> selected = new HashSet<>();
+        selected.add(startNodeId);
+
+        for (int i = 0; i < anchorCount; i++) {
+            double bearing = normalizeBearing(orientation + direction * i * (360.0 / anchorCount));
+            double bearingRadians = Math.toRadians(bearing);
+            double targetLat = startNode.lat + Math.toDegrees((radiusM * Math.cos(bearingRadians)) / EARTH_RADIUS_M);
+            double longitudeScale = Math.max(0.1, Math.cos(Math.toRadians(startNode.lat)));
+            double targetLng = startNode.lng
+                    + Math.toDegrees((radiusM * Math.sin(bearingRadians)) / (EARTH_RADIUS_M * longitudeScale));
+
+            Long closest = graph.values().stream()
+                    .filter(node -> connectedNodeIds.contains(node.id))
+                    .filter(node -> !selected.contains(node.id))
+                    .min(Comparator.comparingDouble(node -> haversineM(targetLat, targetLng, node.lat, node.lng)))
+                    .map(node -> node.id)
+                    .orElse(null);
+            if (closest == null) {
+                return List.of();
+            }
+            selected.add(closest);
+            anchors.add(closest);
+        }
+        return anchors;
+    }
+
+    private Set<Long> connectedNodeIds(Map<Long, GraphNode> graph, long startNodeId) {
+        Set<Long> visited = new HashSet<>();
+        ArrayDeque<Long> queue = new ArrayDeque<>();
+        visited.add(startNodeId);
+        queue.add(startNodeId);
+
+        while (!queue.isEmpty()) {
+            Long nodeId = queue.removeFirst();
+            GraphNode node = graph.get(nodeId);
+            if (node == null) {
+                continue;
+            }
+            for (GraphNode.Edge edge : node.neighbors) {
+                if (graph.containsKey(edge.targetId) && visited.add(edge.targetId)) {
+                    queue.addLast(edge.targetId);
+                }
+            }
+        }
+        return visited;
+    }
+
+    private AStarResult connectAnchorLoop(Map<Long, GraphNode> graph,
+                                          long startNodeId,
+                                          List<Long> anchors) {
+        List<Long> route = new ArrayList<>();
+        route.add(startNodeId);
+        Set<String> usedEdges = new HashSet<>();
+        long currentNodeId = startNodeId;
+
+        for (Long anchorNodeId : anchors) {
+            List<Long> segment = shortestPath(
+                    graph,
+                    currentNodeId,
+                    anchorNodeId,
+                    usedEdges,
+                    startNodeId
+            );
+            if (segment == null) {
+                return null;
+            }
+            appendSegment(route, segment, usedEdges);
+            currentNodeId = anchorNodeId;
+        }
+
+        List<Long> closingSegment = shortestPath(
+                graph,
+                currentNodeId,
+                startNodeId,
+                usedEdges,
+                null
+        );
+        if (closingSegment == null) {
+            return null;
+        }
+        appendSegment(route, closingSegment, usedEdges);
+
+        double distanceM = pathDistanceM(graph, route);
+        List<double[]> waypoints = route.stream()
+                .map(graph::get)
+                .filter(Objects::nonNull)
+                .map(node -> new double[]{node.lat, node.lng})
+                .toList();
+        if (!hasRunnableRouteShape(waypoints)) {
+            return null;
+        }
+        return new AStarResult(route, distanceM);
+    }
+
+    private List<Long> shortestPath(Map<Long, GraphNode> graph,
+                                    long sourceNodeId,
+                                    long targetNodeId,
+                                    Set<String> blockedEdges,
+                                    Long blockedIntermediateNodeId) {
+        PriorityQueue<PathQueueState> queue = new PriorityQueue<>(Comparator.comparingDouble(state -> state.cost));
+        Map<Long, Double> distances = new HashMap<>();
+        Map<Long, Long> previous = new HashMap<>();
+        distances.put(sourceNodeId, 0.0);
+        queue.add(new PathQueueState(sourceNodeId, 0.0));
+
+        while (!queue.isEmpty()) {
+            PathQueueState current = queue.poll();
+            if (current.cost > distances.getOrDefault(current.nodeId, Double.POSITIVE_INFINITY)) {
+                continue;
+            }
+            if (current.nodeId == targetNodeId) {
+                break;
+            }
+
+            GraphNode node = graph.get(current.nodeId);
+            if (node == null) {
+                continue;
+            }
+            for (GraphNode.Edge edge : node.neighbors) {
+                if (blockedEdges.contains(edgeKey(current.nodeId, edge.targetId))) {
+                    continue;
+                }
+                if (blockedIntermediateNodeId != null
+                        && edge.targetId == blockedIntermediateNodeId
+                        && edge.targetId != targetNodeId) {
+                    continue;
+                }
+                double newDistance = current.cost + edge.distanceM;
+                if (newDistance >= distances.getOrDefault(edge.targetId, Double.POSITIVE_INFINITY)) {
+                    continue;
+                }
+                distances.put(edge.targetId, newDistance);
+                previous.put(edge.targetId, current.nodeId);
+                queue.add(new PathQueueState(edge.targetId, newDistance));
+            }
+        }
+
+        if (!distances.containsKey(targetNodeId)) {
+            return null;
+        }
+        List<Long> path = new ArrayList<>();
+        Long current = targetNodeId;
+        while (current != null) {
+            path.add(current);
+            if (current == sourceNodeId) {
+                break;
+            }
+            current = previous.get(current);
+        }
+        if (path.get(path.size() - 1) != sourceNodeId) {
+            return null;
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
+    private void appendSegment(List<Long> route, List<Long> segment, Set<String> usedEdges) {
+        for (int i = 1; i < segment.size(); i++) {
+            long previousNodeId = segment.get(i - 1);
+            long currentNodeId = segment.get(i);
+            usedEdges.add(edgeKey(previousNodeId, currentNodeId));
+            route.add(currentNodeId);
+        }
+    }
+
+    private double pathDistanceM(Map<Long, GraphNode> graph, List<Long> path) {
+        double distanceM = 0.0;
+        for (int i = 1; i < path.size(); i++) {
+            GraphNode previous = graph.get(path.get(i - 1));
+            GraphNode current = graph.get(path.get(i));
+            if (previous != null && current != null) {
+                distanceM += haversineM(previous.lat, previous.lng, current.lat, current.lng);
+            }
+        }
+        return distanceM;
+    }
+
+    private static String edgeKey(long firstNodeId, long secondNodeId) {
+        long start = Math.min(firstNodeId, secondNodeId);
+        long end = Math.max(firstNodeId, secondNodeId);
+        return start + ":" + end;
+    }
+
+    private static double normalizeBearing(double bearing) {
+        double normalized = bearing % 360.0;
+        return normalized < 0 ? normalized + 360.0 : normalized;
+    }
+
+    private record PathQueueState(long nodeId, double cost) {
+    }
+
     // --- Helpers ---
 
     private double heuristic(double distSoFar, double distToStart, double targetDistanceM) {
@@ -536,7 +948,7 @@ public class RoutePlannerService {
         return nodeId + "_" + ((long) distBucket) + "_" + shapeBucket + "_" + bearingBucket;
     }
 
-    private String coordinateKey(double lat, double lng) {
+    private static String coordinateKey(double lat, double lng) {
         long roundedLat = Math.round(lat * GRAPH_COORDINATE_SCALE);
         long roundedLng = Math.round(lng * GRAPH_COORDINATE_SCALE);
         return roundedLat + ":" + roundedLng;
@@ -585,7 +997,33 @@ public class RoutePlannerService {
         if (hasCrossBlockJump(waypoints)) {
             return false;
         }
+        if (hasRepeatedStreetSegment(waypoints)) {
+            return false;
+        }
         return countMeaningfulDirectionChanges(waypoints) >= MIN_ROUTE_DIRECTION_CHANGES;
+    }
+
+    static boolean hasRepeatedStreetSegment(List<double[]> waypoints) {
+        if (waypoints == null || waypoints.size() < 2) {
+            return false;
+        }
+        Set<String> traversedSegments = new HashSet<>();
+        for (int i = 1; i < waypoints.size(); i++) {
+            double[] previous = waypoints.get(i - 1);
+            double[] current = waypoints.get(i);
+            if (previous == null || current == null || previous.length < 2 || current.length < 2) {
+                continue;
+            }
+            String previousKey = coordinateKey(previous[0], previous[1]);
+            String currentKey = coordinateKey(current[0], current[1]);
+            String segmentKey = previousKey.compareTo(currentKey) <= 0
+                    ? previousKey + "|" + currentKey
+                    : currentKey + "|" + previousKey;
+            if (!traversedSegments.add(segmentKey)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

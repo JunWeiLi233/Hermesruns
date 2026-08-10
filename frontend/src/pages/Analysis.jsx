@@ -21,6 +21,8 @@ import PageSkeleton from '../components/PageSkeleton';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;
+const ANALYSIS_HEAT_REQUEST_TIMEOUT_MS = 10000;
+const ANALYSIS_ACCLIMATION_WINDOW_DAYS = 14;
 const TRAINING_ZONE_BASIS_STYLE = {
   display: 'block',
   marginTop: '0.42rem',
@@ -30,6 +32,41 @@ const TRAINING_ZONE_BASIS_STYLE = {
   letterSpacing: '0.035em',
   lineHeight: 1.35,
 };
+
+function toFiniteHeatNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function formatHeatTemperature(value) {
+  const numeric = toFiniteHeatNumber(value);
+  return numeric === null ? '--' : `${numeric.toFixed(1)}°C`;
+}
+
+function formatHeatDelta(value) {
+  const numeric = toFiniteHeatNumber(value);
+  if (numeric === null) return '--';
+  return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}°C`;
+}
+
+function formatHeatPenalty(value, t) {
+  const numeric = toFiniteHeatNumber(value);
+  if (numeric === null) return '--';
+  return numeric > 0
+    ? `+${Math.round(numeric)} ${t('analysis.heat_seconds_per_km')}`
+    : t('analysis.heat_no_adjustment');
+}
+
+function formatHeatDay(value, t) {
+  const numeric = toFiniteHeatNumber(value);
+  return numeric === null ? '--' : t('analysis.heat_day_value', { day: Math.round(numeric) });
+}
+
+function formatHeatFactor(value) {
+  const numeric = toFiniteHeatNumber(value);
+  return numeric === null ? '--' : numeric.toFixed(2);
+}
 
 function Gauge({ value, color }) {
   const clamped = Math.max(0, Math.min(1.8, Number(value || 0)));
@@ -118,6 +155,8 @@ export default function Analysis() {
   const [runs, setRuns] = useState([]);
   const [, setProfileState] = useState('loading');
   const [runsState, setRunsState] = useState('loading');
+  const [weatherContext, setWeatherContext] = useState(null);
+  const [weatherContextState, setWeatherContextState] = useState('idle');
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [injuryStatus, setInjuryStatus] = useState(null);
@@ -190,9 +229,13 @@ export default function Analysis() {
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
+  const [importStatus, setImportStatus] = useState('idle');
+  const selectedFileCount = [fitExportFiles, corosFiles, huaweiFiles]
+    .reduce((total, files) => total + (files?.length ?? 0), 0);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
+  const correctedRunCount = useMemo(() => runs.filter((run) => Number(run?.pacePenaltySecPerKm) > 0).length, [runs]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -236,6 +279,40 @@ export default function Analysis() {
     };
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (!isAuthenticated || runsState !== 'ready' || runs.length === 0) return undefined;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      ANALYSIS_HEAT_REQUEST_TIMEOUT_MS,
+    );
+
+    async function loadWeatherContext() {
+      setWeatherContextState('loading');
+      try {
+        const payload = await apiJson('/api/v1/weather/context', { signal: controller.signal });
+        if (cancelled) return;
+        setWeatherContext(payload && typeof payload === 'object' ? payload : null);
+        setWeatherContextState('ready');
+      } catch {
+        if (cancelled) return;
+        setWeatherContext(null);
+        setWeatherContextState('error');
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    loadWeatherContext();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [isAuthenticated, runs.length, runsState]);
+
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
   const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
@@ -254,6 +331,42 @@ export default function Analysis() {
   const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
   const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
   const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
+  const heatContextAvailable = weatherContext?.available === true;
+  const heatPenalty = heatContextAvailable
+    ? toFiniteHeatNumber(weatherContext?.pacePenaltySecPerKm)
+    : null;
+  const acclimatizationDay = heatContextAvailable
+    ? Math.max(1, Math.min(
+      ANALYSIS_ACCLIMATION_WINDOW_DAYS,
+      Math.round(toFiniteHeatNumber(weatherContext?.acclimatizationDay) || 1),
+    ))
+    : null;
+  const heatTone = weatherContextState === 'loading'
+    ? 'loading'
+    : !heatContextAvailable
+      ? 'unavailable'
+      : weatherContext?.climateShockEvent
+        ? 'shock'
+        : heatPenalty > 0
+          ? 'adjusted'
+          : 'clear';
+  const heatDecisionTitle = weatherContextState === 'loading'
+    ? t('analysis.heat_loading_title')
+    : !heatContextAvailable
+      ? t('analysis.heat_unavailable_title')
+      : heatPenalty > 0
+        ? t('analysis.heat_adjustment_active', { penalty: Math.round(heatPenalty) })
+        : t('analysis.heat_adjustment_clear');
+  const heatDecisionCopy = weatherContextState === 'loading'
+    ? t('analysis.heat_loading_copy')
+    : !heatContextAvailable
+      ? t('analysis.heat_unavailable_copy')
+      : heatPenalty > 0
+        ? t('analysis.heat_active_copy', { penalty: Math.round(heatPenalty) })
+        : t('analysis.heat_clear_copy');
+  const heatStatusLabel = heatContextAvailable && weatherContext?.acclimatizationStatus
+    ? t(`analysis.heat_status_${weatherContext.acclimatizationStatus}`)
+    : '--';
 
   useEffect(() => {
     if (!hasRuns) return;
@@ -291,14 +404,28 @@ export default function Analysis() {
 
   async function handleImport(event) {
     event.preventDefault();
+    if (selectedFileCount === 0 || importStatus === 'uploading') return;
+
     const formData = new FormData();
     if (fitExportFiles) Array.from(fitExportFiles).forEach((file) => formData.append('exports', file));
     if (corosFiles) Array.from(corosFiles).forEach((file) => formData.append('coros', file));
     if (huaweiFiles) Array.from(huaweiFiles).forEach((file) => formData.append('huawei', file));
+
+    setImportStatus('uploading');
     try {
       await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-      setImportModalOpen(false);
-      setRunsState('loading');
+    } catch {
+      setImportStatus('error');
+      return;
+    }
+
+    setFitExportFiles(null);
+    setCorosFiles(null);
+    setHuaweiFiles(null);
+    setImportStatus('idle');
+    setImportModalOpen(false);
+    setRunsState('loading');
+    try {
       const activitiesData = await apiJson('/api/activities/analysis');
       const list = Array.isArray(activitiesData) ? activitiesData : [];
       startTransition(() => {
@@ -306,8 +433,17 @@ export default function Analysis() {
       });
       setRunsState('ready');
     } catch {
-      // noop
+      setRunsState('error');
     }
+  }
+
+  function closeImportModal() {
+    if (importStatus === 'uploading') return;
+    setFitExportFiles(null);
+    setCorosFiles(null);
+    setHuaweiFiles(null);
+    setImportStatus('idle');
+    setImportModalOpen(false);
   }
 
   async function handleSaveName(event) {
@@ -616,6 +752,114 @@ export default function Analysis() {
                 </div>
               </section>
 
+              <section
+                className={cx('analysis-heat-context', `is-${heatTone}`)}
+                data-testid="analysis-heat-context"
+                aria-labelledby="analysis-heat-context-title"
+              >
+                <div className="analysis-heat-context__summary">
+                  <div className="analysis-heat-context__heading">
+                    <span className="analysis-heat-context__kicker">{t('analysis.heat_kicker')}</span>
+                    <h2 id="analysis-heat-context-title">{t('analysis.heat_title')}</h2>
+                    <p>{t('analysis.heat_copy')}</p>
+                  </div>
+
+                  <div className="analysis-heat-context__decision" aria-live="polite">
+                    <div className="analysis-heat-context__decision-icon" aria-hidden="true">
+                      <AppIcon name="thermostat" />
+                    </div>
+                    <div>
+                      <span>{t('analysis.heat_today_signal')}</span>
+                      <strong>{heatDecisionTitle}</strong>
+                      <p>{heatDecisionCopy}</p>
+                    </div>
+                    {heatContextAvailable && weatherContext?.climateShockEvent ? (
+                      <span className="analysis-heat-context__shock-pill">
+                        {t('analysis.heat_shock_detected')}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="analysis-heat-context__history">
+                    <div>
+                      <span>{t('analysis.heat_history_label')}</span>
+                      <strong>
+                        {correctedRunCount > 0
+                          ? t('analysis.heat_history_count', { count: correctedRunCount })
+                          : t('analysis.heat_history_none')}
+                      </strong>
+                      <p>{t('analysis.heat_history_copy')}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="runner-shell-inline-btn analysis-heat-context__action"
+                      onClick={() => navigate('/weather')}
+                    >
+                      {t('analysis.heat_open_weather')}
+                      <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="analysis-heat-context__data">
+                  <div className="analysis-heat-context__metrics">
+                    <article className="analysis-heat-context__metric">
+                      <span>{t('analysis.heat_baseline')}</span>
+                      <strong>{heatContextAvailable ? formatHeatTemperature(weatherContext.baselineDewPoint14dC) : '--'}</strong>
+                    </article>
+                    <article className="analysis-heat-context__metric">
+                      <span>{t('analysis.heat_current')}</span>
+                      <strong>{heatContextAvailable ? formatHeatTemperature(weatherContext.currentDewPointC) : '--'}</strong>
+                    </article>
+                    <article className={cx('analysis-heat-context__metric', weatherContext?.climateShockEvent && 'is-shock')}>
+                      <span>{t('analysis.heat_delta')}</span>
+                      <strong>{heatContextAvailable ? formatHeatDelta(weatherContext.climateShockDeltaC) : '--'}</strong>
+                    </article>
+                    <article className={cx('analysis-heat-context__metric', heatPenalty > 0 && 'is-emphasis')}>
+                      <span>{t('analysis.heat_pace_adjustment')}</span>
+                      <strong>
+                        {weatherContext?.available
+                          ? formatHeatPenalty(weatherContext.pacePenaltySecPerKm, t)
+                          : '--'}
+                      </strong>
+                    </article>
+                    <article className="analysis-heat-context__metric">
+                      <span>{t('analysis.heat_adaptation_day')}</span>
+                      <strong>{heatContextAvailable ? formatHeatDay(weatherContext.acclimatizationDay, t) : '--'}</strong>
+                    </article>
+                    <article className="analysis-heat-context__metric">
+                      <span>{t('analysis.heat_penalty_factor')}</span>
+                      <strong>{heatContextAvailable ? formatHeatFactor(weatherContext.penaltyFactor) : '--'}</strong>
+                    </article>
+                  </div>
+
+                  <div className="analysis-heat-context__exposure">
+                    <div className="analysis-heat-context__exposure-head">
+                      <span>{t('analysis.heat_exposure_window')}</span>
+                      <strong>{heatStatusLabel}</strong>
+                    </div>
+                    <div className="analysis-heat-context__exposure-track" aria-hidden="true">
+                      {Array.from({ length: ANALYSIS_ACCLIMATION_WINDOW_DAYS }, (_, index) => {
+                        const day = index + 1;
+                        return (
+                          <span
+                            key={`heat-day-${day}`}
+                            className={cx(
+                              acclimatizationDay !== null && day <= acclimatizationDay && 'is-complete',
+                              day === acclimatizationDay && 'is-current',
+                            )}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="analysis-heat-context__exposure-labels">
+                      <span>{t('analysis.heat_exposure_start')}</span>
+                      <span>{t('analysis.heat_exposure_end')}</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <section className="analysis-overview-grid analysis-overview-grid--summary analysis-profile-bento-grid">
                 <button
                   type="button"
@@ -899,49 +1143,130 @@ export default function Analysis() {
         </form>
       </Modal>
 
-      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
-        <form onSubmit={handleImport}>
+      <Modal
+        isOpen={importModalOpen}
+        onClose={closeImportModal}
+        title={t('profile.import_modal_title')}
+        shellClassName="profile-import-modal-shell"
+        cardClassName="profile-import-modal-card"
+      >
+        <form className="profile-import-modal-form" onSubmit={handleImport}>
           <ImportDataGuide />
-          <p className="modal-help">{t('profile.import_hint')}</p>
+          <header className="import-upload-heading">
+            <span>{t('profile.import_upload_kicker')}</span>
+            <h3>{t('profile.import_upload_title')}</h3>
+            <p className="modal-help">{t('profile.import_hint')}</p>
+          </header>
           <div className="import-source-grid">
-            <section className="import-source-card">
+            <section className={`import-source-card${fitExportFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">01</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
                   <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
                 </div>
                 <span className="import-source-tag">FIT/GPX</span>
               </div>
-              <label className="modal-label">{t('profile.fit_export_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setFitExportFiles(event.target.files)} />
+              <label className="modal-label" htmlFor="analysis-fit-export-files">{t('profile.fit_export_file_label')}</label>
+              <input
+                id="analysis-fit-export-files"
+                type="file"
+                accept=".gpx,.tcx,.fit,.zip"
+                multiple
+                aria-describedby="analysis-fit-export-selection"
+                onChange={(event) => {
+                  setFitExportFiles(event.target.files);
+                  setImportStatus('idle');
+                }}
+              />
+              <p id="analysis-fit-export-selection" className="selected-file-name">
+                {fitExportFiles?.length
+                  ? t('profile.selected_files_count', { count: fitExportFiles.length })
+                  : t('profile.no_file_selected')}
+              </p>
             </section>
-            <section className="import-source-card">
+            <section className={`import-source-card${corosFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">02</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.coros_source_title')}</span>
                   <span className="import-source-hint">{t('profile.coros_source_hint')}</span>
                 </div>
                 <span className="import-source-tag">COROS</span>
               </div>
-              <label className="modal-label">{t('profile.coros_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setCorosFiles(event.target.files)} />
+              <label className="modal-label" htmlFor="analysis-coros-files">{t('profile.coros_file_label')}</label>
+              <input
+                id="analysis-coros-files"
+                type="file"
+                accept=".gpx,.tcx,.fit,.zip"
+                multiple
+                aria-describedby="analysis-coros-selection"
+                onChange={(event) => {
+                  setCorosFiles(event.target.files);
+                  setImportStatus('idle');
+                }}
+              />
+              <p id="analysis-coros-selection" className="selected-file-name">
+                {corosFiles?.length
+                  ? t('profile.selected_files_count', { count: corosFiles.length })
+                  : t('profile.no_file_selected')}
+              </p>
             </section>
-            <section className="import-source-card">
+            <section className={`import-source-card${huaweiFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">03</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.huawei_source_title')}</span>
                   <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>
                 </div>
                 <span className="import-source-tag">HUAWEI</span>
               </div>
-              <label className="modal-label">{t('profile.huawei_file_label')}</label>
-              <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setHuaweiFiles(event.target.files)} />
+              <label className="modal-label" htmlFor="analysis-huawei-files">{t('profile.huawei_file_label')}</label>
+              <input
+                id="analysis-huawei-files"
+                type="file"
+                accept=".gpx,.tcx,.fit,.zip"
+                multiple
+                aria-describedby="analysis-huawei-selection"
+                onChange={(event) => {
+                  setHuaweiFiles(event.target.files);
+                  setImportStatus('idle');
+                }}
+              />
+              <p id="analysis-huawei-selection" className="selected-file-name">
+                {huaweiFiles?.length
+                  ? t('profile.selected_files_count', { count: huaweiFiles.length })
+                  : t('profile.no_file_selected')}
+              </p>
             </section>
           </div>
-          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
+          <div className="import-summary-line">
+            <strong>{t('profile.import_selected_total', { count: selectedFileCount })}</strong>
+            <span>{t('profile.import_batch_hint')}</span>
+          </div>
+          {importStatus === 'error' ? (
+            <p className="modal-status is-error" role="alert" aria-live="polite">
+              {t('profile.import_batch_failed')}
+            </p>
+          ) : null}
           <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
+            <button
+              type="button"
+              className="btn-secondary modal-button"
+              disabled={importStatus === 'uploading'}
+              onClick={closeImportModal}
+            >
+              {t('profile.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="btn-primary modal-button"
+              disabled={selectedFileCount === 0 || importStatus === 'uploading'}
+            >
+              {importStatus === 'uploading'
+                ? t('profile.import_uploading')
+                : t('profile.upload_file_count', { count: selectedFileCount })}
+            </button>
           </div>
         </form>
       </Modal>

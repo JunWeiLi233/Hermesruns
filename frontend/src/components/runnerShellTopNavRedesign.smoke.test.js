@@ -18,16 +18,31 @@ function assert(condition, message) {
 
 const componentSource = read('components/RunnerShellTopNav.jsx');
 const styleSource = read('styles/style.css');
+const runnerShellStyleSource = read('styles/_split/runner-shell.css');
+const profileStyleSource = read('styles/_split/profile.css');
 const navSource = read('utils/runnerShellNav.js');
 const iconSource = read('components/AppIcon.jsx');
 
 assert(
   !/runner-shell-topnav-shortcuts/.test(componentSource)
     && !/runner-shell-topnav-shortcut/.test(componentSource)
+    && !/runner-shell-topnav-brand/.test(componentSource)
+    && !/>\s*HERMES\s*</.test(componentSource)
     && !/aria-current=/.test(componentSource)
     && !/runner-shell-topnav-shortcuts/.test(styleSource)
     && !/runner-shell-topnav-shortcut/.test(styleSource),
-  'RunnerShellTopNav should not render or style the removed route shortcut chip strip.',
+  'RunnerShellTopNav should not render the removed route shortcut strip or HERMES brand pill.',
+);
+
+assert(
+  /\.runner-shell-topnav--command\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*max-content\)\s+auto;/.test(runnerShellStyleSource)
+    && /\.runner-shell-topnav-identity\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(runnerShellStyleSource)
+    && /\.runner-shell-topnav-current-stack\s*\{[\s\S]*width:\s*100%;[\s\S]*max-width:\s*100%;/.test(runnerShellStyleSource)
+    && /\.runner-shell-topnav-current-stack strong\s*\{[\s\S]*overflow-wrap:\s*anywhere;[\s\S]*white-space:\s*normal;/.test(runnerShellStyleSource)
+    && /\.runner-shell-topnav-identity\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(profileStyleSource)
+    && !/\.runner-shell-topnav-identity\s*\{[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(profileStyleSource)
+    && !/\.runner-shell-topnav-brand\s*\{/.test(runnerShellStyleSource),
+  'The shared runner topnav should keep localized page labels inside a single compact identity column after removing the HERMES brand pill.',
 );
 
 assert(

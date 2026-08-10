@@ -1,21 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-const GRID_SPACING = 20;
-const INTERACTION_RADIUS = 240;
-const POINTER_EASING = 0.22;
-
-function getDotPalette(canvas) {
-  const styles = window.getComputedStyle(canvas);
-  return {
-    rgb: styles.getPropertyValue('--auth-dot-rgb').trim() || '255, 244, 236',
-    opacity: Number.parseFloat(styles.getPropertyValue('--auth-dot-opacity')) || 0.2,
-  };
-}
+const DOT_GAP = 22;
+const INTERACTION_RADIUS = 260;
+const EASING = 0.18;
 
 export default function AuthDotField() {
   const canvasRef = useRef(null);
-  const canvasReadyRef = useRef(false);
-  const [isInteractive, setIsInteractive] = useState(false);
+  const frameRef = useRef();
   const pointerRef = useRef({
     active: false,
     x: 0,
@@ -23,177 +14,148 @@ export default function AuthDotField() {
     targetX: 0,
     targetY: 0,
   });
-  const frameIdRef = useRef();
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || typeof canvas.getContext !== 'function') return undefined;
+    if (!canvas) return undefined;
 
-    let prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const requestFrame = window.requestAnimationFrame?.bind(window);
-    const cancelFrame = window.cancelAnimationFrame?.bind(window);
+    const context = canvas.getContext('2d');
+    if (!context) return undefined;
+
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reducedMotion = motionQuery.matches;
+
+    const palette = () => {
+      const styles = window.getComputedStyle(canvas);
+      return {
+        color:
+          styles.getPropertyValue('--auth-dot-color').trim() || '224, 238, 255',
+        opacity:
+          Number.parseFloat(styles.getPropertyValue('--auth-dot-opacity')) ||
+          0.22,
+      };
+    };
 
     const draw = () => {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
-      if (width <= 0 || height <= 0) return;
+      if (!width || !height) return;
 
-      const pixelRatio = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-      const canvasWidth = Math.round(width * pixelRatio);
-      const canvasHeight = Math.round(height * pixelRatio);
-
-      if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
+      const ratio = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+      const pixelWidth = Math.round(width * ratio);
+      const pixelHeight = Math.round(height * ratio);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
       }
 
-      const context = canvas.getContext('2d');
-      if (!context) return;
-
-      if (!canvasReadyRef.current) {
-        canvasReadyRef.current = true;
-        setIsInteractive(true);
-      }
-
-      const { rgb, opacity } = getDotPalette(canvas);
+      const { color, opacity } = palette();
       const pointer = pointerRef.current;
-      const allowsInteraction = pointer.active && !prefersReducedMotion;
-
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
-      context.fillStyle = `rgb(${rgb})`;
+      context.fillStyle = `rgb(${color})`;
 
-      for (let baseY = GRID_SPACING / 2; baseY < height; baseY += GRID_SPACING) {
-        for (let baseX = GRID_SPACING / 2; baseX < width; baseX += GRID_SPACING) {
-          let x = baseX;
-          let y = baseY;
-          let radius = 1.1;
-          let alpha = opacity;
+      for (let baseY = DOT_GAP / 2; baseY < height; baseY += DOT_GAP) {
+        for (let baseX = DOT_GAP / 2; baseX < width; baseX += DOT_GAP) {
+          const dx = pointer.x - baseX;
+          const dy = pointer.y - baseY;
+          const distance = Math.hypot(dx, dy);
+          const influence =
+            pointer.active && !reducedMotion
+              ? Math.max(0, 1 - distance / INTERACTION_RADIUS) ** 2
+              : 0;
+          const radius = 1.05 + influence * 1.1;
+          const alpha = Math.min(1, opacity + influence * 0.48);
 
-          if (allowsInteraction) {
-            const offsetX = pointer.x - baseX;
-            const offsetY = pointer.y - baseY;
-            const distance = Math.hypot(offsetX, offsetY);
-            const influence = Math.max(0, 1 - distance / INTERACTION_RADIUS) ** 2;
-
-            x += offsetX * influence * 0.2;
-            y += offsetY * influence * 0.2;
-            radius += influence * 0.9;
-            alpha += influence * 0.36;
-          }
-
-          context.globalAlpha = Math.min(1, alpha);
+          context.globalAlpha = alpha;
           context.beginPath();
-          context.arc(x, y, radius, 0, Math.PI * 2);
+          context.arc(
+            baseX + dx * influence * 0.12,
+            baseY + dy * influence * 0.12,
+            radius,
+            0,
+            Math.PI * 2,
+          );
           context.fill();
         }
       }
-
       context.globalAlpha = 1;
     };
 
     const render = () => {
-      frameIdRef.current = undefined;
+      frameRef.current = undefined;
       const pointer = pointerRef.current;
-
-      if (pointer.active && !prefersReducedMotion) {
-        pointer.x += (pointer.targetX - pointer.x) * POINTER_EASING;
-        pointer.y += (pointer.targetY - pointer.y) * POINTER_EASING;
+      if (pointer.active && !reducedMotion) {
+        pointer.x += (pointer.targetX - pointer.x) * EASING;
+        pointer.y += (pointer.targetY - pointer.y) * EASING;
       }
 
       draw();
-
-      const settlingDistance = Math.hypot(pointer.targetX - pointer.x, pointer.targetY - pointer.y);
-      if (requestFrame && pointer.active && !prefersReducedMotion && settlingDistance > 0.2) {
-        frameIdRef.current = requestFrame(render);
+      const remaining = Math.hypot(
+        pointer.targetX - pointer.x,
+        pointer.targetY - pointer.y,
+      );
+      if (pointer.active && !reducedMotion && remaining > 0.2) {
+        frameRef.current = window.requestAnimationFrame(render);
       }
     };
 
-    const scheduleRender = () => {
-      if (!requestFrame) {
-        render();
-        return;
+    const schedule = () => {
+      if (frameRef.current === undefined) {
+        frameRef.current = window.requestAnimationFrame(render);
       }
-
-      if (frameIdRef.current === undefined) {
-        frameIdRef.current = requestFrame(render);
-      }
-    };
-
-    const resetPointer = () => {
-      pointerRef.current.active = false;
-      scheduleRender();
     };
 
     const handlePointerMove = (event) => {
       const bounds = canvas.getBoundingClientRect();
       const x = event.clientX - bounds.left;
       const y = event.clientY - bounds.top;
-
-      if (x < 0 || y < 0 || x > bounds.width || y > bounds.height) {
-        resetPointer();
-        return;
-      }
+      if (x < 0 || y < 0 || x > bounds.width || y > bounds.height) return;
 
       const pointer = pointerRef.current;
       if (!pointer.active) {
         pointer.x = x;
         pointer.y = y;
       }
-
       pointer.targetX = x;
       pointer.targetY = y;
       pointer.active = true;
-      scheduleRender();
+      schedule();
     };
 
-    const handlePointerOut = (event) => {
-      if (event.relatedTarget === null) resetPointer();
+    const resetPointer = () => {
+      pointerRef.current.active = false;
+      schedule();
     };
 
-    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleMotionPreference = () => {
-      prefersReducedMotion = motionPreference.matches;
-      if (prefersReducedMotion) pointerRef.current.active = false;
-      scheduleRender();
+    const handleMotionChange = () => {
+      reducedMotion = motionQuery.matches;
+      if (reducedMotion) pointerRef.current.active = false;
+      schedule();
     };
 
-    const resizeObserver = typeof window.ResizeObserver === 'function'
-      ? new window.ResizeObserver(scheduleRender)
-      : null;
-    resizeObserver?.observe(canvas);
-
-    const themeObserver = typeof MutationObserver === 'function'
-      ? new MutationObserver(scheduleRender)
-      : null;
-    themeObserver?.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-
-    window.addEventListener('pointermove', handlePointerMove, { passive: true });
-    window.addEventListener('pointerout', handlePointerOut, { passive: true });
+    const resizeObserver = new ResizeObserver(schedule);
+    resizeObserver.observe(canvas);
+    window.addEventListener('pointermove', handlePointerMove, {
+      passive: true,
+    });
     window.addEventListener('blur', resetPointer);
-    window.addEventListener('resize', scheduleRender);
-    document.addEventListener('visibilitychange', resetPointer);
-    motionPreference.addEventListener('change', handleMotionPreference);
-    scheduleRender();
+    motionQuery.addEventListener('change', handleMotionChange);
+    schedule();
 
     return () => {
-      resizeObserver?.disconnect();
-      themeObserver?.disconnect();
+      resizeObserver.disconnect();
       window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerout', handlePointerOut);
       window.removeEventListener('blur', resetPointer);
-      window.removeEventListener('resize', scheduleRender);
-      document.removeEventListener('visibilitychange', resetPointer);
-      motionPreference.removeEventListener('change', handleMotionPreference);
-      if (frameIdRef.current !== undefined && cancelFrame) {
-        cancelFrame(frameIdRef.current);
-      }
+      motionQuery.removeEventListener('change', handleMotionChange);
+      if (frameRef.current !== undefined)
+        window.cancelAnimationFrame(frameRef.current);
     };
   }, []);
 
   return (
-    <div className={`auth-login-dot-field${isInteractive ? ' is-interactive' : ''}`} aria-hidden="true">
-      <canvas ref={canvasRef} className="auth-login-dot-field__canvas" />
+    <div className="auth-dot-field" aria-hidden="true">
+      <canvas ref={canvasRef} className="auth-dot-field__canvas" />
     </div>
   );
 }

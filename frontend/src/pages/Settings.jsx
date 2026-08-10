@@ -16,6 +16,7 @@ import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
 
 const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
 const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
+const SETTINGS_REQUEST_TIMEOUT_MS = 12000;
 
 const WELLNESS_SOURCE_ROWS = [
   { key: 'sleep', labelKey: 'settings.stitch_wellness_sleep' },
@@ -60,7 +61,7 @@ function formatWellnessSourceLabel(source, t) {
 }
 
 export default function Settings() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, authHydrated, logout } = useAuth();
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
   const { unit, setUnit } = useUnit();
@@ -89,20 +90,27 @@ export default function Settings() {
   }, []);
 
   useEffect(() => {
+    if (!authHydrated) return undefined;
+
     if (!isAuthenticated) {
       navigate('/login');
-      return;
+      return undefined;
     }
 
     let cancelled = false;
+    const settingsController = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => settingsController.abort(),
+      SETTINGS_REQUEST_TIMEOUT_MS,
+    );
 
     async function loadSettings() {
       setLoadState('loading');
       try {
         const [profileData, stravaData, wellnessPreferencesData] = await Promise.all([
-          apiJson('/api/profile/me'),
-          apiJson('/api/auth/strava/status').catch(() => null),
-          apiJson('/api/wellness/source-preferences').catch(() => null),
+          apiJson('/api/profile/me', { signal: settingsController.signal }),
+          apiJson('/api/auth/strava/status', { signal: settingsController.signal }).catch(() => null),
+          apiJson('/api/wellness/source-preferences', { signal: settingsController.signal }).catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -122,8 +130,10 @@ export default function Settings() {
     loadSettings();
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
+      settingsController.abort();
     };
-  }, [isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate]);
 
   const displayNameResolved = resolveDisplayName(profile, t('profile.default_name'));
   const initials = displayNameResolved.slice(0, 1).toUpperCase();
@@ -310,7 +320,25 @@ export default function Settings() {
   }
 
   if (loadState === 'error') {
-    return <div className="runner-shell-page runner-shell-page--loading"><div className="runner-shell-loading">{t('settings.stitch_load_error')}</div></div>;
+    return (
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">
+          <div className="settings-load-error" role="alert">
+            <p className="rewards-load-eyebrow">{t('settings.eyebrow')}</p>
+            <p className="rewards-load-title">{t('settings.stitch_load_error')}</p>
+            <p className="rewards-load-detail">{t('settings.stitch_load_error_detail')}</p>
+            <div className="settings-load-error-actions">
+              <button type="button" className="rewards-load-retry" onClick={() => window.location.reload()}>
+                {t('components.retry')}
+              </button>
+              <button type="button" className="settings-load-back" onClick={() => navigate('/profile')}>
+                {t('settings.stitch_back_to_profile')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -428,4 +456,3 @@ export default function Settings() {
     </div>
   );
 }
-

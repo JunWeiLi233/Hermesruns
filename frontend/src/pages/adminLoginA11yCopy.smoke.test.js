@@ -6,6 +6,9 @@ const source = fs.readFileSync(new URL('./AdminLogin.jsx', import.meta.url), 'ut
 const requiredSnippets = [
   "apiFetch('/api/auth/admin-login'",
   "login(data.token, data.email, 'ADMIN')",
+  "import AuthDotField from '../components/AuthDotField'",
+  'auth-page--liquid-glass',
+  'auth-flow-card--admin',
   'role="alert"',
   "t('landing.stitch_footer_terms')",
   "t('landing.stitch_footer_privacy')",

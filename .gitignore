@@ -81,6 +81,7 @@ backend/.mvn/repository/
 backend/*.mv.db
 backend/*.lock.db
 backend/*.trace.db
+backend/backend/
 *.mv.db
 *.trace.db
 backend/HELP.md
