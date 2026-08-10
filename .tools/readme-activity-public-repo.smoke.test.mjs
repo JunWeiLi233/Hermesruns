@@ -7,6 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 const readme = read("README.md");
 const generator = read(".tools/update-readme-activity.mjs");
+const workflow = read(".github/workflows/update-readme-activity.yml");
 
 assert.match(
   readme,
@@ -22,6 +23,26 @@ assert.doesNotMatch(
   generator,
   /"--all"/,
   "The activity generator must not include unrelated remote-tracking refs.",
+);
+assert.doesNotMatch(
+  workflow,
+  /\n\s+push:\s*\n\s+branches:/,
+  "The activity workflow must not run after every protected-main push.",
+);
+assert.match(
+  workflow,
+  /ACTIVITY_BRANCH:\s*automation\/readme-activity/,
+  "Generated activity graphs must be published to a review branch.",
+);
+assert.match(
+  workflow,
+  /git push --force-with-lease origin "HEAD:refs\/heads\/\$ACTIVITY_BRANCH"/,
+  "The workflow must update the review branch instead of pushing to main.",
+);
+assert.doesNotMatch(
+  workflow,
+  /^\s*git push\s*$/m,
+  "The workflow must not use a bare push that targets protected main.",
 );
 
 console.log("[PASS] README activity chart targets the public repository and current branch.");
