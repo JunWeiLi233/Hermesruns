@@ -1,6 +1,9 @@
 // AUTO-SPLIT FROM zh-CN.js — namespace bucket: components
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
+  "components": {
+    "retry": "重试"
+  },
   "rewards": {
     "eyebrow": "成就系统",
     "heading": "我的徽章",

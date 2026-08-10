@@ -1,6 +1,6 @@
 import { memo, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { List } from 'react-window';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';

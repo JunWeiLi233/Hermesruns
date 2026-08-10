@@ -1,6 +1,9 @@
 // AUTO-SPLIT FROM en.js — namespace bucket: components
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
+  "components": {
+    "retry": "Retry"
+  },
   "rewards": {
     "eyebrow": "Achievement System",
     "heading": "My Badges",
