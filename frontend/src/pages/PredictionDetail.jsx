@@ -5,7 +5,7 @@ import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
-import HermesLogo from '../components/HermesLogo';
+import AnalysisSubpageNav from '../components/AnalysisSubpageNav';
 import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
@@ -110,6 +110,7 @@ export default function PredictionDetail() {
 
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const distance = useMemo(() => RACE_DISTANCES.find((d) => d.key === distKey), [distKey]);
 
@@ -308,26 +309,15 @@ export default function PredictionDetail() {
   ];
 
   return (
-    <div className="runner-shell-page runner-dashboard-page prediction-detail-page" style={{ '--prediction-accent': DIST_COLORS[distKey] || '#f07561' }}>
-      <aside className="runner-shell-sidebar">
-        <div className="runner-shell-brand runner-dashboard-brand">
-          <HermesLogo dark />
-        </div>
-        <nav className="runner-shell-side-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
-              onClick={() => navigate(item.route)}
-              aria-label={item.label}
-            >
-              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
-              <span className="runner-dashboard-side-link-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
+    <div className={`runner-shell-page runner-dashboard-page prediction-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`} style={{ '--prediction-accent': DIST_COLORS[distKey] || '#f07561' }}>
+      <AnalysisSubpageNav
+        activePredictionKey={distKey}
+        collapsed={isSidebarCollapsed}
+        lang={lang}
+        navigate={navigate}
+        onToggle={() => setIsSidebarCollapsed((current) => !current)}
+        t={t}
+      />
 
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">

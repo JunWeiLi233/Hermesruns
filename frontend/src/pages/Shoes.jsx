@@ -110,27 +110,6 @@ async function fileToOptimizedDataUrl(file, t) {
   }
 }
 
-/**
- * Return `src` only when it is a scheme that is safe to bind to an <img>.
- * Shoe images come from uploaded files (blob: / data:image/), the backend
- * background-removal API (data:image/), or catalog https URLs. Rejecting
- * anything else (notably `javascript:` and other navigable schemes) prevents
- * DOM-based XSS where a tainted string is assigned to img.src.
- */
-function safeImageSrc(src) {
-  if (typeof src !== 'string' || !src) return '';
-  const lower = src.trim().toLowerCase();
-  if (
-    lower.startsWith('https:') ||
-    lower.startsWith('http:') ||
-    lower.startsWith('data:image/') ||
-    lower.startsWith('blob:')
-  ) {
-    return src;
-  }
-  return '';
-}
-
 /** Shoe image component with auto background removal */
 function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   const [processed, setProcessed] = useState(null);
@@ -158,7 +137,7 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={safeImageSrc(processed)} alt={alt} onError={onError} loading="lazy" decoding="async" />;
+  return <img className={className} src={processed} alt={alt} onError={onError} loading="lazy" decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -264,7 +243,7 @@ function matchesInventoryCategory(shoe, category) {
 }
 
 
-const SHOE_CARD_ESTIMATED_HEIGHT = 280;
+const SHOE_CARD_ESTIMATED_HEIGHT = 336;
 
 function ShoeCardRow({ index, style, data }) {
   const { shoes, renderCard } = data;
@@ -353,7 +332,6 @@ const Shoes = memo(function Shoes() {
   const [scanPreviewUrl, setScanPreviewUrl] = useState('');
   const [aiQuota, setAiQuota] = useState(null);
   const [isRotationSignalCollapsed, setIsRotationSignalCollapsed] = useState(false);
-  const [isInventoryCollapsed, setIsInventoryCollapsed] = useState(false);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
   const aiQuotaLimit = getShoeScanQuotaLimit(aiQuota);
@@ -504,6 +482,7 @@ const Shoes = memo(function Shoes() {
   }).length;
   const recentRunsWindow = shoeSignal.recentRuns;
   const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
+  const isOwnedFallback = performanceFallback?.type === 'fallback' || performanceFallback?.type === 'primary';
   const shoePerformanceInsights = (() => {
     const topInsight = shoeSignal.performanceInsights.topInsight;
     if (!topInsight) return shoeSignal.performanceInsights;
@@ -595,7 +574,7 @@ const Shoes = memo(function Shoes() {
     ? `${shoePerformanceInsights.topInsight.summary} ${rotationSignalEvidenceSentence}`.trim()
     : performanceFallback?.type === 'rotation'
       ? t('shoes.rotation_fallback_rotation', { evidence: rotationSignalEvidenceSentence })
-      : performanceFallback?.type === 'primary'
+      : isOwnedFallback
         ? t('shoes.rotation_fallback_primary', { evidence: rotationSignalEvidenceSentence })
         : recentRotationEmpty;
   const rotationSignalMetaItems = performanceFallback
@@ -621,22 +600,24 @@ const Shoes = memo(function Shoes() {
     ? t('shoes.rotation_status_insight')
     : performanceFallback?.type === 'rotation'
       ? t('shoes.rotation_status_rotation')
-      : performanceFallback?.type === 'primary'
+      : isOwnedFallback
         ? t('shoes.rotation_status_fallback')
         : recentWindowLabel;
   const rotationSignalSideCopy = performanceFallback?.type === 'insight'
     ? t('shoes.rotation_side_insight')
     : performanceFallback?.type === 'rotation'
       ? t('shoes.rotation_side_rotation')
-      : performanceFallback?.type === 'primary'
+      : isOwnedFallback
         ? t('shoes.rotation_side_primary')
         : recentRotationEmpty;
-  const rotationSignalAvgPace = shoePerformanceInsights.topInsight?.paceSecPerKm ?? performanceFallback?.avgPace ?? null;
+  const rotationSignalAvgPace = performanceFallback?.type === 'insight'
+    ? shoePerformanceInsights.topInsight?.paceSecPerKm ?? null
+    : performanceFallback?.avgPace ?? null;
   const rotationSignalTotalDistance = recentTaggedRuns.reduce((sum, run) => sum + kmOf(run), 0);
-  const rotationSignalHighlightLabel = performanceFallback?.type === 'primary'
+  const rotationSignalHighlightLabel = isOwnedFallback
     ? t('shoes.rotation_highlight_fallback')
     : t('shoes.rotation_highlight_pick');
-  const rotationSignalSourceLabel = performanceFallback?.type === 'primary'
+  const rotationSignalSourceLabel = isOwnedFallback
     ? t('shoes.rotation_source_fallback')
     : t('shoes.rotation_source_rotation');
   const rotationSignalSourceHref = null;
@@ -644,12 +625,12 @@ const Shoes = memo(function Shoes() {
     ? { label: t('shoes.rotation_badge_confident'), className: ' is-positive' }
     : performanceFallback?.type === 'rotation'
       ? { label: t('shoes.rotation_badge_evidence'), className: ' is-watch' }
-      : performanceFallback?.type === 'primary'
+      : isOwnedFallback
         ? { label: t('shoes.rotation_badge_fallback'), className: ' is-watch' }
         : null;
 
   const renderRotationSignal = (inside = false) => (
-    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && performanceFallback?.type === 'primary' ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
+    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && isOwnedFallback ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
       <div className="shoe-rotation-signal-head">
         <div className="shoe-rotation-signal-copy">
           <span className="shoe-inventory-panel-kicker">{t('shoes.performance_inline_title')}</span>
@@ -1159,115 +1140,121 @@ const Shoes = memo(function Shoes() {
 
     return (
       <article key={shoe.id} className={`shoe-inventory-card${shoe.isPrimary ? ' is-primary' : ''}${shoe.retired ? ' is-retired' : ''}${preview ? ' is-preview' : ''}`}>
-        <div className="shoe-inventory-card-art">
-          <div className="shoe-img-clickable shoe-inventory-card-image" title={preview ? name : t('shoes.img_pick')} onClick={preview ? undefined : () => openImagePicker(shoe)}>
-            {preview
-              ? <PreviewShoeArt tone={shoe.previewTone} label={localizeShoeBrand(shoe.brand, lang)} />
-              : <ShoeImage src={shoe.photoUrl} alt={name} />}
+        <div className="shoe-inventory-card-top">
+          <div className="shoe-inventory-card-art">
+            <div className="shoe-img-clickable shoe-inventory-card-image" title={preview ? name : t('shoes.img_pick')} onClick={preview ? undefined : () => openImagePicker(shoe)}>
+              {preview
+                ? <PreviewShoeArt tone={shoe.previewTone} label={localizeShoeBrand(shoe.brand, lang)} />
+                : <ShoeImage src={shoe.photoUrl} alt={name} />}
+            </div>
+          </div>
+
+          <div className="shoe-inventory-card-copy">
+            <div className="shoe-inventory-card-meta">
+              <span className="shoe-inventory-card-meta-brand">
+                <ShoeBrandLogo brand={shoe.brand} fallbackEmoji={shoe.logo} />
+                <em>{localizeShoeBrand(shoe.brand, lang)}</em>
+              </span>
+              <span>{preview ? t('shoes.stitch_preview_label') : t('shoes.uses_count', { count: usage.count })}</span>
+            </div>
+            <div className="shoe-inventory-card-head">
+              <h2>{localizeShoeModel(shoe.model, lang) || name}</h2>
+            </div>
+            <p className="shoe-inventory-card-subtitle">
+              {shoe.nickname || performanceInsight?.summary || localizeShoeBrand(shoe.brand, lang)}
+            </p>
+            <div className="shoe-inventory-card-badges">
+              <span className={`shoe-inventory-card-type-badge${shoe.retired ? ' is-muted' : ''}`}>{typeLabel}</span>
+              {shoe.isPrimary && <span className="shoe-inventory-inline-pill">{t('shoes.primary_label')}</span>}
+              {!shoe.isPrimary && preview && <span className="shoe-inventory-inline-pill">{t('shoes.browser_kicker')}</span>}
+            </div>
+          </div>
+
+          <div className="shoe-inventory-card-side">
+            <button type="button" className="shoe-inventory-chevron" onClick={preview ? openManualAdd : () => openEditForm(shoe)} aria-label={preview ? t('shoes.add_shoe') : t('shoes.edit')}>
+              <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
+            </button>
           </div>
         </div>
 
-        <div className="shoe-inventory-card-copy">
-          <div className="shoe-inventory-card-head">
-            <h2>{localizeShoeModel(shoe.model, lang) || name}</h2>
-            <span className={`shoe-inventory-card-type-badge${shoe.retired ? ' is-muted' : ''}`}>{typeLabel}</span>
+        <div className="shoe-inventory-card-metrics">
+          <div className="shoe-inventory-card-metric">
+            <span className="shoe-inventory-brand-label">{t('shoes.sort_mileage')}</span>
+            <div className={`shoe-inventory-card-metric-value is-${health}`}>
+              <strong>{formatDistanceValue(current, unit, 0)}</strong>
+              <span>{distanceUnitLabel}</span>
+            </div>
           </div>
-          <p className="shoe-inventory-card-subtitle">
-            {shoe.nickname || performanceInsight?.summary || localizeShoeBrand(shoe.brand, lang)}
-          </p>
-          <div className="shoe-inventory-card-metrics">
-            <div className="shoe-inventory-card-metric">
-              <span className="shoe-inventory-brand-label">{t('shoes.sort_mileage')}</span>
-              <div className={`shoe-inventory-card-metric-value is-${health}`}>
-                <strong>{formatDistanceValue(current, unit, 0)}</strong>
-                <span>{distanceUnitLabel}</span>
+
+          {!shoe.retired && (
+            <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
+              <span className="shoe-inventory-brand-label">{t('shoes.retirement_health')}</span>
+              <div className="shoe-inventory-card-progress">
+                <div
+                  className={`shoe-inventory-card-progress-fill is-${health}`}
+                  style={{ width: `${retirement ? retirement.healthPercent : 100 - lifespanPct}%` }}
+                />
+              </div>
+              <span className="shoe-inventory-card-retirement-text">
+                {retirement
+                  ? (retirement.remainingKm <= 0
+                    ? t('shoes.retirement_past_due')
+                    : retirement.daysLeft != null
+                      ? (retirement.daysLeft >= 14
+                        ? (retirement.estimatedRetirementDate
+                          ? t('shoes.retirement_expected_date', { date: new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(retirement.estimatedRetirementDate)) })
+                          : t('shoes.retirement_weeks_left', { n: Math.round(retirement.daysLeft / 7) }))
+                        : t('shoes.retirement_days_left', { n: retirement.daysLeft }))
+                      : t('shoes.retirement_km_left', { km: formatDistanceValue(retirement.remainingKm, unit, 0), unit: distanceUnitLabel }))
+                  : (max > 0
+                    ? t('shoes.retirement_km_left', { km: formatDistanceValue(max - current, unit, 0), unit: distanceUnitLabel })
+                    : t('shoes.retirement_limit_not_set'))}
+              </span>
+            </div>
+          )}
+          {shoe.retired && (
+            <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
+              <span className="shoe-inventory-brand-label">{t('shoes.lifespan')}</span>
+              <div className="shoe-inventory-card-progress">
+                <div className="shoe-inventory-card-progress-fill is-muted" style={{ width: '100%' }} />
               </div>
             </div>
-            
-            {(current >= max || (max > 0 && current > max * 0.9)) && !shoe.retired && (
-              <div className={`shoe-inventory-alert is-${current >= max ? 'critical' : 'warning'}`}>
-                <AppIcon name="warning" className="shoe-inventory-alert-icon" />
-                <span>
-                  {current >= max 
-                    ? t('shoes.shoe_mileage_replace', { current: Math.round(current), max: Math.round(max) })
-                    : t('shoes.shoe_mileage_warning', { current: Math.round(current), max: Math.round(max) })}
-                </span>
-              </div>
-            )}
+          )}
 
-            {!shoe.retired && (
-              <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
-                <span className="shoe-inventory-brand-label">{t('shoes.retirement_health')}</span>
-                <div className="shoe-inventory-card-progress">
-                  <div
-                    className={`shoe-inventory-card-progress-fill is-${health}`}
-                    style={{ width: `${retirement ? retirement.healthPercent : 100 - lifespanPct}%` }}
-                  />
-                </div>
-                <span className="shoe-inventory-card-retirement-text">
-                  {retirement
-                    ? (retirement.remainingKm <= 0
-                      ? t('shoes.retirement_past_due')
-                      : retirement.daysLeft != null
-                        ? (retirement.daysLeft >= 14
-                          ? (retirement.estimatedRetirementDate
-                            ? t('shoes.retirement_expected_date', { date: new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(retirement.estimatedRetirementDate)) })
-                            : t('shoes.retirement_weeks_left', { n: Math.round(retirement.daysLeft / 7) }))
-                          : t('shoes.retirement_days_left', { n: retirement.daysLeft }))
-                        : t('shoes.retirement_km_left', { km: formatDistanceValue(retirement.remainingKm, unit, 0), unit: distanceUnitLabel }))
-                    : (max > 0
-                      ? t('shoes.retirement_km_left', { km: formatDistanceValue(max - current, unit, 0), unit: distanceUnitLabel })
-                      : t('shoes.retirement_limit_not_set'))}
-                </span>
-              </div>
-            )}
-            {shoe.retired && (
-              <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
-                <span className="shoe-inventory-brand-label">{t('shoes.lifespan')}</span>
-                <div className="shoe-inventory-card-progress">
-                  <div className={`shoe-inventory-card-progress-fill is-muted`} style={{ width: '100%' }} />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="shoe-inventory-card-actions">
-            {preview ? (
-              <button type="button" className="shoe-inventory-card-action shoe-inventory-card-action--cta" onClick={openManualAdd}>{t('shoes.add_shoe')}</button>
-            ) : (
-              <>
-                <button type="button" className="shoe-inventory-card-action" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
-                <button type="button" className="shoe-inventory-card-action" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
-                {shoe.retired ? (
-                  <button
-                    type="button"
-                    className="shoe-inventory-card-action shoe-inventory-card-action--cta"
-                    disabled={shoeActionBusyId === shoe.id}
-                    onClick={() => handleReactivate(shoe)}
-                  >
-                    {t('shoes.reactivate')}
-                  </button>
-                ) : (
-                  <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
-                )}
-                <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
-              </>
-            )}
-          </div>
+          {(current >= max || (max > 0 && current > max * 0.9)) && !shoe.retired && (
+            <div className={`shoe-inventory-alert is-${current >= max ? 'critical' : 'warning'}`}>
+              <AppIcon name="warning" className="shoe-inventory-alert-icon" />
+              <span>
+                {current >= max
+                  ? t('shoes.shoe_mileage_replace', { current: Math.round(current), max: Math.round(max) })
+                  : t('shoes.shoe_mileage_warning', { current: Math.round(current), max: Math.round(max) })}
+              </span>
+            </div>
+          )}
         </div>
 
-        <div className="shoe-inventory-card-side">
-          {shoe.isPrimary && <span className="shoe-inventory-inline-pill">{t('shoes.primary_label')}</span>}
-          {!shoe.isPrimary && preview && <span className="shoe-inventory-inline-pill">{t('shoes.browser_kicker')}</span>}
-          <button type="button" className="shoe-inventory-chevron" onClick={preview ? openManualAdd : () => openEditForm(shoe)} aria-label={preview ? t('shoes.add_shoe') : t('shoes.edit')}>
-            <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
-          </button>
-          <div className="shoe-inventory-card-meta">
-            <span className="shoe-inventory-card-meta-brand">
-              <ShoeBrandLogo brand={shoe.brand} fallbackEmoji={shoe.logo} />
-              <em>{localizeShoeBrand(shoe.brand, lang)}</em>
-            </span>
-            <span>{preview ? t('shoes.stitch_preview_label') : t('shoes.uses_count', { count: usage.count })}</span>
-          </div>
+        <div className="shoe-inventory-card-actions">
+          {preview ? (
+            <button type="button" className="shoe-inventory-card-action shoe-inventory-card-action--cta" onClick={openManualAdd}>{t('shoes.add_shoe')}</button>
+          ) : (
+            <>
+              <button type="button" className="shoe-inventory-card-action" onClick={() => openEditForm(shoe)}>{t('shoes.edit')}</button>
+              <button type="button" className="shoe-inventory-card-action" onClick={() => openImagePicker(shoe)}>{t('shoes.photo_action')}</button>
+              {shoe.retired ? (
+                <button
+                  type="button"
+                  className="shoe-inventory-card-action shoe-inventory-card-action--cta"
+                  disabled={shoeActionBusyId === shoe.id}
+                  onClick={() => handleReactivate(shoe)}
+                >
+                  {t('shoes.reactivate')}
+                </button>
+              ) : (
+                <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
+              )}
+              <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
+            </>
+          )}
         </div>
       </article>
     );
@@ -1282,7 +1269,7 @@ const Shoes = memo(function Shoes() {
           <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
               <HermesLogo dark />
-              <span>{t('profile.dashboard_tagline')}</span>
+              <span>{t('analysis.stitch_brand_subtitle_profile')}</span>
             </div>
             <button
               type="button"
@@ -1359,50 +1346,65 @@ const Shoes = memo(function Shoes() {
           </header>
 
           <div className="runner-shell-canvas">
-            <div className="shoe-inventory-screen shoes-dashboard-shell">
-        {renderRotationSignal()}
+            <div className="shoe-inventory-screen shoes-dashboard-shell shoes-profile-workspace">
+              {renderRotationSignal()}
 
-        <section className="shoe-inventory-stage">
-          <header className="shoe-inventory-topbar">
-            <div className="shoe-inventory-topbar-title">
-              <button
-                type="button"
-                className="shoe-inventory-topbar-toggle"
-                onClick={() => setIsInventoryCollapsed((current) => !current)}
-                aria-expanded={!isInventoryCollapsed}
-                aria-label={isInventoryCollapsed ? 'Expand running shoes inventory' : 'Collapse running shoes inventory'}
-              >
-                <AppIcon
-                  name={isInventoryCollapsed ? 'chevron_right' : 'change_history'}
-                  className="runner-dashboard-side-link-icon"
-                />
-              </button>
-              <h2>{t('shoes.stitch_surface_label')}</h2>
-            </div>
-            <div className="shoe-inventory-topbar-actions">
-              <label className="shoe-inventory-search">
-                <AppIcon name="search" className="runner-dashboard-side-link-icon" />
-                <input
-                  type="search"
-                  value={inventoryQuery}
-                  onChange={(event) => setInventoryQuery(event.target.value)}
-                  placeholder={t('shoes.search_placeholder')}
-                  aria-label={t('shoes.search_placeholder')}
-                />
-              </label>
-              <button type="button" className="shoe-inventory-cta" onClick={openManualAdd}>
-                <AppIcon name="add" className="runner-dashboard-side-link-icon" />
-                <span>{t('shoes.add_shoe')}</span>
-              </button>
-            </div>
-          </header>
+              <section className="shoe-inventory-summary-strip" aria-label={t('shoes.health_summary_rotation')}>
+                <article className="shoe-inventory-summary-tile is-active">
+                  <span>{t('shoes.health_summary_rotation')}</span>
+                  <strong>{t('shoes.health_summary_active', { count: activeShoes.length })}</strong>
+                </article>
+                <article className={`shoe-inventory-summary-tile${retireSoonCount > 0 ? ' is-warning' : ''}`}>
+                  <span>{t('shoes.retirement_health')}</span>
+                  <strong>{t('shoes.health_summary_retire_soon', { count: retireSoonCount })}</strong>
+                </article>
+                <article className="shoe-inventory-summary-tile">
+                  <span>{t('shoes.rotation_health_label')}</span>
+                  <strong>{t(`shoes.rotation_health_${rotationHealth.status}`)}</strong>
+                </article>
+              </section>
 
-          {!isInventoryCollapsed && (
-            <>
-              <div className="shoe-inventory-hero">
-                <div className="shoe-inventory-hero-copy">
-                  <h1>{t('shoes.stitch_inventory_title')}</h1>
-                </div>
+              <section className="shoe-inventory-stage">
+                <header className="shoe-inventory-workspace-head">
+                  <div className="shoe-inventory-workspace-copy">
+                    <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_surface_label')}</span>
+                    <h1>{t('shoes.stitch_inventory_title')}</h1>
+                    <p>{t('shoes.page_copy')}</p>
+                  </div>
+                  <div className="shoe-inventory-toolbar">
+                    <label className="shoe-inventory-search">
+                      <AppIcon name="search" className="runner-dashboard-side-link-icon" />
+                      <input
+                        type="search"
+                        value={inventoryQuery}
+                        onChange={(event) => setInventoryQuery(event.target.value)}
+                        placeholder={t('shoes.search_placeholder')}
+                        aria-label={t('shoes.search_placeholder')}
+                      />
+                    </label>
+                    <div className="shoe-inventory-scan-action">
+                      <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
+                        {t('shoes.scan_image')}
+                      </button>
+                      {aiQuota && !aiQuota.admin && (
+                        aiQuota.tier === 'PRO' || aiQuota.unlimited ? (
+                          <span className="shoe-inventory-pro-badge">{t('pro.badge')}</span>
+                        ) : (
+                          <span className="shoe-inventory-quota-badge">
+                            {aiQuotaRemaining > 0
+                              ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                              : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
+                          </span>
+                        )
+                      )}
+                    </div>
+                    <button type="button" className="shoe-inventory-cta" onClick={openManualAdd}>
+                      <AppIcon name="add" className="runner-dashboard-side-link-icon" />
+                      <span>{t('shoes.add_shoe')}</span>
+                    </button>
+                  </div>
+                </header>
+
                 <div className="shoe-inventory-hero-tabs" role="tablist" aria-label={t('shoes.stitch_surface_label')}>
                   <button type="button" className={`shoe-inventory-pill${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
                     {t('shoes.inventory_all', { count: shoes.length })}
@@ -1414,97 +1416,66 @@ const Shoes = memo(function Shoes() {
                     {t('shoes.inventory_retired', { count: retiredShoes.length })}
                   </button>
                 </div>
-              </div>
 
-              <div className="shoe-health-summary-row" aria-label={t('shoes.health_summary_rotation')}>
-                <span className="shoe-health-summary-pill shoe-health-summary-pill--health">
-                  <strong>{t('shoes.health_summary_active', { count: activeShoes.length })}</strong>
-                  <span className="shoe-health-summary-label">{t('shoes.health_summary_rotation')}</span>
-                </span>
-                <span className={`shoe-health-summary-pill${retireSoonCount > 0 ? ' shoe-health-summary-pill--warn' : ''}`}>
-                  <strong>{t('shoes.health_summary_retire_soon', { count: retireSoonCount })}</strong>
-                  <span className="shoe-health-summary-label">{t(`shoes.rotation_health_${rotationHealth.status}`)}</span>
-                </span>
-              </div>
-
-              <div className="shoe-inventory-manage-strip">
-                <div className="shoe-inventory-manage-head">
-                  <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_actions')}</span>
-                  <div className="shoe-inventory-manage-actions">
-                    <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
-                      {t('shoes.scan_image')}
-                    </button>
-                    {aiQuota && !aiQuota.admin && (
-                      aiQuota.tier === 'PRO' || aiQuota.unlimited ? (
-                        <span className="shoe-inventory-pro-badge">{t('pro.badge')}</span>
-                      ) : (
-                        <span className="shoe-inventory-quota-badge">
-                          {aiQuotaRemaining > 0
-                            ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
-                            : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
-                        </span>
-                      )
-                    )}
+                <div className="shoe-inventory-filterbar">
+                  <div className="shoe-inventory-filterbar-head">
+                    <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_actions')}</span>
                     {isFiltered && <button type="button" className="shoe-inventory-action-btn is-muted" onClick={resetLocker}>{t('shoes.stitch_reset')}</button>}
                   </div>
+                  <div className="shoe-inventory-manage-grid">
+                    <div className="shoe-inventory-manage-group">
+                      <span className="shoe-inventory-panel-kicker">{t('shoes.sort_mileage')}</span>
+                      <div className="shoe-inventory-brand-pills">
+                        <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>{t('shoes.sort_recent')}</button>
+                        <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>{t('shoes.sort_added')}</button>
+                        <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>{t('shoes.sort_mileage')}</button>
+                      </div>
+                    </div>
+
+                    <div className="shoe-inventory-manage-group">
+                      <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_brand_label')}</span>
+                      <div className="shoe-inventory-brand-pills shoe-locker-brandbar">
+                        <button type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === 'all' ? ' active' : ''}`} onClick={() => setLockerBrandFilter('all')}>{t('shoes.locker_all_brands')}</button>
+                        {lockerBrands.map((brand) => (
+                          <button key={brand} type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === brand ? ' active' : ''}`} onClick={() => setLockerBrandFilter(brand)}>{brand}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="shoe-inventory-manage-group">
+                      <span className="shoe-inventory-panel-kicker">{t('shoes.browser_kicker')}</span>
+                      <div className="shoe-inventory-brand-pills">
+                        <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'all' ? ' active' : ''}`} onClick={() => setInventoryCategory('all')}>{t('shoes.locker_all_brands')}</button>
+                        <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'daily' ? ' active' : ''}`} onClick={() => setInventoryCategory('daily')}>{t('shoes.stitch_filter_daily')}</button>
+                        <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'race' ? ' active' : ''}`} onClick={() => setInventoryCategory('race')}>{t('shoes.stitch_filter_race')}</button>
+                        <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'trail' ? ' active' : ''}`} onClick={() => setInventoryCategory('trail')}>{t('shoes.stitch_filter_trail')}</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="shoe-inventory-manage-grid">
-                  <div className="shoe-inventory-manage-group">
-                    <span className="shoe-inventory-panel-kicker">{t('shoes.sort_mileage')}</span>
-                    <div className="shoe-inventory-brand-pills">
-                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'recent' ? ' active' : ''}`} onClick={() => setInventorySort('recent')}>{t('shoes.sort_recent')}</button>
-                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'added' ? ' active' : ''}`} onClick={() => setInventorySort('added')}>{t('shoes.sort_added')}</button>
-                      <button type="button" className={`shoe-inventory-brand-pill${inventorySort === 'mileage' ? ' active' : ''}`} onClick={() => setInventorySort('mileage')}>{t('shoes.sort_mileage')}</button>
+                {loadState === 'loading' && <div className="shoe-inventory-status shoe-inventory-status--loading">{t('shoes.loading')}</div>}
+                {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
+                {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
+                {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
+
+                {loadState === 'ready' && inventoryShoes.length > 0 && (
+                  inventoryShoes.length > 20 ? (
+                    <List
+                      rowComponent={ShoeCardRow}
+                      rowCount={inventoryShoes.length}
+                      rowHeight={SHOE_CARD_ESTIMATED_HEIGHT}
+                      rowProps={{ shoes: inventoryShoes, renderCard: renderInventoryCard }}
+                      style={{ height: Math.min(inventoryShoes.length * SHOE_CARD_ESTIMATED_HEIGHT, 640), width: '100%' }}
+                      className="shoe-inventory-virtual-list"
+                    />
+                  ) : (
+                    <div className="shoe-inventory-grid">
+                      {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
                     </div>
-                  </div>
-
-                  <div className="shoe-inventory-manage-group">
-                    <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_brand_label')}</span>
-                    <div className="shoe-inventory-brand-pills shoe-locker-brandbar">
-                      <button type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === 'all' ? ' active' : ''}`} onClick={() => setLockerBrandFilter('all')}>{t('shoes.locker_all_brands')}</button>
-                      {lockerBrands.map((brand) => (
-                        <button key={brand} type="button" className={`shoe-inventory-brand-pill${lockerBrandFilter === brand ? ' active' : ''}`} onClick={() => setLockerBrandFilter(brand)}>{brand}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="shoe-inventory-manage-group">
-                    <span className="shoe-inventory-panel-kicker">{t('shoes.browser_kicker')}</span>
-                    <div className="shoe-inventory-brand-pills">
-                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'all' ? ' active' : ''}`} onClick={() => setInventoryCategory('all')}>{t('shoes.locker_all_brands')}</button>
-                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'daily' ? ' active' : ''}`} onClick={() => setInventoryCategory('daily')}>{t('shoes.stitch_filter_daily')}</button>
-                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'race' ? ' active' : ''}`} onClick={() => setInventoryCategory('race')}>{t('shoes.stitch_filter_race')}</button>
-                      <button type="button" className={`shoe-inventory-brand-pill${inventoryCategory === 'trail' ? ' active' : ''}`} onClick={() => setInventoryCategory('trail')}>{t('shoes.stitch_filter_trail')}</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {loadState === 'loading' && <div className="shoe-inventory-status shoe-inventory-status--loading">{t('shoes.loading')}</div>}
-              {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
-              {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
-              {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
-
-              {loadState === 'ready' && inventoryShoes.length > 0 && (
-                inventoryShoes.length > 20 ? (
-                  <List
-                    rowComponent={ShoeCardRow}
-                    rowCount={inventoryShoes.length}
-                    rowHeight={SHOE_CARD_ESTIMATED_HEIGHT}
-                    rowProps={{ shoes: inventoryShoes, renderCard: renderInventoryCard }}
-                    style={{ height: Math.min(inventoryShoes.length * SHOE_CARD_ESTIMATED_HEIGHT, 640), width: '100%' }}
-                    className="shoe-inventory-virtual-list"
-                  />
-                ) : (
-                  <div className="shoe-inventory-grid">
-                    {inventoryShoes.map((shoe) => renderInventoryCard(shoe))}
-                  </div>
-                )
-              )}
-            </>
-          )}
-        </section>
+                  )
+                )}
+              </section>
 
         {duplicateClusters.length > 0 && (
           <section className="shoe-inventory-intel-panel shoe-inventory-intel-panel--duplicate">
@@ -1550,26 +1521,43 @@ const Shoes = memo(function Shoes() {
         </main>
       </div>
       {/* Edit-shoe modal */}
-      <Modal isOpen={editOpen} onClose={() => { setEditOpen(false); setEditingShoe(null); }} title={t('shoes.edit_title')}>
-        <form onSubmit={handleSave}>
-          <label className="modal-label">{t('shoes.brand')}</label>
-          <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} />
+      <Modal
+        isOpen={editOpen}
+        onClose={() => { setEditOpen(false); setEditingShoe(null); }}
+        title={t('shoes.edit_title')}
+        shellClassName="shoe-edit-modal-shell"
+        cardClassName="shoe-edit-modal-card"
+      >
+        <form onSubmit={handleSave} className="shoe-edit-modal-form">
+          <div className="shoe-edit-modal-grid">
+            <label className="shoe-edit-modal-field">
+              <span className="modal-label">{t('shoes.brand')}</span>
+              <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} />
+            </label>
 
-          <label className="modal-label">{t('shoes.model')}</label>
-          <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} />
+            <label className="shoe-edit-modal-field">
+              <span className="modal-label">{t('shoes.model')}</span>
+              <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} />
+            </label>
 
-          <label className="modal-label">{t('shoes.nickname')}</label>
-          <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
+            <label className="shoe-edit-modal-field">
+              <span className="modal-label">{t('shoes.nickname')}</span>
+              <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
+            </label>
 
-          <label className="modal-label">{t('shoes.max_distance')}</label>
-          <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
+            <label className="shoe-edit-modal-field">
+              <span className="modal-label">{t('shoes.max_distance')}</span>
+              <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
+            </label>
+          </div>
 
-          <label className="shoe-checkbox-label">
+          <label className="shoe-edit-modal-primary-toggle">
             <input type="checkbox" checked={formPrimary} onChange={e => setFormPrimary(e.target.checked)} />
-            <span>{t('shoes.set_primary')}</span>
+            <span className="shoe-edit-modal-toggle-control" aria-hidden="true" />
+            <span className="shoe-edit-modal-toggle-copy">{t('shoes.set_primary')}</span>
           </label>
 
-          <div className="modal-actions">
+          <div className="modal-actions shoe-edit-modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => { setEditOpen(false); setEditingShoe(null); }}>{t('shoes.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('shoes.save')}</button>
           </div>
@@ -1774,7 +1762,7 @@ const Shoes = memo(function Shoes() {
             </div>
             <div className="shoe-scan-modal-preview">
               {scanPreviewUrl ? (
-                <img src={safeImageSrc(scanPreviewUrl)} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
+                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
               ) : (
                 <div className="shoe-scan-modal-preview-empty">
                   <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />

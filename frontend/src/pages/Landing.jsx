@@ -554,11 +554,29 @@ function getRaceTimelineDelay(index, total) {
   return `${index * RACE_MAP_CYCLE_STEP_SECONDS}s`;
 }
 
+function buildCurvedFlightPath(points) {
+  if (points.length < 2) return '';
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+
+    const previous = points[index - 1];
+    const midpointX = (previous.x + point.x) / 2;
+    const midpointY = (previous.y + point.y) / 2;
+    const arcLift = Math.min(8, Math.max(2.4, Math.abs(point.x - previous.x) * 0.08));
+    const controlY = Math.min(previous.y, point.y, midpointY) - arcLift;
+
+    return `${path} Q ${midpointX.toFixed(2)} ${controlY.toFixed(2)} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
+  }, '');
+}
+
 function WorldMap({ races, metricLabels, flowLabels }) {
   const racePins = races.map((race) => ({
     ...race,
     pin: race.pin ?? (race.geo ? resolveRaceMapPoint(race) : null),
   }));
+  const flightPoints = racePins.map((race) => race.pin).filter(Boolean);
+  const flightPath = buildCurvedFlightPath([...flightPoints, flightPoints[0]].filter(Boolean));
   const getRacePhaseDelay = (index) => getRaceTimelineDelay(index, racePins.length);
   const raceCycleDuration = getRaceCycleDuration(racePins.length);
   const flowSteps = [
@@ -580,20 +598,20 @@ function WorldMap({ races, metricLabels, flowLabels }) {
           preserveAspectRatio="none"
           className="landing-cinematic-map-reference"
         />
-        <g className="landing-cinematic-map-selection-layer">
-          {racePins.map((race, index) => (
-            <g
-              key={`${race.name}-selection`}
-              transform={`translate(${race.pin.x} ${race.pin.y})`}
-              className="landing-cinematic-map-selection"
-              style={{ '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
-            >
-              <circle r="1.2" className="landing-cinematic-map-selection-spread" />
-              <circle r="3.4" className="landing-cinematic-map-selection-ping" />
-              <circle r="2.55" className="landing-cinematic-map-selection-ring" />
+        {flightPath ? (
+          <>
+            <path d={flightPath} pathLength="1" className="landing-cinematic-map-flight-route" />
+            <path d={flightPath} pathLength="1" className="landing-cinematic-map-flight-route-live" />
+            <g className="landing-cinematic-map-aircraft" aria-hidden="true">
+              <circle r="2.2" className="landing-cinematic-map-aircraft-glow" />
+              <path
+                d="M 2.55 0 L 0.46 -0.52 L -1.52 -1.62 L -1.82 -1.3 L -0.62 -0.08 L -1.7 1.12 L -1.34 1.48 L 0.46 0.52 Z"
+                className="landing-cinematic-map-aircraft-shape"
+              />
+              <animateMotion dur={raceCycleDuration} path={flightPath} rotate="auto" repeatCount="indefinite" />
             </g>
-          ))}
-        </g>
+          </>
+        ) : null}
         {racePins.map((race, index) => (
           <g
             key={race.name}
@@ -601,9 +619,10 @@ function WorldMap({ races, metricLabels, flowLabels }) {
             className="landing-cinematic-map-pin"
             style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
           >
-            <circle r="1.35" className="landing-cinematic-map-badge" />
-            <circle r="0.42" className="landing-cinematic-map-core" />
-            <text x="0" y="0.34" textAnchor="middle" className="landing-cinematic-map-order">
+            <circle r="0.72" className="landing-cinematic-map-pin-halo" />
+            <circle r="0.5" className="landing-cinematic-map-badge" />
+            <circle r="0.12" className="landing-cinematic-map-core" />
+            <text x="0" y="0.16" textAnchor="middle" className="landing-cinematic-map-order">
               {String(index + 1).padStart(2, '0')}
             </text>
           </g>
@@ -776,7 +795,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="landing-page--cinematic">
+    <div className="landing-page--cinematic landing-page--liquid-glass">
       {/* ── Navigation ── */}
       <header className={`landing-cinematic-nav ${isScrolled ? 'is-scrolled' : ''}`}>
         <PageWidth className="landing-cinematic-nav-inner">

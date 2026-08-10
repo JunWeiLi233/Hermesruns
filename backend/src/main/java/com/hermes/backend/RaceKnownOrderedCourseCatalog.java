@@ -8,7 +8,8 @@ final class RaceKnownOrderedCourseCatalog {
     }
 
     static boolean isUploadShortcutKnownCourseContext(String raceName, String city, String country) {
-        return isHelsinkiCourseContext(raceName, city, country)
+        return isAmsterdamCourseContext(raceName, city, country)
+                || isHelsinkiCourseContext(raceName, city, country)
                 || isIstanbulCourseContext(raceName, city, country)
                 || isJakartaCourseContext(raceName, city, country)
                 || isJerusalemCourseContext(raceName, city, country)
@@ -36,6 +37,14 @@ final class RaceKnownOrderedCourseCatalog {
     }
 
     static KnownOrderedCourse knownOrderedCourseFor(String raceName, String city, String country) {
+        if (isAmsterdamCourseContext(raceName, city, country)) {
+            return new KnownOrderedCourse(
+                    AmsterdamMarathonOfficialCourse.routePoints(),
+                    AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE,
+                    "Known ordered Amsterdam Marathon route uses the verified organizer course geometry.",
+                    12
+            );
+        }
         if (isChicagoCourseContext(raceName, city, country)) {
             return new KnownOrderedCourse(
                     ChicagoMarathonKnownCourse.routePoints(),
@@ -291,8 +300,11 @@ final class RaceKnownOrderedCourseCatalog {
     }
 
     static KnownCourseRouteVerdict assessKnownCourseRoute(List<RoutePoint> routePoints, String raceName, String city, String country, RaceCourseMapGeometryService geometryService) {
+        if (isAmsterdamCourseContext(raceName, city, country)) {
+            return assessAmsterdamCourseRoute(routePoints, geometryService);
+        }
         if (!isBostonCourseContext(raceName, city, country)) {
-            return new KnownCourseRouteVerdict(true, "not a Boston Marathon course");
+            return new KnownCourseRouteVerdict(true, "no race-specific course geography gate");
         }
         if (routePoints == null || routePoints.size() < 2) {
             return new KnownCourseRouteVerdict(false, "Boston Marathon route has no usable point-to-point geometry");
@@ -319,6 +331,56 @@ final class RaceKnownOrderedCourseCatalog {
             return new KnownCourseRouteVerdict(false, "Boston Marathon route misses the Natick-Wellesley-Newton course corridor");
         }
         return new KnownCourseRouteVerdict(true, "Boston Marathon course geography accepted");
+    }
+
+    private static KnownCourseRouteVerdict assessAmsterdamCourseRoute(
+            List<RoutePoint> routePoints,
+            RaceCourseMapGeometryService geometryService) {
+        if (routePoints == null || routePoints.size() < 2) {
+            return new KnownCourseRouteVerdict(false, "Amsterdam Marathon route has no usable geometry");
+        }
+        OverlayBounds bounds = geometryService.boundsFromRoute(routePoints);
+        if (bounds.south() > 52.307 || bounds.east() < 4.932) {
+            return new KnownCourseRouteVerdict(
+                    false,
+                    "Amsterdam Marathon route misses the defining Amstel southbound and east-side return corridors");
+        }
+
+        RoutePoint first = routePoints.get(0);
+        RoutePoint last = routePoints.get(routePoints.size() - 1);
+        double firstToStadium = geometryService.haversineKm(first.lat(), first.lng(), 52.3434439, 4.8540543);
+        double lastToStadium = geometryService.haversineKm(last.lat(), last.lng(), 52.3434439, 4.8540543);
+        if (firstToStadium > 2.0 || lastToStadium > 2.0) {
+            return new KnownCourseRouteVerdict(
+                    false,
+                    "Amsterdam Marathon route does not start and finish at the Olympic Stadium");
+        }
+
+        boolean reachesOuderkerk = passesNear(routePoints, 52.2968417, 4.9042702, 2.2, geometryService);
+        boolean reachesEastReturn = passesNear(routePoints, 52.3535915, 4.9389997, 2.0, geometryService);
+        boolean reachesMuseum = passesNear(routePoints, 52.3598431, 4.8850395, 1.2, geometryService);
+        boolean reachesVondelpark = passesNear(routePoints, 52.3571974, 4.8641190, 1.5, geometryService);
+        if (!reachesOuderkerk || !reachesEastReturn || !reachesMuseum || !reachesVondelpark) {
+            return new KnownCourseRouteVerdict(
+                    false,
+                    "Amsterdam Marathon route misses organizer checkpoints along the Amstel, Science Park, Rijksmuseum, or Vondelpark");
+        }
+        return new KnownCourseRouteVerdict(true, "Amsterdam Marathon organizer corridor accepted");
+    }
+
+    private static boolean passesNear(
+            List<RoutePoint> routePoints,
+            double latitude,
+            double longitude,
+            double radiusKm,
+            RaceCourseMapGeometryService geometryService) {
+        return routePoints.stream().anyMatch(point ->
+                geometryService.haversineKm(point.lat(), point.lng(), latitude, longitude) <= radiusKm);
+    }
+
+    private static boolean isAmsterdamCourseContext(String raceName, String city, String country) {
+        String combined = String.join(" ", normalize(raceName), normalize(city), normalize(country));
+        return combined.contains("amsterdam") && combined.contains("marathon");
     }
 
     private static boolean isBostonCourseContext(String raceName, String city, String country) {

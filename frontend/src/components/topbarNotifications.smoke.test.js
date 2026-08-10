@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const componentSource = readFileSync(path.join(here, 'TopbarNotifications.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const profileStyleSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
   componentSource,
@@ -56,15 +57,33 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  styleSource,
-  /\.runner-shell-notification-delete\s*\{[\s\S]*background:\s*#a0392a;/,
-  'The message delete button should use a high-contrast filled background.'
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*border:\s*1px solid var\(--runner-profile-line\);[\s\S]*var\(--runner-profile-card-strong\) !important;/,
+  'The training-message popover should use the Profile paper, border, and surface tokens.'
 );
 
 assert.match(
-  styleSource,
-  /\.runner-shell-notification-delete \.runner-dashboard-side-link-icon\s*\{[\s\S]*width:\s*24px;/,
-  'The icon-only delete button should render a large, readable trash icon.'
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px;[\s\S]*border-radius:\s*16px;[\s\S]*box-shadow:\s*none !important;/,
+  'Training messages should use compact Profile-style list rows instead of oversized nested cards.'
+);
+
+assert.doesNotMatch(
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-card::before/,
+  'Training-message rows should not render decorative color strips.'
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-delete\s*\{[\s\S]*width:\s*34px;[\s\S]*border-radius:\s*999px;[\s\S]*var\(--runner-profile-flame\) 10%, transparent\) !important;/,
+  'Delete actions should be compact circular Profile controls with a clear destructive accent.'
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-list\s*\{[\s\S]*max-height:\s*min\(52vh, 390px\);[\s\S]*overflow-y:\s*auto;/,
+  'The notification list should remain compact and scroll internally when more messages arrive.'
 );
 
 console.log('[PASS] Topbar notification contrast, wrapping, and delete guardrails passed.');

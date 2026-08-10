@@ -972,9 +972,9 @@
 .landing-cinematic-map-order {
     fill: #fffaf3;
     font-family: var(--lc-font-mono);
-    font-size: 1.18px;
+    font-size: 0.68px;
     font-weight: 850;
-    letter-spacing: 0;
+    letter-spacing: -0.02px;
     dominant-baseline: middle;
     pointer-events: none;
 }
@@ -2848,49 +2848,85 @@
 }
 
 /* Landing race map motion contract */
-.landing-cinematic-map-selection-spread,
-.landing-cinematic-map-selection-ping,
-.landing-cinematic-map-selection-ring {
-  animation-duration: var(--race-cycle-duration, 15s);
-  animation-delay: var(--race-delay);
-  animation-fill-mode: both;
-  animation-timing-function: ease-in-out;
-  transform-origin: center;
-}
-
-.landing-cinematic-map-selection-spread {
-  animation-name: landing-cinematic-map-selection-spread-step;
-  fill: rgba(240, 117, 97, 0.14);
-  stroke: var(--lc-coral);
-  stroke-width: 1.4;
-}
-
-.landing-cinematic-map-selection-ping {
-  animation-name: landing-cinematic-map-selection-ping-step;
-  fill: rgba(240, 117, 97, 0.12);
-  stroke: rgba(240, 117, 97, 0.52);
-}
-
-.landing-cinematic-map-selection-ring {
-  animation-name: landing-cinematic-map-selection-ring-step;
+.landing-cinematic-map-flight-route,
+.landing-cinematic-map-flight-route-live {
   fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.landing-cinematic-map-flight-route {
+  stroke: rgba(33, 30, 27, 0.22);
+  stroke-width: 0.9;
+  stroke-dasharray: 0.7 1.25;
+  opacity: 0.78;
+}
+
+.landing-cinematic-map-flight-route-live {
   stroke: var(--lc-coral);
-  stroke-width: 1.2;
+  stroke-width: 1.5;
+  stroke-dasharray: 0.02 0.98;
+  opacity: 0.92;
+  animation: landing-cinematic-map-flight-route-step var(--race-cycle-duration, 30s) linear infinite;
 }
 
-@keyframes landing-cinematic-map-selection-spread-step {
-  0%, 3%, 24%, 100% { opacity: 0; r: 1.2; }
-  6%, 16% { opacity: 0.72; r: 5.6; }
+@keyframes landing-cinematic-map-flight-route-step {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1; }
 }
 
-@keyframes landing-cinematic-map-selection-ping-step {
-  0%, 4%, 22%, 100% { opacity: 0; transform: scale(0.7); }
-  7%, 18% { opacity: 0.82; transform: scale(1); }
+.landing-cinematic-map-aircraft {
+  pointer-events: none;
 }
 
-@keyframes landing-cinematic-map-selection-ring-step {
-  0%, 4%, 24%, 100% { opacity: 0; transform: scale(0.86); }
-  7%, 18% { opacity: 0.92; transform: scale(1); }
+.landing-cinematic-map-aircraft-glow {
+  fill: rgba(240, 117, 97, 0.22);
+  opacity: 0.35;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-cinematic-map-aircraft-glow-step 2.2s ease-in-out infinite;
+}
+
+@keyframes landing-cinematic-map-aircraft-glow-step {
+  0%, 100% { opacity: 0.18; transform: scale(0.72); }
+  50% { opacity: 0.46; transform: scale(1.18); }
+}
+
+.landing-cinematic-map-aircraft-shape {
+  fill: var(--lc-coral);
+  stroke: #fffaf3;
+  stroke-width: 0.32;
+  vector-effect: non-scaling-stroke;
+}
+
+.landing-cinematic-map-pin {
+  opacity: 1;
+}
+
+.landing-cinematic-map-pin-halo {
+  fill: rgba(240, 117, 97, 0.04);
+  stroke: rgba(240, 117, 97, 0.46);
+  stroke-width: 0.1;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: landing-cinematic-map-pin-halo-step var(--race-cycle-duration, 30s) ease-in-out infinite;
+  animation-delay: var(--race-delay, 0s);
+}
+
+@keyframes landing-cinematic-map-pin-halo-step {
+  0%, 100% { opacity: 0.34; transform: scale(0.86); }
+  5%, 17% { opacity: 0.86; transform: scale(1); }
+  23% { opacity: 0.26; transform: scale(1.12); }
+}
+
+.landing-cinematic-map-badge {
+  fill: rgba(33, 30, 27, 0.94);
+  stroke: rgba(255, 250, 243, 0.98);
+  stroke-width: 0.1;
+  vector-effect: non-scaling-stroke;
 }
 
 .landing-cinematic-map-bottom-deck {
@@ -3175,9 +3211,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-cinematic-map-selection-spread,
-  .landing-cinematic-map-selection-ping,
-  .landing-cinematic-map-selection-ring,
+  .landing-cinematic-map-flight-route-live,
+  .landing-cinematic-map-aircraft,
+  .landing-cinematic-map-aircraft-glow,
+  .landing-cinematic-map-pin-halo,
   .landing-cinematic-map-guide-step,
   .landing-cinematic-map-timeline-item,
   .landing-cinematic-race-row::before,
@@ -3186,6 +3223,10 @@
   .landing-cinematic-race-row em,
   .landing-cinematic-map-caption {
     animation: none;
+  }
+
+  .landing-cinematic-map-aircraft {
+    display: none;
   }
 }
 
@@ -3839,8 +3880,8 @@ body:has(.landing-page--cinematic),
    Scoped behind .landing-cinematic-final-card--minimal. Drops the old
    2-column copy+photo layout for a single centered warm-paper column
    with generous breathing room. CONTEXT_LEDGER content/theme preserves
-   hold: Strava + email actions, dark-ink copy, trust chips, single-line
-   desktop Chinese title, warm theme, no proof grids / fake metrics.
+   hold: Strava + email actions, dark-ink copy, trust chips, a fluid Chinese
+   title that stays inside the card, warm theme, no proof grids / fake metrics.
    =================================================================== */
 
 .landing-cinematic-final-card--minimal {
@@ -3884,9 +3925,8 @@ body:has(.landing-page--cinematic),
   justify-items: center;
   text-align: center;
   width: 100%;
-  /* Wider than the old 620px so the 15-char Chinese title fits on one line at
-     an editorial font-size without overflowing the card. */
-  max-width: 720px;
+  min-width: 0;
+  max-width: min(100%, 920px);
 }
 
 /* Each direct child centers as a box (justify-items: center alone leaves
@@ -3899,19 +3939,13 @@ body:has(.landing-page--cinematic),
   margin-top: 14px;
   color: rgba(33, 28, 22, 0.92);
   letter-spacing: 0;
-  /* Size the title to fit one line inside the 720px copy column. The 15-char
-     Chinese title advances ~0.765em per char, so it fits one line at up to
-     ~62px; clamp() scales it down on narrower viewports and lets it wrap only
-     if a small viewport truly can't fit it (mobile). */
+  min-width: 0;
   font-size: clamp(2rem, 4.6vw, 3.5rem) !important;
   line-height: 1.05;
   max-width: 100%;
-  /* nowrap keeps the fixed Chinese title on one line; the clamp() font-size
-     above already guarantees it fits the card width, so wrapping is never
-     needed. (text-wrap: balance was forcing a 2-line split even though the
-     string fits one line.) */
-  white-space: nowrap;
-  text-wrap: nowrap;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .landing-cinematic-final-card--minimal .landing-cinematic-final-copy > p {
@@ -3960,4 +3994,255 @@ body:has(.landing-page--cinematic),
 
 .landing-cinematic-final-card--minimal .landing-cinematic-final-trust span::before {
   content: none;
+}
+
+/* ===================================================================
+   Liquid glass landing treatment
+   Inspired by rdev/liquid-glass-react: translucent depth, soft refraction
+   cues, chromatic edge light, and responsive hover feedback. The CSS-only
+   layer keeps the page usable in browsers without displacement filters.
+   =================================================================== */
+
+.landing-page--liquid-glass {
+  --lg-edge: rgba(255, 255, 255, 0.62);
+  --lg-shadow: rgba(62, 42, 29, 0.16);
+  --lg-cyan: rgba(176, 218, 221, 0.22);
+  --lg-coral: rgba(240, 117, 97, 0.2);
+  background:
+    radial-gradient(circle at 4% 11%, var(--lg-cyan), transparent 24rem),
+    radial-gradient(circle at 94% 32%, var(--lg-coral), transparent 28rem),
+    #f4efe6;
+}
+
+.landing-page--liquid-glass .landing-cinematic-nav {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(244, 239, 230, 0.58);
+  box-shadow:
+    0 12px 36px rgba(73, 52, 37, 0.08),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.46);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.landing-page--liquid-glass .landing-cinematic-nav.is-scrolled {
+  background: rgba(246, 241, 233, 0.76);
+  box-shadow:
+    0 16px 42px rgba(73, 52, 37, 0.12),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.58);
+}
+
+.landing-page--liquid-glass .landing-cinematic-brand,
+.landing-page--liquid-glass .landing-cinematic-links a,
+.landing-page--liquid-glass .landing-cinematic-btn--ghost {
+  color: rgba(33, 28, 22, 0.86);
+}
+
+.landing-page--liquid-glass .landing-cinematic-links a:hover,
+.landing-page--liquid-glass .landing-cinematic-btn--ghost:hover {
+  color: var(--landing-command-accent);
+}
+
+.landing-page--liquid-glass .landing-cinematic-brand-glyph {
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow:
+    inset 0 1px 0 var(--lg-edge),
+    0 6px 18px rgba(73, 52, 37, 0.1);
+}
+
+.landing-page--liquid-glass .landing-cinematic-btn--ghost,
+.landing-page--liquid-glass .landing-cinematic-btn--outline {
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  background: rgba(255, 253, 248, 0.3);
+  box-shadow:
+    inset 0 1px 0 var(--lg-edge),
+    0 8px 22px rgba(73, 52, 37, 0.08);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  backdrop-filter: blur(14px) saturate(135%);
+}
+
+.landing-page--liquid-glass .landing-cinematic-btn--ghost:hover,
+.landing-page--liquid-glass .landing-cinematic-btn--outline:hover {
+  border-color: rgba(216, 95, 76, 0.36);
+  background: rgba(255, 253, 248, 0.56);
+  box-shadow:
+    inset 0 1px 0 var(--lg-edge),
+    0 12px 28px rgba(73, 52, 37, 0.12);
+}
+
+.landing-page--liquid-glass .landing-cinematic-btn--primary {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.46),
+    0 14px 30px rgba(160, 57, 42, 0.24);
+}
+
+.landing-page--liquid-glass .landing-cinematic-hero--minimal {
+  position: relative;
+  background:
+    radial-gradient(circle at 78% 30%, rgba(240, 117, 97, 0.16), transparent 23rem),
+    radial-gradient(circle at 18% 18%, rgba(176, 218, 221, 0.18), transparent 20rem),
+    #f4efe6;
+}
+
+.landing-page--liquid-glass .landing-cinematic-hero--minimal::before {
+  content: "";
+  position: absolute;
+  inset: 12% 4% 10%;
+  border-radius: 48% 52% 42% 58% / 42% 38% 62% 58%;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.36), transparent 34%),
+    radial-gradient(circle at 72% 32%, rgba(255, 255, 255, 0.34), transparent 28%),
+    linear-gradient(130deg, rgba(171, 220, 222, 0.12), rgba(240, 117, 97, 0.12));
+  filter: blur(16px);
+  opacity: 0.66;
+  pointer-events: none;
+}
+
+.landing-page--liquid-glass .landing-cinematic-hero--minimal .landing-cinematic-hero-inner {
+  z-index: 1;
+}
+
+.landing-page--liquid-glass .landing-hero-shoe-cycle {
+  filter: drop-shadow(0 28px 34px rgba(73, 52, 37, 0.16));
+}
+
+.landing-page--liquid-glass .landing-command-deck--minimal-black {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(142, 208, 214, 0.12), transparent 24rem),
+    radial-gradient(circle at 90% 72%, rgba(240, 117, 97, 0.14), transparent 28rem),
+    var(--mbg-canvas);
+}
+
+.landing-page--liquid-glass .landing-command-deck--minimal-black .landing-command-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%),
+    rgba(24, 25, 29, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 1px 0 0 rgba(145, 214, 218, 0.08),
+    0 24px 70px rgba(0, 0, 0, 0.22);
+  -webkit-backdrop-filter: blur(22px) saturate(132%);
+  backdrop-filter: blur(22px) saturate(132%);
+}
+
+.landing-page--liquid-glass .landing-command-deck--minimal-black .landing-command-card::before,
+.landing-page--liquid-glass .landing-cinematic-answer-card::before,
+.landing-page--liquid-glass .landing-cinematic-final-card--minimal::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.28), transparent 18% 74%, rgba(186, 233, 234, 0.14)),
+    linear-gradient(90deg, transparent 0 74%, rgba(240, 117, 97, 0.12) 84%, transparent 100%);
+  opacity: 0.56;
+  pointer-events: none;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+}
+
+.landing-page--liquid-glass .landing-command-deck--minimal-black .landing-command-card > *,
+.landing-page--liquid-glass .landing-cinematic-answer-card > *,
+.landing-page--liquid-glass .landing-cinematic-final-card--minimal > * {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-page--liquid-glass .landing-command-deck--minimal-black .landing-command-card:hover {
+  border-color: rgba(206, 244, 245, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 44%),
+    rgba(31, 32, 37, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 28px 76px rgba(0, 0, 0, 0.28);
+}
+
+.landing-page--liquid-glass .landing-cinematic-answer-card,
+.landing-page--liquid-glass .landing-cinematic-race-list,
+.landing-page--liquid-glass .landing-cinematic-compare-table,
+.landing-page--liquid-glass .landing-cinematic-final-card--minimal {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.38), transparent 38%),
+    rgba(255, 253, 248, 0.46);
+  box-shadow:
+    inset 0 1px 0 var(--lg-edge),
+    inset 1px 0 0 rgba(176, 218, 221, 0.16),
+    0 22px 60px var(--lg-shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
+  backdrop-filter: blur(20px) saturate(135%);
+}
+
+.landing-page--liquid-glass .landing-cinematic-answer-card:hover {
+  border-color: rgba(216, 95, 76, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.54), transparent 40%),
+    rgba(255, 253, 248, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 28px 68px rgba(73, 52, 37, 0.14);
+}
+
+.landing-page--liquid-glass .landing-cinematic-race-list,
+.landing-page--liquid-glass .landing-cinematic-compare-table {
+  border-radius: 28px;
+}
+
+.landing-page--liquid-glass .landing-cinematic-map {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.26), transparent 42%),
+    rgba(255, 253, 248, 0.3);
+  box-shadow:
+    inset 0 1px 0 var(--lg-edge),
+    0 22px 54px rgba(73, 52, 37, 0.1);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
+.landing-page--liquid-glass .landing-cinematic-final-card--minimal {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 42%),
+    rgba(244, 239, 230, 0.76) !important;
+}
+
+.landing-page--liquid-glass .landing-cinematic-footer {
+  background: rgba(244, 239, 230, 0.44);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .landing-page--liquid-glass .landing-cinematic-nav,
+  .landing-page--liquid-glass .landing-cinematic-btn--ghost,
+  .landing-page--liquid-glass .landing-cinematic-btn--outline,
+  .landing-page--liquid-glass .landing-command-card,
+  .landing-page--liquid-glass .landing-cinematic-answer-card,
+  .landing-page--liquid-glass .landing-cinematic-race-list,
+  .landing-page--liquid-glass .landing-cinematic-compare-table,
+  .landing-page--liquid-glass .landing-cinematic-final-card--minimal {
+    background: rgba(255, 253, 248, 0.88);
+  }
+
+  .landing-page--liquid-glass .landing-command-deck--minimal-black .landing-command-card {
+    background: #17181c;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-page--liquid-glass .landing-cinematic-btn,
+  .landing-page--liquid-glass .landing-cinematic-answer-card,
+  .landing-page--liquid-glass .landing-command-card {
+    transition: none;
+  }
 }

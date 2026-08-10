@@ -8,6 +8,8 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Clock;
@@ -24,6 +26,7 @@ import java.util.Optional;
 
 @Service
 public class RaceCourseMapService {
+    private static final Logger logger = LoggerFactory.getLogger(RaceCourseMapService.class);
     private static final Duration CACHE_TTL = Duration.ofHours(24);
     private static final int MIN_ALIGNMENT_CONFIDENCE = 68;
     private static final int MIN_DIRECTIVE_RETRY_CONFIDENCE = 55;
@@ -57,6 +60,7 @@ public class RaceCourseMapService {
     private final MarathonRouteGeoreferencingService marathonRouteGeoreferencingService;
     private final CourseMapScanWatcher scanWatcher;
     private final TtlCacheStore cacheStore;
+    private RaceCourseMapBulkSeedService bulkSeedService;
 
     public RaceCourseMapService(
             RestTemplate restTemplate,
@@ -138,6 +142,17 @@ public class RaceCourseMapService {
         this.cacheStore = cacheStore;
     }
 
+    /**
+     * Optional on-demand seed collaborator. Keeping this setter optional lets
+     * the service's small constructor-based unit-test fixtures keep working,
+     * while the Spring application can materialize a route for a catalog race
+     * the first time its detail page asks for a map.
+     */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setBulkSeedService(RaceCourseMapBulkSeedService bulkSeedService) {
+        this.bulkSeedService = bulkSeedService;
+    }
+
     public RaceCourseMapService(
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
@@ -178,6 +193,17 @@ public class RaceCourseMapService {
             Double latitude, Double longitude, Double distanceKm
     ) {
         RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
+        // Refresh only seed-owned Osaka rows generated before the current
+        // course's three out-and-back turnarounds were represented. Admin
+        // uploads use different sources and are never overwritten here.
+        if (isStaleOsakaOfficialSeed(raceId, asset)) {
+            RaceCourseMapResult refreshed = seedMissingCatalogRoute(
+                    raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, true
+            );
+            if (refreshed != null) {
+                return refreshed;
+            }
+        }
         // Return the stored live result when EITHER an image URL OR a route
         // polyline is present. Bulk-seeded official courses (e.g. NYC) live
         // without a scanned image 鈥?the OSM base map + route polyline is the
@@ -185,6 +211,12 @@ public class RaceCourseMapService {
         if (asset != null && hasLiveCourseData(asset)) {
             RaceCourseMapResult liveResult = toResult(asset, true);
             return backfillMissingLiveTerrain(asset, liveResult);
+        }
+        RaceCourseMapResult seeded = seedMissingCatalogRoute(
+                raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm
+        );
+        if (seeded != null) {
+            return seeded;
         }
         RaceCourseMapResult resolved = resolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
         if ((resolved.imageUrl() != null && !resolved.imageUrl().isBlank()) || resolved.courseMapDetected()) {
@@ -197,7 +229,79 @@ public class RaceCourseMapService {
         if (asset == null) return false;
         if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) return true;
         String routeJson = asset.getLiveRoutePointsJson();
-        return routeJson != null && !routeJson.isBlank() && !"[]".equals(routeJson.trim());
+        if (routeJson == null || routeJson.isBlank() || "[]".equals(routeJson.trim())) return false;
+        // Do not let a hand-curated route whose extracted length is plainly
+        // outside the marathon distance window mask the on-demand repair path.
+        // Other uploaded routes remain visible and are handled by the normal
+        // city-level fallback rules below.
+        if (!isKnownInvalidOfficialRouteSource(asset)) return true;
+        List<RoutePoint> routePoints = readJson(routeJson, new TypeReference<List<RoutePoint>>() {}, List.of());
+        return routePoints.size() >= 2
+                && strictDistanceMismatchReason(routePoints, asset.getDistanceKm()) == null;
+    }
+
+    private boolean isKnownInvalidOfficialRouteSource(RaceCourseMapAsset asset) {
+        return asset != null
+                && OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(asset.getLiveSource());
+    }
+
+    private boolean isStaleOsakaOfficialSeed(String raceId, RaceCourseMapAsset asset) {
+        if (!OsakaMarathonOfficialCourse.RACE_ID.equals(raceId) || asset == null) {
+            return false;
+        }
+        String source = asset.getLiveSource();
+        boolean seedOwnedSource = RaceCourseMapBulkSeedService.SYNTHETIC_SOURCE.equals(source)
+                || RaceCourseMapBulkSeedService.LEGACY_GEOGRAPHIC_LOOP_SOURCE.equals(source)
+                || OsakaMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source);
+        if (!seedOwnedSource) {
+            return false;
+        }
+        String routeJson = asset.getLiveRoutePointsJson();
+        return routeJson == null
+                || !routeJson.contains("Ichioka Motomachi 3 turnaround")
+                || !routeJson.contains("Koenkitaguchi turnaround");
+    }
+
+    private RaceCourseMapResult seedMissingCatalogRoute(
+            String raceId, String raceName, String city, String country, String websiteUrl,
+            Double latitude, Double longitude, Double distanceKm
+    ) {
+        return seedMissingCatalogRoute(
+                raceId, raceName, city, country, websiteUrl, latitude, longitude, distanceKm, false
+        );
+    }
+
+    private RaceCourseMapResult seedMissingCatalogRoute(
+            String raceId, String raceName, String city, String country, String websiteUrl,
+            Double latitude, Double longitude, Double distanceKm, boolean overwriteSynthetic
+    ) {
+        if (bulkSeedService == null || raceId == null || raceId.isBlank()
+                || latitude == null || longitude == null) {
+            return null;
+        }
+        RaceCourseMapBulkSeedService.CatalogRace catalogRace =
+                new RaceCourseMapBulkSeedService.CatalogRace(
+                        raceId, raceName, null, websiteUrl, city, country,
+                        city == null || city.isBlank() ? country : city + ", " + country,
+                        distanceKm, null, "", latitude, longitude, null
+                );
+        try {
+            RaceCourseMapBulkSeedService.SeedOutcome outcome =
+                    bulkSeedService.seedRace(catalogRace, "race-detail-on-demand", overwriteSynthetic);
+            if (outcome != RaceCourseMapBulkSeedService.SeedOutcome.SEEDED) {
+                return null;
+            }
+            RaceCourseMapAsset seededAsset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
+            if (!hasLiveCourseData(seededAsset)) {
+                return null;
+            }
+            return backfillMissingLiveTerrain(seededAsset, toResult(seededAsset, true));
+        } catch (RuntimeException ex) {
+            // A transient router/elevation failure must not break the existing
+            // candidate-image path or the map card itself.
+            logger.warn("course-map on-demand seed failed for raceId={}: {}", raceId, ex.getMessage());
+            return null;
+        }
     }
 
     private RaceCourseMapResult backfillMissingLiveTerrain(RaceCourseMapAsset asset, RaceCourseMapResult liveResult) {
@@ -2603,6 +2707,9 @@ public class RaceCourseMapService {
     }
 
     private boolean isHandCuratedOfficialCourseSource(String source) {
+        if (source != null && source.startsWith("known-official-course:")) {
+            return true;
+        }
         return NycMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
                 || TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
                 || LosAngelesMarathonOfficialCourse.OFFICIAL_SOURCE.equals(source)
