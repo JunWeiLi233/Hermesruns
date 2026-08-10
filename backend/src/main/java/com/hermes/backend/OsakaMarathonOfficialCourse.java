@@ -3,92 +3,119 @@ package com.hermes.backend;
 import java.util.List;
 
 /**
- * Real waypoints along the CURRENT Osaka Marathon course (the 2024 redesign
- * used for the Feb 2026 edition), a single loop that both starts and finishes
- * at the Osaka Castle area — NOT the obsolete pre-2018 route that finished out
- * at INTEX Osaka on the bay.
+ * Ordered landmarks for the current Osaka Marathon course.
  *
- * <p>Course: start at the Osaka Prefectural Government Office (大阪府庁) on the
- * west side of Osaka Castle Park, run north to the Okawa River (大川) and back
- * down to Nakanoshima (中之島, ~6 km), south down the iconic Midosuji boulevard
- * (御堂筋) through Honmachi / Shinsaibashi to Namba / Dotonbori (~12 km), west
- * to Kyocera Dome Osaka (京セラドーム, ~16 km), south/east along the Naniwasuji
- * corridor, up onto the Uemachi plateau (上町台地) past Shinsekai / Tennoji /
- * Shitenno-ji (the ~30 km climb), east through Tsuruhashi to Imazato (今里,
- * ~36 km), then north-west via Morinomiya to the finish inside Osaka Castle
- * Park (大阪城公園). Roughly 42.195 km.</p>
+ * <p>The 2026 course is not a simple castle-to-castle city loop.  It has a
+ * north-side opening, the Nakanoshima/Midosuji section, a west out-and-back
+ * past Kyocera Dome, and three explicit turnarounds on the Naniwasuji and
+ * Matsuyamachi-suji corridors before the final Imazato-suji approach to Osaka
+ * Castle.  Keeping the turnarounds as paired waypoints is important: removing
+ * either side shortens the line to roughly 24 km and makes the map visibly
+ * wrong even when its start and finish are correct.</p>
  *
- * <p>Waypoints are turning-point landmarks rather than dense GPS samples: the
- * bulk-seed flow feeds them to the pedestrian OSRM (FOSSGIS routed-foot) as a
- * multi-leg routing request so the resulting polyline follows real streets
- * between landmarks. Coordinates verified against the official Osaka Marathon
- * course map and OpenStreetMap landmarks; updated 2026-05-28 to the current
- * castle-to-castle loop.</p>
+ * <p>Waypoints are routed one leg at a time through pedestrian OSRM.  When the
+ * router is unavailable, the same ordered landmarks become a straight-line
+ * corridor rather than a synthetic city loop.  The official PDF is the source
+ * of truth for this sequence.</p>
  */
 final class OsakaMarathonOfficialCourse {
 
     static final String RACE_ID = "osaka-marathon";
     static final String OFFICIAL_COURSE_URL = "https://www.osaka-marathon.com/2026/en/info/course/";
+    static final String OFFICIAL_COURSE_PDF_URL = "https://www.osaka-marathon.com/2026/en/info/course/pdf/course_en.pdf";
     static final String OFFICIAL_SOURCE = "osaka-official-course";
 
     private static final double[][] WAYPOINTS = new double[][]{
-            // ===== Start: Osaka Prefectural Government (大阪府庁) / Otemae =====
-            { 34.6861, 135.5205 }, // Start - Osaka Prefectural Government Office
-            // ===== North to the Okawa River (大川), then back down =====
-            { 34.6905, 135.5158 }, // Temmabashi (天満橋)
-            { 34.6978, 135.5115 }, // Okawa River - Sakuranomiya bend (桜ノ宮)
-            { 34.6938, 135.5055 }, // Tenjinbashi (天神橋)
-            { 34.6928, 135.5008 }, // Nakanoshima (中之島) - ~6 km return
-            // ===== South down Midosuji (御堂筋) =====
-            { 34.6824, 135.5003 }, // Honmachi (本町) - Midosuji
-            { 34.6736, 135.5006 }, // Shinsaibashi (心斎橋)
-            { 34.6687, 135.5013 }, // Dotonbori (道頓堀)
-            { 34.6659, 135.5011 }, // Namba (難波) - ~12 km
-            // ===== West to Kyocera Dome Osaka (京セラドーム) =====
-            { 34.6655, 135.4915 }, // Sakuragawa (桜川)
-            { 34.6685, 135.4790 }, // Kujo (九条)
-            { 34.6694, 135.4762 }, // Kyocera Dome Osaka (京セラドーム大阪) - ~16 km
-            // ===== South-east along the Naniwasuji corridor =====
-            { 34.6620, 135.4730 }, // Taisho (大正)
-            { 34.6545, 135.4790 }, // Tsukamoto-minami / south-west turn
-            { 34.6520, 135.4885 }, // Naniwasuji (なにわ筋) - ~22 km
-            { 34.6490, 135.4965 }, // Hanazonocho (花園町)
-            { 34.6470, 135.5010 }, // Daikokucho (大国町)
-            // ===== Up onto the Uemachi plateau (上町台地) =====
-            { 34.6470, 135.5078 }, // Shinsekai / Tsutenkaku (新世界・通天閣)
-            { 34.6465, 135.5135 }, // Tennoji (天王寺)
-            { 34.6539, 135.5167 }, // Shitenno-ji (四天王寺) - ~30 km climb
-            // ===== East through Tsuruhashi to Imazato (今里) =====
-            { 34.6610, 135.5232 }, // Tamatsukuri (玉造)
-            { 34.6660, 135.5310 }, // Tsuruhashi (鶴橋)
-            { 34.6688, 135.5390 }, // Imazato (今里) - ~36 km
-            // ===== North-west back to Osaka Castle Park (大阪城公園) =====
-            { 34.6778, 135.5402 }, // Joto-ku (城東区)
-            { 34.6842, 135.5358 }, // Morinomiya (森ノ宮) - ~40 km
-            { 34.6875, 135.5298 }, // Osaka Castle Park - east approach
-            // ===== Finish: inside Osaka Castle Park (大阪城公園) =====
-            { 34.6888, 135.5262 }  // Finish - Osaka Castle Park
+            // Start and the north-side opening section.
+            {34.685708, 135.520778}, // Osaka Prefectural Government start
+            {34.690150, 135.519370}, // Keihan Higashiguchi
+            {34.693520, 135.527210}, // Katamachi
+            {34.697600, 135.530000}, // Higashinodamachi
+            {34.696980, 135.517950}, // Higashitenma
+            {34.710798, 135.510788}, // Tenjinbashi 6
+            {34.696500, 135.513000}, // Tenjinbashi
+
+            // Nakanoshima and the Midosuji section.
+            {34.692200, 135.502200}, // Yodoyabashi
+            {34.693700, 135.502300}, // Osaka City Hall / challenge marker
+            {34.692300, 135.501000}, // Oe Bridge south end
+            {34.692200, 135.494800}, // Watanabebashi-minamizume
+            {34.692355, 135.496182}, // Higobashi
+            {34.692200, 135.502200}, // Yodoyabashi return
+            {34.665454, 135.503290}, // Namba
+
+            // West out-and-back: the official route passes Kyocera Dome and
+            // turns at Ichioka Motomachi 3 before returning east.
+            {34.667100, 135.480300}, // Taishobashi
+            {34.669400, 135.476200}, // Kyocera Dome Osaka
+            {34.676181, 135.481718}, // Hakurakubashi-nishizume
+            {34.678212, 135.479925}, // Honden 1
+            {34.662540, 135.465649}, // Ichioka Motomachi 3 turnaround
+            {34.678212, 135.479925}, // Honden 1 return
+            {34.676181, 135.481718}, // Hakurakubashi-nishizume return
+            {34.667100, 135.480300}, // Taishobashi return
+
+            // Naniwasuji out-and-back: the second official turnaround.
+            {34.671300, 135.488400}, // Saiwaicho 1
+            {34.659500, 135.488500}, // Yanagi-dori turnaround
+            {34.671300, 135.488400}, // Saiwaicho 1 return
+
+            // Matsuyamachi-suji out-and-back: the third official turnaround.
+            {34.657000, 135.511700}, // Shitaderamachi
+            {34.650000, 135.515500}, // Koenkitaguchi turnaround
+            {34.657000, 135.511700}, // Shitaderamachi return
+            {34.660000, 135.514500}, // Shimoajimachi
+            {34.664700, 135.519500}, // Uehonmachi 6
+
+            // Final south/east section and the Osaka Castle finish.
+            {34.650800, 135.522000}, // Gojonomiya-mae
+            {34.652800, 135.529900}, // Katsuyama 4 / Katsuyama-dori
+            {34.655400, 135.544000}, // Oikebashi
+            {34.668000, 135.539000}, // Imazato-suji
+            {34.691000, 135.548000}, // Shiginohigashi 2
+            {34.690000, 135.532000}, // Shiromi 1 Nishi
+            {34.688800, 135.526200}  // Osaka Castle Park finish
     };
 
-    private static final String[] LABELS;
-    static {
-        LABELS = new String[WAYPOINTS.length];
-        LABELS[0] = "Start - Osaka Prefectural Government";
-        LABELS[2] = "Okawa River";
-        LABELS[4] = "Nakanoshima";
-        LABELS[5] = "Honmachi - Midosuji";
-        LABELS[6] = "Shinsaibashi";
-        LABELS[8] = "Namba";
-        LABELS[11] = "Kyocera Dome Osaka";
-        LABELS[14] = "Naniwasuji";
-        LABELS[17] = "Shinsekai - Tsutenkaku";
-        LABELS[18] = "Tennoji";
-        LABELS[19] = "Shitenno-ji Temple";
-        LABELS[21] = "Tsuruhashi";
-        LABELS[22] = "Imazato";
-        LABELS[24] = "Morinomiya";
-        LABELS[WAYPOINTS.length - 1] = "Finish - Osaka Castle Park";
-    }
+    private static final String[] LABELS = new String[]{
+            "Start - Osaka Prefectural Government",
+            "Keihan Higashiguchi",
+            "Katamachi",
+            "Higashinodamachi",
+            "Higashitenma",
+            "Tenjinbashi 6",
+            "Tenjinbashi",
+            "Yodoyabashi",
+            "Osaka City Hall",
+            "Oe Bridge",
+            "Watanabebashi-minamizume",
+            "Higobashi",
+            "Yodoyabashi return",
+            "Namba",
+            "Taishobashi",
+            "Kyocera Dome Osaka",
+            "Hakurakubashi-nishizume",
+            "Honden 1",
+            "Ichioka Motomachi 3 turnaround",
+            "Honden 1 return",
+            "Hakurakubashi-nishizume return",
+            "Taishobashi return",
+            "Saiwaicho 1",
+            "Yanagi-dori turnaround",
+            "Saiwaicho 1 return",
+            "Shitaderamachi",
+            "Koenkitaguchi turnaround",
+            "Shitaderamachi return",
+            "Shimoajimachi",
+            "Uehonmachi 6",
+            "Gojonomiya-mae",
+            "Katsuyama 4",
+            "Oikebashi",
+            "Imazato-suji",
+            "Shiginohigashi 2",
+            "Shiromi 1 Nishi",
+            "Finish - Osaka Castle Park"
+    };
 
     private OsakaMarathonOfficialCourse() {
     }

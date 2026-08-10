@@ -2,9 +2,9 @@ import { createElement, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';
 import AppIcon from '../components/AppIcon';
+import AuthDotField from '../components/AuthDotField';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
-import AuthDotField from '../components/AuthDotField';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -170,7 +170,7 @@ export default function LegalPage({ variant = 'terms' }) {
   }, [isPrivacy, page.sections]);
 
   return (
-    <div className={`legal-page legal-page--${variant}`}>
+    <div className={`legal-page legal-page--${variant} auth-page--liquid-glass`}>
       <AuthDotField />
       <div className="legal-page-shell">
         <header className="legal-page-header">

@@ -1,29 +1,33 @@
-# OpenCode `/auto-hermes`
+<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- Runtime: opencode; command: /auto-hermes; contract: docs/ai/EDITING_CONTRACT.md -->
 
-Use this command as the OpenCode runtime note for the bounded Hermes `/auto-hermes` workflow.
+---
+name: auto-hermes
+---
 
-## Continuity
+# Auto-Hermes
+
+Codex command note for the bounded auto-hermes control plane.
+
+## Continuity Rules
 
 - Empty queue does not immediately stop.
-- `## Active Tasks` being empty is NOT a stop condition.
 - Website-audit explorer is the first exhaustion fallback.
 - Repeated no-candidate audit rounds are the true stop condition.
-- Promote queue candidates first; if none exist, seed suggestions; if still none, run website-audit fallback before stopping.
+- Supervisor is the preferred continuity layer for long-running runs.
 
-## Trace-To-Skill
+## Command Notes
 
-- Read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json`.
-- Treat trace-to-skill output as a `soft-signal`: evidence-backed guidance for workflow evolution, not a hard stop for normal product work.
+- Use `.tools/auto-hermes-loop.mjs` for the current bounded loop owner behavior.
+- `.tools/auto-hermes-supervisor.mjs` now owns the live continuity decision for repeated website-audit exhaustion inside the loop helper.
+- `/auto-hermes` persists Ralph grounding artifacts and supervisor state in `.ai-sync` so the loop owner remains a real repo-backed execution surface rather than a prompt-only brief writer.
+- Default executor-backed Codex/OMX worker rounds run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the Codex fallback prefers the installed `codex` CLI with `--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust` when supported, then falls back to bundled `codex-local`.
+- Planned Codex subagent lanes inherit that active executor permission context; do not silently downgrade agents to sandboxed `--full-auto` unless an explicit executor command/config overrides the default.
+- Finish behavior now routes through `.tools/auto-hermes-finish.mjs`: auto-commit only when needed on a true clean stop with publishable product files, and auto-push is now also allowed when a clean stop leaves unpublished local commits on the current branch and `origin` still equals `https://github.com/520HXC/run.git`.
 
-## Docker/Main-Repository Gate
+## Frontend Design Notes
 
-- Main-repository submission requires a fresh passing Docker gate:
-  `node .tools/auto-hermes-docker-gate.mjs --write`
-- The Docker gate blocks publish paths only.
-- It does not block normal local auto-commit.
-
-## Execution
-
-- OpenCode has no native parallel subagent loop by default; execute bounded work directly or through the configured plugin helper.
-- Preserve Hermes verification contracts from `AGENTS.md`.
-- Do not claim live frontend/backend runtime changes without the relevant runtime proof gate.
+- For non-trivial frontend rounds, read `design.md` before implementation and treat it as the final Hermes visual authority.
+- Use `node .tools/auto-hermes-skills.mjs --json` as the frontend design skill manifest for `/auto-hermes` design-review rounds.
+- The default frontend design stack is `hermes-dev`, `design-taste-frontend`, `frontend-design`, `ui-ux-pro-max` as supplemental research, Browser/browser-harness proof, and translation/accessibility skills when triggered.
+- If the controller emits `designContext.frontendSkillStack`, carry those skills into the worker prompt and report missing required skills plainly instead of treating them as executed.

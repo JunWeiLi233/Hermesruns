@@ -22,6 +22,25 @@ const splitRunsStyleSource = read('styles/_split/runs.css');
 const splitLightThemeStyleSource = read('styles/_split/light-theme-overrides.css');
 
 assert(
+  runDetailSource.includes("import { Link, useNavigate, useParams } from 'react-router';")
+    && runDetailSource.includes("activeKey: 'activities'")
+    && runDetailSource.includes('runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page')
+    && runDetailSource.includes('<RunnerShellTopNav')
+    && runDetailSource.includes('parentRoute="/runs"')
+    && runDetailSource.includes('<RunsSubpageNav')
+    && runDetailSource.includes('className="runner-shell-canvas"'),
+  'Run Detail should live inside the shared authenticated runner shell with Runs active and a Runs breadcrumb.',
+);
+
+assert(
+  /\.run-detail-runner-page\s+\.run-detail-page\.run-detail-profile-cockpit\s*\{[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*0;[\s\S]*background:\s*transparent\s*!important;/.test(splitRunsStyleSource)
+    && /\.run-detail-runner-page\s+\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-profile-stat-rail\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(splitRunsStyleSource)
+    && /\.run-detail-runner-page\s+\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*grid-column:\s*auto;/.test(splitRunsStyleSource)
+    && /\.run-detail-runner-page\s+\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s+:is\(span,\s*strong,\s*em\)\s*\{[\s\S]*color:\s*#fff8ee\s*!important;[\s\S]*-webkit-text-fill-color:\s*#fff8ee\s*!important;/.test(splitRunsStyleSource),
+  'Run Detail should inherit the Profile canvas and use a compact one-column evidence rail instead of the oversized standalone stat grid.',
+);
+
+assert(
   (runDetailSource.match(/run-detail-page run-detail-profile-cockpit/g) || []).length >= 3,
   'Run Detail loading, empty, and loaded states should all opt into the profile cockpit shell.',
 );

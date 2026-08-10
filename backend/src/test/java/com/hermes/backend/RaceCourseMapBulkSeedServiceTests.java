@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +30,78 @@ import static org.mockito.Mockito.when;
 class RaceCourseMapBulkSeedServiceTests {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void officialLandmarkCatalogCoversThePreviouslySyntheticRaceSet() {
+        List<String> raceIds = List.of(
+                "big-sur-marathon", "honolulu-marathon", "barcelona-marathon",
+                "bangkok-marathon", "comrades-marathon", "buenos-aires-marathon",
+                "bergen-city-marathon", "brussels-airport-marathon", "rio-marathon",
+                "beijing-marathon", "hong-kong-marathon", "auckland-marathon",
+                "cape-town-marathon", "fukuoka-marathon", "guangzhou-marathon",
+                "chengdu-marathon", "hangzhou-marathon", "dublin-marathon",
+                "ho-chi-minh-city-marathon", "amsterdam-marathon");
+
+        for (String raceId : raceIds) {
+            MarathonOfficialLandmarkCourseCatalog.Course course =
+                    MarathonOfficialLandmarkCourseCatalog.find(raceId);
+            assertThat(course).as(raceId).isNotNull();
+            assertThat(course.sourceUrl()).as(raceId).startsWith("https://");
+            assertThat(course.landmarks()).as(raceId).hasSizeGreaterThanOrEqualTo(7);
+            assertThat(course.landmarks().get(0).label()).as(raceId).startsWith("Start");
+            assertThat(course.landmarks().get(course.landmarks().size() - 1).label())
+                    .as(raceId).startsWith("Finish");
+        }
+    }
+
+    @Test
+    void landmarkOfficialRoutesKeepTheirOrganizerCorridorWhenRoutingIsUnavailable() {
+        RaceCourseMapBulkSeedService service = newService(mock(RestTemplate.class), mock(RaceCourseMapAssetRepository.class));
+        service.osrmRetryDelayMs = 0L;
+
+        List<String> raceIds = List.of(
+                "big-sur-marathon", "honolulu-marathon", "barcelona-marathon",
+                "bangkok-marathon", "comrades-marathon", "buenos-aires-marathon",
+                "bergen-city-marathon", "brussels-airport-marathon", "rio-marathon",
+                "beijing-marathon", "hong-kong-marathon", "auckland-marathon",
+                "cape-town-marathon", "fukuoka-marathon", "guangzhou-marathon",
+                "chengdu-marathon", "hangzhou-marathon", "dublin-marathon",
+                "ho-chi-minh-city-marathon", "amsterdam-marathon");
+
+        for (String raceId : raceIds) {
+            List<RoutePoint> route = service.generateOfficialCoursePolyline(raceId);
+            assertThat(route).as(raceId).hasSizeGreaterThanOrEqualTo(4);
+            assertThat(route.get(0).label()).as(raceId).startsWith("Start");
+            assertThat(route.get(route.size() - 1).label()).as(raceId).startsWith("Finish");
+        }
+    }
+
+    @Test
+    void berlinBulkSeedUsesTheCheckedOfficialGpxTrack() {
+        List<RoutePoint> route = BerlinMarathonOfficialCourse.routePoints();
+
+        assertThat(BerlinMarathonOfficialCourse.OFFICIAL_SOURCE)
+                .isEqualTo("verified-official-gpx:berlin-marathon");
+        assertThat(route).hasSize(508);
+        assertThat(polylineKm(route)).isBetween(42.0, 42.4);
+        assertThat(route.get(0).label()).startsWith("Start");
+        assertThat(route.get(route.size() - 1).label()).startsWith("Finish");
+    }
+
+    @Test
+    void bergenBulkSeedRepeatsTheOrganizerGpxCircuitTwice() {
+        List<RoutePoint> route = BergenCityMarathonOfficialCourse.routePoints();
+
+        assertThat(BergenCityMarathonOfficialCourse.OFFICIAL_SOURCE)
+                .isEqualTo("verified-official-gpx:bergen-city-marathon");
+        assertThat(route).hasSize(2291);
+        assertThat(BergenCityMarathonOfficialCourse.routePointCount()).isEqualTo(2291);
+        assertThat(polylineKm(route)).isBetween(42.0, 42.4);
+        assertThat(route.get(0).label()).isEqualTo("Start - Bryggen");
+        assertThat(route.get(BergenCityMarathonOfficialCourse.HALF_ROUTE_POINT_COUNT - 1).label())
+                .isEqualTo("Halfway - second official lap");
+        assertThat(route.get(route.size() - 1).label()).isEqualTo("Finish - Bryggen");
+    }
 
     @Test
     void syntheticLoopHasPerimeterCloseToDistanceAtMidLatitude() {
@@ -68,6 +141,186 @@ class RaceCourseMapBulkSeedServiceTests {
         double latSpread = maxLat - minLat;
         assertThat(lngSpread).isGreaterThan(latSpread); // lng must be stretched at high latitude
         assertThat(lngSpread).isLessThan(2.0); // and not absurdly wide
+    }
+
+    @Test
+    void bulkSeedPromotesCheckedLondonCourseInsteadOfSyntheticLoop() {
+        RaceCourseMapBulkSeedService service = newService(mockElevationRestTemplate(), mock(RaceCourseMapAssetRepository.class));
+
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                "london-marathon", "London Marathon", "London Marathon Events",
+                "https://www.londonmarathonevents.co.uk/london-marathon/course",
+                "London", "United Kingdom", "London, United Kingdom", 42.195, 4, "",
+                51.5074, -0.1278, ""
+        );
+
+        List<RoutePoint> route = service.generateKnownOrderedCoursePolyline(race);
+
+        assertThat(route).hasSizeGreaterThan(20);
+        assertThat(route.get(0).label()).isEqualTo("Start - Greenwich");
+        assertThat(route.get(route.size() - 1).label()).isEqualTo("Finish - The Mall");
+        assertThat(polylineKm(route)).isBetween(36.0, 52.0);
+    }
+
+    @Test
+    void amsterdamSupplementalRectangleFailsOrganizerCorridorValidation() {
+        SupplementalMarathonKnownCourses.CourseDefinition staleSupplemental =
+                SupplementalMarathonKnownCourses.find(
+                                "Amsterdam Marathon", "Amsterdam", "Netherlands")
+                        .orElseThrow();
+
+        RaceKnownOrderedCourseCatalog.KnownCourseRouteVerdict verdict =
+                RaceKnownOrderedCourseCatalog.assessKnownCourseRoute(
+                        staleSupplemental.routePoints(),
+                        "Amsterdam Marathon",
+                        "Amsterdam",
+                        "Netherlands",
+                        new RaceCourseMapGeometryService());
+
+        assertThat(verdict.accepted()).isFalse();
+        assertThat(verdict.reason()).contains("Amstel");
+    }
+
+    @Test
+    void amsterdamLandmarkCourseUsesOrganizerCorridors() {
+        MarathonOfficialLandmarkCourseCatalog.Course course =
+                MarathonOfficialLandmarkCourseCatalog.find("amsterdam-marathon");
+
+        assertThat(course).isNotNull();
+        assertThat(course.sourceUrl()).contains("tcsamsterdammarathon.nl");
+        assertThat(course.landmarks()).extracting(MarathonOfficialLandmarkCourseCatalog.Landmark::label)
+                .contains(
+                        "Start - Olympic Stadium",
+                        "Ouderkerk turnaround",
+                        "Joan Muyskenweg",
+                        "Galileiplantsoen",
+                        "Zeeburgerdijk",
+                        "Finish - Olympic Stadium");
+
+        List<RoutePoint> organizerCorridor = course.landmarks().stream()
+                .map(landmark -> new RoutePoint(landmark.lat(), landmark.lng(), landmark.label()))
+                .toList();
+        RaceKnownOrderedCourseCatalog.KnownCourseRouteVerdict verdict =
+                RaceKnownOrderedCourseCatalog.assessKnownCourseRoute(
+                        organizerCorridor,
+                        "Amsterdam Marathon",
+                        "Amsterdam",
+                        "Netherlands",
+                        new RaceCourseMapGeometryService());
+
+        assertThat(verdict.accepted()).isTrue();
+        assertThat(polylineKm(organizerCorridor)).isBetween(32.0, 45.0);
+    }
+
+    @Test
+    void bulkSeedUsesTheVerifiedAmsterdamOfficialRoute() {
+        RaceCourseMapBulkSeedService service = new RaceCourseMapBulkSeedService(
+                null,
+                new RaceCourseMapGeometryService(),
+                objectMapper,
+                new RestTemplate());
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                "amsterdam-marathon",
+                "Amsterdam Marathon",
+                "TCS Amsterdam Marathon",
+                "https://www.tcsamsterdammarathon.nl/",
+                "Amsterdam",
+                "Netherlands",
+                "Amsterdam, Netherlands",
+                42.195,
+                10,
+                "",
+                52.3676,
+                4.9041,
+                "");
+
+        assertThat(service.generateKnownOrderedCoursePolyline(race))
+                .containsExactlyElementsOf(AmsterdamMarathonOfficialCourse.routePoints());
+    }
+
+    @Test
+    void amsterdamOfficialCourseIsDeterministicAndMatchesOrganizerGeography() {
+        List<RoutePoint> route = AmsterdamMarathonOfficialCourse.routePoints();
+
+        assertThat(AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE)
+                .isEqualTo("verified-official-map:amsterdam-marathon");
+        assertThat(route).hasSize(543);
+        assertThat(AmsterdamMarathonOfficialCourse.routePointCount()).isEqualTo(543);
+        assertThat(polylineKm(route)).isBetween(42.8, 43.2);
+        assertThat(route.get(0).label()).isEqualTo("Start - Olympic Stadium");
+        assertThat(route.get(route.size() - 1).label()).isEqualTo("Finish - Olympic Stadium");
+        assertThat(route).anyMatch(point -> "Ouderkerk turnaround".equals(point.label()));
+        assertThat(route).anyMatch(point -> "Science Park east return".equals(point.label()));
+        assertThat(route).anyMatch(point -> "Rijksmuseum return".equals(point.label()));
+        assertThat(route).anyMatch(point -> "Vondelpark return".equals(point.label()));
+
+        RaceCourseMapGeometryService geometryService = new RaceCourseMapGeometryService();
+        OverlayBounds bounds = geometryService.boundsFromRoute(route);
+        assertThat(bounds.south()).isLessThan(52.307);
+        assertThat(bounds.east()).isGreaterThan(4.932);
+        RaceKnownOrderedCourseCatalog.KnownCourseRouteVerdict verdict =
+                RaceKnownOrderedCourseCatalog.assessKnownCourseRoute(
+                        route,
+                        "Amsterdam Marathon",
+                        "Amsterdam",
+                        "Netherlands",
+                        geometryService);
+        assertThat(verdict.accepted()).isTrue();
+    }
+
+    @Test
+    void seedRaceReplacesStaleAmsterdamRectangleWithCheckedOfficialCourse() throws Exception {
+        RestTemplate restTemplate = mockElevationRestTemplate();
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+
+        RaceCourseMapAsset existing = new RaceCourseMapAsset();
+        existing.setRaceId(AmsterdamMarathonOfficialCourse.RACE_ID);
+        existing.setLiveSource("known-official-course:amsterdam-marathon");
+        existing.setLiveImageUrl("local-course-map:amsterdam-stale.png");
+        RaceKnownOrderedCourseCatalog.KnownOrderedCourse staleCourse =
+                RaceKnownOrderedCourseCatalog.knownOrderedCourseFor(
+                        "Amsterdam Marathon", "Amsterdam", "Netherlands");
+        assertThat(staleCourse).isNotNull();
+        existing.setLiveRoutePointsJson(objectMapper.writeValueAsString(staleCourse.routePoints()));
+        when(repository.findByRaceId(AmsterdamMarathonOfficialCourse.RACE_ID)).thenReturn(Optional.of(existing));
+        when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RaceCourseMapBulkSeedService service = newService(restTemplate, repository);
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                AmsterdamMarathonOfficialCourse.RACE_ID,
+                "Amsterdam Marathon",
+                "TCS Amsterdam Marathon",
+                "https://www.tcsamsterdammarathon.nl/",
+                "Amsterdam",
+                "Netherlands",
+                "Amsterdam, Netherlands",
+                42.195,
+                10,
+                "",
+                52.3676,
+                4.9041,
+                "");
+
+        RaceCourseMapBulkSeedService.SeedOutcome outcome =
+                service.seedRace(race, "admin@hermes.test", true);
+
+        assertThat(outcome).isEqualTo(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+        assertThat(existing.getOfficialWebsite())
+                .isEqualTo(AmsterdamMarathonOfficialCourse.OFFICIAL_COURSE_URL);
+        assertThat(existing.getLiveSource()).isEqualTo(AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE);
+        assertThat(existing.getLiveImageUrl()).isNull();
+        assertThat(existing.getLiveConfidence()).isEqualTo(90);
+        assertThat(existing.getLiveSummary()).contains("official TCS Amsterdam Marathon course map");
+        assertThat(existing.getLiveSummary()).contains("does not depend on OSRM availability");
+
+        List<RoutePoint> persistedRoute = objectMapper.readValue(
+                existing.getLiveRoutePointsJson(),
+                objectMapper.getTypeFactory().constructCollectionType(List.class, RoutePoint.class));
+        assertThat(persistedRoute).hasSize(543);
+        assertThat(polylineKm(persistedRoute)).isBetween(42.8, 43.2);
+        assertThat(persistedRoute).anyMatch(point -> "Ouderkerk turnaround".equals(point.label()));
+        assertThat(persistedRoute).anyMatch(point -> "Science Park east return".equals(point.label()));
+        verify(repository, times(1)).save(existing);
     }
 
     @Test
@@ -270,6 +523,56 @@ class RaceCourseMapBulkSeedServiceTests {
     }
 
     @Test
+    void seedRaceRefusesSyntheticReplacementWhenOfficialLandmarksAreIncomplete() {
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        when(repository.findByRaceId("dublin-marathon")).thenReturn(Optional.empty());
+        RaceCourseMapBulkSeedService service = newService(mock(RestTemplate.class), repository);
+        service.osrmRetryDelayMs = 0L;
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                "dublin-marathon", "Dublin Marathon", "Irish Life Dublin Marathon",
+                "https://irishlifedublinmarathon.ie/course-and-start-finish/",
+                "Dublin", "Ireland", "Dublin, Ireland", 42.195, 10, "",
+                53.3498, -6.2603, "");
+
+        RaceCourseMapBulkSeedService.SeedOutcome outcome =
+                service.seedRace(race, "admin@hermes.test", true);
+
+        assertThat(outcome).isEqualTo(RaceCourseMapBulkSeedService.SeedOutcome.FAILED);
+        verify(repository, never()).save(any(RaceCourseMapAsset.class));
+    }
+
+    @Test
+    void seedRaceQuarantinesExistingSyntheticRouteWhenOfficialLandmarksAreIncomplete() {
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset existing = new RaceCourseMapAsset();
+        existing.setRaceId("dublin-marathon");
+        existing.setLiveSource(RaceCourseMapBulkSeedService.LEGACY_GEOGRAPHIC_LOOP_SOURCE);
+        existing.setLiveImageUrl("local-course-map:dublin-synthetic.png");
+        existing.setLiveRoutePointsJson("[{\"lat\":53.3,\"lng\":-6.2},{\"lat\":53.4,\"lng\":-6.3}]");
+        existing.setLiveElevationSamplesJson("[10,11]");
+        when(repository.findByRaceId("dublin-marathon")).thenReturn(Optional.of(existing));
+        RaceCourseMapBulkSeedService service = newService(mock(RestTemplate.class), repository);
+        service.osrmRetryDelayMs = 0L;
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                "dublin-marathon", "Dublin Marathon", "Irish Life Dublin Marathon",
+                "https://irishlifedublinmarathon.ie/course-and-start-finish/",
+                "Dublin", "Ireland", "Dublin, Ireland", 42.195, 10, "",
+                53.3498, -6.2603, "");
+
+        RaceCourseMapBulkSeedService.SeedOutcome outcome =
+                service.seedRace(race, "admin@hermes.test", true);
+
+        assertThat(outcome).isEqualTo(RaceCourseMapBulkSeedService.SeedOutcome.FAILED);
+        assertThat(existing.getLiveSource()).isEqualTo("quarantined-unverified-course:dublin-marathon");
+        assertThat(existing.getLiveRoutePointsJson()).isEqualTo("[]");
+        assertThat(existing.getLiveElevationSamplesJson()).isEqualTo("[]");
+        assertThat(existing.getLiveImageUrl()).isNull();
+        assertThat(existing.getLiveConfidence()).isZero();
+        assertThat(existing.getLiveSummary()).contains("withheld the previous synthetic course");
+        verify(repository).save(existing);
+    }
+
+    @Test
     void seedAllReadsCatalogAndSummarizes(@TempDir Path tempDir) throws Exception {
         Path catalog = tempDir.resolve("catalog.json");
         Files.writeString(catalog, """
@@ -344,6 +647,32 @@ class RaceCourseMapBulkSeedServiceTests {
         // Landmark labels survive the fallback so the runner card still reads right.
         assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Start"));
         assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Finish"));
+        assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Ichioka Motomachi 3"));
+        assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Koenkitaguchi"));
+        assertThat(route).anyMatch(p -> p.label() != null && p.label().contains("Yanagi-dori"));
+    }
+
+    @Test
+    void osakaOfficialWaypointsIncludeAllCurrentOutAndBackSections() {
+        List<double[]> waypoints = OsakaMarathonOfficialCourse.waypoints();
+
+        assertThat(OsakaMarathonOfficialCourse.OFFICIAL_COURSE_PDF_URL)
+                .isEqualTo("https://www.osaka-marathon.com/2026/en/info/course/pdf/course_en.pdf");
+        assertThat(waypoints).hasSize(37);
+        assertThat(OsakaMarathonOfficialCourse.labelAt(18)).contains("Ichioka Motomachi 3");
+        assertThat(OsakaMarathonOfficialCourse.labelAt(23)).contains("Yanagi-dori");
+        assertThat(OsakaMarathonOfficialCourse.labelAt(26)).contains("Koenkitaguchi");
+        assertThat(OsakaMarathonOfficialCourse.labelAt(waypoints.size() - 1)).contains("Finish");
+
+        double corridorKm = 0.0;
+        for (int i = 1; i < waypoints.size(); i++) {
+            corridorKm += haversineKm(
+                    waypoints.get(i - 1)[0], waypoints.get(i - 1)[1],
+                    waypoints.get(i)[0], waypoints.get(i)[1]);
+        }
+        // Straight-line fallback remains close enough to the 42.195 km race
+        // to pass runtime acceptance; routed street geometry is slightly longer.
+        assertThat(corridorKm).isBetween(38.0, 44.0);
     }
 
     @Test
@@ -386,7 +715,9 @@ class RaceCourseMapBulkSeedServiceTests {
         assertThat(existing.getLiveImageUrl()).isNull();
         assertThat(existing.getLiveSource()).isEqualTo(OsakaMarathonOfficialCourse.OFFICIAL_SOURCE);
         assertThat(existing.getLiveConfidence()).isEqualTo(90);
-        assertThat(existing.getLiveSummary()).contains("official Osaka Marathon");
+        assertThat(existing.getLiveSummary()).contains("Ichioka Motomachi 3 turnaround");
+        assertThat(existing.getLiveSummary()).contains("Koenkitaguchi turnaround");
+        assertThat(existing.getLiveSummary()).contains(OsakaMarathonOfficialCourse.OFFICIAL_COURSE_PDF_URL);
         assertThat(existing.getLiveRoutePointsJson()).isNotBlank().isNotEqualTo("[]");
         assertThat(existing.getLiveOverlayBoundsJson()).isNotBlank();
         assertThat(existing.getLiveUpdatedAt()).isNotNull();
@@ -396,7 +727,10 @@ class RaceCourseMapBulkSeedServiceTests {
                 objectMapper.getTypeFactory().constructCollectionType(List.class, RoutePoint.class));
         assertThat(route).hasSizeGreaterThan(8);
         assertThat(route).anyMatch(point -> point.label() != null && point.label().contains("Start"));
-        assertThat(route).anyMatch(point -> point.label() != null && point.label().contains("Finish"));
+        assertThat(route).anyMatch(point -> point.label() != null && point.label().toLowerCase(Locale.ROOT).contains("finish"));
+        assertThat(route).anyMatch(point -> point.label() != null && point.label().contains("Ichioka Motomachi 3"));
+        assertThat(route).anyMatch(point -> point.label() != null && point.label().contains("Koenkitaguchi"));
+        assertThat(polylineKm(route)).isBetween(36.0, 50.0);
         verify(repository, times(1)).save(existing);
     }
 

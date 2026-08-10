@@ -47,7 +47,7 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /OFFICIAL_COURSE_MAP_SOURCES[\s\S]*nyc-official-course[\s\S]*boston-official-course[\s\S]*chicago-official-course[\s\S]*hasOfficialCourseMap[\s\S]*detail_map_official_badge[\s\S]*detail_map_official_source/,
+  /OFFICIAL_COURSE_MAP_SOURCES[\s\S]*nyc-official-course[\s\S]*boston-official-course[\s\S]*chicago-official-course[\s\S]*known-official-course:[\s\S]*hasOfficialCourseMap[\s\S]*detail_map_official_badge[\s\S]*detail_map_official_source/,
   'RacesDetail should present hand-curated official course seeds as official routes instead of AI-aligned course-map detections.',
 );
 
@@ -91,6 +91,18 @@ assert.match(
   racesDetailSource,
   /L\.imageOverlay\(courseMapData\.overlayImageUrl,[\s\S]*pane:\s*'race-detail-course-image'/,
   'RacesDetail should paint only the generated transparent course-map overlay in its own pane beneath the extracted route.',
+);
+
+assert.match(
+  racesDetailSource,
+  /courseMapImageOverlayLayer[\s\S]*refreshCourseMapOverlayOnViewChange[\s\S]*map\.on\('moveend zoomend resize viewreset', refreshCourseMapOverlayOnViewChange\)/,
+  'RacesDetail should keep the course-map raster inside Leaflet and re-run its native pixel reset after completed pan, zoom, resize, and view-reset events.',
+);
+
+assert.match(
+  racesDetailSource,
+  /if \(!routeMapRef\.current \|\| !race \|\| !courseMapRequestSettled \|\| routeMapInstanceRef\.current\) return undefined;/,
+  'RacesDetail should wait for the course-map request to settle before creating Leaflet so the initial viewport is framed from the active route geometry.',
 );
 
 assert.doesNotMatch(

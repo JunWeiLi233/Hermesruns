@@ -14,8 +14,9 @@ export default defineConfig({
   },
   build: {
     outDir: '../backend/src/main/resources/static',
-    // Important: backend/static/assets is served directly by Spring.
-    // If we don't clear it, each build leaves old hashed chunks behind.
+    // Important: backend/static/assets is served directly by Spring. The
+    // publish script intentionally retains immutable hashed chunks so tabs
+    // with an older index.html do not request deleted CSS/JS files.
     emptyOutDir: false,
     // Generate readable-ish bundles when `VITE_MINIFY=false`.
     // Note: bundles are still output as JS modules; original code lives in `frontend/` or devtools via sourcemaps.

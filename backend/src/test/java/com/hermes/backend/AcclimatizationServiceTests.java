@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AcclimatizationServiceTests {
@@ -45,6 +47,89 @@ class AcclimatizationServiceTests {
     }
 
     @Test
+    void buildContextUsesExplicitBrowserCoordinatesInsteadOfLatestRunLocation() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        LocalDate today = LocalDate.now();
+
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{40.7128, -74.0060}));
+        when(activityRepository.findRunsBetween(any(), any(), any(), any())).thenReturn(List.of());
+        when(restTemplate.exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenReturn(ResponseEntity.ok(archiveWeather(
+                today.minusDays(14), today, Map.of(today, 24.0), 24.0
+        )));
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        AcclimatizationService.WeatherContextResponse response = service.buildContext(runner(), 25.9600, 119.3000);
+
+        assertThat(response.available()).isTrue();
+        assertThat(response.latitude()).isEqualTo(25.96);
+        assertThat(response.longitude()).isEqualTo(119.3);
+    }
+
+    @Test
+    void buildContextUsesYesterdayForArchiveAndMergesTodaysLiveDewPoint() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        LocalDate today = LocalDate.now();
+        List<java.net.URI> requestedUris = new ArrayList<>();
+
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{40.7488, -73.8068}));
+        when(activityRepository.findRunsBetween(any(), any(), any(), any())).thenReturn(List.of());
+        when(restTemplate.exchange(
+                ArgumentMatchers.<RequestEntity<?>>any(),
+                ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenAnswer(invocation -> {
+            RequestEntity<?> request = invocation.getArgument(0);
+            requestedUris.add(request.getUrl());
+            if (request.getUrl().getHost().startsWith("archive-api")) {
+                return ResponseEntity.ok(archiveWeather(
+                        today.minusDays(14),
+                        today.minusDays(1),
+                        Map.of(),
+                        12.0
+                ));
+            }
+            return ResponseEntity.ok(Map.of("current", Map.of("dew_point_2m", 18.5)));
+        });
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        AcclimatizationService.WeatherContextResponse response = service.buildContextForDate(runner(), today);
+
+        assertThat(response.available()).isTrue();
+        assertThat(response.currentDewPointC()).isEqualTo(18.5);
+        assertThat(requestedUris).hasSize(2);
+        assertThat(requestedUris.get(0).getQuery()).contains("end_date=" + today.minusDays(1));
+        assertThat(requestedUris.get(1).getHost()).isEqualTo("api.open-meteo.com");
+    }
+
+    @Test
+    void buildContextReturnsUnavailableWhenLatestGpsProjectionIsInvalid() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(activityPointRepository.findLatestLatLngByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{null, 121.4737}));
+
+        AcclimatizationService service = new AcclimatizationService(activityRepository, activityPointRepository, restTemplate);
+
+        AcclimatizationService.WeatherContextResponse response = service.buildContext(runner());
+
+        assertThat(response.available()).isFalse();
+        assertThat(response.message()).isEqualTo("No recent run GPS points found.");
+        verify(activityRepository, never()).findRunsBetween(any(), any(), any(), any());
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
     void buildContextReturnsUnavailableWhenWeatherProviderHasNoDewPointSeries() {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
@@ -63,6 +148,8 @@ class AcclimatizationServiceTests {
         AcclimatizationService.WeatherContextResponse response = service.buildContext(runner());
 
         assertThat(response.available()).isFalse();
+        assertThat(response.latitude()).isEqualTo(31.2304);
+        assertThat(response.longitude()).isEqualTo(121.4737);
         assertThat(response.message()).isEqualTo("Weather provider returned no dew point data.");
     }
 

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "tokenEstimation": "ceil(utf8_bytes / 4)",
+  "maxTotalEstimatedTokens": 5500,
+  "requiredReadPaths": [
+    { "path": "AGENTS.md", "maxEstimatedTokens": 2500 },
+    { "path": "docs/ai/EDITING_CONTRACT.md", "maxEstimatedTokens": 1500 },
+    { "path": "docs/ai/CONTEXT_SNAPSHOT.md", "maxEstimatedTokens": 1500 }
+  ],
+  "searchOnlyArchives": [
+    "README.md",
+    ".ai-sync/CONTEXT_LEDGER.md",
+    ".ai-sync/AGENT_SYNC.md",
+    "DESIGN_VERSIONS.md"
+  ],
+  "guardedInstructionPaths": [
+    ".codex/workflows/hermes-multi-agent.md",
+    ".claude/agents/PM_AGENT.md",
+    ".claude/agents/QA_AGENT.md",
+    ".claude/agents/DEV_AGENT.md",
+    ".claude/agents/reviewer-agent.md",
+    ".claude/agents/planning-agent.md",
+    ".claude/agents/evolver.md",
+    ".claude/agents/antigravity.md",
+    ".claude/agents/gemini-auto-hermes.md"
+  ]
+}

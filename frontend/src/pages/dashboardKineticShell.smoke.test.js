@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const kineticStyleSource = readFileSync(path.join(here, '../styles/admin-kinetic-editorial.css'), 'utf8');
 
 assert.match(
   dashboardSource,
@@ -77,6 +78,30 @@ assert.match(
   styleSource,
   /\.admin-shoe-workbench\s*\{/,
   'Dashboard styles should define the shoe workbench layout.',
+);
+
+assert.doesNotMatch(
+  dashboardSource,
+  /\bad-(?:content|sidebar|topbar|page|metric|action|two-col|health|audit|card|search|status|role|tier|avatar|course|settings|option|shell)\b/,
+  'Dashboard markup should avoid ad-prefixed classes that browser content blockers can hide.',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /\.ad-(?:content|sidebar|topbar|page|metric|action|two-col|health|audit|card|search|status|role|tier|avatar|course|settings|option|shell)\b/,
+  'Dashboard styles should avoid ad-prefixed selectors that browser content blockers can hide.',
+);
+
+assert.match(
+  kineticStyleSource,
+  /admin-command-layout[\s\S]*grid-template-columns:\s*var\(--admin-command-rail-width,\s*240px\)\s+minmax\(0,\s*1fr\)/,
+  'Desktop dashboard shell should keep the command rail and content in one row.',
+);
+
+assert.match(
+  kineticStyleSource,
+  /admin-command-main\.ops-content[\s\S]*margin-left:\s*0/,
+  'Desktop dashboard content should not be pushed below or away from the command rail.',
 );
 
 console.log('[PASS] Dashboard kinetic shell guardrails passed.');
