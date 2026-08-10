@@ -192,7 +192,7 @@ export default function Rewards() {
           </div>
         </header>
 
-        <div className="runner-shell-canvas rewards-ledger-canvas">
+        <div className="runner-shell-canvas hd-content rewards-ledger-canvas rewards-profile-canvas">
           {/* Page intro */}
           <section className="rewards-ledger-intro" aria-labelledby="rewards-ledger-title">
             <span className="rewards-ledger-eyebrow">{t('rewards.editorial_kicker')}</span>

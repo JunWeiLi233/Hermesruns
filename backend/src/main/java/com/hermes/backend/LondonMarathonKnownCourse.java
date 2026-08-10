@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class LondonMarathonKnownCourse {
+    static final String RACE_ID = "london-marathon";
+    static final String OFFICIAL_COURSE_URL = "https://www.londonmarathonevents.co.uk/london-marathon/course";
+    static final String OFFICIAL_SOURCE = "london-official-course";
     static final String SOURCE_NOTE = "Go&Race 2026 GPX cross-checked against London Marathon Events official course page and 2026 road-closure route leaflet";
     static final int MAX_OFFICIAL_SELF_INTERSECTIONS = 1;
 
