@@ -83,6 +83,30 @@ function normalizeFallbackCenter(rawCenter) {
   };
 }
 
+function buildStaticRoutePath(points) {
+  if (!Array.isArray(points) || points.length < 2) {
+    return 'M 8 72 C 24 18, 36 82, 52 42 S 78 22, 92 68';
+  }
+
+  const lats = points.map(([lat]) => lat);
+  const lngs = points.map(([, lng]) => lng);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs);
+  const maxLng = Math.max(...lngs);
+  const latRange = Math.max(maxLat - minLat, 0.000001);
+  const lngRange = Math.max(maxLng - minLng, 0.000001);
+
+  return points
+    .filter((_, index) => index % Math.max(1, Math.ceil(points.length / 18)) === 0 || index === points.length - 1)
+    .map(([lat, lng], index) => {
+      const x = 8 + ((lng - minLng) / lngRange) * 84;
+      const y = 86 - ((lat - minLat) / latRange) * 72;
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(' ');
+}
+
 export default function AdminCourseMapPreview({
   preview,
   title,
@@ -92,6 +116,7 @@ export default function AdminCourseMapPreview({
   fallbackCenter = null,
   allowImageFallback = true,
   unalignedLabel = '',
+  renderMap = true,
 }) {
   const mapHostRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -114,12 +139,13 @@ export default function AdminCourseMapPreview({
   const hasAlignedOverlay = Boolean(imageUrl) && Boolean(overlayBounds) && hasAlignedRoute;
   const hasRenderableAlignment = hasAlignedOverlay || hasAlignedRoute;
   const hasFallbackCenter = Boolean(fallbackLatLng);
-  const shouldRenderMap = !mapFailed && (hasRenderableAlignment || (forceLiveMap && hasFallbackCenter));
+  const shouldRenderMap = renderMap && !mapFailed && (hasRenderableAlignment || (forceLiveMap && hasFallbackCenter));
   const canRenderImage = Boolean(imageUrl) && !imageFailed;
   const shouldAllowImageFallback = allowImageFallback || hasRenderableAlignment;
   const previewSummary = useMemo(() => resolvePreviewSummary(preview), [preview]);
   const showPreviewSummary = Boolean(previewSummary) && !hasRenderableAlignment;
   const fallbackLabel = previewSummary || (preview && unalignedLabel ? unalignedLabel : emptyLabel);
+  const staticRoutePath = useMemo(() => buildStaticRoutePath(polylinePoints), [polylinePoints]);
 
   useEffect(() => {
     setMapReady(false);
@@ -337,6 +363,20 @@ export default function AdminCourseMapPreview({
       }
     };
   }, [fallbackLatLng, fallbackTileUrl, hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
+
+  if (!renderMap && isCardVariant && !(allowImageFallback && canRenderImage)) {
+    return (
+      <div className="admin-review-preview admin-review-preview--card admin-review-preview--static-card">
+        <svg className="admin-review-preview__static-route" viewBox="0 0 100 100" role="img" aria-label={title}>
+          <path className="admin-review-preview__static-route-shadow" d={staticRoutePath} />
+          <path className="admin-review-preview__static-route-line" d={staticRoutePath} />
+          <circle className="admin-review-preview__static-route-start" cx="8" cy="72" r="3" />
+          <circle className="admin-review-preview__static-route-end" cx="92" cy="68" r="3" />
+        </svg>
+        <span className="admin-review-preview__static-label">{emptyLabel}</span>
+      </div>
+    );
+  }
 
   if (shouldRenderMap) {
     return (

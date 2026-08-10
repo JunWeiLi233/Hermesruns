@@ -1,9 +1,14 @@
+<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- Runtime: claude; command: /auto-hermes-structure-update; contract: docs/ai/EDITING_CONTRACT.md -->
+
 # /auto-hermes-structure-update
 
-Run:
+Run the Hermes structure-governance pass.
 
-```bash
+Use:
+
+```powershell
 node .tools/auto-hermes-structure-update.mjs --write
 ```
 
-Use this for the bounded Hermes structure-governance pass that checks runtime adapters, command registrations, and steering briefs.
+This command audits runtime adapters, repository steering files, and owner-map coverage, then writes the structure-update brief under `.ai-sync/`.

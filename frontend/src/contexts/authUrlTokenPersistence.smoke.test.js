@@ -24,4 +24,10 @@ assert.match(
   'AuthProvider should persist URL auth before deriving initialToken and before route data loaders run.',
 );
 
+assert.match(
+  source,
+  /AUTH_PING_TIMEOUT_MS[\s\S]*?new AbortController\(\)[\s\S]*?authController\.abort\(\)[\s\S]*?apiJson\('\/api\/auth\/protected\/ping', \{ signal: authController\.signal \}\)/,
+  'Auth hydration should be bounded so protected pages can reach their own recoverable error state when the backend is unavailable.',
+);
+
 console.log('[PASS] Auth URL token persistence guard passed.');

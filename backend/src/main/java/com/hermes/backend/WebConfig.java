@@ -3,12 +3,14 @@ package com.hermes.backend;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class WebConfig {
     @Bean
+    @Primary
     RestTemplate restTemplate() {
         // Connect + read timeouts were originally 10 s / 30 s. The 30 s read
         // timeout was a tail-latency hazard: every controller that reads from
@@ -22,6 +24,14 @@ public class WebConfig {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
         factory.setReadTimeout(5_000);
+        return new RestTemplate(factory);
+    }
+
+    @Bean("routePlannerRestTemplate")
+    RestTemplate routePlannerRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(15_000);
         return new RestTemplate(factory);
     }
 }

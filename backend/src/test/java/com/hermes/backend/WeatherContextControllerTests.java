@@ -1,6 +1,8 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -63,6 +65,40 @@ class WeatherContextControllerTests {
         verify(acclimatizationService).buildContext(runner);
     }
 
+    @ParameterizedTest(name = "accepts weather coordinates for {0}")
+    @CsvSource({
+            "Iceland, 64.1466, -21.9426",
+            "Brazil, -15.7939, -47.8828",
+            "Kenya, -1.2921, 36.8219",
+            "Japan, 35.6762, 139.6503",
+            "Fiji, -18.1248, 178.4501"
+    })
+    void getContextPassesGlobalBrowserCoordinatesToWeatherService(
+            String country,
+            double latitude,
+            double longitude
+    ) {
+        AuthService authService = mock(AuthService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        Runner runner = runner();
+        AcclimatizationService.WeatherContextResponse payload = new AcclimatizationService.WeatherContextResponse(
+                true, latitude, longitude, 24.0, 20.0, 4.0, true, 4.0, 10, 1, 1.0, "day_1_3", "Heat"
+        );
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(acclimatizationService.buildContext(runner, latitude, longitude)).thenReturn(payload);
+        WeatherContextController controller = controller(authService, acclimatizationService, fitnessService, activityRepository);
+
+        ResponseEntity<?> response = controller.getContext("Bearer runner-token", latitude, longitude);
+
+        assertThat(response.getStatusCode())
+                .as("weather context status for %s", country)
+                .isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(payload);
+        verify(acclimatizationService).buildContext(runner, latitude, longitude);
+    }
+
     @Test
     void getContextReturnsBadRequestWhenServiceRejectsRunnerContext() {
         AuthService authService = mock(AuthService.class);
@@ -96,13 +132,83 @@ class WeatherContextControllerTests {
         assertError(response, HttpStatus.INTERNAL_SERVER_ERROR, "Server error");
     }
 
+    @Test
+    void getForecastReturnsSameOriginWeatherPayloadForAuthenticatedRunner() {
+        AuthService authService = mock(AuthService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        WeatherForecastService forecastService = mock(WeatherForecastService.class);
+        Runner runner = runner();
+        Map<String, Object> payload = Map.of("current", Map.of("temperature_2m", 21.5));
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(forecastService.fetchForecast(40.7128, -74.0060)).thenReturn(payload);
+        WeatherContextController controller = controller(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                forecastService
+        );
+
+        ResponseEntity<?> response = controller.getForecast("Bearer runner-token", 40.7128, -74.0060);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(payload);
+        verify(forecastService).fetchForecast(40.7128, -74.0060);
+    }
+
+    @Test
+    void getForecastRejectsInvalidCoordinatesBeforeCallingProvider() {
+        AuthService authService = mock(AuthService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        WeatherForecastService forecastService = mock(WeatherForecastService.class);
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner()));
+        WeatherContextController controller = controller(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                forecastService
+        );
+
+        ResponseEntity<?> response = controller.getForecast("Bearer runner-token", 91.0, -74.0060);
+
+        assertError(response, HttpStatus.BAD_REQUEST, "Invalid weather coordinates.");
+        verifyNoInteractions(forecastService);
+    }
+
     private WeatherContextController controller(
             AuthService authService,
             AcclimatizationService acclimatizationService,
             WeatherAdjustedFitnessService fitnessService,
             ActivityRepository activityRepository
     ) {
-        return new WeatherContextController(authService, acclimatizationService, fitnessService, activityRepository);
+        return controller(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                mock(WeatherForecastService.class)
+        );
+    }
+
+    private WeatherContextController controller(
+            AuthService authService,
+            AcclimatizationService acclimatizationService,
+            WeatherAdjustedFitnessService fitnessService,
+            ActivityRepository activityRepository,
+            WeatherForecastService forecastService
+    ) {
+        return new WeatherContextController(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                forecastService
+        );
     }
 
     private Runner runner() {

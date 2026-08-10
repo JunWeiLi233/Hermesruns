@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scheduleSource = readFileSync(path.join(here, 'Schedule.jsx'), 'utf8');
+const scheduleCss = readFileSync(path.join(here, '../styles/_split/schedule.css'), 'utf8');
 // Translations are split into locale files; check both
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8');
@@ -46,6 +47,30 @@ assert.match(
   'Schedule should dynamically import leaflet for the route map.',
 );
 
+assert.match(
+  scheduleSource,
+  /const routeSketch = routeRecommendation\?\.preview \|\| null/,
+  'Schedule should retain the history-derived route sketch when full geographic waypoints are unavailable.',
+);
+
+assert.match(
+  scheduleSource,
+  /className="schedule-plan-route-map-svg"/,
+  'Schedule should render the history-derived route sketch instead of leaving the fallback map surface blank.',
+);
+
+assert.match(
+  scheduleCss,
+  /\.schedule-plan-route-card\.is-route-fallback \.schedule-plan-route-map-svg\s*\{[\s\S]*?width:\s*min\(58%, 560px\)/,
+  'History route sketches should occupy the unused side of the fallback panel without covering its labels.',
+);
+
+assert.match(
+  scheduleCss,
+  /\.schedule-plan-route-map-svg\s*\{[\s\S]*?z-index:\s*2/,
+  'History route sketches should stay visible above themed fallback-panel backgrounds.',
+);
+
 // Auto-plan from recent runs
 assert.match(
   scheduleSource,
@@ -57,6 +82,18 @@ assert.match(
   scheduleSource,
   /didAutoPlanRef/,
   'Schedule should guard the auto-plan call with a ref so it only fires once per page load.',
+);
+
+assert.match(
+  scheduleSource,
+  /isRouteRecommendationUsable\(newRoute, targetDistanceKm\)/,
+  'Schedule should only promote a generated route after it passes the street-loop quality guard.',
+);
+
+assert.match(
+  scheduleSource,
+  /requireStreetGraph: false/,
+  'Schedule should reject a badly distance-matched recent-run fallback instead of presenting it as the planned route.',
 );
 
 for (const key of [

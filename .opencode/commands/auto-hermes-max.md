@@ -1,29 +1,25 @@
-# OpenCode `/auto-hermes-max`
+<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- Runtime: opencode; command: /auto-hermes-max; contract: docs/ai/EDITING_CONTRACT.md -->
 
-Use this command as the OpenCode runtime note for adaptive Hermes max execution.
+---
+name: auto-hermes-max
+---
 
-## Continuity
+# Auto-Hermes Max
+
+Codex command note for the bounded parent coordinator path.
+
+## Continuity Rules
 
 - Empty queue does not immediately stop.
 - Website-audit explorer is the first exhaustion fallback.
 - Repeated no-candidate audit rounds are the true stop condition.
 - Supervisor is the preferred continuity layer for long-running runs.
-- Max execution is fully routed through the supervisor when the supervisor owns live continuity.
 
-## Trace-To-Skill
+## Command Notes
 
-- Read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json`.
-- Treat trace-to-skill output as a `soft-signal`: advisory workflow evidence, not an ordinary product-work blocker.
-
-## Docker/Main-Repository Gate
-
-- Main-repository submission requires a fresh passing Docker gate:
-  `node .tools/auto-hermes-docker-gate.mjs --write`
-- The Docker gate blocks publish paths only.
-- It does not block normal local auto-commit.
-
-## Execution
-
-- Split work into bounded, disjoint lanes when possible.
-- If OpenCode cannot run true parallel lanes, execute lanes sequentially while preserving lane ownership and merge-gate evidence.
-- Reassess after each merge; do not stop after one successful lane if promotable work remains.
+- Parent reassessment should treat website-audit as the first fallback when queue promotion runs dry.
+- A single empty queue observation is not enough to stop the parent loop.
+- `.tools/auto-hermes-supervisor.mjs` now owns the live continuity and repeated no-candidate stop contract for the parent loop.
+- `/auto-hermes-max` remains coordinator-driven, but its true-stop decision is now fully routed through the supervisor instead of a modeled-only caveat.
+- On a true clean parent stop, finish behavior now also routes through `.tools/auto-hermes-finish.mjs`: auto-commit only when needed, and auto-push is now also allowed when the stop leaves unpublished local commits on the current branch and `origin` still equals `https://github.com/520HXC/run.git`.

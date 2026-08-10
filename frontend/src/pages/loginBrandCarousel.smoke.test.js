@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const loginSource = readFileSync(path.join(here, 'Login.jsx'), 'utf8');
+const signupSource = readFileSync(path.join(here, 'Signup.jsx'), 'utf8');
+const carouselSource = readFileSync(path.join(here, '../components/AuthBrandCarousel.jsx'), 'utf8');
 const slideSource = readFileSync(path.join(here, '../data/authBrandSlides.js'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
 const translationsSource = [
@@ -14,8 +16,14 @@ const translationsSource = [
 
 assert.match(
   loginSource,
-  /import authBrandSlides from '\.\.\/data\/authBrandSlides';/,
-  'Login should use the shared brand slide list for the brand introduction carousel.',
+  /import AuthBrandCarousel from '\.\.\/components\/AuthBrandCarousel';/,
+  'Login should use the shared brand carousel component.',
+);
+
+assert.match(
+  signupSource,
+  /import AuthBrandCarousel from '\.\.\/components\/AuthBrandCarousel';/,
+  'Signup should use the same shared brand carousel component.',
 );
 
 assert.match(
@@ -26,8 +34,26 @@ assert.match(
 
 assert.match(
   loginSource,
-  /auth-flow-slide-track/,
-  'Login brand intro should render a rolling slide track inside auth-flow-brand-inner.',
+  /<AuthBrandCarousel t=\{t\} \/>/,
+  'Login brand intro should render the shared carousel inside auth-flow-brand-inner.',
+);
+
+assert.match(
+  carouselSource,
+  /Math\.random\(\)/,
+  'The brand carousel should make random slide and timing choices.',
+);
+
+assert.match(
+  carouselSource,
+  /setActiveIndex\(\(currentIndex\) => randomIndex/,
+  'The brand carousel should choose a different random slide after each interval.',
+);
+
+assert.match(
+  carouselSource,
+  /auth-flow-slide-details/,
+  'The brand carousel should render the expanded slide details.',
 );
 
 assert.match(
@@ -43,9 +69,9 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  loginSource,
+  carouselSource,
   /auth-flow-slide/,
-  'Login brand intro should render individual slide panels instead of one static copy block.',
+  'The shared brand carousel should render an individual slide panel instead of one static copy block.',
 );
 
 assert.match(
@@ -76,6 +102,36 @@ assert.match(
   translationsSource,
   /"stitch_slide_3_copy":/,
   'Login carousel should include all three translated slide copy entries.',
+);
+
+assert.match(
+  translationsSource,
+  /"stitch_slide_7_detail_three":/,
+  'Expanded course-map details should be translated in both locales.',
+);
+
+assert.match(
+  slideSource,
+  /id: 'run-data-hub'/,
+  'The auth carousel should introduce the data-import entry point.',
+);
+
+assert.match(
+  translationsSource,
+  /"stitch_slide_10_copy":/,
+  'The auth carousel should include a translated progress overview slide.',
+);
+
+assert.match(
+  slideSource,
+  /id: 'today-run-decision'/,
+  'The auth carousel should introduce the Today Run decision surface.',
+);
+
+assert.match(
+  translationsSource,
+  /"stitch_slide_14_copy":/,
+  'The auth carousel should include a translated coach-reasoning slide.',
 );
 
 console.log('[PASS] Login brand carousel guardrails passed.');
