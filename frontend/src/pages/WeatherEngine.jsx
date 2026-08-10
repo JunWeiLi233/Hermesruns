@@ -11,6 +11,10 @@ import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import {
+  normalizeWeatherCoordinates,
+  toFiniteNumber,
+} from '../utils/weatherLocation';
 
 const WEATHER_PAGE_COPY = {
   'zh-CN': {
@@ -32,9 +36,11 @@ const WEATHER_PAGE_COPY = {
     humidity: '湿度',
     wind: '风速',
     forecast_title: 'Forecast Pipeline // 12H',
-    forecast_copy: '按最近一次跑步位置估算接下来 12 小时的环境变化，方便你选择更好的开跑窗口。',
     no_weather: '天气数据暂时不可用',
     weather_unavailable_copy: '当前拿不到实时天气，但页面结构会继续保留热适应判断入口。',
+    adaptation_unavailable: '热适应基线暂时不可用',
+    adaptation_unavailable_copy: '实时预报已经可用，但 14 天历史露点基线暂时无法计算，因此不会把未知的配速修正显示为零。',
+    adaptation_message_unavailable: '14 天历史基线暂时不可用，因此尚未计算适应状态或配速修正。',
     heat_engine_title: '热适应引擎',
     heat_engine_copy: '保留 Hermes 原本的热适应逻辑，用 14 天露点基线、当天冲击值和适应进度来判断今天是否需要保守配速。',
     engine_baseline: '14 天基线',
@@ -56,13 +62,16 @@ const WEATHER_PAGE_COPY = {
     coach_quote_cold: '今天的环境读数很干净。冷空气和较低露点让有氧执行成本更低，这一页应该给你“可以放心跑”的信号，而不是制造噪音。',
     coach_quote_heat: '热适应引擎已经亮灯。今天先把稳定完成放在前面，用更保守的配速保护训练连续性，而不是和环境硬碰硬。',
     coach_quote_neutral: '环境没有明显惩罚，但也不值得逞强。把这一页当成判断窗口，先看未来几小时，再决定今天的训练时机。',
+    coach_quote_baseline_missing: '实时天气已经上线，但 14 天热适应基线暂时缺失。先按当前温湿度选择更稳的开跑窗口，不把未知的惩罚值当成零。',
     coach_decision: '今日判断',
     coach_decision_clear: '可以按计划推进',
     coach_decision_adjust: '今天更适合保守一点',
     coach_decision_watch: '继续观察窗口',
+    coach_decision_baseline_missing: '等待适应基线',
     coach_decision_note_clear: '没有热适应惩罚，重点放回节奏与执行质量。',
     coach_decision_note_adjust: '热应激正在拉高成本，优先守住输出稳定和恢复边界。',
     coach_decision_note_watch: '当前读数偏中性，选择更舒服的开跑时段会更稳。',
+    coach_decision_note_baseline_missing: '预报可用；适应状态与配速修正暂不作结论。',
     coach_cta_primary: '打开今日训练',
     coach_cta_secondary: '查看本周计划',
     humidity_label: '湿度',
@@ -90,9 +99,11 @@ const WEATHER_PAGE_COPY = {
     humidity: 'Humidity',
     wind: 'Wind speed',
     forecast_title: 'Forecast Pipeline // 12H',
-    forecast_copy: 'Estimated from your latest running location so you can spot the better window before you head out.',
     no_weather: 'Weather data unavailable',
     weather_unavailable_copy: 'Live weather is missing right now, but the page still holds the adaptation and planning structure.',
+    adaptation_unavailable: 'Heat-adaptation baseline unavailable',
+    adaptation_unavailable_copy: 'The live forecast is available, but the 14-day dew-point baseline cannot be calculated right now, so an unknown pace adjustment is not shown as zero.',
+    adaptation_message_unavailable: 'The 14-day historical baseline is unavailable, so adaptation status and pace adjustment have not been calculated.',
     heat_engine_title: 'Heat Adaptation Engine',
     heat_engine_copy: "Keep the existing Hermes heat logic intact: compare the 14-day dew-point baseline, today's shock delta, and acclimatization progress before deciding whether pace should ease off.",
     engine_baseline: '14-day baseline',
@@ -114,13 +125,16 @@ const WEATHER_PAGE_COPY = {
     coach_quote_cold: 'The engine is running clean. Dense cold air and a low dew point make this feel like a confidence surface, not a warning surface, so the runner can commit to the plan with less hesitation.',
     coach_quote_heat: 'The heat engine is lit. Today is about protecting continuity first, easing the pace enough to keep the work absorbable instead of fighting the environment for a headline session.',
     coach_quote_neutral: 'Conditions are mostly neutral. Use this page as a timing board: read the next few hours, then choose the cleaner window instead of forcing the first available slot.',
+    coach_quote_baseline_missing: 'Live weather is online, but the 14-day heat-adaptation baseline is missing. Choose the steadier window from current conditions instead of treating an unknown penalty as zero.',
     coach_decision: "Today's call",
     coach_decision_clear: 'Proceed as planned',
     coach_decision_adjust: 'Bias toward control today',
     coach_decision_watch: 'Keep watching the window',
+    coach_decision_baseline_missing: 'Await adaptation baseline',
     coach_decision_note_clear: 'No heat penalty is active, so execution quality matters more than weather management.',
     coach_decision_note_adjust: 'Environmental cost is rising. Keep the session sustainable and protect the next training day.',
     coach_decision_note_watch: 'The reading is neutral, so choosing the cleaner time block is still worth it.',
+    coach_decision_note_baseline_missing: 'Forecast is available; adaptation status and pace adjustment remain undetermined.',
     coach_cta_primary: "Open today's run",
     coach_cta_secondary: 'Open weekly schedule',
     humidity_label: 'Humidity',
@@ -132,8 +146,9 @@ const WEATHER_PAGE_COPY = {
 };
 
 const ADAPTATION_BAR_LEVELS = [46, 62, 74, 54, 68, 100, 78, 56, 38, 28];
-const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 6000;
-const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 6500;
+const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 10000;
+const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 15000;
+const WEATHER_GEOLOCATION_TIMEOUT_MS = 8000;
 
 function pageText(lang, key) {
   const copy = WEATHER_PAGE_COPY[lang] || WEATHER_PAGE_COPY.en;
@@ -141,40 +156,77 @@ function pageText(lang, key) {
 }
 
 function formatTemperature(value) {
-  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}°C` : '--';
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)}°C`;
 }
 
 function formatSignedTemperature(value) {
-  if (!Number.isFinite(Number(value))) return '--';
-  const numeric = Number(value);
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) return '--';
   return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}°C`;
 }
 
 function formatDecimal(value, digits = 1) {
-  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '--';
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : numeric.toFixed(digits);
 }
 
 function formatPenalty(value, wt) {
-  return Number(value) > 0 ? `+${Math.round(Number(value))} sec/km` : wt('no_penalty');
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) return '--';
+  return numeric > 0 ? `+${Math.round(numeric)} sec/km` : wt('no_penalty');
 }
 
 function formatHumidity(value) {
-  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))}%` : '--';
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)}%`;
 }
 
 function formatWind(value) {
-  return Number.isFinite(Number(value)) ? `${Math.round(Number(value))} km/h` : '--';
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)} km/h`;
 }
 
-function toFiniteNumber(value) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
+function getBrowserCoordinates() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeoutId;
+    const finish = (coordinates) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(coordinates);
+    };
+    timeoutId = window.setTimeout(
+      () => finish(null),
+      WEATHER_GEOLOCATION_TIMEOUT_MS,
+    );
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (position) => finish(normalizeWeatherCoordinates(position?.coords?.latitude, position?.coords?.longitude)),
+        () => finish(null),
+        {
+          enableHighAccuracy: false,
+          maximumAge: 5 * 60 * 1000,
+          timeout: WEATHER_GEOLOCATION_TIMEOUT_MS,
+        },
+      );
+    } catch {
+      finish(null);
+    }
+  });
 }
 
 function formatCardinalDirection(degrees, t) {
-  if (!Number.isFinite(Number(degrees))) return t('weather_engine.northFlow');
+  const numeric = toFiniteNumber(degrees);
+  if (numeric === null) return t('weather_engine.northFlow');
   const dirKeys = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  const index = Math.round(Number(degrees) / 45) % 8;
+  const index = Math.round(numeric / 45) % 8;
   return t(`weather_engine.cardinalDirection.${dirKeys[index]}`);
 }
 
@@ -182,8 +234,9 @@ function formatCardinalDirection(degrees, t) {
 // structured `pacePenaltySecPerKm` so zh-CN runners see the same advice in
 // Chinese without round-tripping a translation through the backend.
 function localizeEngineMessage(weatherContext, wt) {
-  const penalty = Number(weatherContext?.pacePenaltySecPerKm);
-  if (Number.isFinite(penalty) && penalty > 0) {
+  if (weatherContext && !weatherContext.available) return wt('adaptation_message_unavailable');
+  const penalty = toFiniteNumber(weatherContext?.pacePenaltySecPerKm);
+  if (penalty !== null && penalty > 0) {
     return wt('engine_message_heat').replace('{penalty}', String(Math.round(penalty)));
   }
   return weatherContext?.message || wt('no_message');
@@ -207,8 +260,8 @@ function getDisplayName(profile, fallback) {
 }
 
 function describeWeatherCode(code, t) {
-  const value = Number(code);
-  if (!Number.isFinite(value)) return t('weather_engine.weatherCode.pending');
+  const value = toFiniteNumber(code);
+  if (value === null) return t('weather_engine.weatherCode.pending');
   if (value === 0) return t('weather_engine.weatherCode.clear');
   if ([1, 2].includes(value)) return t('weather_engine.weatherCode.lightCloud');
   if (value === 3) return t('weather_engine.weatherCode.overcast');
@@ -250,11 +303,13 @@ function buildHourlyForecast(response, lang, t) {
     // matches the hero "实时环境状态" reading; later slots stay on the hourly
     // forecast series.
     const liveCurrent = offset === 0 && current ? current : null;
-    const temperature = liveCurrent && Number.isFinite(Number(liveCurrent.temperature_2m))
-      ? Number(liveCurrent.temperature_2m)
+    const liveTemperature = liveCurrent ? toFiniteNumber(liveCurrent.temperature_2m) : null;
+    const temperature = liveTemperature !== null
+      ? liveTemperature
       : temps[index];
-    const weatherCode = liveCurrent && Number.isFinite(Number(liveCurrent.weather_code))
-      ? Number(liveCurrent.weather_code)
+    const liveWeatherCode = liveCurrent ? toFiniteNumber(liveCurrent.weather_code) : null;
+    const weatherCode = liveWeatherCode !== null
+      ? liveWeatherCode
       : codes[index];
     return {
       key: `${time}-${offset}`,
@@ -268,10 +323,20 @@ function buildHourlyForecast(response, lang, t) {
 
 function buildCoachJudgment({ weatherContext, liveWeather, lang }) {
   const wt = (key) => pageText(lang, key);
-  const penalty = Number(weatherContext?.pacePenaltySecPerKm || 0);
-  const dewPoint = Number(weatherContext?.currentDewPointC);
-  const isColdAdvantage = Number.isFinite(dewPoint) && dewPoint <= 2 && penalty <= 0;
+  const penalty = toFiniteNumber(weatherContext?.pacePenaltySecPerKm) ?? 0;
+  const dewPoint = toFiniteNumber(weatherContext?.currentDewPointC)
+    ?? toFiniteNumber(liveWeather?.dew_point_2m);
+  const liveTemperature = toFiniteNumber(liveWeather?.temperature_2m);
+  const isColdAdvantage = dewPoint !== null && dewPoint <= 2 && penalty <= 0;
   const isPenaltyDay = penalty > 0;
+
+  if (!weatherContext?.available && liveWeather) {
+    return {
+      quote: wt('coach_quote_baseline_missing'),
+      decision: wt('coach_decision_baseline_missing'),
+      note: wt('coach_decision_note_baseline_missing'),
+    };
+  }
 
   if (isPenaltyDay) {
     return {
@@ -281,7 +346,7 @@ function buildCoachJudgment({ weatherContext, liveWeather, lang }) {
     };
   }
 
-  if (isColdAdvantage || Number(liveWeather?.temperature_2m) <= 6) {
+  if (isColdAdvantage || (liveTemperature !== null && liveTemperature <= 6)) {
     return {
       quote: wt('coach_quote_cold'),
       decision: wt('coach_decision_clear'),
@@ -328,55 +393,78 @@ export default function WeatherEngine() {
       setLoadState('loading');
       setForecastState('loading');
       try {
-        const [profileData, weatherData] = await Promise.all([
+        const [profileData, browserCoordinates] = await Promise.all([
           apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null),
-          apiJson('/api/v1/weather/context', { signal: contextController.signal }).catch(() => null),
+          getBrowserCoordinates(),
         ]);
 
         if (cancelled) return;
-        window.clearTimeout(contextTimeout);
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
-        const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
-        setWeatherContext(ctx);
         setLoadState('ready');
 
-        // Start forecast fetch immediately — no re-render hop needed.
-        const latitude = toFiniteNumber(ctx?.latitude);
-        const longitude = toFiniteNumber(ctx?.longitude);
-        if (!ctx?.available || latitude === null || longitude === null) {
-          setLiveWeather(null);
-          setForecast([]);
-          setForecastState('empty');
-          return;
+        const contextParams = new URLSearchParams();
+        if (browserCoordinates) {
+          contextParams.set('latitude', browserCoordinates.latitude);
+          contextParams.set('longitude', browserCoordinates.longitude);
         }
+        const contextUrl = contextParams.toString()
+          ? `/api/v1/weather/context?${contextParams.toString()}`
+          : '/api/v1/weather/context';
+        const contextPromise = apiJson(contextUrl, { signal: contextController.signal }).catch(() => null);
 
-        const forecastTimeout = window.setTimeout(
-          () => forecastController.abort(),
-          WEATHER_FORECAST_REQUEST_TIMEOUT_MS,
-        );
-        const url = new URL('https://api.open-meteo.com/v1/forecast');
-        url.searchParams.set('latitude', latitude);
-        url.searchParams.set('longitude', longitude);
-        url.searchParams.set('current', 'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code');
-        url.searchParams.set('hourly', 'temperature_2m,weather_code');
-        url.searchParams.set('forecast_days', '2');
-        url.searchParams.set('timezone', 'auto');
+        const fetchForecast = async (coordinates) => {
+          const forecastTimeout = window.setTimeout(
+            () => forecastController.abort(),
+            WEATHER_FORECAST_REQUEST_TIMEOUT_MS,
+          );
+          const forecastParams = new URLSearchParams({
+            latitude: String(coordinates.latitude),
+            longitude: String(coordinates.longitude),
+          });
+          try {
+            return await apiJson(
+              `/api/v1/weather/forecast?${forecastParams.toString()}`,
+              { signal: forecastController.signal },
+            );
+          } finally {
+            window.clearTimeout(forecastTimeout);
+          }
+        };
 
-        try {
-          const res = await fetch(url, { signal: forecastController.signal });
-          window.clearTimeout(forecastTimeout);
-          if (!res.ok) throw new Error('weather-fetch-failed');
-          const payload = await res.json();
-          if (cancelled) return;
-          setLiveWeather(payload?.current || null);
-          setForecast(buildHourlyForecast(payload, lang, t));
-          setForecastState('ready');
-        } catch {
-          window.clearTimeout(forecastTimeout);
-          if (!cancelled) {
+        const applyForecast = async (coordinates) => {
+          try {
+            const payload = await fetchForecast(coordinates);
+            if (cancelled) return;
+            setLiveWeather(payload?.current || null);
+            setForecast(buildHourlyForecast(payload, lang, t));
+            setForecastState('ready');
+          } catch {
+            if (!cancelled) {
+              setLiveWeather(null);
+              setForecast([]);
+              setForecastState('error');
+            }
+          }
+        };
+
+        // Use device coordinates first so the forecast follows the runner rather than a historical run.
+        const browserForecastPromise = browserCoordinates
+          ? applyForecast(browserCoordinates)
+          : null;
+        const weatherData = await contextPromise;
+        if (cancelled) return;
+        window.clearTimeout(contextTimeout);
+        const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
+        setWeatherContext(ctx);
+
+        if (!browserForecastPromise) {
+          const fallbackCoordinates = normalizeWeatherCoordinates(ctx?.latitude, ctx?.longitude);
+          if (fallbackCoordinates) {
+            await applyForecast(fallbackCoordinates);
+          } else {
             setLiveWeather(null);
             setForecast([]);
-            setForecastState('error');
+            setForecastState('empty');
           }
         }
       } catch {
@@ -442,9 +530,11 @@ export default function WeatherEngine() {
 
   const coachJudgment = buildCoachJudgment({ weatherContext, liveWeather, lang });
 
-  const heroStatus = weatherContext?.available ? wt('hero_status_ready') : wt('hero_status_fallback');
+  const heroStatus = liveWeather ? wt('hero_status_ready') : wt('hero_status_fallback');
   const heroTemperature = formatTemperature(liveWeather?.temperature_2m);
   const heroCondition = describeWeatherCode(liveWeather?.weather_code, t);
+  const currentDewPoint = toFiniteNumber(weatherContext?.currentDewPointC)
+    ?? toFiniteNumber(liveWeather?.dew_point_2m);
 
   if (loadState === 'loading') {
     return <PageSkeleton variant="weather" />;
@@ -543,11 +633,15 @@ export default function WeatherEngine() {
                   </span>
                   <span className="weather-engine-data-pill">
                     <strong>{wt('dew_point')}</strong>
-                    <span>{formatSignedTemperature(weatherContext?.currentDewPointC)}</span>
+                    <span>{formatSignedTemperature(currentDewPoint)}</span>
                   </span>
                   <span className="weather-engine-data-pill">
                     <strong>{wt('pace_penalty')}</strong>
-                    <span>{formatPenalty(weatherContext?.pacePenaltySecPerKm, wt)}</span>
+                    <span>
+                      {weatherContext?.available
+                        ? formatPenalty(weatherContext.pacePenaltySecPerKm, wt)
+                        : '--'}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -582,7 +676,6 @@ export default function WeatherEngine() {
                 <span className="weather-engine-card-kicker">{wt('forecast_title')}</span>
                 <h2>{wt('page_name')}</h2>
               </div>
-              <p>{wt('forecast_copy')}</p>
             </div>
             <div className="weather-engine-forecast-strip">
               {forecastState === 'loading' ? (
@@ -658,8 +751,8 @@ export default function WeatherEngine() {
                 </>
               ) : (
                 <div className="weather-engine-empty">
-                  <strong>{wt('no_weather')}</strong>
-                  <p>{wt('weather_unavailable_copy')}</p>
+                  <strong>{liveWeather ? wt('adaptation_unavailable') : wt('no_weather')}</strong>
+                  <p>{liveWeather ? wt('adaptation_unavailable_copy') : wt('weather_unavailable_copy')}</p>
                 </div>
               )}
             </article>

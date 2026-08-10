@@ -176,6 +176,49 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .
   color: #fff6f2 !important;
 }
 
+/* Profile today's session card contrast repair — preserve the photo, but keep
+   the light-theme copy on a dependable dark scrim instead of a pale glass wash. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(240, 117, 97, 0.16), transparent 32%),
+    linear-gradient(112deg, #2f241e 0%, #211916 58%, #171513 100%) !important;
+  color: #fff8f1 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg {
+  opacity: 0.32 !important;
+  filter: saturate(0.86) contrast(1.06);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay {
+  background:
+    linear-gradient(90deg, rgba(18, 13, 10, 0.9) 0%, rgba(18, 13, 10, 0.72) 56%, rgba(18, 13, 10, 0.52) 100%),
+    linear-gradient(180deg, rgba(18, 13, 10, 0.2) 0%, rgba(18, 13, 10, 0.72) 100%) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-content {
+  text-shadow: 0 2px 12px rgba(12, 9, 7, 0.58);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
+  color: #ffb8a7 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong) {
+  color: #fff8f1 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label) {
+  color: rgba(255, 248, 241, 0.9) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-btn-ghost {
+  border-color: rgba(255, 248, 241, 0.42) !important;
+  background: rgba(24, 17, 13, 0.28) !important;
+  color: #fff8f1 !important;
+}
+
 /* Pattern A'' — the Runs generated image hero is intentionally photographic
    even in light mode. Keep its copy in the dark-hero treatment so the text does
    not fall back to charcoal/muted gray over the image. */
@@ -896,4 +939,138 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
   border-color: var(--brand-accent, #c0462b) !important;
   background: var(--brand-accent, #c0462b) !important;
   color: #ffffff !important;
+}
+
+/* Today Run uses a dark decision grid in midnight themes. Pin its semantic
+   colors so shared Profile card tokens cannot reduce its contrast. */
+#root .today-run-command-page .today-run-command-hero {
+  --tr-command-ink: #fffaf2;
+  --tr-command-soft: rgba(255, 250, 242, 0.84);
+  --tr-command-muted: rgba(255, 250, 242, 0.64);
+  --tr-command-accent: #ffad9a;
+  color: var(--tr-command-ink) !important;
+}
+
+#root .today-run-command-page .today-run-command-hero :is(
+  .today-run-command-hero-copy h1,
+  .today-run-plan-panel-copy h2,
+  .today-run-plan-hero-metrics strong,
+  .today-run-plan-panel-grid strong,
+  .today-run-plan-signal-grid strong
+) {
+  color: var(--tr-command-ink) !important;
+  text-shadow: none !important;
+}
+
+#root .today-run-command-page .today-run-command-hero :is(
+  .today-run-command-hero-copy > p,
+  .today-run-plan-morning-briefing p,
+  .today-run-plan-wellness-insight span,
+  .today-run-plan-panel-copy p
+) {
+  color: var(--tr-command-soft) !important;
+}
+
+#root .today-run-command-page .today-run-command-hero :is(
+  .today-run-plan-panel-copy > span,
+  .today-run-plan-hero-metrics > article > span,
+  .today-run-plan-panel-grid > article > span,
+  .today-run-plan-signal-grid > article > span
+) {
+  color: var(--tr-command-muted) !important;
+}
+
+#root .today-run-command-page .today-run-command-hero :is(
+  .today-run-plan-kicker,
+  .today-run-plan-morning-briefing-label,
+  .today-run-plan-rationale-label
+) {
+  color: var(--tr-command-accent) !important;
+}
+
+#root .today-run-command-page .today-run-command-hero :is(
+  .today-run-plan-hero-metrics article,
+  .today-run-plan-panel-grid article,
+  .today-run-plan-signal-grid article
+) {
+  border-color: rgba(255, 250, 242, 0.14) !important;
+  background: rgba(255, 250, 242, 0.075) !important;
+}
+
+#root .today-run-command-page .today-run-command-readiness-panel {
+  border-color: rgba(255, 250, 242, 0.16) !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(226, 112, 91, 0.24), transparent 15rem),
+    rgba(255, 250, 242, 0.07) !important;
+}
+
+/* In light themes, make the full decision grid part of the Profile paper
+   system instead of leaving a dark island inside the dashboard. */
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero {
+  --tr-command-ink: var(--runner-profile-ink, #211f1a);
+  --tr-command-soft: rgba(33, 31, 26, 0.76);
+  --tr-command-muted: rgba(33, 31, 26, 0.58);
+  --tr-command-accent: #a13d31;
+  align-items: stretch;
+  padding: 0 !important;
+  overflow: visible;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--tr-command-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero::before {
+  display: none;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero-copy {
+  padding: clamp(24px, 2.8vw, 36px);
+  border: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16));
+  border-radius: clamp(24px, 2.4vw, 32px);
+  background:
+    radial-gradient(circle at 8% 12%, rgba(191, 91, 73, 0.12), transparent 22rem),
+    linear-gradient(145deg, rgba(255, 253, 247, 0.98), rgba(244, 235, 223, 0.96));
+  box-shadow: var(--runner-profile-shadow, 0 20px 48px rgba(76, 54, 39, 0.08));
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero :is(
+  .today-run-plan-morning-briefing,
+  .today-run-plan-hero-metrics article,
+  .today-run-plan-panel-grid article,
+  .today-run-plan-signal-grid article
+) {
+  border-color: var(--runner-profile-line, rgba(72, 58, 42, 0.16)) !important;
+  background: rgba(255, 253, 247, 0.68) !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-plan-morning-briefing {
+  border-color: rgba(161, 61, 49, 0.18) !important;
+  background:
+    linear-gradient(135deg, rgba(191, 91, 73, 0.075), rgba(255, 253, 247, 0.76)) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page :is(
+  .today-run-marathon-pill,
+  .today-run-plan-rationale-item
+) {
+  border: 1px solid rgba(161, 61, 49, 0.13) !important;
+  background: rgba(191, 91, 73, 0.075) !important;
+  color: rgba(71, 48, 40, 0.82) !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-readiness-panel {
+  align-self: stretch;
+  border-color: rgba(72, 58, 42, 0.14) !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(226, 112, 91, 0.16), transparent 15rem),
+    rgba(250, 245, 236, 0.84) !important;
+  box-shadow: var(--runner-profile-shadow, 0 20px 48px rgba(76, 54, 39, 0.08)) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-plan-weather {
+  border-color: rgba(72, 58, 42, 0.12) !important;
+  background: rgba(72, 58, 42, 0.055) !important;
 }

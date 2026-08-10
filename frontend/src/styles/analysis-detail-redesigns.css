@@ -849,10 +849,10 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-
   position: relative !important;
   overflow: hidden !important;
   isolation: isolate !important;
-  min-height: 156px !important;
-  padding: 24px 26px !important;
+  min-height: 72px !important;
+  padding: 10px 12px 10px 16px !important;
   border: 0 !important;
-  border-radius: 24px !important;
+  border-radius: 13px !important;
   background:
     radial-gradient(circle at 84% 22%, rgba(239, 106, 82, 0.2), transparent 31%),
     linear-gradient(135deg, rgba(255, 248, 240, 0.98), rgba(246, 225, 210, 0.9) 46%, rgba(255, 251, 244, 0.94)) !important;
@@ -883,15 +883,15 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-
   font-family: "Manrope", var(--font-display) !important;
   font-style: normal !important;
   font-weight: 800 !important;
-  font-size: clamp(1.9rem, 3.3vw, 3.2rem) !important;
-  line-height: 0.92 !important;
-  letter-spacing: -0.075em !important;
+  font-size: clamp(1rem, 1.35vw, 1.34rem) !important;
+  line-height: 1 !important;
+  letter-spacing: -0.045em !important;
 }
 
 #root .runs-dashboard-page .runs-profile-history .recent-runs-insight-card.recent-runs-insight-card--primary p {
-  max-width: 28ch !important;
+  max-width: 24ch !important;
   color: rgba(69, 54, 38, 0.7) !important;
-  font-size: 0.95rem !important;
+  font-size: 0.68rem !important;
   font-weight: 700 !important;
-  line-height: 1.5 !important;
+  line-height: 1.2 !important;
 }

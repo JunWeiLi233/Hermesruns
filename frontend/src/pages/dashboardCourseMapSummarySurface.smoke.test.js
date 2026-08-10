@@ -14,7 +14,7 @@ assert.match(
 
 assert.match(
   dashboardSource,
-  /courseMapDisplaySummary \? \(\s*<p className="admin-coursemap-publish-canvas__copy">\{courseMapDisplaySummary\}<\/p>/,
+  /courseMapDisplaySummary \? \(\s*<p className="admin-coursemap-publish-canvas__copy">\{courseMapLocalizedSummary\}<\/p>/,
   'Dashboard should surface the active course-map summary in the publish/output panel.',
 );
 

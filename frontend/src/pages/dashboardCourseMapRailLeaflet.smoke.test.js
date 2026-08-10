@@ -15,8 +15,20 @@ assert.match(
 
 assert.match(
   dashboardSource,
-  /admin-coursemap-rail__preview[\s\S]*forceLiveMap=\{true\}[\s\S]*fallbackCenter=\{getCourseMapViewportFallback\(item\)\}/,
-  'Dashboard rail cards should force live Leaflet rendering and pass a race-level fallback center into AdminCourseMapPreview.'
+  /<List[\s\S]*rowComponent=\{CourseMapQueueRowComponent\}[\s\S]*rowHeight=\{160\}[\s\S]*rowProps=\{courseMapQueueRowProps\}/,
+  'Dashboard course-map rail should virtualize the catalog-sized queue instead of mounting every race card at once.'
+);
+
+assert.match(
+  dashboardSource,
+  /function CourseMapQueueRowComponent[\s\S]*admin-coursemap-rail__preview[\s\S]*renderMap=\{false\}/,
+  'Dashboard rail cards should use lightweight static previews and reserve interactive Leaflet rendering for the selected workspace.'
+);
+
+assert.match(
+  dashboardSource,
+  /admin-track-hub-map-panel--live[\s\S]*forceLiveMap=\{true\}[\s\S]*fallbackCenter=\{getCourseMapViewportFallback\(selectedCourseMapItem\)\}/,
+  'Dashboard selected course-map workspace should keep live Leaflet rendering and a race-level fallback center.'
 );
 
 assert.match(
@@ -33,8 +45,8 @@ assert.match(
 
 assert.match(
   previewSource,
-  /const hasRenderableAlignment = hasAlignedOverlay \|\| hasAlignedRoute;[\s\S]*const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = !mapFailed && \(hasRenderableAlignment \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
-  'AdminCourseMapPreview should allow a live Leaflet map even when only fallback center data exists.'
+  /const hasRenderableAlignment = hasAlignedOverlay \|\| hasAlignedRoute;[\s\S]*const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = renderMap && !mapFailed && \(hasRenderableAlignment \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
+  'AdminCourseMapPreview should allow callers to opt out of Leaflet mounting while preserving live fallback behavior for workspace panels.'
 );
 
 assert.match(

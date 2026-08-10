@@ -192,20 +192,9 @@
   opacity: 0 !important;
 }
 .heatmap-page-dot-canvas {
-  will-change: transform, opacity;
+  will-change: transform;
+  backface-visibility: hidden;
   transform: translateZ(0);
-  transition: opacity 120ms ease;
-}
-
-.heatmap-page-map-shell.is-map-zooming .heatmap-page-dot-canvas {
-  opacity: 1;
-}
-
-.heatmap-page-map-shell.is-map-zooming :is(.heatmap-page-topbar, .heatmap-page-legend-card, .heatmap-page-utility-rail, .heatmap-sessions-card) {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  transition: none;
 }
 
 .heatmap-page-map-vignette {
@@ -219,7 +208,6 @@
 .heatmap-page-topbar,
 .heatmap-page-legend-card,
 .heatmap-page-utility-rail,
-.heatmap-sessions-card,
 .heatmap-page-empty {
   z-index: 30;
 }
@@ -245,8 +233,6 @@
 .heatmap-page-primary-btn {
   border: 0;
   box-shadow: 0 22px 58px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .heatmap-page-brand-pill,
@@ -390,8 +376,6 @@
   flex-shrink: 0;
   background: rgba(8, 10, 13, 0.88);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 .heatmap-page-utility-rail {
@@ -404,12 +388,10 @@
   max-height: calc(100vh - 136px);
   padding: 5px;
   border-radius: 22px;
-  background: rgba(8, 10, 13, 0.46);
+  background: rgba(8, 10, 13, 0.84);
   box-shadow:
     inset 0 0 0 1px rgba(255, 248, 238, 0.1),
     0 18px 48px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -473,159 +455,6 @@
   color: #f1e7dd;
 }
 
-.heatmap-sessions-card {
-  position: absolute;
-  top: 118px;
-  right: 22px;
-  width: min(340px, calc(100% - 44px));
-  max-height: calc(100vh - 240px);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 22px;
-  border-radius: 26px;
-  background:
-    linear-gradient(145deg, rgba(255, 252, 246, 0.9), rgba(238, 224, 205, 0.84)),
-    rgba(255, 252, 246, 0.86);
-  border: 1px solid rgba(255, 248, 238, 0.15);
-  box-shadow: 0 24px 62px rgba(23, 19, 15, 0.22);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 30;
-  overflow: hidden;
-  color: #171512;
-}
-
-.heatmap-sessions-summary {
-  display: grid;
-  gap: 12px;
-}
-
-.heatmap-sessions-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.heatmap-sessions-summary-grid > div {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  padding: 12px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(43, 32, 24, 0.08);
-}
-
-.heatmap-sessions-summary-grid strong {
-  color: #171512;
-  font-family: "Manrope", sans-serif;
-  font-size: 1.25rem;
-  font-weight: 850;
-  letter-spacing: -0.05em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.heatmap-sessions-summary-grid span,
-.heatmap-sessions-empty {
-  color: rgba(43, 32, 24, 0.58);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.heatmap-sessions-empty {
-  margin: 0;
-  line-height: 1.5;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.heatmap-sessions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.heatmap-sessions-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.heatmap-sessions-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-}
-
-.heatmap-session-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(43, 32, 24, 0.08);
-  cursor: pointer;
-  text-align: left;
-  transition: background 160ms ease, transform 160ms ease;
-}
-
-.heatmap-session-row:hover {
-  background: rgba(255, 255, 255, 0.78);
-  transform: translateX(-2px);
-}
-
-.heatmap-session-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.heatmap-session-main strong {
-  color: #171512;
-  font-size: 0.92rem;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.heatmap-session-main span {
-  color: rgba(43, 32, 24, 0.58);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.heatmap-session-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.heatmap-session-meta strong {
-  color: #a0392a;
-  font-size: 0.98rem;
-  font-weight: 800;
-  font-family: "Manrope", sans-serif;
-  letter-spacing: -0.02em;
-}
-
-.heatmap-session-meta span {
-  color: rgba(160, 57, 42, 0.62);
-  font-size: 0.64rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 .heatmap-page-empty-copy h3 {
   margin: 0;
   color: #171512;
@@ -647,10 +476,6 @@
 .heatmap-page-legend-card .heatmap-page-card-kicker,
 .heatmap-page-legend-card .heatmap-page-legend-meta span {
   color: rgba(244, 238, 232, 0.68);
-}
-
-.heatmap-sessions-card .heatmap-page-card-kicker {
-  color: rgba(43, 32, 24, 0.56);
 }
 
 .heatmap-page-empty-copy h3 {
@@ -899,10 +724,6 @@
     left: 16px;
     right: 16px;
     width: auto;
-  }
-
-  .heatmap-sessions-card {
-    display: none;
   }
 
   .heatmap-page-legend-card {

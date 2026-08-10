@@ -541,6 +541,8 @@ const Runs = memo(function Runs() {
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
   const [importStatus, setImportStatus] = useState('');
+  const selectedImportFileCount = [fitExportFiles, corosFiles, huaweiFiles]
+    .reduce((total, files) => total + (files?.length ?? 0), 0);
   const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
   // Per-run geographic bbox keyed by run id. Seeded from localStorage so a
   // repeat page load does not need to re-fetch preview metadata for the same runs.
@@ -1009,35 +1011,60 @@ const Runs = memo(function Runs() {
 
   function renderImportModal() {
     return (
-      <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title={t('profile.import_modal_title')}>
-        <form onSubmit={handleImport}>
+      <Modal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title={t('profile.import_modal_title')}
+        shellClassName="profile-import-modal-shell"
+        cardClassName="profile-import-modal-card"
+      >
+        <form className="profile-import-modal-form" onSubmit={handleImport}>
           <ImportDataGuide />
-          <p className="modal-help">{t('profile.import_hint')}</p>
+          <header className="import-upload-heading">
+            <span>{t('profile.import_upload_kicker')}</span>
+            <h3>{t('profile.import_upload_title')}</h3>
+            <p className="modal-help">{t('profile.import_hint')}</p>
+          </header>
           <div className="import-source-grid">
             {[
               ['fit', 'FIT/GPX', fitExportFiles, setFitExportFiles, 'profile.fit_export_source_title', 'profile.fit_export_source_hint', 'profile.fit_export_file_label'],
               ['coros', 'COROS', corosFiles, setCorosFiles, 'profile.coros_source_title', 'profile.coros_source_hint', 'profile.coros_file_label'],
               ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
-            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey]) => (
-              <section key={key} className="import-source-card">
+            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
+              <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
                 <div className="import-source-header">
+                  <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                   <div className="import-source-copy">
                     <span className="import-source-title">{t(titleKey)}</span>
                     <span className="import-source-hint">{t(hintKey)}</span>
                   </div>
                   <span className="import-source-tag">{tag}</span>
                 </div>
-                <label className="modal-label">{t(labelKey)}</label>
-                <input type="file" accept=".gpx,.tcx,.fit,.zip" multiple onChange={(event) => setter(event.target.files)} />
-                <p className="selected-file-name">{files?.length ? t('profile.selected_files_count', { count: files.length }) : t('profile.no_file_selected')}</p>
+                <label className="modal-label" htmlFor={`runs-import-${key}`}>{t(labelKey)}</label>
+                <input
+                  id={`runs-import-${key}`}
+                  type="file"
+                  accept=".gpx,.tcx,.fit,.zip"
+                  multiple
+                  aria-describedby={`runs-import-${key}-selection`}
+                  onChange={(event) => setter(event.target.files)}
+                />
+                <p id={`runs-import-${key}-selection`} className="selected-file-name">
+                  {files?.length ? t('profile.selected_files_count', { count: files.length }) : t('profile.no_file_selected')}
+                </p>
               </section>
             ))}
           </div>
-          <p className="import-summary-line">{t('profile.import_batch_hint')}</p>
-          {importStatus ? <div className="modal-status">{importStatus}</div> : null}
+          <div className="import-summary-line">
+            <strong>{t('profile.import_selected_total', { count: selectedImportFileCount })}</strong>
+            <span>{t('profile.import_batch_hint')}</span>
+          </div>
+          {importStatus ? <div className="modal-status is-error" role="alert">{importStatus}</div> : null}
           <div className="modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('profile.upload_file')}</button>
+            <button type="submit" className="btn-primary modal-button" disabled={selectedImportFileCount === 0}>
+              {t('profile.upload_file_count', { count: selectedImportFileCount })}
+            </button>
           </div>
         </form>
       </Modal>
@@ -1278,9 +1305,11 @@ const Runs = memo(function Runs() {
           <main className="recent-runs-shell runs-dashboard-shell runs-profile-history">
             <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
               <div className="runs-profile-cockpit__primary">
-                <span className="recent-runs-hero-kicker">{t('runs.eyebrow')}</span>
-                <h1 id="runs-profile-title">{t('runs.heading')}</h1>
-                <p>{t('runs.page_copy')}</p>
+                <div className="runs-profile-cockpit__heading">
+                  <span className="recent-runs-hero-kicker">{t('runs.eyebrow')}</span>
+                  <h1 id="runs-profile-title">{t('runs.heading')}</h1>
+                  <p>{t('runs.page_copy')}</p>
+                </div>
                 <div className="runs-profile-cockpit__actions">
                   <button
                     type="button"
@@ -1337,43 +1366,47 @@ const Runs = memo(function Runs() {
                   )}
                 </div>
               </div>
-              <div className="recent-runs-chip-row">
-                {timeFilterOptions.map((option) => (
-                  <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
-                    setActiveMode(option.key);
-                    setSelectedYear(null);
-                    setSelectedMonth(null);
-                  }}>
-                    {option.label}
-                  </button>
-                ))}
+              <div className="runs-profile-workbench__filters">
+                <div className="recent-runs-chip-row">
+                  {timeFilterOptions.map((option) => (
+                    <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
+                      setActiveMode(option.key);
+                      setSelectedYear(null);
+                      setSelectedMonth(null);
+                    }}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
               </div>
-              <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
             </section>
-            <section className="recent-runs-stats-grid">
-              <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-              <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-              <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
-            </section>
-            {filteredRuns.length > 0 ? (
-              <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
-            <article className="recent-runs-insight-card recent-runs-insight-card--primary">
-              <span>{t('runs.stitch_pattern_title')}</span>
-              <strong>{t('runs.insight_runs_count', { count: filteredRuns.length })}</strong>
-              <p>{t('runs.insight_active_days', { count: activeDaysCount })}</p>
-            </article>
-            <article className="recent-runs-insight-card">
-              <span>{t('runs.insight_fastest_label')}</span>
-              <strong>{fastestRun ? formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang) : '--'}</strong>
-              <p>{fastestRun?.run?.name || t('runs.default_run_name')}</p>
-            </article>
-            <article className="recent-runs-insight-card">
-              <span>{t('runs.insight_longest_label')}</span>
-              <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
-              <p>{longestRun?.name || t('runs.default_run_name')}</p>
-            </article>
+            <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
+              <section className="recent-runs-stats-grid">
+                <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
+                <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
+                <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
               </section>
-            ) : null}
+              {filteredRuns.length > 0 ? (
+                <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
+                  <article className="recent-runs-insight-card recent-runs-insight-card--primary">
+                    <span>{t('runs.stitch_pattern_title')}</span>
+                    <strong>{t('runs.insight_runs_count', { count: filteredRuns.length })}</strong>
+                    <p>{t('runs.insight_active_days', { count: activeDaysCount })}</p>
+                  </article>
+                  <article className="recent-runs-insight-card">
+                    <span>{t('runs.insight_fastest_label')}</span>
+                    <strong>{fastestRun ? formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang) : '--'}</strong>
+                    <p>{fastestRun?.run?.name || t('runs.default_run_name')}</p>
+                  </article>
+                  <article className="recent-runs-insight-card">
+                    <span>{t('runs.insight_longest_label')}</span>
+                    <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
+                    <p>{longestRun?.name || t('runs.default_run_name')}</p>
+                  </article>
+                </section>
+              ) : null}
+            </section>
             <section className="recent-runs-card-list" aria-label={t('runs.full_history')}>
           {loadState === 'loading' ? <div className="recent-runs-status recent-runs-status--loading">{t('runs.loading')}</div> : null}
           {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}

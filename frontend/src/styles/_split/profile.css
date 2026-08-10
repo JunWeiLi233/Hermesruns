@@ -4557,6 +4557,15 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   }
 }
 
+/* Keep the legacy weekly chart header from painting a strip behind its labels. */
+.profile-dashboard-page .runner-dashboard-weekly-card .runner-dashboard-section-head,
+.profile-dashboard-page .runner-dashboard-weekly-card .runner-dashboard-section-head > *,
+.profile-dashboard-page .runner-dashboard-weekly-card .runner-dashboard-legend,
+.profile-dashboard-page .runner-dashboard-weekly-card .runner-dashboard-legend > span,
+.profile-dashboard-page .runner-dashboard-weekly-card .runner-dashboard-bar-col > span {
+  background: transparent !important;
+}
+
 /* Profile support grid calm board redesign */
 
 .profile-dashboard-page .runner-dashboard-profile-support-grid {
@@ -5561,7 +5570,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   }
 
   .runner-shell-topnav-identity {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .runner-shell-topnav-meta {
@@ -6776,4 +6785,11 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   .profile-dashboard-page .runner-dashboard-profile-support-grid > .runner-streak-card .runner-streak-card__stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* The weekly card gradient itself created the pale header band behind the labels. */
+.runner-dashboard-page .runner-dashboard-weekly-card,
+.profile-dashboard-page .runner-dashboard-weekly-card {
+  background: transparent !important;
+  background-image: none !important;
 }
