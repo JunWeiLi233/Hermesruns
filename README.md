@@ -7,7 +7,7 @@
 
 ## Activity
 
-[![Hermes GitHub commit activity](docs/github-commit-activity.svg)](https://github.com/520HXC/run/graphs/commit-activity)
+[![Hermes GitHub commit activity](docs/github-commit-activity.svg)](https://github.com/JunWeiLi233/Hermesruns/graphs/commit-activity)
 
 This graph is generated from real repository commits with ISO calendar dates on the x-axis. GitHub Actions refreshes it daily and after pushes to `main`.
 
