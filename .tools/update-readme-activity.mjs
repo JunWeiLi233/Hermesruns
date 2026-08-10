@@ -32,11 +32,13 @@ function runGit(args) {
 function collectCounts(start, end) {
   const output = runGit([
     "log",
+    // Scope activity to the checked-out repository branch, excluding unrelated
+    // remote-tracking refs that may exist in a contributor's local clone.
+    "HEAD",
     `--since=${isoDate(start)}T00:00:00Z`,
     `--until=${isoDate(end)}T23:59:59Z`,
     "--date=format:%Y-%m-%d",
     "--pretty=format:%cd",
-    "--all",
   ]);
   const counts = new Map();
   if (!output) return counts;
