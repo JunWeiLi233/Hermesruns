@@ -1,153 +1,33 @@
-# /auto-hermes-max 闂?Hermes Parallel Max Workflow (Gemini CLI)
-# Gemini CLI custom command 闂?invoke with /auto-hermes-max
+# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
 
 [command]
-description = "Run a bounded adaptive Hermes execution round where the parent coordinator decides how many scoped /auto-hermes workers to launch, then reunify the outputs through a required merge gate."
+description = "Hermes workflow: /auto-hermes-max"
 
 [command.prompt]
-text = """
-# [RALPH + AUTO-HERMES-MAX - ITERATION {{ITERATION}}/{{MAX}}]
-
-Run a bounded adaptive Hermes execution round where the parent coordinator decides how many scoped `/auto-hermes` workers to launch, then reunify the outputs through a required merge gate.
-
-<Purpose>
-`/auto-hermes-max` is a **launcher and merger** operating in **OMX Ralph persistence mode**. It does not implement work. It does not pick individual tasks. It does not write code.
-Its only job:
-1. Determine what work exists and how many sequential lanes it warrants
-2. Launch 1-5 `/auto-hermes` Ralph loops sequentially, each owning a disjoint scope
-3. Wait for each agent to finish its full persistence loop
-4. Merge their results through a required 9-gate arbitration gate
-5. **Re-assess lane count** based on what was just discovered, then repeat
-</Purpose>
-
-## Runtime Identity
-- **Runtime**: Gemini CLI (coordinator mode)
-- **Execution model**: Sequential iteration. No native parallel agents. The coordinator executes the Explorer or parallel lanes one after another in a persistent loop.
-- **Canonical command**: `.codex/commands/auto-hermes-max.md` defines the full parallel protocol. This prompt matches it strictly for Gemini CLI's sequential model and Ralph rigor.
+text = '''
+<!-- Generated from .codex/commands/auto-hermes-max.md. Do not edit this adapter directly. -->
+<!-- Follow docs/ai/EDITING_CONTRACT.md for every code change. -->
 
 ---
-
-## Mode Switch 闂?Check Arguments First
-
-### Concrete Scope Mode (arguments provided)
-When `/auto-hermes-max` is called with a scope or task description:
-- Use that scope directly as the parent goal for this iteration
-- Skip the Explorer step 闂?go straight to Lane Planning (Step 1)
-- After merge gate clears, switch to Dynamic Reassessment for next iterations
-
-### Explorer Mode (no arguments)
-When `/auto-hermes-max` is called with no arguments:
-- Launch one Explorer Agent (run one `/auto-hermes` loop round) to discover work
-- Read `.ai-sync/AUTO_HERMES_MAX_EXPLORER.{json,md}` for Parallelism Recommendation
-- Decides final lane count for the next round
-
+name: auto-hermes-max
 ---
 
-## Explorer Mode 闂?First Round
+# Auto-Hermes Max
 
-Launch a **single `planning-agent` as the Explorer** before any parallel work begins.
+Codex command note for the bounded parent coordinator path.
 
-### Explorer Agent job
-Before reading `TASKS.md` directly, refresh and read context:
-```bash
-node .tools/generate-codex.js
-node .tools/optimize-agent-context.mjs --agent gemini --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
-powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
-node .tools/omx-auto-hermes-bridge.mjs
-```
-Then read `.ai-codex/optimized-gemini.md` for status. The Explorer identifies the single highest-value task, executes **one `/auto-hermes` loop round**, and writes the **Explorer Report** to `.ai-sync/AUTO_HERMES_MAX_EXPLORER.json`.
+## Continuity Rules
 
----
+- Empty queue does not immediately stop.
+- Website-audit explorer is the first exhaustion fallback.
+- Repeated no-candidate audit rounds are the true stop condition.
+- Supervisor is the preferred continuity layer for long-running runs.
 
-## Dynamic Lane Reassessment
+## Command Notes
 
-After every completed iteration, the coordinator reassesses lane count for the next round.
-
-| Condition | Decision |
-|---|---|
-| Follow-up work spans 2+ independent disjoint surfaces | Launch `min(surfaces, 5)` lanes |
-| Follow-up work is sequential | Launch 1 lane now; queue follower |
-| Follow-up work is a single bounded fix | Launch 1 lane |
-| Remaining work is unknown or thin | Launch 1 Explorer Agent (subject to Runaway Guard) |
-| No remaining promotable work | Increment Max Runaway counter, consult guard |
-
----
-
-## Coordinator Role 闂?What the Coordinator Does and Does Not Do
-
-The coordinator DOESdecide lane count, split goals into disjoint scopes, write the plan, run the merge gate, arbitrate conflicts autonomously, and update TASKS.md/CONTEXT_LEDGER.md.
-The coordinator does NOT write application code, pick individual tasks for lanes, or ask the user to pick anything.
-
----
-
-## Execution Steps (Per Iteration)
-
-### Step 0 闂?Pre-context intake & Mode check
-Assemble a context snapshot at `.ai-sync/context-snapshots/ahm-{timestamp}.json`.
-- **Arguments provided** -> parentGoal = scope.
-- **No arguments** -> launch Explorer, wait for Explorer Report, parentGoal = Explorer recommendations.
-
-### Step 1 闂?Split scope into lanes
-Divide parent goal into disjoint ownership scopes. Apply lane count decision rules.
-- **If lane count = 1**: run a single `/auto-hermes` Ralph loop for that scope, then go to Step 7.
-- **If Explorer found 0 work**: increment Max Runaway counter; if count >= 3, **Stop**.
-- **If lane count >= 2**: proceed to Step 2.
-
-### Step 2 闂?Write the plan
-Serialize to `.ai-sync/AUTO_HERMES_MAX_PLAN.json`.
-
-### Step 3 闂?Generate lane briefs
-Run: `node .tools/auto-hermes-max.mjs --write --runtime gemini --scope "<parent goal>"`
-
-### Step 4 闂?Execute lanes sequentially
-For each lane: run full `/auto-hermes` Ralph loop within its owned files. **Lanes do not write TASKS.md or CONTEXT_LEDGER.md.**
-
-### Step 5 闂?Wait for all lanes
-Ensure all result packets are written to `.ai-sync/auto-hermes-max-results/`. Each packet MUST contain fresh verification evidence.
-
-### Step 6 闂?Run the merge gate
-Run: `node .tools/auto-hermes-max-merge.mjs --write`.
-Arbitrate conflicts autonomously: `accept-as-is`, `accept-lane-<id>`, `synthesize`, `discard-all`. Run all 9 merge gates.
-
-### Step 7 闂?Post-merge updates & Mandatory Gates
-After `approve-merge`:
-1. **Integrate lane changes**.
-2. **Architect Verification**: REQUIRE architect verification (STANDARD tier minimum) for the merged result.
-3. **Mandatory Deslop Pass (Step 7.5)**: Run `ai-slop-cleaner` on all changed files (unless `--no-deslop` present).
-4. **Regression Re-verification (Step 7.6)**: Run full Vite build + backend compile + runtime sync verify. Evidence before assertions.
-5. **Update `.ai-sync/CONTEXT_LEDGER.md`**.
-6. **Update `TASKS.md`** (remove completed, append follow-ups from result packets).
-7. **Run auto-commit finish action**.
-
-### Step 8 闂?Dynamic Reassessment
-Read all result packets. Apply Decision Rules. Go back to Step 1 with new count.
-
----
-
-## Lane Agent Contract
-Run `/auto-hermes` Ralph loop within owned scope. defer TASKS.md and CONTEXT_LEDGER.md writes to coordinator. Write result packet when loop stops. REQUIRE fresh evidence.
-
----
-
-## Max Runaway Guard
-Counter in `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json`.
-- Increment if Explorer finds 0 work.
-- Reset to 0 on successful Step 7 completion.
-- Fire if count >= 3: stop and report.
-
-## Stop Rules
-- Reassessment finds 0 items AND Explorer finds 0 work.
-- Unresolvable blocker.
-- HUMAN_LOOP says `pause/stop/must-ask`.
-- Max Runaway Guard fires.
-
-## Truth Rules
-Sequential iteration only. No live claims without proof gates. Do not declare done until stop condition. For claims, use the taxonomy in `.codex/workflows/auto-hermes-claim-taxonomy.md`.
-
-## Final Checklist
-- [ ] All requirements from parent goal met
-- [ ] Architect verification passed (STANDARD tier minimum)
-- [ ] ai-slop-cleaner pass completed (or --no-deslop)
-- [ ] Post-deslop regression tests/build PASS
-- [ ] TASKS.md and CONTEXT_LEDGER.md synchronized
-"""
+- Parent reassessment should treat website-audit as the first fallback when queue promotion runs dry.
+- A single empty queue observation is not enough to stop the parent loop.
+- `.tools/auto-hermes-supervisor.mjs` now owns the live continuity and repeated no-candidate stop contract for the parent loop.
+- `/auto-hermes-max` remains coordinator-driven, but its true-stop decision is now fully routed through the supervisor instead of a modeled-only caveat.
+- On a true clean parent stop, finish behavior now also routes through `.tools/auto-hermes-finish.mjs`: auto-commit only when needed, and auto-push is now also allowed when the stop leaves unpublished local commits on the current branch and `origin` still equals `https://github.com/520HXC/run.git`.
+'''

@@ -1427,81 +1427,86 @@
   }
 }
 
-/* Today Run command deck redesign final override */
+/* Today Run profile-grid redesign final override */
 
 .today-run-command-page {
-  --tr-command-ink: #fff7ef;
-  --tr-command-soft: rgba(255, 247, 239, 0.68);
-  --tr-command-muted: rgba(255, 247, 239, 0.48);
-  --tr-command-carbon: #151311;
-  --tr-command-ember: #f07561;
-  --tr-command-ember-deep: #a0392a;
-  --tr-command-panel: rgba(31, 28, 25, 0.78);
-  --tr-command-panel-strong: rgba(42, 37, 33, 0.9);
+  --tr-command-ink: #fff8ee;
+  --tr-command-soft: rgba(255, 248, 238, 0.72);
+  --tr-command-muted: rgba(255, 248, 238, 0.5);
+  --tr-command-carbon: #211f1a;
+  --tr-command-ember: var(--runner-profile-flame, #bf5b49);
+  --tr-command-ember-deep: #923f32;
   background:
-    radial-gradient(circle at 12% 8%, rgba(240, 117, 97, 0.16), transparent 24rem),
-    radial-gradient(circle at 86% 18%, rgba(255, 180, 167, 0.1), transparent 22rem),
-    linear-gradient(180deg, #171513 0%, #11100f 52%, #181513 100%) !important;
+    radial-gradient(circle at 10% 8%, rgba(191, 91, 73, 0.11), transparent 24rem),
+    radial-gradient(circle at 88% 14%, rgba(122, 168, 130, 0.08), transparent 26rem),
+    linear-gradient(145deg, var(--runner-profile-paper, #f7f0e7), #ede2d2) !important;
 }
 
 .today-run-command-page .runner-shell-canvas.today-run-command-canvas {
-  width: min(1560px, calc(100% - clamp(22px, 4vw, 56px))) !important;
-  max-width: none !important;
+  width: min(1320px, calc(100% - clamp(24px, 3vw, 44px))) !important;
+  max-width: 1320px !important;
   margin-inline: auto !important;
-  padding: clamp(22px, 2.4vw, 34px) 0 clamp(48px, 6vw, 82px) !important;
+  padding: clamp(20px, 2.2vw, 30px) 0 clamp(42px, 5vw, 64px) !important;
   display: grid;
-  gap: clamp(18px, 2.2vw, 30px);
+  gap: clamp(16px, 1.8vw, 24px);
 }
 
 .today-run-command-page .today-run-coaching-strip {
   position: relative;
   margin: 0 !important;
-  padding: clamp(12px, 1.5vw, 18px) !important;
+  padding: 0 !important;
   border: 0 !important;
-  border-radius: clamp(22px, 2vw, 30px) !important;
-  background:
-    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.025)),
-    rgba(22, 19, 17, 0.74) !important;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
 }
 
 .today-run-command-page .today-run-coaching-strip::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, transparent 0 12%, rgba(240, 117, 97, 0.14) 12% 12.3%, transparent 12.3% 52%, rgba(255, 247, 239, 0.06) 52% 52.2%, transparent 52.2%),
-    radial-gradient(circle at 8% 50%, rgba(240, 117, 97, 0.16), transparent 18rem);
-  pointer-events: none;
+  display: none;
 }
 
 .today-run-command-page .today-run-coaching-strip-inner {
   position: relative;
   z-index: 1;
   display: grid !important;
-  grid-template-columns: minmax(260px, 1.3fr) repeat(4, minmax(140px, 0.8fr)) !important;
-  gap: clamp(10px, 1vw, 14px) !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  gap: 12px !important;
   align-items: stretch !important;
 }
 
 .today-run-command-page .today-run-coaching-answer {
-  min-height: 132px;
-  padding: clamp(14px, 1.25vw, 18px) !important;
-  border: 0 !important;
-  border-radius: clamp(16px, 1.5vw, 22px) !important;
+  grid-column: span 2;
+  min-width: 0;
+  min-height: 112px;
+  padding: 16px !important;
+  border: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16)) !important;
+  border-radius: 20px !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.025)),
-    rgba(255, 255, 255, 0.035) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.44), transparent 48%),
+    var(--runner-profile-card, rgba(255, 251, 242, 0.84)) !important;
+  box-shadow: 0 12px 28px rgba(76, 54, 39, 0.06) !important;
+  color: var(--runner-profile-ink, #211f1a);
+  align-content: start;
+  overflow: hidden;
 }
 
 .today-run-command-page .today-run-coaching-answer--readiness {
+  grid-column: span 4;
+  min-height: 148px;
   background:
-    radial-gradient(circle at 88% 18%, rgba(240, 117, 97, 0.24), transparent 12rem),
-    linear-gradient(135deg, rgba(240, 117, 97, 0.18), rgba(255, 255, 255, 0.04)) !important;
+    radial-gradient(circle at 92% 10%, rgba(191, 91, 73, 0.14), transparent 12rem),
+    var(--runner-profile-card-strong, rgba(255, 253, 247, 0.94)) !important;
+}
+
+.today-run-command-page .today-run-coaching-strip-inner:not(:has(.today-run-coaching-answer--wellness)) .today-run-coaching-answer--load,
+.today-run-command-page .today-run-coaching-strip-inner:not(:has(.today-run-coaching-answer--wellness)) .today-run-coaching-answer--shoe {
+  grid-column: span 3;
+}
+
+.today-run-command-page .today-run-coaching-answer--onboarding {
+  grid-column: 1 / -1;
+  min-height: 0;
 }
 
 .today-run-command-page .today-run-coaching-answer-kicker,
@@ -1514,71 +1519,73 @@
 .today-run-command-page .today-run-plan-coach-line span,
 .today-run-command-page .today-run-shoe-brief-copy span,
 .today-run-command-page .today-run-shoe-brief-meta span {
-  color: var(--tr-command-muted) !important;
+  color: var(--runner-profile-muted, rgba(33, 31, 26, 0.64)) !important;
   font-size: 0.66rem !important;
   font-weight: 850 !important;
-  letter-spacing: 0.19em !important;
+  letter-spacing: 0.14em !important;
 }
 
 .today-run-command-page .today-run-coaching-answer-value {
-  color: var(--tr-command-ink) !important;
-  font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.05rem, 1.3vw, 1.38rem) !important;
-  letter-spacing: -0.025em;
+  color: var(--runner-profile-ink, #211f1a) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.2vw, 1.24rem) !important;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .today-run-command-page .today-run-coaching-answer-sub {
-  color: var(--tr-command-soft) !important;
+  color: var(--runner-profile-muted, rgba(33, 31, 26, 0.64)) !important;
 }
 
 .today-run-command-page .today-run-readiness-signal {
-  background: rgba(255, 247, 239, 0.08);
+  background: rgba(72, 58, 42, 0.055);
   border-radius: 999px;
-  padding: 5px 8px;
+  padding: 4px 7px;
 }
 
 .today-run-command-page .today-run-readiness-signal-bar {
-  background: rgba(255, 247, 239, 0.1);
+  background: rgba(72, 58, 42, 0.1);
 }
 
 .today-run-command-page .today-run-readiness-signal-fill {
-  background: linear-gradient(90deg, var(--tr-command-ember), #ffb4a7);
+  background: linear-gradient(90deg, var(--tr-command-ember), #e89787);
+}
+
+.today-run-command-page .today-run-coaching-answer-title,
+.today-run-command-page .today-run-coaching-answer-copy,
+.today-run-command-page .today-run-coaching-answer-coach-message {
+  display: none;
 }
 
 .today-run-command-page .today-run-command-hero {
-  min-height: clamp(640px, 62vw, 840px);
-  grid-template-columns: minmax(0, 1.06fr) minmax(380px, 0.94fr) !important;
-  gap: clamp(18px, 2vw, 28px) !important;
-  padding: clamp(28px, 3.6vw, 56px) !important;
-  border-radius: clamp(28px, 3vw, 44px) !important;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr) !important;
+  gap: clamp(18px, 2vw, 26px) !important;
+  padding: clamp(24px, 2.8vw, 36px) !important;
+  border: 1px solid rgba(255, 248, 238, 0.08) !important;
+  border-radius: clamp(24px, 2.4vw, 32px) !important;
   background:
-    radial-gradient(circle at 12% 16%, rgba(240, 117, 97, 0.26), transparent 25rem),
-    radial-gradient(circle at 78% 18%, rgba(255, 180, 167, 0.11), transparent 22rem),
-    linear-gradient(135deg, rgba(38, 33, 29, 0.98), rgba(16, 15, 14, 0.98) 62%, #0e0d0c) !important;
-  box-shadow:
-    0 34px 86px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    radial-gradient(circle at 8% 12%, rgba(191, 91, 73, 0.24), transparent 22rem),
+    radial-gradient(circle at 88% 18%, rgba(122, 168, 130, 0.1), transparent 20rem),
+    linear-gradient(135deg, #2d2923, #1d1a17 64%, #171512) !important;
+  box-shadow: 0 24px 58px rgba(76, 54, 39, 0.2) !important;
+  color: var(--tr-command-ink) !important;
 }
 
 .today-run-command-page .today-run-command-hero::before {
   content: "";
   position: absolute;
-  inset: clamp(18px, 2vw, 28px);
-  border-radius: clamp(22px, 2.2vw, 34px);
+  inset: 0;
+  border-radius: inherit;
   background:
-    linear-gradient(115deg, rgba(255, 247, 239, 0.055) 0 1px, transparent 1px 22px),
-    radial-gradient(circle at 50% 100%, rgba(240, 117, 97, 0.1), transparent 34rem);
-  mask-image: linear-gradient(90deg, #000 0%, rgba(0,0,0,0.74) 58%, transparent 100%);
+    linear-gradient(115deg, rgba(255, 248, 238, 0.04) 0 1px, transparent 1px 28px);
+  mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.45) 48%, transparent 78%);
   pointer-events: none;
 }
 
 .today-run-command-page .today-run-command-hero::after {
-  width: min(46vw, 640px) !important;
-  height: min(46vw, 640px) !important;
-  inset: auto -10% -26% auto !important;
-  background:
-    radial-gradient(circle, rgba(240, 117, 97, 0.28), transparent 62%),
-    conic-gradient(from 210deg, transparent, rgba(255, 180, 167, 0.13), transparent) !important;
+  display: none;
 }
 
 .today-run-command-page .today-run-command-hero-copy {
@@ -1589,32 +1596,49 @@
 }
 
 .today-run-command-page .today-run-command-hero-copy h1 {
-  max-width: 12ch !important;
-  font-size: clamp(3.35rem, 6.4vw, 7.35rem) !important;
-  line-height: 0.88 !important;
-  letter-spacing: -0.085em !important;
+  max-width: 11ch !important;
+  color: var(--tr-command-ink) !important;
+  font-size: clamp(2.8rem, 4.5vw, 4.8rem) !important;
+  line-height: 0.92 !important;
+  letter-spacing: -0.075em !important;
   text-wrap: balance;
 }
 
 .today-run-command-page .today-run-command-hero-copy > p {
   max-width: 58ch !important;
   color: var(--tr-command-soft) !important;
-  font-size: clamp(1rem, 1.15vw, 1.16rem);
+  font-size: 0.98rem;
+  line-height: 1.58;
 }
 
 .today-run-command-page .today-run-overview-disclosure {
-  width: min(100%, 620px);
+  width: min(100%, 560px);
 }
 
 .today-run-command-page .today-run-plan-morning-briefing {
-  width: min(100%, 760px);
-  margin-top: clamp(22px, 2.8vw, 38px);
-  padding: clamp(18px, 2vw, 26px);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.045);
+  width: min(100%, 680px);
+  margin-top: 16px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  border: 1px solid rgba(255, 248, 238, 0.09);
+  border-radius: 20px;
+  background: rgba(255, 248, 238, 0.055);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.today-run-command-page .today-run-plan-morning-briefing-label,
+.today-run-command-page .today-run-plan-wellness-insights {
+  grid-column: 1 / -1;
+}
+
+.today-run-command-page .today-run-plan-morning-briefing .today-run-plan-downshift-btn {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .today-run-command-page .today-run-plan-morning-briefing p,
@@ -1626,7 +1650,7 @@
 .today-run-command-page .today-run-stitch-primary-btn,
 .today-run-command-page .today-run-stitch-secondary-btn,
 .today-run-command-page .today-run-shoe-brief-action {
-  min-height: 44px;
+  min-height: 40px;
   border: 0 !important;
   border-radius: 999px !important;
   font-weight: 850;
@@ -1635,8 +1659,8 @@
 .today-run-command-page .today-run-plan-downshift-btn,
 .today-run-command-page .today-run-stitch-primary-btn {
   background: linear-gradient(135deg, var(--tr-command-ember-deep), var(--tr-command-ember)) !important;
-  color: #fff7ef !important;
-  box-shadow: 0 18px 34px rgba(160, 57, 42, 0.24);
+  color: #fff8ee !important;
+  box-shadow: 0 12px 24px rgba(146, 63, 50, 0.22);
 }
 
 .today-run-command-page .today-run-stitch-secondary-btn,
@@ -1646,21 +1670,25 @@
 }
 
 .today-run-command-page .today-run-plan-badges {
-  margin-top: clamp(18px, 2vw, 28px) !important;
+  margin-top: 16px !important;
+  gap: 8px;
 }
 
 .today-run-command-page .today-run-marathon-pill {
   border: 0;
-  background: rgba(255, 247, 239, 0.085) !important;
+  min-height: 30px;
+  padding: 6px 10px;
+  background: rgba(255, 248, 238, 0.075) !important;
   color: #ffd7cd !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .today-run-command-page .today-run-plan-rationale {
-  margin-top: clamp(18px, 2vw, 28px);
-  padding: clamp(16px, 1.6vw, 22px);
-  border-radius: 24px;
-  background: rgba(255, 247, 239, 0.06);
+  margin-top: 14px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .today-run-command-page .today-run-plan-rationale-label {
@@ -1670,35 +1698,37 @@
 .today-run-command-page .today-run-plan-rationale-content {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .today-run-command-page .today-run-plan-rationale-item {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 11px;
+  padding: 7px 10px;
   border-radius: 999px;
   background: rgba(255, 247, 239, 0.08);
   color: rgba(255, 247, 239, 0.78);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
 }
 
 .today-run-command-page .today-run-plan-hero-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 10px !important;
+  gap: 8px !important;
+  margin-top: 16px;
 }
 
 .today-run-command-page .today-run-plan-hero-metrics article,
 .today-run-command-page .today-run-plan-panel-grid article,
 .today-run-command-page .today-run-plan-signal-grid article {
-  border: 0 !important;
-  border-radius: 22px !important;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 239, 0.1), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.04) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 248, 238, 0.08) !important;
+  border-radius: 16px !important;
+  padding: 13px 14px;
+  background: rgba(255, 248, 238, 0.055) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-plan-hero-metrics strong,
@@ -1706,115 +1736,203 @@
 .today-run-command-page .today-run-plan-signal-grid strong,
 .today-run-command-page .today-run-plan-coach-line strong {
   color: var(--tr-command-ink) !important;
-  font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.18rem, 1.7vw, 1.65rem) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.35vw, 1.28rem) !important;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+.today-run-command-page .today-run-command-hero :is(
+  .today-run-plan-kicker,
+  .today-run-plan-card-head span,
+  .today-run-plan-panel-copy > span,
+  .today-run-plan-hero-metrics span,
+  .today-run-plan-panel-grid span,
+  .today-run-plan-signal-grid span
+) {
+  color: var(--tr-command-muted) !important;
 }
 
 .today-run-command-page .today-run-command-readiness-panel {
   display: grid;
-  align-content: space-between;
-  min-height: 100%;
-  padding: clamp(22px, 2.4vw, 34px) !important;
-  border-radius: clamp(24px, 2.2vw, 34px) !important;
+  align-content: start;
+  align-self: start;
+  min-height: 0;
+  padding: clamp(18px, 2vw, 24px) !important;
+  border: 1px solid rgba(255, 248, 238, 0.1) !important;
+  border-radius: 22px !important;
   background:
-    radial-gradient(circle at 86% 12%, rgba(240, 117, 97, 0.22), transparent 17rem),
-    linear-gradient(160deg, rgba(255, 247, 239, 0.12), rgba(255, 247, 239, 0.035)),
-    rgba(255, 255, 255, 0.06) !important;
+    radial-gradient(circle at 92% 8%, rgba(191, 91, 73, 0.2), transparent 15rem),
+    rgba(255, 248, 238, 0.06) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-command-readiness-panel::before {
-  content: "";
-  justify-self: end;
-  width: clamp(112px, 12vw, 168px);
-  aspect-ratio: 1;
-  margin-bottom: clamp(18px, 3vw, 34px);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(20, 18, 16, 0.9) 0 47%, transparent 48%),
-    conic-gradient(from 220deg, var(--tr-command-ember), #ffb4a7 64%, rgba(255, 247, 239, 0.14) 64%);
-  box-shadow: 0 22px 56px rgba(240, 117, 97, 0.16);
+  display: none;
 }
 
 .today-run-command-page .today-run-plan-panel-copy h2 {
-  font-size: clamp(2.4rem, 4vw, 4.7rem) !important;
-  line-height: 0.88 !important;
-  letter-spacing: -0.08em !important;
+  color: var(--tr-command-ink) !important;
+  font-size: clamp(2rem, 3vw, 3.25rem) !important;
+  line-height: 0.94 !important;
+  letter-spacing: -0.065em !important;
+}
+
+.today-run-command-page .today-run-plan-panel-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  margin-top: 18px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-plan-grid.today-run-command-grid {
-  grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr) !important;
-  gap: clamp(18px, 2vw, 28px) !important;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr) !important;
+  gap: clamp(16px, 1.7vw, 22px) !important;
 }
 
 .today-run-command-page .today-run-plan-card {
-  border: 0 !important;
-  border-radius: clamp(26px, 2.4vw, 38px) !important;
+  padding: clamp(20px, 2vw, 26px) !important;
+  border: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16)) !important;
+  border-radius: 24px !important;
   background:
-    radial-gradient(circle at 90% 0%, rgba(240, 117, 97, 0.12), transparent 18rem),
-    linear-gradient(180deg, rgba(39, 35, 31, 0.94), rgba(25, 23, 21, 0.96)) !important;
-  box-shadow:
-    0 26px 70px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    radial-gradient(circle at 94% 0%, rgba(191, 91, 73, 0.08), transparent 17rem),
+    var(--runner-profile-card-strong, rgba(255, 253, 247, 0.94)) !important;
+  box-shadow: var(--runner-profile-shadow, 0 20px 48px rgba(76, 54, 39, 0.08)) !important;
+  color: var(--runner-profile-ink, #211f1a) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-plan-card-head {
-  align-items: flex-end !important;
-  border-bottom: 1px solid rgba(255, 247, 239, 0.08);
-  padding-bottom: 18px;
+  align-items: flex-start !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16)) !important;
+  border-radius: 0 !important;
+  padding: 0 0 16px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-plan-card-head h2 {
-  max-width: 11ch;
-  font-size: clamp(2.2rem, 3.4vw, 4rem) !important;
-  line-height: 0.9 !important;
-  letter-spacing: -0.075em !important;
+  max-width: none;
+  color: var(--runner-profile-ink, #211f1a) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.55rem, 2.25vw, 2.2rem) !important;
+  line-height: 1 !important;
+  letter-spacing: -0.055em !important;
 }
 
 .today-run-command-page .today-run-plan-step-list {
   display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: clamp(12px, 1.2vw, 16px) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px !important;
+  margin-top: 18px;
 }
 
 .today-run-command-page .today-run-plan-step-card,
 .today-run-command-page .today-run-plan-reason-card,
 .today-run-command-page .today-run-plan-coach-line,
 .today-run-command-page .today-run-shoe-brief {
-  border: 0 !important;
-  border-radius: 24px !important;
-  background:
-    linear-gradient(180deg, rgba(255, 247, 239, 0.085), rgba(255, 247, 239, 0.03)),
-    rgba(255, 255, 255, 0.035) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--runner-profile-line, rgba(72, 58, 42, 0.16)) 74%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, var(--runner-profile-card, #fffbf2) 72%, transparent) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .today-run-command-page .today-run-plan-step-card h3,
 .today-run-command-page .today-run-shoe-brief-copy h3 {
-  color: var(--tr-command-ink) !important;
+  color: var(--runner-profile-ink, #211f1a) !important;
 }
 
 .today-run-command-page .today-run-plan-step-card p,
 .today-run-command-page .today-run-plan-reason-card p,
 .today-run-command-page .today-run-plan-coach-line p,
 .today-run-command-page .today-run-shoe-brief-copy p,
-.today-run-command-page .today-run-plan-card-head p,
-.today-run-command-page .today-run-plan-panel-copy p {
+.today-run-command-page .today-run-plan-card-head p {
+  color: var(--runner-profile-muted, rgba(33, 31, 26, 0.64)) !important;
+}
+
+.today-run-command-page .today-run-command-hero .today-run-plan-panel-copy {
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.today-run-command-page .today-run-command-hero .today-run-plan-panel-copy p {
   color: var(--tr-command-soft) !important;
 }
 
 .today-run-command-page .today-run-plan-step-card span,
 .today-run-command-page .today-run-plan-reason-card strong {
   border: 0;
-  background: rgba(240, 117, 97, 0.18) !important;
-  color: #ffd2c8 !important;
+  background: color-mix(in srgb, var(--runner-profile-flame, #bf5b49) 12%, transparent) !important;
+  color: var(--runner-profile-flame, #bf5b49) !important;
 }
 
 .today-run-command-page .today-run-plan-coach-line {
-  align-items: stretch !important;
+  align-items: flex-start !important;
+  padding: 14px 16px;
+}
+
+.today-run-command-page .today-run-plan-coach-line strong,
+.today-run-command-page .today-run-plan-signal-grid strong {
+  color: var(--runner-profile-ink, #211f1a) !important;
+}
+
+.today-run-command-page .today-run-plan-coach-line span,
+.today-run-command-page .today-run-plan-signal-grid span,
+.today-run-command-page .today-run-plan-card-head span,
+.today-run-command-page .today-run-shoe-brief-copy span,
+.today-run-command-page .today-run-shoe-brief-meta span {
+  color: var(--runner-profile-muted, rgba(33, 31, 26, 0.64)) !important;
 }
 
 .today-run-command-page .today-run-plan-signal-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.today-run-command-page .today-run-plan-signal-grid article {
+  border-color: var(--runner-profile-line, rgba(72, 58, 42, 0.16)) !important;
+  background: var(--runner-profile-card, rgba(255, 251, 242, 0.84)) !important;
+}
+
+.today-run-command-page .today-run-plan-reason-list,
+.today-run-command-page .today-run-plan-coach-lines {
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.today-run-command-page .today-run-plan-reason-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.today-run-command-page .today-run-plan-reason-card p {
+  margin: 4px 0 0;
+}
+
+.today-run-command-page .today-run-shoe-brief {
+  padding: 16px;
 }
 
 .today-run-command-page .runner-shell-footer {
@@ -1822,26 +1940,32 @@
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
-  --tr-command-ink: #261f1a;
-  --tr-command-soft: rgba(38, 31, 26, 0.68);
-  --tr-command-muted: rgba(38, 31, 26, 0.5);
-  --tr-command-panel: rgba(255, 255, 255, 0.74);
-  --tr-command-panel-strong: rgba(255, 255, 255, 0.9);
+  --tr-command-ink: #fff8ee;
+  --tr-command-soft: rgba(255, 248, 238, 0.72);
+  --tr-command-muted: rgba(255, 248, 238, 0.5);
   background:
-    radial-gradient(circle at 12% 8%, rgba(240, 117, 97, 0.14), transparent 24rem),
-    radial-gradient(circle at 86% 18%, rgba(160, 57, 42, 0.08), transparent 22rem),
-    linear-gradient(180deg, #fbf7f1 0%, #f5eee6 52%, #efe6dd 100%) !important;
+    radial-gradient(circle at 10% 8%, rgba(191, 91, 73, 0.11), transparent 24rem),
+    radial-gradient(circle at 88% 14%, rgba(122, 168, 130, 0.08), transparent 26rem),
+    linear-gradient(145deg, var(--runner-profile-paper, #f7f0e7), #ede2d2) !important;
 }
 
 @media (max-width: 1180px) {
-  .today-run-command-page .today-run-coaching-strip-inner,
   .today-run-command-page .today-run-command-hero,
   .today-run-command-page .today-run-plan-grid.today-run-command-grid {
     grid-template-columns: 1fr !important;
   }
 
-  .today-run-command-page .today-run-command-hero {
-    min-height: auto;
+  .today-run-command-page .today-run-coaching-strip-inner {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+
+  .today-run-command-page .today-run-coaching-answer {
+    grid-column: span 3;
+  }
+
+  .today-run-command-page .today-run-coaching-answer--readiness,
+  .today-run-command-page .today-run-coaching-answer--onboarding {
+    grid-column: 1 / -1;
   }
 }
 
@@ -1850,14 +1974,55 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
     width: min(100% - 22px, 100%) !important;
   }
 
+  .today-run-command-page .today-run-coaching-strip-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .today-run-command-page .today-run-coaching-answer {
+    grid-column: span 1 !important;
+  }
+
+  .today-run-command-page .today-run-coaching-answer--readiness,
+  .today-run-command-page .today-run-coaching-answer--onboarding {
+    grid-column: 1 / -1 !important;
+  }
+
+  .today-run-command-page .today-run-command-hero-copy h1 {
+    font-size: clamp(2.55rem, 13vw, 4rem) !important;
+  }
+
+  .today-run-command-page .today-run-plan-step-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .today-run-command-page .today-run-coaching-strip-inner,
   .today-run-command-page .today-run-plan-hero-metrics,
   .today-run-command-page .today-run-plan-panel-grid,
   .today-run-command-page .today-run-plan-signal-grid {
     grid-template-columns: 1fr !important;
   }
 
-  .today-run-command-page .today-run-command-hero-copy h1 {
-    font-size: clamp(2.8rem, 16vw, 4.7rem) !important;
+  .today-run-command-page .today-run-coaching-answer {
+    grid-column: 1 / -1 !important;
+  }
+
+  .today-run-command-page .today-run-command-hero,
+  .today-run-command-page .today-run-plan-card {
+    padding: 18px !important;
+    border-radius: 20px !important;
+  }
+
+  .today-run-command-page .today-run-plan-morning-briefing {
+    grid-template-columns: 1fr;
+  }
+
+  .today-run-command-page .today-run-plan-morning-briefing .today-run-plan-downshift-btn {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    white-space: normal;
   }
 }
 

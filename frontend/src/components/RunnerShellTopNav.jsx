@@ -20,7 +20,6 @@ export default function RunnerShellTopNav({
     : [];
   const activeItem = resolveActiveItem(normalizedItems, activeLabel);
   const currentLabel = activeLabel || activeItem?.label || 'Hermes';
-  const dashboardItem = normalizedItems.find((item) => item.key === 'dashboard');
 
   function handleRoute(route) {
     if (!route || typeof navigate !== 'function') return;
@@ -30,14 +29,6 @@ export default function RunnerShellTopNav({
   return (
     <div className={cx('runner-shell-topnav runner-shell-topnav--command', className)}>
       <div className="runner-shell-topnav-identity">
-        <button
-          type="button"
-          className="runner-shell-topnav-brand"
-          onClick={() => handleRoute(dashboardItem?.route || '/profile')}
-          aria-label={dashboardItem?.label || 'HERMES'}
-        >
-          HERMES
-        </button>
         <div className="runner-shell-topnav-current-stack">
           {parentLabel ? (
             <button

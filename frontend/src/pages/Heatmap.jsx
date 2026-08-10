@@ -2,11 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
-import { formatDate, formatDistance } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import PageSkeleton from '../components/PageSkeleton';
 import 'leaflet/dist/leaflet.css';
@@ -18,11 +16,11 @@ const HEATMAP_INITIAL_PAGE_SIZE = 5000;
 const HEATMAP_INITIAL_COVERAGE_LIMIT = 60000;
 const HEATMAP_BACKGROUND_PAGE_SIZE = 100000;
 const MAX_HEATMAP_PAGES = 1000;
-const ACTIVITIES_REQUEST_TIMEOUT_MS = 15000;
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
-const HEATMAP_FULL_DRAW_CHUNK_SIZE = 320;
-const HEATMAP_CANVAS_PADDING = 0.5;
+const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
+const HEATMAP_CANVAS_PADDING = 0.25;
+const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;
 const HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1';
 const HEATMAP_CACHE_STORE_NAME = 'heatmaps';
 const HEATMAP_CACHE_DB_VERSION = 1;
@@ -324,30 +322,21 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
   return `${Math.abs(value).toFixed(3)}\u00b0${suffix}`;
 }
 
-function getRunDistanceKm(run) {
-  const distanceKm = Number(run?.distanceKm);
-  if (Number.isFinite(distanceKm) && distanceKm > 0) return distanceKm;
-  const distanceMeters = Number(run?.distanceMeters);
-  return Number.isFinite(distanceMeters) && distanceMeters > 0 ? distanceMeters / 1000 : 0;
-}
-
 export default function Heatmap() {
   const { isAuthenticated, authHydrated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
-  const { unit } = useUnit();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
   const [heatmap, setHeatmap] = useState(null);
-  const [runs, setRuns] = useState([]);
   const [heatmapState, setHeatmapState] = useState('loading');
   const [heatmapReloadToken, setHeatmapReloadToken] = useState(0);
   const [mapMountFailed, setMapMountFailed] = useState(false);
-  const [viewBounds, setViewBounds] = useState(null);
 
-  const mapShellRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const zoomAnimationActiveRef = useRef(false);
+  const queuedZoomStepsRef = useRef(0);
   const boundsRef = useRef(null);
   const dotOverlayRef = useRef(null);
   const latestPointsRef = useRef([]);
@@ -387,9 +376,7 @@ export default function Heatmap() {
     if (!authHydrated || !isAuthenticated) return undefined;
 
     const heatmapController = new AbortController();
-    const activitiesController = new AbortController();
     const heatmapTimeoutId = window.setTimeout(() => heatmapController.abort(), HEATMAP_REQUEST_TIMEOUT_MS);
-    const activitiesTimeoutId = window.setTimeout(() => activitiesController.abort(), ACTIVITIES_REQUEST_TIMEOUT_MS);
     let cancelled = false;
 
     setHeatmapState('loading');
@@ -398,7 +385,6 @@ export default function Heatmap() {
     async function loadHeatmap() {
       const cacheKey = getHeatmapCacheKey(authEmail);
       let servedCachedHeatmap = false;
-      const activitiesPromise = apiJson('/api/activities', { signal: activitiesController.signal }).catch(() => []);
       const cachedHeatmapPromise = readCachedHeatmapPayload(cacheKey).catch(() => null);
       try {
         const cachedHeatmap = await cachedHeatmapPromise;
@@ -413,12 +399,10 @@ export default function Heatmap() {
           setHeatmap(partialHeatmap);
           setHeatmapState('ready');
         });
-        const activitiesData = await activitiesPromise;
 
         if (cancelled) return;
         const completeHeatmap = heatmapData && typeof heatmapData === 'object' ? heatmapData : null;
         setHeatmap(completeHeatmap);
-        setRuns(Array.isArray(activitiesData) ? activitiesData : []);
         setHeatmapState('ready');
         if (completeHeatmap && completeHeatmap.diagnostics?.complete !== false) {
           writeCachedHeatmapPayload(cacheKey, completeHeatmap).catch(() => {});
@@ -430,7 +414,6 @@ export default function Heatmap() {
         }
       } finally {
         window.clearTimeout(heatmapTimeoutId);
-        window.clearTimeout(activitiesTimeoutId);
       }
     }
 
@@ -439,9 +422,7 @@ export default function Heatmap() {
     return () => {
       cancelled = true;
       window.clearTimeout(heatmapTimeoutId);
-      window.clearTimeout(activitiesTimeoutId);
       heatmapController.abort();
-      activitiesController.abort();
     };
   }, [authEmail, authHydrated, isAuthenticated, heatmapReloadToken]);
 
@@ -478,8 +459,6 @@ export default function Heatmap() {
     if (!mapRef.current || !boundsRef.current || !hasBounds || heatmapState !== 'ready') return undefined;
 
     let disposed = false;
-    const mapShellElement = mapShellRef.current;
-
     async function mountMap() {
       try {
         const L = await loadLeafletModules();
@@ -488,7 +467,6 @@ export default function Heatmap() {
         if (dotOverlayRef.current?.destroy) {
           dotOverlayRef.current.destroy();
         }
-        mapShellElement?.classList.remove('is-map-zooming');
         if (mapInstanceRef.current) {
           mapInstanceRef.current.remove();
           mapInstanceRef.current = null;
@@ -502,6 +480,7 @@ export default function Heatmap() {
           wheelDebounceTime: 24,
           wheelPxPerZoomLevel: 96,
           zoomAnimation: true,
+          zoomAnimationThreshold: 1,
           fadeAnimation: false,
           markerZoomAnimation: false,
           preferCanvas: true,
@@ -513,7 +492,8 @@ export default function Heatmap() {
           maxZoom: 20,
           updateWhenZooming: false,
           updateWhenIdle: false,
-          keepBuffer: 10,
+          updateInterval: 250,
+          keepBuffer: 2,
           className: 'heatmap-page-dark-tile-layer',
           errorTileUrl: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22256%22 height=%22256%22 viewBox=%220 0 256 256%22%3E%3Crect width=%22256%22 height=%22256%22 fill=%22%2305070a%22/%3E%3C/svg%3E',
           attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
@@ -549,7 +529,6 @@ export default function Heatmap() {
         let fullDrawFrameId = null;
         let cancelFullDrawFrame = null;
         let activeFullDrawToken = 0;
-        let lastViewBoundsKey = '';
         let isZoomingMap = false;
         let skipNextMovePreview = false;
         let zoomSettleTimeoutId = null;
@@ -557,19 +536,6 @@ export default function Heatmap() {
         const canvasSize = { width: 0, height: 0, pixelRatio: 0 };
         const bufferCanvas = document.createElement('canvas');
         const bufferContext = bufferCanvas.getContext('2d');
-
-        const updateViewBounds = (mapBounds) => {
-          const nextViewBounds = {
-            west: mapBounds.getWest(),
-            east: mapBounds.getEast(),
-            north: mapBounds.getNorth(),
-            south: mapBounds.getSouth(),
-          };
-          const nextKey = `${nextViewBounds.west.toFixed(5)}:${nextViewBounds.east.toFixed(5)}:${nextViewBounds.north.toFixed(5)}:${nextViewBounds.south.toFixed(5)}`;
-          if (nextKey === lastViewBoundsKey) return;
-          lastViewBoundsKey = nextKey;
-          setViewBounds(nextViewBounds);
-        };
 
         const cancelFullDraw = () => {
           activeFullDrawToken += 1;
@@ -608,32 +574,35 @@ export default function Heatmap() {
           context.globalAlpha = 1;
         };
 
-        const paintRouteDots = (renderMode = 'full') => {
+        const paintRouteDots = (renderMode = 'full', onPaintComplete) => {
           if (disposed) return;
 
           const zoom = map.getZoom();
-          const mapBounds = map.getBounds();
           const center = map.getCenter();
           const size = map.getSize();
           const paddedSize = size.multiplyBy(1 + HEATMAP_CANVAS_PADDING * 2).round();
-          const pixelRatio = window.devicePixelRatio || 1;
+          const pixelRatio = Math.min(window.devicePixelRatio || 1, HEATMAP_CANVAS_PIXEL_RATIO_CAP);
           const layerTopLeft = map.containerPointToLayerPoint(size.multiplyBy(-HEATMAP_CANVAS_PADDING)).round();
           const canvasLayerOrigin = layerTopLeft;
-          L.DomUtil.setPosition(dotCanvas, canvasLayerOrigin);
-          canvasViewState = { center, zoom };
 
           const canvasWidth = Math.max(1, Math.round(paddedSize.x * pixelRatio));
           const canvasHeight = Math.max(1, Math.round(paddedSize.y * pixelRatio));
-          if (canvasSize.width !== canvasWidth || canvasSize.height !== canvasHeight || canvasSize.pixelRatio !== pixelRatio) {
-            canvasSize.width = canvasWidth;
-            canvasSize.height = canvasHeight;
-            canvasSize.pixelRatio = pixelRatio;
-            dotCanvas.width = canvasWidth;
-            dotCanvas.height = canvasHeight;
+          const commitCanvasLayout = () => {
+            L.DomUtil.setPosition(dotCanvas, canvasLayerOrigin);
+            canvasViewState = { center, zoom };
+            if (canvasSize.width !== canvasWidth || canvasSize.height !== canvasHeight || canvasSize.pixelRatio !== pixelRatio) {
+              canvasSize.width = canvasWidth;
+              canvasSize.height = canvasHeight;
+              canvasSize.pixelRatio = pixelRatio;
+              dotCanvas.width = canvasWidth;
+              dotCanvas.height = canvasHeight;
+              dotCanvas.style.width = `${paddedSize.x}px`;
+              dotCanvas.style.height = `${paddedSize.y}px`;
+            }
+          };
+          if (bufferCanvas.width !== canvasWidth || bufferCanvas.height !== canvasHeight) {
             bufferCanvas.width = canvasWidth;
             bufferCanvas.height = canvasHeight;
-            dotCanvas.style.width = `${paddedSize.x}px`;
-            dotCanvas.style.height = `${paddedSize.y}px`;
           }
 
           const paddedSouthEast = layerTopLeft.add(paddedSize);
@@ -649,13 +618,9 @@ export default function Heatmap() {
             ? latestPreviewRenderPointsRef.current
             : latestFullRenderPointsRef.current;
 
-          if (renderMode === 'full') {
-            updateViewBounds(mapBounds);
-          }
-
           cancelFullDraw();
           if (renderMode !== 'full' || renderPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
-            dotCanvas.style.opacity = renderMode === 'preview' ? '0.82' : '1';
+            commitCanvasLayout();
             dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
             dotContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
             for (const point of renderPoints) {
@@ -663,6 +628,7 @@ export default function Heatmap() {
               if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
               drawRoutePoint(dotContext, point, zoom, renderMode, canvasLayerOrigin);
             }
+            onPaintComplete?.();
             return;
           }
 
@@ -703,35 +669,32 @@ export default function Heatmap() {
               return;
             }
 
-            dotCanvas.style.opacity = '1';
+            commitCanvasLayout();
             dotContext.setTransform(1, 0, 0, 1, 0, 0);
             dotContext.clearRect(0, 0, canvasWidth, canvasHeight);
             dotContext.drawImage(bufferCanvas, 0, 0);
+            onPaintComplete?.();
           };
 
           scheduleFullDrawChunk(drawFullChunk);
         };
 
-        const scheduleRouteDots = (renderMode = 'full') => {
+        const scheduleRouteDots = (renderMode = 'full', onPaintComplete) => {
           if (drawFrameId !== null) {
             window.cancelAnimationFrame(drawFrameId);
           }
           drawFrameId = window.requestAnimationFrame(() => {
             drawFrameId = null;
-            paintRouteDots(renderMode);
+            paintRouteDots(renderMode, onPaintComplete);
           });
         };
 
         const finishZoomRender = () => {
           if (disposed) return;
           isZoomingMap = false;
+          zoomAnimationActiveRef.current = false;
           zoomSettleTimeoutId = null;
-          dotCanvas.style.display = 'block';
-          dotCanvas.style.opacity = '1';
           scheduleRouteDots('full');
-          window.setTimeout(() => {
-            if (!disposed) mapShellElement?.classList.remove('is-map-zooming');
-          }, 120);
         };
 
         const animateRouteDotsZoom = (event) => {
@@ -747,6 +710,7 @@ export default function Heatmap() {
         };
 
         const scheduleZoomStart = () => {
+          zoomAnimationActiveRef.current = true;
           if (drawFrameId !== null) {
             window.cancelAnimationFrame(drawFrameId);
             drawFrameId = null;
@@ -755,11 +719,8 @@ export default function Heatmap() {
           if (zoomSettleTimeoutId !== null) {
             window.clearTimeout(zoomSettleTimeoutId);
           }
-          mapShellRef.current?.classList.add('is-map-zooming');
           isZoomingMap = true;
           skipNextMovePreview = true;
-          dotCanvas.style.display = 'block';
-          dotCanvas.style.opacity = '1';
           zoomSettleTimeoutId = window.setTimeout(finishZoomRender, 480);
         };
 
@@ -767,7 +728,23 @@ export default function Heatmap() {
           if (zoomSettleTimeoutId !== null) {
             window.clearTimeout(zoomSettleTimeoutId);
           }
-          finishZoomRender();
+          zoomSettleTimeoutId = null;
+
+          const queuedZoomDelta = queuedZoomStepsRef.current;
+          queuedZoomStepsRef.current = 0;
+          if (queuedZoomDelta === 0) {
+            finishZoomRender();
+            return;
+          }
+          const nextZoom = clamp(map.getZoom() + queuedZoomDelta, map.getMinZoom(), map.getMaxZoom());
+          if (nextZoom === map.getZoom()) {
+            finishZoomRender();
+            return;
+          }
+          window.requestAnimationFrame(() => {
+            if (disposed) return;
+            map.setZoom(nextZoom, { animate: true });
+          });
         };
 
         const scheduleMoveEnd = () => {
@@ -790,6 +767,8 @@ export default function Heatmap() {
               zoomSettleTimeoutId = null;
             }
             cancelFullDraw();
+            zoomAnimationActiveRef.current = false;
+            queuedZoomStepsRef.current = 0;
           },
         };
         map.on('zoomstart', scheduleZoomStart);
@@ -816,7 +795,6 @@ export default function Heatmap() {
         dotOverlayRef.current.destroy();
       }
       dotOverlayRef.current = null;
-      mapShellElement?.classList.remove('is-map-zooming');
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -842,45 +820,6 @@ export default function Heatmap() {
     ? `${formatCoordinate(centerLatitude, 'N', 'S')} / ${formatCoordinate(centerLongitude, 'E', 'W')}`
     : '--';
 
-  const visibleRuns = useMemo(() => {
-    if (!viewBounds || !runs.length || !points.length) return [];
-
-    const visibleGpsPoints = buildVisibleGpsDots(points);
-    if (visibleGpsPoints.length === 0) return [];
-
-    const knownRunIds = new Set(
-      runs
-        .map((run) => Number(run.id))
-        .filter((id) => Number.isFinite(id)),
-    );
-    if (knownRunIds.size === 0) return [];
-
-    const activityIdsInView = new Set();
-    for (const point of visibleGpsPoints) {
-      const activityId = Number(point?.activityId);
-      if (!knownRunIds.has(activityId)) continue;
-      if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
-      if (
-        point.latitude >= viewBounds.south
-        && point.latitude <= viewBounds.north
-        && point.longitude >= viewBounds.west
-        && point.longitude <= viewBounds.east
-      ) {
-        activityIdsInView.add(activityId);
-        if (activityIdsInView.size >= knownRunIds.size) break;
-      }
-    }
-
-    return runs.filter((run) => activityIdsInView.has(Number(run.id)));
-  }, [viewBounds, runs, points]);
-
-  const visibleRunRows = useMemo(() => visibleRuns.slice(0, 10), [visibleRuns]);
-  const visibleRunDistanceKm = useMemo(
-    () => visibleRuns.reduce((total, run) => total + getRunDistanceKm(run), 0),
-    [visibleRuns],
-  );
-  const viewSummaryReady = Boolean(viewBounds);
-
   const speedLegendLabels = {
     slow: t('heatmap.page_legend_slow'),
     mid: t('heatmap.page_legend_mid'),
@@ -902,11 +841,20 @@ export default function Heatmap() {
   const zoomMap = (delta) => {
     const map = mapInstanceRef.current;
     if (!map) return;
-    if (delta > 0) {
-      map.zoomIn();
+    const zoomStep = Math.sign(delta);
+    if (zoomStep === 0) return;
+    if (zoomAnimationActiveRef.current) {
+      queuedZoomStepsRef.current = clamp(
+        queuedZoomStepsRef.current + zoomStep,
+        -3,
+        3,
+      );
       return;
     }
-    map.zoomOut();
+    const targetZoom = clamp(map.getZoom() + zoomStep, map.getMinZoom(), map.getMaxZoom());
+    if (targetZoom === map.getZoom()) return;
+    zoomAnimationActiveRef.current = true;
+    map.setZoom(targetZoom, { animate: true });
   };
 
   const recenterMap = () => {
@@ -927,7 +875,7 @@ export default function Heatmap() {
 
   return (
     <div className="heatmap-page">
-      <div ref={mapShellRef} className="heatmap-page-map-shell">
+      <div className="heatmap-page-map-shell">
         <div ref={mapRef} className="heatmap-page-map-canvas" />
         <div className="heatmap-page-map-vignette" aria-hidden="true" />
 
@@ -1069,47 +1017,6 @@ export default function Heatmap() {
               </div>
             </aside>
 
-            <section className={cx('heatmap-sessions-card', visibleRunRows.length === 0 && 'is-empty')}>
-              <div className="heatmap-sessions-summary">
-                <span className="heatmap-page-card-kicker">{t('heatmap.page_sessions_in_view')}</span>
-                <div className="heatmap-sessions-summary-grid">
-                  <div>
-                    <strong>{viewSummaryReady ? visibleRuns.length : '--'}</strong>
-                    <span>{t('heatmap.page_runs_in_view_label')}</span>
-                  </div>
-                  <div>
-                    <strong>{viewSummaryReady ? formatDistance(visibleRunDistanceKm, 1, lang, unit) : '--'}</strong>
-                    <span>{t('heatmap.page_distance_in_view_label')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {viewSummaryReady && visibleRunRows.length > 0 ? (
-                <div className="heatmap-sessions-list">
-                  {visibleRunRows.map((run) => (
-                    <button
-                      key={run.id}
-                      type="button"
-                      className="heatmap-session-row"
-                      onClick={() => navigate(`/run/${run.id}`)}
-                    >
-                      <div className="heatmap-session-main">
-                        <strong>{run.name || t('profile.dashboard_session_fallback')}</strong>
-                        <span>{formatDate(run.startTime || run.startDate, lang === 'zh-CN' ? 'zh-CN' : 'en-US')}</span>
-                      </div>
-                      <div className="heatmap-session-meta">
-                        <strong>{formatDistance(getRunDistanceKm(run), 1, lang, unit)}</strong>
-                        <span>{t('heatmap.page_view_session')}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="heatmap-sessions-empty">
-                  {viewSummaryReady ? t('heatmap.page_no_sessions_in_view') : t('heatmap.page_area_syncing')}
-                </p>
-              )}
-            </section>
           </>
         ) : null}
 

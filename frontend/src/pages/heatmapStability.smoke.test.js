@@ -62,10 +62,10 @@ assert.doesNotMatch(
   /normalizedZoom|normalizedZoom - 8|getGpsDotStyle\(speedRatio, zoom\)/,
   'Heatmap GPS dot style should not depend on zoom-specific radius or opacity formulas.',
 );
-assert.match(
+assert.doesNotMatch(
   heatmapSource,
-  /const visibleRuns = useMemo\(\(\) => \{[\s\S]*?const activityIdsInView = new Set\(\);[\s\S]*?const activityId = Number\(point\?\.activityId\);[\s\S]*?isValidGpsCoordinate\(point\?\.latitude, point\?\.longitude\)[\s\S]*?activityIdsInView\.add\(activityId\)[\s\S]*?return runs\.filter\(\(run\) => activityIdsInView\.has\(Number\(run\.id\)\)\);[\s\S]*?\}, \[viewBounds, runs, points\]\);/,
-  'Heatmap sessions-in-view should be derived from real GPS activity IDs inside the current viewport, not unavailable activity start coordinates.',
+  /heatmap-sessions-card|heatmap-sessions-list|visibleRuns|viewBounds/,
+  'Heatmap should not retain the removed viewport sessions drawer or its viewport activity matching state.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -153,8 +153,13 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  /HEATMAP_FULL_DRAW_CHUNK_SIZE = 320[\s\S]*?const bufferCanvas = document\.createElement\('canvas'\)[\s\S]*?const bufferContext = bufferCanvas\.getContext\('2d'\)[\s\S]*?const cancelFullDraw = \(\) => \{[\s\S]*?activeFullDrawToken \+= 1[\s\S]*?cancelFullDrawFrame\(fullDrawFrameId\)[\s\S]*?const scheduleFullDrawChunk = \(callback\) => \{[\s\S]*?requestIdleCallback\(callback, \{ timeout: 420 \}\)[\s\S]*?window\.setTimeout\(\(\) => callback\(\{ timeRemaining: \(\) => 4, didTimeout: true \}\), 24\)[\s\S]*?scheduleFullDrawChunk\(drawFullChunk\)[\s\S]*?dotContext\.drawImage\(bufferCanvas, 0, 0\)/,
-  'Heatmap full GPS redraws should be chunked into an offscreen canvas and swapped only after completion so zoom animation frames stay responsive.',
+  /HEATMAP_CANVAS_PADDING = 0\.25[\s\S]*?HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1\.5[\s\S]*?const pixelRatio = Math\.min\(window\.devicePixelRatio \|\| 1, HEATMAP_CANVAS_PIXEL_RATIO_CAP\)/,
+  'Heatmap should cap its padded Retina backing store so zoom animation does not composite oversized canvas textures.',
+);
+assert.match(
+  heatmapSource,
+  /HEATMAP_FULL_DRAW_CHUNK_SIZE = 640[\s\S]*?const bufferCanvas = document\.createElement\('canvas'\)[\s\S]*?const bufferContext = bufferCanvas\.getContext\('2d'\)[\s\S]*?const commitCanvasLayout = \(\) => \{[\s\S]*?L\.DomUtil\.setPosition\(dotCanvas, canvasLayerOrigin\)[\s\S]*?canvasViewState = \{ center, zoom \}[\s\S]*?const drawFullChunk = \(deadline\) => \{[\s\S]*?scheduleFullDrawChunk\(drawFullChunk\)[\s\S]*?commitCanvasLayout\(\);[\s\S]*?dotContext\.drawImage\(bufferCanvas, 0, 0\);/,
+  'Heatmap full GPS redraws should keep the transformed frame visible and commit the new layout only when the offscreen replacement is complete.',
 );
 assert.match(
   heatmapSource,
@@ -177,8 +182,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  /let isZoomingMap = false;[\s\S]*?let skipNextMovePreview = false;[\s\S]*?let zoomSettleTimeoutId = null;[\s\S]*?let canvasViewState = null;[\s\S]*?const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?classList\.remove\('is-map-zooming'\)[\s\S]*?const animateRouteDotsZoom = \(event\) => \{[\s\S]*?if \(!canvasViewState\) return;[\s\S]*?getZoomScale\(event\.zoom, canvasViewState\.zoom\)[\s\S]*?0\.5 \+ HEATMAP_CANVAS_PADDING[\s\S]*?map\.project\(canvasViewState\.center, event\.zoom\)[\s\S]*?_getNewPixelOrigin\(event\.center, event\.zoom\)[\s\S]*?L\.DomUtil\.setTransform\(dotCanvas, offset, scale\);[\s\S]*?const scheduleZoomStart = \(\) => \{[\s\S]*?cancelAnimationFrame\(drawFrameId\)[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?classList\.add\('is-map-zooming'\)[\s\S]*?dotCanvas\.style\.display = 'block';[\s\S]*?dotCanvas\.style\.opacity = '1';[\s\S]*?zoomSettleTimeoutId = window\.setTimeout\(finishZoomRender, 480\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?window\.clearTimeout\(zoomSettleTimeoutId\)[\s\S]*?finishZoomRender\(\);[\s\S]*?const scheduleMoveEnd = \(\) => \{[\s\S]*?isZoomingMap \|\| skipNextMovePreview[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('zoomstart', scheduleZoomStart\);[\s\S]*?map\.on\('zoomanim', animateRouteDotsZoom\);[\s\S]*?map\.on\('zoomend', scheduleZoomEnd\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);/,
-  'Heatmap zooming should transform the GPS canvas during Leaflet zoom animation, then repaint the full rendered pool when zoom settles.',
+  /const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?zoomAnimationActiveRef\.current = false;[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?const queuedZoomDelta = queuedZoomStepsRef\.current;[\s\S]*?queuedZoomStepsRef\.current = 0;[\s\S]*?if \(queuedZoomDelta === 0\) \{[\s\S]*?finishZoomRender\(\);[\s\S]*?return;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomDelta[\s\S]*?map\.setZoom\(nextZoom, \{ animate: true \}\)/,
+  'Heatmap zooming should skip intermediate redraws and coalesce queued clicks into one follow-up animation before the atomic full repaint.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -187,38 +192,45 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  new RegExp(String.raw`wheelDebounceTime: 24[\s\S]*?wheelPxPerZoomLevel: 96[\s\S]*?zoomAnimation: true[\s\S]*?fadeAnimation: false[\s\S]*?markerZoomAnimation: false[\s\S]*?preferCanvas: true[\s\S]*?updateWhenZooming: false[\s\S]*?updateWhenIdle: false[\s\S]*?keepBuffer: 10[\s\S]*?className: 'heatmap-page-dark-tile-layer'[\s\S]*?errorTileUrl: 'data:image/svg\+xml,`),
-  'Heatmap should preserve existing dark tiles through zoom and use a dark fallback for unloaded map tiles.',
+  new RegExp(String.raw`wheelDebounceTime: 24[\s\S]*?wheelPxPerZoomLevel: 96[\s\S]*?zoomAnimation: true[\s\S]*?zoomAnimationThreshold: 1[\s\S]*?fadeAnimation: false[\s\S]*?markerZoomAnimation: false[\s\S]*?preferCanvas: true[\s\S]*?updateWhenZooming: false[\s\S]*?updateWhenIdle: false[\s\S]*?updateInterval: 250[\s\S]*?keepBuffer: 2[\s\S]*?className: 'heatmap-page-dark-tile-layer'[\s\S]*?errorTileUrl: 'data:image/svg\+xml,`),
+  'Heatmap should animate one-level zooms only, throttle tile updates, retain a bounded buffer, and use a dark fallback during zoom.',
+);
+assert.match(
+  heatmapSource,
+  /const zoomMap = \(delta\) => \{[\s\S]*?const zoomStep = Math\.sign\(delta\);[\s\S]*?if \(zoomAnimationActiveRef\.current\) \{[\s\S]*?queuedZoomStepsRef\.current = clamp\([\s\S]*?queuedZoomStepsRef\.current \+ zoomStep,[\s\S]*?-3,[\s\S]*?3,[\s\S]*?return;[\s\S]*?const targetZoom = clamp\(map\.getZoom\(\) \+ zoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);[\s\S]*?map\.setZoom\(targetZoom, \{ animate: true \}\);/,
+  'Heatmap zoom controls should queue rapid clicks and request a bounded zoom step without serializing every click.',
 );
 assert.match(
   heatmapSource,
   /const scheduleMoveEnd = \(\) => \{[\s\S]*?skipNextMovePreview = false;[\s\S]*?return;[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);[\s\S]*?map\.on\('resize', \(\) => scheduleRouteDots\('preview'\)\);[\s\S]*?scheduleRouteDots\('preview'\);/,
   'Heatmap should keep ordinary map movement redraws on the lightweight preview pool without replacing the post-zoom full repaint.',
 );
-assert.match(
-  heatmapSource,
-  /if \(renderMode === 'full'\) \{[\s\S]*?updateViewBounds\(mapBounds\);[\s\S]*?\}/,
-  'Heatmap preview paints should not update React viewport state during zoom or movement.',
-);
-assert.match(
+assert.doesNotMatch(
   heatmapStyleSource,
-  /is-map-zooming :is\([\s\S]*?backdrop-filter: none[\s\S]*?box-shadow: none/,
-  'Heatmap zoom mode should reduce heavy overlay compositing without hiding visible bars.',
+  /is-map-zooming[\s\S]*?backdrop-filter: none|is-map-zooming[\s\S]*?box-shadow: none/,
+  'Heatmap zooming should not flash overlay blur or shadows on and off.',
+);
+assert.doesNotMatch(
+  heatmapStyleSource,
+  /\.heatmap-page-(?:brand-pill|search-pill|filter-pill|utility-btn|legend-card|avatar|utility-rail)[^{]*\{[^}]*backdrop-filter/,
+  'Heatmap controls should not continuously backdrop-blur the moving map on laptop GPUs.',
 );
 assert.doesNotMatch(
   heatmapStyleSource,
   /heatmap-page-map-canvas \{[^}]*?\n\s*filter:|is-map-zooming \.heatmap-page-map-canvas[^}]*?\n\s*filter:|leaflet-zoom-animated[\s\S]*?transition: none/,
   'Heatmap should not filter the full-screen map or disable Leaflet native zoom transitions because both make zoom visibly laggy.',
-);assert.match(
+);
+assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-map-shell \{[\s\S]*?isolation: isolate;[\s\S]*?\.heatmap-page-map-canvas \{[\s\S]*?position: relative;[\s\S]*?z-index: 0;[\s\S]*?\.heatmap-page-topbar,[\s\S]*?\.heatmap-page-utility-rail,[\s\S]*?\.heatmap-sessions-card,[\s\S]*?z-index: 30;/,
+  /\.heatmap-page-map-shell \{[\s\S]*?isolation: isolate;[\s\S]*?\.heatmap-page-map-canvas \{[\s\S]*?position: relative;[\s\S]*?z-index: 0;[\s\S]*?\.heatmap-page-topbar,[\s\S]*?\.heatmap-page-legend-card,[\s\S]*?\.heatmap-page-utility-rail,[\s\S]*?\.heatmap-page-empty\s*\{[\s\S]*?z-index: 30;/,
   'Heatmap overlay bars should stay above Leaflet panes without relying on expensive full-map filters.',
 );
 assert.doesNotMatch(
   heatmapStyleSource,
-  /is-map-zooming \.heatmap-sessions-card[^{}]*\{[^}]*visibility: hidden|is-map-zooming[^{}]*heatmap-page-utility-rail[^{}]*\{[^}]*display: none|is-map-zooming[^{}]*heatmap-page-legend-card[^{}]*\{[^}]*display: none/,
+  /is-map-zooming[^{}]*heatmap-page-utility-rail[^{}]*\{[^}]*display: none|is-map-zooming[^{}]*heatmap-page-legend-card[^{}]*\{[^}]*display: none/,
   'Heatmap zoom mode should not make the visible overlay bars disappear.',
-);assert.match(
+);
+assert.match(
   heatmapStyleSource,
   /\.heatmap-page-map-canvas \{[\s\S]*?background: #05070a[\s\S]*?leaflet-container,[\s\S]*?leaflet-tile-pane,[\s\S]*?leaflet-tile-container,[\s\S]*?heatmap-page-dark-tile-layer[\s\S]*?background: #05070a !important[\s\S]*?leaflet-tile:not\(\.leaflet-tile-loaded\)[\s\S]*?opacity: 0 !important/,
   'Heatmap map tiles should use a dark backing and hide unloaded tile images so zooming cannot flash white.',
@@ -226,13 +238,13 @@ assert.doesNotMatch(
 
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-dot-canvas \{[\s\S]*?will-change: transform, opacity[\s\S]*?transform: translateZ\(0\)[\s\S]*?\.heatmap-page-map-shell\.is-map-zooming \.heatmap-page-dot-canvas[\s\S]*?opacity: 1/,
-  'Heatmap GPS dot canvas should remain GPU-composited and visible during zoom.',
+  /\.heatmap-page-dot-canvas \{[\s\S]*?will-change: transform[\s\S]*?backface-visibility: hidden[\s\S]*?transform: translateZ\(0\)/,
+  'Heatmap GPS dot canvas should remain GPU-composited without an opacity transition during zoom.',
 );
 assert.doesNotMatch(
   heatmapSource,
-  /dotCanvas\.style\.display = 'none'/,
-  'Heatmap zooming should not hide GPS points while the user zooms.',
+  /dotCanvas\.style\.(?:display|opacity)/,
+  'Heatmap zooming should not hide or fade GPS points while the user zooms.',
 );
 assert.match(
   heatmapSource,

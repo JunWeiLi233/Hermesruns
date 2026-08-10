@@ -3406,6 +3406,12 @@
   padding-inline: clamp(16px, 2.5vw, 40px) !important;
 }
 
+/* Keep every Settings control above the decorative glass canvas treatment. */
+.runner-dashboard-page.settings-control-page .settings-atlas-canvas > * {
+  position: relative;
+  z-index: 1;
+}
+
 .settings-atlas-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(310px, 360px) minmax(0, 0.92fr);
@@ -4418,7 +4424,13 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  align-items: start;
+  /* Keep the two workbench cards on the same baseline in each row. */
+  align-items: stretch;
+}
+
+.st-main-grid > .st-card {
+  height: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Account form ── */
@@ -5057,6 +5069,59 @@ body:is(.theme-midnight, .theme-high-contrast) .st-brief-toggle {
 .st-logout-hint {
   font-size: 0.68rem;
   color: var(--text-muted);
+}
+
+/* Keep a failed settings request recoverable instead of leaving a dead-end message. */
+.settings-load-error {
+  width: min(460px, calc(100% - 32px));
+  padding: 28px 30px;
+  border: 1px solid rgba(160, 57, 42, 0.18);
+  border-radius: 24px;
+  background: rgba(255, 251, 247, 0.82);
+  box-shadow: 0 24px 70px rgba(75, 45, 32, 0.12);
+  text-align: center;
+}
+
+.settings-load-error .rewards-load-eyebrow,
+.settings-load-error .rewards-load-title,
+.settings-load-error .rewards-load-detail {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.settings-load-error-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-load-back {
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(44, 47, 48, 0.15);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted, #595c5d);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.settings-load-back:hover {
+  background: rgba(44, 47, 48, 0.06);
+}
+
+body.theme-midnight .settings-load-error,
+[data-theme="midnight"] .settings-load-error {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(25, 25, 31, 0.88);
+}
+
+body.theme-midnight .settings-load-back,
+[data-theme="midnight"] .settings-load-back {
+  border-color: rgba(255, 255, 255, 0.16);
+  color: rgba(243, 237, 232, 0.85);
 }
 
 /* ── Bottom grid (wellness) ── */
