@@ -87,7 +87,11 @@ for (const [label, source] of [
   );
   assert.match(strong, /background:\s*transparent\s*!important;/, `${label} primary metric should not render as a translucent pill.`);
   assert.match(strong, /font-family:\s*"Manrope",\s*var\(--font-display\);/, `${label} primary metric should use the site's expressive display stack.`);
-  assert.match(strong, /font-size:\s*clamp\(1\.9rem,\s*3\.3vw,\s*3\.2rem\);/, `${label} primary metric should read as the lead insight.`);
+  if (label === 'split runtime style') {
+    assert.match(strong, /font-size:\s*clamp\(1rem,\s*1\.35vw,\s*1\.34rem\);/, `${label} primary metric should remain compact inside the scan-first glance rail.`);
+  } else {
+    assert.match(strong, /font-size:\s*clamp\(1\.9rem,\s*3\.3vw,\s*3\.2rem\);/, `${label} should retain its legacy base value before the split and final cascade overrides.`);
+  }
 
   const darkPrimary = blockFor(
     source,
@@ -130,5 +134,10 @@ assert.match(
   finalStrong,
   /color:\s*#3f261c\s*!important;/,
   'The later imported stylesheet should keep the primary metric dark on the light editorial surface.',
+);
+assert.match(
+  finalStrong,
+  /font-size:\s*clamp\(1rem,\s*1\.35vw,\s*1\.34rem\)\s*!important;/,
+  'The later imported stylesheet should preserve the compact glance-rail metric size.',
 );
 console.log('[PASS] Runs primary insight card design guardrails passed.');

@@ -1,76 +1,46 @@
-# Gemini CLI custom command
+# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
 
 [command]
-description = "Run a controlled local/dev-only attack simulation against backend and frontend surfaces."
+description = "Hermes workflow: /auto-hermes-attack"
 
 [command.prompt]
-text = """
-# Auto-Hermes Attack (Gemini Runtime)
-
-You are running the Auto-Hermes active attack simulation pipeline.
-
-Treat `/auto-hermes-attack` as a one-shot attack simulation and report generation pipeline.
-
-## Runtime Identity
-
-- **Runtime**: Gemini CLI (coordinator mode)
-- **Execution model**: Active simulation phases. Exercises auth, input, and leak paths against local Hermes.
-- **Canonical reference**: `.codex/commands/auto-hermes-attack.md`
+text = '''
+<!-- Generated from .codex/commands/auto-hermes-attack.md. Do not edit this adapter directly. -->
+<!-- Follow docs/ai/EDITING_CONTRACT.md for every code change. -->
 
 ---
-
-## Session Start
-
-1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately.
-2. Ensure `.ai-sync/security-reports/` directory exists.
-3. Verify local Hermes is reachable at `http://localhost:8080`.
-
+name: auto-hermes-attack
 ---
 
-## Execution
+# Auto-Hermes Attack
 
-### Phase 1 — Active Simulation
+Repo-local Hermes active attack-simulation command.
 
-Run the security engine in attack mode:
+## Purpose
 
-```bash
-node .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --write
-```
+Run controlled local/dev-only attack simulation that:
 
-For a deeper scan, optionally add `--aggressive`:
-```bash
-node .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --aggressive --write
-```
+- reuses the shared security inventory from `.tools/auto-hermes-security.mjs`
+- exercises auth, input, leak, and config attack paths against local/dev Hermes
+- supports a stronger `--aggressive` mode without changing the local/dev-only rule
+- writes a Markdown report and JSON summary under `.ai-sync/security-reports/`
 
-### Phase 2 — Evidence Review
+## Command Notes
 
-1. Read the generated report (typically under `.ai-sync/security-reports/`).
-2. Filter for **HIGH** and **CRITICAL** exploit evidence.
-3. Verify if the simulation successfully bypassed any auth or extracted sensitive data.
-
-### Phase 3 — Must-Fix Generation
-
-Insert confirmed exploitable findings as **CRITICAL** tasks into `TASKS.md` `## Active Tasks`.
-
-Task format:
-- `[CRITICAL SECURITY FIX] <Short description>`
-- `Files: <Vulnerable files>`
-- `Context: <Link to attack report evidence>`
-- `Rationale: <Exploit proof and impact>`
-
----
+- Preferred engine: `node .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --write --runtime-base-url http://localhost:8080`
+- Aggressive mode: add `--aggressive`
+- This command must block non-local/non-dev runtime targets.
+- Controlled mutation only: tagged test state is allowed in local/dev, but cleanup must remain part of the command contract.
 
 ## Attack Probes
 
-The engine sends 11 categories of controlled probes:
-
 | Probe | What It Tests |
 |---|---|
-| Auth Bypass | Hits protected endpoints with no auth, fake Bearer, forged JWT |
-| Data Leak | Probes config/status, billing/config without auth |
+| Auth Bypass | Hits 11 protected endpoints with no auth, fake Bearer, forged JWT |
+| Data Leak | Probes `/api/config/status`, `/api/billing/config` without auth |
 | IDOR | Accesses runner data at various IDs without auth |
 | Injection | SQL injection + XSS payloads on login and console-errors |
-| Mass Assignment | Tests signup with role=ADMIN, subscriptionTier=PRO |
+| Mass Assignment | Tests signup with `role=ADMIN`, `subscriptionTier=PRO` |
 | Webhook Abuse | Strava webhook with wrong verify_token; Stripe webhook with fake signature |
 | CORS | Sends Origin headers from evil.com to check reflection |
 | Rate Limit | 25 rapid login attempts |
@@ -78,17 +48,8 @@ The engine sends 11 categories of controlled probes:
 | URL Enumeration | Scans for exposed actuator, swagger, .env, .git |
 | User Enumeration | Tests password-reset and login differential responses |
 
----
+## Safety
 
-## Output
-
-Final user-facing report must include:
-- Summary of exploit successes (if any).
-- List of CRITICAL tasks added to `TASKS.md`.
-- Confirmation that the attack report is available in `.ai-sync/security-reports/`.
-
----
-
-## Safety Warning
-Never target production URLs with this command. This tool is for local/dev use only.
-"""
+- Never target production with this command.
+- If runtime is unavailable locally, keep the run static and report the skipped active probes honestly.
+'''

@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch } from '../api';
+import AuthDotField from '../components/AuthDotField';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import HermesLogo from '../components/HermesLogo';
 
 export default function AdminLogin() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
@@ -50,13 +50,14 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="auth-page auth-page--login auth-page--admin">
+    <div className="auth-page auth-page--login auth-page--admin auth-page--liquid-glass">
+      <AuthDotField />
       <LanguageSwitcher />
       <main className="auth-flow-shell">
         <section className="auth-flow-brand">
           <div className="auth-flow-brand-inner">
             <div className="auth-flow-wordmark-wrap">
-              <HermesLogo tone="light" />
+              <h1 className="auth-flow-wordmark">HERMES</h1>
               <span className="auth-flow-pulse">ADMIN OPS</span>
             </div>
 
@@ -100,8 +101,10 @@ export default function AdminLogin() {
               <div className="form-group form-group--auth">
                 <label htmlFor="admin-email">{t('admin.email_label')}</label>
                 <input
-                  type="text"
+                  type="email"
                   id="admin-email"
+                  placeholder="admin@hermes.io"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -113,6 +116,7 @@ export default function AdminLogin() {
                 <input
                   type="password"
                   id="admin-password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}

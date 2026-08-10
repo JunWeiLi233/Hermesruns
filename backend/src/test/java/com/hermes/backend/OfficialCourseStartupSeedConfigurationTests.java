@@ -34,7 +34,7 @@ class OfficialCourseStartupSeedConfigurationTests {
 
         ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
                 ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
-        verify(bulkSeedService, times(8)).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        verify(bulkSeedService, times(11)).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
         assertThat(raceCaptor.getAllValues())
                 .extracting(RaceCourseMapBulkSeedService.CatalogRace::id)
                 .containsExactly(
@@ -45,8 +45,96 @@ class OfficialCourseStartupSeedConfigurationTests {
                         LosAngelesMarathonOfficialCourse.RACE_ID,
                         OsakaMarathonOfficialCourse.RACE_ID,
                         AthensMarathonOfficialCourse.RACE_ID,
-                        WuxiMarathonOfficialCourse.RACE_ID
+                        WuxiMarathonOfficialCourse.RACE_ID,
+                        BerlinMarathonOfficialCourse.RACE_ID,
+                        BergenCityMarathonOfficialCourse.RACE_ID,
+                        AmsterdamMarathonOfficialCourse.RACE_ID
                 );
+    }
+
+    @Test
+    void startupSeederAlsoPromotesCheckedCatalogRoutes() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        when(assetRepository.findByRaceId(anyString())).thenReturn(Optional.empty());
+        when(bulkSeedService.readCatalog(null)).thenReturn(List.of(
+                new RaceCourseMapBulkSeedService.CatalogRace(
+                        "london-marathon", "London Marathon", "London Marathon Events",
+                        LondonMarathonKnownCourse.OFFICIAL_COURSE_URL,
+                        "London", "United Kingdom", "London, United Kingdom", 42.195, 4, "",
+                        51.5074, -0.1278, ""
+                )
+        ));
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        verify(bulkSeedService, times(12)).seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true));
+    }
+
+    @Test
+    void startupSeederAlsoPromotesLandmarkCatalogRoutes() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        when(assetRepository.findByRaceId(anyString())).thenReturn(Optional.empty());
+        when(bulkSeedService.readCatalog(null)).thenReturn(List.of(
+                new RaceCourseMapBulkSeedService.CatalogRace(
+                        "honolulu-marathon", "Honolulu Marathon", "Honolulu Marathon Association",
+                        "https://www.honolulumarathon.org/our-events/jal-honolulu-marathon",
+                        "Honolulu", "United States", "Honolulu, United States", 42.195, 12, "",
+                        21.2944, -157.8465, ""
+                )
+        ));
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
+                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
+        verify(bulkSeedService, times(12)).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        assertThat(raceCaptor.getAllValues())
+                .extracting(RaceCourseMapBulkSeedService.CatalogRace::id)
+                .contains("honolulu-marathon");
+    }
+
+    @Test
+    void startupSeederRefreshesStaleAmsterdamKnownCourseSeed() throws Exception {
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset staleAmsterdam = new RaceCourseMapAsset();
+        staleAmsterdam.setRaceId(AmsterdamMarathonOfficialCourse.RACE_ID);
+        staleAmsterdam.setOfficialWebsite(AmsterdamMarathonOfficialCourse.OFFICIAL_COURSE_URL);
+        staleAmsterdam.setLiveSource("known-official-course:amsterdam-marathon");
+        staleAmsterdam.setLiveRoutePointsJson("[{\"lat\":52.36,\"lng\":4.82,\"label\":\"Start\"},"
+                + "{\"lat\":52.36,\"lng\":4.98},{\"lat\":52.29,\"lng\":4.98},"
+                + "{\"lat\":52.29,\"lng\":4.82},{\"lat\":52.36,\"lng\":4.82,\"label\":\"Finish\"}]");
+        when(assetRepository.findByRaceId(anyString())).thenAnswer(invocation -> {
+            String raceId = invocation.getArgument(0, String.class);
+            if (AmsterdamMarathonOfficialCourse.RACE_ID.equals(raceId)) {
+                return Optional.of(staleAmsterdam);
+            }
+            return Optional.of(verifiedAdminAsset(raceId));
+        });
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class), eq("startup-seeder"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
+                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+
+        runner.run(null);
+
+        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
+                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
+        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
+        assertThat(raceCaptor.getValue().id()).isEqualTo(AmsterdamMarathonOfficialCourse.RACE_ID);
     }
 
     @Test

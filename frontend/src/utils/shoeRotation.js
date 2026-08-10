@@ -34,6 +34,90 @@ function normalizeWear(shoe) {
   return current / max;
 }
 
+const RACE_SHOE_PATTERN = /(vaporfly|alphafly|metaspeed|adios pro|fast-r|rocket x|endorphin pro|endorphin elite|cloudboom|deviate nitro elite|wave rebellion pro|race day)/i;
+const SPEED_SHOE_PATTERN = /(endorphin speed|boston|magic speed|tempo|workout|speed)/i;
+const TRAINER_SHOE_PATTERN = /(superblast|novablast|pegasus|nimbus|cumulus|vomero|ghost|clifton|ride|1080|daily|trainer|long run|easy|recovery)/i;
+
+function inferTrainingRole(shoe) {
+  const descriptor = `${shoe?.brand || ''} ${shoe?.model || ''} ${shoe?.nickname || ''}`;
+
+  if (shoe?.type === 'race' || RACE_SHOE_PATTERN.test(descriptor)) return 'race';
+  if (shoe?.type === 'trail') return 'trail';
+  if (shoe?.type === 'stability') return 'stability';
+  if (shoe?.type === 'speed' || SPEED_SHOE_PATTERN.test(descriptor)) return 'speed';
+  if (shoe?.type === 'daily' || TRAINER_SHOE_PATTERN.test(descriptor)) return 'trainer';
+  return 'unknown';
+}
+
+function getRunDistanceKm(run) {
+  return Number(run?.distanceKm || (run?.distanceMeters ? run.distanceMeters / 1000 : 0));
+}
+
+function rankOwnedShoes(activeShoes, runs = []) {
+  return activeShoes
+    .map((shoe) => {
+      const shoeId = String(shoe?.id ?? '');
+      const shoeRuns = runs.filter((run) => String(run?.shoeId ?? '') === shoeId);
+      const role = inferTrainingRole(shoe);
+      const currentDistanceKm = Number(shoe?.currentDistanceKm || 0);
+      const maxDistanceKm = Number(shoe?.maxDistanceKm || 0);
+      const remainingRatio = maxDistanceKm > 0
+        ? Math.max(0, Math.min(1, 1 - (currentDistanceKm / maxDistanceKm)))
+        : 0.5;
+      const latest = shoeRuns.length > 0
+        ? Math.max(...shoeRuns.map((run) => getRunTimestamp(run)))
+        : 0;
+      const recentAgeDays = latest > 0 ? Math.max(0, (Date.now() - latest) / 86400000) : null;
+      const usageDistanceKm = shoeRuns.reduce((sum, run) => sum + getRunDistanceKm(run), 0);
+
+      const roleScore = {
+        trainer: 7,
+        stability: 6,
+        speed: 3.5,
+        trail: 2,
+        unknown: 1,
+        race: -6,
+      }[role];
+      const usageScore = Math.min(shoeRuns.length, 4) * 1.1
+        + Math.min(usageDistanceKm, 30) * 0.08;
+      const recencyScore = recentAgeDays == null
+        ? 0
+        : Math.max(0, 2 - (recentAgeDays / 45));
+      const lowMileagePenalty = remainingRatio < 0.15
+        ? 6
+        : remainingRatio < 0.3
+          ? 3
+          : 0;
+      const score = roleScore
+        + (remainingRatio * 4)
+        + usageScore
+        + recencyScore
+        + (shoe?.isPrimary ? 0.75 : 0)
+        - lowMileagePenalty;
+
+      return {
+        shoe,
+        shoeRuns,
+        role,
+        score,
+        latest,
+        remainingRatio,
+        avgPace: shoeRuns.length > 0
+          ? average(shoeRuns.map((run) => {
+            const km = getRunDistanceKm(run);
+            const sec = Number(run?.movingTimeSeconds || run?.durationSeconds || 0);
+            return km > 0 && sec > 0 ? sec / km : 0;
+          }).filter((pace) => pace > 0)) || null
+          : null,
+      };
+    })
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      if (right.latest !== left.latest) return right.latest - left.latest;
+      return normalizeWear(left.shoe) - normalizeWear(right.shoe);
+    });
+}
+
 function pickRedditRecommendation(avgPaceSecPerKm) {
   if (!avgPaceSecPerKm || avgPaceSecPerKm <= 0) {
     return REDDIT_RECOMMENDED_SHOES[0];
@@ -46,13 +130,8 @@ function pickRedditRecommendation(avgPaceSecPerKm) {
   return pool[dayOfYear % pool.length];
 }
 
-function pickOwnedFallback(activeShoes) {
-  return [...activeShoes].sort((left, right) => {
-    if (Boolean(right?.isPrimary) !== Boolean(left?.isPrimary)) {
-      return Number(Boolean(right?.isPrimary)) - Number(Boolean(left?.isPrimary));
-    }
-    return normalizeWear(left) - normalizeWear(right);
-  })[0] || null;
+function pickOwnedFallback(activeShoes, runs = []) {
+  return rankOwnedShoes(activeShoes, runs)[0] || null;
 }
 
 export function getRunTimestamp(run) {
@@ -108,7 +187,8 @@ export function buildShoePerformanceInsights(shoes, runs) {
   }
 
   const insights = new Map();
-  let topInsight = null;
+  let strongestInsight = null;
+  let topPositiveInsight = null;
 
   for (const shoe of shoes) {
     const shoeRuns = byShoe.get(shoe.id) || [];
@@ -139,12 +219,15 @@ export function buildShoePerformanceInsights(shoes, runs) {
     };
 
     insights.set(shoe.id, insight);
-    if (!topInsight || Math.abs(deltaHr) > Math.abs(topInsight.deltaHr)) {
-      topInsight = insight;
+    if (!strongestInsight || Math.abs(deltaHr) > Math.abs(strongestInsight.deltaHr)) {
+      strongestInsight = insight;
+    }
+    if (insight.positive && (!topPositiveInsight || deltaHr > topPositiveInsight.deltaHr)) {
+      topPositiveInsight = insight;
     }
   }
 
-  return { byShoe: insights, topInsight };
+  return { byShoe: insights, topInsight: topPositiveInsight || strongestInsight };
 }
 
 export function buildRecentShoeSignal(shoes, runs, options = {}) {
@@ -178,15 +261,21 @@ export function buildRecentShoeSignal(shoes, runs, options = {}) {
 
   if (recentPerformanceRuns.length === 0) {
     if (preferOwnedFallback && activeShoes.length > 0) {
+      const fallback = pickOwnedFallback(activeShoes, runs);
       return {
         recentRuns,
         recentPerformanceRuns,
         performanceInsights,
         recommendation: {
-          type: 'primary',
-          shoe: pickOwnedFallback(activeShoes),
+          type: 'fallback',
+          shoe: fallback.shoe,
           avgPace: null,
-          runCount: 0,
+          runCount: fallback.shoeRuns.length,
+          confidence: fallback.shoeRuns.length > 0 ? 'medium' : 'low',
+          rationale: {
+            role: fallback.role,
+            remainingRatio: fallback.remainingRatio,
+          },
         },
       };
     }
@@ -204,37 +293,12 @@ export function buildRecentShoeSignal(shoes, runs, options = {}) {
     return sec / km;
   }));
 
-  const activeShoeIds = new Set(activeShoes.map((shoe) => shoe.id));
-  const recentLinkedRuns = recentPerformanceRuns.filter((run) => activeShoeIds.has(run.shoeId));
+  const activeShoeIdStrings = new Set(activeShoes.map((shoe) => String(shoe.id)));
+  const recentLinkedRuns = recentPerformanceRuns.filter((run) => activeShoeIdStrings.has(String(run.shoeId)));
 
   if (activeShoes.length > 0 && recentLinkedRuns.length > 0) {
-    const recentByShoe = new Map();
-    recentLinkedRuns.forEach((run) => {
-      const current = recentByShoe.get(run.shoeId) || [];
-      current.push(run);
-      recentByShoe.set(run.shoeId, current);
-    });
-
-    const best = activeShoes
-      .map((shoe) => {
-        const shoeRuns = recentByShoe.get(shoe.id) || [];
-        if (!shoeRuns.length) return null;
-        return {
-          shoe,
-          count: shoeRuns.length,
-          latest: Math.max(...shoeRuns.map((run) => getRunTimestamp(run))),
-          avgPace: average(shoeRuns.map((run) => {
-            const km = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
-            const sec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
-            return sec / km;
-          })),
-        };
-      })
-      .filter(Boolean)
-      .sort((left, right) => {
-        if (right.count !== left.count) return right.count - left.count;
-        return right.latest - left.latest;
-      })[0];
+    const best = rankOwnedShoes(activeShoes, recentLinkedRuns)
+      .find((candidate) => candidate.shoeRuns.length > 0);
 
     if (best) {
       return {
@@ -245,23 +309,34 @@ export function buildRecentShoeSignal(shoes, runs, options = {}) {
           type: 'rotation',
           shoe: best.shoe,
           avgPace: best.avgPace,
-          runCount: best.count,
+          runCount: best.shoeRuns.length,
           totalRecentRuns: recentPerformanceRuns.length,
+          confidence: best.shoeRuns.length >= 3 ? 'high' : 'medium',
+          rationale: {
+            role: best.role,
+            remainingRatio: best.remainingRatio,
+          },
         },
       };
     }
   }
 
   if (preferOwnedFallback && activeShoes.length > 0) {
+    const fallback = pickOwnedFallback(activeShoes, runs);
     return {
       recentRuns,
       recentPerformanceRuns,
       performanceInsights,
       recommendation: {
-        type: 'primary',
-        shoe: pickOwnedFallback(activeShoes),
+        type: 'fallback',
+        shoe: fallback.shoe,
         avgPace,
-        runCount: recentPerformanceRuns.length,
+        runCount: fallback.shoeRuns.length,
+        confidence: fallback.shoeRuns.length > 0 ? 'medium' : 'low',
+        rationale: {
+          role: fallback.role,
+          remainingRatio: fallback.remainingRatio,
+        },
       },
     };
   }

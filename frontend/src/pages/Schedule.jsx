@@ -17,6 +17,11 @@ import { buildScheduleTargetBlockModel } from '../utils/scheduleMarathonBlock';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildWeeklyCoachSummaryModel } from '../utils/scheduleCoachSummary';
+import {
+  extractRouteWaypoints,
+  isRouteRecommendationUsable,
+  normalizeRouteWaypoint,
+} from '../utils/routeRecommendation';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 
@@ -229,17 +234,6 @@ function pickCurrentGear(shoes) {
     || null;
 }
 
-function normalizeRouteWaypoint(point) {
-  if (Array.isArray(point) && point.length >= 2) {
-    const lat = Number(point[0]);
-    const lng = Number(point[1]);
-    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-  }
-  const lat = Number(point?.lat ?? point?.latitude);
-  const lng = Number(point?.lng ?? point?.lon ?? point?.longitude);
-  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-}
-
 function buildPlannedRoutePreview(waypoints) {
   const points = (Array.isArray(waypoints) ? waypoints : [])
     .map(normalizeRouteWaypoint)
@@ -272,14 +266,6 @@ function buildPlannedRoutePreview(waypoints) {
   };
 }
 
-function extractRouteWaypoints(route) {
-  const rawWaypoints = route?.waypoints;
-  const points = (Array.isArray(rawWaypoints) ? rawWaypoints : [])
-    .map(normalizeRouteWaypoint)
-    .filter(Boolean);
-  return points.length >= 2 ? points : null;
-}
-
 function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
   const candidates = (Array.isArray(plannedRoutes) ? plannedRoutes : [])
     .map((route) => {
@@ -287,8 +273,8 @@ function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
       const routeTargetDistanceKm = Number(route?.targetDistanceKm || actualDistanceKm || 0);
       const waypoints = extractRouteWaypoints(route);
       const preview = waypoints ? buildPlannedRoutePreview(route?.waypoints) : null;
-      if (!waypoints || actualDistanceKm <= 0) return null;
       const desiredDistanceKm = Number(targetDistanceKm || routeTargetDistanceKm || actualDistanceKm);
+      if (!isRouteRecommendationUsable(route, desiredDistanceKm)) return null;
       const distanceGapKm = Math.abs(actualDistanceKm - desiredDistanceKm);
       const distanceAccuracy = Number(route?.distanceAccuracy || (desiredDistanceKm > 0 ? actualDistanceKm / desiredDistanceKm : 1));
       const createdAt = new Date(route?.createdAt || 0).getTime();
@@ -681,6 +667,14 @@ export default function Schedule() {
       : 'history';
   const routeWaypoints = routeRecommendation?.waypoints || null;
   const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
+  const routeSketch = routeRecommendation?.preview || null;
+  const routeSketchStartX = Number(routeSketch?.startX ?? routeSketch?.start?.[0]);
+  const routeSketchStartY = Number(routeSketch?.startY ?? routeSketch?.start?.[1]);
+  const routeSketchFinishX = Number(routeSketch?.finishX ?? routeSketch?.finish?.[0]);
+  const routeSketchFinishY = Number(routeSketch?.finishY ?? routeSketch?.finish?.[1]);
+  const hasRouteSketch = typeof routeSketch?.path === 'string'
+    && routeSketch.path.trim().length > 0
+    && [routeSketchStartX, routeSketchStartY, routeSketchFinishX, routeSketchFinishY].every(Number.isFinite);
   const routeTitle = routeRecommendation
     ? routeRecommendationSource === 'planner'
       ? s('route_planner_title')
@@ -825,7 +819,7 @@ export default function Schedule() {
             return res.json();
           })
           .then((newRoute) => {
-            if (newRoute && typeof newRoute === 'object') {
+            if (isRouteRecommendationUsable(newRoute, targetDistanceKm)) {
               setPlannedRoutes((prev) => [newRoute, ...prev]);
             }
           })
@@ -912,6 +906,12 @@ export default function Schedule() {
           || 0,
       );
       const targetDistanceKm = rawTarget > 0 ? rawTarget : runDistanceKm;
+      if (!isRouteRecommendationUsable({
+        actualDistanceKm: runDistanceKm,
+        waypoints,
+      }, targetDistanceKm, { requireStreetGraph: false })) {
+        return;
+      }
 
       // Format date for the source label
       const runDate = new Date(startCandidateRun.startTime || startCandidateRun.startDate || 0);
@@ -1202,25 +1202,37 @@ export default function Schedule() {
                 <div className="schedule-plan-route-map" aria-hidden="true">
                   {hasRoutePreview ? (
                     <div ref={routeMapRef} className="schedule-plan-route-leaflet-map" />
-                  ) : autoPlanning ? (
-                    <div className="schedule-plan-route-empty-panel schedule-plan-route-empty-panel--loading">
-                      <div className="schedule-plan-route-auto-spinner" aria-hidden="true" />
-                      <div className="schedule-plan-route-empty-copy">
-                        <span>{s('route_auto_loading')}</span>
-                      </div>
-                    </div>
                   ) : (
-                    <div className="schedule-plan-route-empty-panel">
-                      <div className="schedule-plan-route-empty-badges">
-                        {routeFallbackBadges.map((badge) => (
-                          <span key={badge} className="schedule-plan-route-empty-badge">{badge}</span>
-                        ))}
-                      </div>
-                      <div className="schedule-plan-route-empty-copy">
-                        <strong>{routeTitle}</strong>
-                        <span>{runs.length === 0 ? s('route_auto_empty_hint') : routeFallbackStatus}</span>
-                      </div>
-                    </div>
+                    <>
+                      {hasRouteSketch ? (
+                        <svg className="schedule-plan-route-map-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+                          <path d={routeSketch.path} className="schedule-plan-route-map-shadow" />
+                          <path d={routeSketch.path} className="schedule-plan-route-map-line" />
+                          <circle cx={routeSketchStartX} cy={routeSketchStartY} r="3.4" className="schedule-plan-route-map-start" />
+                          <circle cx={routeSketchFinishX} cy={routeSketchFinishY} r="4" className="schedule-plan-route-map-finish" />
+                        </svg>
+                      ) : null}
+                      {autoPlanning && !hasRouteSketch ? (
+                        <div className="schedule-plan-route-empty-panel schedule-plan-route-empty-panel--loading">
+                          <div className="schedule-plan-route-auto-spinner" aria-hidden="true" />
+                          <div className="schedule-plan-route-empty-copy">
+                            <span>{s('route_auto_loading')}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`schedule-plan-route-empty-panel${hasRouteSketch ? ' has-route-sketch' : ''}`}>
+                          <div className="schedule-plan-route-empty-badges">
+                            {routeFallbackBadges.map((badge) => (
+                              <span key={badge} className="schedule-plan-route-empty-badge">{badge}</span>
+                            ))}
+                          </div>
+                          <div className="schedule-plan-route-empty-copy">
+                            <strong>{routeTitle}</strong>
+                            <span>{runs.length === 0 ? s('route_auto_empty_hint') : routeFallbackStatus}</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="schedule-plan-route-content">

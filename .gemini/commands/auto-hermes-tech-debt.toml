@@ -1,41 +1,38 @@
+# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
+
 [command]
-description = "Run a bounded Hermes tech-debt audit. Reviews frontend, backend, and automation surfaces across 10 specific debt categories, then writes step-by-step debt tasks into TASKS.md."
+description = "Hermes workflow: /auto-hermes-tech-debt"
 
 [command.prompt]
-text = """
-# Hermes Tech Debt Audit
+text = '''
+<!-- Generated from .codex/commands/auto-hermes-tech-debt.md. Do not edit this adapter directly. -->
+<!-- Follow docs/ai/EDITING_CONTRACT.md for every code change. -->
 
-Treat `/auto-hermes-tech-debt` as the repo-local Gemini CLI command for one-shot Hermes tech-debt review.
+---
+name: auto-hermes-tech-debt
+---
 
-## Runtime Identity
+# Auto-Hermes Tech Debt
 
-- Runtime: Gemini CLI
-- Execution model: sequential one-shot audit
-- Shared engine: `.tools/auto-hermes-tech-debt.mjs`
+Repo-local Hermes tech-debt audit command.
+
+## Purpose
+
+Run a bounded, whole-project tech-debt review that:
+
+- scans frontend, backend, and docs / automation surfaces
+- identifies deterministic, bounded debt candidates across 10 specific categories
+- writes only step-by-step tasks into `TASKS.md`
+- keeps command behavior aligned with the shared Hermes debt-audit contract
+
+## Command Notes
+
+- Preferred engine: `node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8`
 - Shared contract: `.codex/workflows/auto-hermes-tech-debt-contract.md`
-- Writeback target: `TASKS.md` under `## Tech Debt Tasks`
-
-## Goal
-
-Review the project in bounded slices, identify deterministic tech debt, and write only implementation-ready step-by-step tasks. Do not auto-fix product code in this run.
-
-## Session Start
-
-1. Read `AGENTS.md`
-2. Read `.ai-sync/AGENT_SYNC.md`
-3. Read `.ai-sync/CONTEXT_LEDGER.md`
-4. Read `TASKS.md`
-
-## Audit Slices
-
-Review:
-- frontend
-- backend
-- docs / automation / workflow tooling
+- Writeback target: repo-standard `TASKS.md` under `## Tech Debt Tasks`
+- Use `--json` when another tool or runtime wants machine-readable output
 
 ## Debt Categories
-
-The engine detects 10 categories of specific, actionable debt:
 
 | Kind | Description | Priority Boost |
 |---|---|---|
@@ -46,19 +43,13 @@ The engine detects 10 categories of specific, actionable debt:
 | `hardcoded-config` | Hardcoded URLs, localhost refs, magic numbers, inline hex colors | +6 |
 | `dead-code` | @Deprecated members on public API surface | +5 |
 | `duplicate-logic` | Repeated object construction patterns (5+ occurrences) | +4 |
-| `oversized-file` | Files exceeding line thresholds (550 backend, 700 frontend, 450 tools) | +3 |
+| `oversized-file` | Files exceeding line thresholds | +3 |
 | `inconsistent-naming` | Spring beans not following naming conventions | +2 |
 | `missing-focused-tests` | Java classes or .mjs tools without matching test files | +1 |
 
-## Preferred Invocation
-
-```bash
-node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8
-```
-
 ## Truth Rules
 
-- Findings are heuristic debt signals, not guaranteed bugs.
+- Treat findings as heuristic debt signals, not guaranteed bugs.
 - Do not write vague cleanup tasks.
-- Do not claim repo-wide semantic understanding from deterministic scans alone.
-"""
+- Do not claim the repo was semantically "fully understood" when the engine only ran deterministic heuristics.
+'''

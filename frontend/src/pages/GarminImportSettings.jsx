@@ -215,191 +215,164 @@ export default function GarminImportSettings() {
 
   return (
     <AuthenticatedPageChrome bodyClassName="garmin-import-page-shell">
-      <section className="garmin-import-page">
-        <header className="garmin-import-page-header">
+      <section className="garmin-import-page garmin-profile-page">
+        <header className="garmin-profile-hero">
           <button type="button" className="garmin-import-page-back" onClick={() => navigate('/settings')}>
             <span aria-hidden="true">&larr;</span>
             <span>{t('profile.settings')}</span>
           </button>
 
-          <div className="garmin-import-page-heading">
-            <div className="garmin-import-kicker-row">
-              <span className="garmin-import-kicker-line" aria-hidden="true" />
-              <span>{t('settings.heading')}</span>
+          <div className="garmin-profile-hero-copy">
+            <div className="garmin-profile-hero-mark" aria-hidden="true">
+              <GarminMark />
             </div>
-            <h1>{t('profile.garmin_connect_modal_title')}</h1>
-            <p>{t('profile.garmin_connect_hint')}</p>
-          </div>
-
-          <div className={`garmin-import-page-status garmin-import-stage garmin-import-stage--${garminLane.tone}`}>
-            <span>{garminLane.eyebrow}</span>
-            <strong>{garminLane.status}</strong>
+            <div className="garmin-profile-hero-text">
+              <span className="garmin-profile-kicker">{t('settings.heading')}</span>
+              <h1>{t('profile.garmin_connect_modal_title')}</h1>
+              <p>{t('profile.garmin_connect_hint')}</p>
+            </div>
           </div>
         </header>
 
-        <div className="garmin-import-page-card">
-          <form onSubmit={handleGarminImport} className="garmin-import-form">
-            <div className="garmin-import-layout">
-              <section className="garmin-import-visual">
-                <div className="garmin-import-kicker-row">
-                  <span className="garmin-import-kicker-line" aria-hidden="true" />
-                  <span>{garminLane.eyebrow}</span>
-                </div>
+        <section className="garmin-profile-metric-strip" aria-label={garminLane.eyebrow}>
+          <article className={`garmin-profile-metric is-status garmin-import-stage--${garminLane.tone}`}>
+            <span>{garminLane.eyebrow}</span>
+            <strong>{garminLane.status}</strong>
+          </article>
+          <article className="garmin-profile-metric">
+            <span>{garminLane.limitLabel}</span>
+            <strong>{garminLane.limitValue}</strong>
+          </article>
+          <article className="garmin-profile-metric">
+            <span>{t('profile.garmin_wellness_last_synced')}</span>
+            <strong>{garminWellnessLastSynced ? new Date(garminWellnessLastSynced).toLocaleDateString() : t('profile.garmin_wellness_never_synced')}</strong>
+          </article>
+        </section>
 
-                <section className="garmin-import-hero">
-                  <div className="service-icon service-icon--garmin garmin-import-hero-icon">
-                    <GarminMark />
-                  </div>
-                  <div className="garmin-import-hero-copy">
-                    <strong>{garminLane.title}</strong>
-                    <p>{garminLane.summary}</p>
-                  </div>
-                </section>
+        <div className="garmin-profile-main-grid">
+          <form onSubmit={handleGarminImport} className="garmin-import-form garmin-profile-form-card">
+            <div className="garmin-profile-card-head">
+              <div className="garmin-profile-card-title">
+                <span>{t('profile.garmin_connect_import')}</span>
+                <strong>{garminLane.title}</strong>
+                <p>{garminLane.credentialsNote}</p>
+              </div>
+              <span className={`garmin-import-pill garmin-import-pill--${garminLane.tone}`}>{garminLane.eyebrow}</span>
+            </div>
 
-                <div className={`garmin-import-stage garmin-import-stage--${garminLane.tone}`}>
-                  <span>{garminLane.eyebrow}</span>
-                  <strong>{garminLane.status}</strong>
-                </div>
+            <div className="garmin-import-field-grid">
+              <div className="garmin-import-field">
+                <label className="modal-label" htmlFor="garmin-import-email">{t('profile.garmin_connect_email_label')}</label>
+                <input
+                  id="garmin-import-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={garminEmail}
+                  onChange={(event) => setGarminEmail(event.target.value)}
+                  disabled={garminImporting}
+                  required
+                  autoComplete="username"
+                />
+              </div>
 
-                <div className="garmin-import-metric-grid">
-                  <article className="garmin-import-metric">
-                    <span>{garminLane.limitLabel}</span>
-                    <strong>{garminLane.limitValue}</strong>
-                  </article>
-                  <article className="garmin-import-metric">
-                    <span>{t('profile.garmin_wellness_last_synced')}</span>
-                    <strong>{garminWellnessLastSynced ? new Date(garminWellnessLastSynced).toLocaleDateString() : t('profile.garmin_wellness_never_synced')}</strong>
-                  </article>
-                </div>
-              </section>
+              <div className="garmin-import-field">
+                <label className="modal-label" htmlFor="garmin-import-password">{t('profile.garmin_connect_password_label')}</label>
+                <input
+                  id="garmin-import-password"
+                  type="password"
+                  value={garminPassword}
+                  onChange={(event) => setGarminPassword(event.target.value)}
+                  disabled={garminImporting}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
 
-              <section className="garmin-import-panel">
-                <div className="garmin-import-panel-head">
-                  <div className="garmin-import-panel-copy">
-                    <span>{t('profile.garmin_connect_import')}</span>
-                    <strong>{t('profile.garmin_connect_modal_title')}</strong>
-                    <p>{garminLane.credentialsNote}</p>
-                  </div>
-                  <span className={`garmin-import-pill garmin-import-pill--${garminLane.tone}`}>{garminLane.eyebrow}</span>
-                </div>
+            <div className="garmin-import-field garmin-import-field--limit">
+              <div className="garmin-import-field-head">
+                <label className="modal-label" htmlFor="garmin-import-limit">{t('profile.garmin_connect_limit_label')}</label>
+                <span className="garmin-import-field-meta">10 - 200</span>
+              </div>
+              <select
+                id="garmin-import-limit"
+                value={garminLimit}
+                onChange={(event) => setGarminLimit(Number(event.target.value))}
+                disabled={garminImporting}
+                className="garmin-import-limit"
+              >
+                {GARMIN_LIMIT_OPTIONS.map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </div>
 
-                <div className="garmin-import-field-grid">
-                  <div className="garmin-import-field">
-                    <label className="modal-label" htmlFor="garmin-import-email">{t('profile.garmin_connect_email_label')}</label>
-                    <input
-                      id="garmin-import-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={garminEmail}
-                      onChange={(event) => setGarminEmail(event.target.value)}
-                      disabled={garminImporting}
-                      required
-                      autoComplete="username"
-                    />
-                  </div>
-
-                  <div className="garmin-import-field">
-                    <label className="modal-label" htmlFor="garmin-import-password">{t('profile.garmin_connect_password_label')}</label>
-                    <input
-                      id="garmin-import-password"
-                      type="password"
-                      value={garminPassword}
-                      onChange={(event) => setGarminPassword(event.target.value)}
-                      disabled={garminImporting}
-                      required
-                      autoComplete="current-password"
-                    />
-                  </div>
-                </div>
-
-                <div className="garmin-import-field garmin-import-field--limit">
-                  <div className="garmin-import-field-head">
-                    <label className="modal-label" htmlFor="garmin-import-limit">{t('profile.garmin_connect_limit_label')}</label>
-                    <span className="garmin-import-field-meta">10 - 200</span>
-                  </div>
-                  <select
-                    id="garmin-import-limit"
-                    value={garminLimit}
-                    onChange={(event) => setGarminLimit(Number(event.target.value))}
-                    disabled={garminImporting}
-                    className="garmin-import-limit"
-                  >
-                    {GARMIN_LIMIT_OPTIONS.map((value) => (
-                      <option key={value} value={value}>{value}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="modal-actions garmin-import-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary modal-button"
-                    onClick={() => navigate('/settings')}
-                    disabled={garminImporting}
-                  >
-                    {t('profile.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary modal-button"
-                    disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
-                  >
-                    {garminLane.primaryAction}
-                  </button>
-                </div>
-              </section>
+            <div className="modal-actions garmin-import-actions">
+              <button
+                type="button"
+                className="btn-secondary modal-button"
+                onClick={() => navigate('/settings')}
+                disabled={garminImporting}
+              >
+                {t('profile.cancel')}
+              </button>
+              <button
+                type="submit"
+                className="btn-primary modal-button"
+                disabled={garminImporting || !garminEmail.trim() || !garminPassword.trim()}
+              >
+                {garminLane.primaryAction}
+              </button>
             </div>
           </form>
 
-          <div className="garmin-import-page-lower">
-            <section className="garmin-import-page-wellness garmin-import-page-wellness--wide">
-              <div className="garmin-import-page-section-head">
-                <div>
-                  <span>{t('profile.garmin_wellness_title')}</span>
-                  <strong>{t('profile.garmin_wellness_auto_sync')}</strong>
-                </div>
-                <span className={`garmin-import-pill garmin-import-pill--${garminWellnessSyncEnabled ? 'success' : 'ready'}`}>
-                  {garminWellnessSyncEnabled ? t('profile.garmin_wellness_enabled') : t('profile.garmin_wellness_disabled')}
-                </span>
+          <section className="garmin-import-page-wellness garmin-profile-wellness-card">
+            <div className="garmin-import-page-section-head">
+              <div>
+                <span>{t('profile.garmin_wellness_title')}</span>
+                <strong>{t('profile.garmin_wellness_auto_sync')}</strong>
               </div>
+              <span className={`garmin-import-pill garmin-import-pill--${garminWellnessSyncEnabled ? 'success' : 'ready'}`}>
+                {garminWellnessSyncEnabled ? t('profile.garmin_wellness_enabled') : t('profile.garmin_wellness_disabled')}
+              </span>
+            </div>
 
-              <div className="garmin-wellness-section">
-                <p className="garmin-import-page-copy">{t('profile.garmin_wellness_desc')}</p>
-                <div className="garmin-wellness-row">
-                  <span>{t('profile.garmin_wellness_auto_sync')}</span>
-                  <button
-                    type="button"
-                    className={`garmin-wellness-toggle${garminWellnessSyncEnabled ? ' garmin-wellness-toggle--active' : ''}`}
-                    onClick={handleGarminWellnessToggle}
-                    aria-label={t('profile.garmin_wellness_auto_sync')}
-                  />
-                </div>
-                <div className="garmin-wellness-row">
-                  <span className="garmin-import-page-copy is-inline">{t('profile.garmin_wellness_auto_sync_desc')}</span>
-                </div>
-                <div className="garmin-wellness-row garmin-import-page-actions">
-                  <button
-                    type="button"
-                    className="garmin-wellness-sync-btn"
-                    onClick={handleGarminWellnessSync}
-                    disabled={garminWellnessImporting}
-                  >
-                    {garminWellnessImporting ? t('profile.garmin_wellness_syncing') : t('profile.garmin_wellness_sync_now')}
-                  </button>
-                  <button
-                    type="button"
-                    className="garmin-wellness-save-credentials-btn"
-                    onClick={handleGarminSaveCredentials}
-                    disabled={!garminEmail.trim() || !garminPassword.trim()}
-                  >
-                    {garminCredentialsSaved ? t('profile.garmin_wellness_credentials_saved') : t('profile.garmin_wellness_save_credentials')}
-                  </button>
-                </div>
-                {garminWellnessStatus ? <div className="garmin-wellness-status">{garminWellnessStatus}</div> : null}
-                <div className="garmin-wellness-status">{syncSummary}</div>
+            <div className="garmin-wellness-section">
+              <p className="garmin-import-page-copy">{t('profile.garmin_wellness_desc')}</p>
+              <div className="garmin-wellness-row">
+                <span>{t('profile.garmin_wellness_auto_sync')}</span>
+                <button
+                  type="button"
+                  className={`garmin-wellness-toggle${garminWellnessSyncEnabled ? ' garmin-wellness-toggle--active' : ''}`}
+                  onClick={handleGarminWellnessToggle}
+                  aria-label={t('profile.garmin_wellness_auto_sync')}
+                />
               </div>
-            </section>
-          </div>
+              <div className="garmin-wellness-row">
+                <span className="garmin-import-page-copy is-inline">{t('profile.garmin_wellness_auto_sync_desc')}</span>
+              </div>
+              <div className="garmin-wellness-row garmin-import-page-actions">
+                <button
+                  type="button"
+                  className="garmin-wellness-sync-btn"
+                  onClick={handleGarminWellnessSync}
+                  disabled={garminWellnessImporting}
+                >
+                  {garminWellnessImporting ? t('profile.garmin_wellness_syncing') : t('profile.garmin_wellness_sync_now')}
+                </button>
+                <button
+                  type="button"
+                  className="garmin-wellness-save-credentials-btn"
+                  onClick={handleGarminSaveCredentials}
+                  disabled={!garminEmail.trim() || !garminPassword.trim()}
+                >
+                  {garminCredentialsSaved ? t('profile.garmin_wellness_credentials_saved') : t('profile.garmin_wellness_save_credentials')}
+                </button>
+              </div>
+              {garminWellnessStatus ? <div className="garmin-wellness-status">{garminWellnessStatus}</div> : null}
+              <div className="garmin-wellness-status">{syncSummary}</div>
+            </div>
+          </section>
         </div>
       </section>
     </AuthenticatedPageChrome>

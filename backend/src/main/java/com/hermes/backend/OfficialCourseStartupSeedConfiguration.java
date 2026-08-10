@@ -10,12 +10,14 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Ensures every race with hardcoded official waypoints has a seeded,
- * street-following polyline in the database on every backend startup.
+ * Ensures every race with hardcoded official waypoints or checked ordered
+ * route geometry has a seeded polyline in the database on every backend
+ * startup.
  *
  * <p>A quick DB read per race skips re-seeding when the official source tag is
  * already stored, so subsequent starts pay only one SELECT per race. The first
@@ -129,6 +131,39 @@ public class OfficialCourseStartupSeedConfiguration {
                                     42.195, 3, "", 31.4912, 120.3119, null
                             ),
                             WuxiMarathonOfficialCourse.OFFICIAL_SOURCE
+                    ),
+                    new OfficialRaceEntry(
+                            new RaceCourseMapBulkSeedService.CatalogRace(
+                                    BerlinMarathonOfficialCourse.RACE_ID,
+                                    "Berlin Marathon",
+                                    "SCC EVENTS",
+                                    BerlinMarathonOfficialCourse.OFFICIAL_COURSE_URL,
+                                    "Berlin", "Germany", "Berlin, Germany",
+                                    42.195, 9, "", 52.5200, 13.4050, null
+                            ),
+                            BerlinMarathonOfficialCourse.OFFICIAL_SOURCE
+                    ),
+                    new OfficialRaceEntry(
+                            new RaceCourseMapBulkSeedService.CatalogRace(
+                                    BergenCityMarathonOfficialCourse.RACE_ID,
+                                    "Bergen City Marathon",
+                                    "Bergen City Marathon",
+                                    BergenCityMarathonOfficialCourse.OFFICIAL_COURSE_URL,
+                                    "Bergen", "Norway", "Bergen, Norway",
+                                    42.195, 4, "", 60.3913, 5.3221, null
+                            ),
+                            BergenCityMarathonOfficialCourse.OFFICIAL_SOURCE
+                    ),
+                    new OfficialRaceEntry(
+                            new RaceCourseMapBulkSeedService.CatalogRace(
+                                    AmsterdamMarathonOfficialCourse.RACE_ID,
+                                    "Amsterdam Marathon",
+                                    "Le Champion",
+                                    AmsterdamMarathonOfficialCourse.OFFICIAL_COURSE_URL,
+                                    "Amsterdam", "Netherlands", "Amsterdam, Netherlands",
+                                    42.195, 10, "", 52.3676, 4.9041, null
+                            ),
+                            AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE
                     )
             );
 
@@ -148,7 +183,42 @@ public class OfficialCourseStartupSeedConfiguration {
                         bulkSeedService.seedRace(entry.race(), "startup-seeder", true);
                 logger.info("official-course-startup-seed: {} → {}", raceId, outcome);
             }
+
+            // Promote the rest of the checked ordered-route catalog too. This
+            // repairs an existing synthetic row on restart instead of waiting
+            // for a manual bulk-seed command.
+            Set<String> bespokeIds = officialRaces.stream()
+                    .map(entry -> entry.race().id())
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            List<RaceCourseMapBulkSeedService.CatalogRace> catalog;
+            try {
+                catalog = bulkSeedService.readCatalog(null);
+            } catch (RuntimeException ex) {
+                logger.warn("official-course-startup-seed: checked catalog unavailable: {}", ex.getMessage());
+                catalog = List.of();
+            }
+            for (RaceCourseMapBulkSeedService.CatalogRace race : catalog) {
+                boolean checkedCatalogRoute = race != null
+                        && (RaceKnownOrderedCourseCatalog.knownOrderedCourseFor(race.name(), race.city(), race.country()) != null
+                        || MarathonOfficialLandmarkCourseCatalog.has(race.id()));
+                if (race == null || bespokeIds.contains(race.id()) || !checkedCatalogRoute) {
+                    continue;
+                }
+                boolean alreadySeeded = assetRepository.findByRaceId(race.id())
+                        .map(asset -> hasCurrentKnownCourseSeed(asset, race.id()) || hasVerifiedAdminCourseMap(asset))
+                        .orElse(false);
+                if (alreadySeeded) continue;
+                logger.info("official-course-startup-seed: promoting checked catalog route {}", race.id());
+                bulkSeedService.seedRace(race, "startup-seeder", true);
+            }
         };
+    }
+
+    private boolean hasCurrentKnownCourseSeed(RaceCourseMapAsset asset, String raceId) {
+        if (asset == null || raceId == null || raceId.isBlank()) return false;
+        String source = asset.getLiveSource() == null ? "" : asset.getLiveSource().trim();
+        String routePoints = asset.getLiveRoutePointsJson() == null ? "" : asset.getLiveRoutePointsJson().trim();
+        return source.equals("known-official-course:" + raceId) && routePoints.length() > 100;
     }
 
     private boolean hasCurrentOfficialCourseSeed(RaceCourseMapAsset asset, OfficialRaceEntry entry) {
@@ -176,7 +246,61 @@ public class OfficialCourseStartupSeedConfiguration {
         if (WuxiMarathonOfficialCourse.RACE_ID.equals(entry.race().id())) {
             return hasCurrentWuxiOfficialSeed(asset);
         }
+        if (BerlinMarathonOfficialCourse.RACE_ID.equals(entry.race().id())) {
+            return hasCurrentBerlinOfficialSeed(asset);
+        }
+        if (BergenCityMarathonOfficialCourse.RACE_ID.equals(entry.race().id())) {
+            return hasCurrentBergenOfficialSeed(asset);
+        }
+        if (AmsterdamMarathonOfficialCourse.RACE_ID.equals(entry.race().id())) {
+            return hasCurrentAmsterdamOfficialSeed(asset);
+        }
         return true;
+    }
+
+    private boolean hasCurrentBerlinOfficialSeed(RaceCourseMapAsset asset) {
+        if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) {
+            return false;
+        }
+        String routePoints = lower(asset.getLiveRoutePointsJson());
+        return routePoints.contains("start - tiergarten")
+                && routePoints.contains("finish - brandenburg gate")
+                && routePointCount(asset.getLiveRoutePointsJson()) >= 500;
+    }
+
+    private boolean hasCurrentAmsterdamOfficialSeed(RaceCourseMapAsset asset) {
+        if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) {
+            return false;
+        }
+        String routePoints = lower(asset.getLiveRoutePointsJson());
+        return routePoints.contains("start - olympic stadium")
+                && routePoints.contains("ouderkerk turnaround")
+                && routePoints.contains("science park east return")
+                && routePoints.contains("finish - olympic stadium")
+                && routePointCount(asset.getLiveRoutePointsJson()) >= 500;
+    }
+
+    private boolean hasCurrentBergenOfficialSeed(RaceCourseMapAsset asset) {
+        if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) {
+            return false;
+        }
+        String routePoints = lower(asset.getLiveRoutePointsJson());
+        return routePoints.contains("start - bryggen")
+                && routePoints.contains("halfway - second official lap")
+                && routePoints.contains("finish - bryggen")
+                && routePointCount(asset.getLiveRoutePointsJson()) >= 2200;
+    }
+
+    private int routePointCount(String routePointsJson) {
+        if (routePointsJson == null || routePointsJson.isBlank()) {
+            return 0;
+        }
+        Matcher matcher = JSON_ROUTE_POINT_PATTERN.matcher(routePointsJson);
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
     }
 
     private boolean hasCurrentNewYorkOfficialSeed(RaceCourseMapAsset asset) {
