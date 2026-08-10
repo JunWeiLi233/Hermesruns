@@ -63,11 +63,20 @@ public class MapTileController {
             @PathVariable int y
     ) {
         String url = "https://tile.openstreetmap.org/" + z + "/" + x + "/" + y + ".png";
-        log.info("Tile request: z={}, x={}, y={}", z, x, y);
+        log.debug("Tile request: z={}, x={}, y={}", z, x, y);
         
-        CachedTile cached = cacheStore.get("map-tile", url, CachedTileCacheValue.class)
-                .map(value -> new CachedTile(value.body(), value.contentType(), Instant.now().plus(TILE_CACHE_TTL)))
-                .orElseGet(() -> tileCache.get(url));
+        // Most zooms revisit tiles already fetched in this process. Check the
+        // raw in-memory bytes first; the generic TTL store serializes PNGs as
+        // Base64 JSON and is intentionally only the cold/cross-instance path.
+        CachedTile localCached = tileCache.get(url);
+        CachedTile cached = localCached != null && !localCached.isExpired()
+                ? localCached
+                : cacheStore.get("map-tile", url, CachedTileCacheValue.class)
+                        .map(value -> new CachedTile(value.body(), value.contentType(), Instant.now().plus(TILE_CACHE_TTL)))
+                        .orElse(null);
+        if (cached != null && cached != localCached) {
+            tileCache.put(url, cached);
+        }
         if (cached != null && !cached.isExpired()) {
             return okResponse(cached);
         }
@@ -114,7 +123,7 @@ public class MapTileController {
             tileCache.put(url, resolvedTile);
             cacheStore.put("map-tile", url, new CachedTileCacheValue(body, resolvedContentType), TILE_CACHE_TTL);
             inFlight.complete(resolvedTile);
-            log.info("Tile fetched and cached: {}", url);
+            log.debug("Tile fetched and cached: {}", url);
             return okResponse(resolvedTile);
         } catch (Exception e) {
             log.error("Failed to fetch tile from OSM: {} - Error: {}", url, e.getMessage());

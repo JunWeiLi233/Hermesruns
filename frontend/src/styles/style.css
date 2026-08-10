@@ -12215,23 +12215,6 @@ body.theme-high-contrast-light .dashboard-body .history-filter-sub-tab.active {
     text-transform: uppercase;
 }
 
-.race-detail-map-street-fallback {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    background: #ece7df;
-}
-
-.race-detail-map-street-fallback-tile {
-    position: absolute;
-    width: 256px;
-    height: 256px;
-    max-width: none !important;
-    max-height: none !important;
-    display: block !important;
-    object-fit: cover;
-}
 
 .race-detail-map-leaflet {
     position: absolute;
@@ -48139,10 +48122,11 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-
 }
 
 .weather-engine-hud-card {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: auto;
   display: grid;
   gap: 14px;
   align-content: space-between;
+  min-height: clamp(208px, 20vw, 248px);
   padding: 18px;
   border-radius: 24px;
   background: rgba(24, 27, 28, 0.72);
@@ -48153,7 +48137,7 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  align-items: flex-start;
+  align-items: center;
   color: rgba(232, 226, 220, 0.82);
   font-size: 0.72rem;
   font-weight: 700;
@@ -48162,8 +48146,20 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-page .runner-shell-
 }
 
 .weather-engine-hud-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(72px, 10vw, 104px);
+  height: clamp(72px, 10vw, 104px);
   color: #f49787;
 }
+
+.weather-engine-hud-head > span {
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+  text-align: right;
+}
+
 
 .weather-engine-hud-value {
   color: #fff6ef;
@@ -75129,7 +75125,6 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] :is(
   .race-detail-map-canvas,
-  .race-detail-map-street-fallback,
   .race-detail-map-leaflet
 ) {
   background: var(--race-detail-map-paper);

@@ -12,6 +12,8 @@ import java.util.Locale;
 import java.util.Map;
 
 final class BerlinMarathonOfficialCourse {
+    static final String RACE_ID = "berlin-marathon";
+    static final String OFFICIAL_SOURCE = "verified-official-gpx:berlin-marathon";
     static final String OFFICIAL_COURSE_URL = "https://www.bmw-berlin-marathon.com/en/your-race/course/";
     static final String OFFICIAL_GPX_URL = "https://www.bmw-berlin-marathon.com/fileadmin/media/events/berlinmarathon/gpx/BM25_Marathon-Strecke.gpx";
 

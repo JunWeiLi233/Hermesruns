@@ -2164,6 +2164,7 @@
     position: relative;
     display: grid;
     grid-column: 1 / -1;
+    height: clamp(460px, 56vw, 620px);
     min-height: clamp(460px, 56vw, 620px);
     overflow: hidden;
     background: #ece7df;
@@ -2180,24 +2181,6 @@
     z-index: 0;
     isolation: isolate;
     background: #ece7df;
-}
-
-.race-detail-map-street-fallback {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    background: #ece7df;
-}
-
-.race-detail-map-street-fallback-tile {
-    position: absolute;
-    width: 256px;
-    height: 256px;
-    max-width: none !important;
-    max-height: none !important;
-    display: block !important;
-    object-fit: cover;
 }
 
 .race-detail-map-leaflet {

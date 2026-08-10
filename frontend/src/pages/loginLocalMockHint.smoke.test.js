@@ -29,13 +29,13 @@ assert.match(
 
 assert.match(
   zhPagesSource,
-  /HermesLocal1!/,
+  /HermesDev2026!/,
   'Chinese login copy should state the current local mock password.',
 );
 
 assert.match(
   enPagesSource,
-  /HermesLocal1!/,
+  /HermesDev2026!/,
   'English login copy should state the current local mock password.',
 );
 

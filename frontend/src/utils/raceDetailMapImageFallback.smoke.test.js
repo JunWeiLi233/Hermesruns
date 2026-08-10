@@ -13,16 +13,16 @@ assert.match(
   'RacesDetail should still define a dedicated empty course-map state object for the runner-facing route map surface.',
 );
 
-assert.match(
+assert.doesNotMatch(
   racesDetailSource,
   /className="race-detail-map-street-fallback"/,
-  'RacesDetail should mount a dedicated real street-tile fallback layer inside the runner-facing map card.',
+  'RacesDetail should not mount a React-managed street-tile snapshot inside the runner-facing map card.',
 );
 
-assert.match(
+assert.doesNotMatch(
   styleSource,
   /\.race-detail-map-street-fallback\s*\{/,
-  'Race detail map styles should define the dedicated real street-tile fallback layer.',
+  'Race detail map styles should not define a static tile fallback layer outside Leaflet.',
 );
 
 console.log('[PASS] Race detail map image fallback guardrails passed.');

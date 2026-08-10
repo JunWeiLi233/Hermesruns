@@ -8,7 +8,6 @@ import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
-import ShoeRecommendation from '../components/ShoeRecommendation';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -934,8 +933,6 @@ export default function TodayRun() {
 
           <section className="today-run-plan-grid today-run-command-grid">
             <div className="today-run-plan-left">
-              <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
-
               <article className="today-run-plan-card">
                 <div className="today-run-plan-card-head">
                   <div>

@@ -76,49 +76,6 @@ function buildRaceTopnavTitle(heroLabels, race) {
   return race?.name || '';
 }
 
-function normalizeTileX(tileX, zoom) {
-  const worldTileCount = 2 ** Math.max(0, zoom);
-  return ((tileX % worldTileCount) + worldTileCount) % worldTileCount;
-}
-
-const buildStreetTileFallbackSnapshot = (map, tileUrlTemplate) => {
-  if (!map || !tileUrlTemplate) return null;
-  const pixelBounds = map.getPixelBounds?.();
-  if (!pixelBounds) return null;
-  const zoom = Math.max(0, Math.min(19, Math.round(map.getZoom?.() ?? 0)));
-  const tileSize = 256;
-  const worldTileCount = 2 ** zoom;
-  const minTileX = Math.floor(pixelBounds.min.x / tileSize);
-  const maxTileX = Math.floor((pixelBounds.max.x - 1) / tileSize);
-  const minTileY = Math.floor(pixelBounds.min.y / tileSize);
-  const maxTileY = Math.floor((pixelBounds.max.y - 1) / tileSize);
-  const tiles = [];
-
-  for (let tileY = minTileY; tileY <= maxTileY; tileY += 1) {
-    if (tileY < 0 || tileY >= worldTileCount) continue;
-    for (let tileX = minTileX; tileX <= maxTileX; tileX += 1) {
-      const normalizedTileX = normalizeTileX(tileX, zoom);
-      tiles.push({
-        key: `${zoom}-${normalizedTileX}-${tileY}`,
-        url: tileUrlTemplate
-          .replace('{z}', String(zoom))
-          .replace('{x}', String(normalizedTileX))
-          .replace('{y}', String(tileY)),
-        left: (tileX * tileSize) - pixelBounds.min.x,
-        top: (tileY * tileSize) - pixelBounds.min.y,
-      });
-    }
-  }
-
-  if (!tiles.length) return null;
-  return {
-    zoom,
-    width: Math.max(1, pixelBounds.max.x - pixelBounds.min.x),
-    height: Math.max(1, pixelBounds.max.y - pixelBounds.min.y),
-    tiles,
-  };
-};
-
 function buildElevationProfile(ascentMeters, courseKey, absoluteProfile) {
   if (Array.isArray(absoluteProfile) && absoluteProfile.length) {
     return absoluteProfile.map((meters, index) => ({
@@ -369,7 +326,8 @@ const OFFICIAL_COURSE_MAP_SOURCES = new Set([
 ]);
 
 function isOfficialCourseMapSource(source) {
-  return typeof source === 'string' && OFFICIAL_COURSE_MAP_SOURCES.has(source);
+  return typeof source === 'string'
+    && (OFFICIAL_COURSE_MAP_SOURCES.has(source) || source.startsWith('known-official-course:'));
 }
 
 function asFiniteNumber(value) {
@@ -464,7 +422,6 @@ export default function RacesDetail() {
   const [loadState, setLoadState] = useState('loading');
   const [routeMapReady, setRouteMapReady] = useState(false);
   const [routeMapPainted, setRouteMapPainted] = useState(false);
-  const [streetTileFallback, setStreetTileFallback] = useState(null);
   const [countdownNow, setCountdownNow] = useState(() => Date.now());
   const raceDetailElevationChartRef = useRef(null);
   const raceDetailElevationStageRef = useRef(null);
@@ -826,7 +783,6 @@ export default function RacesDetail() {
   useEffect(() => {
     setRouteMapReady(false);
     setRouteMapPainted(false);
-    setStreetTileFallback(null);
     // Clear map instance when route data changes to allow re-initialization with new data
     if (routeMapInstanceRef.current) {
       routeMapInstanceRef.current.remove();
@@ -835,13 +791,18 @@ export default function RacesDetail() {
   }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, hasAlignedRoute, race?.id, routeMapPoints.length]);
 
   useEffect(() => {
-    if (!routeMapRef.current || !race || routeMapInstanceRef.current) return undefined;
+    if (!routeMapRef.current || !race || !courseMapRequestSettled || routeMapInstanceRef.current) return undefined;
     const routeMapHost = routeMapRef.current;
     let resizeTimer = null;
-    let tileFallbackTimer = null;
     let cancelled = false;
     let createdMap = null;
     let hasAppliedInitialViewport = false;
+    let hasUserInteractedWithMap = false;
+    let settleFrameId = null;
+    let settleFrameIdNext = null;
+    let routeRendererSyncFrameId = null;
+    let mapResizeObserver = null;
+    let cleanupMapInteractionListeners = null;
 
     if (cancelled || !routeMapRef.current) return undefined;
     if (routeMapRef.current !== routeMapHost || routeMapInstanceRef.current) return undefined;
@@ -864,6 +825,11 @@ export default function RacesDetail() {
         boxZoom: false,
         keyboard: false,
         tap: false,
+        // Keep the previous tile level scaled while the next level arrives.
+        // This prevents beige holes during a quick sequence of zoom clicks.
+        zoomAnimation: true,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
       });
       const courseImagePane = map.createPane('race-detail-course-image');
       courseImagePane.style.zIndex = '430';
@@ -871,10 +837,13 @@ export default function RacesDetail() {
       courseImagePane.style.mixBlendMode = 'multiply';
       const routeShadowPane = map.createPane('race-detail-route-shadow');
       routeShadowPane.style.zIndex = '440';
+      routeShadowPane.style.pointerEvents = 'none';
       const routePane = map.createPane('race-detail-route');
       routePane.style.zIndex = '450';
+      routePane.style.pointerEvents = 'none';
       const routeMarkerPane = map.createPane('race-detail-route-marker');
       routeMarkerPane.style.zIndex = '460';
+      routeMarkerPane.style.pointerEvents = 'none';
       const tilePane = map.getPane('tilePane');
       if (tilePane) {
         tilePane.style.mixBlendMode = 'normal';
@@ -883,36 +852,81 @@ export default function RacesDetail() {
       }
       const tileAttribution = '&copy; OpenStreetMap contributors';
       let activeTileLayer = null;
-      let switchedToFallbackTiles = false;
-      let tileLoadConfirmed = false;
-      const refreshStreetTileFallback = (tileTemplate = tileUrl) => {
+      let fallbackTileLayer = null;
+      let courseMapImageOverlayLayer = null;
+      let routeShadowPolyline = null;
+      let polyline = null;
+      const routeRenderer = L.svg({ padding: 0.5 });
+      const synchronizeRouteRenderer = () => {
+        if (cancelled || !routeRenderer?._container || typeof map.getZoom !== 'function') return;
+        const currentZoom = map.getZoom();
+        const currentCenter = map.getCenter?.();
+        if (!Number.isFinite(currentZoom) || !currentCenter) return;
+        // A wheel zoom can reach the map while the renderer is still carrying
+        // the previous zoom level. Seed Leaflet's private renderer state with
+        // the settled map view before resetting so it cannot retain a stale
+        // scale transform (for example matrix(0.125, ...)).
+        routeRenderer._center = currentCenter;
+        routeRenderer._zoom = currentZoom;
+        routeRenderer._reset?.();
+        routeRenderer._updateTransform?.(currentCenter, currentZoom);
+      };
+      const refreshCourseMapOverlayOnViewChange = () => {
         if (cancelled) return;
-        setStreetTileFallback(buildStreetTileFallbackSnapshot(map, tileTemplate));
+        // Size invalidation belongs to the initial/resize layout pass. Calling
+        // it after every zoom makes Leaflet remeasure the whole card while the
+        // new tile level is already loading, which creates visible lag. Leaflet
+        // emits both zoomend and moveend for a control click, so coalesce both
+        // into one pre-paint renderer sync and redraw.
+        const refresh = () => {
+          if (cancelled) return;
+          synchronizeRouteRenderer();
+          // Leaflet owns the overlay element; explicitly asking its native
+          // reset routine to recalculate the pixel bounds keeps the raster
+          // aligned after a pan/zoom completes, including when a map was
+          // mounted while its card was below the fold.
+          courseMapImageOverlayLayer?._reset?.();
+          routeShadowPolyline?.redraw?.();
+          polyline?.redraw?.();
+        };
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+          if (routeRendererSyncFrameId) return;
+          routeRendererSyncFrameId = window.requestAnimationFrame(() => {
+            routeRendererSyncFrameId = null;
+            refresh();
+          });
+          return;
+        }
+        refresh();
+      };
+      const ensureFallbackTiles = () => {
+        if (cancelled || fallbackTileLayer) return fallbackTileLayer;
+        // Keep a direct OSM layer warm from the first paint. The proxy remains
+        // available for local caching, but the browser can reveal this layer
+        // immediately when a zoom requests a tile the proxy has not cached.
+        fallbackTileLayer = attachTileLayer(fallbackTileUrl, { isFallback: true });
+        return fallbackTileLayer;
       };
       const switchToFallbackTiles = () => {
-        if (cancelled || switchedToFallbackTiles) return;
-        switchedToFallbackTiles = true;
-        tileLoadConfirmed = false;
-        if (tileFallbackTimer) {
-          clearTimeout(tileFallbackTimer);
-          tileFallbackTimer = null;
-        }
-        if (activeTileLayer) {
-          activeTileLayer.off();
-          map.removeLayer(activeTileLayer);
-        }
-        activeTileLayer = attachTileLayer(fallbackTileUrl);
+        const layer = ensureFallbackTiles();
         if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
           window.requestAnimationFrame(() => {
             map.invalidateSize({ pan: false });
-            activeTileLayer?.redraw?.();
-            refreshStreetTileFallback(fallbackTileUrl);
+            layer?.redraw?.();
           });
         }
       };
-      const attachTileLayer = (url) => {
+      const refreshWarmFallbackTiles = () => {
+        if (cancelled) return;
+        ensureFallbackTiles()?.redraw?.();
+      };
+      const attachTileLayer = (url, { isFallback = false } = {}) => {
         const layer = L.tileLayer(url, {
           maxZoom: 19,
+          keepBuffer: 2,
+          updateWhenZooming: true,
+          updateInterval: 75,
+          zIndex: isFallback ? 300 : 200,
           attribution: tileAttribution,
         }).addTo(map);
         layer.on('tileload', () => {
@@ -932,15 +946,9 @@ export default function RacesDetail() {
             tile.style.maxWidth = 'none';
             tile.style.maxHeight = 'none';
           });
-          tileLoadConfirmed = true;
-          setStreetTileFallback(null);
-          if (tileFallbackTimer) {
-            clearTimeout(tileFallbackTimer);
-            tileFallbackTimer = null;
-          }
         });
         layer.on('tileerror', () => {
-          if (url === fallbackTileUrl) return;
+          if (isFallback) return;
           switchToFallbackTiles();
         });
         return layer;
@@ -948,8 +956,14 @@ export default function RacesDetail() {
       const finalizeMapLayout = () => {
         if (cancelled) return;
         map.invalidateSize({ pan: false });
-        applyRouteMapViewport();
+        // The first fit can run while the lower card still has a provisional
+        // size. Re-fit once the real dimensions are available, but never snap
+        // back after the runner has started panning or zooming.
+        if (!hasUserInteractedWithMap) {
+          applyRouteMapViewport({ force: true });
+        }
         activeTileLayer?.redraw?.();
+        refreshCourseMapOverlayOnViewChange();
         setRouteMapPainted(true);
         setRouteMapReady(true);
       };
@@ -971,10 +985,14 @@ export default function RacesDetail() {
           map.setView([0, 0], 1);
         }
       };
-      let polyline = null;
       const applyRouteMapViewport = ({ force = false } = {}) => {
         if (hasAppliedInitialViewport && !force) return;
-        if (hasAlignedRoute && polyline) {
+        const trustedRouteViewport = hasAlignedRoute && mapViewportBounds
+          ? L.latLngBounds(toLeafletBoundsCorners(mapViewportBounds))
+          : null;
+        if (trustedRouteViewport) {
+          map.fitBounds(trustedRouteViewport, { padding: [26, 26], maxZoom: 16 });
+        } else if (hasAlignedRoute && polyline) {
           map.fitBounds(polyline.getBounds().pad(0.12), { padding: [26, 26], maxZoom: 16 });
         } else {
           renderFallbackCityMap();
@@ -983,20 +1001,22 @@ export default function RacesDetail() {
       };
 
       if (hasTransparentCourseMapOverlay) {
-        L.imageOverlay(courseMapData.overlayImageUrl, courseMapImageOverlayBounds, {
+        courseMapImageOverlayLayer = L.imageOverlay(courseMapData.overlayImageUrl, courseMapImageOverlayBounds, {
           pane: 'race-detail-course-image',
           opacity: 0.72,
           interactive: false,
           className: 'race-detail-course-map-overlay',
         }).addTo(map);
+        courseMapImageOverlayLayer.on('load', refreshCourseMapOverlayOnViewChange);
       }
 
       if (hasAlignedRoute) {
-        L.polyline(routeMapPoints, {
+        routeShadowPolyline = L.polyline(routeMapPoints, {
           color: '#fff6f2',
           weight: 9,
           opacity: 0.92,
           pane: 'race-detail-route-shadow',
+          renderer: routeRenderer,
         }).addTo(map);
 
         polyline = L.polyline(routeMapPoints, {
@@ -1004,6 +1024,7 @@ export default function RacesDetail() {
           weight: 6,
           opacity: 0.98,
           pane: 'race-detail-route',
+          renderer: routeRenderer,
         }).addTo(map);
 
         const startMarker = L.circleMarker(routeMapPoints[0], {
@@ -1030,24 +1051,52 @@ export default function RacesDetail() {
           finishMarker.bindTooltip(routePoints[routePoints.length - 1].label, { direction: 'top', offset: [0, -6] });
         }
       }
+      const markMapInteraction = () => {
+        hasUserInteractedWithMap = true;
+      };
+      const settleMapLayout = () => {
+        if (cancelled) return;
+        map.invalidateSize({ pan: false });
+        if (!hasUserInteractedWithMap) {
+          applyRouteMapViewport({ force: true });
+        }
+        activeTileLayer?.redraw?.();
+        refreshCourseMapOverlayOnViewChange();
+        setRouteMapPainted(true);
+        setRouteMapReady(true);
+      };
+      const scheduleMapLayoutSettle = () => {
+        if (cancelled) return;
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+          settleMapLayout();
+          return;
+        }
+        if (settleFrameId) window.cancelAnimationFrame(settleFrameId);
+        if (settleFrameIdNext) window.cancelAnimationFrame(settleFrameIdNext);
+        settleFrameId = window.requestAnimationFrame(() => {
+          settleFrameIdNext = window.requestAnimationFrame(settleMapLayout);
+        });
+      };
+      map.on('dragstart', markMapInteraction);
+      routeMapHost.addEventListener('pointerdown', markMapInteraction, { passive: true });
+      cleanupMapInteractionListeners = () => {
+        routeMapHost.removeEventListener('pointerdown', markMapInteraction);
+      };
+      map.on('resize', scheduleMapLayoutSettle);
       map.invalidateSize({ pan: false });
       applyRouteMapViewport({ force: true });
+      map.on('moveend zoomend resize viewreset', refreshCourseMapOverlayOnViewChange);
+      map.on('zoomstart moveend', refreshWarmFallbackTiles);
+      refreshCourseMapOverlayOnViewChange();
+      ensureFallbackTiles();
       activeTileLayer = attachTileLayer(tileUrl);
-      tileFallbackTimer = setTimeout(() => {
-        if (!tileLoadConfirmed && !switchedToFallbackTiles) {
-          refreshStreetTileFallback(tileUrl);
-          map.invalidateSize({ pan: false });
-          applyRouteMapViewport({ force: true });
-          activeTileLayer?.redraw?.();
-        }
-      }, 2200);
 
-      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-        window.requestAnimationFrame(finalizeMapLayout);
-      } else {
-        finalizeMapLayout();
+      if (typeof ResizeObserver !== 'undefined') {
+        mapResizeObserver = new ResizeObserver(scheduleMapLayoutSettle);
+        mapResizeObserver.observe(routeMapHost);
       }
-      resizeTimer = setTimeout(finalizeMapLayout, 180);
+      scheduleMapLayoutSettle();
+      resizeTimer = setTimeout(finalizeMapLayout, 260);
       if (!cancelled) {
         routeMapInstanceRef.current = map;
         createdMap = map;
@@ -1065,9 +1114,17 @@ export default function RacesDetail() {
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
-      if (tileFallbackTimer) {
-        clearTimeout(tileFallbackTimer);
+      if (settleFrameId && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(settleFrameId);
       }
+      if (settleFrameIdNext && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(settleFrameIdNext);
+      }
+      if (routeRendererSyncFrameId && typeof window !== 'undefined') {
+        window.cancelAnimationFrame(routeRendererSyncFrameId);
+      }
+      mapResizeObserver?.disconnect();
+      cleanupMapInteractionListeners?.();
       if (createdMap && routeMapInstanceRef.current === createdMap) {
         routeMapInstanceRef.current.remove();
         routeMapInstanceRef.current = null;
@@ -1075,12 +1132,25 @@ export default function RacesDetail() {
         createdMap.remove();
       }
     };
-  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapImageOverlayBounds, fallbackTileUrl, hasAlignedRoute, hasTransparentCourseMapOverlay, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapImageOverlayBounds, courseMapRequestSettled, fallbackTileUrl, hasAlignedRoute, hasTransparentCourseMapOverlay, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
 
   if (loadState !== 'ready') {
     return (
       <div className="runner-shell-page runner-shell-page--loading race-detail-page--loading" data-loading-state={loadState}>
-        <div className="runner-shell-loading">{t(loadState === 'error' ? 'races.stitch_load_error' : 'races.stitch_loading')}</div>
+        <div className="race-detail-loading-shell" role="status" aria-live="polite" aria-busy="true" aria-label={t('races.stitch_loading')}>
+          <section className="race-detail-loading-hero" aria-hidden="true">
+            <span className="race-detail-loading-image" />
+            <div className="race-detail-loading-copy">
+              <span className="race-detail-loading-kicker" />
+              <span className="race-detail-loading-title" />
+              <span className="race-detail-loading-line" />
+              <div className="race-detail-loading-countdown"><span /><span /><span /><span /></div>
+            </div>
+          </section>
+          <section className="race-detail-loading-panel" aria-hidden="true"><span /><span /><span /><span /><span /></section>
+          <section className="race-detail-loading-map" aria-hidden="true"><span className="race-detail-loading-map-title" /><span className="race-detail-loading-map-body" /></section>
+          {loadState === 'error' && <p className="runner-shell-loading race-detail-loading-message">{t('races.stitch_load_error')}</p>}
+        </div>
       </div>
     );
   }
@@ -1355,26 +1425,13 @@ export default function RacesDetail() {
                     aria-label={mapCardCopy.title}
                     aria-describedby="race-detail-map-access-copy"
                   >
-                    {streetTileFallback ? (
-                      <div className="race-detail-map-street-fallback" aria-hidden="true">
-                        {streetTileFallback.tiles.map((tile) => (
-                          <img
-                            key={tile.key}
-                            className="race-detail-map-street-fallback-tile"
-                            src={tile.url}
-                            alt=""
-                            style={{ left: `${tile.left}px`, top: `${tile.top}px` }}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
                     <div
                       ref={routeMapRef}
                       className={`race-detail-map-leaflet${routeMapReady ? ' is-mounted' : ''}${routeMapPainted ? ' is-ready' : ''}`}
                     />
                   </div>
                   <p id="race-detail-map-access-copy" className="sr-only">
-                    {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
+                      {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
                   </p>
                 </article>
 

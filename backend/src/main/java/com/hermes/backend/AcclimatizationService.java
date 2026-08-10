@@ -48,6 +48,7 @@ public class AcclimatizationService {
     private static final double SAFETY_WARNING_DEW_POINT_C = 26.0;
 
     private static final Duration DEW_POINT_CACHE_TTL = Duration.ofHours(24);
+    private static final Duration CURRENT_DEW_POINT_CACHE_TTL = Duration.ofMinutes(30);
     private static final String OPEN_METEO_ENDPOINT = "archive";
 
     private final ActivityRepository activityRepository;
@@ -81,17 +82,30 @@ public class AcclimatizationService {
         return buildContextForDate(runner, LocalDate.now());
     }
 
+    public WeatherContextResponse buildContext(Runner runner, Double latitude, Double longitude) {
+        return buildContextForDate(runner, LocalDate.now(), latitude, longitude);
+    }
+
     public WeatherContextResponse buildContextForDate(Runner runner, LocalDate targetDate) {
+        return buildContextForDate(runner, targetDate, null, null);
+    }
+
+    public WeatherContextResponse buildContextForDate(
+            Runner runner,
+            LocalDate targetDate,
+            Double requestedLatitude,
+            Double requestedLongitude
+    ) {
         LocalDate lookbackStart = targetDate.minusDays(14);
         LocalDateTime lookbackStartDateTime = lookbackStart.atStartOfDay();
 
-        List<Object[]> latestLatLng = activityPointRepository.findLatestLatLngByRunnerAndType(runner.getId(), ActivityType.RUN.name());
-        if (latestLatLng.isEmpty()) {
+        WeatherCoordinates coordinates = resolveCoordinates(runner, requestedLatitude, requestedLongitude);
+        if (coordinates == null) {
             return WeatherContextResponse.unavailable("No recent run GPS points found.");
         }
 
-        double lat = ((Number) latestLatLng.get(0)[0]).doubleValue();
-        double lon = ((Number) latestLatLng.get(0)[1]).doubleValue();
+        double lat = coordinates.latitude();
+        double lon = coordinates.longitude();
 
         List<Activity> recentRuns = activityRepository.findRunsBetween(
                 runner, ActivityType.RUN, lookbackStartDateTime, targetDate.plusDays(1).atStartOfDay()
@@ -107,7 +121,11 @@ public class AcclimatizationService {
 
         DewPointSeries series = fetchDewPointSeries(lat, lon, lookbackStart, targetDate);
         if (series == null || series.dailyDewPointC().isEmpty()) {
-            return WeatherContextResponse.unavailable("Weather provider returned no dew point data.");
+            return WeatherContextResponse.unavailableAtCoordinates(
+                    lat,
+                    lon,
+                    "Weather provider returned no dew point data."
+            );
         }
 
         double baselineDewPoint = computeBaseline(series.dailyDewPointC(), runDates);
@@ -155,6 +173,43 @@ public class AcclimatizationService {
         );
     }
 
+    private WeatherCoordinates resolveCoordinates(Runner runner, Double requestedLatitude, Double requestedLongitude) {
+        if (requestedLatitude != null || requestedLongitude != null) {
+            return isValidGpsCoordinate(requestedLatitude, requestedLongitude)
+                    ? new WeatherCoordinates(requestedLatitude, requestedLongitude)
+                    : null;
+        }
+
+        List<Object[]> latestLatLng = activityPointRepository.findLatestLatLngByRunnerAndType(
+                runner.getId(), ActivityType.RUN.name()
+        );
+        if (latestLatLng == null || latestLatLng.isEmpty()) return null;
+
+        Object[] latestCoordinate = latestLatLng.get(0);
+        if (latestCoordinate == null || latestCoordinate.length < 2
+                || !(latestCoordinate[0] instanceof Number latitudeValue)
+                || !(latestCoordinate[1] instanceof Number longitudeValue)) {
+            return null;
+        }
+
+        Double latitude = latitudeValue.doubleValue();
+        Double longitude = longitudeValue.doubleValue();
+        return isValidGpsCoordinate(latitude, longitude)
+                ? new WeatherCoordinates(latitude, longitude)
+                : null;
+    }
+
+    private boolean isValidGpsCoordinate(Double latitude, Double longitude) {
+        return latitude != null
+                && longitude != null
+                && Double.isFinite(latitude)
+                && Double.isFinite(longitude)
+                && latitude >= -90.0
+                && latitude <= 90.0
+                && longitude >= -180.0
+                && longitude <= 180.0;
+    }
+
     public Integer calculatePenaltyForActivity(Activity activity) {
         if (activity.getRunner() == null) return 0;
         LocalDate runDate = resolveActivityDate(activity);
@@ -172,18 +227,88 @@ public class AcclimatizationService {
             return cached.toSeries();
         }
 
-        if (rateLimiter.shouldThrottle(OPEN_METEO_ENDPOINT)) {
-            log.debug("Open-Meteo archive API is currently throttled; skipping dew-point fetch for ({}, {})", lat, lon);
+        LocalDate today = LocalDate.now();
+        LocalDate archiveEnd = end.isBefore(today) ? end : today.minusDays(1);
+        Map<LocalDate, Double> values = new HashMap<>();
+
+        if (!archiveEnd.isBefore(start)) {
+            if (rateLimiter.shouldThrottle(OPEN_METEO_ENDPOINT)) {
+                log.debug("Open-Meteo archive API is currently throttled; skipping dew-point fetch for ({}, {})", lat, lon);
+                return null;
+            }
+
+            URI archiveUri = UriComponentsBuilder
+                    .fromUriString("https://archive-api.open-meteo.com/v1/archive")
+                    .queryParam("latitude", lat)
+                    .queryParam("longitude", lon)
+                    .queryParam("start_date", start)
+                    .queryParam("end_date", archiveEnd)
+                    .queryParam("daily", "dew_point_2m_mean")
+                    .queryParam("timezone", "auto")
+                    .build()
+                    .toUri();
+
+            try {
+                RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, archiveUri);
+                ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                        request,
+                        new ParameterizedTypeReference<>() {}
+                );
+                rateLimiter.recordSuccess(OPEN_METEO_ENDPOINT);
+                appendDailyDewPoints(response.getBody(), values);
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode().value() == 429) {
+                    rateLimiter.recordRateLimited(OPEN_METEO_ENDPOINT);
+                    log.warn("Open-Meteo archive API returned 429 Too Many Requests; subsequent calls in this window are throttled.");
+                } else {
+                    log.warn("Open-Meteo archive API returned HTTP {}: {}", e.getStatusCode().value(), e.getMessage());
+                }
+                return null;
+            } catch (Exception e) {
+                log.warn("Open-Meteo archive API call failed: {}", e.getMessage());
+                return null;
+            }
+        }
+
+        if (end.equals(today)) {
+            Double currentDewPoint = fetchCurrentDewPoint(lat, lon);
+            if (currentDewPoint != null) {
+                values.put(end, currentDewPoint);
+            }
+        }
+
+        if (values.isEmpty()) {
             return null;
         }
 
+        DewPointSeries series = new DewPointSeries(values);
+        Duration cacheTtl = end.equals(today) ? CURRENT_DEW_POINT_CACHE_TTL : DEW_POINT_CACHE_TTL;
+        cacheStore.put("open-meteo-dew-point", cacheKey, DewPointSeriesCache.from(series), cacheTtl);
+        return series;
+    }
+
+    private void appendDailyDewPoints(Map<String, Object> body, Map<LocalDate, Double> values) {
+        if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) return;
+
+        Object timesObj = daily.get("time");
+        Object dewObj = daily.get("dew_point_2m_mean");
+        if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews)) return;
+
+        int count = Math.min(times.size(), dews.size());
+        for (int index = 0; index < count; index++) {
+            Object time = times.get(index);
+            Object dewPoint = dews.get(index);
+            if (!(time instanceof String date) || !(dewPoint instanceof Number numericDewPoint)) continue;
+            values.put(LocalDate.parse(date), numericDewPoint.doubleValue());
+        }
+    }
+
+    private Double fetchCurrentDewPoint(double latitude, double longitude) {
         URI uri = UriComponentsBuilder
-                .fromUriString("https://archive-api.open-meteo.com/v1/archive")
-                .queryParam("latitude", lat)
-                .queryParam("longitude", lon)
-                .queryParam("start_date", start)
-                .queryParam("end_date", end)
-                .queryParam("daily", "dew_point_2m_mean")
+                .fromUriString("https://api.open-meteo.com/v1/forecast")
+                .queryParam("latitude", latitude)
+                .queryParam("longitude", longitude)
+                .queryParam("current", "dew_point_2m")
                 .queryParam("timezone", "auto")
                 .build()
                 .toUri();
@@ -194,41 +319,12 @@ public class AcclimatizationService {
                     request,
                     new ParameterizedTypeReference<>() {}
             );
-
-            rateLimiter.recordSuccess(OPEN_METEO_ENDPOINT);
-
             Map<String, Object> body = response.getBody();
-            if (body == null || !(body.get("daily") instanceof Map<?, ?> daily)) {
-                return null;
-            }
-
-            Object timesObj = daily.get("time");
-            Object dewObj = daily.get("dew_point_2m_mean");
-            if (!(timesObj instanceof List<?> times) || !(dewObj instanceof List<?> dews) || times.isEmpty()) {
-                return null;
-            }
-
-            Map<LocalDate, Double> out = new HashMap<>();
-            int n = Math.min(times.size(), dews.size());
-            for (int i = 0; i < n; i++) {
-                Object t = times.get(i);
-                Object d = dews.get(i);
-                if (!(t instanceof String ts) || !(d instanceof Number dew)) continue;
-                out.put(LocalDate.parse(ts), dew.doubleValue());
-            }
-            DewPointSeries series = new DewPointSeries(out);
-            cacheStore.put("open-meteo-dew-point", cacheKey, DewPointSeriesCache.from(series), DEW_POINT_CACHE_TTL);
-            return series;
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode().value() == 429) {
-                rateLimiter.recordRateLimited(OPEN_METEO_ENDPOINT);
-                log.warn("Open-Meteo archive API returned 429 Too Many Requests; subsequent calls in this window are throttled.");
-            } else {
-                log.warn("Open-Meteo archive API returned HTTP {}: {}", e.getStatusCode().value(), e.getMessage());
-            }
-            return null;
-        } catch (Exception e) {
-            log.warn("Open-Meteo archive API call failed: {}", e.getMessage());
+            if (body == null || !(body.get("current") instanceof Map<?, ?> current)) return null;
+            Object dewPoint = current.get("dew_point_2m");
+            return dewPoint instanceof Number numericDewPoint ? numericDewPoint.doubleValue() : null;
+        } catch (Exception exception) {
+            log.warn("Open-Meteo forecast API dew-point call failed: {}", exception.getMessage());
             return null;
         }
     }
@@ -304,6 +400,8 @@ public class AcclimatizationService {
 
     private record DewPointSeries(Map<LocalDate, Double> dailyDewPointC) {}
 
+    private record WeatherCoordinates(double latitude, double longitude) {}
+
     private record DewPointSeriesCache(Map<String, Double> dailyDewPointC) {
         private static DewPointSeriesCache from(DewPointSeries series) {
             Map<String, Double> values = new LinkedHashMap<>();
@@ -342,10 +440,18 @@ public class AcclimatizationService {
             String message
     ) {
         static WeatherContextResponse unavailable(String message) {
+            return unavailable(null, null, message);
+        }
+
+        static WeatherContextResponse unavailableAtCoordinates(double latitude, double longitude, String message) {
+            return unavailable(latitude, longitude, message);
+        }
+
+        private static WeatherContextResponse unavailable(Double latitude, Double longitude, String message) {
             return new WeatherContextResponse(
                     false,
-                    null,
-                    null,
+                    latitude,
+                    longitude,
                     null,
                     null,
                     null,

@@ -1,0 +1,420 @@
+/* Rewards page — align the achievement ledger with the Profile dashboard.
+   This layer is intentionally route-scoped and loaded after the shared glass
+   treatment so reward data and behavior remain untouched. */
+
+body .rewards-ledger-page .rewards-profile-canvas {
+  --rwl-surface: var(--hd-bg-card);
+  --rwl-surface-warm: var(--hd-bg-card);
+  --rwl-surface-soft: var(--hd-bg-card-elevated);
+  --rwl-line: var(--hd-line);
+  --rwl-ink: var(--hd-text-primary);
+  --rwl-ink-muted: var(--hd-text-secondary);
+  --rwl-accent: var(--hd-coral);
+  --rwl-accent-deep: var(--hd-accent);
+  --rwl-accent-soft: var(--hd-accent-soft);
+  --rwl-shadow: var(--hd-shadow-md);
+
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 28px clamp(20px, 3vw, 48px) 60px;
+  gap: 24px;
+  background: transparent;
+}
+
+@media (min-width: 1100px) {
+  body .rewards-ledger-page.runner-dashboard-page .runner-shell-canvas.rewards-profile-canvas {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 28px clamp(20px, 3vw, 48px) 60px !important;
+  }
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-intro {
+  max-width: 760px;
+  padding: 8px 0;
+  gap: 7px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-eyebrow,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section-eyebrow {
+  color: var(--hd-text-tertiary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-title {
+  color: var(--hd-text-primary);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-lede {
+  color: var(--hd-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card {
+  min-height: 300px;
+  gap: 14px;
+  padding: 26px 28px;
+  border: 0;
+  border-radius: var(--hd-radius-xl);
+  background: var(--hd-bg-card);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background var(--hd-transition), transform var(--hd-transition);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card:hover {
+  background: var(--hd-bg-card-hover);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card::before {
+  display: none;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--celebrate {
+  background: var(--hd-bg-card);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--next,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--next:hover {
+  background: var(--hd-bg-today);
+  color: var(--hd-bg-today-text);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-tag {
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: var(--hd-accent-soft);
+  color: var(--hd-accent);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--next .rewards-ledger-hero-tag {
+  background: rgba(240, 117, 97, 0.18);
+  color: var(--hd-coral);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-counter {
+  color: var(--hd-text-primary);
+  font-size: clamp(1.55rem, 2.2vw, 2rem);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-glyph {
+  width: 72px;
+  height: 72px;
+  border: 0;
+  border-radius: var(--hd-radius-md);
+  background: var(--hd-accent-soft);
+  color: var(--hd-accent);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--next .rewards-ledger-hero-glyph {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--hd-coral);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-glyph svg,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-glyph img,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-glyph .reward-glyph {
+  width: 46px;
+  height: 46px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-h2 {
+  color: var(--hd-text-primary);
+  font-size: clamp(1.35rem, 2.4vw, 1.8rem);
+  font-weight: 800;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-copy {
+  max-width: 54ch;
+  color: var(--hd-text-secondary);
+  font-size: 0.86rem;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-progress,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-bar {
+  background: var(--hd-bg-input);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-progress > span,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-bar > span {
+  background: var(--hd-accent-gradient);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card--next .rewards-ledger-hero-progress {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-foot {
+  color: var(--hd-text-secondary);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-cta,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-empty-cta {
+  border-radius: 999px;
+  background: var(--hd-accent-gradient);
+  box-shadow: 0 4px 16px rgba(160, 57, 42, 0.28);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-ghost {
+  border-color: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric {
+  min-height: 142px;
+  gap: 10px;
+  padding: 20px 22px;
+  border-radius: var(--hd-radius-lg);
+  background: var(--hd-bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background var(--hd-transition);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric:hover {
+  background: var(--hd-bg-card-hover);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric-index {
+  color: var(--hd-accent);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric-label {
+  color: var(--hd-text-secondary);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric-value {
+  color: var(--hd-text-primary);
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metric-meta {
+  color: var(--hd-text-tertiary);
+  font-size: 0.72rem;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section {
+  margin: 0;
+  padding: 22px 24px;
+  border: 0;
+  border-radius: var(--hd-radius-lg);
+  background: var(--hd-bg-card);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section-head {
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section-title {
+  color: var(--hd-text-primary);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section-sub {
+  color: var(--hd-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section-count {
+  color: var(--hd-accent);
+  font-size: 1.65rem;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-grid {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-card,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-row,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-card {
+  border: 1px solid var(--hd-line);
+  border-radius: var(--hd-radius-md);
+  background: var(--hd-bg-card-elevated);
+  box-shadow: none;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-card:hover,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-row:hover,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-card:hover {
+  border-color: var(--hd-line-strong);
+  background: var(--hd-bg-card-hover);
+  box-shadow: none;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-card.is-latest,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-row.is-top {
+  border-color: var(--hd-accent-medium);
+  background: var(--hd-accent-soft);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-icon,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-icon,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-icon {
+  border: 0;
+  background: var(--hd-accent-soft);
+  color: var(--hd-accent);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-title,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-title,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-title,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-pct {
+  color: var(--hd-text-primary);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-sub,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-hint,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-sub {
+  color: var(--hd-text-secondary);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline {
+  gap: 8px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-row {
+  grid-template-columns: 40px 52px minmax(0, 1fr) minmax(160px, 24%);
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-card {
+  min-width: 0;
+  padding: 16px;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-status,
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-earned-status {
+  color: var(--hd-accent);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-empty {
+  border: 1px dashed var(--hd-line-strong);
+  border-radius: var(--hd-radius-md);
+  background: var(--hd-bg-card-elevated);
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .runner-dashboard-footer {
+  margin-top: 0;
+}
+
+body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-signoff {
+  margin: 12px 0 0;
+  color: var(--hd-text-tertiary);
+}
+
+@media (max-width: 1080px) {
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  body .rewards-ledger-page .rewards-profile-canvas,
+  body .rewards-ledger-page.runner-dashboard-page .runner-shell-canvas.rewards-profile-canvas {
+    padding: 20px 16px 44px !important;
+    gap: 16px;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-intro,
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero,
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero,
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metrics,
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-metrics {
+    margin: 0;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-hero-card,
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-section {
+    padding: 20px;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-row {
+    grid-template-columns: 32px 48px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px;
+  }
+
+  body .rewards-ledger-page .rewards-profile-canvas .rewards-ledger-pipeline-progress {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .rewards-ledger-page .rewards-profile-canvas *,
+  body .rewards-ledger-page .rewards-profile-canvas *::before,
+  body .rewards-ledger-page .rewards-profile-canvas *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

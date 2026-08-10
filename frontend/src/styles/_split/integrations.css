@@ -1543,3 +1543,345 @@
     width: 100%;
   }
 }
+
+/* Profile-aligned Garmin destination page */
+.garmin-profile-page {
+  --garmin-profile-card: rgba(255, 252, 246, 0.88);
+  --garmin-profile-card-strong: rgba(255, 254, 250, 0.96);
+  --garmin-profile-ink: #211f1a;
+  --garmin-profile-muted: rgba(33, 31, 26, 0.64);
+  --garmin-profile-line: rgba(72, 58, 42, 0.14);
+  --garmin-profile-accent: #bf5b49;
+  --garmin-profile-blue: #276f84;
+  --garmin-profile-shadow: 0 18px 46px rgba(76, 54, 39, 0.08);
+
+  width: min(100%, 1280px);
+  max-width: none;
+  padding: 28px clamp(20px, 3vw, 48px) 60px;
+  gap: 24px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .garmin-profile-page,
+body:not(.theme-light):not(.theme-high-contrast-light) .garmin-profile-page {
+  --garmin-profile-card: rgba(255, 248, 238, 0.045);
+  --garmin-profile-card-strong: rgba(255, 248, 238, 0.065);
+  --garmin-profile-ink: #f3ece4;
+  --garmin-profile-muted: rgba(232, 226, 220, 0.66);
+  --garmin-profile-line: rgba(255, 248, 238, 0.09);
+  --garmin-profile-accent: #f07561;
+  --garmin-profile-blue: #9fe9f4;
+  --garmin-profile-shadow: none;
+}
+
+.garmin-profile-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.garmin-profile-hero .garmin-import-page-back {
+  margin-top: 4px;
+  border: 1px solid var(--garmin-profile-line);
+  background: var(--garmin-profile-card);
+  color: var(--garmin-profile-ink);
+  box-shadow: 0 8px 20px rgba(76, 54, 39, 0.05);
+}
+
+.garmin-profile-hero-copy {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.garmin-profile-hero-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--garmin-profile-blue) 12%, var(--garmin-profile-card-strong));
+  color: var(--garmin-profile-blue);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--garmin-profile-blue) 18%, transparent);
+}
+
+.garmin-profile-hero-text {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.garmin-profile-kicker,
+.garmin-profile-card-title > span,
+.garmin-profile-metric > span {
+  color: var(--garmin-profile-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.garmin-profile-hero-text h1 {
+  margin: 0;
+  color: var(--garmin-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.9rem, 3.2vw, 2.75rem);
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+}
+
+.garmin-profile-hero-text p {
+  max-width: 58rem;
+  margin: 0;
+  color: var(--garmin-profile-muted);
+  font-size: 0.92rem;
+  font-weight: 620;
+  line-height: 1.55;
+}
+
+.garmin-profile-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.garmin-profile-metric {
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  min-width: 0;
+  min-height: 98px;
+  padding: 18px 21px;
+  border: 1px solid var(--garmin-profile-line);
+  border-radius: 16px;
+  background: var(--garmin-profile-card);
+  box-shadow: 0 10px 28px rgba(76, 54, 39, 0.05);
+}
+
+.garmin-profile-metric.is-status {
+  border-color: var(--garmin-tone-ring, var(--garmin-profile-line));
+  background: color-mix(in srgb, var(--garmin-tone-bg, rgba(39, 111, 132, 0.1)) 72%, var(--garmin-profile-card));
+}
+
+.garmin-profile-metric strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--garmin-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.6vw, 1.28rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.garmin-profile-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.28fr) minmax(320px, 0.72fr);
+  align-items: stretch;
+  gap: 18px;
+}
+
+.garmin-profile-form-card,
+.garmin-profile-wellness-card {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  min-width: 0;
+  padding: clamp(22px, 2.6vw, 30px);
+  border: 1px solid var(--garmin-profile-line);
+  border-radius: 20px;
+  background: var(--garmin-profile-card-strong);
+  box-shadow: var(--garmin-profile-shadow);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.garmin-profile-card-head,
+.garmin-profile-page .garmin-import-page-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.garmin-profile-card-title {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.garmin-profile-card-title strong,
+.garmin-profile-page .garmin-import-page-section-head strong {
+  margin: 0;
+  color: var(--garmin-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.4rem, 2.3vw, 1.9rem);
+  font-weight: 820;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.garmin-profile-card-title p,
+.garmin-profile-page .garmin-import-page-copy {
+  margin: 0;
+  color: var(--garmin-profile-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.garmin-profile-page .garmin-import-pill {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 7px 11px;
+  border-radius: 999px;
+}
+
+.garmin-profile-form-card .garmin-import-field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.garmin-profile-form-card .garmin-import-field {
+  min-width: 0;
+}
+
+.garmin-profile-form-card .modal-label,
+.garmin-profile-form-card .garmin-import-field-meta {
+  color: var(--garmin-profile-muted);
+}
+
+.garmin-profile-form-card input,
+.garmin-profile-form-card .garmin-import-limit {
+  min-height: 50px;
+  border: 1px solid var(--garmin-profile-line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--garmin-profile-card) 74%, transparent);
+  color: var(--garmin-profile-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.garmin-profile-form-card .garmin-import-field--limit {
+  padding: 16px;
+  border: 1px solid var(--garmin-profile-line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--garmin-profile-card) 58%, transparent);
+  box-shadow: none;
+}
+
+.garmin-profile-form-card .garmin-import-actions {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--garmin-profile-line);
+}
+
+.garmin-profile-form-card .garmin-import-actions .modal-button {
+  min-height: 48px;
+}
+
+.garmin-profile-wellness-card {
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--garmin-profile-blue) 10%, transparent), transparent 18rem),
+    var(--garmin-profile-card-strong);
+}
+
+.garmin-profile-page .garmin-import-page-section-head span {
+  color: var(--garmin-profile-muted);
+}
+
+.garmin-profile-wellness-card .garmin-wellness-section {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--garmin-profile-line);
+}
+
+.garmin-profile-wellness-card .garmin-wellness-row {
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--garmin-profile-line) 72%, transparent);
+  color: var(--garmin-profile-ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.garmin-profile-wellness-card .garmin-import-page-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  border-bottom: 0;
+}
+
+.garmin-profile-wellness-card :is(.garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn) {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 999px;
+}
+
+.garmin-profile-wellness-card .garmin-wellness-status {
+  margin: 0;
+  color: var(--garmin-profile-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 960px) {
+  .garmin-profile-main-grid,
+  .garmin-profile-metric-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .garmin-profile-form-card .garmin-import-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .garmin-profile-page {
+    padding: 20px 16px 44px;
+  }
+
+  .garmin-profile-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .garmin-profile-hero-copy {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .garmin-profile-hero-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .garmin-profile-card-head,
+  .garmin-profile-page .garmin-import-page-section-head {
+    flex-direction: column;
+  }
+
+  .garmin-profile-form-card,
+  .garmin-profile-wellness-card {
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .garmin-profile-form-card .garmin-import-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garmin-profile-page :is(button, input, select) {
+    transition: none;
+  }
+}

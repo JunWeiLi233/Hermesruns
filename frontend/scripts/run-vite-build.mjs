@@ -160,8 +160,9 @@ function publishBuildOutput() {
   const buildAssetsDir = path.join(buildOutputDir, 'assets')
 
   if (fs.existsSync(buildAssetsDir)) {
-    emptyDirectory(backendAssetsDir)
-    syncDirectory(buildAssetsDir, backendAssetsDir)
+    // Hashed assets are immutable. Keep older bundles so a tab holding a
+    // previously served index.html can still load its CSS/JS after a rebuild.
+    copyDirectory(buildAssetsDir, backendAssetsDir)
   }
 
   for (const entry of fs.readdirSync(buildOutputDir, { withFileTypes: true })) {

@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -2137,7 +2138,9 @@ class RaceCourseMapServiceTests {
                     .isTrue();
             assertThat(result.routePoints())
                     .as(definition.raceId())
-                    .hasSize(definition.routePoints().size());
+                    .hasSize(definition.raceId().equals(AmsterdamMarathonOfficialCourse.RACE_ID)
+                            ? AmsterdamMarathonOfficialCourse.routePointCount()
+                            : definition.routePoints().size());
             assertThat(result.routePoints().get(0).label())
                     .as(definition.raceId())
                     .contains("Start");
@@ -2625,6 +2628,107 @@ class RaceCourseMapServiceTests {
                 eq(byte[].class)
         );
         verify(repository, never()).save(any(RaceCourseMapAsset.class));
+    }
+
+    @Test
+    void resolveCourseMapWithStorageSeedsMissingCatalogRouteBeforeImageSearch() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        RaceCourseMapAsset seededAsset = new RaceCourseMapAsset();
+        seededAsset.setRaceId("amsterdam-marathon");
+        seededAsset.setRaceName("Amsterdam Marathon");
+        seededAsset.setCity("Amsterdam");
+        seededAsset.setCountry("Netherlands");
+        seededAsset.setDistanceKm(42.195);
+        seededAsset.setLatitude(52.3676);
+        seededAsset.setLongitude(4.9041);
+        seededAsset.setLiveSource(RaceCourseMapBulkSeedService.SYNTHETIC_SOURCE);
+        seededAsset.setLiveRoutePointsJson(objectMapper.writeValueAsString(List.of(
+                new RoutePoint(52.3676, 4.9041, "Start"),
+                new RoutePoint(52.3800, 4.9200, null),
+                new RoutePoint(52.3900, 4.9000, null),
+                new RoutePoint(52.3676, 4.9041, "Finish")
+        )));
+        seededAsset.setLiveElevationSamplesJson("[4,5,4,6]");
+        seededAsset.setLiveTotalClimbMeters(2);
+        seededAsset.setLiveConfidence(35);
+        seededAsset.setLiveSummary("Synthetic city loop fallback.");
+        seededAsset.setLiveAiAssisted(false);
+
+        when(repository.findByRaceId("amsterdam-marathon"))
+                .thenReturn(Optional.empty(), Optional.of(seededAsset));
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class),
+                eq("race-detail-on-demand"), eq(false)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+        service.setBulkSeedService(bulkSeedService);
+
+        RaceCourseMapResult result = service.resolveCourseMapWithStorage(
+                "amsterdam-marathon", "Amsterdam Marathon", "Amsterdam", "Netherlands",
+                "https://example.com/amsterdam", 52.3676, 4.9041, 42.195
+        );
+
+        assertThat(result.routePoints()).hasSize(4);
+        assertThat(result.source()).isEqualTo(RaceCourseMapBulkSeedService.SYNTHETIC_SOURCE);
+        verify(bulkSeedService).seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class),
+                eq("race-detail-on-demand"), eq(false));
+    }
+
+    @Test
+    void resolveCourseMapWithStorageRefreshesStaleOsakaSeedOwnedRoute() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        RaceCourseMapAsset stale = new RaceCourseMapAsset();
+        stale.setRaceId(OsakaMarathonOfficialCourse.RACE_ID);
+        stale.setLiveSource(RaceCourseMapBulkSeedService.SYNTHETIC_SOURCE);
+        stale.setLiveRoutePointsJson(objectMapper.writeValueAsString(List.of(
+                new RoutePoint(34.68, 135.52, "Start"),
+                new RoutePoint(34.69, 135.52, "Finish")
+        )));
+
+        RaceCourseMapAsset refreshed = new RaceCourseMapAsset();
+        refreshed.setRaceId(OsakaMarathonOfficialCourse.RACE_ID);
+        refreshed.setDistanceKm(42.195);
+        refreshed.setLiveSource(OsakaMarathonOfficialCourse.OFFICIAL_SOURCE);
+        List<RoutePoint> refreshedPoints = new ArrayList<>();
+        for (int index = 0; index < 60; index++) {
+            String label = index == 0 ? "Start - Osaka Prefectural Government"
+                    : index == 20 ? "Ichioka Motomachi 3 turnaround"
+                    : index == 40 ? "Koenkitaguchi turnaround"
+                    : index == 59 ? "Finish - Osaka Castle Park" : null;
+            refreshedPoints.add(new RoutePoint(34.685708 + index * 0.006, 135.520778, label));
+        }
+        refreshed.setLiveRoutePointsJson(objectMapper.writeValueAsString(refreshedPoints));
+        refreshed.setLiveElevationSamplesJson("[1,2,1,2]");
+        refreshed.setLiveTotalClimbMeters(2);
+
+        when(repository.findByRaceId(OsakaMarathonOfficialCourse.RACE_ID))
+                .thenReturn(Optional.of(stale), Optional.of(refreshed));
+        when(bulkSeedService.seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class),
+                eq("race-detail-on-demand"), eq(true)))
+                .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+        service.setBulkSeedService(bulkSeedService);
+
+        RaceCourseMapResult result = service.resolveCourseMapWithStorage(
+                OsakaMarathonOfficialCourse.RACE_ID, "Osaka Marathon", "Osaka", "Japan",
+                OsakaMarathonOfficialCourse.OFFICIAL_COURSE_URL, 34.6937, 135.5023, 42.195
+        );
+
+        assertThat(result.source()).isEqualTo(OsakaMarathonOfficialCourse.OFFICIAL_SOURCE);
+        assertThat(result.routePoints()).hasSize(60);
+        verify(bulkSeedService).seedRace(any(RaceCourseMapBulkSeedService.CatalogRace.class),
+                eq("race-detail-on-demand"), eq(true));
     }
 
     @Test
@@ -4877,4 +4981,3 @@ class RaceCourseMapServiceTests {
         return text;
     }
 }
-
