@@ -4,22 +4,18 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * *"
-  push:
-    branches:
-      - main
 
 permissions:
   contents: write
 
 concurrency:
-  group: readme-activity-${{ github.ref }}
+  group: readme-activity
   cancel-in-progress: true
 
 jobs:
   update-activity-graph:
     name: update-activity-graph
     runs-on: ubuntu-latest
-    if: github.actor != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,7 +25,9 @@ jobs:
           node-version: "20"
       - name: Generate README activity graph
         run: node .tools/update-readme-activity.mjs
-      - name: Commit updated graph
+      - name: Publish updated graph branch
+        env:
+          ACTIVITY_BRANCH: automation/readme-activity
         run: |
           if git diff --quiet -- docs/github-commit-activity.svg; then
             echo "README activity graph is already current."
@@ -37,6 +35,14 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --create "$ACTIVITY_BRANCH"
           git add docs/github-commit-activity.svg
           git commit -m "docs: refresh readme activity graph"
-          git push
+          git push --force-with-lease origin "HEAD:refs/heads/$ACTIVITY_BRANCH"
+          {
+            echo "### README activity graph ready for review"
+            echo
+            echo "Repository rules require changes to reach main through a pull request."
+            echo "Open or update the review at:"
+            echo "https://github.com/${GITHUB_REPOSITORY}/compare/main...${ACTIVITY_BRANCH}?expand=1"
+          } >> "$GITHUB_STEP_SUMMARY"
