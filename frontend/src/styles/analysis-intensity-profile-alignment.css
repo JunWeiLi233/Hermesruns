@@ -1,0 +1,666 @@
+/* Profile-parity presentation for /analysis/intensity. */
+.analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+  --intensity-radius-xl: 20px;
+  --intensity-radius-lg: 16px;
+  --intensity-radius-md: 12px;
+  --intensity-card: rgba(255, 255, 255, 0.92);
+  --intensity-card-strong: #fff;
+  --intensity-card-hover: rgba(255, 255, 255, 1);
+  --intensity-input: rgba(28, 25, 23, 0.04);
+  --intensity-ink: #1c1917;
+  --intensity-muted: #78716c;
+  --intensity-faint: #a8a29e;
+  --intensity-accent: #c0462b;
+  --intensity-accent-soft: rgba(192, 70, 43, 0.08);
+  --intensity-accent-medium: rgba(192, 70, 43, 0.14);
+  --intensity-coral: #f07561;
+  --intensity-green: #3d8b5e;
+  --intensity-amber: #a96618;
+  --intensity-line: rgba(28, 25, 23, 0.06);
+  --intensity-line-strong: rgba(28, 25, 23, 0.1);
+  --intensity-shadow: 0 8px 24px rgba(28, 25, 23, 0.06);
+  --intensity-motion: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  width: 100%;
+  padding: 28px clamp(20px, 3vw, 48px) 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--intensity-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+  --intensity-card: rgba(255, 255, 255, 0.04);
+  --intensity-card-strong: rgba(255, 255, 255, 0.06);
+  --intensity-card-hover: rgba(255, 255, 255, 0.08);
+  --intensity-input: rgba(255, 255, 255, 0.05);
+  --intensity-ink: #ece5dd;
+  --intensity-muted: #aaa299;
+  --intensity-faint: #7f776f;
+  --intensity-accent: #f07561;
+  --intensity-accent-soft: rgba(240, 117, 97, 0.1);
+  --intensity-accent-medium: rgba(240, 117, 97, 0.18);
+  --intensity-coral: #f07561;
+  --intensity-green: #76ad8b;
+  --intensity-amber: #e3b56f;
+  --intensity-line: rgba(255, 255, 255, 0.06);
+  --intensity-line-strong: rgba(255, 255, 255, 0.1);
+  --intensity-shadow: none;
+}
+
+.analysis-insight-detail-page.is-intensity .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  background: transparent !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content :is(
+  .analysis-intensity-command-hero-copy,
+  .analysis-intensity-command-hero-stats,
+  .analysis-intensity-command-panel-head,
+  .analysis-intensity-command-zone-list,
+  .analysis-intensity-command-summary,
+  .analysis-intensity-command-sidebar,
+  .analysis-intensity-command-section-head,
+  .analysis-intensity-command-sample-grid,
+  .analysis-intensity-command-sample-body,
+  .analysis-intensity-command-sample-head,
+  .analysis-intensity-command-sample-metrics
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 0.58fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+  padding: 8px 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible;
+  animation: intensity-profile-rise 0.45s ease-out both;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-copy {
+  gap: 10px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-vo2-page-back {
+  width: fit-content;
+  margin-bottom: 4px;
+  padding: 5px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--intensity-muted);
+  box-shadow: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-vo2-page-back:hover,
+.analysis-insight-detail-page.is-intensity .analysis-vo2-page-back:focus-visible {
+  color: var(--intensity-accent);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-eyebrow {
+  color: var(--intensity-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero h1 {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 0.24em;
+  margin: 0;
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.8rem, 3.2vw, 2.45rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero h1 strong {
+  color: var(--intensity-accent);
+  font-weight: inherit;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--intensity-muted);
+  font-size: 0.9rem;
+  line-height: 1.58;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-stat {
+  min-height: 88px;
+  padding: 18px 20px;
+  border: 0 !important;
+  border-radius: var(--intensity-radius-lg);
+  background: var(--intensity-card) !important;
+  box-shadow: var(--intensity-shadow) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  justify-content: center;
+  gap: 7px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-stat > span,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary span,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-metrics span {
+  color: var(--intensity-faint);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-stat strong {
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.45rem, 2.4vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(290px, 0.75fr);
+  gap: 16px;
+  align-items: stretch;
+  animation: intensity-profile-rise 0.45s 0.08s ease-out both;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-distribution,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card {
+  border: 0 !important;
+  background: var(--intensity-card) !important;
+  box-shadow: var(--intensity-shadow) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-distribution {
+  padding: 24px 28px;
+  border-radius: var(--intensity-radius-xl);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-panel-head h2,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-section-head h2 {
+  margin: 0;
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-panel-head p {
+  margin: 4px 0 0;
+  color: var(--intensity-faint);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-block {
+  min-width: 0;
+  padding: 16px;
+  border: 0 !important;
+  border-radius: var(--intensity-radius-md);
+  background: var(--intensity-card-strong) !important;
+  box-shadow: none !important;
+  gap: 9px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-head {
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-head strong {
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.55rem, 2.8vw, 2.1rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-head strong span {
+  color: var(--intensity-faint);
+  font-size: 0.72rem;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-head > span {
+  max-width: 12ch;
+  color: var(--intensity-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-track {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--intensity-line-strong);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-fill {
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-fill.is-accent {
+  background: linear-gradient(90deg, var(--intensity-coral), var(--intensity-accent));
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-fill.is-muted {
+  background: color-mix(in srgb, var(--intensity-muted) 55%, transparent);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-fill.is-dim {
+  background: color-mix(in srgb, var(--intensity-faint) 34%, transparent);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-block p {
+  margin: 0;
+  color: var(--intensity-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--intensity-line) !important;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary strong {
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-status.is-optimal {
+  color: var(--intensity-green);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-status.is-watch {
+  color: var(--intensity-amber);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-status.is-alert {
+  color: var(--intensity-accent);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sidebar {
+  gap: 12px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment {
+  flex: 1;
+  padding: 24px;
+  border: 0 !important;
+  border-radius: var(--intensity-radius-xl);
+  background: linear-gradient(135deg, #2c2218 0%, #1a1510 52%, #0f0d0a 100%) !important;
+  box-shadow: none !important;
+  color: #f6f1eb;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy strong,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment h3,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p {
+  color: #f6f1eb;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy span {
+  color: rgba(246, 241, 235, 0.62);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment h3 {
+  margin: 10px 0 8px;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.16;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p {
+  margin: 0;
+  color: rgba(246, 241, 235, 0.74);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p + p {
+  margin-top: 8px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-cta {
+  margin-top: 18px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #a0392a, #e8634e) !important;
+  color: #fff8f4;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: transform var(--intensity-motion), filter var(--intensity-motion);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-cta:hover,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-cta:focus-visible {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery {
+  padding: 20px 22px;
+  border-radius: var(--intensity-radius-lg);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery h4 {
+  margin: 0;
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery p {
+  margin: 7px 0 0;
+  color: var(--intensity-muted);
+  font-size: 0.76rem;
+  line-height: 1.48;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery-badge {
+  width: fit-content;
+  margin-top: 12px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--intensity-accent-soft) !important;
+  color: var(--intensity-accent);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-samples {
+  gap: 14px;
+  animation: intensity-profile-rise 0.45s 0.16s ease-out both;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-section-head {
+  align-items: center;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-link {
+  padding: 7px 0;
+  border: 0;
+  background: transparent !important;
+  color: var(--intensity-accent);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card {
+  min-width: 0;
+  padding: 18px;
+  border-radius: var(--intensity-radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--intensity-motion), background var(--intensity-motion);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card:hover,
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card:focus-visible {
+  background: var(--intensity-card-hover) !important;
+  transform: translateY(-2px);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual {
+  min-height: 64px;
+  margin: -18px -18px 16px;
+  padding: 14px 18px;
+  align-items: flex-end;
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent) !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual.is-easy {
+  background-color: color-mix(in srgb, var(--intensity-green) 42%, var(--intensity-card-strong)) !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual.is-steady {
+  background-color: color-mix(in srgb, var(--intensity-amber) 36%, var(--intensity-card-strong)) !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual.is-hard {
+  background-color: color-mix(in srgb, var(--intensity-coral) 42%, var(--intensity-card-strong)) !important;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual span {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.76) !important;
+  color: #403a35;
+  box-shadow: none !important;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-body {
+  gap: 13px;
+  padding: 0;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-head h3 {
+  margin: 0;
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.98rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-head span {
+  color: var(--intensity-faint);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-head .runner-dashboard-side-link-icon {
+  color: var(--intensity-faint);
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-metrics > div {
+  min-width: 0;
+}
+
+.analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-metrics strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--intensity-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes intensity-profile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1120px) {
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.7fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+    padding: 20px 16px 48px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-list,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-block {
+    padding: 15px 16px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual {
+    min-height: 100%;
+    margin: -18px 0 -18px -18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+    gap: 18px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero {
+    gap: 18px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-hero-stats,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sidebar,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-distribution,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-recovery {
+    padding: 20px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-summary > div {
+    align-items: flex-start;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card {
+    display: flex;
+    padding: 16px;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual {
+    min-height: 56px;
+    margin: -16px -16px 14px;
+    padding: 12px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content :is(
+    .analysis-intensity-command-hero,
+    .analysis-intensity-command-grid,
+    .analysis-intensity-command-samples
+  ) {
+    animation: none;
+  }
+
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-zone-fill,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-card,
+  .analysis-insight-detail-page.is-intensity .analysis-intensity-command-cta {
+    transition: none;
+  }
+}

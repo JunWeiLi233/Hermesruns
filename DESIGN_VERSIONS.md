@@ -11,6 +11,16 @@ Rules
 
 ## Current Versions
 
+### Version: DV-2026-08-13-01
+Date: 2026-08-13
+Surface: Intensity distribution detail on `/analysis/intensity`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-intensity-profile-alignment.css`, `frontend/src/index.css`, `frontend/src/pages/analysisIntensityProfileParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the intensity detail route with the Profile dashboard's compact editorial header, concise metric tiles, 20px tonal cards, three-zone scan row, dark coach decision card, and shorter recent-run summaries.
+Why: The previous oversized command hero, heavy nested cards, and tall activity previews made the page slower to scan and visually disconnected from Profile.
+Preserve list: Intensity calculations, percentages, compliance and status values, coach assignment and guidance, recent-run data, route navigation, authentication, localization, units, themes, responsive behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-09-04`
+Notes: Presentation-only Profile alignment; no API, calculation, persistence, route, interaction, or user-facing copy changed.
+
 ### Version: DV-2026-08-09-04
 Date: 2026-08-09
 Surface: Rewards achievement ledger on `/rewards`
