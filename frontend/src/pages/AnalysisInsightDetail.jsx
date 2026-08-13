@@ -2097,7 +2097,7 @@ export default function AnalysisInsightDetail() {
               </section>
             </>
           ) : insightKey === 'intensity' && intensityDashboard ? (
-            <>
+            <div className="analysis-intensity-profile-content">
               <section className="analysis-intensity-command-hero">
                 <div className="analysis-intensity-command-hero-copy">
                   <button type="button" className="analysis-vo2-page-back" onClick={() => navigate('/analysis')}>
@@ -2233,7 +2233,7 @@ export default function AnalysisInsightDetail() {
                   )}
                 </div>
               </section>
-            </>
+            </div>
           ) : (
             <>
               <section className="analysis-overview-card analysis-insight-intro-card">
