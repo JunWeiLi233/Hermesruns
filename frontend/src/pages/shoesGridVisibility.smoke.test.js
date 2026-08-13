@@ -11,12 +11,19 @@ const styles = [
   read('src/styles/style.css'),
   read('src/styles/_split/shoes.css'),
 ].join('\n');
+const liquidGlassStyles = read('src/styles/all-pages-liquid-glass.css');
 const shoesPage = read('src/pages/Shoes.jsx');
 const addShoesPage = read('src/pages/AddShoes.jsx');
 
 const assertIncludes = (source, needle, label) => {
   if (!source.includes(needle)) {
     throw new Error(`${label} missing: ${needle}`);
+  }
+};
+
+const assertExcludes = (source, needle, label) => {
+  if (source.includes(needle)) {
+    throw new Error(`${label} should not include: ${needle}`);
   }
 };
 
@@ -33,6 +40,11 @@ const assertIncludes = (source, needle, label) => {
   '.shoe-rotation-signal-copy h2',
   '.shoe-health-summary-label',
   '.shoe-inventory-card-type-badge',
+  '.shoes-profile-workspace',
+  '.shoe-inventory-summary-strip',
+  '.shoe-inventory-workspace-head',
+  '.shoe-inventory-toolbar',
+  '.shoes-dashboard-page .shoe-inventory-grid',
   '.runner-shell-footer a',
   '.add-shoes-brand-expand-grid',
   '.add-shoes-model-empty',
@@ -47,7 +59,21 @@ const assertIncludes = (source, needle, label) => {
   'shoe-inventory-card-side',
   'shoe-inventory-manage-grid',
   'shoe-rotation-signal',
+  'shoes-profile-workspace',
+  'shoe-inventory-summary-strip',
+  'shoe-inventory-workspace-head',
+  'shoe-inventory-toolbar',
 ].forEach((className) => assertIncludes(shoesPage, className, 'Shoes page class hook'));
+
+assertIncludes(
+  liquidGlassStyles,
+  '.runner-shell-page.shoes-dashboard-page .shoe-inventory-card :is(',
+  'Shoes nested-card liquid-glass reset'
+);
+assertIncludes(styles, 'grid-template-columns: repeat(2, minmax(0, 1fr)) !important;', 'stable Shoes desktop grid');
+assertExcludes(shoesPage, 'isInventoryCollapsed', 'duplicate inventory collapse state');
+assertExcludes(shoesPage, 'Collapse running shoes inventory', 'hardcoded inventory accessibility copy');
+assertExcludes(shoesPage, 'Expand running shoes inventory', 'hardcoded inventory accessibility copy');
 
 [
   'add-shoes-brand-deck-grid',

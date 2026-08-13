@@ -26,14 +26,20 @@ assert(
 assert(
   !heatmapSource.includes('heatmap-page-story-card')
     && !heatmapSource.includes('heatmap-page-focus-toggle')
+    && !heatmapSource.includes('heatmap-sessions-summary-grid')
+    && !heatmapSource.includes('heatmap-sessions-card')
+    && !heatmapSource.includes('heatmap-sessions-list')
     && !styleSource.includes('.heatmap-page-story-card')
-    && !styleSource.includes('.heatmap-page-focus-card'),
-  'Heatmap should not render or style the retired story/focus card overlay.',
+    && !styleSource.includes('.heatmap-page-focus-card')
+    && !styleSource.includes('.heatmap-sessions-summary-grid')
+    && !styleSource.includes('.heatmap-sessions-card')
+    && !styleSource.includes('.heatmap-sessions-list'),
+  'Heatmap should not render the retired story/focus overlay or the removed sessions drawer.',
 );
 
 assert(
-  /@media\s+\(max-width:\s*920px\)\s*\{[\s\S]*\.heatmap-sessions-card\s*\{[\s\S]*display:\s*none;[\s\S]*\.heatmap-page-legend-card\s*\{[\s\S]*bottom:\s*92px;[\s\S]*max-height:\s*244px;[\s\S]*overflow-y:\s*auto;/,
-  'Heatmap mobile overlay stack should hide the optional sessions drawer and bound the legend card above the utility rail.',
+  /@media\s+\(max-width:\s*920px\)\s*\{[\s\S]*\.heatmap-page-legend-card\s*\{[\s\S]*bottom:\s*92px;[\s\S]*max-height:\s*244px;[\s\S]*overflow-y:\s*auto;/,
+  'Heatmap mobile legend should remain bounded above the utility rail.',
 );
 
 assert(

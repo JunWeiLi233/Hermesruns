@@ -117,12 +117,52 @@ function replaceDirectory(sourceDir, targetDir) {
   retryFileOperation(() => fs.rmSync(sourceDir, { recursive: true, force: true }), `Remove ${sourceDir}`)
 }
 
+// Replace a live directory atomically so a concurrent server never sees a
+// half-written mix of old and new files. We stage a complete copy, then swap it
+// into place with two renames. On POSIX each rename() is atomic; the only window
+// is the microsecond gap between the two renames, during which the target path
+// does not exist (a 404 at worst — never a stale or mixed version).
+function atomicReplaceDirectory(sourceDir, targetDir) {
+  const parent = path.dirname(targetDir)
+  const base = path.basename(targetDir)
+  const stamp = Date.now()
+  const stagingDir = path.join(parent, `${base}.swap-${stamp}`)
+  const retiredDir = path.join(parent, `${base}.old-${stamp}`)
+
+  // 1. Stage a complete copy beside the target.
+  retryFileOperation(() => fs.rmSync(stagingDir, { recursive: true, force: true }), `Clear staging ${stagingDir}`)
+  syncDirectory(sourceDir, stagingDir)
+
+  // 2. Move the current live dir aside (if present), then move the staging dir
+  //    into the target path. Best-effort cleanup of the retired dir follows.
+  let movedOld = false
+  if (fs.existsSync(targetDir)) {
+    retryFileOperation(() => fs.renameSync(targetDir, retiredDir), `Retire ${targetDir} -> ${retiredDir}`)
+    movedOld = true
+  }
+  retryFileOperation(() => fs.renameSync(stagingDir, targetDir), `Promote ${stagingDir} -> ${targetDir}`)
+
+  if (movedOld) {
+    // Best-effort: the old dir is no longer served. Removal may fail transiently
+    // (e.g. a reader holding a file handle) — retry but never fail the build.
+    try {
+      retryFileOperation(
+        () => fs.rmSync(retiredDir, { recursive: true, force: true }),
+        `Cleanup retired ${retiredDir}`,
+      )
+    } catch (cleanupError) {
+      console.warn(`[frontend] Retired dir ${retiredDir} could not be removed yet: ${cleanupError.message}. It is no longer served; it can be deleted manually.`)
+    }
+  }
+}
+
 function publishBuildOutput() {
   const buildAssetsDir = path.join(buildOutputDir, 'assets')
 
   if (fs.existsSync(buildAssetsDir)) {
-    emptyDirectory(backendAssetsDir)
-    syncDirectory(buildAssetsDir, backendAssetsDir)
+    // Hashed assets are immutable. Keep older bundles so a tab holding a
+    // previously served index.html can still load its CSS/JS after a rebuild.
+    copyDirectory(buildAssetsDir, backendAssetsDir)
   }
 
   for (const entry of fs.readdirSync(buildOutputDir, { withFileTypes: true })) {
@@ -204,16 +244,29 @@ try {
 retryFileOperation(() => fs.rmSync(backupAssetsDir, { recursive: true, force: true }), `Remove ${backupAssetsDir}`)
 
 if (fs.existsSync(backendLiveStaticDir)) {
-  syncDirectory(backendStaticDir, backendLiveStaticDir)
-
+  // Verify the source is complete first (stays a no-op if already in sync).
   const missingRuntimeFiles = collectMissingPaths(backendStaticDir, backendLiveStaticDir)
-  if (missingRuntimeFiles.length > 0) {
-    console.error('[frontend] Live backend static sync is incomplete. Missing files:')
-    missingRuntimeFiles.forEach((filePath) => console.error(` - ${filePath}`))
+
+  // Atomically swap the live dir so a running Spring Boot dev server never
+  // observes a mix of old and new build artifacts mid-publish. This replaces
+  // the previous file-by-file syncDirectory() which could serve a previous
+  // build's chunks alongside a new index.html (or vice versa) for several
+  // seconds during a rebuild.
+  atomicReplaceDirectory(backendStaticDir, backendLiveStaticDir)
+
+  // Re-collect after the swap; the live dir is now an exact mirror of the source.
+  const postSwapMissing = collectMissingPaths(backendStaticDir, backendLiveStaticDir)
+  if (postSwapMissing.length > 0) {
+    console.error('[frontend] Live backend static swap is incomplete. Missing files:')
+    postSwapMissing.forEach((filePath) => console.error(` - ${filePath}`))
     process.exit(1)
   }
 
-  console.log(`[frontend] Synced live backend static dir: ${backendLiveStaticDir}`)
+  if (missingRuntimeFiles.length === 0 && postSwapMissing.length === 0) {
+    console.log(`[frontend] Atomic live static swap complete: ${backendLiveStaticDir}`)
+  } else {
+    console.log(`[frontend] Atomic live static swap complete (${postSwapMissing.length} stale) -> ${backendLiveStaticDir}`)
+  }
 }
 
 process.exitCode = 0

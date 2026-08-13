@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import AnalysisSubpageNav from '../components/AnalysisSubpageNav';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
-import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration } from '../utils/format';
@@ -1339,8 +1340,9 @@ export default function AnalysisInsightDetail() {
   }
 
   if (loadState !== 'ready' || !detail) {
+    if (loadState === 'loading') return <PageSkeleton variant="analysis-insight" />;
     return (
-      <div className="runner-shell-page runner-shell-page--loading">
+      <div className="runner-shell-page runner-shell-page--loading" data-loading-state={loadState}>
         <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
       </div>
     );
@@ -1348,49 +1350,14 @@ export default function AnalysisInsightDetail() {
 
   return (
     <div className={`runner-shell-page runner-dashboard-page analysis-insight-detail-page${insightKey === 'intensity' ? ' is-intensity' : ''}${insightKey === 'coach-insight' ? ' is-coach-insight' : ''}${insightKey === 'injury-risk' ? ' is-injury-risk' : ''}${insightKey === 'load-balance' ? ' is-load-balance' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
-      <aside className="runner-shell-sidebar">
-        <div className="runner-shell-brand runner-dashboard-brand">
-          <div className="runner-dashboard-brand-copy">
-            <HermesLogo dark />
-            <span>{t('analysis.stitch_brand_subtitle_detail')}</span>
-          </div>
-          <button
-            type="button"
-            className="runner-dashboard-sidebar-toggle"
-            onClick={() => setIsSidebarCollapsed((current) => !current)}
-            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
-            aria-pressed={isSidebarCollapsed}
-          >
-            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">
-              {isSidebarCollapsed ? '>' : '<'}
-            </span>
-          </button>
-        </div>
-        <nav className="runner-shell-side-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={cx('runner-shell-side-link', item.active && 'is-active')}
-              onClick={() => navigate(item.route)}
-            >
-              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
-              <span className="runner-dashboard-side-link-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="runner-shell-sidebar-footer">
-          <button
-            type="button"
-            className="runner-shell-workout-btn runner-dashboard-workout-btn"
-            onClick={() => navigate('/today-run')}
-            aria-label={t('profile.dashboard_start_workout')}
-          >
-            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
-            <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
-          </button>
-        </div>
-      </aside>
+      <AnalysisSubpageNav
+        activeInsightKey={insightKey}
+        collapsed={isSidebarCollapsed}
+        lang={lang}
+        navigate={navigate}
+        onToggle={() => setIsSidebarCollapsed((current) => !current)}
+        t={t}
+      />
 
       <main className="runner-shell-main">
         <header className="runner-shell-topbar runner-dashboard-shell-topbar">
@@ -2130,7 +2097,7 @@ export default function AnalysisInsightDetail() {
               </section>
             </>
           ) : insightKey === 'intensity' && intensityDashboard ? (
-            <>
+            <div className="analysis-intensity-profile-content">
               <section className="analysis-intensity-command-hero">
                 <div className="analysis-intensity-command-hero-copy">
                   <button type="button" className="analysis-vo2-page-back" onClick={() => navigate('/analysis')}>
@@ -2266,7 +2233,7 @@ export default function AnalysisInsightDetail() {
                   )}
                 </div>
               </section>
-            </>
+            </div>
           ) : (
             <>
               <section className="analysis-overview-card analysis-insight-intro-card">

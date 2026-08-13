@@ -30,4 +30,13 @@
 @import './styles/admin-kinetic-editorial.css';
 @import './styles/dark-mode-final-fixes.css';
 @import './styles/muscle-training-profile-alignment.css';
+@import './styles/liquid-glass.css';
+@import './styles/auth-liquid-glass.css';
+@import './styles/all-pages-liquid-glass.css';
+@import './styles/rewards-profile-alignment.css';
+@import './styles/analysis-subnav.css';
+@import './styles/analysis-intensity-profile-alignment.css';
+@import './styles/runs-subnav.css';
+@import './styles/admin-monitoring-dashboard.css';
+@import './styles/loading-skeleton.css';
 @config '../tailwind.config.js';

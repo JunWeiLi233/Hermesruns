@@ -157,6 +157,11 @@ function runtimeExecutorLabel(runtime) {
   return String(runtime || "");
 }
 
+function configuredExecutorLabel(runtime, executor) {
+  if (executor?.label) return executor.label;
+  return getRuntimeNativeExecution(runtime) ? runtimeExecutorLabel(runtime) : "";
+}
+
 function shellQuote(value) {
   return `'${String(value || "").replace(/'/g, "''")}'`;
 }
@@ -1986,7 +1991,7 @@ export function runAutoHermesLoop(rawArgs = process.argv.slice(2)) {
     status: "starting",
     currentPhase: String(persistedState.currentPhase || "grounding").trim() || "grounding",
     stopReason: "",
-    executorLabel: executor?.label || runtimeExecutorLabel(args.runtime),
+    executorLabel: configuredExecutorLabel(args.runtime, executor),
     executorPermissionMode: executor?.permissionMode || "",
     executorPermissionFlag: executor?.permissionFlag || "",
     executorPermissionDescription: executor?.permissionDescription || "",

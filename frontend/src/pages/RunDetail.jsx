@@ -1,10 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
+import FooterNavLinks from '../components/FooterNavLinks';
+import RunnerShellTopNav from '../components/RunnerShellTopNav';
+import RunsSubpageNav from '../components/RunsSubpageNav';
+import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
+import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
   Chart as ChartJS,
@@ -205,9 +210,12 @@ function resampleTelemetrySamples(
 
 export default function RunDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [profile, setProfile] = useState(null);
   const [run, setRun] = useState(() => readSelectedRunFromSession(id));
   const [isBootstrappingRun, setIsBootstrappingRun] = useState(true);
   const [points, setPoints] = useState([]);
@@ -230,6 +238,11 @@ export default function RunDetail() {
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const navItems = useMemo(() => getRunnerShellNavItems({
+    t,
+    lang,
+    activeKey: 'activities',
+  }), [lang, t]);
 
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
@@ -283,6 +296,7 @@ export default function RunDetail() {
   useEffect(() => {
     if (!isAuthenticated) return;
     apiJson('/api/shoes').then((data) => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
+    apiJson('/api/profile/me').then((data) => setProfile(data)).catch(() => {});
   }, [isAuthenticated]);
 
   useEffect(() => {
@@ -680,8 +694,78 @@ export default function RunDetail() {
     window.setTimeout(() => setShareFeedback(''), 2600);
   }
 
-  if (isBootstrappingRun) {
+  const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
+  const initials = displayName.slice(0, 1).toUpperCase();
+  const shellPageTitle = run?.name || t('run_detail.detail_title');
+
+  function handleSelectRecentRun(selectedRun) {
+    if (!selectedRun?.id) return;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('hermes_selected_run', JSON.stringify(selectedRun));
+    }
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+    setRun(selectedRun);
+    setPoints([]);
+    setInsights(null);
+    setAnalytics(null);
+    setTelemetry(null);
+    setElevationStatus(null);
+    setSelectedTelemetryPoint(null);
+    navigate(`/run/${selectedRun.id}`);
+  }
+
+  function renderRunnerShell(content, { hasCoachReview = false, hasComparison = false, showSections = false } = {}) {
     return (
+      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+        <RunsSubpageNav
+          collapsed={isSidebarCollapsed}
+          hasCoachReview={hasCoachReview}
+          hasComparison={hasComparison}
+          lang={lang}
+          navigate={navigate}
+          onSelectRun={handleSelectRecentRun}
+          onToggle={() => setIsSidebarCollapsed((current) => !current)}
+          recentRuns={recentRuns}
+          run={run}
+          showSections={showSections}
+          t={t}
+        />
+
+        <main className="runner-shell-main">
+          <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+            <div className="runner-shell-topbar-left">
+              <RunnerShellTopNav
+                navItems={navItems}
+                activeLabel={shellPageTitle}
+                parentLabel={t('profile.dashboard_nav_activities')}
+                parentRoute="/runs"
+                navigate={navigate}
+              />
+            </div>
+            <div className="runner-shell-topbar-actions">
+              <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+                <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+                <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                  <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+                </button>
+                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
+                  {initials}
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div className="runner-shell-canvas">{content}</div>
+        </main>
+      </div>
+    );
+  }
+
+  if (isBootstrappingRun) {
+    return renderRunnerShell(
       <div className="run-detail-page run-detail-profile-cockpit">
         <div className="run-detail-loading-card" aria-live="polite">
           <span className="run-detail-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
@@ -692,18 +776,18 @@ export default function RunDetail() {
             <span />
           </div>
         </div>
-      </div>
+      </div>,
     );
   }
 
   if (!run) {
-    return (
+    return renderRunnerShell(
       <div className="run-detail-page run-detail-profile-cockpit">
         <div className="empty-state run-detail-empty-state" style={{ width: 'min(100%, 860px)', margin: '80px auto 0', padding: '42px 32px', borderRadius: 28, textAlign: 'center' }}>
           <h1>{t('run_detail.no_run_selected')}</h1>
           <p><Link to="/runs">{t('run_detail.back_to_runs')}</Link> {t('run_detail.no_run_selected_copy')}</p>
         </div>
-      </div>
+      </div>,
     );
   }
 
@@ -767,7 +851,7 @@ export default function RunDetail() {
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
   const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
 
-  return (
+  return renderRunnerShell(
     <div className="run-detail-page run-detail-profile-cockpit">
       <div className="run-detail-topbar">
         <div className="run-detail-topbar-left">
@@ -794,8 +878,8 @@ export default function RunDetail() {
         </div>
       </div>
 
-      <main className="run-detail-shell">
-        <section className="run-detail-hero-grid run-detail-profile-hero">
+      <div className="run-detail-shell">
+        <section id="run-detail-overview" className="run-detail-hero-grid run-detail-profile-hero">
           <div className="run-detail-map-card run-detail-profile-map">
             {points.length > 0 ? (
               <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
@@ -826,7 +910,7 @@ export default function RunDetail() {
         <section className="run-detail-main-grid">
           <div className="run-detail-primary-column">
             {analytics?.debrief && (
-              <section className="run-detail-section run-detail-debrief-section">
+              <section id="run-detail-coach" className="run-detail-section run-detail-debrief-section">
                 <h2>{t('run_detail.coach_debrief_title')}</h2>
                 <div className="run-detail-panel run-detail-debrief-panel">
                   <div className="run-detail-debrief-header">
@@ -914,7 +998,7 @@ export default function RunDetail() {
         </section>
 
         {runComparison && (
-          <section className="run-detail-section run-detail-comparison-section">
+          <section id="run-detail-comparison" className="run-detail-section run-detail-comparison-section">
             <h2>{t('run_detail.run_comparison_title')}</h2>
             <div className="run-detail-panel run-detail-comparison-panel">
               <div className="run-detail-comparison-signal">
@@ -938,7 +1022,7 @@ export default function RunDetail() {
           </section>
         )}
 
-        <section className="run-detail-section run-detail-telemetry-section">
+        <section id="run-detail-telemetry" className="run-detail-section run-detail-telemetry-section">
           <div className="run-detail-section-head run-detail-telemetry-heading">
             <div>
               <h2>{t('run_detail.telemetry_title')}</h2>
@@ -1052,7 +1136,7 @@ export default function RunDetail() {
           </div>
         </section>
 
-        <section className="run-detail-section run-detail-splits-section">
+        <section id="run-detail-splits" className="run-detail-section run-detail-splits-section">
           <div className="run-detail-section-head">
             <h2>{t('run_detail.splits')}</h2>
             {lapRows.length > 5 && (
@@ -1092,7 +1176,7 @@ export default function RunDetail() {
           </div>
         </section>
 
-        <section className="run-detail-bottom-grid">
+        <section id="run-detail-metrics" className="run-detail-bottom-grid">
           <article className="run-detail-panel">
             <h3>{t('run_detail.performance_metrics')}</h3>
             <div className="run-detail-stat-list">
@@ -1102,7 +1186,15 @@ export default function RunDetail() {
             </div>
           </article>
         </section>
-      </main>
-    </div>
+      </div>
+      <footer className="runner-shell-footer runner-dashboard-footer run-detail-footer">
+        <FooterNavLinks />
+      </footer>
+    </div>,
+    {
+      hasCoachReview: Boolean(analytics?.debrief),
+      hasComparison: Boolean(runComparison),
+      showSections: true,
+    },
   );
 }

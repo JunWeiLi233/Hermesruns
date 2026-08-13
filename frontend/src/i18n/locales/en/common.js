@@ -21,6 +21,8 @@ export default {
     "weather_forecast": "Hourly temperature and run conditions",
     "weather_loading": "Loading weather…",
     "weather_error": "Weather unavailable right now",
+    "heatmap_front": "Front",
+    "heatmap_back": "Back",
     "close_notifications": "Close notifications",
     "show_details": "Show details",
   },

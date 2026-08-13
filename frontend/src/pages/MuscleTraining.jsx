@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { apiJson } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -12,6 +12,7 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import PageSkeleton from '../components/PageSkeleton';
 import { muscleSlugsForExercise } from '../utils/muscleSlugMapper';
 import MUSCLE_MASKS from '../utils/muscleMasks.data.json';
 import targetArmsUrl from '../assets/muscle-training/target-arms.webp';
@@ -91,6 +92,15 @@ const DEFAULT_PROFILE = {
 
 const CHECK_IN_RUN_TYPES = ['REST', 'EASY', 'RECOVERY', 'QUALITY', 'LONG_RUN', 'CROSS_TRAIN'];
 const CHECK_IN_ENTRY_STATES = ['PLANNED', 'ACTUAL'];
+const STRENGTH_FOCUS_OPTIONS = [
+  'COACH_PICK',
+  'LEG_DAY',
+  'POSTERIOR_CHAIN',
+  'CALVES_ANKLES',
+  'CORE_STABILITY',
+  'MOBILITY_RESET',
+];
+const STRENGTH_DOSE_OPTIONS = ['MICRO', 'STANDARD', 'STRONG'];
 function compoundLibraryExercise({
   key,
   zhName,
@@ -178,6 +188,19 @@ const TOP_MUSCLE_SELECTOR_GROUPS = {
   shoulders: ['deltoids', 'trapezius'],
   arms: ['biceps', 'triceps', 'forearm', 'hands'],
   core: ['abs', 'obliques'],
+};
+
+// Bridge the purpose-oriented StrengthFocus enum (the backend recommendation
+// vocabulary) to the 6 anatomy target-area keys that drive the heatmap chip +
+// highlight. The backend emits POSTERIOR_CHAIN / CALVES_ANKLES / etc.; the UI
+// highlights the matching anatomy region via this map.
+const FOCUS_TO_TARGET_AREA = {
+  LEG_DAY: 'legs',
+  POSTERIOR_CHAIN: 'legs',   // glutes/hamstrings live under the 'legs' anatomy group
+  CALVES_ANKLES: 'legs',     // calves/tibialis live under 'legs'
+  CORE_STABILITY: 'core',
+  MOBILITY_RESET: 'core',
+  COACH_PICK: 'legs',
 };
 
 const TOP_MUSCLE_SELECTOR_SLUG_TARGETS = new Map([
@@ -739,6 +762,8 @@ const DEFAULT_CHECK_IN_DRAFT = {
   entryState: 'PLANNED',
   distanceKm: '',
   durationMinutes: '',
+  strengthFocus: 'COACH_PICK',
+  strengthDose: 'STANDARD',
 };
 const KM_PER_MILE = 1.60934;
 
@@ -1346,15 +1371,35 @@ function mapWorkoutTypeToCheckInType(workoutType) {
   }
 }
 
+function parseCustomStrengthSessionType(sessionType) {
+  const match = /^CUSTOM_(.+)_(MICRO|STANDARD|STRONG)$/.exec(sessionType || '');
+  if (!match) return null;
+  return {
+    focus: match[1],
+    dose: match[2],
+  };
+}
+
+function inferStrengthFocus(sessionType) {
+  return parseCustomStrengthSessionType(sessionType)?.focus || DEFAULT_CHECK_IN_DRAFT.strengthFocus;
+}
+
+function inferStrengthDose(sessionType) {
+  return parseCustomStrengthSessionType(sessionType)?.dose || DEFAULT_CHECK_IN_DRAFT.strengthDose;
+}
+
 function buildCheckInDraft(plan, isMile) {
   const today = Array.isArray(plan?.days) ? plan.days[0] : null;
   const checkIn = plan?.todayCheckIn;
+  const sessionType = checkIn?.strengthSessionType || today?.strength?.sessionType;
   if (checkIn) {
     return {
       runType: checkIn.runType || DEFAULT_CHECK_IN_DRAFT.runType,
       entryState: checkIn.entryState || DEFAULT_CHECK_IN_DRAFT.entryState,
       distanceKm: checkIn.distanceKm != null ? (isMile ? checkIn.distanceKm / KM_PER_MILE : checkIn.distanceKm) : '',
       durationMinutes: checkIn.durationMinutes ?? '',
+      strengthFocus: checkIn.strengthFocus || inferStrengthFocus(sessionType),
+      strengthDose: checkIn.strengthDose || inferStrengthDose(sessionType),
     };
   }
   return {
@@ -1362,12 +1407,24 @@ function buildCheckInDraft(plan, isMile) {
     entryState: 'PLANNED',
     distanceKm: today?.run?.plannedDistanceKm != null ? (isMile ? today.run.plannedDistanceKm / KM_PER_MILE : today.run.plannedDistanceKm) : '',
     durationMinutes: today?.run?.plannedDurationMinutes ?? '',
+    // Pre-fill the coach's recommended focus (Today's Strength Focus) when no
+    // check-in exists yet; the user can still override in the composer.
+    strengthFocus: plan?.recommendedMuscleArea || inferStrengthFocus(sessionType),
+    strengthDose: inferStrengthDose(sessionType),
   };
 }
 
 function pickLabel(map, key, fallback = '-') {
   if (!key) return fallback;
   return map[key] || fallback || key;
+}
+
+function pickStrengthSessionLabel(copy, sessionType, fallback = '') {
+  const custom = parseCustomStrengthSessionType(sessionType);
+  if (!custom) return pickLabel(copy.sessionEmphasis, sessionType, fallback);
+  const focusLabel = pickLabel(copy.strengthFocusOptions, custom.focus, custom.focus);
+  const doseLabel = pickLabel(copy.strengthDoseOptions, custom.dose, custom.dose);
+  return [focusLabel, doseLabel].filter(Boolean).join(' · ');
 }
 
 function trimNumber(value, digits = 1) {
@@ -1497,7 +1554,7 @@ function getExerciseHeatmapSlugs(item, exerciseCopy) {
     slugExerciseName(item?.exercise?.name),
   ].filter(Boolean);
   const explicitSlugs = possibleKeys.map((key) => EXERCISE_HEATMAP_SLUGS[key]).find(Boolean);
-  return explicitSlugs || muscleSlugsForExercise(exerciseCopy?.muscles);
+  return explicitSlugs || muscleSlugsForExercise(exerciseCopy.muscles || []);
 }
 
 function resolveExerciseVisualKey(name, muscles = []) {
@@ -2859,6 +2916,9 @@ export default function MuscleTraining() {
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
   const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
   const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
+  const [recommendedArea, setRecommendedArea] = useState(null);
+  const [recommendedReasonCode, setRecommendedReasonCode] = useState(null);
+  const userOverrideRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -2893,6 +2953,24 @@ export default function MuscleTraining() {
     checkInResetSuccess: t('muscle_training.check_in_reset_success'),
     checkInUpdatedAt: t('muscle_training.check_in_updated_at'),
     checkInEffectHint: t('muscle_training.check_in_effect_hint'),
+    strengthComposerTitle: t('muscle_training.strength_composer_title'),
+    strengthComposerHint: t('muscle_training.strength_composer_hint'),
+    strengthComposerSafety: t('muscle_training.strength_composer_safety'),
+    strengthFocusLabel: t('muscle_training.strength_focus_label'),
+    strengthDoseLabel: t('muscle_training.strength_dose_label'),
+    strengthFocusOptions: {
+      COACH_PICK: t('muscle_training.strength_focus_coach_pick'),
+      LEG_DAY: t('muscle_training.strength_focus_leg_day'),
+      POSTERIOR_CHAIN: t('muscle_training.strength_focus_posterior_chain'),
+      CALVES_ANKLES: t('muscle_training.strength_focus_calves_ankles'),
+      CORE_STABILITY: t('muscle_training.strength_focus_core_stability'),
+      MOBILITY_RESET: t('muscle_training.strength_focus_mobility_reset'),
+    },
+    strengthDoseOptions: {
+      MICRO: t('muscle_training.strength_dose_micro'),
+      STANDARD: t('muscle_training.strength_dose_standard'),
+      STRONG: t('muscle_training.strength_dose_strong'),
+    },
     planSourceLabel: t('muscle_training.plan_source_label'),
     sourcePills: {
       COACH_SCHEDULE: t('muscle_training.source_pill_coach_schedule'),
@@ -3035,6 +3113,7 @@ export default function MuscleTraining() {
       R_RACE_WEEK: t('muscle_training.rationale_r_race_week'),
       R_QUIET_FILTER: t('muscle_training.rationale_r_quiet_filter'),
       R_SKIP_WEEK: t('muscle_training.rationale_r_skip_week'),
+      R_CUSTOM_TODAY_FOCUS: t('muscle_training.rationale_r_custom_today_focus'),
     },
     placementReasons: {
       ASSIGN_AFTER_EASY_RUN: t('muscle_training.placement_assign_after_easy_run'),
@@ -3255,7 +3334,7 @@ export default function MuscleTraining() {
     const durStr = strengthDur != null ? formatMinutes(strengthDur, isZh) : '';
     const acwrStr = acwr != null ? `ACWR ${trimNumber(acwr, 2)}` : '';
     const volStr = volKm != null ? `${formatDistanceValue(volKm, isMile, 0)} ${isMile ? (t('muscle_training.miles_unit')) : (t('muscle_training.km_unit'))}` : '';
-    const focusLabel = pickLabel(copy.sessionEmphasis, sessionType, '');
+    const focusLabel = pickStrengthSessionLabel(copy, sessionType, '');
     const nextKeyStr = nextKeyDate ? formatShortDate(nextKeyDate, displayLang) : '';
 
     if (hasStrength) {
@@ -3512,6 +3591,7 @@ export default function MuscleTraining() {
   }
 
   function handleTopMuscleSelect(targetKey) {
+    userOverrideRef.current = true;
     const nextItems = buildTopRecommendationItems(targetKey);
     setSelectedMuscleTarget(targetKey);
     setActiveTarget(targetKey);
@@ -3555,6 +3635,25 @@ export default function MuscleTraining() {
     setDraft(normalized);
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
+
+    // Today's recommended muscle area comes from the backend plan. Apply it as
+    // the default anatomy selection on first load (so the heatmap + chip auto-
+    // highlight the coach's pick) unless the user has already chosen manually.
+    const area = nextPlan?.recommendedMuscleArea;
+    const reason = nextPlan?.recommendedMuscleReasonCode;
+    setRecommendedArea(area || null);
+    setRecommendedReasonCode(reason || null);
+    if (area && !userOverrideRef.current) {
+      const targetKey = FOCUS_TO_TARGET_AREA[area] || 'legs';
+      const nextItems = buildTopRecommendationItems(targetKey);
+      setSelectedMuscleTarget(targetKey);
+      setActiveTarget(targetKey);
+      setExpandedExerciseIdx(null);
+      if (nextItems[0]) {
+        setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTopRecommendationItems omitted to prevent infinite re-render loop
   }, [isMile]);
 
   function applyPlanOnly(nextPlan) {
@@ -3663,6 +3762,8 @@ export default function MuscleTraining() {
         entryState: checkInDraft.entryState,
         distanceKm: distanceValue != null ? (isMile ? distanceValue * KM_PER_MILE : distanceValue) : null,
         durationMinutes: parseOptionalInteger(checkInDraft.durationMinutes),
+        strengthFocus: checkInDraft.strengthFocus,
+        strengthDose: checkInDraft.strengthDose,
       };
       await apiJson('/api/training/muscle/today', {
         method: 'PUT',
@@ -3699,6 +3800,8 @@ export default function MuscleTraining() {
   function scrollToControls() {
     document.getElementById('muscle-controls')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  if (loading) return <PageSkeleton variant="muscle-training" />;
 
   return (
     <div
@@ -3770,7 +3873,7 @@ export default function MuscleTraining() {
         <div className="runner-shell-canvas muscle-training-canvas">
           <div className="mt-content">
 
-        {loading && <div style={{ padding: '22px 0', color: 'var(--text-muted)' }}>{copy.loading}</div>}
+        {loading && <div className="muscle-training-loading-skeleton" role="status" aria-live="polite" aria-busy="true">{copy.loading}</div>}
         {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
 
         {!loading && !error && !plan && (
@@ -3804,6 +3907,15 @@ export default function MuscleTraining() {
                     />
                   </div>
                 </div>
+                {recommendedArea && (
+                  <p className="mt-recommended-area-banner" role="note">
+                    <span>{t('muscle_training.recommended_area_label')}</span>
+                    <strong>{pickLabel(copy.strengthFocusOptions, recommendedArea, recommendedArea)}</strong>
+                    {recommendedReasonCode && (
+                      <span>{t(`muscle_training.recommended_area_reason_${recommendedReasonCode.toLowerCase()}`)}</span>
+                    )}
+                  </p>
+                )}
                 <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
                   {targetAreaCards.map((target) => {
                     const isActive = selectedMuscleTarget === target.key;
@@ -4177,6 +4289,44 @@ export default function MuscleTraining() {
                         ))}
                       </div>
                     </label>
+
+                    <fieldset className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide mt-strength-composer">
+                      <legend>{copy.strengthComposerTitle}</legend>
+                      <p>{copy.strengthComposerHint}</p>
+                      <div>
+                        <span>{copy.strengthFocusLabel}</span>
+                        <div className="muscle-choice-row">
+                          {STRENGTH_FOCUS_OPTIONS.map((focus) => (
+                            <button
+                              key={focus}
+                              type="button"
+                              className={`muscle-day-chip${checkInDraft.strengthFocus === focus ? ' active' : ''}`}
+                              onClick={() => updateCheckInDraft('strengthFocus', focus)}
+                              aria-pressed={checkInDraft.strengthFocus === focus}
+                            >
+                              {pickLabel(copy.strengthFocusOptions, focus, focus)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span>{copy.strengthDoseLabel}</span>
+                        <div className="muscle-choice-row">
+                          {STRENGTH_DOSE_OPTIONS.map((dose) => (
+                            <button
+                              key={dose}
+                              type="button"
+                              className={`muscle-day-chip${checkInDraft.strengthDose === dose ? ' active' : ''}`}
+                              onClick={() => updateCheckInDraft('strengthDose', dose)}
+                              aria-pressed={checkInDraft.strengthDose === dose}
+                            >
+                              {pickLabel(copy.strengthDoseOptions, dose, dose)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <small>{copy.strengthComposerSafety}</small>
+                    </fieldset>
 
                     <label className="muscle-pref-field">
                       <span>{`${copy.checkInDistanceLabel} (${distanceUnitLabel})`}</span>

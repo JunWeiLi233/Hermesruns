@@ -40,7 +40,7 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.22.0</version>
+			<version>2.22.1</version>
 		</dependency>
 
 		<dependency>
@@ -79,19 +79,20 @@
 		<dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+			<version>42.7.13</version>
             <scope>runtime</scope>
         </dependency>
 
 		<dependency>
 			<groupId>com.garmin</groupId>
 			<artifactId>fit</artifactId>
-			<version>21.205.0</version>
+			<version>21.212.0</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.stripe</groupId>
 			<artifactId>stripe-java</artifactId>
-			<version>33.1.0-alpha.2</version>
+			<version>33.3.0-beta.1</version>
 		</dependency>
 
 		<dependency>
@@ -103,7 +104,7 @@
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
-			<version>3.0.7</version>
+			<version>3.0.8</version>
 		</dependency>
 
 		<dependency>

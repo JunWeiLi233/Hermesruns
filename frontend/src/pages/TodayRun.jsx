@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import InfoDisclosure from '../components/ui/InfoDisclosure';
-import ShoeRecommendation from '../components/ShoeRecommendation';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -514,11 +514,7 @@ export default function TodayRun() {
 
 
   if (loadState === 'loading') {
-    return (
-      <div className="runner-shell-page runner-shell-page--loading">
-        <div className="runner-shell-loading">{t('runs.loading')}</div>
-      </div>
-    );
+    return <PageSkeleton variant="today-run" />;
   }
 
   if (loadState === 'error') {
@@ -937,8 +933,6 @@ export default function TodayRun() {
 
           <section className="today-run-plan-grid today-run-command-grid">
             <div className="today-run-plan-left">
-              <ShoeRecommendation recommendedShoe={coachPayload?.recommendedShoe} />
-
               <article className="today-run-plan-card">
                 <div className="today-run-plan-card-head">
                   <div>

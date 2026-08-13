@@ -398,6 +398,13 @@ body.theme-midnight .hd-content {
   margin-bottom: 16px;
 }
 
+/* Keep recent-activity labels on the card surface instead of painting a strip
+   behind the kicker and training-log title. */
+.runner-shell-page .hd-content .hd-sessions-card .hd-card-head,
+.runner-shell-page .hd-content .hd-sessions-card .hd-card-head * {
+  background: transparent !important;
+}
+
 .hd-card-kicker {
   font-size: 0.62rem;
   font-weight: 700;
@@ -527,6 +534,19 @@ body.theme-midnight .hd-content {
 .hd-sessions-card {
   display: flex;
   flex-direction: column;
+}
+
+/* Keep the grid/card surface; only the header strip above is neutralized. */
+.runner-shell-page .hd-content .hd-sessions-card {
+  border-color: var(--hermes-glass-line) !important;
+  background:
+    linear-gradient(135deg, var(--hermes-glass-highlight), transparent 40%),
+    var(--hermes-glass-paper) !important;
+  box-shadow:
+    inset 0 1px 0 var(--hermes-glass-highlight),
+    0 18px 48px rgba(105, 68, 48, 0.07) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(132%);
+  backdrop-filter: blur(18px) saturate(132%);
 }
 
 .hd-session-list {

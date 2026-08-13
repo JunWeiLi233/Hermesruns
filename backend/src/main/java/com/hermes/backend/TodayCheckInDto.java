@@ -9,5 +9,7 @@ public record TodayCheckInDto(
         String entryState,
         Double distanceKm,
         Integer durationMinutes,
+        String strengthFocus,
+        String strengthDose,
         LocalDateTime updatedAt
 ) {}

@@ -517,9 +517,18 @@
 .schedule-plan-route-map-svg {
   position: absolute;
   inset: 18px;
+  z-index: 2;
   width: calc(100% - 36px);
   height: calc(100% - 36px);
   opacity: 0.92;
+  pointer-events: none;
+  filter: drop-shadow(0 12px 18px rgba(33, 37, 41, 0.12));
+}
+
+.schedule-plan-route-card.is-route-fallback .schedule-plan-route-map-svg {
+  inset: 14px 22px 14px auto;
+  width: min(58%, 560px);
+  height: calc(100% - 28px);
 }
 
 .schedule-plan-route-map-shadow,
@@ -595,6 +604,10 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px;
+}
+
+.schedule-plan-route-empty-panel.has-route-sketch {
+  padding-right: min(62%, 590px);
 }
 
 .schedule-plan-route-empty-badges {
@@ -1003,6 +1016,19 @@
 
   .schedule-plan-coach-focus-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .schedule-plan-route-card.is-route-fallback .schedule-plan-route-map-svg {
+    inset: 48px 14px 10px;
+    width: calc(100% - 28px);
+    height: calc(100% - 58px);
+    opacity: 0.42;
+  }
+
+  .schedule-plan-route-empty-panel.has-route-sketch {
+    padding-right: 18px;
   }
 }
 

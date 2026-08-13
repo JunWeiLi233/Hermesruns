@@ -1,0 +1,22 @@
+# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
+
+[command]
+description = "Hermes workflow: /auto-hermes-structure-update"
+
+[command.prompt]
+text = '''
+<!-- Generated from .codex/commands/auto-hermes-structure-update.md. Do not edit this adapter directly. -->
+<!-- Follow docs/ai/EDITING_CONTRACT.md for every code change. -->
+
+# /auto-hermes-structure-update
+
+Run the Hermes structure-governance pass.
+
+Use:
+
+```powershell
+node .tools/auto-hermes-structure-update.mjs --write
+```
+
+This command audits runtime adapters, repository steering files, and owner-map coverage, then writes the structure-update brief under `.ai-sync/`.
+'''

@@ -207,6 +207,27 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Next Risk: Future landing cleanup could flatten the panel back into empty fog, reintroduce proof grids or fake metric widgets, lower text contrast, restore the broken diagonal split background, make the CTA dark/off-theme again, or narrow the copy container so the desktop Chinese title wraps again.
 - Rollback Target: DV-2026-06-15-59
 
+### Public landing final CTA — warm minimal centered card (2026-07-24)
+- Goal: Convert the final CTA from the 2-column copy+photo layout to a single centered warm-paper minimal card.
+- Changed: Removed the right-side `landing-cinematic-final-bg` hero photo panel and the grid-pattern `::before` overlay. Added a scoped `.landing-cinematic-final-card--minimal` modifier (CSS-only). Single-column centered grid, warm `#f4efe6` surface with no border/shadow, generous padding, centered copy + CTAs, primary Strava button keeps the §5 coral gradient, trust chips restyled as a centered flex row of mono labels. Chinese title held on one line at desktop via `white-space: nowrap !important`.
+- Preserve: Keep the single centered warm column (do not restore the 2-column photo-panel layout or the hero-background.webp rail). Keep the card borderless/shadowless on the warm surface. Keep the Chinese title on one line at desktop. All original CONTEXT_LEDGER content/theme preserves above still hold.
+- Next Risk: Future rounds could restore the photo panel, re-add the grid-pattern overlay, switch the card back to a 2-column split, drop the `!important` so the title wraps again at desktop, or make the card dark/off-theme.
+- Rollback Target: DV-2026-07-24-01
+
+### Public landing minimalist refresh (2026-07-22)
+- Goal: Reduce landing visual load to a single clear focal point per screen.
+- Changed: Removed the Coach Voice quote block, the interactive 4-toggle Formula explorer (VDOT/ACWR/recovery/paces + equations/proofs/steps), and the 6-row Training Zones table. Hero flattened to warm-paper `#f4efe6` with no photo/scrim, a single primary Strava CTA plus a quiet email text link, and plain coral `#d85f4c` accent instead of the multi-stop text gradient. Dead legacy CSS layers deleted (`landing.css` 5722 → ~3360 lines). Command-card metrics moved from hardcoded Chinese to i18n keys in both locales.
+- Preserve: Keep the removed sections *removed* (do not restore the Coach Voice, Formula explorer, or Training Zones blocks). Keep the flat warm-paper minimal hero (no photo/scrim, single primary CTA). The Race map, Comparison chart, and Final CTA contracts above are unchanged and still locked.
+- Next Risk: Future rounds could reintroduce the dense formula explorer or zones table, restore the hero photo plate, or re-add the second hero button — all intentionally removed for minimalism.
+- Rollback Target: DV-2026-07-22-01
+
+### Public landing command deck — Minimalist Black Grid (2026-07-23)
+- Goal: Apply the design.md §10 Minimalist Black Grid treatment to the landing `#features` 3-card bento (user-approved full-black minimalist aesthetic).
+- Changed: Added a scoped `.landing-command-deck--minimal-black` modifier (CSS-only, no JSX restructure). Section canvas is near-black `#0a0a0b`; all three cards share one dark surface `#121214` with near-white ink `#f4f4f5`. Removed per-card warm-paper gradients, the dark-accent `:first-child` gradient, decorative `::after` glow rings, and box-shadow separators. Hierarchy now comes from bento spans (focal 7×2), not color. Single coral accent `#d85f4c` on index numbers + metrics only. Hover: `surface → surface-raised` (`#1a1a1d`) over 0.2s.
+- Preserve: Keep the scoped black treatment on the `#features` deck only. Do not let it leak into hero / races / comparison / final CTA (those stay warm-paper light). Keep coral as the single chromatic accent. Keep the 12-col bento + responsive single-column collapse. Reference implementation of design.md §10.
+- Next Risk: Future rounds could repaint the deck back to warm paper, add a second accent color, reintroduce glow/shadow separators, or accidentally cascade the dark tokens into adjacent sections.
+- Rollback Target: DV-2026-07-23-01
+
 ### Shoe Image
 - Goal:
 - Changed:
@@ -1523,6 +1544,13 @@ Keep it short. Prefer replacing stale capsules over appending long history.
 - Preserve: Do not change Weather API/fallback timing, shoe inventory filters/actions/retired-state/image scan quota, or Muscle Training coach-plan data, real anatomy atlas, hotspots, labels, and interaction wiring.
 - Next Risk: The route polish is CSS-specificity dependent because previous whole-site/minimalist layers also style these pages. Future app-frame changes should keep the `data-route-path` and `data-runner-design` attributes stable or update the smoke guards together.
 - Rollback Target: `DV-2026-05-06-01`
+
+### Muscle-training auto muscle-area recommendation (2026-07-24)
+- Goal: Auto-recommend today's muscle-training focus (a `StrengthFocus` token) instead of requiring a manual anatomy-chip pick.
+- Changed: New `MuscleTrainingMetricsService.deriveRecommendedMuscleArea(metrics, sorenessLevel, injuryRisk, sessionType)` — a 7-priority cascade (protective → soreness → high-volume → recent-hard-run → recovery-session → steady-default → fallback) that consumes `PlanMetrics` + today's `SorenessLog` + `InjuryRiskService` verdict. Wired into `MuscleTrainingPlannerService.getPlan(...)` (which now injects `SorenessLogRepository` + `InjuryRiskService`); exposed as `MusclePlanDto.recommendedMuscleArea` + `recommendedMuscleReasonCode`. Frontend auto-selects the matching anatomy chip via a `FOCUS_TO_TARGET_AREA` bridge map, renders a localized reason banner, and pre-fills the check-in strength composer. Also fixed a persistence gap: `strengthFocus` + `strengthDose` now persist in `muscle_training_check_in` (previously dropped).
+- Preserve: Keep the cascade priority order and the `StrengthFocus` vocabulary (`LEG_DAY`/`POSTERIOR_CHAIN`/`CALVES_ANKLES`/`CORE_STABILITY`/`MOBILITY_RESET`). Keep the reason-code set (`R_AREA_PROTECT`/`R_AREA_SORENESS`/`R_AREA_HIGH_VOLUME`/`R_AREA_RECENT_HARD`/`R_AREA_RECOVERY_SESSION`/`R_AREA_STEADY_DEFAULT`/`R_AREA_FALLBACK`). The existing day/type/dose/placement engine is untouched — the recommender consumes its output via `currentFocus`; never restore a competing parallel engine. Manual chip override (via `userOverrideRef`) must keep working. The banner + check-in pre-fill must be pre-fill only (no auto-commit).
+- Next Risk: Future rounds could reorder the cascade, drop the session-plan coupling (priority 5), remove the `userOverrideRef` so manual picks get clobbered, or auto-commit the recommendation instead of pre-filling. The reason codes are referenced by i18n keys `muscle_training.recommended_area_reason_*` in both locales — keep them in sync.
+- Rollback Target: DV-2026-07-24-07
 
 ### Territory Concrete Land Fidelity
 - Goal: `/territory` must show Hermes Shared Account owned land as concrete activity-derived mask cells, not generated INTVL/district rectangles or broad inferred slabs.

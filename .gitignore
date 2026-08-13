@@ -4,6 +4,17 @@ Thumbs.db
 .vscode/
 .idea/
 
+# local agent / debug state
+.zcode/
+.playwright-mcp/
+.worktree-align-backups/
+
+# local debug screenshots at repo root
+/landing-*.png
+/landing-*.jpg
+/landing-*.jpeg
+/landing-*.webp
+
 # local runtime logs
 *.log
 debug.log
@@ -70,6 +81,7 @@ backend/.mvn/repository/
 backend/*.mv.db
 backend/*.lock.db
 backend/*.trace.db
+backend/backend/
 *.mv.db
 *.trace.db
 backend/HELP.md
@@ -344,3 +356,8 @@ test-results/
 autoresearch/
 !.codex/commands/autoresearch/
 !.codex/commands/autoresearch/*.md
+
+# All root-level debug/test screenshots
+/*.png
+/*.jpg
+/*.jpeg

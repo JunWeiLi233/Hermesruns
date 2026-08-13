@@ -1877,11 +1877,8 @@
   gap: 10px;
 }
 
-/* Month-grouped run grid. Each `.recent-runs-month-group` carries a sticky
-   month header + a responsive RunCard grid below it. Mobile-first: single
-   column at 鈮?40px, 2 columns 鈮?20px, 3 columns 鈮?200px. The cards are the
-   existing `.recent-runs-card` (renders RunCard) 鈥?month grouping is a
-   structural overlay only, no card visual changes. */
+/* Let the available content width decide the column count. A full run card
+   needs enough room for its route preview plus three readable metric tiles. */
 .recent-runs-month-group {
   display: flex;
   flex-direction: column;
@@ -1974,20 +1971,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 
 .recent-runs-month-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-@media (min-width: 720px) {
-  .recent-runs-month-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1200px) {
-  .recent-runs-month-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+  gap: 14px;
 }
 
 .recent-runs-load-more-sentinel {
@@ -2017,8 +2002,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 .recent-runs-card {
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: clamp(136px, 30%, 168px) minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 22px);
   align-items: stretch;
   padding: 16px;
   border-radius: 20px;
@@ -2036,7 +2021,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   position: relative;
   overflow: hidden;
   border-radius: 16px;
-  min-height: 124px;
+  min-height: 220px;
   background:
     radial-gradient(circle at 18% 18%, rgba(240, 117, 97, 0.18), transparent 34%),
     radial-gradient(circle at 82% 78%, rgba(113, 130, 255, 0.1), transparent 30%),
@@ -2180,10 +2165,12 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   margin: 0;
   color: #f4efea;
   font-family: "Inter", var(--font-body);
-  font-size: 1.5rem;
+  font-size: clamp(1.16rem, 1.5vw, 1.42rem);
   font-style: normal;
   font-weight: 700;
   letter-spacing: -0.05em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
   transform: none;
 }
 
@@ -2204,7 +2191,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
-  gap: 16px;
+  gap: 10px;
 }
 
 .recent-runs-card-metric {
@@ -2212,7 +2199,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   display: grid;
   align-content: center;
   min-height: 58px;
-  padding: 10px 16px;
+  min-width: 0;
+  padding: 12px;
   overflow: hidden;
 }
 
@@ -2221,7 +2209,9 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   color: rgba(232, 224, 217, 0.42);
   font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  word-break: keep-all;
   text-transform: uppercase;
 }
 
@@ -2229,9 +2219,11 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   display: block;
   margin-top: 8px;
   color: #f4efea;
-  font-size: 1.25rem;
+  font-size: clamp(0.98rem, 1.35vw, 1.18rem);
   font-weight: 800;
   letter-spacing: -0.05em;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .recent-runs-card-metric--accent strong {
@@ -2267,8 +2259,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 }
 
 @media (max-width: 900px) {
-  .recent-runs-stats-grid,
-  .recent-runs-card-metrics {
+  .recent-runs-stats-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2939,7 +2930,329 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   }
 
   .runs-dashboard-page .runs-profile-history .recent-runs-card-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-history .recent-runs-card-metric {
+    padding: 10px 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {
+    font-size: clamp(0.88rem, 4vw, 1.05rem);
+  }
+}
+
+/* Runs compact scan-first composition */
+.runs-dashboard-page .runs-profile-history {
+  gap: 12px;
+  max-width: 1480px;
+}
+
+.runs-dashboard-page .runs-profile-cockpit {
+  grid-template-columns: minmax(0, 1fr) minmax(480px, 0.9fr);
+  align-items: stretch;
+  min-height: 0;
+  gap: 14px;
+  padding: clamp(14px, 1.6vw, 20px);
+  border-radius: 24px;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__primary {
+  justify-content: center;
+  gap: 12px;
+}
+
+.runs-dashboard-page .runs-profile-cockpit .recent-runs-hero-kicker {
+  padding: 5px 9px;
+  font-size: 0.6rem;
+}
+
+.runs-dashboard-page .runs-profile-cockpit h1 {
+  margin-top: 7px;
+  font-size: clamp(2.35rem, 4vw, 3.35rem);
+  letter-spacing: -0.075em;
+  line-height: 0.92;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__primary p {
+  display: -webkit-box;
+  max-width: 66ch;
+  margin-top: 8px;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__actions {
+  gap: 8px;
+}
+
+.runs-dashboard-page :is(.runs-profile-primary-action, .runs-profile-secondary-action) {
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 0.68rem;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__rail {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.runs-dashboard-page .runs-profile-signal,
+.runs-dashboard-page .runs-profile-signal--status {
+  grid-column: auto;
+  min-height: 0;
+  gap: 7px;
+  padding: 11px;
+  border-radius: 16px;
+}
+
+.runs-dashboard-page .runs-profile-signal span {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+}
+
+.runs-dashboard-page .runs-profile-signal strong {
+  font-size: clamp(1rem, 1.45vw, 1.42rem);
+  letter-spacing: -0.045em;
+}
+
+.runs-dashboard-page .runs-profile-signal p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.runs-dashboard-page .runs-profile-workbench {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 18px;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-bar {
+  margin: 0;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
+  min-height: 40px;
+  border-radius: 13px;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters,
+.runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters {
+  justify-content: flex-end;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row--secondary {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--runs-profile-line);
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-chip {
+  min-height: 32px;
+  padding: 6px 11px;
+  font-size: 0.72rem;
+}
+
+.runs-dashboard-page .runs-profile-glance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--runs-profile-line);
+  border-radius: 18px;
+  background: var(--runs-profile-card-strong);
+  box-shadow: 0 12px 30px rgba(58, 43, 28, 0.07);
+}
+
+.runs-dashboard-page .runs-profile-glance > :only-child {
+  grid-column: 1 / -1;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip) {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px;
+  margin: 0;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) {
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) span {
+  font-size: 0.56rem;
+  letter-spacing: 0.11em;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) strong,
+.runs-dashboard-page .runs-profile-history .recent-runs-insight-card--primary strong {
+  margin-top: 5px;
+  background: transparent !important;
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.35vw, 1.34rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.runs-dashboard-page .runs-profile-glance .recent-runs-insight-card p {
+  margin-top: 5px;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-insight-card--primary {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 72px;
+  padding: 10px 12px 10px 16px;
+  background:
+    radial-gradient(circle at 84% 22%, rgba(239, 106, 82, 0.2), transparent 31%),
+    linear-gradient(135deg, rgba(255, 248, 240, 0.98), rgba(246, 225, 210, 0.9) 46%, rgba(255, 251, 244, 0.94));
+  box-shadow:
+    0 26px 68px rgba(85, 48, 24, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-insight-card--primary::before {
+  inset: 8px auto 8px 7px;
+  width: 3px;
+  background: linear-gradient(180deg, #ef6a52, rgba(239, 106, 82, 0.22));
+  box-shadow: 12px 0 28px rgba(239, 106, 82, 0.16);
+}
+
+.runs-dashboard-page .recent-runs-card-list {
+  gap: 10px;
+  margin-top: 0;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-group {
+  gap: 6px;
+  border-radius: 18px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-header {
+  min-height: 44px;
+  padding: 9px 12px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 370px), 1fr));
+  gap: 10px;
+  padding: 0 8px 8px;
+}
+
+.runs-dashboard-page .runs-profile-history button.recent-runs-card {
+  grid-template-columns: clamp(108px, 30%, 126px) minmax(0, 1fr);
+  gap: 10px;
+  min-height: 166px;
+  padding: 10px;
+  border-radius: 16px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-thumb {
+  min-height: 146px;
+  border-radius: 13px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-body {
+  gap: 10px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2 {
+  font-size: clamp(0.94rem, 1.15vw, 1.1rem);
+  line-height: 1.05;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-date {
+  margin-top: 6px;
+  font-size: 0.72rem;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metrics {
+  gap: 5px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric {
+  min-height: 48px;
+  padding: 7px;
+  border-radius: 11px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric span {
+  font-size: 0.54rem;
+  letter-spacing: 0.06em;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {
+  margin-top: 5px;
+  font-size: clamp(0.78rem, 0.95vw, 0.94rem);
+}
+
+@media (max-width: 1100px) {
+  .runs-dashboard-page .runs-profile-cockpit,
+  .runs-dashboard-page .runs-profile-workbench,
+  .runs-dashboard-page .runs-profile-glance {
     grid-template-columns: 1fr;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .runs-dashboard-page .runs-profile-cockpit__rail {
+    grid-template-columns: 1fr;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__actions,
+  .runs-dashboard-page .runs-profile-primary-action,
+  .runs-dashboard-page .runs-profile-secondary-action {
+    width: auto;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit h1 {
+    font-size: clamp(2.2rem, 12vw, 3.1rem);
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row--secondary {
+    width: 100%;
+    padding: 6px 0 0;
+    border-top: 1px solid var(--runs-profile-line);
+    border-left: 0;
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .runs-dashboard-page .runs-profile-history button.recent-runs-card {
+    grid-template-columns: 104px minmax(0, 1fr);
   }
 }
 
@@ -3567,4 +3880,140 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
   width: 100% !important;
   max-width: none !important;
   justify-self: stretch !important;
+}
+
+/* Run Detail belongs to the same authenticated canvas as Runs and Profile. */
+.run-detail-runner-page .runner-shell-canvas {
+  width: min(1120px, calc(100% - 40px));
+  padding-inline: 0;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit {
+  min-height: auto;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+  overflow: visible;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar,
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-shell,
+.run-detail-runner-page .run-detail-footer {
+  width: 100% !important;
+  max-width: none;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar {
+  align-items: center;
+  padding: clamp(20px, 2.4vw, 30px) !important;
+  border-radius: clamp(22px, 2vw, 30px);
+  box-shadow: 0 18px 48px rgba(58, 43, 28, 0.1);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-heading h1 {
+  max-width: 20ch;
+  font-size: clamp(2.2rem, 4.1vw, 4.15rem) !important;
+  line-height: 0.98;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-shell {
+  padding-top: clamp(16px, 2vw, 24px) !important;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-hero {
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.82fr);
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-map {
+  min-height: clamp(430px, 43vw, 520px);
+  box-shadow: 0 18px 46px rgba(58, 43, 28, 0.12);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-stat-rail {
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(12px, 1.4vw, 16px);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card,
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card.is-accent {
+  min-height: 0;
+  padding: clamp(18px, 2vw, 24px);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card.is-accent {
+  grid-column: auto;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card.is-accent :is(span, strong, em) {
+  color: #fff8ee !important;
+  -webkit-text-fill-color: #fff8ee !important;
+  opacity: 1;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-stat-card strong {
+  margin-top: auto;
+  padding-top: 18px;
+  font-size: clamp(2rem, 3.2vw, 3.35rem);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-main-grid {
+  grid-template-columns: minmax(0, 8fr) minmax(280px, 4fr);
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-panel {
+  padding: clamp(20px, 2.4vw, 32px) !important;
+}
+
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-stage,
+.run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-telemetry-chart {
+  min-height: clamp(300px, 30vw, 420px);
+}
+
+.run-detail-runner-page .run-detail-footer {
+  margin-top: clamp(28px, 4vw, 48px);
+}
+
+@media (max-width: 1180px) {
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-stat-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .run-detail-runner-page .runner-shell-canvas {
+    width: min(100% - 24px, 1120px);
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit {
+    padding-top: 0;
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar,
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-shell {
+    width: 100% !important;
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar-actions,
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar-actions > div {
+    width: 100%;
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-topbar-actions > div {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-heading h1 {
+    font-size: clamp(2rem, 10vw, 3rem) !important;
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-map {
+    min-height: clamp(320px, 95vw, 430px);
+  }
+
+  .run-detail-runner-page .run-detail-page.run-detail-profile-cockpit .run-detail-profile-stat-rail {
+    grid-template-columns: 1fr;
+  }
 }
