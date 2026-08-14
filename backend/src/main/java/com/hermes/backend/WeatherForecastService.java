@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -33,18 +34,37 @@ public class WeatherForecastService {
 
     private final RestTemplate restTemplate;
     private final OpenMeteoRateLimiter rateLimiter;
+    private final NationalWeatherServiceForecastClient nationalWeatherServiceFallback;
 
     @Autowired
-    public WeatherForecastService(OpenMeteoRateLimiter rateLimiter) {
-        this(createRestTemplate(), rateLimiter);
+    public WeatherForecastService(OpenMeteoRateLimiter rateLimiter,
+                                   NationalWeatherServiceForecastClient nationalWeatherServiceFallback) {
+        this(createRestTemplate(), rateLimiter, nationalWeatherServiceFallback);
     }
 
-    WeatherForecastService(RestTemplate restTemplate, OpenMeteoRateLimiter rateLimiter) {
+    WeatherForecastService(RestTemplate restTemplate,
+                           OpenMeteoRateLimiter rateLimiter,
+                           NationalWeatherServiceForecastClient nationalWeatherServiceFallback) {
         this.restTemplate = restTemplate;
         this.rateLimiter = rateLimiter;
+        this.nationalWeatherServiceFallback = nationalWeatherServiceFallback;
     }
 
     public Map<String, Object> fetchForecast(double latitude, double longitude) {
+        try {
+            return fetchFromOpenMeteo(latitude, longitude);
+        } catch (WeatherProviderRateLimitedException | RestClientException exception) {
+            Map<String, Object> fallback = nationalWeatherServiceFallback.tryFetchForecast(latitude, longitude);
+            if (fallback != null && !fallback.isEmpty()) {
+                log.warn("Open-Meteo forecast unavailable ({}); serving National Weather Service fallback.",
+                        exception.getMessage());
+                return fallback;
+            }
+            throw exception;
+        }
+    }
+
+    private Map<String, Object> fetchFromOpenMeteo(double latitude, double longitude) {
         if (rateLimiter.shouldThrottle(OPEN_METEO_FORECAST_LIMITER_KEY)) {
             log.debug("Open-Meteo forecast API is currently throttled; skipping forecast fetch for ({}, {})",
                     latitude, longitude);
