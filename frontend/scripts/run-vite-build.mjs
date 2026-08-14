@@ -27,7 +27,9 @@ function retryFileOperation(operation, description) {
     }
   }
 
-  throw new Error(`${description} failed after retries: ${lastError?.message ?? 'unknown error'}`)
+  const failedOperation = new Error(`${description} failed after retries: ${lastError?.message ?? 'unknown error'}`)
+  failedOperation.code = lastError?.code
+  throw failedOperation
 }
 
 function syncDirectory(sourceDir, targetDir) {
@@ -117,6 +119,20 @@ function replaceDirectory(sourceDir, targetDir) {
   retryFileOperation(() => fs.rmSync(sourceDir, { recursive: true, force: true }), `Remove ${sourceDir}`)
 }
 
+function isLockedDirectoryRenameError(error) {
+  return error?.code === 'EBUSY' || error?.code === 'EPERM' || error?.code === 'EACCES'
+}
+
+function cleanUpStagingDirectory(stagingDir) {
+  if (!fs.existsSync(stagingDir)) return
+
+  try {
+    retryFileOperation(() => fs.rmSync(stagingDir, { recursive: true, force: true }), `Cleanup staging ${stagingDir}`)
+  } catch (cleanupError) {
+    console.warn(`[frontend] Staging dir ${stagingDir} could not be removed yet: ${cleanupError.message}. It can be deleted manually.`)
+  }
+}
+
 // Replace a live directory atomically so a concurrent server never sees a
 // half-written mix of old and new files. We stage a complete copy, then swap it
 // into place with two renames. On POSIX each rename() is atomic; the only window
@@ -129,18 +145,34 @@ function atomicReplaceDirectory(sourceDir, targetDir) {
   const stagingDir = path.join(parent, `${base}.swap-${stamp}`)
   const retiredDir = path.join(parent, `${base}.old-${stamp}`)
 
-  // 1. Stage a complete copy beside the target.
-  retryFileOperation(() => fs.rmSync(stagingDir, { recursive: true, force: true }), `Clear staging ${stagingDir}`)
-  syncDirectory(sourceDir, stagingDir)
-
-  // 2. Move the current live dir aside (if present), then move the staging dir
-  //    into the target path. Best-effort cleanup of the retired dir follows.
   let movedOld = false
-  if (fs.existsSync(targetDir)) {
-    retryFileOperation(() => fs.renameSync(targetDir, retiredDir), `Retire ${targetDir} -> ${retiredDir}`)
-    movedOld = true
+  let promotedStaging = false
+
+  try {
+    // 1. Stage a complete copy beside the target.
+    retryFileOperation(() => fs.rmSync(stagingDir, { recursive: true, force: true }), `Clear staging ${stagingDir}`)
+    syncDirectory(sourceDir, stagingDir)
+
+    // 2. Move the current live dir aside (if present), then move the staging dir
+    //    into the target path. Best-effort cleanup of the retired dir follows.
+    if (fs.existsSync(targetDir)) {
+      retryFileOperation(() => fs.renameSync(targetDir, retiredDir), `Retire ${targetDir} -> ${retiredDir}`)
+      movedOld = true
+    }
+    retryFileOperation(() => fs.renameSync(stagingDir, targetDir), `Promote ${stagingDir} -> ${targetDir}`)
+    promotedStaging = true
+  } catch (error) {
+    if (movedOld && !promotedStaging && !fs.existsSync(targetDir) && fs.existsSync(retiredDir)) {
+      try {
+        retryFileOperation(() => fs.renameSync(retiredDir, targetDir), `Restore ${retiredDir} -> ${targetDir}`)
+      } catch (restoreError) {
+        console.error(`[frontend] Live static restore failed: ${restoreError.message}`)
+      }
+    }
+    throw error
+  } finally {
+    cleanUpStagingDirectory(stagingDir)
   }
-  retryFileOperation(() => fs.renameSync(stagingDir, targetDir), `Promote ${stagingDir} -> ${targetDir}`)
 
   if (movedOld) {
     // Best-effort: the old dir is no longer served. Removal may fail transiently
@@ -156,13 +188,108 @@ function atomicReplaceDirectory(sourceDir, targetDir) {
   }
 }
 
+const DEFAULT_KEEP_BUILDS = 3
+const generationStateDir = path.resolve(projectRoot, '.asset-generations')
+
+function listAssetFiles(assetsDir) {
+  const files = []
+  if (!fs.existsSync(assetsDir)) return files
+
+  const walk = (dir, prefix = '') => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walk(path.join(dir, entry.name), prefix ? `${prefix}/${entry.name}` : entry.name)
+        continue
+      }
+      files.push(prefix ? `${prefix}/${entry.name}` : entry.name)
+    }
+  }
+
+  walk(assetsDir)
+  return files
+}
+
+function loadRetainedGenerations(keepBuilds) {
+  if (!fs.existsSync(generationStateDir)) return []
+
+  return fs.readdirSync(generationStateDir)
+    .filter((name) => name.endsWith('.json'))
+    .sort()
+    .reverse()
+    .slice(0, Math.max(0, keepBuilds - 1))
+    .map((name) => JSON.parse(fs.readFileSync(path.join(generationStateDir, name), 'utf8')))
+}
+
+function writeGenerationManifest(files) {
+  retryFileOperation(() => fs.mkdirSync(generationStateDir, { recursive: true }), `Create ${generationStateDir}`)
+  retryFileOperation(
+    () => fs.writeFileSync(path.join(generationStateDir, `${Date.now()}.json`), JSON.stringify(files)),
+    `Write generation manifest`,
+  )
+}
+
+function rotateGenerationManifests(keepBuilds) {
+  if (!fs.existsSync(generationStateDir)) return
+
+  const manifests = fs.readdirSync(generationStateDir).filter((name) => name.endsWith('.json')).sort().reverse()
+  for (const name of manifests.slice(Math.max(0, keepBuilds - 1))) {
+    retryFileOperation(() => fs.rmSync(path.join(generationStateDir, name), { force: true }), `Remove manifest ${name}`)
+  }
+}
+
+function pruneAssetsToGenerations(assetsDir, keepSet) {
+  if (!fs.existsSync(assetsDir)) return 0
+  let removed = 0
+
+  const walk = (dir, prefix = '') => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const entryPath = path.join(dir, entry.name)
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name
+      if (entry.isDirectory()) {
+        walk(entryPath, relative)
+        if (fs.readdirSync(entryPath).length === 0) {
+          retryFileOperation(() => fs.rmSync(entryPath, { recursive: true, force: true }), `Remove empty ${entryPath}`)
+        }
+        continue
+      }
+      if (keepSet.has(relative)) continue
+      retryFileOperation(() => fs.rmSync(entryPath, { force: true }), `Prune ${entryPath}`)
+      removed += 1
+    }
+  }
+
+  walk(assetsDir)
+  return removed
+}
+
 function publishBuildOutput() {
   const buildAssetsDir = path.join(buildOutputDir, 'assets')
 
   if (fs.existsSync(buildAssetsDir)) {
-    // Hashed assets are immutable. Keep older bundles so a tab holding a
-    // previously served index.html can still load its CSS/JS after a rebuild.
+    // Hashed assets are immutable. Keep bundles from the last few builds so a
+    // tab holding a previously served index.html can still load its CSS/JS
+    // after a rebuild — but bound retention by build generation. Without this
+    // the directory grows without bound (~10k stale chunks / ~1GB observed)
+    // and every backend start pays to scan and copy all of it.
+    const rawKeep = Number.parseInt(process.env.HERMES_ASSET_KEEP_BUILDS ?? '', 10)
+    const keepBuilds = Number.isFinite(rawKeep) && rawKeep >= 1 ? rawKeep : DEFAULT_KEEP_BUILDS
+    const retainedGenerations = loadRetainedGenerations(keepBuilds)
+    const newFiles = listAssetFiles(buildAssetsDir)
+
     copyDirectory(buildAssetsDir, backendAssetsDir)
+
+    const keepSet = new Set(newFiles)
+    for (const generation of retainedGenerations) {
+      for (const file of generation) keepSet.add(file)
+    }
+    const removedCount = pruneAssetsToGenerations(backendAssetsDir, keepSet)
+
+    writeGenerationManifest(newFiles)
+    rotateGenerationManifests(keepBuilds)
+
+    if (removedCount > 0) {
+      console.log(`[frontend] Pruned ${removedCount} stale asset file(s) beyond the last ${keepBuilds} build(s).`)
+    }
   }
 
   for (const entry of fs.readdirSync(buildOutputDir, { withFileTypes: true })) {
@@ -252,7 +379,16 @@ if (fs.existsSync(backendLiveStaticDir)) {
   // the previous file-by-file syncDirectory() which could serve a previous
   // build's chunks alongside a new index.html (or vice versa) for several
   // seconds during a rebuild.
-  atomicReplaceDirectory(backendStaticDir, backendLiveStaticDir)
+  let usedAtomicSwap = true
+  try {
+    atomicReplaceDirectory(backendStaticDir, backendLiveStaticDir)
+  } catch (error) {
+    if (!isLockedDirectoryRenameError(error)) throw error
+
+    usedAtomicSwap = false
+    console.warn('[frontend] Live static directory swap is locked; falling back to an in-place file sync.')
+    syncDirectory(backendStaticDir, backendLiveStaticDir)
+  }
 
   // Re-collect after the swap; the live dir is now an exact mirror of the source.
   const postSwapMissing = collectMissingPaths(backendStaticDir, backendLiveStaticDir)
@@ -262,10 +398,12 @@ if (fs.existsSync(backendLiveStaticDir)) {
     process.exit(1)
   }
 
-  if (missingRuntimeFiles.length === 0 && postSwapMissing.length === 0) {
+  if (usedAtomicSwap && missingRuntimeFiles.length === 0 && postSwapMissing.length === 0) {
     console.log(`[frontend] Atomic live static swap complete: ${backendLiveStaticDir}`)
-  } else {
+  } else if (usedAtomicSwap) {
     console.log(`[frontend] Atomic live static swap complete (${postSwapMissing.length} stale) -> ${backendLiveStaticDir}`)
+  } else {
+    console.log(`[frontend] Live backend static sync complete after locked directory fallback: ${backendLiveStaticDir}`)
   }
 }
 

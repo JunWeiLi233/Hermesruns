@@ -168,6 +168,9 @@ backend/target/
 backend/src/main/resources/static/favicon.ico
 backend/src/main/resources/static/favicon.svg
 backend/src/main/resources/static/hermes-tab-icon.svg
+
+# Test-only compatibility view generated from frontend/src/index.css imports.
+frontend/src/styles/style.generated.css
 backend/src/main/resources/static/icons.svg
 
 # Local AI workflow files - SHARED
@@ -361,3 +364,4 @@ autoresearch/
 /*.png
 /*.jpg
 /*.jpeg
+frontend/.asset-generations/
