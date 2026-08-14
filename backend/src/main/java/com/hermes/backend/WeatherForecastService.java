@@ -1,11 +1,15 @@
 package com.hermes.backend;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -14,7 +18,9 @@ import java.util.Map;
 
 @Service
 public class WeatherForecastService {
+    private static final Logger log = LoggerFactory.getLogger(WeatherForecastService.class);
     private static final String OPEN_METEO_FORECAST_ENDPOINT = "https://api.open-meteo.com/v1/forecast";
+    static final String OPEN_METEO_FORECAST_LIMITER_KEY = "forecast";
     private static final String CURRENT_FIELDS = String.join(",",
             "temperature_2m",
             "apparent_temperature",
@@ -26,16 +32,25 @@ public class WeatherForecastService {
     );
 
     private final RestTemplate restTemplate;
+    private final OpenMeteoRateLimiter rateLimiter;
 
-    public WeatherForecastService() {
-        this(createRestTemplate());
+    @Autowired
+    public WeatherForecastService(OpenMeteoRateLimiter rateLimiter) {
+        this(createRestTemplate(), rateLimiter);
     }
 
-    WeatherForecastService(RestTemplate restTemplate) {
+    WeatherForecastService(RestTemplate restTemplate, OpenMeteoRateLimiter rateLimiter) {
         this.restTemplate = restTemplate;
+        this.rateLimiter = rateLimiter;
     }
 
     public Map<String, Object> fetchForecast(double latitude, double longitude) {
+        if (rateLimiter.shouldThrottle(OPEN_METEO_FORECAST_LIMITER_KEY)) {
+            log.debug("Open-Meteo forecast API is currently throttled; skipping forecast fetch for ({}, {})",
+                    latitude, longitude);
+            throw new WeatherProviderRateLimitedException("Weather provider rate limited; backing off.");
+        }
+
         URI uri = UriComponentsBuilder
                 .fromUriString(OPEN_METEO_FORECAST_ENDPOINT)
                 .queryParam("latitude", latitude)
@@ -52,15 +67,27 @@ public class WeatherForecastService {
                 .toUri();
 
         RequestEntity<Void> request = new RequestEntity<>(HttpMethod.GET, uri);
-        ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                request,
-                new ParameterizedTypeReference<>() {}
-        );
-        Map<String, Object> payload = response.getBody();
-        if (payload == null) {
-            throw new IllegalStateException("Weather provider returned an empty forecast.");
+        try {
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    request,
+                    new ParameterizedTypeReference<>() {}
+            );
+            rateLimiter.recordSuccess(OPEN_METEO_FORECAST_LIMITER_KEY);
+            Map<String, Object> payload = response.getBody();
+            if (payload == null) {
+                throw new IllegalStateException("Weather provider returned an empty forecast.");
+            }
+            return payload;
+        } catch (HttpClientErrorException exception) {
+            if (exception.getStatusCode().value() == 429) {
+                rateLimiter.recordRateLimited(OPEN_METEO_FORECAST_LIMITER_KEY);
+                log.warn("Open-Meteo forecast API returned 429 Too Many Requests; subsequent calls in this window are throttled.");
+                throw new WeatherProviderRateLimitedException("Weather provider rate limited.");
+            }
+            log.warn("Open-Meteo forecast API returned HTTP {}: {}",
+                    exception.getStatusCode().value(), exception.getMessage());
+            throw exception;
         }
-        return payload;
     }
 
     private static RestTemplate createRestTemplate() {

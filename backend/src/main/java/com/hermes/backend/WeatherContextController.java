@@ -53,6 +53,8 @@ public class WeatherContextController {
             return ResponseEntity.ok()
                     .cacheControl(CacheControl.maxAge(5, TimeUnit.MINUTES).mustRevalidate())
                     .body(forecastService.fetchForecast(latitude, longitude));
+        } catch (WeatherProviderRateLimitedException exception) {
+            return error(HttpStatus.TOO_MANY_REQUESTS, "Weather provider rate limited. Please try again later.");
         } catch (Exception exception) {
             return error(HttpStatus.BAD_GATEWAY, "Weather provider unavailable.");
         }
