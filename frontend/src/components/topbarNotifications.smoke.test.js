@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const componentSource = readFileSync(path.join(here, 'TopbarNotifications.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const profileStyleSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
@@ -66,6 +66,12 @@ assert.match(
   profileStyleSource,
   /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px;[\s\S]*border-radius:\s*16px;[\s\S]*box-shadow:\s*none !important;/,
   'Training messages should use compact Profile-style list rows instead of oversized nested cards.'
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*background:\s*transparent !important;/,
+  'Training-message rows should sit directly on the notification paper without nested panel strips.'
 );
 
 assert.doesNotMatch(

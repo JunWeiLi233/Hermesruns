@@ -16,7 +16,7 @@ function assert(condition, message) {
 }
 
 const landingSource = read('pages/Landing.jsx');
-const styleSource = read('styles/style.css');
+const styleSource = read('styles/style.generated.css');
 const landingStyleSource = read('styles/_split/landing.css');
 const retiredHeroGridClassPair = ['landing-cinematic-hero-grid', 'landing-command-hero'].join(' ');
 
@@ -54,6 +54,11 @@ assert(
     && /\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;[\s\S]*grid-row:\s*1\s*\/\s*span\s*2;/.test(landingStyleSource)
     && /\.landing-command-card:nth-child\(2\),\s*\.landing-command-card:nth-child\(3\)\s*\{[\s\S]*grid-column:\s*8\s*\/\s*-1;/.test(landingStyleSource),
   'Landing command CSS should use the full-width asymmetric feature deck without reserving an empty column.',
+);
+
+assert(
+  /\.landing-cinematic-footer-links\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*\}/.test(landingStyleSource),
+  'Landing footer utility links should align horizontally and wrap only when the viewport is too narrow.',
 );
 
 assert(
@@ -119,9 +124,11 @@ assert(
     && !landingSource.includes('className="landing-cinematic-map-readout-layer"')
     && !landingSource.includes('className="landing-cinematic-map-readout-line"')
     && landingSource.includes('function buildCurvedFlightPath(points)')
-    && landingSource.includes('const flightPath = buildCurvedFlightPath')
+    && landingSource.includes('const flightLegs = flightPoints.length > 1')
+    && landingSource.includes('const activeFlightLeg = flightLegs[activeFlightLegIndex % flightLegs.length] ?? null;')
+    && !landingSource.includes('const flightPath = buildCurvedFlightPath')
     && landingSource.includes('className="landing-cinematic-map-flight-route"')
-    && landingSource.includes('className="landing-cinematic-map-flight-route-live"')
+    && !landingSource.includes('className="landing-cinematic-map-flight-route-live"')
     && landingSource.includes('className="landing-cinematic-map-aircraft"')
     && landingSource.includes('<animateMotion')
     && !landingSource.includes('className="landing-cinematic-map-selection-layer"')
@@ -287,6 +294,11 @@ assert(
 );
 
 assert(
+  /\.landing-cinematic-race-row\s*>\s*\.landing-cinematic-race-order\s*\{[\s\S]*padding-left:\s*12px/.test(landingStyleSource),
+  'Landing race order numbers should have a small leading inset without shifting the table columns.',
+);
+
+assert(
   /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-race-row\s*\{[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto;[\s\S]*min-height:\s*92px/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-bottom-deck\s*\{[\s\S]*left:\s*50%;[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);[\s\S]*width:\s*min\(320px,\s*calc\(100% - 28px\)\)/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-guide\s*\{[\s\S]*position:\s*static/.test(styleSource)
@@ -333,11 +345,11 @@ assert(
 
 assert(
   /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*0\.68px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-dasharray:\s*0\.7 1\.25;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(landingStyleSource)
+    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-width:\s*1\.1;/.test(landingStyleSource)
+    && !landingStyleSource.includes('landing-cinematic-map-flight-route-live')
     && /\.landing-cinematic-map-aircraft-shape\s*\{[\s\S]*stroke:\s*#fffaf3;/.test(landingStyleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource),
-  'Landing race map active split CSS should keep SVG pin labels and the moving airline route bounded inside the map.',
+  'Landing race map active split CSS should keep SVG pin labels and continuous destination connectors bounded inside the map.',
 );
 
 assert(
@@ -371,6 +383,11 @@ assert(
     && /\.landing-cinematic-final-card \.landing-cinematic-btn--primary\s*\{[\s\S]*linear-gradient\(135deg,\s*#a0392a 0%,\s*#fc7e69 100%\)/.test(landingStyleSource)
     && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*flex;[\s\S]*justify-content:\s*center/.test(landingStyleSource),
   'Landing final CTA should be a warm (#f4efe6) centered minimal card: single column, no photo panel, centered copy + actions, coral gradient primary button, and a centered row of mono trust chips. No proof grids or fake metrics.',
+);
+
+assert(
+  /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust span\s*\{(?=[^}]*background:\s*transparent;)(?=[^}]*border-radius:\s*0;)(?=[^}]*box-shadow:\s*none;)[^}]*\}/.test(landingStyleSource),
+  'Landing final trust labels should stay text-first without inherited pill backgrounds or shadows.',
 );
 
 console.log('[PASS] Landing command editorial guardrails passed.');

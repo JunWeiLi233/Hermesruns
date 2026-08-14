@@ -172,14 +172,24 @@ echo [2/4] Waking up Spring Boot (Java)...
 start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 :wait_for_backend
 echo [4/4] Waiting for Spring Boot on localhost:8080...
-for /l %%I in (1,1,30) do (
+:: Reset the per-run probe log so it only reflects this attempt.
+if exist "%ROOT%\backend_probe.log" del "%ROOT%\backend_probe.log" >nul 2>nul
+:: Gate uses a TCP connect as the PRIMARY "is the server up" signal, because
+:: that is exactly what Spring's "Tomcat started on port 8080" log line means.
+:: HTTP probing alone was unreliable here: Invoke-WebRequest can fail 100% of
+:: the time inside this detached launcher window even when the server is live
+:: and serving 200 to every other client (observed on Windows). A TcpClient
+:: connect to 127.0.0.1:8080 depends only on the OS socket layer, so it does
+:: not share that failure mode. We still issue one HTTP request per iteration
+:: and write any exception to the probe log so future failures are diagnosable.
+for /l %%I in (1,1,120) do (
     powershell -NoProfile -Command ^
-        "try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -UseBasicParsing -TimeoutSec 2; if ($r.StatusCode -ge 200) { exit 0 } else { exit 1 } } catch { exit 1 }"
-    if not errorlevel 1 (
-        goto :open_app
-    )
+        "$ok = $false; $err = ''; try { $c = New-Object Net.Sockets.TcpClient; $iar = $c.BeginConnect('127.0.0.1', 8080, $null, $null); if ($iar.AsyncWaitHandle.WaitOne(1500)) { $c.EndConnect($iar); $ok = $c.Connected } else { $err = 'tcp-timeout' } } catch { $err = 'tcp:' + $_.Exception.Message }; if ($c) { try { $c.Close() } catch {} }; if ($ok) { $httpOk = $false; try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -UseBasicParsing -TimeoutSec 4 -MaximumRedirection 0; $httpOk = ($r.StatusCode -lt 500); if (-not $httpOk) { $err = 'http-' + $r.StatusCode } } catch { $err = 'http:' + $_.Exception.Message }; if ($httpOk) { exit 0 } else { Add-Content -Path '%ROOT%\backend_probe.log' -Value ('tcp-up-but-' + $err) -ErrorAction SilentlyContinue; exit 0 } } else { Add-Content -Path '%ROOT%\backend_probe.log' -Value ($err) -ErrorAction SilentlyContinue; exit 1 }"
+    if not errorlevel 1 goto :open_app
+    powershell -NoProfile -Command "[Console]::Write('.')"
     timeout /t 1 /nobreak > nul
 )
+echo.
 
 if not defined BACKEND_RETRY_DONE (
     findstr /C:"NoClassDefFoundError: com/hermes/backend/" /C:"ClassNotFoundException: com.hermes.backend." "%HERMES_BACKEND_LOG%" >nul 2>nul
@@ -191,9 +201,14 @@ if not defined BACKEND_RETRY_DONE (
     )
 )
 
-echo [Warn] Spring Boot did not answer on localhost:8080 within 30 seconds.
-echo [Warn] Keep the backend window open and check for startup errors.
-echo [Warn] Once it is ready, open %APP_URL% manually.
+echo [Warn] Spring Boot did not answer on localhost:8080 within 120 seconds.
+echo [Warn] If it is still starting, open %APP_URL% manually once it is ready.
+echo [Hermes] Probe errors captured this run ^(backend_probe.log, last 15^):
+powershell -NoProfile -Command ^
+    "if (Test-Path '%ROOT%\backend_probe.log') { Get-Content '%ROOT%\backend_probe.log' -Tail 15 } else { Write-Host '(no probe log written)' }"
+echo [Hermes] Most recent backend log lines ^(from %HERMES_BACKEND_LOG%^):
+powershell -NoProfile -Command ^
+    "if (Test-Path '%HERMES_BACKEND_LOG%') { Get-Content '%HERMES_BACKEND_LOG%' -Tail 25 | Where-Object { $_ -match 'ERROR|WARN|Caused by|Started BackendApplication|Tomcat started|APPLICATION FAILED|Dialect|Unable to|Exception' } | Select-Object -Last 15 }"
 goto :startup_failed
 
 :open_app
@@ -201,6 +216,7 @@ echo Launching Hermes...
 start "" "%APP_URL%"
 echo ==========================================
 echo Hermes is online!
+echo To stop everything ^(backend, Python engines, leftover background processes^), run stop_hermes.cmd
 echo ==========================================
 pause
 exit /b 0

@@ -1771,10 +1771,6 @@ const Shoes = memo(function Shoes() {
                 </div>
               )}
               <div className="shoe-scan-modal-preview-overlay">
-                <div className="shoe-scan-modal-scan-line" aria-hidden="true" />
-                <span className="shoe-scan-modal-chip is-live">
-                  {scanStatus === 'processing' ? t('shoes.scan_processing') : t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
-                </span>
                 {scanAvailable && scanStatus !== 'done' ? (
                   <label className="shoe-scan-modal-preview-upload">
                     <input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />
@@ -1782,7 +1778,7 @@ const Shoes = memo(function Shoes() {
                   </label>
                 ) : (
                   <span className="shoe-scan-modal-chip">
-                    {scanFiles.length > 0 ? `${scanFiles.length}/${SHOE_SCAN_MAX_FILES}` : t('shoes.scan_image')}
+                    {scanFiles.length > 0 ? `${scanFiles.length}/${SHOE_SCAN_MAX_FILES}` : t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
                   </span>
                 )}
               </div>

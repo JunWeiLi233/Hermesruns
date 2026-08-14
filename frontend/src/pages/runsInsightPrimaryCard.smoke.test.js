@@ -7,7 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8');
 const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
 const analysisDetailStyle = readFileSync(path.join(here, '../styles/analysis-detail-redesigns.css'), 'utf8');
-const bundledStyle = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const bundledStyle = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -38,7 +38,7 @@ assert.match(
 
 for (const [label, source] of [
   ['split runtime style', splitRunsStyle],
-  ['bundled style mirror', bundledStyle],
+  ['generated runtime style', bundledStyle],
 ]) {
   blockForMatching(
     source,
@@ -87,11 +87,7 @@ for (const [label, source] of [
   );
   assert.match(strong, /background:\s*transparent\s*!important;/, `${label} primary metric should not render as a translucent pill.`);
   assert.match(strong, /font-family:\s*"Manrope",\s*var\(--font-display\);/, `${label} primary metric should use the site's expressive display stack.`);
-  if (label === 'split runtime style') {
-    assert.match(strong, /font-size:\s*clamp\(1rem,\s*1\.35vw,\s*1\.34rem\);/, `${label} primary metric should remain compact inside the scan-first glance rail.`);
-  } else {
-    assert.match(strong, /font-size:\s*clamp\(1\.9rem,\s*3\.3vw,\s*3\.2rem\);/, `${label} should retain its legacy base value before the split and final cascade overrides.`);
-  }
+  assert.match(strong, /font-size:\s*clamp\(1rem,\s*1\.35vw,\s*1\.34rem\);/, `${label} primary metric should remain compact inside the scan-first glance rail.`);
 
   const darkPrimary = blockFor(
     source,

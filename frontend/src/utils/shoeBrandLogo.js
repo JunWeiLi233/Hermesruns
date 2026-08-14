@@ -3,6 +3,18 @@ const BRAND_ALIASES = {
   '鸿星尔克': 'erke',
   '彪马': 'puma',
   '特步': 'xtep',
+  '李宁': 'lining',
+  '安踏': 'anta',
+  '匹克': 'peak',
+  '中国乔丹': 'qiaodan',
+  '乔丹': 'qiaodan',
+  '必迈': 'bmai',
+  '大雁': 'dayan',
+  '大鲶': 'dayan',
+  '多威': 'dowin',
+  '马孔多': 'macondo',
+  '沃兰迪': 'volanti',
+  '沃尔朗迪': 'volanti',
 };
 
 export function normalizeShoeBrandKey(brand) {

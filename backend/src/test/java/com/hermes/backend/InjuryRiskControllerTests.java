@@ -7,6 +7,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -108,7 +109,15 @@ class InjuryRiskControllerTests {
         InjuryRiskService injuryRiskService = mock(InjuryRiskService.class);
         Runner runner = runner();
         InjuryRiskService.InjuryRiskAssessment status = new InjuryRiskService.InjuryRiskAssessment(
-                1.12, "LOW", "LOW", "Keep easy days easy.");
+                1.12,
+                "LOW",
+                "LOW",
+                "Keep easy days easy.",
+                17,
+                "ready",
+                "flat",
+                List.of(new InjuryRiskService.SorenessLogSummary("LOW", LocalDate.now())),
+                "Keep easy days easy.");
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(injuryRiskService.getRiskAssessment(runner)).thenReturn(status);
         InjuryRiskController controller = new InjuryRiskController(injuryRiskService, authService);

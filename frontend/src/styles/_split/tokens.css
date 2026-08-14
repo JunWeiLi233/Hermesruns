@@ -177,6 +177,54 @@
 
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
+/* ── Shared entrance-motion layer ──
+   Canonical app-wide section reveal. Pages that previously had no entrance
+   animation can drop `.hd-fade-up` onto top-level sections (with a per-section
+   `--hd-enter-delay` for a staggered cadence) instead of re-declaring keyframes. */
+@keyframes hd-fade-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.hd-fade-up {
+    animation: hd-fade-up 0.5s var(--hd-enter-delay, 0s) ease-out both;
+}
+
+/* ── App-wide page entrance ──
+   Applies the canonical hd-fade-up to each page's top-level content wrapper so the
+   whole app shares one motion vocabulary. Lightweight (0.5s, single translateY) and
+   overridden by the reduced-motion guard above. Maps are excluded (Heatmap) since a
+   moving map canvas causes layout jank. */
+.recent-runs-shell,
+.run-detail-shell,
+.race-center-content,
+.race-detail-layout,
+.rewards-ledger-canvas,
+.runner-shell-canvas.today-run-plan-canvas,
+.runner-shell-canvas.weather-engine-canvas,
+.prediction-forecast-cockpit,
+.runner-shell-canvas.analysis-insight-detail-canvas,
+.shoe-inventory-screen,
+.runner-shell-canvas.add-shoes-canvas,
+.analysis-overview-page .runner-shell-canvas,
+.analysis-overview-empty-shell {
+    animation: hd-fade-up 0.5s ease-out both;
+}
+
+/* Global reduced-motion guard: disables every entrance/scroll animation app-wide
+   so the app never depends on per-page @media blocks. */
+@media (prefers-reduced-motion: reduce) {
+    .hd-fade-up,
+    .reveal-hidden,
+    [class*="fade-up"],
+    [class*="fadeUp"],
+    [class*="-rise"],
+    [class*="page-enter"] {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 [data-theme="midnight"] .scan-result-duplicate,

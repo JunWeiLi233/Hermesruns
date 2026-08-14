@@ -7,9 +7,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const shoesSource = readFileSync(path.join(here, 'Shoes.jsx'), 'utf8');
 
 const sources = [
-  ['bundled style.css', path.join(here, '../styles/style.css')],
+  ['bundled style.css', path.join(here, '../styles/style.generated.css')],
   ['split shoes.css', path.join(here, '../styles/_split/shoes.css')],
 ];
+
+const activeShoesStyles = readFileSync(path.join(here, '../styles/_split/shoes.css'), 'utf8').replace(/\r\n/g, '\n');
 
 const assertContains = (source, expected, label) => {
   assert.ok(source.includes(expected), `${label} should include ${expected}`);
@@ -22,6 +24,23 @@ assert.doesNotMatch(
   /shoe-scan-modal-preview-overlay" aria-hidden="true"/,
   'The visible scan preview controls must not be hidden from interaction.',
 );
+
+assert.doesNotMatch(shoesSource, /shoe-scan-modal-scan-line/, 'The minimal scan preview should not render a decorative scan line.');
+assert.doesNotMatch(shoesSource, /shoe-scan-modal-chip is-live/, 'The minimal scan preview should not duplicate status copy in a floating chip.');
+
+assert.match(
+  activeShoesStyles,
+  /\.modal-card\.shoe-scan-modal-card\s*\{[\s\S]*?width: min\(1080px, calc\(100vw - 32px\)\);[\s\S]*?max-width: 1080px;[\s\S]*?padding: 0;/,
+  'The active scan card must outrank the shared 500px modal width and padding rules.',
+);
+const minimalPreviewStyles = activeShoesStyles.slice(activeShoesStyles.indexOf('/* Minimal shoe scan preview */'));
+assertContains(minimalPreviewStyles, 'border: 1px solid var(--runner-profile-line);', 'Minimal scan preview border');
+assertContains(minimalPreviewStyles, 'border-radius: 16px;', 'Minimal scan preview radius');
+assertContains(minimalPreviewStyles, 'font-size: clamp(1.2rem, 2vw, 1.45rem);', 'Minimal scan preview heading');
+assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-overlay::before,', 'Minimal scan preview decorative reset');
+assertContains(minimalPreviewStyles, 'content: none;', 'Minimal scan preview decorative reset');
+assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-upload,', 'Minimal scan preview action');
+assertContains(minimalPreviewStyles, 'border-radius: 8px;', 'Minimal scan preview action radius');
 
 for (const [label, filePath] of sources) {
   const source = readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');

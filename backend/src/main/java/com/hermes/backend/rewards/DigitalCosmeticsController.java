@@ -1,4 +1,7 @@
-package com.hermes.backend;
+package com.hermes.backend.rewards;
+
+import com.hermes.backend.AuthService;
+import com.hermes.backend.Runner;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

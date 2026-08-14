@@ -123,6 +123,29 @@ body.theme-high-contrast .dashboard-body {
   border-radius: 22px;
 }
 
+/* The command label is text-only; do not let the shared glass chrome recreate a pill. */
+#root .runner-shell-page .runner-shell-topnav--command {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+#root .runner-shell-page .runner-shell-topnav--command .runner-shell-topnav-current-stack {
+  margin: 0 !important;
+  overflow: visible !important;
+}
+
+#root .runner-shell-page .runner-shell-topnav--command .runner-shell-topnav-current-stack strong {
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
 .runner-shell-page .runner-shell-canvas {
   isolation: isolate;
 }
@@ -632,6 +655,90 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page .analysis-
   box-shadow: none !important;
 }
 
+/* Heatmap controls are map instruments, not translucent page chrome. */
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page {
+  --heatmap-control-surface: rgba(8, 13, 18, 0.98);
+  --heatmap-control-raised: rgba(24, 33, 43, 0.98);
+  --heatmap-control-border: rgba(255, 248, 238, 0.22);
+  --heatmap-control-ink: #fffaf3;
+  --heatmap-control-muted: #c6d0d8;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-topbar {
+  padding: 8px;
+  border: 1px solid var(--heatmap-control-border) !important;
+  border-radius: 24px;
+  background: linear-gradient(110deg, rgba(4, 8, 12, 0.99), rgba(11, 18, 25, 0.96)) !important;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.42) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page :is(
+  .heatmap-page-brand-pill,
+  .heatmap-page-search-pill,
+  .heatmap-page-utility-btn,
+  .heatmap-page-legend-card,
+  .heatmap-page-empty
+) {
+  border: 1px solid var(--heatmap-control-border) !important;
+  background: var(--heatmap-control-surface) !important;
+  color: var(--heatmap-control-ink) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-utility-rail {
+  border: 1px solid var(--heatmap-control-border);
+  background: rgba(4, 8, 12, 0.96);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.38);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-utility-btn {
+  background: var(--heatmap-control-raised) !important;
+  color: var(--heatmap-control-ink) !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-utility-btn:hover:not(:disabled) {
+  border-color: rgba(255, 150, 125, 0.82) !important;
+  background: rgba(40, 52, 65, 1) !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-utility-btn.is-active {
+  border-color: #ff9277 !important;
+  background: linear-gradient(135deg, #ff785f, #ff3f63) !important;
+  color: #180c10 !important;
+  box-shadow: 0 10px 20px rgba(255, 74, 89, 0.34) !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-secondary-btn {
+  border: 1px solid var(--heatmap-control-border) !important;
+  background: var(--heatmap-control-raised) !important;
+  color: var(--heatmap-control-ink) !important;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page .heatmap-page-primary-btn {
+  border: 1px solid #ff9277 !important;
+  background: linear-gradient(135deg, #ff926c, #ff4f5f) !important;
+  color: #180c10 !important;
+  box-shadow: 0 12px 24px rgba(255, 74, 89, 0.34) !important;
+}
+
+body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page :is(
+  .heatmap-page-brand-pill,
+  .heatmap-page-search-pill,
+  .heatmap-page-utility-btn,
+  .heatmap-page-primary-btn,
+  .heatmap-page-secondary-btn
+):focus-visible {
+  outline: 3px solid #ffd166 !important;
+  outline-offset: 3px;
+}
+
 .runner-dashboard-page :is(
   .recent-runs-thumb-map,
   .schedule-plan-route-map,
@@ -793,6 +900,49 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page .analysis-
   backdrop-filter: none !important;
 }
 
+/* The injury-risk detail uses `-card` in a heading class and gives its
+ * signal cells a light-theme tile treatment. Both are nested content, not
+ * additional panels; keep them on the parent risk card surface. */
+.runner-shell-page.analysis-insight-detail-page.is-injury-risk :is(
+  .analysis-cinematic-card-head,
+  .analysis-cinematic-signal-row > div
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The forecast kicker is a heading, not a status badge. Keep the label on the
+ * forecast card surface without painting a separate pill behind it. */
+.runner-shell-page.analysis-page-shell .analysis-overview-card--forecast .analysis-overview-card-kicker {
+  display: inline;
+  border: 0 !important;
+  border-radius: 0;
+  padding: 0;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The intensity kicker is a heading, not a status badge. Keep the label on the
+ * intensity card surface without painting a separate pill behind it. */
+.runner-shell-page.analysis-page-shell .analysis-overview-card--intensity .analysis-overview-card-kicker {
+  display: inline;
+  border: 0 !important;
+  border-radius: 0;
+  padding: 0;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 /* The primary VO2 card has the same shared `-card` collision. Remove the
  * parent band and header wrapper fill, but leave the kicker badge and metric
  * value card intentionally styled. */
@@ -817,6 +967,65 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page .analysis-
 .runner-shell-page.weather-engine-page :is(
   .weather-engine-card-head,
   .weather-engine-card-head > div
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Restore the forecast panel's light-theme surface so the second weather grid
+ * carries the same profile-aligned frame as the live-conditions grid above it. */
+body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-engine-page .weather-engine-forecast-panel {
+  border: 1px solid var(--runner-profile-line) !important;
+  border-radius: clamp(24px, 2.4vw, 38px) !important;
+  background: #fff !important;
+  box-shadow: var(--runner-profile-shadow) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-engine-page .weather-engine-forecast-strip {
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.runner-shell-page.weather-engine-page .weather-engine-panel-head > div {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* `-panel` and `-card` in these class names are semantic, not nested surfaces.
+ * Keep the compact forecast labels directly on the outer forecast panel. */
+.runner-shell-page.weather-engine-page .weather-engine-forecast-panel :is(
+  .weather-engine-panel-head,
+  .weather-engine-card-kicker
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Race discovery cards retain their image, tag, and action surfaces. Their
+ * copy descendants only inherit the parent card surface, never a second glass
+ * layer from the broad `-card` selector. */
+.runner-shell-page.races-dashboard-page .race-center-card :is(
+  .race-center-card-body,
+  .race-center-card-meta,
+  .race-center-card-distance,
+  .race-center-card-month,
+  .race-center-card-name,
+  .race-center-card-location
 ) {
   border-color: transparent !important;
   background: transparent !important;
@@ -1468,9 +1677,11 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-import-modal-form .impor
   .shoe-inventory-card-art,
   .shoe-inventory-card-copy,
   .shoe-inventory-card-head,
+  .shoe-inventory-card-subtitle,
   .shoe-inventory-card-badges,
   .shoe-inventory-card-metrics,
   .shoe-inventory-card-metric,
+  .shoe-inventory-card-metric-value,
   .shoe-inventory-card-progress,
   .shoe-inventory-card-progress-fill,
   .shoe-inventory-card-retirement-text,
@@ -1492,9 +1703,11 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-import-modal-form .impor
   .shoe-inventory-card-art,
   .shoe-inventory-card-copy,
   .shoe-inventory-card-head,
+  .shoe-inventory-card-subtitle,
   .shoe-inventory-card-badges,
   .shoe-inventory-card-metrics,
   .shoe-inventory-card-metric,
+  .shoe-inventory-card-metric-value,
   .shoe-inventory-card-retirement-text,
   .shoe-inventory-card-actions,
   .shoe-inventory-card-side,
@@ -1503,6 +1716,26 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-import-modal-form .impor
 ) {
   border-color: transparent !important;
   background-color: transparent !important;
+}
+
+.runner-shell-page.shoes-dashboard-page :is(.shoe-inventory-card-subtitle, .shoe-inventory-card-metrics, .shoe-inventory-card-metric, .shoe-inventory-card-metric-value, .shoe-inventory-card-progress) {
+  background: transparent !important;
+}
+
+.runner-shell-page.shoes-dashboard-page .shoe-inventory-manage-group > .shoe-inventory-panel-kicker {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.runner-shell-page.shoes-dashboard-page .shoe-rotation-signal-copy > .shoe-inventory-panel-kicker {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 .runner-shell-page.shoes-dashboard-page .shoe-inventory-card {
@@ -1653,7 +1886,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-page.shoes-
   overflow: hidden;
   border: 1px solid var(--runner-profile-line);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--runner-profile-card) 88%, transparent) !important;
+  background: transparent !important;
   box-shadow: none !important;
 }
 
@@ -1745,5 +1978,280 @@ body:not(.theme-light):not(.theme-high-contrast-light) .runner-shell-page.shoes-
 
   .runner-shell-page .runner-shell-notification-link {
     margin: 0 10px 10px;
+  }
+}
+
+/* Personal-record celebrations belong to the Profile paper system: keep the
+ * achievement readable as a compact ledger instead of a second dark dashboard. */
+.runner-pr-modal-shell {
+  padding: clamp(16px, 3vw, 40px);
+  background: rgba(33, 31, 26, 0.34);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.runner-pr-modal-card {
+  display: flex;
+  flex-direction: column;
+  width: min(42rem, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--runner-profile-line) 78%, white 22%);
+  border-radius: clamp(24px, 2.4vw, 34px);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(191, 91, 73, 0.1), transparent 20rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 248, 238, 0.38)),
+    var(--runner-profile-card-strong);
+  box-shadow: 0 34px 90px rgba(58, 42, 31, 0.24);
+  color: var(--runner-profile-ink);
+}
+
+.runner-pr-modal-card .modal-header {
+  position: relative;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  padding: clamp(22px, 2.4vw, 30px) clamp(22px, 3vw, 32px) 12px;
+  border: 0;
+  background: transparent;
+}
+
+.runner-pr-modal-card .modal-header::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: clamp(22px, 3vw, 32px);
+  width: 42px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--runner-profile-flame);
+}
+
+.runner-pr-modal-card .modal-header h3 {
+  margin: 0;
+  color: var(--runner-profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  font-weight: 780;
+  letter-spacing: -0.055em;
+  text-transform: none;
+}
+
+.runner-pr-modal-card .modal-close {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--runner-profile-line);
+  border-radius: 999px;
+  background: var(--runner-profile-card);
+  color: var(--runner-profile-ink);
+  font-size: 1.55rem;
+  line-height: 1;
+  box-shadow: 0 10px 24px rgba(76, 54, 39, 0.08);
+}
+
+.runner-pr-modal-card .modal-close:hover {
+  border-color: color-mix(in srgb, var(--runner-profile-flame) 46%, var(--runner-profile-line));
+  background: color-mix(in srgb, var(--runner-profile-flame) 11%, var(--runner-profile-card));
+  color: var(--runner-profile-flame);
+}
+
+.runner-pr-modal-card :is(.modal-close, .runner-pr-modal-primary):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--runner-profile-flame) 62%, transparent);
+  outline-offset: 3px;
+}
+
+.runner-pr-modal-card .modal-form {
+  min-height: 0;
+  padding: 0 clamp(22px, 3vw, 32px) clamp(22px, 3vw, 30px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: color-mix(in srgb, var(--runner-profile-ink) 42%, transparent) transparent;
+}
+
+.runner-pr-modal-body {
+  display: grid;
+  gap: 0;
+}
+
+.runner-pr-modal-hero {
+  margin-top: 18px;
+  padding: clamp(18px, 2.5vw, 24px);
+  border: 1px solid color-mix(in srgb, var(--runner-profile-flame) 24%, var(--runner-profile-line));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--runner-profile-flame) 7%, var(--runner-profile-card-strong));
+  color: var(--runner-profile-ink);
+}
+
+.runner-pr-modal-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--runner-profile-flame);
+  font-family: "Manrope", sans-serif;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.runner-pr-modal-hero h4 {
+  max-width: 19ch;
+  margin: 0 0 8px;
+  color: var(--runner-profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.5rem, 3.1vw, 2.2rem);
+  font-style: normal;
+  font-weight: 780;
+  line-height: 1.06;
+  letter-spacing: -0.06em;
+}
+
+.runner-pr-modal-hero p {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--runner-profile-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.runner-pr-modal-list {
+  display: grid;
+  gap: 0;
+  margin-top: 10px;
+  padding: 0 2px;
+}
+
+.runner-pr-modal-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  padding: 16px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: inset 0 -1px 0 var(--runner-profile-line);
+}
+
+.runner-pr-modal-entry:last-child {
+  box-shadow: none;
+}
+
+.runner-pr-modal-entry-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--runner-profile-flame);
+  font-family: "Manrope", sans-serif;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.runner-pr-modal-entry strong {
+  display: block;
+  color: var(--runner-profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.28rem, 2.5vw, 1.65rem);
+  font-weight: 780;
+  line-height: 1.04;
+  letter-spacing: -0.05em;
+}
+
+.runner-pr-modal-entry-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--runner-profile-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.runner-pr-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--runner-profile-line);
+}
+
+.runner-pr-modal-primary {
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.78rem 1.25rem;
+  background: var(--runner-profile-action-bg);
+  color: var(--runner-profile-action-ink);
+  font-family: "Manrope", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  box-shadow: none;
+}
+
+.runner-pr-modal-primary:hover {
+  border-color: color-mix(in srgb, var(--runner-profile-flame) 58%, transparent);
+  background: var(--runner-profile-flame);
+  color: #fffaf7;
+  box-shadow: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runner-pr-modal-card {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(191, 91, 73, 0.14), transparent 20rem),
+    linear-gradient(145deg, rgba(255, 248, 238, 0.06), rgba(255, 248, 238, 0.015)),
+    var(--runner-profile-card-strong);
+}
+
+@media (max-width: 540px) {
+  .runner-pr-modal-shell {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .runner-pr-modal-card {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 24px;
+  }
+
+  .runner-pr-modal-card .modal-header {
+    padding: 20px 18px 10px;
+  }
+
+  .runner-pr-modal-card .modal-header::before {
+    left: 18px;
+  }
+
+  .runner-pr-modal-card .modal-form {
+    padding: 0 18px 18px;
+  }
+
+  .runner-pr-modal-hero {
+    margin-top: 14px;
+    border-radius: 18px;
+  }
+
+  .runner-pr-modal-entry {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 7px;
+    padding: 14px 2px;
+  }
+
+  .runner-pr-modal-entry-meta {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .runner-pr-modal-actions {
+    display: block;
+  }
+
+  .runner-pr-modal-primary {
+    width: 100%;
   }
 }

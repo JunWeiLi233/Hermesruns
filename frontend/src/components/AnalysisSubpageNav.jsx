@@ -12,7 +12,7 @@ const INSIGHT_ITEMS = [
 const PREDICTION_ITEMS = [
   { key: '5k', route: '/prediction/5k', icon: 'timer' },
   { key: '10k', route: '/prediction/10k', icon: 'timer' },
-  { key: 'half', route: '/prediction/half', icon: 'distance' },
+  { key: 'half', route: '/prediction/half', icon: 'timer' },
   { key: 'marathon', route: '/prediction/marathon', icon: 'flag' },
 ];
 
@@ -20,24 +20,6 @@ function getPredictionLabel(key, lang) {
   const distance = RACE_DISTANCES.find((item) => item.key === key);
   if (!distance) return key;
   return lang === 'zh-CN' ? distance.labelZh : distance.labelEn;
-}
-
-function AnalysisNavLink({ active, icon, index, label, onClick }) {
-  return (
-    <button
-      type="button"
-      className={`analysis-subnav-link${active ? ' is-active' : ''}`}
-      onClick={onClick}
-      aria-current={active ? 'page' : undefined}
-      title={label}
-    >
-      <span className="analysis-subnav-link-icon" aria-hidden="true">
-        <AppIcon name={icon} />
-      </span>
-      <span className="analysis-subnav-link-copy">{label}</span>
-      <span className="analysis-subnav-link-index" aria-hidden="true">{index}</span>
-    </button>
-  );
 }
 
 export default function AnalysisSubpageNav({
@@ -49,18 +31,29 @@ export default function AnalysisSubpageNav({
   onToggle,
   t,
 }) {
-  const insightItems = INSIGHT_ITEMS.map((item) => ({ ...item, label: t(item.labelKey) }));
-  const predictionItems = PREDICTION_ITEMS.map((item) => ({
-    ...item,
-    label: getPredictionLabel(item.key, lang),
-  }));
-  const activeItem = insightItems.find((item) => item.key === activeInsightKey)
-    || predictionItems.find((item) => item.key === activePredictionKey)
-    || { label: t('profile.dashboard_nav_analysis'), icon: 'insights' };
+  const navItems = [
+    {
+      key: 'analysis',
+      route: '/analysis',
+      label: t('profile.dashboard_nav_analysis'),
+      icon: 'insights',
+      active: !activeInsightKey && !activePredictionKey,
+    },
+    ...INSIGHT_ITEMS.map((item) => ({
+      ...item,
+      label: t(item.labelKey),
+      active: item.key === activeInsightKey,
+    })),
+    ...PREDICTION_ITEMS.map((item) => ({
+      ...item,
+      label: getPredictionLabel(item.key, lang),
+      active: item.key === activePredictionKey,
+    })),
+  ];
 
   return (
-    <aside className="runner-shell-sidebar analysis-subnav">
-      <div className="runner-shell-brand runner-dashboard-brand analysis-subnav-header">
+    <aside className="runner-shell-sidebar">
+      <div className="runner-shell-brand runner-dashboard-brand">
         <div className="runner-dashboard-brand-copy">
           <HermesLogo dark />
           <span>{t('analysis.subnav_title')}</span>
@@ -72,62 +65,37 @@ export default function AnalysisSubpageNav({
           aria-label={t(collapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
           aria-pressed={collapsed}
         >
-          <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{collapsed ? '>' : '<'}</span>
+          <span className="runner-dashboard-toggle-glyph" aria-hidden="true">
+            {collapsed ? '>' : '<'}
+          </span>
         </button>
       </div>
 
-      <div className="analysis-subnav-current" aria-live="polite">
-        <span className="analysis-subnav-current-icon" aria-hidden="true">
-          <AppIcon name={activeItem.icon} />
-        </span>
-        <span>
-          <small>{t('analysis.subnav_current')}</small>
-          <strong>{activeItem.label}</strong>
-        </span>
-      </div>
-
-      <nav className="analysis-subnav-nav" aria-label={t('analysis.subnav_aria_label')}>
-        <AnalysisNavLink
-          active={false}
-          icon="insights"
-          index="00"
-          label={t('profile.dashboard_nav_analysis')}
-          onClick={() => navigate('/analysis')}
-        />
-
-        <div className="analysis-subnav-group">
-          <span className="analysis-subnav-group-label">{t('analysis.subnav_insights')}</span>
-          {insightItems.map((item, index) => (
-            <AnalysisNavLink
-              key={item.key}
-              active={item.key === activeInsightKey}
-              icon={item.icon}
-              index={String(index + 1).padStart(2, '0')}
-              label={item.label}
-              onClick={() => navigate(item.route)}
-            />
-          ))}
-        </div>
-
-        <div className="analysis-subnav-group">
-          <span className="analysis-subnav-group-label">{t('analysis.subnav_predictions')}</span>
-          {predictionItems.map((item, index) => (
-            <AnalysisNavLink
-              key={item.key}
-              active={item.key === activePredictionKey}
-              icon={item.icon}
-              index={`R${index + 1}`}
-              label={item.label}
-              onClick={() => navigate(item.route)}
-            />
-          ))}
-        </div>
+      <nav className="runner-shell-side-nav" aria-label={t('analysis.subnav_aria_label')}>
+        {navItems.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
+            onClick={() => navigate(item.route)}
+            aria-current={item.active ? 'page' : undefined}
+            aria-label={item.label}
+          >
+            <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+            <span className="runner-dashboard-side-link-label">{item.label}</span>
+          </button>
+        ))}
       </nav>
 
-      <div className="runner-shell-sidebar-footer analysis-subnav-footer">
-        <button type="button" className="analysis-subnav-today" onClick={() => navigate('/today-run')}>
-          <AppIcon name="directions_run" aria-hidden="true" />
-          <span>{t('analysis.pred_open_today')}</span>
+      <div className="runner-shell-sidebar-footer">
+        <button
+          type="button"
+          className="runner-shell-workout-btn runner-dashboard-workout-btn"
+          onClick={() => navigate('/today-run')}
+          aria-label={t('analysis.pred_open_today')}
+        >
+          <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+          <span className="runner-dashboard-workout-btn-label">{t('analysis.pred_open_today')}</span>
         </button>
       </div>
     </aside>

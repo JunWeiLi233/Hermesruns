@@ -5,18 +5,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 @RestController
@@ -29,6 +43,11 @@ public class ProfileController {
     private static final int MAX_HEATMAP_PAGE_LIMIT = 100000;
     private static final int MAX_SETTINGS_MANTRA_LENGTH = 180;
     private static final int PROFILE_DASHBOARD_INITIAL_RUN_LIMIT = 180;
+    private static final long MAX_PROFILE_AVATAR_UPLOAD_BYTES = 3L * 1024 * 1024;
+    private static final int MAX_PROFILE_AVATAR_SOURCE_DIMENSION = 4096;
+    private static final long MAX_PROFILE_AVATAR_SOURCE_PIXELS = 16_000_000L;
+    private static final int PROFILE_AVATAR_RENDER_DIMENSION = 512;
+    private static final Set<String> PROFILE_AVATAR_CONTENT_TYPES = Set.of("image/jpeg", "image/jpg", "image/png");
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
@@ -146,6 +165,46 @@ public class ProfileController {
 
         Runner runner = runnerOptional.get();
         runner.setDisplayName(normalizedDisplayName);
+        runnerRepository.save(runner);
+        return ResponseEntity.ok(toProfileResponse(runner));
+    }
+
+    @PutMapping(value = "/profile/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateAvatar(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        final byte[] normalizedImage;
+        try {
+            normalizedImage = normalizeAvatarImage(image);
+        } catch (IllegalArgumentException ex) {
+            return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        } catch (IOException ex) {
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "Could not process profile image. Please try again.");
+        }
+
+        Runner runner = runnerOptional.get();
+        runner.setAvatarImage(normalizedImage);
+        runnerRepository.save(runner);
+        return ResponseEntity.ok(toProfileResponse(runner));
+    }
+
+    @DeleteMapping("/profile/me/avatar")
+    public ResponseEntity<?> deleteAvatar(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+
+        Runner runner = runnerOptional.get();
+        runner.setAvatarImage(null);
         runnerRepository.save(runner);
         return ResponseEntity.ok(toProfileResponse(runner));
     }
@@ -837,9 +896,78 @@ public class ProfileController {
         return new ProfileResponse(
                 runner.getEmail(),
                 runner.getDisplayName(),
+                avatarDataUrl(runner),
                 stravaLinked,
                 showLanguageSettingsHint
         );
+    }
+
+    private byte[] normalizeAvatarImage(MultipartFile image) throws IOException {
+        if (image == null || image.isEmpty() || image.getSize() <= 0) {
+            throw new IllegalArgumentException("Profile image is required.");
+        }
+        if (image.getSize() > MAX_PROFILE_AVATAR_UPLOAD_BYTES) {
+            throw new IllegalArgumentException("Profile image must be 3 MB or smaller.");
+        }
+        String contentType = image.getContentType();
+        if (contentType == null || !PROFILE_AVATAR_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Upload a PNG or JPEG profile image.");
+        }
+
+        byte[] sourceBytes = image.getBytes();
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(sourceBytes))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw new IllegalArgumentException("Upload a valid PNG or JPEG profile image.");
+            }
+
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                int sourceWidth = reader.getWidth(0);
+                int sourceHeight = reader.getHeight(0);
+                if (sourceWidth <= 0 || sourceHeight <= 0
+                        || sourceWidth > MAX_PROFILE_AVATAR_SOURCE_DIMENSION
+                        || sourceHeight > MAX_PROFILE_AVATAR_SOURCE_DIMENSION
+                        || (long) sourceWidth * sourceHeight > MAX_PROFILE_AVATAR_SOURCE_PIXELS) {
+                    throw new IllegalArgumentException("Profile image dimensions are too large.");
+                }
+
+                BufferedImage source = reader.read(0);
+                if (source == null) {
+                    throw new IllegalArgumentException("Upload a valid PNG or JPEG profile image.");
+                }
+
+                double scale = Math.min(1d, PROFILE_AVATAR_RENDER_DIMENSION / (double) Math.max(sourceWidth, sourceHeight));
+                int targetWidth = Math.max(1, (int) Math.round(sourceWidth * scale));
+                int targetHeight = Math.max(1, (int) Math.round(sourceHeight * scale));
+                BufferedImage normalized = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D graphics = normalized.createGraphics();
+                try {
+                    graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+                    graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    graphics.drawImage(source, 0, 0, targetWidth, targetHeight, null);
+                } finally {
+                    graphics.dispose();
+                }
+
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                if (!ImageIO.write(normalized, "png", output)) {
+                    throw new IOException("PNG writer unavailable");
+                }
+                return output.toByteArray();
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    private String avatarDataUrl(Runner runner) {
+        byte[] avatarImage = runner.getAvatarImage();
+        if (avatarImage == null || avatarImage.length == 0) {
+            return null;
+        }
+        return "data:image/png;base64," + Base64.getEncoder().encodeToString(avatarImage);
     }
 
     private ProfilePreferencesResponse toProfilePreferencesResponse(Runner runner) {
@@ -862,6 +990,7 @@ public class ProfileController {
     public record ProfileResponse(
             String email,
             String displayName,
+            String avatarUrl,
             boolean stravaLinked,
             boolean showLanguageSettingsHint
     ) {

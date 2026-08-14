@@ -31,7 +31,7 @@ export function ThemeProvider({ children }) {
     setThemeState(validated);
   }, []);
 
-  // Theme classes live on body; CSS targets `body.theme-* .dashboard-body` (see style.css).
+  // Theme classes live on body; active CSS is ordered by frontend/src/index.css.
   // `data-theme` mirrors the active theme for selectors like [data-theme="light"].
   useEffect(() => {
     const body = document.body;

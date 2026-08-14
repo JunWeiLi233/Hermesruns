@@ -33,6 +33,9 @@ public class PlannedRoute {
     @Column(nullable = false, length = 20)
     private String elevationPreference;
 
+    @Column(length = 32)
+    private String anchorSource;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String waypoints;
 
@@ -67,6 +70,9 @@ public class PlannedRoute {
 
     public String getElevationPreference() { return elevationPreference; }
     public void setElevationPreference(String elevationPreference) { this.elevationPreference = elevationPreference; }
+
+    public String getAnchorSource() { return anchorSource; }
+    public void setAnchorSource(String anchorSource) { this.anchorSource = anchorSource; }
 
     public String getWaypoints() { return waypoints; }
     public void setWaypoints(String waypoints) { this.waypoints = waypoints; }

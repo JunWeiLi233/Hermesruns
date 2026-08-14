@@ -1,0 +1,1226 @@
+/* ============================================================================
+   Shoes "vault" redesign — hybrid hero + gallery grid.
+   Reference source: design.md Kinetic Editorial.
+   Surface: /shoes.
+
+   This sheet loads AFTER `shoes-atelier-redesign.css` (see index.css), so every
+   rule here wins the cascade against the atelier layer without `!important`.
+   Scoped under the existing `#root .shoes-atelier-redesign` selector so NO JSX
+   className changes are required (smoke tests assert the atelier class + ~30
+   literal CSS strings, all of which remain intact below).
+
+   Preserve list (unchanged): API, auth, routing, sidebar/topbar shell, all
+   filters/sort/tabs, scan modal, image picker, shoe actions, i18n copy, units,
+   themes, accessibility focus states, and the >20-shoe virtualized list path.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   Atmosphere — warm vault paper, calm tonal layering.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign {
+  --vault-paper: #fbf6f0;
+  --vault-paper-deep: #f3ebe0;
+  --vault-surface: rgba(255, 252, 248, 0.96);
+  --vault-surface-soft: rgba(255, 252, 248, 0.72);
+  --vault-line: rgba(78, 39, 30, 0.10);
+  --vault-line-strong: rgba(78, 39, 30, 0.16);
+  --vault-ink: #2c2f30;
+  --vault-muted: #6b5f55;
+  --vault-accent: #a0392a;
+  --vault-accent-soft: rgba(160, 57, 42, 0.10);
+  --vault-green: #2f6d55;
+  --vault-amber: #9a6212;
+  --vault-radius-xl: 24px;
+  --vault-radius-lg: 18px;
+  --vault-radius-md: 14px;
+  --vault-shadow-card: 0 18px 38px rgba(78, 39, 30, 0.08);
+  --vault-shadow-card-hover: 0 26px 54px rgba(78, 39, 30, 0.13);
+  --vault-shadow-soft: 0 8px 22px rgba(78, 39, 30, 0.05);
+  background:
+    radial-gradient(circle at 12% 6%, rgba(252, 126, 105, 0.12), transparent 30%),
+    radial-gradient(circle at 88% 2%, rgba(160, 57, 42, 0.07), transparent 26%),
+    radial-gradient(circle at 96% 92%, rgba(47, 109, 85, 0.06), transparent 30%),
+    linear-gradient(180deg, #fbf6f0 0%, #f5efe6 46%, #f1ebe1 100%);
+}
+
+#root .shoes-atelier-redesign .shoes-atelier-shell {
+  width: min(100%, 1180px);
+  gap: 22px;
+  padding: 18px 0 56px;
+}
+
+/* Stage container: unify as one calm rounded surface. */
+#root .shoes-atelier-redesign .shoe-inventory-stage {
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-xl);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 250, 0.88), rgba(248, 242, 234, 0.92));
+  box-shadow: var(--vault-shadow-soft);
+}
+
+/* Rotation signal: calmer, deeper editorial card. */
+#root .shoes-atelier-redesign .shoe-rotation-signal {
+  margin-top: 0;
+  border: 1px solid rgba(255, 246, 242, 0.06);
+  border-radius: var(--vault-radius-xl);
+  box-shadow: 0 22px 48px rgba(20, 12, 8, 0.42);
+}
+
+/* ----------------------------------------------------------------------------
+   is-recommend (fallback recommendation, no performance insight): the sidecar
+   is still fully populated but the recommendation copy is simple, so the
+   default 2-col stat wrap + tall stat cards made the block oversized. Compact
+   the sidecar: 3 stats in one tight row, slimmer glass, reduced min-heights.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-body {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+  gap: 16px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-sidecar {
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-glass {
+  gap: 6px;
+  padding: 12px 14px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-glass strong {
+  font-size: 1.1rem;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-glass p {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* Meta: fit the 3 stats on a single tight row instead of wrapping. */
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-stat {
+  min-height: 0;
+  padding: 10px 8px;
+  gap: 4px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-stat strong {
+  font-size: 1rem;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-stat small {
+  font-size: 0.54rem;
+}
+
+/* Detail items: slimmer in the fallback state. */
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-detail-item,
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-source {
+  min-height: 0;
+  padding: 8px 11px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-detail-list {
+  gap: 6px;
+}
+
+/* On narrow screens the 3-stat row would get cramped — let it wrap to 1 col. */
+@media (max-width: 760px) {
+  #root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoes-atelier-redesign .shoe-rotation-signal.is-recommend .shoe-rotation-signal-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-intel-panel {
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-xl);
+  box-shadow: var(--vault-shadow-soft);
+}
+
+/* ----------------------------------------------------------------------------
+   Top bar + hero header.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar {
+  padding: 14px 16px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-lg);
+  background: var(--vault-surface);
+  box-shadow: var(--vault-shadow-soft);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-title h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-search {
+  height: 44px;
+  border-radius: var(--vault-radius-md);
+  background: var(--vault-paper);
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-search:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--vault-accent);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-cta {
+  min-height: 44px;
+  height: 44px;
+  border-radius: var(--vault-radius-md);
+  background: linear-gradient(135deg, #8f2f22, #6e2218) !important;
+  color: #fff6f2 !important;
+  box-shadow: 0 10px 22px rgba(111, 34, 24, 0.28);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-cta:hover {
+  box-shadow: 0 14px 28px rgba(111, 34, 24, 0.36);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-hero {
+  align-items: end;
+  padding: 6px 4px 2px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw, 2.7rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+/* Health summary row: rounded calm pills. */
+#root .shoes-atelier-redesign .shoe-health-summary-row {
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill {
+  min-height: 78px;
+  padding: 16px 18px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-lg);
+  background: var(--vault-surface);
+  box-shadow: var(--vault-shadow-soft);
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill--health {
+  background: linear-gradient(135deg, rgba(47, 109, 85, 0.14), rgba(47, 109, 85, 0.05));
+  border-color: rgba(47, 109, 85, 0.22);
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill--warn {
+  background: linear-gradient(135deg, rgba(160, 57, 42, 0.12), rgba(160, 57, 42, 0.04));
+  border-color: rgba(160, 57, 42, 0.22);
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill strong {
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ----------------------------------------------------------------------------
+   Control strip (filters / sort / brand / type) — calmer, consistent rounding.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-strip {
+  gap: 16px;
+  margin-top: 2px;
+  padding: 16px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-lg);
+  background: var(--vault-surface-soft);
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-grid {
+  gap: 14px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-group {
+  padding: 14px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-md);
+  background: var(--vault-surface);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-toggle,
+#root .shoes-atelier-redesign .shoe-inventory-chevron,
+#root .shoes-atelier-redesign .shoe-inventory-action-btn,
+#root .shoes-atelier-redesign .shoe-inventory-pill,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill {
+  min-height: 38px;
+  border-radius: 11px;
+  background: var(--vault-paper);
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-pill.active,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill.active {
+  background: var(--vault-accent);
+  color: #fff6f2;
+  box-shadow: 0 8px 18px rgba(160, 57, 42, 0.24);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-action-btn.is-muted {
+  background: var(--vault-accent-soft);
+  color: var(--vault-accent);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.2);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-pro-badge,
+#root .shoes-atelier-redesign .shoe-inventory-quota-badge {
+  border: 1px solid var(--vault-line);
+  border-radius: 11px;
+}
+
+/* Status / empty / error lines. */
+#root .shoes-atelier-redesign .shoe-inventory-status {
+  padding: 26px 18px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-lg);
+  background: var(--vault-surface);
+  color: var(--vault-muted);
+}
+
+/* ----------------------------------------------------------------------------
+   The grid — responsive gallery; primary shoe spans full width as hero.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-inventory-grid {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+/* Hero: primary shoe (and the add-shoe preview) spans the full row. */
+#root .shoes-atelier-redesign .shoe-inventory-grid .shoe-inventory-card.is-primary,
+#root .shoes-atelier-redesign .shoe-inventory-grid .shoe-inventory-card.is-preview {
+  grid-column: 1 / -1;
+}
+
+/* Virtualized list (>20 shoes): minimal surface polish, layout untouched. */
+#root .shoes-atelier-redesign .shoe-inventory-virtual-list {
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-lg);
+  overflow: hidden;
+}
+
+/* ----------------------------------------------------------------------------
+   Shoe card — large radius, elevated warm surface, premium feel.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-inventory-card {
+  position: relative;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(116px, 0.22fr);
+  gap: 18px;
+  min-height: 184px;
+  padding: 18px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-xl);
+  background: var(--vault-surface);
+  box-shadow: var(--vault-shadow-card);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.22s ease;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--vault-line-strong);
+  box-shadow: var(--vault-shadow-card-hover);
+}
+
+/* Hero (primary) card: wide feature treatment. */
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary {
+  grid-template-columns: 168px minmax(0, 1fr) minmax(150px, 0.26fr);
+  gap: 24px;
+  min-height: 208px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(252, 126, 105, 0.14), transparent 40%),
+    linear-gradient(135deg, rgba(255, 253, 250, 0.98), rgba(252, 243, 234, 0.96));
+  border-color: rgba(160, 57, 42, 0.22);
+  box-shadow: 0 22px 48px rgba(111, 34, 24, 0.14);
+}
+
+/* Retired cards: desaturated, calmed. */
+#root .shoes-atelier-redesign .shoe-inventory-card.is-retired {
+  opacity: 0.78;
+  background: var(--vault-surface-soft);
+}
+
+/* Image frame. */
+#root .shoes-atelier-redesign .shoe-inventory-card-image {
+  width: 120px;
+  min-height: 156px;
+  border-radius: var(--vault-radius-lg);
+  background:
+    radial-gradient(circle at 46% 26%, rgba(160, 57, 42, 0.16), transparent 46%),
+    linear-gradient(160deg, #f4ece0, #ebe1d2);
+  box-shadow: inset 0 0 0 1px rgba(78, 39, 30, 0.06);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-card-image {
+  width: 168px;
+  min-height: 184px;
+  border-radius: var(--vault-radius-xl);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img,
+#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img-placeholder,
+#root .shoes-atelier-redesign .shoe-preview-art {
+  border-radius: var(--vault-radius-lg);
+}
+
+/* Copy column. */
+#root .shoes-atelier-redesign .shoe-inventory-card-copy {
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-head {
+  gap: 10px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-copy h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-card-copy h2 {
+  font-size: 1.9rem;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-subtitle {
+  color: var(--vault-muted);
+}
+
+/* Mileage emphasis. */
+#root .shoes-atelier-redesign .shoe-inventory-card-metric-value strong {
+  color: var(--vault-accent) !important;
+  font-size: 1.95rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-card-metric-value strong {
+  font-size: 2.5rem;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-metric-value span {
+  color: var(--vault-muted);
+}
+
+/* Lifespan progress bar — rounded track + ember gradient fill. */
+#root .shoes-atelier-redesign .shoe-inventory-card-progress,
+#root .shoes-atelier-redesign .shoe-inventory-card-retirement-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(78, 39, 30, 0.10);
+  overflow: hidden;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a0392a, #d86a54);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress-fill.is-warn {
+  background: linear-gradient(90deg, #9a6212, #d59b3c);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress-fill.is-critical {
+  background: linear-gradient(90deg, #8f2f22, #c0392b);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress-fill.is-good {
+  background: linear-gradient(90deg, #2f6d55, #4a9a7c);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-retirement-text {
+  color: var(--vault-muted);
+}
+
+/* Type + inline pills. */
+#root .shoes-atelier-redesign .shoe-inventory-card-type-badge,
+#root .shoes-atelier-redesign .shoe-inventory-inline-pill {
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--vault-paper);
+  color: var(--vault-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-inline-pill {
+  background: var(--vault-accent);
+  color: #fff6f2 !important;
+  box-shadow: 0 6px 14px rgba(160, 57, 42, 0.26);
+}
+
+/* Mileage alert callout. */
+#root .shoes-atelier-redesign .shoe-inventory-alert {
+  padding: 9px 12px;
+  border-radius: var(--vault-radius-md);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-alert.is-critical {
+  background: rgba(143, 47, 34, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(143, 47, 34, 0.2);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-alert.is-warning {
+  background: rgba(154, 98, 18, 0.10);
+  box-shadow: inset 0 0 0 1px rgba(154, 98, 18, 0.2);
+}
+
+/* Side column. */
+#root .shoes-atelier-redesign .shoe-inventory-card-side {
+  align-content: space-between;
+  justify-items: end;
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-meta {
+  gap: 6px;
+  color: var(--vault-muted);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-meta-brand em {
+  color: var(--vault-muted);
+}
+
+/* Action buttons. */
+#root .shoes-atelier-redesign .shoe-inventory-card-actions {
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action {
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--vault-paper);
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action:hover {
+  background: var(--vault-surface);
+  box-shadow: inset 0 0 0 1px var(--vault-line-strong);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action--cta {
+  background: linear-gradient(135deg, #8f2f22, #6e2218);
+  color: #fff6f2;
+  box-shadow: 0 8px 18px rgba(111, 34, 24, 0.24);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action--cta:hover {
+  background: linear-gradient(135deg, #a0392a, #7c2820);
+  box-shadow: 0 12px 24px rgba(111, 34, 24, 0.32);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action.is-danger {
+  color: var(--vault-accent);
+  background: var(--vault-accent-soft);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.2);
+}
+
+/* Chevron. */
+#root .shoes-atelier-redesign .shoe-inventory-chevron {
+  min-height: 38px;
+  min-width: 38px;
+  border-radius: 12px;
+  background: var(--vault-paper);
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+}
+
+/* ----------------------------------------------------------------------------
+   Duplicate intel panel.
+   ---------------------------------------------------------------------------- */
+
+#root .shoes-atelier-redesign .shoe-inventory-intel-panel--duplicate {
+  padding: 20px;
+}
+
+#root .shoes-atelier-redesign .shoe-duplicate-cluster {
+  padding: 14px;
+  border: 1px solid var(--vault-line);
+  border-radius: var(--vault-radius-md);
+  background: var(--vault-surface);
+}
+
+/* ----------------------------------------------------------------------------
+   Reduced motion — keep transitions calm for users who prefer it.
+   ---------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  #root .shoes-atelier-redesign .shoe-inventory-card,
+  #root .shoes-atelier-redesign .shoe-inventory-card-action,
+  #root .shoes-atelier-redesign .shoe-inventory-cta,
+  #root .shoes-atelier-redesign .shoe-inventory-card-progress-fill {
+    transition: none;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card:hover {
+    transform: none;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Responsive — hero collapses to single column; grid drops to 1 col on mobile.
+   ---------------------------------------------------------------------------- */
+
+@media (max-width: 880px) {
+  #root .shoes-atelier-redesign .shoe-inventory-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card,
+  #root .shoes-atelier-redesign .shoe-inventory-card.is-primary {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card-image,
+  #root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-card-image {
+    width: 96px;
+    min-height: 108px;
+  }
+
+  /* Side rail folds under the copy on narrow screens. */
+  #root .shoes-atelier-redesign .shoe-inventory-card-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    justify-items: start;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-card-copy h2 {
+    font-size: 1.6rem;
+  }
+}
+
+@media (max-width: 560px) {
+  #root .shoes-atelier-redesign .shoe-inventory-stage {
+    padding: 14px;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-manage-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ============================================================================
+   Dark / midnight / high-contrast themes — intentional vault treatment.
+   Mirror the atelier dark tokens so the redesign reads as premium in both modes.
+   ============================================================================ */
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign {
+  --vault-paper: #14110f;
+  --vault-paper-deep: #0f0d0c;
+  --vault-surface: rgba(28, 24, 21, 0.92);
+  --vault-surface-soft: rgba(255, 255, 255, 0.05);
+  --vault-line: rgba(255, 255, 255, 0.09);
+  --vault-line-strong: rgba(255, 255, 255, 0.16);
+  --vault-ink: #f7efe9;
+  --vault-muted: rgba(244, 238, 232, 0.66);
+  --vault-accent: #f07561;
+  --vault-accent-soft: rgba(240, 117, 97, 0.14);
+  --vault-green: #4a9a7c;
+  --vault-amber: #d59b3c;
+  --vault-shadow-card: 0 20px 44px rgba(0, 0, 0, 0.46);
+  --vault-shadow-card-hover: 0 28px 60px rgba(0, 0, 0, 0.56);
+  --vault-shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.34);
+  background:
+    radial-gradient(circle at 12% 6%, rgba(240, 117, 97, 0.16), transparent 30%),
+    radial-gradient(circle at 88% 2%, rgba(160, 57, 42, 0.12), transparent 26%),
+    radial-gradient(circle at 96% 92%, rgba(47, 109, 85, 0.08), transparent 30%),
+    linear-gradient(180deg, #110f0e 0%, #0c0b0a 100%);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-stage,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-stage {
+  background:
+    linear-gradient(180deg, rgba(26, 22, 20, 0.9), rgba(20, 17, 15, 0.92));
+  border-color: var(--vault-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-topbar,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-topbar,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-manage-group,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-manage-group,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-health-summary-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-health-summary-pill,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-status,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-status {
+  background: var(--vault-surface);
+  border-color: var(--vault-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-manage-strip,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-manage-strip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--vault-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(255, 255, 255, 0.04), transparent 50%),
+    rgba(30, 25, 22, 0.94);
+  border-color: var(--vault-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card.is-primary,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card.is-primary {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(240, 117, 97, 0.2), transparent 42%),
+    rgba(34, 26, 22, 0.96);
+  border-color: rgba(240, 117, 97, 0.3);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-image,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-image {
+  background:
+    radial-gradient(circle at 46% 26%, rgba(240, 117, 97, 0.18), transparent 46%),
+    linear-gradient(160deg, #211a16, #181311);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-type-badge,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-type-badge,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-inline-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-inline-pill,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-action,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-action,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-pill,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-brand-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-brand-pill,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-chevron,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-chevron {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px var(--vault-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-search,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-search {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-pill.active,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-pill.active,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-brand-pill.active,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-brand-pill.active {
+  background: linear-gradient(135deg, #f07561, #c5533f);
+  color: #1a120e;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-inline-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card.is-primary .shoe-inventory-inline-pill {
+  background: linear-gradient(135deg, #f07561, #c5533f);
+  color: #1a120e !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-action--cta,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-action--cta,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-cta,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-cta {
+  background: linear-gradient(135deg, #f07561, #c5533f) !important;
+  color: #1a120e !important;
+}
+
+/* ============================================================================
+   Shoe scan import modal ("识图导入") — premium scan studio.
+   Loads after the base scan styles + compact-repair layer, so it wins the
+   cascade. Scoped at body level (matching the base scan CSS) because the Modal
+   is inline-rendered within the Shoes tree. No JSX changes; every existing
+   className, the upload control, file inputs, quota handling, and
+   duplicate-resolution actions are preserved.
+   ============================================================================ */
+
+/* Shell + card: warmer, deeper atmosphere. */
+.shoe-scan-modal-shell {
+  background: rgba(28, 16, 10, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.shoe-scan-modal-card {
+  border: 1px solid rgba(160, 57, 42, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(252, 126, 105, 0.10), transparent 36%),
+    linear-gradient(165deg, #fdf8f1 0%, #f6efe4 100%);
+  box-shadow: 0 40px 100px rgba(60, 28, 16, 0.24);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-card {
+  border-color: rgba(240, 117, 97, 0.18);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(240, 117, 97, 0.16), transparent 38%),
+    linear-gradient(165deg, #1a1614 0%, #0f0d0c 100%);
+  box-shadow: 0 44px 120px rgba(0, 0, 0, 0.56);
+}
+
+/* Close button: softer, on-card. */
+.shoe-scan-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(78, 39, 30, 0.7);
+  box-shadow: 0 10px 26px rgba(78, 39, 30, 0.14);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.shoe-scan-modal-card .modal-close:hover {
+  background: rgba(160, 57, 42, 0.16);
+  color: #6e2218;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(246, 241, 235, 0.74);
+}
+
+/* Visual rail: atmospheric warm studio. */
+.shoe-scan-modal-visual {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(252, 126, 105, 0.18), transparent 34%),
+    radial-gradient(circle at 6% 100%, rgba(47, 109, 85, 0.07), transparent 30%),
+    linear-gradient(160deg, #fbf4ea 0%, #efe6d8 100%);
+  border-bottom: 1px solid rgba(160, 57, 42, 0.10);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-visual,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-visual {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(240, 117, 97, 0.20), transparent 36%),
+    radial-gradient(circle at 6% 100%, rgba(47, 109, 85, 0.08), transparent 32%),
+    linear-gradient(160deg, #1d1815 0%, #100e0c 100%);
+  border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Kicker pill. */
+.shoe-scan-modal-kicker-row {
+  background: rgba(160, 57, 42, 0.10);
+  color: #8f2f22;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-kicker-row,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-kicker-row {
+  background: rgba(240, 117, 97, 0.16);
+  color: #ffb4a7;
+}
+
+/* Preview frame: deeper, premium, cinematic scan target. */
+.shoe-scan-modal-preview {
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(244, 236, 225, 0.66)),
+    linear-gradient(150deg, #2b2018, #160f0b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 22px 52px rgba(50, 24, 14, 0.22);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.42)),
+    linear-gradient(150deg, #241b14, #0d0a08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 22px 52px rgba(0, 0, 0, 0.4);
+}
+
+/* Corner brackets + scan line: warmer ember. */
+.shoe-scan-modal-preview-overlay::before,
+.shoe-scan-modal-preview-overlay::after {
+  border-color: rgba(240, 117, 97, 0.72);
+  width: 30px;
+  height: 30px;
+}
+
+.shoe-scan-modal-scan-line {
+  background: linear-gradient(90deg, transparent, rgba(252, 126, 105, 0.9), transparent);
+  box-shadow: 0 0 18px rgba(252, 126, 105, 0.4);
+}
+
+/* Chips + upload pill: refined glass. */
+.shoe-scan-modal-chip,
+.shoe-scan-modal-preview-upload {
+  border-radius: 999px;
+  border: 1px solid rgba(160, 57, 42, 0.22);
+  background: rgba(255, 252, 248, 0.88);
+  color: #8f2f22;
+  box-shadow: 0 10px 24px rgba(60, 28, 16, 0.12);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-chip,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-chip,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview-upload {
+  border-color: rgba(240, 117, 97, 0.3);
+  background: rgba(20, 14, 10, 0.74);
+  color: #ffb4a7;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+}
+
+/* Empty-state hero text. */
+.shoe-scan-modal-preview-empty strong {
+  color: #fcf5ec;
+}
+
+/* Metric tiles + notes + upload + result cards: unified warm surfaces. */
+.shoe-scan-modal-metrics > div,
+.shoe-scan-modal-note,
+.shoe-scan-modal-status,
+.shoe-scan-modal-upload,
+.shoe-scan-result-card,
+.shoe-scan-modal-quota-after,
+.shoe-scan-modal-upgrade-card {
+  border: 1px solid rgba(160, 57, 42, 0.10);
+  background: rgba(255, 252, 248, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 14px 34px rgba(78, 39, 30, 0.07);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-metrics > div,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-note,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-status,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upload,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-result-card,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-quota-after,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upgrade-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-metrics > div,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-note,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-status,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-result-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-quota-after,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upgrade-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Metric strong values: ember. */
+.shoe-scan-modal-metrics strong {
+  color: #a0392a;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-metrics strong,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-metrics strong {
+  color: #ffb4a7;
+}
+
+/* Copy headings + body. */
+.shoe-scan-modal-copy h4 {
+  color: #2c2f30;
+}
+
+.shoe-scan-modal-copy p,
+.shoe-scan-modal-preview-empty p {
+  color: rgba(89, 92, 93, 0.78);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-copy p,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-preview-empty p,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-preview-empty p {
+  color: rgba(232, 226, 220, 0.7);
+}
+
+/* Upload dropzone: refined dashed ember ring. */
+.shoe-scan-modal-upload {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 26px 20px;
+  border-radius: 20px;
+  text-align: center;
+  cursor: pointer;
+  outline: 1px dashed rgba(160, 57, 42, 0.36);
+  outline-offset: -7px;
+  transition: outline-color 0.2s ease, background 0.2s ease;
+}
+
+.shoe-scan-modal-upload:hover {
+  outline-color: rgba(160, 57, 42, 0.6);
+  background: rgba(252, 126, 105, 0.06);
+}
+
+/* Hide the ugly native OS file picker — the whole label is the click target. */
+.shoe-scan-modal-upload input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Make the label's first span (the action title) read as a primary dropzone
+   button, and render a upload glyph via the label's leading marker. */
+.shoe-scan-modal-upload > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #8f2f22, #d86a54);
+  color: #fff7f2;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(111, 34, 24, 0.24);
+}
+
+.shoe-scan-modal-upload > span:first-child::before {
+  content: "↑";
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.shoe-scan-modal-upload small {
+  color: rgba(89, 92, 93, 0.72);
+  font-weight: 600;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upload small,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upload small {
+  color: rgba(232, 226, 220, 0.6);
+}
+
+/* Note + status accents. */
+.shoe-scan-modal-note strong,
+.shoe-scan-modal-status strong {
+  color: #8f2f22;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-note strong,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-status strong,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-note strong,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-status strong {
+  color: #ffb4a7;
+}
+
+/* Result-card badges: refined. */
+.shoe-scan-result-badge.is-new {
+  background: rgba(47, 109, 85, 0.16);
+  color: #2f6d55;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-result-badge.is-new,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-result-badge.is-new {
+  background: rgba(74, 154, 124, 0.18);
+  color: #7fe0b8;
+}
+
+.shoe-scan-result-card.is-duplicate {
+  border-color: rgba(154, 98, 18, 0.26);
+  background: rgba(154, 98, 18, 0.08);
+}
+
+/* Result inputs: cleaner. */
+.shoe-scan-result-fields input {
+  background: rgba(255, 252, 248, 0.9);
+  color: #2c2f30;
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.12);
+}
+
+.shoe-scan-result-fields input:focus {
+  box-shadow: inset 0 0 0 1.5px rgba(160, 57, 42, 0.6);
+  outline: 0;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-result-fields input,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-result-fields input {
+  background: rgba(255, 255, 255, 0.07);
+  color: #f8f1eb;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Primary scan button: warm ember gradient. */
+.shoe-scan-modal-primary {
+  background: linear-gradient(135deg, #8f2f22, #d86a54);
+  color: #fff7f2;
+  box-shadow: 0 12px 26px rgba(111, 34, 24, 0.28);
+}
+
+.shoe-scan-modal-primary:not(:disabled):hover {
+  box-shadow: 0 16px 32px rgba(111, 34, 24, 0.36);
+}
+
+.shoe-scan-modal-secondary,
+.shoe-scan-choice {
+  background: rgba(44, 47, 48, 0.06);
+  color: #4a4540;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-secondary,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-choice,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-secondary,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-choice {
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(244, 238, 232, 0.82);
+}
+
+.shoe-scan-choice.is-active {
+  background: linear-gradient(135deg, #8f2f22, #d86a54);
+  color: #fff8f3;
+}
+
+/* Upgrade CTA: warm. */
+.shoe-scan-modal-upgrade-card {
+  background: linear-gradient(135deg, rgba(252, 126, 105, 0.12), rgba(160, 57, 42, 0.05));
+  border-color: rgba(160, 57, 42, 0.2);
+}
+
+.shoe-scan-modal-upgrade-cta {
+  background: linear-gradient(135deg, #8f2f22, #d86a54);
+  box-shadow: 0 10px 22px rgba(111, 34, 24, 0.24);
+}
+
+/* ----------------------------------------------------------------------------
+   Scan modal spacing/layout fix — the narrow-viewport "hard stop" capped the
+   card at 520px and hid the visual rail, which crammed copy + quota + upload +
+   actions into a tight column. Loosen it: wider card, generous panel padding,
+   and a panel-favoring two-column ratio on desktop so the form breathes.
+   ---------------------------------------------------------------------------- */
+
+/* Desktop: give the form panel more room than the visual rail. */
+@media (min-width: 981px) {
+  .shoe-scan-modal-card {
+    width: min(1040px, calc(100vw - 48px));
+  }
+
+  .shoe-scan-modal-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(380px, 1.1fr) !important;
+    gap: 0;
+  }
+
+  .shoe-scan-modal-visual,
+  .shoe-scan-modal-panel {
+    padding: clamp(28px, 3.4vw, 40px);
+  }
+}
+
+/* Panel: vertical rhythm so stacked elements don't crowd. */
+.shoe-scan-modal-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.shoe-scan-modal-stack {
+  gap: 22px;
+}
+
+.shoe-scan-modal-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.shoe-scan-modal-copy h4 {
+  max-width: 16ch;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  line-height: 1;
+}
+
+.shoe-scan-modal-copy p {
+  max-width: 38ch;
+  line-height: 1.6;
+}
+
+/* Quota note: comfortable internal padding. */
+.shoe-scan-modal-note {
+  padding: 16px 18px;
+  gap: 10px;
+}
+
+/* Actions: full-width, consistent height. */
+.shoe-scan-modal-actions {
+  gap: 12px;
+}
+
+.shoe-scan-modal-primary,
+.shoe-scan-modal-secondary {
+  min-height: 52px;
+  letter-spacing: 0.06em;
+}
+
+/* Narrow single-column (≤980px): widen the cap and add breathing room instead
+   of squeezing to 520px. */
+@media (max-width: 980px) {
+  .shoe-scan-modal-card {
+    width: min(620px, calc(100vw - 32px));
+  }
+
+  .shoe-scan-modal-panel {
+    padding: clamp(24px, 5vw, 34px);
+  }
+
+  .shoe-scan-modal-stack {
+    gap: 20px;
+  }
+
+  .shoe-scan-modal-copy h4 {
+    max-width: none;
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
+  }
+}
+
+/* Phone: keep actions stacked and touch-friendly. */
+@media (max-width: 520px) {
+  .shoe-scan-modal-card {
+    width: calc(100vw - 16px);
+    border-radius: 22px;
+  }
+
+  .shoe-scan-modal-panel {
+    padding: 22px;
+  }
+
+  .shoe-scan-modal-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .shoe-scan-modal-upload {
+    padding: 22px 16px;
+  }
+}

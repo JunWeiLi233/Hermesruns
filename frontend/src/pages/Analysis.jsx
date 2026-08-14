@@ -21,8 +21,6 @@ import PageSkeleton from '../components/PageSkeleton';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;
-const ANALYSIS_HEAT_REQUEST_TIMEOUT_MS = 10000;
-const ANALYSIS_ACCLIMATION_WINDOW_DAYS = 14;
 const TRAINING_ZONE_BASIS_STYLE = {
   display: 'block',
   marginTop: '0.42rem',
@@ -33,54 +31,22 @@ const TRAINING_ZONE_BASIS_STYLE = {
   lineHeight: 1.35,
 };
 
-function toFiniteHeatNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function formatHeatTemperature(value) {
-  const numeric = toFiniteHeatNumber(value);
-  return numeric === null ? '--' : `${numeric.toFixed(1)}°C`;
-}
-
-function formatHeatDelta(value) {
-  const numeric = toFiniteHeatNumber(value);
-  if (numeric === null) return '--';
-  return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}°C`;
-}
-
-function formatHeatPenalty(value, t) {
-  const numeric = toFiniteHeatNumber(value);
-  if (numeric === null) return '--';
-  return numeric > 0
-    ? `+${Math.round(numeric)} ${t('analysis.heat_seconds_per_km')}`
-    : t('analysis.heat_no_adjustment');
-}
-
-function formatHeatDay(value, t) {
-  const numeric = toFiniteHeatNumber(value);
-  return numeric === null ? '--' : t('analysis.heat_day_value', { day: Math.round(numeric) });
-}
-
-function formatHeatFactor(value) {
-  const numeric = toFiniteHeatNumber(value);
-  return numeric === null ? '--' : numeric.toFixed(2);
-}
-
 function Gauge({ value, color }) {
   const clamped = Math.max(0, Math.min(1.8, Number(value || 0)));
   const progressPct = Math.max(0, Math.min((clamped / 1.8) * 100, 100));
+  const hasProgress = progressPct > 0;
   const path = 'M 24 126 A 86 86 0 0 1 196 126';
   return (
     <svg viewBox="0 0 220 140" className="analysis-overview-gauge-svg" aria-hidden="true">
       <path d={path} pathLength="100" className="analysis-overview-gauge-track" />
-      <path
-        d={path}
-        pathLength="100"
-        className="analysis-overview-gauge-progress"
-        style={{ stroke: color, strokeDasharray: `${progressPct} 100` }}
-      />
+      {hasProgress ? (
+        <path
+          d={path}
+          pathLength="100"
+          className="analysis-overview-gauge-progress"
+          style={{ stroke: color, strokeDasharray: `${progressPct} 100` }}
+        />
+      ) : null}
     </svg>
   );
 }
@@ -155,8 +121,6 @@ export default function Analysis() {
   const [runs, setRuns] = useState([]);
   const [, setProfileState] = useState('loading');
   const [runsState, setRunsState] = useState('loading');
-  const [weatherContext, setWeatherContext] = useState(null);
-  const [weatherContextState, setWeatherContextState] = useState('idle');
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [injuryStatus, setInjuryStatus] = useState(null);
@@ -235,7 +199,6 @@ export default function Analysis() {
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
-  const correctedRunCount = useMemo(() => runs.filter((run) => Number(run?.pacePenaltySecPerKm) > 0).length, [runs]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -279,40 +242,6 @@ export default function Analysis() {
     };
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    if (!isAuthenticated || runsState !== 'ready' || runs.length === 0) return undefined;
-
-    let cancelled = false;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(
-      () => controller.abort(),
-      ANALYSIS_HEAT_REQUEST_TIMEOUT_MS,
-    );
-
-    async function loadWeatherContext() {
-      setWeatherContextState('loading');
-      try {
-        const payload = await apiJson('/api/v1/weather/context', { signal: controller.signal });
-        if (cancelled) return;
-        setWeatherContext(payload && typeof payload === 'object' ? payload : null);
-        setWeatherContextState('ready');
-      } catch {
-        if (cancelled) return;
-        setWeatherContext(null);
-        setWeatherContextState('error');
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    loadWeatherContext();
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-      controller.abort();
-    };
-  }, [isAuthenticated, runs.length, runsState]);
-
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
   const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
@@ -331,45 +260,8 @@ export default function Analysis() {
   const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
   const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
   const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
-  const heatContextAvailable = weatherContext?.available === true;
-  const heatPenalty = heatContextAvailable
-    ? toFiniteHeatNumber(weatherContext?.pacePenaltySecPerKm)
-    : null;
-  const acclimatizationDay = heatContextAvailable
-    ? Math.max(1, Math.min(
-      ANALYSIS_ACCLIMATION_WINDOW_DAYS,
-      Math.round(toFiniteHeatNumber(weatherContext?.acclimatizationDay) || 1),
-    ))
-    : null;
-  const heatTone = weatherContextState === 'loading'
-    ? 'loading'
-    : !heatContextAvailable
-      ? 'unavailable'
-      : weatherContext?.climateShockEvent
-        ? 'shock'
-        : heatPenalty > 0
-          ? 'adjusted'
-          : 'clear';
-  const heatDecisionTitle = weatherContextState === 'loading'
-    ? t('analysis.heat_loading_title')
-    : !heatContextAvailable
-      ? t('analysis.heat_unavailable_title')
-      : heatPenalty > 0
-        ? t('analysis.heat_adjustment_active', { penalty: Math.round(heatPenalty) })
-        : t('analysis.heat_adjustment_clear');
-  const heatDecisionCopy = weatherContextState === 'loading'
-    ? t('analysis.heat_loading_copy')
-    : !heatContextAvailable
-      ? t('analysis.heat_unavailable_copy')
-      : heatPenalty > 0
-        ? t('analysis.heat_active_copy', { penalty: Math.round(heatPenalty) })
-        : t('analysis.heat_clear_copy');
-  const heatStatusLabel = heatContextAvailable && weatherContext?.acclimatizationStatus
-    ? t(`analysis.heat_status_${weatherContext.acclimatizationStatus}`)
-    : '--';
-
   useEffect(() => {
-    if (!hasRuns) return;
+    if (!isAuthenticated) return;
     let cancelled = false;
     async function fetchInjuryStatus() {
       setInjuryStatusLoading(true);
@@ -387,12 +279,16 @@ export default function Analysis() {
     }
     fetchInjuryStatus();
     return () => { cancelled = true; };
-  }, [hasRuns]);
+  }, [isAuthenticated]);
 
   const injuryKicker = t('analysis.stitch_injury_signal');
   const injuryTitle = t('analysis.stitch_injury_title');
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
   const injuryCopy = t('analysis.stitch_injury_copy');
+  const latestSorenessLevel = String(
+    injuryStatus?.recentLogs?.[0]?.level ?? injuryStatus?.sorenessLevel ?? ''
+  ).toLowerCase();
+  const hasSorenessLog = ['low', 'medium', 'high'].includes(latestSorenessLevel);
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -729,134 +625,46 @@ export default function Analysis() {
                     </div>
                   </button>
 
-                  {vdotTrend.hasData && (
-                    <article className="analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight analysis-profile-reference-card is-trend">
-                      <div className="analysis-overview-card-head">
-                        <div>
-                          <span className="analysis-overview-card-kicker">{t('analysis.vdot_trend_insight_title')}</span>
-                          <h3 className="analysis-overview-vdot-trend-heading">
-                            <AppIcon
-                              name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'}
-                              className={cx('runner-dashboard-side-link-icon', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}
-                            />
-                            {t(`profile.vdot_trend_${vdotTrend.direction}`)}
-                          </h3>
+                  <article
+                    className={cx(
+                      'analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight analysis-profile-reference-card is-trend',
+                      !vdotTrend.hasData && 'is-empty',
+                    )}
+                  >
+                    {vdotTrend.hasData ? (
+                      <>
+                        <div className="analysis-overview-card-head">
+                          <div>
+                            <span className="analysis-overview-card-kicker">{t('analysis.vdot_trend_insight_title')}</span>
+                            <h3 className="analysis-overview-vdot-trend-heading">
+                              <AppIcon
+                                name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'}
+                                className={cx('runner-dashboard-side-link-icon', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}
+                              />
+                              {t(`profile.vdot_trend_${vdotTrend.direction}`)}
+                            </h3>
+                          </div>
+                          <div className="analysis-overview-insight-delta">
+                            <strong>{vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)}</strong>
+                          </div>
                         </div>
-                        <div className="analysis-overview-insight-delta">
-                          <strong>{vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)}</strong>
+                        <p className="analysis-overview-insight-copy">{t('analysis.vdot_trend_insight_copy')}</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="analysis-overview-card-head">
+                          <div>
+                            <span className="analysis-overview-card-kicker">{t('profile.vdot_trend_label')}</span>
+                            <h3 className="analysis-overview-vdot-trend-heading">{t('analysis.vdot_trend_empty_title')}</h3>
+                          </div>
+                          <div className="analysis-overview-insight-delta">
+                            <strong>--</strong>
+                          </div>
                         </div>
-                      </div>
-                      <p className="analysis-overview-insight-copy">{t('analysis.vdot_trend_insight_copy')}</p>
-                    </article>
-                  )}
-                </div>
-              </section>
-
-              <section
-                className={cx('analysis-heat-context', `is-${heatTone}`)}
-                data-testid="analysis-heat-context"
-                aria-labelledby="analysis-heat-context-title"
-              >
-                <div className="analysis-heat-context__summary">
-                  <div className="analysis-heat-context__heading">
-                    <span className="analysis-heat-context__kicker">{t('analysis.heat_kicker')}</span>
-                    <h2 id="analysis-heat-context-title">{t('analysis.heat_title')}</h2>
-                    <p>{t('analysis.heat_copy')}</p>
-                  </div>
-
-                  <div className="analysis-heat-context__decision" aria-live="polite">
-                    <div className="analysis-heat-context__decision-icon" aria-hidden="true">
-                      <AppIcon name="thermostat" />
-                    </div>
-                    <div>
-                      <span>{t('analysis.heat_today_signal')}</span>
-                      <strong>{heatDecisionTitle}</strong>
-                      <p>{heatDecisionCopy}</p>
-                    </div>
-                    {heatContextAvailable && weatherContext?.climateShockEvent ? (
-                      <span className="analysis-heat-context__shock-pill">
-                        {t('analysis.heat_shock_detected')}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="analysis-heat-context__history">
-                    <div>
-                      <span>{t('analysis.heat_history_label')}</span>
-                      <strong>
-                        {correctedRunCount > 0
-                          ? t('analysis.heat_history_count', { count: correctedRunCount })
-                          : t('analysis.heat_history_none')}
-                      </strong>
-                      <p>{t('analysis.heat_history_copy')}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="runner-shell-inline-btn analysis-heat-context__action"
-                      onClick={() => navigate('/weather')}
-                    >
-                      {t('analysis.heat_open_weather')}
-                      <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="analysis-heat-context__data">
-                  <div className="analysis-heat-context__metrics">
-                    <article className="analysis-heat-context__metric">
-                      <span>{t('analysis.heat_baseline')}</span>
-                      <strong>{heatContextAvailable ? formatHeatTemperature(weatherContext.baselineDewPoint14dC) : '--'}</strong>
-                    </article>
-                    <article className="analysis-heat-context__metric">
-                      <span>{t('analysis.heat_current')}</span>
-                      <strong>{heatContextAvailable ? formatHeatTemperature(weatherContext.currentDewPointC) : '--'}</strong>
-                    </article>
-                    <article className={cx('analysis-heat-context__metric', weatherContext?.climateShockEvent && 'is-shock')}>
-                      <span>{t('analysis.heat_delta')}</span>
-                      <strong>{heatContextAvailable ? formatHeatDelta(weatherContext.climateShockDeltaC) : '--'}</strong>
-                    </article>
-                    <article className={cx('analysis-heat-context__metric', heatPenalty > 0 && 'is-emphasis')}>
-                      <span>{t('analysis.heat_pace_adjustment')}</span>
-                      <strong>
-                        {weatherContext?.available
-                          ? formatHeatPenalty(weatherContext.pacePenaltySecPerKm, t)
-                          : '--'}
-                      </strong>
-                    </article>
-                    <article className="analysis-heat-context__metric">
-                      <span>{t('analysis.heat_adaptation_day')}</span>
-                      <strong>{heatContextAvailable ? formatHeatDay(weatherContext.acclimatizationDay, t) : '--'}</strong>
-                    </article>
-                    <article className="analysis-heat-context__metric">
-                      <span>{t('analysis.heat_penalty_factor')}</span>
-                      <strong>{heatContextAvailable ? formatHeatFactor(weatherContext.penaltyFactor) : '--'}</strong>
-                    </article>
-                  </div>
-
-                  <div className="analysis-heat-context__exposure">
-                    <div className="analysis-heat-context__exposure-head">
-                      <span>{t('analysis.heat_exposure_window')}</span>
-                      <strong>{heatStatusLabel}</strong>
-                    </div>
-                    <div className="analysis-heat-context__exposure-track" aria-hidden="true">
-                      {Array.from({ length: ANALYSIS_ACCLIMATION_WINDOW_DAYS }, (_, index) => {
-                        const day = index + 1;
-                        return (
-                          <span
-                            key={`heat-day-${day}`}
-                            className={cx(
-                              acclimatizationDay !== null && day <= acclimatizationDay && 'is-complete',
-                              day === acclimatizationDay && 'is-current',
-                            )}
-                          />
-                        );
-                      })}
-                    </div>
-                    <div className="analysis-heat-context__exposure-labels">
-                      <span>{t('analysis.heat_exposure_start')}</span>
-                      <span>{t('analysis.heat_exposure_end')}</span>
-                    </div>
-                  </div>
+                        <p className="analysis-overview-insight-copy">{t('analysis.vdot_trend_empty_copy')}</p>
+                      </>
+                    )}
+                  </article>
                 </div>
               </section>
 
@@ -1029,7 +837,11 @@ export default function Analysis() {
                   </div>
                   <div className="analysis-overview-grid analysis-injury-prevention-grid">
                     {/* Card 1: Combined Risk Score */}
-                    <div className="analysis-overview-card analysis-overview-card--metric">
+                    <button
+                      type="button"
+                      className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
+                      onClick={() => navigate('/analysis/injury-risk')}
+                    >
                       <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_risk_kicker')}</span>
                       <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_risk_title')}</h3>
                       <div className="analysis-injury-prevention-risk-ring-wrap">
@@ -1043,10 +855,14 @@ export default function Analysis() {
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Card 2: ACWR Monitor */}
-                    <div className="analysis-overview-card analysis-overview-card--metric">
+                    <button
+                      type="button"
+                      className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
+                      onClick={() => navigate('/analysis/load-balance')}
+                    >
                       <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_acwr_kicker')}</span>
                       <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_acwr_title')}</h3>
                       <div className="analysis-injury-prevention-acwr-body">
@@ -1064,7 +880,7 @@ export default function Analysis() {
                           <span className={((Number(injuryStatus?.acwr) || 0) > 1.2) ? 'is-active-danger' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_danger')}</span>
                         </div>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Card 3: Daily Soreness Check-in + Coach Advice */}
                     <div className="analysis-overview-card analysis-overview-card--metric">
@@ -1073,25 +889,28 @@ export default function Analysis() {
                       <div className="analysis-injury-prevention-soreness-actions">
                         <button
                           type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-low', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'low') && 'is-active-low')}
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-low', latestSorenessLevel === 'low' && 'is-active-low')}
                           onClick={() => handleSorenessLog('low')}
                           disabled={sorenessSubmitting}
+                          aria-pressed={latestSorenessLevel === 'low'}
                         >
                           {t('analysis.stitch_injury_prevention_soreness_low')}
                         </button>
                         <button
                           type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-medium', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'medium') && 'is-active-medium')}
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-medium', latestSorenessLevel === 'medium' && 'is-active-medium')}
                           onClick={() => handleSorenessLog('medium')}
                           disabled={sorenessSubmitting}
+                          aria-pressed={latestSorenessLevel === 'medium'}
                         >
                           {t('analysis.stitch_injury_prevention_soreness_medium')}
                         </button>
                         <button
                           type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-high', (Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0]?.level === 'high') && 'is-active-high')}
+                          className={cx('analysis-injury-prevention-soreness-btn', 'is-high', latestSorenessLevel === 'high' && 'is-active-high')}
                           onClick={() => handleSorenessLog('high')}
                           disabled={sorenessSubmitting}
+                          aria-pressed={latestSorenessLevel === 'high'}
                         >
                           {t('analysis.stitch_injury_prevention_soreness_high')}
                         </button>
@@ -1099,9 +918,9 @@ export default function Analysis() {
                       {sorenessError && (
                         <div className="analysis-injury-prevention-log-error">{sorenessError}</div>
                       )}
-                      {Array.isArray(injuryStatus?.recentLogs) && injuryStatus.recentLogs[0] ? (
+                      {hasSorenessLog ? (
                         <div className="analysis-injury-prevention-soreness-meta">
-                          {t('analysis.stitch_injury_prevention_soreness_logged', { level: t(`analysis.stitch_injury_prevention_soreness_${injuryStatus.recentLogs[0].level}`) })}
+                          {t('analysis.stitch_injury_prevention_soreness_logged', { level: t(`analysis.stitch_injury_prevention_soreness_${latestSorenessLevel}`) })}
                         </div>
                       ) : (
                         <div className="analysis-injury-prevention-soreness-empty">

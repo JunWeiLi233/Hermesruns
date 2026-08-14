@@ -1,4 +1,4 @@
-import { apiFetch } from '../api.js';
+import { apiFetch } from '../api.ts';
 
 const TRACKER_FLAG = '__hermesLocalConsoleErrorTrackerInstalled';
 const pendingByFingerprint = new Map();

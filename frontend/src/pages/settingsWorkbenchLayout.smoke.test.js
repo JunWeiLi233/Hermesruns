@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const layoutSource = readFileSync(path.join(here, '..', 'components', 'SettingsAtlasLayout.jsx'), 'utf8');
 const styleSource = [
-  readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8'),
+  readFileSync(path.join(here, '..', 'styles', 'style.generated.css'), 'utf8'),
   readFileSync(path.join(here, '..', 'styles', '_split', 'settings.css'), 'utf8'),
 ].join('\n');
 const liquidGlassStyleSource = readFileSync(
@@ -142,6 +142,24 @@ assert.match(
   pageSource,
   /SETTINGS_REQUEST_TIMEOUT_MS[\s\S]*?new AbortController\(\)[\s\S]*?settingsController\.abort\(\)/,
   'Settings profile loading must abort after a bounded timeout and on unmount instead of hanging forever.',
+);
+
+assert.match(
+  pageSource,
+  /\/api\/profile\/me\/name[\s\S]*?method:\s*'PATCH'/,
+  'Profile names must use the backend display-name route and HTTP method.',
+);
+
+assert.match(
+  pageSource,
+  /new FormData\(\)[\s\S]*?\/api\/profile\/me\/avatar[\s\S]*?method:\s*'PUT'/,
+  'Settings must upload profile photos through the authenticated avatar endpoint.',
+);
+
+assert.match(
+  layoutSource,
+  /st-profile-avatar-input[\s\S]*?onAvatarUpload[\s\S]*?settings\.avatar_change/,
+  'The Settings hero must expose a visible profile-photo picker.',
 );
 
 console.log('[PASS] Settings workbench layout guardrails passed.');

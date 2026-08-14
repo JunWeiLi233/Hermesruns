@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const racesDetailSource = readFileSync(path.join(here, 'RacesDetail.jsx'), 'utf8');
-const racesDetailStyles = readFileSync(path.join(here, '..', 'styles', 'style.css'), 'utf8');
+const racesDetailStyles = readFileSync(path.join(here, '..', 'styles', 'style.generated.css'), 'utf8');
 const enPages = readFileSync(path.join(here, '..', 'i18n', 'locales', 'en', 'pages.js'), 'utf8');
 const zhPages = readFileSync(path.join(here, '..', 'i18n', 'locales', 'zh-CN', 'pages.js'), 'utf8');
 

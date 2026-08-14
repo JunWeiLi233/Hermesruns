@@ -1040,6 +1040,7 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
     optimal: t('analysisInsight.load_status_optimal'),
     unknown: t('analysisInsight.load_status_unknown'),
   };
+  const resolvedZoneLabel = zoneLabel || statusCopyMap[zoneKey] || statusCopyMap.unknown;
   const judgmentFollowupMap = {
     low: t('analysisInsight.load_followup_low'),
     moderate: t('analysisInsight.load_followup_moderate'),
@@ -1075,7 +1076,7 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang) 
     heroTitle: t('analysisInsight.load_hero_title'),
     heroAccent: t('analysisInsight.load_hero_accent'),
     statusLabel: t('analysisInsight.load_status_label'),
-    statusValue: zoneLabel,
+    statusValue: resolvedZoneLabel,
     ratioLabel: t('analysisInsight.load_ratio_label'),
     ratioValue: acwr != null ? acwr.toFixed(2) : '--',
     ratioRangeLabel: t('analysisInsight.load_ratio_range'),
@@ -1264,7 +1265,6 @@ export default function AnalysisInsightDetail() {
   }, [loadChartGeometry]);
 
   const handleLoadPointerLeave = useCallback(() => setLoadScrubber(null), []);
-  const injuryHeroLabel = t('analysis.injury_cinematic_live');
   const injuryHeroTitle = t('analysis.injury_cinematic_title');
   const injuryHeroSubtitle = t('analysis.injury_cinematic_subtitle');
   const injuryRiskToneLabel = t(`analysis.injury_cinematic_zone_${snapshot.injury.level}`);
@@ -1327,7 +1327,7 @@ export default function AnalysisInsightDetail() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights', active: true },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'weather' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -1385,11 +1385,11 @@ export default function AnalysisInsightDetail() {
 
         <div className="runner-shell-canvas analysis-insight-detail-canvas">
           {insightKey === 'coach-insight' && coachSystem ? (
-            <>
-              <section className="analysis-coach-command-hero" style={{ boxShadow: coachSystem.palette.shadow }}>
+            <div className="analysis-coach-profile">
+              <section className="analysis-coach-profile-hero" style={{ boxShadow: coachSystem.palette.shadow }}>
                 <div className="analysis-coach-command-hero-art" aria-hidden="true" />
                 <div className="analysis-coach-command-hero-copy">
-                  <button type="button" className="analysis-vo2-page-back" onClick={() => navigate('/analysis')}>
+                  <button type="button" className="analysis-coach-profile-back" onClick={() => navigate('/analysis')}>
                     <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
                     <span>{t('analysis.detail_back')}</span>
                   </button>
@@ -1397,39 +1397,46 @@ export default function AnalysisInsightDetail() {
                     <span className="analysis-coach-command-live-pill">{t('analysis.coach_dashboard_live')}</span>
                     <span className="analysis-coach-command-cycle-pill">{`${t('analysis.coach_dashboard_macrocycle')}: ${coachToneLabel}`}</span>
                   </div>
-                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-coach-command-coach-badge" />
-                  <h1>
+                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-coach-profile-coach analysis-coach-command-coach-badge" />
+                  <p className="analysis-coach-profile-kicker">
                     <span>{t('analysis.coach_dashboard_ready_title')}</span>
                     <strong>{t('analysis.coach_dashboard_ready_accent')}</strong>
-                  </h1>
-                  <p>{coachSystem.subtitle}</p>
-                  <div className="analysis-coach-command-pill-row">
-                    {[coachSystem.forecastDelta, `${coachSystem.copy.keyWorkoutLabel}: ${coachSystem.keyWorkout}`].map((pill) => (
-                      <span key={pill} className="analysis-coach-command-pill">{pill}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="analysis-coach-command-metric-stack">
-                  <article className="analysis-coach-command-hero-metric is-accent">
+                  </p>
+                  <h1>{coachSystem.title}</h1>
+                  <p className="analysis-coach-profile-summary">{coachSystem.subtitle}</p>
+                  <aside className="analysis-coach-profile-readiness">
                     <span>{coachSystem.copy.readinessLabel}</span>
-                    <strong>{coachSystem.readinessScore}</strong>
-                    <small>{coachSystem.readinessDescription}</small>
-                  </article>
+                    <div
+                      className="analysis-coach-profile-readiness-dial"
+                      style={{ '--coach-readiness-angle': `${Math.min(100, Math.max(0, coachSystem.readinessScore)) * 3.6}deg` }}
+                    >
+                      <strong>{coachSystem.readinessScore}</strong>
+                      <small>/ 100</small>
+                    </div>
+                    <p>{coachSystem.readinessDescription}</p>
+                  </aside>
+                </div>
+                <div className="analysis-coach-profile-metrics">
                   <article className="analysis-coach-command-hero-metric">
                     <span>{coachSystem.copy.raceForecastLabel}</span>
                     <strong>{coachSystem.forecastLabel}</strong>
                     <small>{coachSystem.forecastDelta}</small>
                   </article>
                   <article className="analysis-coach-command-hero-metric">
-                    <span>{coachSystem.copy.focusTitle}</span>
+                    <span>{coachSystem.copy.keyWorkoutLabel}</span>
                     <strong>{coachSystem.keyWorkout}</strong>
+                    <small>{coachSystem.copy.blockCopy}</small>
+                  </article>
+                  <article className="analysis-coach-command-hero-metric is-accent">
+                    <span>{coachSystem.copy.focusTitle}</span>
+                    <strong>{`${coachFocusShare}%`}</strong>
                     <small>{coachSystem.copy.focusCopy}</small>
                   </article>
                 </div>
               </section>
 
-              <section className="analysis-coach-command-grid">
-                <div className="analysis-coach-command-main">
+              <section className="analysis-coach-profile-workbench">
+                <div className="analysis-coach-profile-main">
                   <div className="analysis-coach-command-section-head">
                     <div>
                       <h2>{t('analysis.coach_dashboard_insights_title')}</h2>
@@ -1493,7 +1500,7 @@ export default function AnalysisInsightDetail() {
                     </div>
                   </article>
 
-                  <article className="analysis-coach-command-recent-card">
+                  <article className="analysis-coach-profile-recent analysis-coach-command-recent-card">
                     <div className="analysis-coach-command-panel-head">
                       <h3>{t('analysis.coach_dashboard_recent_title')}</h3>
                     </div>
@@ -1524,7 +1531,7 @@ export default function AnalysisInsightDetail() {
                   </article>
                 </div>
 
-                <aside className="analysis-coach-command-sidebar">
+                <aside className="analysis-coach-profile-blueprint">
                   <div className="analysis-coach-command-section-head is-sidebar">
                     <div>
                       <h2>{t('analysis.coach_dashboard_blueprint_title')}</h2>
@@ -1574,7 +1581,7 @@ export default function AnalysisInsightDetail() {
                 </aside>
               </section>
 
-              <section className="analysis-coach-command-footer-grid">
+              <section className="analysis-coach-profile-evidence">
                 <article className="analysis-coach-command-support-card">
                   <div className="analysis-coach-command-panel-head">
                     <h3>{coachSystem.copy.phaseTitle}</h3>
@@ -1618,7 +1625,7 @@ export default function AnalysisInsightDetail() {
                   </div>
                 </article>
               </section>
-            </>
+            </div>
           ) : insightKey === 'injury-risk' ? (
             <>
               <section className="analysis-cinematic-hero">
@@ -1626,10 +1633,6 @@ export default function AnalysisInsightDetail() {
                   <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
                   <span>{t('analysis.detail_back')}</span>
                 </button>
-                <div className="analysis-cinematic-live-pill">
-                  <span className="analysis-cinematic-live-dot" aria-hidden="true" />
-                  <span>{injuryHeroLabel}</span>
-                </div>
                 <h1>{injuryHeroTitle}</h1>
                 <p>{injuryHeroSubtitle}</p>
               </section>
@@ -1840,50 +1843,54 @@ export default function AnalysisInsightDetail() {
               </section>
             </>
           ) : insightKey === 'load-balance' && loadDashboard ? (
-            <>
-              <section className="analysis-load-command-hero">
-                <div className="analysis-load-command-hero-copy">
-                  <button type="button" className="analysis-vo2-page-back" onClick={() => navigate('/analysis')}>
+            <div className="analysis-load-profile">
+              <section className="analysis-load-profile-header">
+                <div className="analysis-load-profile-heading">
+                  <button type="button" className="analysis-load-profile-back" onClick={() => navigate('/analysis')}>
                     <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
                     <span>{t('analysis.detail_back')}</span>
                   </button>
-                  <span className="analysis-load-command-eyebrow">{loadDashboard.heroEyebrow}</span>
+                  <span className="analysis-load-profile-kicker">{loadDashboard.heroEyebrow}</span>
                   <h1>
                     <span>{loadDashboard.heroTitle}</span>
                     <strong>{loadDashboard.heroAccent}</strong>
                   </h1>
                 </div>
-                <div className="analysis-load-command-status">
-                  <span>{loadDashboard.statusLabel}</span>
-                  <strong className={cx('analysis-load-command-status-value', `is-${loadDashboard.statusTone}`)}>{loadDashboard.statusValue}</strong>
+                <div className="analysis-load-profile-readiness">
+                  <div className="analysis-load-profile-ring" style={{ '--load-progress': `${loadDashboard.ratioProgress}%` }}>
+                    <strong>{loadDashboard.ratioValue}</strong>
+                  </div>
+                  <div className="analysis-load-profile-readiness-copy">
+                    <span>{loadDashboard.statusLabel}</span>
+                    <strong className={cx('analysis-load-profile-status-value', `is-${loadDashboard.statusTone}`)}>{loadDashboard.statusValue}</strong>
+                  </div>
                 </div>
               </section>
 
-              <section className="analysis-load-command-top-grid">
-                <article className="analysis-load-command-ratio-card">
-                  <div className="analysis-load-command-ratio-glow" aria-hidden="true" />
-                  <div>
-                    <span>{loadDashboard.ratioLabel}</span>
-                    <div className="analysis-load-command-ratio-value">
-                      <strong>{loadDashboard.ratioValue}</strong>
-                      <AppIcon name="change_history" className="runner-dashboard-side-link-icon" />
-                    </div>
-                  </div>
-                  <div className="analysis-load-command-ratio-track-wrap">
-                    <div className="analysis-load-command-ratio-track" aria-hidden="true">
-                      <div className="analysis-load-command-ratio-fill" style={{ width: `${loadDashboard.ratioProgress}%` }} />
-                    </div>
-                    <div className="analysis-load-command-ratio-labels">
-                      <span>{t('analysisInsight.load_underload')}</span>
-                      <span>{loadDashboard.ratioRangeLabel}</span>
-                      <span>{t('analysisInsight.load_overreach')}</span>
-                    </div>
-                  </div>
-                </article>
+              <section className="analysis-load-profile-decision">
+                <div className="analysis-load-profile-decision-copy">
+                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-load-coach-badge" />
+                  <span className="analysis-load-profile-kicker">{loadDashboard.judgmentKicker}</span>
+                  <h2>{loadDashboard.judgmentTitle}</h2>
+                  <p>{loadDashboard.judgmentBody}</p>
+                  <p>{loadDashboard.judgmentFollowup}</p>
+                  <button type="button" className="analysis-load-profile-primary-action" onClick={() => navigate('/today-run')}>
+                    {loadDashboard.judgmentCta}
+                  </button>
+                </div>
+                <div className="analysis-load-profile-window">
+                  <span>{loadDashboard.nextWindowTitle}</span>
+                  <strong>{loadDashboard.nextWindowValue}</strong>
+                  <p>{loadDashboard.nextWindowCopy}</p>
+                  <small>{loadDashboard.nextWindowAthlete}</small>
+                </div>
+              </section>
 
-                <article className="analysis-load-command-chart-card">
+              <section className="analysis-load-profile-evidence">
+                <article className="analysis-load-command-chart-card analysis-load-profile-chart-card">
                   <div className="analysis-load-command-panel-head">
                     <div>
+                      <span className="analysis-load-profile-kicker">{loadDashboard.ratioLabel}</span>
                       <h2>{loadDashboard.chartTitle}</h2>
                     </div>
                     <div className="analysis-load-command-legend">
@@ -1910,29 +1917,17 @@ export default function AnalysisInsightDetail() {
                             <rect x={loadChartGeometry.padL} y={loadChartGeometry.padT} width={loadChartGeometry.width - loadChartGeometry.padL - loadChartGeometry.padR} height={loadChartGeometry.height - loadChartGeometry.padT - loadChartGeometry.padB} />
                           </clipPath>
                         </defs>
-
-                        {/* Hit area */}
                         <rect x="0" y="0" width={loadChartGeometry.width} height={loadChartGeometry.height} fill="transparent" />
-
-                        {/* Y-axis grid + labels */}
                         {loadChartGeometry.yTicks.map((tick) => (
                           <g key={tick.value}>
                             <line x1={loadChartGeometry.padL} x2={loadChartGeometry.width - loadChartGeometry.padR} y1={tick.y} y2={tick.y} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
                             <text x={loadChartGeometry.padL - 8} y={tick.y + 4} textAnchor="end" fontSize="11" fill="rgba(255,255,255,0.38)">{tick.value}</text>
                           </g>
                         ))}
-
                         <g clipPath="url(#loadChartClip)">
-                          {/* Acute area fill */}
                           <path d={loadChartGeometry.acuteAreaPath} fill="url(#loadAcuteGrad)" />
-
-                          {/* Chronic line */}
                           <path d={loadChartGeometry.chronicPath} fill="none" stroke="rgba(120,180,255,0.65)" strokeWidth="2" strokeDasharray="5 3" strokeLinejoin="round" />
-
-                          {/* Acute line */}
                           <path d={loadChartGeometry.acutePath} fill="none" stroke="#f07561" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-
-                          {/* Scrubber */}
                           {loadScrubber && (
                             <>
                               <line
@@ -1947,19 +1942,13 @@ export default function AnalysisInsightDetail() {
                             </>
                           )}
                         </g>
-
-                        {/* X-axis labels */}
                         {loadChartGeometry.xTicks.map((tick) => (
                           <text key={tick.day} x={tick.cx} y={loadChartGeometry.height - loadChartGeometry.padB + 18} textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.38)">{tick.label}</text>
                         ))}
                       </svg>
                     ) : (
-                      <div className="analysis-load-command-chart-empty">
-                        {t('analysisInsight.load_no_data')}
-                      </div>
+                      <div className="analysis-load-command-chart-empty">{t('analysisInsight.load_no_data')}</div>
                     )}
-
-                    {/* Scrubber tooltip */}
                     {loadScrubber ? (
                       <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
                         <span>{loadScrubber.label}</span>
@@ -1976,9 +1965,30 @@ export default function AnalysisInsightDetail() {
                     )}
                   </div>
                 </article>
+
+                <article className="analysis-load-command-ratio-card analysis-load-profile-ratio-card">
+                  <div>
+                    <span>{loadDashboard.ratioLabel}</span>
+                    <div className="analysis-load-command-ratio-value">
+                      <strong>{loadDashboard.ratioValue}</strong>
+                      <AppIcon name="change_history" className="runner-dashboard-side-link-icon" />
+                    </div>
+                    <p>{loadDashboard.statusValue}</p>
+                  </div>
+                  <div className="analysis-load-command-ratio-track-wrap">
+                    <div className="analysis-load-command-ratio-track" aria-hidden="true">
+                      <div className="analysis-load-command-ratio-fill" style={{ width: `${loadDashboard.ratioProgress}%` }} />
+                    </div>
+                    <div className="analysis-load-command-ratio-labels">
+                      <span>{t('analysisInsight.load_underload')}</span>
+                      <span>{loadDashboard.ratioRangeLabel}</span>
+                      <span>{t('analysisInsight.load_overreach')}</span>
+                    </div>
+                  </div>
+                </article>
               </section>
 
-              <section className="analysis-load-command-metric-grid">
+              <section className="analysis-load-profile-metrics" aria-label={loadDashboard.ratioLabel}>
                 {loadDashboard.metricCards.map((metric) => (
                   <article key={metric.label} className={cx('analysis-load-command-metric-card', `is-${metric.tone}`)}>
                     <span>{metric.label}</span>
@@ -1988,11 +1998,60 @@ export default function AnalysisInsightDetail() {
                 ))}
               </section>
 
-              <section className="analysis-load-command-methodology">
+              <section className="analysis-load-profile-ledger">
+                <div className="analysis-load-command-section-head">
+                  <div>
+                    <span className="analysis-load-profile-kicker">{loadDashboard.samplesFilter}</span>
+                    <h2>{loadDashboard.samplesTitle}</h2>
+                  </div>
+                  <button type="button" className="analysis-load-command-link" onClick={() => navigate('/runs')}>
+                    {loadDashboard.samplesViewAll}
+                  </button>
+                </div>
+                <div className="analysis-load-command-sample-list">
+                  {loadDashboard.sampleRows.length ? loadDashboard.sampleRows.map((row) => (
+                    <button
+                      key={`${row.id || row.title}-${row.dateLabel}`}
+                      type="button"
+                      className="analysis-load-command-sample-row"
+                      onClick={() => row.id && navigate(`/run/${row.id}`)}
+                    >
+                      <div className="analysis-load-command-sample-main">
+                        <div className="analysis-load-command-sample-icon" aria-hidden="true">
+                          <AppIcon name={row.icon} className="runner-dashboard-side-link-icon" />
+                        </div>
+                        <div>
+                          <h3>{row.title}</h3>
+                          <p>{row.dateLabel}</p>
+                        </div>
+                      </div>
+                      <div className="analysis-load-command-sample-metrics">
+                        <div>
+                          <span>{loadDashboard.sampleDistanceLabel}</span>
+                          <strong>{row.distanceLabel}</strong>
+                        </div>
+                        <div>
+                          <span>{loadDashboard.sampleLoadLabel}</span>
+                          <strong>{row.loadLabel}</strong>
+                        </div>
+                      </div>
+                    </button>
+                  )) : (
+                    <div className="analysis-insight-empty-state">{t('analysis.insight_no_recent_runs')}</div>
+                  )}
+                </div>
+                <div className="analysis-load-command-footer">
+                  <button type="button" className="analysis-load-command-archive-button" onClick={() => navigate('/runs')}>
+                    {loadDashboard.samplesViewAll}
+                  </button>
+                </div>
+              </section>
+
+              <section className="analysis-load-profile-methodology">
                 <article className="analysis-load-command-methodology-card">
                   <div className="analysis-load-command-panel-head">
                     <div>
-                      <span className="analysis-overview-card-kicker" style={{ letterSpacing: lang === 'zh-CN' ? '0.08em' : undefined, textTransform: lang === 'zh-CN' ? 'none' : undefined }}>{t('analysis.load_methodology_kicker')}</span>
+                      <span className="analysis-load-profile-kicker">{t('analysis.load_methodology_kicker')}</span>
                       <h2>{t('analysis.load_methodology_title')}</h2>
                     </div>
                   </div>
@@ -2024,78 +2083,7 @@ export default function AnalysisInsightDetail() {
                   </div>
                 </article>
               </section>
-              <section className="analysis-load-command-bottom-grid">
-                <div className="analysis-load-command-side-column">
-                  <article className="analysis-load-command-judgment-card">
-                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-load-coach-badge" />
-                    <span>{loadDashboard.judgmentKicker}</span>
-                    <h3>{loadDashboard.judgmentTitle}</h3>
-                    <p>{loadDashboard.judgmentBody}</p>
-                    <p>{loadDashboard.judgmentFollowup}</p>
-                    <button type="button" className="analysis-load-command-cta" onClick={() => navigate('/today-run')}>
-                      {loadDashboard.judgmentCta}
-                    </button>
-                  </article>
-
-                  <article className="analysis-load-command-window-card">
-                    <div>
-                      <h4>{loadDashboard.nextWindowTitle}</h4>
-                      <p>{loadDashboard.nextWindowAthlete}</p>
-                    </div>
-                    <div className="analysis-load-command-window-meta">
-                      <strong>{loadDashboard.nextWindowValue}</strong>
-                      <span>{loadDashboard.nextWindowCopy}</span>
-                    </div>
-                  </article>
-                </div>
-
-                <div className="analysis-load-command-samples">
-                  <div className="analysis-load-command-section-head">
-                    <h2>{loadDashboard.samplesTitle}</h2>
-                    <button type="button" className="analysis-load-command-link" onClick={() => navigate('/runs')}>
-                      {loadDashboard.samplesFilter}
-                    </button>
-                  </div>
-                  <div className="analysis-load-command-sample-list">
-                    {loadDashboard.sampleRows.length ? loadDashboard.sampleRows.map((row) => (
-                      <button
-                        key={`${row.id || row.title}-${row.dateLabel}`}
-                        type="button"
-                        className="analysis-load-command-sample-row"
-                        onClick={() => row.id && navigate(`/run/${row.id}`)}
-                      >
-                        <div className="analysis-load-command-sample-main">
-                          <div className="analysis-load-command-sample-icon" aria-hidden="true">
-                            <AppIcon name={row.icon} className="runner-dashboard-side-link-icon" />
-                          </div>
-                          <div>
-                            <h3>{row.title}</h3>
-                            <p>{row.dateLabel}</p>
-                          </div>
-                        </div>
-                        <div className="analysis-load-command-sample-metrics">
-                          <div>
-                            <span>{loadDashboard.sampleDistanceLabel}</span>
-                            <strong>{row.distanceLabel}</strong>
-                          </div>
-                          <div>
-                            <span>{loadDashboard.sampleLoadLabel}</span>
-                            <strong>{row.loadLabel}</strong>
-                          </div>
-                        </div>
-                      </button>
-                    )) : (
-                      <div className="analysis-insight-empty-state">{t('analysis.insight_no_recent_runs')}</div>
-                    )}
-                  </div>
-                  <div className="analysis-load-command-footer">
-                    <button type="button" className="analysis-load-command-archive-button" onClick={() => navigate('/runs')}>
-                      {loadDashboard.samplesViewAll}
-                    </button>
-                  </div>
-                </div>
-              </section>
-            </>
+            </div>
           ) : insightKey === 'intensity' && intensityDashboard ? (
             <div className="analysis-intensity-profile-content">
               <section className="analysis-intensity-command-hero">

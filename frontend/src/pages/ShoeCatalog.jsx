@@ -4,6 +4,7 @@ import { apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
+import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -17,55 +18,6 @@ function normalizeBrandKey(brand) {
     .toLowerCase()
     .replace(/\s+/g, '')
     .replace(/[!.,]/g, '');
-}
-
-function brandLogoSpec(brand) {
-  const key = normalizeBrandKey(brand);
-  const make = ({ bg, fg, text }) => ({
-    bg,
-    fg,
-    text,
-    fontSize: /[\u4e00-\u9fff]/.test(text) ? 12 : 13,
-  });
-
-  if (key === 'nike') return make({ bg: '#f97316', fg: '#ffffff', text: 'NIKE' });
-  if (key === 'adidas') return make({ bg: '#111827', fg: '#ffffff', text: 'ADID' });
-  if (key === 'asics') return make({ bg: '#2563eb', fg: '#ffffff', text: 'ASICS' });
-  if (key === 'newbalance') return make({ bg: '#fbbf24', fg: '#0f172a', text: 'NB' });
-  if (key === 'hoka') return make({ bg: '#22c55e', fg: '#ffffff', text: 'HOKA' });
-  if (key === 'brooks') return make({ bg: '#3b82f6', fg: '#ffffff', text: 'BROOKS' });
-  if (key === 'saucony') return make({ bg: '#ef4444', fg: '#ffffff', text: 'SAU' });
-  if (key === 'on') return make({ bg: '#e5e7eb', fg: '#0f172a', text: 'ON' });
-  if (key === 'mizuno') return make({ bg: '#8b5cf6', fg: '#ffffff', text: 'M' });
-  if (key === 'altra') return make({ bg: '#a16207', fg: '#ffffff', text: 'AL' });
-  if (key === 'puma') return make({ bg: '#0f172a', fg: '#ffffff', text: 'PUMA' });
-  if (key.includes('361')) return make({ bg: '#1d4ed8', fg: '#ffffff', text: '361' });
-  if (key === 'lining' || (brand || '').includes('李宁')) return make({ bg: '#dc2626', fg: '#ffffff', text: '李宁' });
-  if (key === 'anta' || (brand || '').includes('安踏')) return make({ bg: '#f97316', fg: '#ffffff', text: '安踏' });
-  if (key === 'xtep' || (brand || '').includes('特步')) return make({ bg: '#2563eb', fg: '#ffffff', text: '特步' });
-  return null;
-}
-
-function BrandLogo({ brand, fallbackEmoji }) {
-  const spec = brandLogoSpec(brand);
-  if (!spec) return <span className="shoe-brand-logo-fallback">{fallbackEmoji || 'S'}</span>;
-  return (
-    <svg className="shoe-brand-logo-svg" viewBox="0 0 40 40" role="img" aria-label={`${brand} logo`}>
-      <rect x="2" y="2" width="36" height="36" rx="10" fill={spec.bg} />
-      <text
-        x="20"
-        y="25"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={spec.fg}
-        fontFamily={/[\u4e00-\u9fff]/.test(spec.text) ? `'Microsoft YaHei','PingFang SC',system-ui,Segoe UI,Arial'` : 'system-ui,Segoe UI,Arial'}
-        fontSize={spec.fontSize}
-        fontWeight="800"
-      >
-        {spec.text}
-      </text>
-    </svg>
-  );
 }
 
 const CATALOG_CATEGORY_META = {
@@ -424,7 +376,7 @@ export default function ShoeCatalog() {
                       onClick={() => handlePickBrand(entry)}
                     >
                       <span className="add-shoes-brand-logo">
-                        <BrandLogo brand={entry.brand} fallbackEmoji={entry.logo} />
+                        <ShoeBrandLogo brand={entry.brand} fallbackEmoji={entry.logo} />
                       </span>
                       <div className="add-shoes-brand-copy">
                         <strong>{localizeShoeBrand(entry.brand, lang)}</strong>
@@ -483,7 +435,7 @@ export default function ShoeCatalog() {
                             onClick={() => setSelectedModel(item.model)}
                           >
                             <span className="add-shoes-model-art">
-                              <BrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
+                              <ShoeBrandLogo brand={selectedBrand.brand} fallbackEmoji={selectedBrand.logo} />
                             </span>
                             <strong>{getCatalogModelLabel(item, lang)}</strong>
                             <span>{getCatalogCategoryLabel(item.category || item.type, t)}</span>

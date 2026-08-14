@@ -6,7 +6,8 @@ This file owns Hermes UI and design rules.
 
 - `design.md` is the default visual source of truth for meaningful Hermes UI work.
 - For `/auto-hermes`, `node .tools/auto-hermes-skills.mjs --json` is the durable frontend design skill manifest.
-- Combine `design.md`, the current user request, and any supplied reference image/mockup/export.
+- Combine `design.md`, the current user request, any supplied reference image/mockup/export, and any explicitly selected external `DESIGN.md` reference.
+- `VoltAgent/awesome-design-md` (`https://github.com/VoltAgent/awesome-design-md`) is an approved optional external `DESIGN.md` reference library, not a replacement for Hermes design authority.
 - Preserve product behavior, routing, auth, and real data wiring unless the task explicitly changes them.
 - Improve runner usefulness first, then visual polish.
 
@@ -51,7 +52,18 @@ Before editing, lock:
 - visual goal
 - preserve list
 - round type: `visual-bug`, `interaction-bug`, `structural-redesign`, or `mimic-implementation`
-- reference source: user reference, `design.md`, or the current approved Hermes surface
+- reference source: user reference, `design.md`, the current approved Hermes surface, selected `awesome-design-md` `DESIGN.md`, or generated reference
+
+## External DESIGN.md Reference Intake
+
+Use `VoltAgent/awesome-design-md` only when the user names it, supplies a specific site/brand/style target from that collection, asks for mimic/reference implementation without a stronger local reference, or design review needs a concrete external `DESIGN.md`.
+
+When used:
+
+- Lock the selected source as `reference source: awesome-design-md:<site-or-file-url>`.
+- Extract portable primitives: atmosphere, color roles, typography hierarchy, component treatment, layout rhythm, depth/elevation, responsive behavior, and do/don't guardrails.
+- Do not copy logos, protected brand identity, exact product copy, screenshots/assets, route behavior, analytics, or site-specific information architecture unless the user explicitly owns or approves that material.
+- Adapt the reference into Hermes runner value, real data wiring, bilingual copy discipline, accessibility, and the Kinetic Editorial system in `design.md`.
 
 ## Mimic Protocol
 

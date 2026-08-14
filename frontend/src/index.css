@@ -34,9 +34,27 @@
 @import './styles/auth-liquid-glass.css';
 @import './styles/all-pages-liquid-glass.css';
 @import './styles/rewards-profile-alignment.css';
-@import './styles/analysis-subnav.css';
 @import './styles/analysis-intensity-profile-alignment.css';
+@import './styles/prediction-profile-alignment.css';
 @import './styles/runs-subnav.css';
 @import './styles/admin-monitoring-dashboard.css';
 @import './styles/loading-skeleton.css';
+@import './styles/run-detail-profile-minimal.css';
+@import './styles/dark-mode-cohesion.css';
+@import './styles/analysis-load-balance-profile-alignment.css';
+@import './styles/add-shoes-profile-alignment.css';
+@import './styles/runner-shell-workout-button.css';
+
+/* Leaflet positions default 256px tiles at fractional screen coordinates.
+ * Overlap their painted edges by one pixel so the map backing never appears
+ * as white seams between adjacent OpenStreetMap tiles. */
+.leaflet-container img.leaflet-tile {
+  width: 257px !important;
+  height: 257px !important;
+  max-width: none !important;
+  max-height: none !important;
+  mix-blend-mode: normal !important;
+  backface-visibility: hidden;
+}
+
 @config '../tailwind.config.js';

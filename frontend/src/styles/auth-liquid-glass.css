@@ -24,7 +24,8 @@
     radial-gradient(circle at 78% 15%, rgba(255, 255, 255, 0.74), transparent 18rem);
 }
 
-#root .auth-page--liquid-glass > .auth-dot-field {
+#root .auth-page--liquid-glass > .auth-dot-field,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand > .auth-dot-field {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -32,7 +33,8 @@
   pointer-events: none;
 }
 
-#root .auth-page--liquid-glass > .auth-dot-field .auth-dot-field__canvas {
+#root .auth-page--liquid-glass > .auth-dot-field .auth-dot-field__canvas,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand > .auth-dot-field .auth-dot-field__canvas {
   display: block;
   width: 100%;
   height: 100%;
@@ -45,6 +47,12 @@
   min-height: 100dvh;
   gap: clamp(28px, 5vw, 80px);
   padding: clamp(26px, 4vw, 64px);
+}
+
+/* The command-entry rail intentionally reaches the viewport edge. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-shell {
+  width: 100%;
+  padding: 0;
 }
 
 #root .auth-page--liquid-glass .auth-flow-brand {
@@ -96,6 +104,66 @@
   opacity: 1;
   transform: none;
   animation: authGlassSlideEnter 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Command-entry slides contain live metric values, not an overflowing visual. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-viewport {
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] :is(
+  .auth-flow-slide-track,
+  .auth-flow-slide
+) {
+  height: auto;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide {
+  gap: 10px;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-hero {
+  font-size: clamp(2.15rem, 9.2vw, 3.5rem);
+  line-height: 0.92;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-text {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-details {
+  gap: 8px;
+  margin-top: 0;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-detail {
+  padding-top: 6px;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats div {
+  min-width: 0;
+  padding: 8px;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats strong {
+  font-size: 1.25rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats span {
+  font-size: 0.62rem;
+  line-height: 1.2;
 }
 
 @keyframes authGlassSlideEnter {
@@ -345,6 +413,28 @@
   border-color: rgba(203, 82, 63, 0.18);
 }
 
+#root .auth-page--liquid-glass .auth-flow-btn--strava.auth-flow-btn--strava-official,
+#root .auth-page--liquid-glass .auth-flow-btn--strava.auth-flow-btn--strava-official:hover:not(:disabled) {
+  width: 237px;
+  max-width: 100%;
+  min-height: 0;
+  justify-self: center;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-btn__strava-official {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 #root .auth-page--liquid-glass .auth-flow-btn--google {
   grid-column: 2;
   grid-row: 1;
@@ -452,12 +542,86 @@
 
 #root .legal-page--terms.auth-page--liquid-glass {
   padding: clamp(14px, 2vw, 28px);
+  background: #f8f5ee;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass::before {
+  display: none;
 }
 
 #root .legal-page--terms.auth-page--liquid-glass .legal-page-shell {
   width: min(1040px, 100%);
-  padding: clamp(18px, 2.5vw, 32px);
-  border-radius: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Terms uses one quiet document card instead of a second, oversized glass shell. */
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-header {
+  padding: clamp(16px, 2vw, 24px) 16px;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-content {
+  overflow: hidden;
+  border: 1px solid rgba(93, 75, 57, 0.1);
+  border-radius: 32px;
+  background: var(--lp-paper-clean, #fdfcf9);
+  box-shadow: 0 22px 52px rgba(71, 56, 43, 0.08);
+}
+
+#root .legal-page--terms.auth-page--liquid-glass .legal-page-sections--editorial {
+  border-inline: 0;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass {
+  padding: clamp(14px, 2vw, 28px);
+  background: #f8f5ee;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass::before {
+  display: none;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-shell {
+  width: min(1040px, 100%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-header {
+  padding: clamp(16px, 2vw, 24px) 16px;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass .legal-page-content {
+  overflow: hidden;
+  border: 1px solid rgba(93, 75, 57, 0.1);
+  border-radius: 32px;
+  background: var(--lp-paper-clean, #fdfcf9);
+  box-shadow: 0 22px 52px rgba(71, 56, 43, 0.08);
+}
+
+#root .legal-page--privacy.auth-page--liquid-glass :is(
+  .legal-page-sections--editorial,
+  .privacy-signal-strip
+) {
+  border-inline: 0;
 }
 
 #root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial {
@@ -717,7 +881,31 @@
   }
 
   #root .legal-page--terms.auth-page--liquid-glass .legal-page-shell {
-    padding: 14px;
+    padding: 0;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-header {
+    padding: 14px 12px;
+  }
+
+  #root .legal-page--terms.auth-page--liquid-glass .legal-page-content {
+    border-radius: 24px;
+  }
+
+  #root .legal-page--privacy.auth-page--liquid-glass {
+    padding: 8px;
+  }
+
+  #root .legal-page--privacy.auth-page--liquid-glass .legal-page-shell {
+    padding: 0;
+  }
+
+  #root .legal-page--privacy.auth-page--liquid-glass .legal-page-header {
+    padding: 14px 12px;
+  }
+
+  #root .legal-page--privacy.auth-page--liquid-glass .legal-page-content {
+    border-radius: 24px;
   }
 
   #root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const landingSplitSource = readFileSync(path.join(here, '../styles/_split/landing.css'), 'utf8');
 const revealHookSource = readFileSync(path.join(here, '../hooks/useScrollReveal.js'), 'utf8');
 const heroAssetPath = path.join(here, '../assets/generated/landing-command-hero-background.webp');
@@ -36,8 +36,14 @@ assert.doesNotMatch(
 
 assert.match(
   landingSource,
-  /function StravaLogo\([\s\S]*<rect width="168" height="48" rx="10" fill="#fc4c02" \/>[\s\S]*STRAVA/,
-  'Landing should render the Strava logo badge from the provided orange/white brand reference.',
+  /import stravaConnectButton from '\.\.\/assets\/btn_strava_connect_with_orange\.svg';/,
+  'Landing should import Strava\'s official OAuth button artwork.',
+);
+
+assert.doesNotMatch(
+  landingSource,
+  /function StravaLogo\(/,
+  'Landing should not redraw the Strava logo with custom SVG text.',
 );
 
 assert.equal(
@@ -47,9 +53,15 @@ assert.equal(
 );
 
 assert.equal(
-  [...landingSource.matchAll(/<StravaLogo \/>/g)].length,
+  [...landingSource.matchAll(/className="landing-strava-connect-button"/g)].length,
   2,
-  'Both large Strava CTA buttons should render the Strava logo.',
+  'Both large Strava CTA buttons should render the official Strava asset.',
+);
+
+assert.equal(
+  [...landingSource.matchAll(/src=\{stravaConnectButton\}/g)].length,
+  2,
+  'Both large Strava CTA buttons should source the vendored official artwork.',
 );
 
 assert.doesNotMatch(

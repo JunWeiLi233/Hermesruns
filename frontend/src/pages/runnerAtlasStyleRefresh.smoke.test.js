@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
 const atlasBlockStart = styleSource.indexOf('/* Runner atlas style refresh final override */');
 assert.notEqual(atlasBlockStart, -1, 'Runner atlas style refresh should be recorded as a final override block.');

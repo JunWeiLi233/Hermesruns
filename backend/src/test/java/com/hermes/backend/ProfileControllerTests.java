@@ -6,6 +6,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.mock.web.MockMultipartFile;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -85,9 +90,81 @@ class ProfileControllerTests {
         assertThat(response.getBody()).isEqualTo(new ProfileController.ProfileResponse(
                 "runner@hermes.test",
                 "Hermes Runner",
+                null,
                 true,
                 true
         ));
+        verify(runnerRepository).save(runner);
+    }
+
+    @Test
+    void updateAvatarNormalizesAndPersistsPng() throws IOException {
+        AuthService authService = mock(AuthService.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(runnerRepository.save(runner)).thenReturn(runner);
+        ProfileController controller = controller(
+                authService,
+                runnerRepository,
+                mock(ActivityRepository.class),
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.updateAvatar(
+                "Bearer runner-token",
+                new MockMultipartFile("image", "runner.png", "image/png", samplePng())
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.ProfileResponse profile = (ProfileController.ProfileResponse) response.getBody();
+        assertThat(profile.avatarUrl()).startsWith("data:image/png;base64,");
+        assertThat(runner.getAvatarImage()).isNotEmpty();
+        verify(runnerRepository).save(runner);
+    }
+
+    @Test
+    void updateAvatarRejectsUnsupportedContentType() {
+        AuthService authService = mock(AuthService.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        ProfileController controller = controller(authService);
+
+        ResponseEntity<?> response = controller.updateAvatar(
+                "Bearer runner-token",
+                new MockMultipartFile("image", "runner.gif", "image/gif", new byte[]{1, 2, 3})
+        );
+
+        assertError(response, HttpStatus.BAD_REQUEST, "Upload a PNG or JPEG profile image.");
+    }
+
+    @Test
+    void deleteAvatarClearsSavedImage() throws IOException {
+        AuthService authService = mock(AuthService.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        Runner runner = runner();
+        runner.setAvatarImage(samplePng());
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(runnerRepository.save(runner)).thenReturn(runner);
+        ProfileController controller = controller(
+                authService,
+                runnerRepository,
+                mock(ActivityRepository.class),
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.deleteAvatar("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.ProfileResponse profile = (ProfileController.ProfileResponse) response.getBody();
+        assertThat(profile.avatarUrl()).isNull();
+        assertThat(runner.getAvatarImage()).isNull();
         verify(runnerRepository).save(runner);
     }
 
@@ -597,6 +674,7 @@ class ProfileControllerTests {
                 "steady", 86,
                 82, "GREEN",
                 80, 74, 83, 72,
+                82, true, true, "GARMIN",
                 190, 49, null,
                 null
         );
@@ -863,6 +941,7 @@ class ProfileControllerTests {
                 "ready", 88,
                 84, "GREEN",
                 81, 75, 85, 73,
+                84, true, true, "GARMIN",
                 188, 50, null,
                 null
         );
@@ -1053,6 +1132,13 @@ class ProfileControllerTests {
                 acclimatizationService,
                 shoeRepository
         );
+    }
+
+    private byte[] samplePng() throws IOException {
+        BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", output);
+        return output.toByteArray();
     }
 
     private Runner runner() {

@@ -37,6 +37,7 @@ public class LoginController {
     private final SecretEncryptionService secretEncryptionService;
     private final AiUsageService aiUsageService;
     private final EmailVerificationService emailVerificationService;
+    private final EmailValidationService emailValidationService;
     private final VerificationResendLimiter verificationResendLimiter;
     private final PasswordResetLimiter passwordResetLimiter;
     private final PasswordResetService passwordResetService;
@@ -49,6 +50,7 @@ public class LoginController {
     public LoginController(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter,
                            SecretEncryptionService secretEncryptionService,
                            AiUsageService aiUsageService, EmailVerificationService emailVerificationService,
+                           EmailValidationService emailValidationService,
                            VerificationResendLimiter verificationResendLimiter,
                            PasswordResetLimiter passwordResetLimiter,
                            PasswordResetService passwordResetService,
@@ -60,6 +62,7 @@ public class LoginController {
         this.secretEncryptionService = secretEncryptionService;
         this.aiUsageService = aiUsageService;
         this.emailVerificationService = emailVerificationService;
+        this.emailValidationService = emailValidationService;
         this.verificationResendLimiter = verificationResendLimiter;
         this.passwordResetLimiter = passwordResetLimiter;
         this.passwordResetService = passwordResetService;
@@ -92,7 +95,7 @@ public class LoginController {
         if (runnerOptional.isEmpty()) {
             rateLimiter.recordFailure(ip);
             log.warn("Auth login failed ip={} emailHash={}", ip, emailHash(email));
-            return error(HttpStatus.UNAUTHORIZED, "Invalid credentials.");
+            return error(HttpStatus.UNAUTHORIZED, "Invalid password/username");
         }
 
         rateLimiter.recordSuccess(ip);
@@ -227,6 +230,27 @@ public class LoginController {
 
         if (!PasswordStrengthChecker.looksLikeEmail(normalizedEmail)) {
             return error(HttpStatus.BAD_REQUEST, "Enter a valid email address.");
+        }
+
+        EmailValidationService.Verdict emailVerdict = emailValidationService.validateSignupEmail(normalizedEmail);
+        switch (emailVerdict.status()) {
+            case INVALID_SYNTAX -> {
+                return errorWithCode(HttpStatus.BAD_REQUEST, "Enter a valid email address.", "INVALID_EMAIL");
+            }
+            case DISPOSABLE -> {
+                return errorWithCode(HttpStatus.BAD_REQUEST,
+                        "Disposable email addresses are not allowed. Sign up with a permanent email.",
+                        "DISPOSABLE_EMAIL");
+            }
+            case DOMAIN_UNDELIVERABLE -> {
+                Map<String, String> err = new LinkedHashMap<>();
+                err.put("error", "This email domain cannot receive mail. Check the address for typos.");
+                err.put("code", "INVALID_EMAIL_DOMAIN");
+                if (emailVerdict.suggestedEmail() != null) {
+                    err.put("suggestedEmail", emailVerdict.suggestedEmail());
+                }
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
+            }
         }
 
         PasswordStrengthChecker.Result pw = PasswordStrengthChecker.check(rawPassword);

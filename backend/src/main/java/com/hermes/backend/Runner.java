@@ -44,6 +44,10 @@ public class Runner {
 
     private String displayName;
 
+    @Lob
+    @JsonIgnore
+    private byte[] avatarImage;
+
     @Column(length = 280)
     private String settingsMantra;
 
@@ -175,6 +179,14 @@ public class Runner {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public byte[] getAvatarImage() {
+        return avatarImage;
+    }
+
+    public void setAvatarImage(byte[] avatarImage) {
+        this.avatarImage = avatarImage;
     }
 
     public String getSettingsMantra() {

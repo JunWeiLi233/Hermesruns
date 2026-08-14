@@ -17,8 +17,9 @@ function assert(condition, message) {
 }
 
 const componentSource = read('components/RunnerShellTopNav.jsx');
-const styleSource = read('styles/style.css');
+const styleSource = read('styles/style.generated.css');
 const runnerShellStyleSource = read('styles/_split/runner-shell.css');
+const liquidGlassStyleSource = read('styles/all-pages-liquid-glass.css');
 const profileStyleSource = read('styles/_split/profile.css');
 const navSource = read('utils/runnerShellNav.js');
 const iconSource = read('components/AppIcon.jsx');
@@ -46,10 +47,25 @@ assert(
 );
 
 assert(
-  /\.runner-shell-topnav--command\s*\{[\s\S]*grid-template-columns:\s*minmax\(178px,\s*max-content\)\s+minmax\(220px,\s*1fr\)\s+auto;/.test(styleSource)
-    && /Runner shell topnav route-chip removal/.test(styleSource)
-    && /\.runner-shell-topnav--command\s*\{[\s\S]*width:\s*fit-content;[\s\S]*grid-template-columns:\s*minmax\(178px,\s*max-content\)\s+auto;/.test(styleSource),
+  /Source: frontend\/src\/styles\/_split\/runner-shell\.css/.test(styleSource)
+    && /\.runner-shell-topnav--command\s*\{[\s\S]*width:\s*fit-content;[\s\S]*grid-template-columns:\s*minmax\(0,\s*max-content\)\s+auto;/.test(styleSource),
   'The shared runner topnav should collapse to a compact identity + meta grid after route-chip removal.',
+);
+
+assert(
+  /\.runner-shell-topnav--command\s*\{[\s\S]*padding:\s*0;[\s\S]*border:\s*0;[\s\S]*background:\s*transparent;[\s\S]*box-shadow:\s*none;/.test(runnerShellStyleSource),
+  'The shared runner topnav should keep only the localized page label without route-chip chrome.',
+);
+
+assert(
+  /#root\s+\.runner-shell-page\s+\.runner-shell-topnav--command\s*\{[\s\S]*padding:\s*0\s*!important;[\s\S]*border:\s*0\s*!important;[\s\S]*border-radius:\s*0\s*!important;[\s\S]*background:\s*transparent\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/.test(liquidGlassStyleSource),
+  'The later liquid-glass runner chrome must not restore a button layer around the top-nav label.',
+);
+
+assert(
+  /#root\s+\.runner-shell-page\s+\.runner-shell-topnav--command\s*\{[\s\S]*margin:\s*0\s*!important;[\s\S]*overflow:\s*visible\s*!important;/.test(liquidGlassStyleSource)
+    && /#root\s+\.runner-shell-page\s+\.runner-shell-topnav--command\s+\.runner-shell-topnav-current-stack\s*\{[\s\S]*margin:\s*0\s*!important;[\s\S]*overflow:\s*visible\s*!important;/.test(liquidGlassStyleSource),
+  'The text-only runner label should not be clipped or offset by residual nav spacing.',
 );
 
 assert(

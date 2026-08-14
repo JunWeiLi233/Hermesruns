@@ -1,4 +1,10 @@
 /* Profile-parity presentation for /analysis/intensity. */
+#root .analysis-insight-detail-page.is-intensity .runner-shell-side-link.is-active {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
   --intensity-radius-xl: 20px;
   --intensity-radius-lg: 16px;
@@ -345,21 +351,25 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment {
   flex: 1;
   padding: 24px;
-  border: 0 !important;
+  border: 1px solid rgba(28, 25, 23, 0.08) !important;
   border-radius: var(--intensity-radius-xl);
-  background: linear-gradient(135deg, #2c2218 0%, #1a1510 52%, #0f0d0a 100%) !important;
-  box-shadow: none !important;
-  color: #f6f1eb;
+  background: linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%) !important;
+  box-shadow: 0 14px 38px rgba(28, 25, 23, 0.07) !important;
+  color: #1c1917;
 }
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy strong,
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment h3,
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p {
-  color: #f6f1eb;
+  color: #1c1917;
 }
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy span {
-  color: rgba(246, 241, 235, 0.62);
+  color: #78716c;
+}
+
+#root .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy strong {
+  color: #1c1917 !important;
 }
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment h3 {
@@ -375,7 +385,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p {
   margin: 0;
-  color: rgba(246, 241, 235, 0.74);
+  color: #78716c;
   font-size: 0.78rem;
   line-height: 1.55;
 }

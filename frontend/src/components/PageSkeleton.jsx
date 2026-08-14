@@ -593,8 +593,9 @@ function RunnerPageSkeleton({ variant = 'runner' }) {
   if (variant === 'prediction') {
     return <RunnerFrame variant={variant}>
       <SkeletonPanel className="page-skeleton__prediction-command"><div>{commonHeader}<SkeletonLines count={2} /><div className="page-skeleton__prediction-actions"><SkeletonBlock /><SkeletonBlock /></div></div><SkeletonBlock className="page-skeleton__prediction-time" /></SkeletonPanel>
-      <div className="page-skeleton__prediction-command-grid"><SkeletonPanel className="page-skeleton__prediction-forecast"><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonBlock className="page-skeleton__prediction-main-value" /><SkeletonBlock className="page-skeleton__chart page-skeleton__chart--tall" /></SkeletonPanel><SkeletonPanel><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonRows count={5} /></SkeletonPanel></div>
-      <div className="page-skeleton__prediction-evidence-grid">{Array.from({ length: 3 }, (_, index) => <SkeletonPanel key={index}><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonLines count={3} /><SkeletonBlock className="page-skeleton__prediction-evidence-art" /></SkeletonPanel>)}</div>
+      <div className="page-skeleton__prediction-evidence-grid page-skeleton__prediction-profile-metrics">{Array.from({ length: 4 }, (_, index) => <SkeletonPanel key={index}><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonBlock className="page-skeleton__prediction-main-value" /><SkeletonLines count={1} /></SkeletonPanel>)}</div>
+      <div className="page-skeleton__prediction-command-grid page-skeleton__prediction-profile-training"><SkeletonPanel className="page-skeleton__prediction-efforts"><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonRows count={4} /></SkeletonPanel><SkeletonPanel className="page-skeleton__prediction-coach"><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonLines count={3} /><SkeletonRows count={3} /></SkeletonPanel></div>
+      <SkeletonPanel className="page-skeleton__prediction-profile-trend"><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonBlock className="page-skeleton__chart page-skeleton__chart--tall" /></SkeletonPanel>
     </RunnerFrame>;
   }
 

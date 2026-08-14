@@ -23,15 +23,18 @@ public class RoutePlannerController {
 
     private final AuthService authService;
     private final RoutePlannerService routePlannerService;
+    private final RouteHeatmapAnchorService routeHeatmapAnchorService;
     private final PlannedRouteRepository plannedRouteRepository;
     private final ObjectMapper objectMapper;
 
     public RoutePlannerController(AuthService authService,
                                   RoutePlannerService routePlannerService,
+                                  RouteHeatmapAnchorService routeHeatmapAnchorService,
                                   PlannedRouteRepository plannedRouteRepository,
                                   ObjectMapper objectMapper) {
         this.authService = authService;
         this.routePlannerService = routePlannerService;
+        this.routeHeatmapAnchorService = routeHeatmapAnchorService;
         this.plannedRouteRepository = plannedRouteRepository;
         this.objectMapper = objectMapper;
     }
@@ -66,6 +69,7 @@ public class RoutePlannerController {
             Runner runner = runnerOpt.get();
             String elevationPreference = request.elevationPreference() != null
                     ? request.elevationPreference() : "rolling";
+            String anchorSource = normalizeAnchorSource(request.anchorSource());
 
             RoutePlannerService.RoutePlanResult result = routePlannerService.planRoute(
                     request.startLat(),
@@ -82,6 +86,7 @@ public class RoutePlannerController {
                 saved.setStartLng(request.startLng());
                 saved.setTargetDistanceKm(request.targetDistanceKm());
                 saved.setElevationPreference(elevationPreference);
+                saved.setAnchorSource(anchorSource);
                 saved.setWaypoints(toWaypointsJson(result.waypoints));
                 saved.setActualDistanceKm(result.actualDistanceKm);
                 saved.setElevationGainMeters(result.elevationGainMeters);
@@ -98,6 +103,7 @@ public class RoutePlannerController {
             response.put("estimatedTimeMinutes", result.estimatedTimeMinutes);
             response.put("distanceAccuracy", round2(result.distanceAccuracy));
             response.put("streetGraphBacked", result.streetGraphBacked);
+            response.put("anchorSource", anchorSource);
             if (!result.streetGraphBacked) {
                 response.put("message", "No street-graph route was available near that start point.");
             }
@@ -110,6 +116,29 @@ public class RoutePlannerController {
             log.error("Route planning failed", e);
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "Route planning failed. Try a different location or distance.");
         }
+    }
+
+    @GetMapping("/plan/anchor")
+    public ResponseEntity<?> routeAnchor(
+            @RequestHeader(value = "Authorization", required = false) String auth
+    ) {
+        Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(auth);
+        if (runnerOpt.isEmpty()) {
+            return unauthorized();
+        }
+
+        RouteHeatmapAnchorService.RouteAnchor anchor = routeHeatmapAnchorService.findAnchor(runnerOpt.get());
+        if (anchor == null) {
+            return ResponseEntity.ok(Map.of());
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("startLat", anchor.startLat());
+        response.put("startLng", anchor.startLng());
+        response.put("activityCount", anchor.activityCount());
+        response.put("pointCount", anchor.pointCount());
+        response.put("source", "heatmap-hotspot");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/plan/recent")
@@ -132,6 +161,7 @@ public class RoutePlannerController {
                 map.put("startLng", r.getStartLng());
                 map.put("targetDistanceKm", r.getTargetDistanceKm());
                 map.put("elevationPreference", r.getElevationPreference());
+                map.put("anchorSource", r.getAnchorSource());
                 map.put("actualDistanceKm", round2(r.getActualDistanceKm()));
                 map.put("elevationGainMeters", round2(r.getElevationGainMeters()));
                 map.put("estimatedTimeMinutes", r.getEstimatedTimeMinutes());
@@ -168,6 +198,10 @@ public class RoutePlannerController {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    private String normalizeAnchorSource(String anchorSource) {
+        return "heatmap-hotspot".equals(anchorSource) ? "heatmap-hotspot" : "recent-run";
+    }
+
     private ResponseEntity<Map<String, String>> unauthorized() {
         return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
     }
@@ -184,6 +218,7 @@ public class RoutePlannerController {
             Double startLat,
             Double startLng,
             Double targetDistanceKm,
-            String elevationPreference
+            String elevationPreference,
+            String anchorSource
     ) {}
 }

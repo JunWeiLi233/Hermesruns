@@ -6,7 +6,8 @@ function iconKind(code) {
   const numericCode = Number(code);
   if (!Number.isFinite(numericCode)) return 'cloud';
   if (numericCode === 0) return 'sun';
-  if (numericCode >= 1 && numericCode <= 3) return 'partly-cloudy';
+  if (numericCode >= 1 && numericCode <= 2) return 'partly-cloudy';
+  if (numericCode === 3) return 'cloud';
   if (numericCode >= 45 && numericCode <= 48) return 'fog';
   if (numericCode >= 51 && numericCode <= 57) return 'drizzle';
   if ((numericCode >= 61 && numericCode <= 67) || (numericCode >= 80 && numericCode <= 82)) return 'rain';
@@ -38,9 +39,11 @@ function SunGlyph(props) {
 function PartlyCloudyGlyph(props) {
   return (
     <BaseIcon {...props}>
-      <path d="M8.1 8.2A3.8 3.8 0 0 1 15 6.6" />
-      <path d="M15.6 4.5v1.9M18.3 7.1l-1.3 1.3M6.8 4.5v1.9" />
-      <path d="M8.5 18.2h8.1a3.2 3.2 0 0 0 .2-6.4 4.7 4.7 0 0 0-9.1-1.3 3.5 3.5 0 0 0 .8 7.7Z" />
+      <circle cx="16.2" cy="7.2" r="2.8" fill="currentColor" fillOpacity="0.14" />
+      <circle cx="16.2" cy="7.2" r="2.8" />
+      <path d="M16.2 2.6v1.2M20.8 7.2h-1.2M19.5 3.9l-.9.9" />
+      <path d="M6.5 18h10.3a3.3 3.3 0 0 0 .1-6.6 4.9 4.9 0 0 0-9.4-1.2A3.6 3.6 0 0 0 6.5 18Z" fill="currentColor" fillOpacity="0.08" />
+      <path d="M6.5 18h10.3a3.3 3.3 0 0 0 .1-6.6 4.9 4.9 0 0 0-9.4-1.2A3.6 3.6 0 0 0 6.5 18Z" />
     </BaseIcon>
   );
 }
@@ -48,7 +51,9 @@ function PartlyCloudyGlyph(props) {
 function CloudGlyph(props) {
   return (
     <BaseIcon {...props}>
-      <path d="M7.9 18.1h8.5a3.5 3.5 0 0 0 .2-7 5.2 5.2 0 0 0-10-1.1 3.8 3.8 0 0 0 1.3 8.1Z" />
+      <path d="M5.9 17.9h11a3.5 3.5 0 0 0 .2-7 5.1 5.1 0 0 0-9.8-1.2 3.7 3.7 0 0 0-1.4 8.2Z" fill="currentColor" fillOpacity="0.1" />
+      <path d="M5.9 17.9h11a3.5 3.5 0 0 0 .2-7 5.1 5.1 0 0 0-9.8-1.2 3.7 3.7 0 0 0-1.4 8.2Z" />
+      <path d="M8.1 20h8" strokeOpacity="0.38" />
     </BaseIcon>
   );
 }

@@ -1,4 +1,4 @@
-import { apiFetch } from '../api.js';
+import { apiFetch } from '../api.ts';
 
 /**
  * Background removal algorithm using flood-fill from corners.

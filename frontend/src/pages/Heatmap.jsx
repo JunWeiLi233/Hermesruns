@@ -811,7 +811,6 @@ export default function Heatmap() {
     ? `${receivedGpsPointCount}/${sourceGpsPointCount}`
     : t('heatmap.page_gps_loading_full');
   const gpsLoadingLabelRoot = gpsReceivedLabel.replace(/\.{3}$/, '');
-  const gpsLoadingLabelPieces = Array.from(gpsLoadingLabelRoot);
   const activityCount = Number(heatmap?.activityCount || 0);
   const densityPerRun = activityCount > 0 ? Math.round(pointCount / activityCount) : 0;
   const centerLatitude = bounds ? (bounds.minLatitude + bounds.maxLatitude) / 2 : null;
@@ -998,17 +997,16 @@ export default function Heatmap() {
                   <strong>
                     {gpsLoadComplete ? gpsReceivedLabel : (
                       <span className="heatmap-page-gps-loading-text" aria-label={gpsReceivedLabel}>
-                        <span className="heatmap-page-gps-loading-words" aria-hidden="true">
-                          {gpsLoadingLabelPieces.map((piece, index) => (
-                            <span key={`${piece}-${index}`} className="heatmap-page-gps-loading-piece">
-                              {piece === ' ' ? '\u00a0' : piece}
-                            </span>
-                          ))}
+                        <span className="heatmap-page-gps-loading-signal" aria-hidden="true">
+                          <span />
                         </span>
-                        <span className="heatmap-page-gps-loading-dots" aria-hidden="true">
-                          <span>.</span>
-                          <span>.</span>
-                          <span>.</span>
+                        <span className="heatmap-page-gps-loading-label" aria-hidden="true">
+                          {gpsLoadingLabelRoot}
+                        </span>
+                        <span className="heatmap-page-gps-loading-bars" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
                         </span>
                       </span>
                     )}

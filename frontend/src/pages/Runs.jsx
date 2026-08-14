@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 
 const RUNS_CACHE_TTL_MS = 86400000;
+const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
+const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 
 function readRunsCache(email) {
   try {
@@ -40,6 +42,7 @@ function localizeStravaSyncMessage(message, t) {
   if (!raw) return '';
   if (raw === 'Strava sync started') return t('profile.strava_sync_started');
   if (/No Strava/i.test(raw)) return t('profile.strava_sync_not_linked');
+  if (/application.*inactive|inactive.*application|api app/i.test(raw)) return t('profile.strava_sync_app_inactive');
   if (/invalid|expired|relink/i.test(raw)) return t('profile.strava_sync_relink_required');
   return raw;
 }
@@ -489,7 +492,7 @@ async function fetchRoutePreviewBatch(ids) {
   return normalizeRoutePreviewBatch(data);
 }
 
-function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen }) {
+function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDelete }) {
   const provider = run.provider || t('runs.manual_import');
   const runName = run.name || t('runs.default_run_name');
   const pointPreview = routePreviewFallbacks[run.id];
@@ -499,22 +502,35 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen }) {
   const bbox = routeBboxes[run.id] || readBboxFromPreview(pointPreview) || readBboxFromPreview(run.routePreview);
 
   return (
-    <button type="button" className="recent-runs-card" data-run-id={run.id || ''} onClick={() => onOpen(run)}>
-      <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
-      <div className="recent-runs-card-body">
-        <div className="recent-runs-card-top">
-          <div>
-            <h2>{runName}</h2>
-            <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+    <div className="recent-runs-card-shell">
+      <button type="button" className="recent-runs-card" data-run-id={run.id || ''} onClick={() => onOpen(run)}>
+        <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
+        <div className="recent-runs-card-body">
+          <div className="recent-runs-card-top">
+            <div>
+              <h2>{runName}</h2>
+              <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
+            </div>
+          </div>
+          <div className="recent-runs-card-metrics">
+            <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
+            <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
+            <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
           </div>
         </div>
-        <div className="recent-runs-card-metrics">
-          <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
-          <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
-          <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
-        </div>
-      </div>
-    </button>
+      </button>
+      {onDelete && (
+        <button
+          type="button"
+          className="recent-runs-card-delete"
+          aria-label={t('runs.delete')}
+          title={t('runs.delete')}
+          onClick={(e) => { e.stopPropagation(); onDelete(run); }}
+        >
+          <AppIcon name="delete_sweep" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -537,6 +553,8 @@ const Runs = memo(function Runs() {
   const [integrationNotice, setIntegrationNotice] = useState('');
   const [integrationNoticeTone, setIntegrationNoticeTone] = useState('info');
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [fitExportFiles, setFitExportFiles] = useState(null);
   const [corosFiles, setCorosFiles] = useState(null);
   const [huaweiFiles, setHuaweiFiles] = useState(null);
@@ -672,6 +690,51 @@ const Runs = memo(function Runs() {
     };
   }, [isAuthenticated, loadRuns]);
 
+  const pollManualStravaSyncCompletion = useCallback(async () => {
+    const deadlineMs = Date.now() + RUNS_STRAVA_SYNC_POLL_DEADLINE_MS;
+    let sawActiveSync = false;
+
+    while (Date.now() < deadlineMs) {
+      let syncStatus = null;
+      try {
+        syncStatus = await apiJson('/api/auth/strava/sync-status');
+      } catch {
+        break;
+      }
+
+      setStravaStatus((current) => ({
+        ...(current || {}),
+        linked: current?.linked ?? true,
+        syncStatus,
+      }));
+
+      if (syncStatus?.active) {
+        sawActiveSync = true;
+      }
+
+      const finished = syncStatus?.status === 'COMPLETED'
+        || syncStatus?.status === 'FAILED'
+        || (sawActiveSync && !syncStatus?.active);
+
+      if (finished) {
+        await loadRuns();
+        if (syncStatus?.status === 'FAILED') {
+          setIntegrationNotice(localizeStravaSyncMessage(syncStatus.error, t) || t('profile.strava_sync_failed'));
+          setIntegrationNoticeTone('alert');
+        } else {
+          setIntegrationNotice(t('profile.strava_sync_completed'));
+          setIntegrationNoticeTone('active');
+        }
+        return syncStatus;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, RUNS_STRAVA_SYNC_POLL_INTERVAL_MS));
+    }
+
+    await loadRuns();
+    return null;
+  }, [loadRuns, t]);
+
   async function handleStravaConnect() {
     setStravaLinking(true);
     try {
@@ -681,7 +744,7 @@ const Runs = memo(function Runs() {
         const localizedMessage = localizeStravaSyncMessage(rawMessage, t);
         setIntegrationNotice(response.ok ? (localizedMessage || t('profile.strava_sync_started')) : (localizedMessage || t('profile.strava_sync_failed')));
         setIntegrationNoticeTone(response.ok ? 'active' : 'alert');
-        if (response.ok) window.setTimeout(() => loadRuns(), 3500);
+        if (response.ok) await pollManualStravaSyncCompletion();
       } else {
         const data = await apiJson('/api/auth/strava/link-url', { method: 'POST' });
         if (data?.url) {
@@ -915,6 +978,51 @@ const Runs = memo(function Runs() {
     navigate(`/run/${run.id || ''}`);
   }
 
+  function confirmDeleteRun(run) {
+    if (!run) return;
+    setDeleteTarget(run);
+  }
+
+  function closeDeleteModal() {
+    if (deleting) return; // don't allow closing mid-delete
+    setDeleteTarget(null);
+  }
+
+  async function handleDeleteRun() {
+    const run = deleteTarget;
+    if (!run || deleting) return;
+    setDeleting(true);
+    try {
+      const res = await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setIntegrationNotice(t('runs.delete_failed'));
+        setIntegrationNoticeTone('error');
+        return;
+      }
+      // Optimistically remove from state + clear per-run caches.
+      setAllRuns(prev => prev.filter(r => r.id !== run.id));
+      setRoutePreviewFallbacks(prev => {
+        if (!(run.id in prev)) return prev;
+        const next = { ...prev };
+        delete next[run.id];
+        return next;
+      });
+      setRouteBboxes(prev => {
+        if (!(run.id in prev)) return prev;
+        const next = { ...prev };
+        delete next[run.id];
+        return next;
+      });
+      try { localStorage.removeItem(`${ROUTE_BBOX_CACHE_PREFIX}${run.id}`); } catch { /* ignore */ }
+      setDeleteTarget(null);
+    } catch {
+      setIntegrationNotice(t('runs.delete_failed'));
+      setIntegrationNoticeTone('error');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   useEffect(() => {
     if (!hasMoreRuns || loadState !== 'ready') return undefined;
     const sentinel = loadMoreSentinelRef.current;
@@ -1075,7 +1183,7 @@ const Runs = memo(function Runs() {
 
   if (isAwaitingData) {
     return (
-      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page runs-ledger-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
         <aside className="runner-shell-sidebar">
           <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
@@ -1142,7 +1250,7 @@ const Runs = memo(function Runs() {
           </header>
 
           <div className="runner-shell-canvas">
-            <main className="integration-alert-shell runs-dashboard-shell">
+            <main className="integration-alert-shell runs-dashboard-shell runs-ledger-awaiting">
               <div className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
                 <h1>{t('runs.heading')}</h1>
                 <p>{t('runs.page_copy')}</p>
@@ -1235,7 +1343,7 @@ const Runs = memo(function Runs() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page runs-ledger-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -1302,7 +1410,7 @@ const Runs = memo(function Runs() {
         </header>
 
         <div className="runner-shell-canvas">
-          <main className="recent-runs-shell runs-dashboard-shell runs-profile-history">
+          <main className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign">
             <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
               <div className="runs-profile-cockpit__primary">
                 <div className="runs-profile-cockpit__heading">
@@ -1454,6 +1562,7 @@ const Runs = memo(function Runs() {
                               routePreviewFallbacks={routePreviewFallbacks}
                               routeBboxes={routeBboxes}
                               onOpen={openRun}
+                              onDelete={confirmDeleteRun}
                             />
                           ))}
                         </div>
@@ -1476,6 +1585,26 @@ const Runs = memo(function Runs() {
         </div>
       </main>
       {renderImportModal()}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={closeDeleteModal}
+        title={t('runs.delete_title')}
+        shellClassName="runs-delete-modal-shell"
+        cardClassName="runs-delete-modal-card"
+      >
+        <p className="runs-delete-modal-copy">
+          {t('runs.delete_confirm', { name: deleteTarget?.name || t('runs.default_run_name') })}
+        </p>
+        <p className="runs-delete-modal-warning">{t('runs.delete_warning')}</p>
+        <div className="runs-delete-modal-actions">
+          <button type="button" className="btn-secondary" onClick={closeDeleteModal} disabled={deleting}>
+            {t('runs.delete_cancel')}
+          </button>
+          <button type="button" className="btn-primary runs-delete-modal-confirm" onClick={handleDeleteRun} disabled={deleting}>
+            {deleting ? t('runs.delete_in_progress') : t('runs.delete_confirm_button')}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 });

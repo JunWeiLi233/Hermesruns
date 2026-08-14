@@ -73,6 +73,7 @@ class LoginControllerTests {
                 mock(SecretEncryptionService.class),
                 mock(AiUsageService.class),
                 emailVerificationService,
+                mock(EmailValidationService.class),
                 verificationResendLimiter,
                 mock(PasswordResetLimiter.class),
                 mock(PasswordResetService.class),
@@ -150,6 +151,7 @@ class LoginControllerTests {
                 mock(SecretEncryptionService.class),
                 aiUsageService,
                 mock(EmailVerificationService.class),
+                mock(EmailValidationService.class),
                 mock(VerificationResendLimiter.class),
                 mock(PasswordResetLimiter.class),
                 mock(PasswordResetService.class),
@@ -186,6 +188,80 @@ class LoginControllerTests {
         assertThat(broken.getRole()).isEqualTo("USER");
     }
 
+    @Test
+    void signupRejectsDisposableEmailBeforeCreatingRunner() {
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        AuthService authService = mock(AuthService.class);
+        when(authService.normalizeEmail("a@mailinator.com")).thenReturn("a@mailinator.com");
+        EmailValidationService emailValidationService = mock(EmailValidationService.class);
+        when(emailValidationService.validateSignupEmail("a@mailinator.com"))
+                .thenReturn(new EmailValidationService.Verdict(EmailValidationService.Status.DISPOSABLE, null));
+        LoginController controller = signupController(runnerRepository, authService, emailValidationService);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("email", "a@mailinator.com");
+        body.put("password", "StrongPass1!");
+        body.put("captchaToken", "");
+
+        ResponseEntity<?> response = controller.signup(body, request("198.51.100.11"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, String> payload = (Map<String, String>) response.getBody();
+        assertThat(payload).containsEntry("code", "DISPOSABLE_EMAIL");
+        assertThat(payload.get("error")).contains("Disposable");
+        verify(runnerRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any(Runner.class));
+    }
+
+    @Test
+    void signupRejectsUndeliverableDomainWithSuggestion() {
+        AuthService authService = mock(AuthService.class);
+        when(authService.normalizeEmail("runner@gnail.con")).thenReturn("runner@gnail.con");
+        EmailValidationService emailValidationService = mock(EmailValidationService.class);
+        when(emailValidationService.validateSignupEmail("runner@gnail.con"))
+                .thenReturn(new EmailValidationService.Verdict(
+                        EmailValidationService.Status.DOMAIN_UNDELIVERABLE, "runner@gmail.com"));
+        LoginController controller = signupController(mock(RunnerRepository.class), authService, emailValidationService);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("email", "runner@gnail.con");
+        body.put("password", "StrongPass1!");
+        body.put("captchaToken", "");
+
+        ResponseEntity<?> response = controller.signup(body, request("198.51.100.12"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, String> payload = (Map<String, String>) response.getBody();
+        assertThat(payload).containsEntry("code", "INVALID_EMAIL_DOMAIN");
+        assertThat(payload).containsEntry("suggestedEmail", "runner@gmail.com");
+    }
+
+    private LoginController signupController(RunnerRepository runnerRepository,
+                                             AuthService authService,
+                                             EmailValidationService emailValidationService) {
+        ApiRateLimiter apiRateLimiter = mock(ApiRateLimiter.class);
+        when(apiRateLimiter.allow(
+                org.mockito.ArgumentMatchers.startsWith("signup:"),
+                org.mockito.ArgumentMatchers.eq(8),
+                org.mockito.ArgumentMatchers.eq(3600L))).thenReturn(true);
+        return controller(
+                runnerRepository,
+                authService,
+                mock(LoginRateLimiter.class),
+                mock(SecretEncryptionService.class),
+                mock(AiUsageService.class),
+                mock(EmailVerificationService.class),
+                emailValidationService,
+                mock(VerificationResendLimiter.class),
+                mock(PasswordResetLimiter.class),
+                mock(PasswordResetService.class),
+                apiRateLimiter
+        );
+    }
+
     private LoginController controller(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter) {
         return controller(
                 runnerRepository,
@@ -194,6 +270,7 @@ class LoginControllerTests {
                 mock(SecretEncryptionService.class),
                 mock(AiUsageService.class),
                 mock(EmailVerificationService.class),
+                mock(EmailValidationService.class),
                 mock(VerificationResendLimiter.class),
                 mock(PasswordResetLimiter.class),
                 mock(PasswordResetService.class),
@@ -208,6 +285,7 @@ class LoginControllerTests {
             SecretEncryptionService secretEncryptionService,
             AiUsageService aiUsageService,
             EmailVerificationService emailVerificationService,
+            EmailValidationService emailValidationService,
             VerificationResendLimiter verificationResendLimiter,
             PasswordResetLimiter passwordResetLimiter,
             PasswordResetService passwordResetService,
@@ -220,6 +298,7 @@ class LoginControllerTests {
                 secretEncryptionService,
                 aiUsageService,
                 emailVerificationService,
+                emailValidationService,
                 verificationResendLimiter,
                 passwordResetLimiter,
                 passwordResetService,
