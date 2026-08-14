@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
@@ -220,6 +221,104 @@ function loadRetainedGenerations(keepBuilds) {
     .map((name) => JSON.parse(fs.readFileSync(path.join(generationStateDir, name), 'utf8')))
 }
 
+// --- Unchanged-source fast path -------------------------------------------------
+// start_hermes.bat runs this script on every boot. Rebuilding identical sources
+// costs seconds warm (and far more on a cold disk) and rewrites classpath/static
+// files that devtools and antivirus then have to re-scan. A fingerprint of all
+// build inputs lets identical re-runs skip straight to success.
+
+const fingerprintFile = path.resolve(projectRoot, '../.tmp/frontend-build-fingerprint.json')
+
+function collectFingerprintEntries(dir, prefix = '') {
+  const entries = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      entries.push(...collectFingerprintEntries(path.join(dir, entry.name), rel))
+      continue
+    }
+    const stats = fs.statSync(path.join(dir, entry.name))
+    entries.push(`${rel}\0${stats.size}\0${Math.round(stats.mtimeMs)}\n`)
+  }
+  return entries
+}
+
+function computeSourceFingerprint(extraArgs) {
+  try {
+    const hash = createHash('sha256')
+    const rootFiles = [
+      'index.html',
+      'package.json',
+      'package-lock.json',
+      'vite.config.js',
+      'vite.config.ts',
+      'vite.config.mjs',
+    ]
+    for (const name of fs.readdirSync(projectRoot)) {
+      if (name.startsWith('.env')) rootFiles.push(name)
+    }
+    for (const name of rootFiles) {
+      const filePath = path.join(projectRoot, name)
+      if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) continue
+      const stats = fs.statSync(filePath)
+      hash.update(`#${name}\0${stats.size}\0${Math.round(stats.mtimeMs)}\n`)
+    }
+    for (const dirName of ['public', 'src']) {
+      const dir = path.join(projectRoot, dirName)
+      if (!fs.existsSync(dir)) continue
+      hash.update(`#${dirName}\n`)
+      collectFingerprintEntries(dir).sort().forEach((line) => hash.update(line))
+    }
+    // --force only bypasses the skip; it does not change build output, so exclude
+    // it from the fingerprint or a forced build would poison the next comparison.
+    const outputAffectingArgs = extraArgs.filter((arg) => arg !== '--force')
+    hash.update(`#args\0${outputAffectingArgs.join(' ')}\n`)
+    return hash.digest('hex')
+  } catch {
+    // Any surprise while hashing inputs: fall back to a full build.
+    return null
+  }
+}
+
+function readSavedFingerprint() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(fingerprintFile, 'utf8'))
+    return typeof saved?.fingerprint === 'string' ? saved.fingerprint : null
+  } catch {
+    return null
+  }
+}
+
+function saveFingerprint(fingerprint) {
+  try {
+    fs.mkdirSync(path.dirname(fingerprintFile), { recursive: true })
+    fs.writeFileSync(fingerprintFile, JSON.stringify({ fingerprint, savedAt: new Date().toISOString() }, null, 2))
+  } catch (error) {
+    // A failed fingerprint write only means the next run rebuilds.
+    console.warn(`[frontend] Could not save build fingerprint: ${error.message}`)
+  }
+}
+
+function publishedOutputLooksComplete() {
+  if (!fs.existsSync(path.join(backendStaticDir, 'index.html'))) return false
+  const publishedAssets = fs.existsSync(backendAssetsDir) ? fs.readdirSync(backendAssetsDir) : []
+  if (!publishedAssets.some((name) => name.endsWith('.js'))) return false
+  if (fs.existsSync(backendLiveStaticDir) && !fs.existsSync(path.join(backendLiveStaticDir, 'index.html'))) return false
+  return true
+}
+
+function trySkipUnchangedBuild(buildArgs) {
+  if (buildArgs.includes('--force') || process.env.HERMES_FORCE_FRONTEND_BUILD === '1') return false
+
+  const fingerprint = computeSourceFingerprint(buildArgs)
+  if (fingerprint === null) return false
+  if (fingerprint !== readSavedFingerprint()) return false
+  if (!publishedOutputLooksComplete()) return false
+
+  console.log('[frontend] Skipping Vite build — sources unchanged since the last successful build (use --force to rebuild).')
+  return true
+}
+
 function writeGenerationManifest(files) {
   retryFileOperation(() => fs.mkdirSync(generationStateDir, { recursive: true }), `Create ${generationStateDir}`)
   retryFileOperation(
@@ -306,6 +405,10 @@ function publishBuildOutput() {
     retryFileOperation(() => fs.mkdirSync(path.dirname(targetPath), { recursive: true }), `Create ${path.dirname(targetPath)}`)
     retryFileOperation(() => fs.copyFileSync(sourcePath, targetPath), `Copy ${targetPath}`)
   }
+}
+
+if (trySkipUnchangedBuild(process.argv.slice(2))) {
+  process.exit(0)
 }
 
 retryFileOperation(() => fs.rmSync(backupAssetsDir, { recursive: true, force: true }), `Remove ${backupAssetsDir}`)
@@ -406,5 +509,7 @@ if (fs.existsSync(backendLiveStaticDir)) {
     console.log(`[frontend] Live backend static sync complete after locked directory fallback: ${backendLiveStaticDir}`)
   }
 }
+
+saveFingerprint(computeSourceFingerprint(process.argv.slice(2)))
 
 process.exitCode = 0
