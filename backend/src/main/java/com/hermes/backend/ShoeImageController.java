@@ -131,7 +131,7 @@ public class ShoeImageController {
         try {
             List<String> images;
             if (!customQuery.isBlank()) {
-                images = bingImageScraper.scrapeMultipleImages(customQuery, 12);
+                images = bingImageScraper.searchShoeImageCandidates(brand, model, customQuery, 12);
             } else {
                 images = bingImageScraper.searchShoeImageCandidates(brand, model);
             }
@@ -271,6 +271,32 @@ public class ShoeImageController {
 
         Runner runner = user.get();
 
+        // Validate the upload before touching quota so rejected files never burn a scan.
+        final String mediaType;
+        final byte[] imageBytes;
+        try {
+            if (image == null || image.isEmpty() || image.getSize() <= 0) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image is required."));
+            }
+            if (image.getSize() > MAX_SCAN_IMAGE_BYTES) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image too large."));
+            }
+
+            mediaType = image.getContentType();
+            if (mediaType == null || !mediaType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid image content type."));
+            }
+
+            imageBytes = image.getBytes();
+        } catch (java.io.IOException e) {
+            logger.warn("Shoe scan upload could not be read: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to read image. Please try again."));
+        }
+        if (!ShoeScanImageValidator.hasImageMagicBytes(imageBytes)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format."));
+        }
+
         // Feature-gating quota check: Pro users skip all quota checks entirely.
         if (!quotaService.isPro(runner)) {
             // Step 1: Check feature quota (premium feature gating for free users)
@@ -294,22 +320,6 @@ public class ShoeImageController {
         }
 
         try {
-            if (image == null || image.isEmpty() || image.getSize() <= 0) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image is required."));
-            }
-            if (image.getSize() > MAX_SCAN_IMAGE_BYTES) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Image too large."));
-            }
-
-            String mediaType = image.getContentType();
-            if (mediaType == null || !mediaType.toLowerCase(Locale.ROOT).startsWith("image/")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid image content type."));
-            }
-
-            byte[] imageBytes = image.getBytes();
-            if (!ShoeScanImageValidator.hasImageMagicBytes(imageBytes)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid image format."));
-            }
             String base64 = Base64.getEncoder().encodeToString(imageBytes);
 
             String text = aiShoeScanService.callAi(base64, mediaType);
