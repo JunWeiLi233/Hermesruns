@@ -48,7 +48,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(shoeBytes));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates(
                 "Nike",
@@ -103,7 +103,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(shoeBytes));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus", 12);
 
@@ -127,7 +127,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(shoeBytes));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus", 12);
 
@@ -150,7 +150,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(shoeBytes));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("", "", "Nike Pegasus", 12);
 
@@ -186,7 +186,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("image host blocked server fetch"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus", 12);
 
@@ -205,7 +205,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("static nike image host blocks test fetch"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("", "", "Nike Pegasus", 12);
 
@@ -240,7 +240,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("image fetch not needed for high confidence metadata"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus 41", 12);
 
@@ -281,7 +281,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("image fetch not needed for high confidence metadata"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus 39", 12);
 
@@ -305,7 +305,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("image fetch not needed for high confidence metadata"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus 40", 12);
 
@@ -318,7 +318,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(ResponseEntity.ok("<html><body>" + "x".repeat(128) + "</body></html>"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
         scraper.scrapeMultipleImages("Nike Pegasus 41", 1);
 
         @SuppressWarnings("unchecked")
@@ -351,7 +351,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenThrow(new RuntimeException("image fetch not needed for high confidence metadata"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("Nike", "Pegasus", "Nike Pegasus", 12);
 
@@ -364,7 +364,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(ResponseEntity.ok("<html><body>" + "x".repeat(128) + "</body></html>"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
         scraper.searchShoeImageCandidates("361", "飞飚", "", 6);
 
         @SuppressWarnings("unchecked")
@@ -399,7 +399,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
                 .thenReturn(ResponseEntity.ok("<html><body>" + "x".repeat(128) + "</body></html>"));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
         // User typed the brand in Chinese (李宁); the plan should still use the romanized brand.
         scraper.searchShoeImageCandidates("李宁", "赤兔", "", 6);
 
@@ -439,7 +439,7 @@ class BingImageScraperTests {
         when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(byte[].class)))
                 .thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(shoeBytes));
 
-        BingImageScraper scraper = new BingImageScraper(restTemplate, new SafeUrlExecutor(restTemplate));
+        BingImageScraper scraper = new BingImageScraper(restTemplate, SafeUrlExecutor.permissiveForTests(restTemplate));
 
         List<String> results = scraper.searchShoeImageCandidates("361", "飞飚", "", 6);
 

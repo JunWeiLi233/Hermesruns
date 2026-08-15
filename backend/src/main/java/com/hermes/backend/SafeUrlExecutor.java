@@ -1,5 +1,11 @@
 package com.hermes.backend;
 
+import org.apache.hc.client5.http.DnsResolver;
+import org.apache.hc.client5.http.SystemDefaultDnsResolver;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -8,16 +14,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.Locale;
 
 /**
@@ -51,11 +58,9 @@ public class SafeUrlExecutor {
     private final RestTemplate restTemplate;
 
     /**
-     * Transport with automatic redirect following disabled, so every redirect
-     * hop can be re-validated before it is followed. Built from the shared
-     * {@link #restTemplate} when its request factory is a
-     * {@link SimpleClientHttpRequestFactory}; otherwise null, which keeps
-     * test mocks working through the injected template unchanged.
+     * Transport with automatic redirects disabled and public-only DNS enforced
+     * by the connection manager. Test-only executors leave this null and use
+     * their explicitly injected mock transport instead.
      */
     private final RestTemplate redirectSafeRestTemplate;
 
@@ -63,7 +68,10 @@ public class SafeUrlExecutor {
     public SafeUrlExecutor(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
         this.resolveDns = true;
-        this.redirectSafeRestTemplate = copyWithoutAutoRedirects(restTemplate);
+        this.redirectSafeRestTemplate = createPinnedPublicTransport(restTemplate);
+        if (this.redirectSafeRestTemplate == null) {
+            throw new IllegalStateException("Safe URL transport could not be initialized.");
+        }
     }
 
     /**
@@ -96,16 +104,11 @@ public class SafeUrlExecutor {
      * redirect on its own, so a public first hop cannot be used to pivot to
      * internal infrastructure via a 30x.
      *
-     * <p>Residual risk: DNS rebinding between the pre-flight resolution here
-     * and the transport's own resolution on connect. Closing that fully
-     * requires connection-level IP pinning (custom DNS resolver), which is
-     * out of scope for this executor.
-     *
      * @return the {@link ResponseEntity}, or {@code null} if any hop resolves
      *         to a disallowed address or is otherwise unfetchable.
      */
     public <T> ResponseEntity<T> exchange(String url, HttpMethod method, HttpEntity<?> requestEntity, Class<T> responseType) {
-        RestTemplate transport = redirectSafeRestTemplate != null ? redirectSafeRestTemplate : restTemplate;
+        RestTemplate transport = resolveDns ? redirectSafeRestTemplate : restTemplate;
         HttpMethod hopMethod = method;
         HttpEntity<?> hopEntity = requestEntity;
         String hopUrl = url;
@@ -145,7 +148,7 @@ public class SafeUrlExecutor {
                 return transport.exchange(URI.create(url), method, requestEntity, responseType);
             }
             return transport.exchange(url, method, requestEntity, responseType);
-        } catch (IllegalArgumentException ignored) {
+        } catch (IllegalArgumentException | RestClientException ignored) {
             return null;
         }
     }
@@ -195,15 +198,12 @@ public class SafeUrlExecutor {
     }
 
     /**
-     * Copy of the given template whose {@link HttpURLConnection} transport has
-     * automatic redirect following disabled. Timeouts mirror the shared
-     * primary RestTemplate bean in WebConfig (5 s connect / 5 s read); the
-     * getters needed to copy them portably only exist on newer Spring
-     * versions, and every SafeUrlExecutor consumer uses that primary bean.
-     * Returns null when the factory is not a {@link SimpleClientHttpRequestFactory}
-     * (e.g. Mockito mocks in tests) so the injected template keeps being used.
+     * Builds a transport that validates DNS results at connection time, closing
+     * the preflight-to-connect DNS rebinding window. It is only derived from the
+     * application's normal simple transport; Mockito and custom test factories
+     * continue through the injected template.
      */
-    private static RestTemplate copyWithoutAutoRedirects(RestTemplate source) {
+    private static RestTemplate createPinnedPublicTransport(RestTemplate source) {
         if (source == null) {
             return null;
         }
@@ -212,18 +212,53 @@ public class SafeUrlExecutor {
             if (!(factory instanceof SimpleClientHttpRequestFactory)) {
                 return null;
             }
-            SimpleClientHttpRequestFactory noRedirects = new SimpleClientHttpRequestFactory() {
-                @Override
-                protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
-                    super.prepareConnection(connection, httpMethod);
-                    connection.setInstanceFollowRedirects(false);
-                }
-            };
-            noRedirects.setConnectTimeout(5_000);
-            noRedirects.setReadTimeout(5_000);
-            return new RestTemplate(noRedirects);
+            ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                    .setConnectTimeout(Timeout.ofSeconds(5))
+                    .setSocketTimeout(Timeout.ofSeconds(5))
+                    .build();
+            var connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                    .setDnsResolver(new PublicAddressDnsResolver(SystemDefaultDnsResolver.INSTANCE))
+                    .setDefaultConnectionConfig(connectionConfig)
+                    .build();
+            var httpClient = HttpClients.custom()
+                    .setConnectionManager(connectionManager)
+                    .disableRedirectHandling()
+                    .build();
+            HttpComponentsClientHttpRequestFactory pinnedFactory =
+                    new HttpComponentsClientHttpRequestFactory(httpClient);
+            pinnedFactory.setConnectionRequestTimeout(Duration.ofSeconds(5));
+            pinnedFactory.setReadTimeout(Duration.ofSeconds(5));
+            return new RestTemplate(pinnedFactory);
         } catch (Exception ex) {
             return null;
+        }
+    }
+
+    /** DNS resolver used by the actual HTTP connection, not only preflight checks. */
+    static final class PublicAddressDnsResolver implements DnsResolver {
+        private final DnsResolver delegate;
+
+        PublicAddressDnsResolver(DnsResolver delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public InetAddress[] resolve(String host) throws UnknownHostException {
+            InetAddress[] addresses = delegate.resolve(host);
+            if (addresses == null || addresses.length == 0) {
+                throw new UnknownHostException("Host returned no addresses.");
+            }
+            for (InetAddress address : addresses) {
+                if (!isPublicAddress(address)) {
+                    throw new UnknownHostException("Host resolved to a non-public address.");
+                }
+            }
+            return addresses;
+        }
+
+        @Override
+        public String resolveCanonicalHostname(String host) {
+            return host;
         }
     }
 
@@ -280,10 +315,35 @@ public class SafeUrlExecutor {
         if (address == null) {
             return false;
         }
-        return !address.isAnyLocalAddress()
+        return !isReservedAddressRange(address.getAddress())
+                && !address.isAnyLocalAddress()
                 && !address.isLoopbackAddress()
                 && !address.isLinkLocalAddress()
                 && !address.isSiteLocalAddress()
                 && !address.isMulticastAddress();
+    }
+
+    private static boolean isReservedAddressRange(byte[] bytes) {
+        if (bytes == null) {
+            return true;
+        }
+        if (bytes.length == 4) {
+            int first = bytes[0] & 0xff;
+            int second = bytes[1] & 0xff;
+            int third = bytes[2] & 0xff;
+            return first == 0
+                    || first == 100 && second >= 64 && second <= 127
+                    || first == 192 && second == 0 && third == 0
+                    || first == 192 && second == 0 && third == 2
+                    || first == 198 && (second == 18 || second == 19)
+                    || first == 198 && second == 51 && third == 100
+                    || first == 203 && second == 0 && third == 113
+                    || first >= 240;
+        }
+        if (bytes.length == 16) {
+            int first = bytes[0] & 0xff;
+            return (first & 0xfe) == 0xfc;
+        }
+        return true;
     }
 }

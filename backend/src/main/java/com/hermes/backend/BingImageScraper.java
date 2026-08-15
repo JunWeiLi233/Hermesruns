@@ -26,12 +26,10 @@ public class BingImageScraper {
 
     private static final Pattern MEDIA_URL_PATTERN =
             Pattern.compile("mediaurl=(https?%3a%2f%2f[^&\"<>\\s]+)", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MURL_BLOCK_PATTERN =
-            Pattern.compile("\\{[^{}]{0,4096}\"murl\"\\s*:\\s*\"(https?://.*?)(?=\")[^{}]{0,4096}\\}", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MURL_PATTERN =
-            Pattern.compile("\"murl\"\\s*:\\s*\"(https?://.*?)(?=\")", Pattern.CASE_INSENSITIVE);
-    private static final Pattern NIKE_STATIC_IMAGE_PATTERN =
-            Pattern.compile("https://static\\.nike\\.com/[^\"'<>\\s]+\\.(?:jpg|jpeg|png|webp|avif)", Pattern.CASE_INSENSITIVE);
+    private static final String MURL_KEY = "\"murl\"";
+    private static final String NIKE_STATIC_IMAGE_PREFIX = "https://static.nike.com/";
+    private static final int MAX_EMBEDDED_IMAGE_URL_LENGTH = 16_384;
+    private static final int MAX_METADATA_CONTEXT_LENGTH = 4_096;
     private static final int SINGLE_IMAGE_CANDIDATE_LIMIT = 12;
     private static final int SEARCH_CANDIDATE_MULTIPLIER = 4;
     private static final int SHOE_SEARCH_RESULT_LIMIT = 12;
@@ -361,13 +359,7 @@ public class BingImageScraper {
             if (html == null || html.length() < 100) {
                 return List.of();
             }
-            Matcher matcher = NIKE_STATIC_IMAGE_PATTERN.matcher(html);
-            while (matcher.find() && candidates.size() < maxCandidates) {
-                String url = normalizeImageUrl(matcher.group());
-                if (isImageFileUrl(url)) {
-                    addImageCandidate(candidates, new ImageCandidate(url, url), maxCandidates);
-                }
-            }
+            addNikeStaticImageCandidates(candidates, html, maxCandidates);
         } catch (Exception e) {
             logger.debug("Official Nike image search failed for {}: {}", query, e.getMessage());
         }
@@ -427,21 +419,7 @@ public class BingImageScraper {
 
         String normalizedHtml = normalizeSearchHtml(html);
         LinkedHashMap<String, ImageCandidate> candidates = new LinkedHashMap<>();
-        Matcher murlBlockMatcher = MURL_BLOCK_PATTERN.matcher(normalizedHtml);
-        while (murlBlockMatcher.find() && candidates.size() < maxCandidates) {
-            String url = normalizeImageUrl(murlBlockMatcher.group(1));
-            if (isImageFileUrl(url)) {
-                addImageCandidate(candidates, new ImageCandidate(url, decodeSearchMetadata(murlBlockMatcher.group())), maxCandidates);
-            }
-        }
-
-        Matcher murlMatcher = MURL_PATTERN.matcher(normalizedHtml);
-        while (murlMatcher.find() && candidates.size() < maxCandidates) {
-            String url = normalizeImageUrl(murlMatcher.group(1));
-            if (isImageFileUrl(url)) {
-                addImageCandidate(candidates, new ImageCandidate(url, url), maxCandidates);
-            }
-        }
+        addMurlCandidates(candidates, normalizedHtml, maxCandidates);
 
         Matcher mediaMatcher = MEDIA_URL_PATTERN.matcher(html);
         while (mediaMatcher.find() && candidates.size() < maxCandidates) {
@@ -453,6 +431,110 @@ public class BingImageScraper {
         }
 
         return new ArrayList<>(candidates.values());
+    }
+
+    private void addNikeStaticImageCandidates(
+            LinkedHashMap<String, ImageCandidate> candidates,
+            String html,
+            int maxCandidates
+    ) {
+        String lowerHtml = html.toLowerCase(Locale.ROOT);
+        int cursor = 0;
+        while (cursor < html.length() && candidates.size() < maxCandidates) {
+            int start = lowerHtml.indexOf(NIKE_STATIC_IMAGE_PREFIX, cursor);
+            if (start < 0) {
+                return;
+            }
+            int end = start;
+            int limit = Math.min(html.length(), start + MAX_EMBEDDED_IMAGE_URL_LENGTH);
+            while (end < limit && !isUrlTerminator(html.charAt(end))) {
+                end++;
+            }
+            String url = normalizeImageUrl(html.substring(start, end));
+            if (isImageFileUrl(url)) {
+                addImageCandidate(candidates, new ImageCandidate(url, url), maxCandidates);
+            }
+            cursor = Math.max(end, start + NIKE_STATIC_IMAGE_PREFIX.length());
+        }
+    }
+
+    private void addMurlCandidates(
+            LinkedHashMap<String, ImageCandidate> candidates,
+            String html,
+            int maxCandidates
+    ) {
+        String lowerHtml = html.toLowerCase(Locale.ROOT);
+        int cursor = 0;
+        while (cursor < html.length() && candidates.size() < maxCandidates) {
+            int keyStart = lowerHtml.indexOf(MURL_KEY, cursor);
+            if (keyStart < 0) {
+                return;
+            }
+            int valueStart = skipWhitespace(html, keyStart + MURL_KEY.length());
+            if (valueStart >= html.length() || html.charAt(valueStart) != ':') {
+                cursor = keyStart + MURL_KEY.length();
+                continue;
+            }
+            valueStart = skipWhitespace(html, valueStart + 1);
+            if (valueStart >= html.length() || html.charAt(valueStart) != '"') {
+                cursor = keyStart + MURL_KEY.length();
+                continue;
+            }
+            valueStart++;
+            int valueEnd = findJsonStringEnd(html, valueStart);
+            if (valueEnd < 0) {
+                cursor = valueStart;
+                continue;
+            }
+            String url = normalizeImageUrl(html.substring(valueStart, valueEnd));
+            if (isImageFileUrl(url)) {
+                String metadata = decodeSearchMetadata(metadataAround(html, keyStart, valueEnd));
+                addImageCandidate(candidates, new ImageCandidate(url, metadata), maxCandidates);
+            }
+            cursor = valueEnd + 1;
+        }
+    }
+
+    private static int skipWhitespace(String value, int cursor) {
+        int next = cursor;
+        while (next < value.length() && Character.isWhitespace(value.charAt(next))) {
+            next++;
+        }
+        return next;
+    }
+
+    private static int findJsonStringEnd(String value, int start) {
+        int limit = Math.min(value.length(), start + MAX_EMBEDDED_IMAGE_URL_LENGTH);
+        boolean escaped = false;
+        for (int index = start; index < limit; index++) {
+            char current = value.charAt(index);
+            if (escaped) {
+                escaped = false;
+            } else if (current == '\\') {
+                escaped = true;
+            } else if (current == '"') {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static String metadataAround(String html, int keyStart, int valueEnd) {
+        int minimumStart = Math.max(0, keyStart - MAX_METADATA_CONTEXT_LENGTH);
+        int objectStart = html.lastIndexOf('{', keyStart);
+        if (objectStart < minimumStart) {
+            objectStart = keyStart;
+        }
+        int maximumEnd = Math.min(html.length(), valueEnd + MAX_METADATA_CONTEXT_LENGTH);
+        int objectEnd = html.indexOf('}', valueEnd);
+        if (objectEnd < 0 || objectEnd >= maximumEnd) {
+            objectEnd = valueEnd;
+        }
+        return html.substring(objectStart, objectEnd + 1);
+    }
+
+    private static boolean isUrlTerminator(char value) {
+        return value == '"' || value == '\'' || value == '<' || value == '>' || Character.isWhitespace(value);
     }
 
     private static void addImageCandidates(
@@ -794,7 +876,7 @@ public class BingImageScraper {
     }
 
     public boolean isImageFileUrl(String url) {
-        if (url == null || !url.startsWith("http")) return false;
+        if (url == null || !url.regionMatches(true, 0, "http", 0, 4)) return false;
         String lower = url.toLowerCase();
         if (lower.contains(".html") || lower.contains(".htm")) return false;
         return lower.contains(".jpg") || lower.contains(".jpeg") ||

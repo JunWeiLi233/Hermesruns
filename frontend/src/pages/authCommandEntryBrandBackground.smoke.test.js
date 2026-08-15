@@ -12,7 +12,7 @@ const brandRule = styles.split('.auth-page[data-auth-redesign="command-entry"] .
 const brandGridRule = styles.split('.auth-page[data-auth-redesign="command-entry"] .auth-flow-brand::before {')[1]?.split('}')[0] || '';
 const brandInnerRule = styles.split('.auth-page[data-auth-redesign="command-entry"] .auth-flow-brand-inner {')[1]?.split('}')[0] || '';
 const fullBleedShellRule = liquidGlassStyles.split('#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-shell {')[1]?.split('}')[0] || '';
-const brandDotFieldRule = liquidGlassStyles.split('#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand > .auth-dot-field {')[1]?.split('}')[0] || '';
+const pageDotFieldRule = liquidGlassStyles.split('#root .auth-page--liquid-glass > .auth-dot-field {')[1]?.split('}')[0] || '';
 const centeredSlideRule = styles.split('.auth-page[data-auth-redesign="command-entry"] .auth-flow-copy,')[1]?.split('}')[0] || '';
 const centeredStatsRule = styles.split('.auth-page[data-auth-redesign="command-entry"] .auth-flow-stats {')[1]?.split('}')[0] || '';
 const commandEntrySlideViewportSelector = '#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-viewport {';
@@ -23,7 +23,7 @@ const mobileMediaStart = liquidGlassStyles.indexOf('@media (max-width: 720px)');
 const fullSlideRule = liquidGlassStyles.split(commandEntrySlideViewportSelector)[1]?.split('}')[0] || '';
 const compactStatsRule = liquidGlassStyles.split(commandEntryStatsSelector)[1]?.split('}')[0] || '';
 const compactStatValueRule = liquidGlassStyles.split('#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats strong {')[1]?.split('}')[0] || '';
-const dotFieldInsideBrand = /<section className="auth-flow-brand">\s*<AuthDotField \/>\s*<div className="auth-flow-brand-inner">/g;
+const dotFieldBehindShell = /<div className="auth-page[^>]+data-auth-redesign="command-entry">\s*<AuthDotField \/>\s*<main className="auth-flow-shell">/g;
 
 assert.match(
   brandRule,
@@ -76,9 +76,9 @@ assert.match(
   'The command-entry shell should not expose a pale background strip around the carousel rail.',
 );
 assert.match(
-  brandDotFieldRule,
+  pageDotFieldRule,
   /position:\s*absolute;/,
-  'The dot field should be positioned relative to the carousel rail, not the page.',
+  'The dot field should cover the auth page behind both command-entry columns.',
 );
 assert.match(
   centeredSlideRule,
@@ -129,12 +129,12 @@ assert.ok(
   'The compact stat grid must apply before the mobile breakpoint so desktop rails keep both values visible.',
 );
 assert.equal(
-  [...loginSource.matchAll(dotFieldInsideBrand)].length,
+  [...loginSource.matchAll(dotFieldBehindShell)].length,
   1,
-  'Login should mount the dot field inside its carousel rail.',
+  'Login should mount one dot field directly behind its command-entry shell.',
 );
 assert.equal(
-  [...signupSource.matchAll(dotFieldInsideBrand)].length,
+  [...signupSource.matchAll(dotFieldBehindShell)].length,
   2,
-  'Both Signup states should mount the dot field inside their carousel rails.',
+  'Both Signup states should mount one dot field directly behind their command-entry shells.',
 );

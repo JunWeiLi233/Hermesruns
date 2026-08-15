@@ -1,3 +1,36 @@
-/* Intentionally empty.
-   The upstream index.css imports this file, but origin/main does not currently
-   include the full-width settings stylesheet. */
+/* Settings full-bleed control room pass */
+.settings-control-page .runner-shell-canvas.settings-control-canvas,
+.settings-control-page .settings-atlas-canvas {
+  width: calc(100% - clamp(28px, 3.2vw, 64px));
+  max-width: none !important;
+  margin-inline: auto;
+}
+
+.settings-atlas-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 360px) minmax(0, 0.92fr);
+  gap: clamp(18px, 2vw, 30px);
+  align-items: start;
+  min-width: 0;
+}
+
+.settings-atlas-action-rail {
+  position: sticky;
+  top: 92px;
+}
+
+@media (min-width: 1540px) {
+  .settings-control-page .settings-atlas-workbench {
+    grid-template-columns: minmax(0, 1fr) minmax(430px, 500px) minmax(0, 0.95fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .settings-atlas-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-atlas-action-rail {
+    position: static;
+  }
+}

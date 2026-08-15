@@ -46,13 +46,7 @@ jobs:
         working-directory: frontend
       - name: Run smoke and unit tests
         working-directory: frontend
-        run: |
-          find src -name "*.test.js" -o -name "*.smoke.test.js" \
-            | sort \
-            | while IFS= read -r f; do
-                echo "▶ $f"
-                node "$f" || exit 1
-              done
+        run: npm test
 
   # ── Backend tests ──────────────────────────────────────────────────────────
   test-backend:

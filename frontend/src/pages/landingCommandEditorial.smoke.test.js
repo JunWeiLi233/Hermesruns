@@ -124,11 +124,9 @@ assert(
     && !landingSource.includes('className="landing-cinematic-map-readout-layer"')
     && !landingSource.includes('className="landing-cinematic-map-readout-line"')
     && landingSource.includes('function buildCurvedFlightPath(points)')
-    && landingSource.includes('const flightLegs = flightPoints.length > 1')
-    && landingSource.includes('const activeFlightLeg = flightLegs[activeFlightLegIndex % flightLegs.length] ?? null;')
-    && !landingSource.includes('const flightPath = buildCurvedFlightPath')
+    && landingSource.includes('const flightPath = buildCurvedFlightPath')
     && landingSource.includes('className="landing-cinematic-map-flight-route"')
-    && !landingSource.includes('className="landing-cinematic-map-flight-route-live"')
+    && landingSource.includes('className="landing-cinematic-map-flight-route-live"')
     && landingSource.includes('className="landing-cinematic-map-aircraft"')
     && landingSource.includes('<animateMotion')
     && !landingSource.includes('className="landing-cinematic-map-selection-layer"')
@@ -255,15 +253,10 @@ assert(
 );
 
 assert(
-  /\.landing-cinematic-map-selection-spread,[\s\S]*\.landing-cinematic-map-selection-ping,[\s\S]*\.landing-cinematic-map-selection-ring\s*\{[\s\S]*animation-duration:\s*var\(--race-cycle-duration,\s*15s\);[\s\S]*animation-delay:\s*var\(--race-delay\)/.test(styleSource)
-    && !styleSource.includes('landing-cinematic-map-readout-line')
+  !styleSource.includes('landing-cinematic-map-readout-line')
     && !styleSource.includes('landing-cinematic-map-readout-line-step')
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-selection-spread-step/.test(styleSource)
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*fill:\s*rgba\(240,\s*117,\s*97,\s*0\.14\)/.test(styleSource)
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*stroke-width:\s*1\.4/.test(styleSource)
-    && /@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*86/.test(styleSource)
-    && /\.landing-cinematic-map-selection-ring\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-selection-ring-step/.test(styleSource)
-    && /@keyframes landing-cinematic-map-selection-ring-step\s*\{[\s\S]*opacity:\s*0\.92/.test(styleSource)
+    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(styleSource)
+    && /@keyframes landing-cinematic-map-flight-route-step\s*\{[\s\S]*stroke-dashoffset:\s*-1/.test(styleSource)
     && /\.landing-cinematic-map-bottom-deck\s*\{[\s\S]*position:\s*absolute;[\s\S]*grid-template-columns:\s*minmax\(220px,\s*278px\) minmax\(0,\s*388px\);[\s\S]*justify-content:\s*space-between/.test(styleSource)
     && /\.landing-cinematic-map-guide\s*\{[\s\S]*width:\s*100%;[\s\S]*pointer-events:\s*none/.test(styleSource)
     && /\.landing-cinematic-map-guide-step\s*\{[\s\S]*animation-duration:\s*3s/.test(styleSource)
@@ -290,7 +283,7 @@ assert(
     && /\.landing-cinematic-map-caption-meta em span,[\s\S]*\.landing-cinematic-map-caption-meta small span,[\s\S]*\.landing-cinematic-map-caption-meta b span\s*\{[\s\S]*color:\s*rgba\(33,\s*30,\s*27,\s*0\.48\)/.test(styleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*animation:\s*landing-cinematic-map-caption-step var\(--race-cycle-duration,\s*15s\)/.test(styleSource)
     && /\.landing-cinematic-map-caption:first-child\s*\{[\s\S]*opacity:\s*1/.test(styleSource),
-  'Landing race map motion should explain the diagram with active race-pin selection, a readout line, sequential metric reading, delayed row matching, scaled timing, and reduced-motion fallback.',
+  'Landing race map motion should explain the diagram with an airline route, sequential metric reading, delayed row matching, scaled timing, and reduced-motion fallback.',
 );
 
 assert(
@@ -345,11 +338,11 @@ assert(
 
 assert(
   /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*0\.68px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-width:\s*1\.1;/.test(landingStyleSource)
-    && !landingStyleSource.includes('landing-cinematic-map-flight-route-live')
+    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-width:\s*0\.9;[\s\S]*stroke-dasharray:\s*0\.7 1\.25;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(landingStyleSource)
     && /\.landing-cinematic-map-aircraft-shape\s*\{[\s\S]*stroke:\s*#fffaf3;/.test(landingStyleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource),
-  'Landing race map active split CSS should keep SVG pin labels and continuous destination connectors bounded inside the map.',
+  'Landing race map CSS should keep SVG pin labels and the moving airline route bounded inside the map.',
 );
 
 assert(

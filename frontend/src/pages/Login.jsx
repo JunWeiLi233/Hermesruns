@@ -177,9 +177,9 @@ export default function Login() {
 
   return (
     <div className="auth-page auth-page--login auth-page--liquid-glass" data-auth-redesign="command-entry">
+      <AuthDotField />
       <main className="auth-flow-shell">
         <section className="auth-flow-brand">
-          <AuthDotField />
           <div className="auth-flow-brand-inner">
             <div className="auth-flow-wordmark-wrap">
               <h1 className="auth-flow-wordmark">HERMES</h1>

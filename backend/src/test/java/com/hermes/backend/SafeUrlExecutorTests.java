@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.apache.hc.client5.http.DnsResolver;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -9,8 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -42,9 +45,18 @@ class SafeUrlExecutorTests {
     }
 
     @Test
+    void productionExecutorRejectsTransportItCannotHarden() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        assertThatThrownBy(() -> new SafeUrlExecutor(restTemplate))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Safe URL transport");
+    }
+
+    @Test
     void rejectsNonHttpSchemesBeforeAnyRequest() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        SafeUrlExecutor executor = new SafeUrlExecutor(restTemplate);
+        SafeUrlExecutor executor = SafeUrlExecutor.permissiveForTests(restTemplate);
 
         ResponseEntity<String> response = executor.exchange(
                 "file:///etc/passwd", HttpMethod.GET, new HttpEntity<Void>((Void) null), String.class);
@@ -57,7 +69,7 @@ class SafeUrlExecutorTests {
     @Test
     void rejectsMalformedUrlBeforeAnyRequest() {
         RestTemplate restTemplate = mock(RestTemplate.class);
-        SafeUrlExecutor executor = new SafeUrlExecutor(restTemplate);
+        SafeUrlExecutor executor = SafeUrlExecutor.permissiveForTests(restTemplate);
 
         ResponseEntity<String> response = executor.exchange(
                 "https://[", HttpMethod.GET, new HttpEntity<Void>((Void) null), String.class);
@@ -77,6 +89,9 @@ class SafeUrlExecutorTests {
         assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("192.168.1.1"))).isFalse();
         assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("172.16.0.1"))).isFalse();
         assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("169.254.169.254"))).isFalse();
+        assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("100.64.0.1"))).isFalse();
+        assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("192.0.2.1"))).isFalse();
+        assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("fc00::1"))).isFalse();
         assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("0.0.0.0"))).isFalse();
         assertThat(SafeUrlExecutor.isPublicAddress(InetAddress.getByName("::1"))).isFalse();
         // IPv4-mapped IPv6 loopback representation must also be rejected.
@@ -87,18 +102,38 @@ class SafeUrlExecutorTests {
     }
 
     @Test
+    void connectionDnsResolverRejectsPrivateResultsAtTransportBoundary() throws Exception {
+        DnsResolver privateDelegate = fixedResolver(InetAddress.getByName("169.254.169.254"));
+        SafeUrlExecutor.PublicAddressDnsResolver resolver =
+                new SafeUrlExecutor.PublicAddressDnsResolver(privateDelegate);
+
+        assertThatThrownBy(() -> resolver.resolve("images.example"))
+                .isInstanceOf(UnknownHostException.class);
+    }
+
+    private static DnsResolver fixedResolver(InetAddress address) {
+        return new DnsResolver() {
+            @Override
+            public InetAddress[] resolve(String host) {
+                return new InetAddress[]{address};
+            }
+
+            @Override
+            public String resolveCanonicalHostname(String host) {
+                return host;
+            }
+        };
+    }
+
+    @Test
     void isResolvedAddressAllowedBlocksLoopbackLiteralHost() {
         // InetAddress resolves the literal loopback host without network I/O,
         // so this exercises the resolved-address guard deterministically.
-        RestTemplate restTemplate = mock(RestTemplate.class);
-        SafeUrlExecutor executor = new SafeUrlExecutor(restTemplate);
+        SafeUrlExecutor executor = new SafeUrlExecutor(new RestTemplate());
 
         assertThat(executor.isResolvedAddressAllowed("http://localhost/")).isFalse();
         assertThat(executor.isResolvedAddressAllowed("http://127.0.0.1/")).isFalse();
         assertThat(executor.isResolvedAddressAllowed("http://[::1]/")).isFalse();
-
-        verify(restTemplate, never()).exchange(
-                any(String.class), any(HttpMethod.class), any(HttpEntity.class), any(Class.class));
     }
 
     @Test

@@ -136,8 +136,8 @@ assert.match(
 
 assert.match(
   styleSource,
-  /\.landing-strava-logo\s*\{[\s\S]*width:\s*78px/,
-  'Landing Strava logo should have a stable CTA-sized badge style.',
+  /\.landing-page--liquid-glass \.landing-cinematic-btn--strava,[\s\S]*width:\s*237px;[\s\S]*border-radius:\s*6px;[\s\S]*background:\s*transparent;/,
+  'Landing should preserve the official Strava button dimensions and artwork.',
 );
 
 assert.match(

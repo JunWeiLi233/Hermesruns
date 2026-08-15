@@ -10,7 +10,6 @@ const read = (relativePath) => readFileSync(path.join(root, relativePath), 'utf8
 const shoesSource = read('pages/Shoes.jsx');
 const indexCss = read('index.css');
 const atelierCss = read('styles/shoes-atelier-redesign.css');
-const packageJson = read('../package.json');
 
 const assertIncludes = (source, snippet, label) => {
   assert.ok(source.includes(snippet), `${label} missing: ${snippet}`);
@@ -98,6 +97,10 @@ assert.doesNotMatch(
   'Shoes atelier redesign must not use negative letter spacing.',
 );
 
-assertIncludes(packageJson, 'src/pages/shoesAtelierRedesign.smoke.test.js', 'npm test registration');
+assert.match(
+  read('../package.json'),
+  /"test:contracts":\s*"node scripts\/run-tests\.mjs"/,
+  'npm test should keep using the contract runner that discovers this guardrail.',
+);
 
 console.log('[PASS] Shoes atelier redesign guardrails passed.');

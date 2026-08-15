@@ -1876,6 +1876,17 @@
   color: rgba(239, 231, 221, 0.26); /* tokens-ok */
 }
 
+.auth-flow-legal > .global-footer-links {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: clamp(12px, 2vw, 22px);
+}
+
+.auth-flow-legal > .global-footer-links a {
+  white-space: nowrap;
+}
+
 .auth-flow-legal a {
   text-decoration: none;
 }

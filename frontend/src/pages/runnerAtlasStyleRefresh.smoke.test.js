@@ -86,9 +86,15 @@ assert.match(
 );
 
 assert.match(
-  minimalistBlock,
+  styleSource,
   /\.runner-dashboard-page:has\(\.muscle-training-page\) \.muscle-training-page \.mt-strength-lab\[data-friendly-strength-lab="true"\] :is\([\s\S]*\.mt-today-card,[\s\S]*\.mt-readiness-card--decision[\s\S]*\)\s*\{[\s\S]*background:\s*var\(--runner-minimal-surface\)\s*!important;[\s\S]*color:\s*var\(--runner-minimal-ink\)\s*!important;/,
   'Muscle Training should specifically override its previous dark anchor cards back to minimalist light surfaces.',
+);
+
+assert.ok(
+  styleSource.lastIndexOf('background: var(--runner-minimal-surface) !important;')
+    > styleSource.indexOf('/* Runner atlas Muscle Training specificity repair */'),
+  'The light Muscle Training decision-card repair should appear after the route-local dark override.',
 );
 
 assert.match(

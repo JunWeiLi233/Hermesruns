@@ -993,12 +993,7 @@ const Runs = memo(function Runs() {
     if (!run || deleting) return;
     setDeleting(true);
     try {
-      const res = await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        setIntegrationNotice(t('runs.delete_failed'));
-        setIntegrationNoticeTone('error');
-        return;
-      }
+      await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
       // Optimistically remove from state + clear per-run caches.
       setAllRuns(prev => prev.filter(r => r.id !== run.id));
       setRoutePreviewFallbacks(prev => {
@@ -1017,7 +1012,7 @@ const Runs = memo(function Runs() {
       setDeleteTarget(null);
     } catch {
       setIntegrationNotice(t('runs.delete_failed'));
-      setIntegrationNoticeTone('error');
+      setIntegrationNoticeTone('alert');
     } finally {
       setDeleting(false);
     }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import java.util.regex.Pattern;
 @Service
 public class NationalWeatherServiceForecastClient {
     private static final Logger log = LoggerFactory.getLogger(NationalWeatherServiceForecastClient.class);
+    private static final String NWS_HOST = "api.weather.gov";
     private static final String POINTS_ENDPOINT = "https://api.weather.gov/points/";
     private static final String USER_AGENT = "Hermes/1.0 (personal running coach app)";
     private static final double MPH_TO_KMH = 1.609344;
@@ -75,11 +77,11 @@ public class NationalWeatherServiceForecastClient {
 
     Map<String, Object> fetchForecast(double latitude, double longitude) {
         String pointsUrl = POINTS_ENDPOINT + String.format(Locale.ROOT, "%.4f,%.4f", latitude, longitude);
-        Map<String, Object> points = getJson(pointsUrl);
+        Map<String, Object> points = getJson(URI.create(pointsUrl));
         if (!(path(points, "properties", "forecastHourly") instanceof String hourlyUrl) || hourlyUrl.isBlank()) {
             throw new IllegalStateException("NWS points response missing forecastHourly URL.");
         }
-        Map<String, Object> hourly = getJson(hourlyUrl);
+        Map<String, Object> hourly = getJson(validatedHourlyUri(hourlyUrl));
         List<Map<String, Object>> periods = asObjectList(path(hourly, "properties", "periods"));
         if (periods.isEmpty()) {
             throw new IllegalStateException("NWS hourly response missing periods.");
@@ -93,8 +95,8 @@ public class NationalWeatherServiceForecastClient {
         return payload;
     }
 
-    private Map<String, Object> getJson(String url) {
-        RequestEntity<Void> request = RequestEntity.get(java.net.URI.create(url))
+    private Map<String, Object> getJson(URI url) {
+        RequestEntity<Void> request = RequestEntity.get(url)
                 .header("User-Agent", USER_AGENT)
                 .header("Accept", "application/geo+json")
                 .build();
@@ -107,6 +109,29 @@ public class NationalWeatherServiceForecastClient {
             throw new IllegalStateException("NWS response body was empty.");
         }
         return body;
+    }
+
+    private static URI validatedHourlyUri(String value) {
+        URI candidate;
+        try {
+            candidate = URI.create(value);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("NWS forecastHourly URL is invalid.", ex);
+        }
+        String path = candidate.getRawPath();
+        boolean allowed = "https".equalsIgnoreCase(candidate.getScheme())
+                && NWS_HOST.equalsIgnoreCase(candidate.getHost())
+                && (candidate.getPort() == -1 || candidate.getPort() == 443)
+                && candidate.getUserInfo() == null
+                && candidate.getRawQuery() == null
+                && candidate.getRawFragment() == null
+                && path != null
+                && path.startsWith("/gridpoints/")
+                && path.endsWith("/forecast/hourly");
+        if (!allowed) {
+            throw new IllegalStateException("NWS forecastHourly URL is outside the weather.gov hourly API.");
+        }
+        return URI.create("https://" + NWS_HOST + path);
     }
 
     private Map<String, Object> buildCurrent(Map<String, Object> period) {

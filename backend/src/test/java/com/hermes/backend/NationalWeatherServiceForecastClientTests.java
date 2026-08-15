@@ -14,6 +14,8 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class NationalWeatherServiceForecastClientTests {
@@ -72,6 +74,21 @@ class NationalWeatherServiceForecastClientTests {
         NationalWeatherServiceForecastClient client = new NationalWeatherServiceForecastClient(restTemplate);
 
         assertThat(client.tryFetchForecast(40.7519, -73.8204)).isNull();
+    }
+
+    @Test
+    void rejectsForecastHourlyUrlOutsideWeatherGovBeforeSecondRequest() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        when(restTemplate.exchange(any(RequestEntity.class), any(ParameterizedTypeReference.class)))
+                .thenReturn(ResponseEntity.ok(Map.of("properties", Map.of(
+                        "forecastHourly", "http://169.254.169.254/latest/meta-data",
+                        "timeZone", "America/New_York"
+                ))));
+        NationalWeatherServiceForecastClient client = new NationalWeatherServiceForecastClient(restTemplate);
+
+        assertThat(client.tryFetchForecast(40.7519, -73.8204)).isNull();
+        verify(restTemplate, times(1)).exchange(
+                any(RequestEntity.class), any(ParameterizedTypeReference.class));
     }
 
     private static Map<String, Object> pointsBody() {

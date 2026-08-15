@@ -276,19 +276,11 @@ public class ActivityController {
 
         List<double[]> latlngs = coords.stream()
                 .map(row -> new double[]{
-                        roundHeatmapCoord(((Number) row[0]).doubleValue()),
-                        roundHeatmapCoord(((Number) row[1]).doubleValue())})
+                        Math.round(((Number) row[0]).doubleValue() * 1_000_000d) / 1_000_000d,
+                        Math.round(((Number) row[1]).doubleValue() * 1_000_000d) / 1_000_000d})
                 .toList();
 
         return ResponseEntity.ok(latlngs);
-    }
-
-    /**
-     * Trims coordinate JSON payload (~25% on large heatmaps). Six decimals is
-     * ~0.11 m — below GPS accuracy, so heatmap rendering is unchanged.
-     */
-    private static double roundHeatmapCoord(double value) {
-        return Math.round(value * 1_000_000d) / 1_000_000d;
     }
 
     @GetMapping("/{id}/points")

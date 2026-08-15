@@ -158,8 +158,14 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /st-profile-avatar-input[\s\S]*?onAvatarUpload[\s\S]*?settings\.avatar_change/,
-  'The Settings hero must expose a visible profile-photo picker.',
+  /id="st-profile-avatar-input"[\s\S]*?accept="image\/png,image\/jpeg"[\s\S]*?onChange=\{handleAvatarSelection\}/,
+  'The Settings hero must expose an image-only profile-photo picker.',
+);
+
+assert.match(
+  layoutSource,
+  /function handleAvatarSelection[\s\S]*?onAvatarUpload\?\.\(file\)[\s\S]*?htmlFor="st-profile-avatar-input"/,
+  'The visible avatar control must forward the selected file to the upload handler.',
 );
 
 console.log('[PASS] Settings workbench layout guardrails passed.');

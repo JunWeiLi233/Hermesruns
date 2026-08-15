@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -44,7 +46,7 @@ public class Runner {
 
     private String displayName;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARBINARY)
     @JsonIgnore
     private byte[] avatarImage;
 

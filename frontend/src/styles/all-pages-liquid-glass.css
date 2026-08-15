@@ -987,10 +987,15 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-eng
   backdrop-filter: none !important;
 }
 
+.runner-shell-page.weather-engine-page .weather-engine-forecast-strip {
+  background: var(--runner-profile-card) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-engine-page .weather-engine-forecast-strip {
   background: #fff !important;
   background-image: none !important;
-  box-shadow: none !important;
 }
 
 .runner-shell-page.weather-engine-page .weather-engine-panel-head > div {

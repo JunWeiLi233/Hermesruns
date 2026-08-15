@@ -3566,6 +3566,52 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   }
 }
 
+/* Runs ledger redesign. Reference source: design.md Kinetic Editorial. */
+#root .runs-dashboard-page.runs-ledger-page {
+  min-width: 0;
+}
+
+.runs-ledger-awaiting .integration-alert-background {
+  display: none;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-month-grid {
+  grid-template-columns: 1fr !important;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-card-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.runs-profile-history.runs-ledger-redesign button.recent-runs-card {
+  grid-template-columns: 160px minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px !important;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-card-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--runner-profile-line);
+  border-radius: 6px;
+  background: var(--runner-profile-card);
+  color: var(--runner-profile-muted);
+}
+
+@media (max-width: 760px) {
+  .runs-profile-history.runs-ledger-redesign button.recent-runs-card {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Profile-aligned Run Detail cockpit polish */
 
 .run-detail-page.run-detail-profile-cockpit {

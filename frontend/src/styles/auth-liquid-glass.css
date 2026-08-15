@@ -24,8 +24,7 @@
     radial-gradient(circle at 78% 15%, rgba(255, 255, 255, 0.74), transparent 18rem);
 }
 
-#root .auth-page--liquid-glass > .auth-dot-field,
-#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand > .auth-dot-field {
+#root .auth-page--liquid-glass > .auth-dot-field {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -33,8 +32,7 @@
   pointer-events: none;
 }
 
-#root .auth-page--liquid-glass > .auth-dot-field .auth-dot-field__canvas,
-#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand > .auth-dot-field .auth-dot-field__canvas {
+#root .auth-page--liquid-glass > .auth-dot-field .auth-dot-field__canvas {
   display: block;
   width: 100%;
   height: 100%;

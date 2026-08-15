@@ -42,6 +42,24 @@ assert.match(
 );
 
 assert.match(
+  runsSource,
+  /await apiJson\(`\/api\/activities\/\$\{run\.id\}`, \{ method: 'DELETE' \}\);/,
+  'A confirmed deletion should await the shared JSON client before updating the ledger.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /(?:const|let|var)\s+\w+\s*=\s*await apiJson\(`\/api\/activities\/\$\{run\.id\}`[\s\S]{0,180}\.ok/,
+  'Runs must not inspect Response.ok on apiJson parsed payloads.',
+);
+
+assert.match(
+  runsSource,
+  /setIntegrationNoticeTone\('alert'\)/,
+  'Delete failures should use the existing alert tone class.',
+);
+
+assert.match(
   ledgerBlock,
   /#root\s+\.runs-dashboard-page\.runs-ledger-page\s*\{/,
   'Runs ledger CSS should be scoped to the page marker.',
