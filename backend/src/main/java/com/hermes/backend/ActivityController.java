@@ -275,7 +275,9 @@ public class ActivityController {
         }
 
         List<double[]> latlngs = coords.stream()
-                .map(row -> new double[]{((Number) row[0]).doubleValue(), ((Number) row[1]).doubleValue()})
+                .map(row -> new double[]{
+                        Math.round(((Number) row[0]).doubleValue() * 1_000_000d) / 1_000_000d,
+                        Math.round(((Number) row[1]).doubleValue() * 1_000_000d) / 1_000_000d})
                 .toList();
 
         return ResponseEntity.ok(latlngs);
@@ -608,6 +610,26 @@ public class ActivityController {
         }
         ElevationCorrectionService.RecalibrateResult result = elevationCorrectionService.recalibrate(activityOpt.get(), request);
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Permanently deletes a run/activity owned by the caller. Removes the activity's GPS
+     * points (separate table) and the activity row itself. Returns 404 if the activity
+     * does not exist or does not belong to the caller (no information leak).
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteActivity(
+            @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
+        if (activeUser.isEmpty()) {
+            return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+        boolean deleted = activityDataAccess.deleteActivityForRunner(id, activeUser.get());
+        if (!deleted) {
+            return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
+        }
+        return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 
     private static ResponseEntity<Map<String, String>> err(HttpStatus status, String code, String message) {

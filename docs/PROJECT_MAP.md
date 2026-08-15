@@ -11,11 +11,11 @@ Primary surfaces include Today Run, Profile, Runs, Analysis, Heatmap, Weather, S
 ## 2. Technology stack
 
 Frontend facts:
-- React 19, Vite, React Router, Leaflet, Chart.js, Zustand. Source of truth: `frontend/package.json`.
+- React 19, Vite, React Router 8, incremental TypeScript, Vitest/React Testing Library, Leaflet, and Chart.js. Source of truth: `frontend/package.json`.
 - Frontend entry: `frontend/src/main.jsx`.
 - Route and provider composition: `frontend/src/App.jsx`.
-- Shared API client: `frontend/src/api.js`.
-- User copy: `frontend/src/i18n/translations.js`.
+- Shared typed API client: `frontend/src/api.ts`.
+- User copy: locale modules under `frontend/src/i18n/locales/`; registry and fallback policy: `frontend/src/i18n/localeRegistry.js`.
 
 Backend facts:
 - Java 17, Maven, Spring Boot, Spring MVC, Spring Security, JPA/Hibernate. Source of truth: `backend/pom.xml`.
@@ -44,23 +44,28 @@ Note: if `backend/pom.xml` and docs disagree on dependency versions, `pom.xml` w
 
 - `frontend/src/main.jsx`: React browser mount.
 - `frontend/src/App.jsx`: providers, lazy-loaded pages, route guards.
-- `frontend/src/api.js`: backend base URL, JWT header, language header, JSON parsing, 401 handling.
+- `frontend/src/api.ts`: typed backend base URL, JWT header, language header, JSON parsing, 401 handling.
+- `frontend/src/api/`: typed product-domain API adapters with runtime payload normalization.
+- `frontend/src/contracts/`: incremental TypeScript API and product-domain contracts.
+- `frontend/src/i18n/localeRegistry.js`: supported locale metadata, normalization, and `Intl` formatter ownership.
+- `frontend/src/i18n/translationRuntime.js`: translation lookup, English fallback, interpolation, and missing-key behavior.
 - `frontend/src/pages/`: route-level pages and page smoke tests.
 - `frontend/src/components/`: shared UI, shell, navigation, cards, visual components.
 - `frontend/src/components/ui/`: low-level reusable UI pieces.
 - `frontend/src/contexts/`: Auth, i18n, theme, units.
-- `frontend/src/stores/`: Zustand or other shared local state.
 - `frontend/src/data/`: static catalog and shared frontend data.
 - `frontend/src/hooks/`: reusable React hooks.
 - `frontend/src/utils/`: formatting, analysis, route, race, shoe, and contract helpers.
-- `frontend/src/styles/style.css`: large legacy/global stylesheet.
+- `frontend/src/styles/_split/` and the later imports in `frontend/src/index.css`: active CSS sources in runtime cascade order.
+- `frontend/src/styles/style.css`: frozen legacy reference; do not edit or split from it.
+- `frontend/src/styles/style.generated.css`: ignored test compatibility view generated from active `index.css` imports.
 - `frontend/src/styles/_split/`: split CSS by surface or feature.
 
 Key route mapping is in `frontend/src/App.jsx`: `/profile`, `/runs`, `/run/:id`, `/analysis`, `/heatmap`, `/weather`, `/today-run`, `/shoes`, `/races`, `/schedule`, `/muscle-training`, `/rewards`, `/settings`, and `/dashboard/*`.
 
 ## 5. Backend module map
 
-Most backend classes currently share package `backend/src/main/java/com/hermes/backend/`.
+Most legacy backend classes currently share package `backend/src/main/java/com/hermes/backend/`. New or migrated vertical slices belong in product-domain subpackages; `com.hermes.backend.billing` and `com.hermes.backend.rewards` are complete slices. See `docs/architecture/backend-package-migration.md`.
 
 Major controller groups:
 - `LoginController.java`: `/api/auth`, password login/signup/reset, email verification, admin login.
@@ -76,19 +81,20 @@ Major controller groups:
 - `RaceController.java`: `/api/races/**`.
 - `RoutePlannerController.java`: `/api/route/**`.
 - `MuscleTrainingController.java`: `/api/training/muscle/**`.
-- `BillingController.java`: `/api/billing/**`, Stripe.
+- `billing/BillingController.java`: `/api/billing/**`, Stripe.
+- `rewards/DigitalCosmeticsController.java`: `/api/cosmetics/**`, earned digital inventory and active themes.
 - `Admin*Controller.java`: `/api/admin/**`, admin portal, jobs, audit, users, shoes, race maps.
 - `WeatherContextController.java`: `/api/v1/weather/**`.
 - `StravaWebhookController.java`: `/api/strava/webhook`.
 - `SpaForwardingController.java`: React SPA route fallback.
 
-Backend class types are currently mixed in the same package: controllers, services, entities, repositories, filters, schedulers, parsers, and DTOs.
+Legacy backend class types remain mixed in the root package while domains are migrated incrementally. Do not create additional root-package product classes.
 
 ## 6. Key call chains and data flow
 
 ### Authentication
 
-`Login.jsx` / auth UI -> `AuthContext.jsx` and `api.js` -> `POST /api/auth/login` -> `LoginController.java` -> `AuthService.java`, `PasswordHasher.java`, login limiter/store -> JWT response -> `localStorage` -> route guards in `App.jsx` and authenticated API calls.
+`Login.jsx` / auth UI -> `AuthContext.jsx` and `api.ts` -> `POST /api/auth/login` -> `LoginController.java` -> `AuthService.java`, `PasswordHasher.java`, login limiter/store -> JWT response -> `localStorage` -> route guards in `App.jsx` and authenticated API calls.
 
 ### OAuth and Strava sync
 
@@ -157,6 +163,8 @@ Frontend:
 cd frontend
 npm run dev
 npm run lint
+npm run typecheck
+npm run test:unit
 npm test
 npm run build
 npm run preview
@@ -185,8 +193,9 @@ Do not claim local runtime changed unless the relevant proof gate passes. Backen
 ## 8. Testing notes
 
 - Backend tests live under `backend/src/test/java/com/hermes/backend/` and run through Maven.
-- Frontend has many colocated `*.smoke.test.js` and `*.test.js` files.
-- `frontend/package.json` runs an explicit list of Node smoke/unit scripts; adding a test file does not automatically add it to `npm test` unless the script is updated.
+- Frontend source-contract tests are colocated as `*.test.js` and run through `frontend/scripts/run-tests.mjs`.
+- Vitest behavior tests are colocated as `*.vitest.{js,jsx,ts,tsx}`; React interaction tests use React Testing Library and jsdom.
+- `npm test` runs TypeScript checking, Vitest behavior tests, and the source-contract runner in that order.
 - Prefer targeted tests first, then lint/build/compile and runtime proof for affected surfaces.
 
 ## 9. Stable change rules
@@ -204,9 +213,9 @@ Do not claim local runtime changed unless the relevant proof gate passes. Backen
 
 Known risks:
 - Backend package is very flat; many domains share `com.hermes.backend`, increasing navigation and coupling cost.
-- `frontend/src/styles/style.css` is large and interacts with split CSS, increasing cascade/regression risk.
-- Translation table is centralized and easy to desynchronize.
-- `npm test` is not broad test auto-discovery; it runs explicit scripts.
+- The active CSS cascade spans split surface files and later route overrides; `style.generated.css` gives source-inspection tests one generated view without restoring dual ownership.
+- Translation bundles remain large; the locale registry and parity checker reduce but do not eliminate synchronization risk.
+- The TypeScript migration is intentionally incremental, so unconverted JavaScript remains outside compiler checking unless imported by typed modules.
 - H2/PostgreSQL differences can hide database bugs.
 - JWT is stored in `localStorage`, so XSS-sensitive UI changes need extra scrutiny.
 - Source, built static files, and live backend can drift; use runtime sync tools.

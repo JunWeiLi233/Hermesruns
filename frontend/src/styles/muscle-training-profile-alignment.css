@@ -547,3 +547,28 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data
     grid-column: 2;
   }
 }
+
+/* Keep the friendly decision cards light after route-local dark overrides. */
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) {
+  border: 1px solid var(--runner-minimal-line) !important;
+  background: var(--runner-minimal-surface) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(h1, h2, h3, h4, strong, label) {
+  color: var(--runner-minimal-ink) !important;
+}
+
+.runner-dashboard-page:has(.muscle-training-page) .muscle-training-page .mt-strength-lab[data-friendly-strength-lab="true"] :is(
+  .mt-today-card,
+  .mt-readiness-card--decision
+) :is(p, span, small, em) {
+  color: var(--runner-minimal-muted) !important;
+}

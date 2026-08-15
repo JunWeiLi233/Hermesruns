@@ -583,7 +583,7 @@ export default function WeatherEngine() {
 
         <div className="runner-shell-sidebar-footer">
           <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
-            <span className="runner-dashboard-workout-glyph" aria-hidden="true">+</span>
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{wt('coach_cta_primary')}</span>
           </button>
         </div>

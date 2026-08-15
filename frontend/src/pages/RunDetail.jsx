@@ -8,7 +8,7 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import RunsSubpageNav from '../components/RunsSubpageNav';
 import TopbarNotifications from '../components/TopbarNotifications';
-import { formatDuration, formatLongDate, formatPace, formatPaceSeconds } from '../utils/format';
+import { formatDuration, formatLongDate, formatPaceSeconds } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
@@ -215,6 +215,9 @@ export default function RunDetail() {
   const { t, lang } = useI18n();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isCompactMapLayout, setIsCompactMapLayout] = useState(() => (
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches
+  ));
   const [profile, setProfile] = useState(null);
   const [run, setRun] = useState(() => readSelectedRunFromSession(id));
   const [isBootstrappingRun, setIsBootstrappingRun] = useState(true);
@@ -243,6 +246,17 @@ export default function RunDetail() {
     lang,
     activeKey: 'activities',
   }), [lang, t]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 860px)');
+    const syncCompactMapLayout = () => setIsCompactMapLayout(mediaQuery.matches);
+    syncCompactMapLayout();
+    mediaQuery.addEventListener('change', syncCompactMapLayout);
+
+    return () => mediaQuery.removeEventListener('change', syncCompactMapLayout);
+  }, []);
 
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
@@ -437,7 +451,13 @@ export default function RunDetail() {
     if (!mapRef.current || mapInstanceRef.current || !insights) return;
     if (!points.length) return;
 
+    let disposed = false;
+    let resizeObserver = null;
+    let resizeTimeoutId = null;
+
     import('leaflet').then((L) => {
+      if (disposed || !mapRef.current) return;
+
       const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: true, dragging: true });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
@@ -451,16 +471,25 @@ export default function RunDetail() {
       L.circleMarker(points[points.length - 1], { radius: 7, color: '#f49787', fillColor: '#f49787', fillOpacity: 1 })
         .bindTooltip(t('run_detail.finish')).addTo(map);
 
+      const resizeMap = () => map.invalidateSize({ pan: false });
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(resizeMap);
+        resizeObserver.observe(mapRef.current);
+      }
+      resizeTimeoutId = window.setTimeout(resizeMap, 0);
       mapInstanceRef.current = map;
     });
 
     return () => {
+      disposed = true;
+      resizeObserver?.disconnect();
+      if (resizeTimeoutId != null) window.clearTimeout(resizeTimeoutId);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [insights, points, t]);
+  }, [insights, isCompactMapLayout, points, t]);
 
   const distKm = useMemo(() => {
     if (!run) return null;
@@ -717,7 +746,11 @@ export default function RunDetail() {
     navigate(`/run/${selectedRun.id}`);
   }
 
-  function renderRunnerShell(content, { hasCoachReview = false, hasComparison = false, showSections = false } = {}) {
+  function renderRunnerShell(content, {
+    hasCoachReview = false,
+    hasComparison = false,
+    showSections = false,
+  } = {}) {
     return (
       <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
         <RunsSubpageNav
@@ -796,11 +829,7 @@ export default function RunDetail() {
   const metaSeparator = t('run_detail.meta_separator');
   const distanceUnitLabel = t('run_detail.unit_km');
   const paceUnitLabel = t('run_detail.unit_pace');
-  const speedUnitLabel = t('run_detail.unit_kmh');
   const heartRateUnitLabel = t('run_detail.unit_bpm');
-  const cadenceUnitLabel = t('run_detail.unit_spm');
-  const powerUnitLabel = t('run_detail.unit_watt');
-  const caloriesUnitLabel = t('run_detail.unit_kcal');
   const elevationUnitLabel = t('run_detail.unit_meter');
   const timeText = Number.isNaN(startDate.getTime())
     ? null
@@ -810,19 +839,6 @@ export default function RunDetail() {
     timeText,
     run.locationCity || run.city || run.locationName || run.location,
   ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
-
-  const performanceRows = [
-    [t('run_detail.perf_distance'), distKm != null ? `${distKm.toFixed(2)} ${distanceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_moving_time'), movingSec ? formatDuration(movingSec) : t('run_detail.not_available')],
-    [t('run_detail.perf_average_pace'), distKm && movingSec ? formatPace(distKm, movingSec, lang) : t('run_detail.not_available')],
-    [t('run_detail.perf_max_speed'), run.maxSpeedMps != null ? `${(run.maxSpeedMps * 3.6).toFixed(1)} ${speedUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_heart_rate'), run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_max_heart_rate'), run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_cadence'), run.averageCadence != null ? `${Math.round(run.averageCadence)} ${cadenceUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_average_power'), run.averageWatts != null ? `${Math.round(run.averageWatts)} ${powerUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_calories'), run.calories != null ? `${run.calories} ${caloriesUnitLabel}` : t('run_detail.not_available')],
-    [t('run_detail.perf_elevation_gain'), run.totalElevationGain != null ? `${Math.round(run.totalElevationGain)} ${elevationUnitLabel}` : t('run_detail.not_available')],
-  ];
 
   const activeShoes = shoes.filter((shoe) => !shoe.retired);
   const linkedShoe = run?.shoeId ? shoes.find((shoe) => String(shoe.id) === String(run.shoeId)) : null;
@@ -850,68 +866,77 @@ export default function RunDetail() {
   const aerobicEffect = Number(trainingEffect?.aerobic);
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
   const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
+  const routeMapBackground = points.length > 0 ? (
+    <div className="run-detail-map-background">
+      <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
+    </div>
+  ) : null;
 
   return renderRunnerShell(
-    <div className="run-detail-page run-detail-profile-cockpit">
-      <div className="run-detail-topbar">
-        <div className="run-detail-topbar-left">
-          <Link to="/runs" className="run-detail-icon-btn" aria-label={t('run_detail.back_to_runs')}>
-            <span aria-hidden="true">&larr;</span>
-          </Link>
-          <div className="run-detail-heading">
-            <h1>{run.name || t('run_detail.detail_title')}</h1>
-            <p>{heroMetaText}</p>
-          </div>
-        </div>
-        <div className="run-detail-topbar-actions">
-          <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
-            {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
-            {run.provider === 'STRAVA' && (
-              <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
-                {syncBtnText || t('run_detail.resync_strava')}
-              </button>
-            )}
-            <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
-              <span>{shareFeedback || t('run_detail.share')}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="run-detail-shell">
-        <section id="run-detail-overview" className="run-detail-hero-grid run-detail-profile-hero">
-          <div className="run-detail-map-card run-detail-profile-map">
-            {points.length > 0 ? (
-              <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
-            ) : (
-              <div className="run-detail-no-map">{t('run_detail.no_map')}</div>
-            )}
-            <div className="run-detail-map-overlay">
-              <span>{t('run_detail.metric_distance')}</span>
-              <strong>{distanceValue} {distanceUnitLabel}</strong>
+    <div className={`run-detail-page run-detail-profile-cockpit run-detail-profile-minimal${points.length > 0 ? ' has-route-map-background' : ''}`}>
+      {points.length === 0 && (
+        <div className="run-detail-topbar">
+          <div className="run-detail-topbar-left">
+            <Link to="/runs" className="run-detail-icon-btn" aria-label={t('run_detail.back_to_runs')}>
+              <span aria-hidden="true">&larr;</span>
+            </Link>
+            <div className="run-detail-heading">
+              <span className="run-detail-eyebrow">{t('run_detail.hero_eyebrow')}</span>
+              <h1>{run.name || t('run_detail.detail_title')}</h1>
+              <p>{heroMetaText}</p>
             </div>
           </div>
-          <div className="run-detail-stat-rail run-detail-profile-stat-rail">
-            <article className="run-detail-stat-card is-accent">
+          <div className="run-detail-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
+              {run.provider === 'STRAVA' && (
+                <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
+                  {syncBtnText || t('run_detail.resync_strava')}
+                </button>
+              )}
+              <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
+                <span>{shareFeedback || t('run_detail.share')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {routeMapBackground}
+
+      <div className="run-detail-shell">
+        {points.length === 0 && (
+          <section className="run-detail-hero-grid run-detail-profile-hero">
+            <div className="run-detail-map-card run-detail-profile-map">
+              <div className="run-detail-no-map">{t('run_detail.no_map')}</div>
+            </div>
+          </section>
+        )}
+
+        <section id="run-detail-overview" className="run-detail-overview-card">
+          <div className="run-detail-overview-head">
+            <h2>{t('run_detail.overview_title')}</h2>
+          </div>
+
+          <div className="run-detail-overview-stat-grid">
+            <article className="run-detail-overview-stat">
               <span>{t('run_detail.metric_distance')}</span>
               <strong>{distanceValue}<em>{distanceUnitLabel}</em></strong>
             </article>
-            <article className="run-detail-stat-card">
+            <article className="run-detail-overview-stat">
               <span>{t('run_detail.metric_average_pace')}</span>
               <strong>{paceMetricValue}{paceMetricValue !== '--' ? <em>{paceUnitLabel}</em> : null}</strong>
             </article>
-            <article className="run-detail-stat-card">
+            <article className="run-detail-overview-stat">
               <span>{t('run_detail.metric_moving_time')}</span>
               <strong>{timeValue}</strong>
             </article>
           </div>
-        </section>
 
-        <section className="run-detail-main-grid">
-          <div className="run-detail-primary-column">
+          <div className="run-detail-overview-content-grid">
             {analytics?.debrief && (
-              <section id="run-detail-coach" className="run-detail-section run-detail-debrief-section">
-                <h2>{t('run_detail.coach_debrief_title')}</h2>
+              <section id="run-detail-coach" className="run-detail-overview-section run-detail-debrief-section">
+                <h3>{t('run_detail.coach_debrief_title')}</h3>
                 <div className="run-detail-panel run-detail-debrief-panel">
                   <div className="run-detail-debrief-header">
                     <div className="run-detail-debrief-readiness">
@@ -930,97 +955,99 @@ export default function RunDetail() {
               </section>
             )}
 
-          </div>
-
-          <aside className="run-detail-side-column">
-            <section className="run-detail-panel run-detail-gear-panel">
-              <span className="run-detail-panel-label">{t('run_detail.gear_linked')}</span>
-              <div className="run-detail-gear-row">
-                <div className="run-detail-gear-art">
-                  {linkedShoe?.photoUrl ? (
-                    <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} />
-                  ) : (
-                    <div className="run-detail-gear-placeholder">H</div>
-                  )}
+            <section className="run-detail-overview-section run-detail-gear-section">
+              <h3>{t('run_detail.gear_linked')}</h3>
+              <div className="run-detail-panel run-detail-gear-panel">
+                <div className="run-detail-gear-row">
+                  <div className="run-detail-gear-art">
+                    {linkedShoe?.photoUrl ? (
+                      <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} />
+                    ) : (
+                      <div className="run-detail-gear-placeholder">H</div>
+                    )}
+                  </div>
+                  <div className="run-detail-gear-copy">
+                    <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
+                    <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
+                    {linkedShoeUsage != null && (
+                      <div className="run-detail-gear-usage">
+                        <div style={{ width: `${linkedShoeUsage}%` }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="run-detail-gear-copy">
-                  <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
-                  <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
-                  {linkedShoeUsage != null && (
-                    <div className="run-detail-gear-usage">
-                      <div style={{ width: `${linkedShoeUsage}%` }} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            <div className="run-detail-gear-actions">
-              <button
-                type="button"
-                className="run-detail-link-btn"
-                disabled={assigningShoeId != null}
-                onClick={() => {
-                  setShoeActionMessage('');
-                  setShoeDropdownOpen((prev) => !prev);
-                }}
-              >
-                {assigningShoeId != null
-                  ? t('run_detail.shoe_assigning')
-                  : run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
-              </button>
-              {run.shoeId && (
-                <button type="button" className="run-detail-link-btn is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
-                  {t('run_detail.unlink_shoe')}
-                </button>
-              )}
-            </div>
-            {shoeDropdownOpen && (
-              <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
-                {activeShoes.length > 0 ? activeShoes.map((shoe) => (
+                <div className="run-detail-gear-actions">
                   <button
-                    key={shoe.id}
                     type="button"
-                    className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
+                    className="run-detail-link-btn"
                     disabled={assigningShoeId != null}
-                    onClick={() => assignShoe(shoe.id)}
+                    onClick={() => {
+                      setShoeActionMessage('');
+                      setShoeDropdownOpen((prev) => !prev);
+                    }}
                   >
-                    {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
+                    {assigningShoeId != null
+                      ? t('run_detail.shoe_assigning')
+                      : run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
                   </button>
-                )) : (
-                  <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
+                  {run.shoeId && (
+                    <button type="button" className="run-detail-link-btn is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
+                      {t('run_detail.unlink_shoe')}
+                    </button>
+                  )}
+                </div>
+                {shoeDropdownOpen && (
+                  <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
+                    {activeShoes.length > 0 ? activeShoes.map((shoe) => (
+                      <button
+                        key={shoe.id}
+                        type="button"
+                        className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
+                        disabled={assigningShoeId != null}
+                        onClick={() => assignShoe(shoe.id)}
+                      >
+                        {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
+                      </button>
+                    )) : (
+                      <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
+                    )}
+                  </div>
+                )}
+                {shoeActionMessage && (
+                  <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
                 )}
               </div>
-            )}
-            {shoeActionMessage && (
-              <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
-            )}
             </section>
-          </aside>
-        </section>
+          </div>
 
-        {runComparison && (
-          <section id="run-detail-comparison" className="run-detail-section run-detail-comparison-section">
-            <h2>{t('run_detail.run_comparison_title')}</h2>
-            <div className="run-detail-panel run-detail-comparison-panel">
-              <div className="run-detail-comparison-signal">
-                <div>
-                  <strong>
-                    {runComparison.direction === 'faster'
-                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                      : runComparison.direction === 'slower'
-                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
-                  </strong>
-                  <p>
-                    {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
-                      : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
-                        : t('run_detail.run_comparison_stable')}
-                    {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
-                  </p>
+          <div className="run-detail-overview-summary-grid">
+            {runComparison && (
+              <section id="run-detail-comparison" className="run-detail-overview-section run-detail-comparison-section">
+                <h3>{t('run_detail.run_comparison_title')}</h3>
+                <div className="run-detail-panel run-detail-comparison-panel">
+                  <div className="run-detail-comparison-signal">
+                    <div>
+                      <strong>
+                        {runComparison.direction === 'faster'
+                          ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                          : runComparison.direction === 'slower'
+                            ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                            : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                      </strong>
+                      <p>
+                        {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
+                          : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
+                            : t('run_detail.run_comparison_stable')}
+                        {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </section>
-        )}
+              </section>
+            )}
+
+          </div>
+        </section>
 
         <section id="run-detail-telemetry" className="run-detail-section run-detail-telemetry-section">
           <div className="run-detail-section-head run-detail-telemetry-heading">
@@ -1176,16 +1203,6 @@ export default function RunDetail() {
           </div>
         </section>
 
-        <section id="run-detail-metrics" className="run-detail-bottom-grid">
-          <article className="run-detail-panel">
-            <h3>{t('run_detail.performance_metrics')}</h3>
-            <div className="run-detail-stat-list">
-              {performanceRows.map(([label, value], index) => (
-                <div key={`${label}-${index}`}><span>{label}</span><strong>{value}</strong></div>
-              ))}
-            </div>
-          </article>
-        </section>
       </div>
       <footer className="runner-shell-footer runner-dashboard-footer run-detail-footer">
         <FooterNavLinks />

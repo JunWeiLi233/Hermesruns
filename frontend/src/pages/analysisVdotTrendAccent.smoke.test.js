@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const analysisSource = readFileSync(path.join(here, 'Analysis.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const analysisSplitStyleSource = readFileSync(path.join(here, '../styles/_split/analysis.css'), 'utf8');
 const liquidGlassStyleSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
@@ -58,6 +58,18 @@ assert.match(
 );
 
 assert.match(
+  analysisSource,
+  /className=\{cx\(\s*'analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight analysis-profile-reference-card is-trend',\s*!vdotTrend\.hasData && 'is-empty',?\s*\)\}/,
+  'Analysis should keep the VDOT reference card in the grid when a comparison trend is not available.',
+);
+
+assert.match(
+  analysisSource,
+  /vdotTrend\.hasData \? \([\s\S]*?\) : \([\s\S]*?t\('analysis\.vdot_trend_empty_title'\)[\s\S]*?t\('analysis\.vdot_trend_empty_copy'\)/,
+  'Analysis should use a localized, truthful empty state instead of omitting the VDOT reference grid card.',
+);
+
+assert.match(
   liquidGlassStyleSource,
   /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight \.analysis-overview-card-head,[\s\S]*?\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight \.analysis-overview-card-head > div\s*\{[^}]*background:\s*transparent\s*!important;/,
   'The Analysis VDOT header reset must target the shared runner/analysis root instead of requiring a nonexistent descendant relationship.',
@@ -67,6 +79,12 @@ assert.match(
   liquidGlassStyleSource,
   /#root \.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vdot-insight\s*\{[^}]*background:\s*radial-gradient\(circle at 85% 10%, var\(--accent-coral\) 0%, transparent 40%\),\s*var\(--bg-glass-strong\)\s*!important;/,
   'The Analysis VDOT insight card must retain the same layered glass surface as the coach grid.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-overview-risk-meter\s*\{[^}]*gap:\s*6px;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/,
+  'Analysis risk meter should keep three separated bars without an enclosing connector line.',
 );
 
 assert.doesNotMatch(
@@ -100,6 +118,12 @@ assert.ok(
 );
 
 assert.match(
+  liquidGlassStyleSource,
+  /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--intensity \.analysis-overview-card-kicker\s*\{[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important;/,
+  'The Analysis intensity label should stay on the card surface instead of showing a separate pill background.',
+);
+
+assert.match(
   styleSource,
   /body\.theme-light\s+\.analysis-overview-card--vdot-insight\s+\.analysis-overview-insight-copy,\s*body\.theme-high-contrast-light\s+\.analysis-overview-card--vdot-insight\s+\.analysis-overview-insight-copy\s*\{[^}]*color:\s*#2d0d08;/,
   'Analysis VDOT trend insight copy should use the same text color as the Hermes coach card headline on light surfaces.',
@@ -109,6 +133,12 @@ assert.match(
   analysisSplitStyleSource,
   /\.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
   'Analysis VO2 hero should not paint a background strip behind the title and metric card.',
+);
+
+assert.doesNotMatch(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-profile-primary::after\s*\{[\s\S]*?repeating-radial-gradient/,
+  'Analysis VO2 hero should not render the removed concentric-circle decoration.',
 );
 
 assert.match(
@@ -147,14 +177,15 @@ assert.notEqual(
   -1,
   'Analysis should include a named physiology lab redesign layer after the shared runner-page styles.',
 );
-const analysisLabEnd = styleSource.indexOf('/* Runner-facing Profile alignment pass */', analysisLabStart);
-const analysisLabBlock = styleSource.slice(
-  analysisLabStart,
-  analysisLabEnd === -1 ? styleSource.length : analysisLabEnd,
+const analysisLabSplitStart = analysisSplitStyleSource.indexOf('/* Analysis physiology lab redesign */');
+const analysisLabEnd = analysisSplitStyleSource.indexOf('/* Analysis heat-adaptation context */', analysisLabSplitStart);
+const analysisLabBlock = analysisSplitStyleSource.slice(
+  analysisLabSplitStart,
+  analysisLabEnd === -1 ? analysisSplitStyleSource.length : analysisLabEnd,
 );
 
 assert.ok(
-  analysisLabStart > styleSource.indexOf('/* Analysis full-width canvas repair */'),
+  analysisLabStart > styleSource.indexOf('/* Analysis full-width canvas repair */') && analysisLabSplitStart !== -1,
   'Analysis physiology lab redesign should come after the older full-width repair so it wins the route cascade.',
 );
 
@@ -300,6 +331,24 @@ assert.doesNotMatch(
   styleSource,
   /analysis-overview-status-pill\.is-cool|analysis-overview-card--vo2-clickable|analysis-overview-vo2-link-row/,
   'Analysis overview styles should not keep the removed cool status pill or VO2 click affordance selectors.',
+);
+
+assert.match(
+  analysisSource,
+  /const hasProgress = progressPct > 0;[\s\S]*?\{hasProgress \? \([\s\S]*?className="analysis-overview-gauge-progress"[\s\S]*?\) : null\}/,
+  'The load gauge should not render a rounded progress cap when its value is zero.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-profile-reference-card\.is-load \.analysis-overview-status-pill\.is-muted\s*\{[\s\S]*?background:\s*transparent\s*!important;[\s\S]*?color:\s*var\(--analysis-lab-muted\) !important;/,
+  'The load card muted status should keep its text without the blue pill background.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-profile-reference-card\.is-trend \.analysis-overview-card-kicker\s*\{[\s\S]*?padding:\s*0;[\s\S]*?border-color:\s*transparent;[\s\S]*?background:\s*transparent\s*!important;/,
+  'The VDOT trend kicker should keep its label without the decorative capsule layer.',
 );
 
 console.log('[PASS] Analysis VDOT trend accent guardrails passed.');

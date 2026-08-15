@@ -1,4 +1,4 @@
-package com.hermes.backend;
+package com.hermes.backend.billing;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

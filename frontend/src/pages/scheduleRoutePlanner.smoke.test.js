@@ -49,6 +49,12 @@ assert.match(
 
 assert.match(
   scheduleSource,
+  /const routeWaypoints = \(Array\.isArray\(routeRecommendation\?\.waypoints\) \? routeRecommendation\.waypoints : \[\]\)\s*\.map\(normalizeRouteWaypoint\)\s*\.filter\(Boolean\)/,
+  'Schedule should normalize coach-route GPS waypoints before mounting the OpenStreetMap background.',
+);
+
+assert.match(
+  scheduleSource,
   /const routeSketch = routeRecommendation\?\.preview \|\| null/,
   'Schedule should retain the history-derived route sketch when full geographic waypoints are unavailable.',
 );

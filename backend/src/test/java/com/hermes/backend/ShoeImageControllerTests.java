@@ -269,7 +269,15 @@ class ShoeImageControllerTests {
 
         ResponseEntity<?> response = controller.scanImage(
                 "Bearer session-token",
-                null,
+                new org.springframework.mock.web.MockMultipartFile(
+                        "image",
+                        "shoes.jpg",
+                        "image/jpeg",
+                        new byte[] {
+                                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10,
+                                'J', 'F', 'I', 'F', 0x00, (byte) 0xFF, (byte) 0xD9
+                        }
+                ),
                 mock(jakarta.servlet.http.HttpServletRequest.class)
         );
 
@@ -283,5 +291,118 @@ class ShoeImageControllerTests {
         assertEquals(3, body.get("monthlyUsed"));
         assertEquals(3, body.get("userFreeTotal"));
         verify(aiShoeScanService, never()).callAi(any(String.class), any(String.class));
+    }
+
+    @Test
+    void scanImageRejectsInvalidFileWithoutConsumingQuota() {
+        AuthService authService = mock(AuthService.class);
+        ShoeRepository shoeRepository = mock(ShoeRepository.class);
+        AiUsageService aiUsageService = mock(AiUsageService.class);
+        QuotaService quotaService = mock(QuotaService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        ApiRateLimiter apiRateLimiter = mock(ApiRateLimiter.class);
+        BingImageScraper bingImageScraper = mock(BingImageScraper.class);
+        AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
+
+        ShoeImageController controller = newController(
+                authService,
+                shoeRepository,
+                aiUsageService,
+                quotaService,
+                restTemplate,
+                systemConfigService,
+                apiRateLimiter,
+                bingImageScraper,
+                aiShoeScanService
+        );
+
+        Runner runner = new Runner();
+        runner.setId(11L);
+        runner.setEmail("free@hermes.com");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(apiRateLimiter.allow(anyString(), anyInt(), anyLong())).thenReturn(true);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(quotaService.isPro(runner)).thenReturn(false);
+
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "image",
+                "eicar.jpg",
+                "image/jpeg",
+                "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+                        .getBytes(java.nio.charset.StandardCharsets.US_ASCII)
+        );
+
+        ResponseEntity<?> response = controller.scanImage(
+                "Bearer session-token",
+                file,
+                mock(jakarta.servlet.http.HttpServletRequest.class)
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = assertInstanceOf(Map.class, response.getBody());
+        assertEquals("Invalid image format.", body.get("error"));
+        verify(quotaService, never()).canUseFeature(any(Runner.class), anyString());
+        verify(aiUsageService, never()).tryConsumeQuota(any(Runner.class));
+        verify(quotaService, never()).consumeFeature(any(Runner.class), anyString());
+        verify(aiShoeScanService, never()).callAi(any(String.class), any(String.class));
+    }
+
+    @Test
+    void scanImageValidFileStillConsumesQuotaBeforeAiCall() throws Exception {
+        AuthService authService = mock(AuthService.class);
+        ShoeRepository shoeRepository = mock(ShoeRepository.class);
+        AiUsageService aiUsageService = mock(AiUsageService.class);
+        QuotaService quotaService = mock(QuotaService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        ApiRateLimiter apiRateLimiter = mock(ApiRateLimiter.class);
+        BingImageScraper bingImageScraper = mock(BingImageScraper.class);
+        AiShoeScanService aiShoeScanService = mock(AiShoeScanService.class);
+
+        ShoeImageController controller = newController(
+                authService,
+                shoeRepository,
+                aiUsageService,
+                quotaService,
+                restTemplate,
+                systemConfigService,
+                apiRateLimiter,
+                bingImageScraper,
+                aiShoeScanService
+        );
+
+        Runner runner = new Runner();
+        runner.setId(12L);
+        runner.setEmail("happy-path@hermes.com");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(apiRateLimiter.allow(anyString(), anyInt(), anyLong())).thenReturn(true);
+        when(systemConfigService.isAiConfigured()).thenReturn(true);
+        when(quotaService.isPro(runner)).thenReturn(false);
+        when(quotaService.canUseFeature(runner, "shoe-scan")).thenReturn(true);
+        when(aiUsageService.getUsageStatus(runner)).thenReturn(new LinkedHashMap<>());
+        when(quotaService.getQuotaStatus(runner)).thenReturn(new LinkedHashMap<>());
+        when(aiShoeScanService.callAi(any(String.class), any(String.class))).thenReturn("[{\"brand\":\"Nike\"}]");
+
+        byte[] jpeg = new byte[] {
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0x00, 0x10,
+                'J', 'F', 'I', 'F', 0x00, (byte) 0xFF, (byte) 0xD9
+        };
+        org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
+                "image", "shoes.jpg", "image/jpeg", jpeg
+        );
+
+        ResponseEntity<?> response = controller.scanImage(
+                "Bearer session-token",
+                file,
+                mock(jakarta.servlet.http.HttpServletRequest.class)
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(quotaService).consumeFeature(runner, "shoe-scan");
+        verify(aiShoeScanService).callAi(any(String.class), any(String.class));
     }
 }

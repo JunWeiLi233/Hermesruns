@@ -1,5 +1,6 @@
 import AppIcon from './AppIcon';
 import FooterNavLinks from './FooterNavLinks';
+import RunActivityContributionGraph from './RunActivityContributionGraph';
 
 export default function SettingsAtlasLayout({
   t,
@@ -37,9 +38,23 @@ export default function SettingsAtlasLayout({
   wellnessRows = [],
   garminLane,
   setupChecklist,
+  runActivities = [],
+  runActivityState = 'loading',
+  avatarUrl,
+  avatarSaving,
+  avatarMsg,
+  onAvatarUpload,
+  onAvatarRemove,
 }) {
   const stravaConnected = Boolean(stravaStatus?.linked);
   const digestStateLabel = digestEnabled ? t('settings.stitch_enabled') : t('settings.stitch_review');
+  const avatarActionLabel = avatarUrl ? t('settings.avatar_change') : t('settings.avatar_upload');
+
+  function handleAvatarSelection(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) onAvatarUpload?.(file);
+  }
 
   return (
     <div className="runner-shell-canvas settings-control-canvas settings-atlas-canvas">
@@ -48,7 +63,25 @@ export default function SettingsAtlasLayout({
       <section className="st-hero">
         <div className="st-hero-left">
           <div className="st-hero-avatar-wrap">
-            <div className="st-hero-avatar">{initials}</div>
+            <input
+              id="st-profile-avatar-input"
+              className="st-avatar-file-input"
+              type="file"
+              accept="image/png,image/jpeg"
+              aria-label={avatarActionLabel}
+              disabled={avatarSaving}
+              onChange={handleAvatarSelection}
+            />
+            <label
+              className={`st-hero-avatar st-hero-avatar--editable${avatarSaving ? ' is-disabled' : ''}`}
+              htmlFor="st-profile-avatar-input"
+              title={avatarActionLabel}
+            >
+              {avatarUrl ? <img src={avatarUrl} alt="" /> : initials}
+              <span className="st-hero-avatar-edit" aria-hidden="true">
+                <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
+              </span>
+            </label>
             <span className="st-hero-badge">{heroBadge}</span>
           </div>
           <div className="st-hero-copy">
@@ -72,6 +105,13 @@ export default function SettingsAtlasLayout({
         </div>
       </section>
 
+      <RunActivityContributionGraph
+        runs={runActivities}
+        status={runActivityState}
+        lang={lang}
+        t={t}
+      />
+
       {/* ── Row 1: Account + Preferences ── */}
       <div className="st-main-grid">
 
@@ -84,6 +124,27 @@ export default function SettingsAtlasLayout({
             </div>
           </div>
           <form className="st-account-form" onSubmit={saveProfile}>
+            <div className="st-avatar-field">
+              <div>
+                <span className="st-label">{t('settings.avatar_title')}</span>
+                <p>{t('settings.avatar_hint')}</p>
+              </div>
+              <div className="st-avatar-field-actions">
+                <label
+                  className={`st-avatar-change${avatarSaving ? ' is-disabled' : ''}`}
+                  htmlFor="st-profile-avatar-input"
+                >
+                  <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
+                  <span>{avatarSaving ? t('settings.avatar_uploading') : avatarActionLabel}</span>
+                </label>
+                {avatarUrl ? (
+                  <button type="button" className="st-avatar-remove" disabled={avatarSaving} onClick={onAvatarRemove}>
+                    {t('settings.avatar_remove')}
+                  </button>
+                ) : null}
+              </div>
+              {avatarMsg ? <p className="st-avatar-msg" role="status">{avatarMsg}</p> : null}
+            </div>
             <div className="st-field">
               <label className="st-label" htmlFor="st-display-name">{t('settings.display_name_title')}</label>
               <input

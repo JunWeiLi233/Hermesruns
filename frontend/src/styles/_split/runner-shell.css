@@ -843,16 +843,11 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
   grid-template-columns: minmax(0, max-content) auto;
   align-items: center;
   gap: clamp(10px, 1.1vw, 16px);
-  padding: 7px;
-  border: 1px solid var(--runner-topnav-line);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(160, 57, 42, 0.12), transparent 30%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(248, 240, 230, 0.58)),
-    var(--runner-topnav-bg);
-  box-shadow:
-    0 18px 36px rgba(105, 68, 48, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: var(--runner-topnav-ink);
   transform: translateZ(0);
 }

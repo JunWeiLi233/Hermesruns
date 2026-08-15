@@ -263,14 +263,20 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const gpsLoadingLabelRoot = gpsReceivedLabel\.replace\(\/\\\.\{3\}\$\/, ''\);[\s\S]*?const gpsLoadingLabelPieces = Array\.from\(gpsLoadingLabelRoot\);[\s\S]*?className="heatmap-page-gps-loading-text"[\s\S]*?gpsLoadingLabelPieces\.map[\s\S]*?className="heatmap-page-gps-loading-piece"[\s\S]*?className="heatmap-page-gps-loading-dots"[\s\S]*?<span>\.<\/span>[\s\S]*?<span>\.<\/span>[\s\S]*?<span>\.<\/span>/,
-  'Heatmap loading GPS label should split the three periods so only the dots animate visually.',
+  /const gpsLoadingLabelRoot = gpsReceivedLabel\.replace\(\/\\\.\{3\}\$\/, ''\);[\s\S]*?className="heatmap-page-gps-loading-text"[\s\S]*?className="heatmap-page-gps-loading-signal"[\s\S]*?className="heatmap-page-gps-loading-label"[\s\S]*?\{gpsLoadingLabelRoot\}[\s\S]*?className="heatmap-page-gps-loading-bars"/,
+  'Heatmap loading GPS label should stay readable beside a dedicated acquisition signal and progress bars.',
 );
 
 assert.match(
   heatmapStyleSource,
-  /heatmap-page-gps-loading-piece:nth-child\(6n \+ 2\)[\s\S]*?--jump-high: -0\.34em[\s\S]*?heatmap-page-gps-loading-piece:nth-child\(6n\)[\s\S]*?--jump-high: -0\.38em[\s\S]*?@keyframes heatmapGpsPieceJump[\s\S]*?translateY\(var\(--jump-high, -0\.24em\)\)[\s\S]*?transform: translateY\(0\);[\s\S]*?@keyframes heatmapGpsDotOne[\s\S]*?translate\(0, -0\.16em\)[\s\S]*?@keyframes heatmapGpsDotTwo[\s\S]*?translate\(0\.28em, -0\.3em\)[\s\S]*?@keyframes heatmapGpsDotThree[\s\S]*?translate\(0\.58em, -0\.12em\)[\s\S]*?prefers-reduced-motion: reduce[\s\S]*?heatmap-page-gps-loading-piece/,
-  'Heatmap loading GPS pieces should jump at staggered heights, return to one shared baseline, and keep the moving-dot reduced-motion fallback.',
+  /heatmap-page-gps-loading-text[\s\S]*?border-radius: 999px[\s\S]*?heatmap-page-gps-loading-signal::after[\s\S]*?animation: heatmapGpsLockPulse 1\.6s[\s\S]*?heatmap-page-gps-loading-bars > span[\s\S]*?animation: heatmapGpsSignalBar 1\.2s[\s\S]*?@keyframes heatmapGpsLockPulse[\s\S]*?@keyframes heatmapGpsSignalBar[\s\S]*?prefers-reduced-motion: reduce[\s\S]*?heatmap-page-gps-loading-bars > span/,
+  'Heatmap GPS loading should use a compact lock pulse and staggered signal bars with a reduced-motion fallback.',
+);
+
+assert.doesNotMatch(
+  heatmapSource,
+  /gpsLoadingLabelPieces|heatmap-page-gps-loading-piece/,
+  'Heatmap loading copy should remain static instead of animating every character.',
 );
 
 assert.doesNotMatch(

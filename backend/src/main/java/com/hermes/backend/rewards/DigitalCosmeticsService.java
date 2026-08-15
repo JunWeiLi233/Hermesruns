@@ -1,4 +1,16 @@
-package com.hermes.backend;
+package com.hermes.backend.rewards;
+
+import com.hermes.backend.Activity;
+import com.hermes.backend.ActivityPointRepository;
+import com.hermes.backend.ActivityRepository;
+import com.hermes.backend.ActivityType;
+import com.hermes.backend.CoachScheduledWorkout;
+import com.hermes.backend.CoachScheduledWorkoutRepository;
+import com.hermes.backend.CoachWorkoutType;
+import com.hermes.backend.Runner;
+import com.hermes.backend.RunnerRepository;
+import com.hermes.backend.Shoe;
+import com.hermes.backend.ShoeRepository;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;

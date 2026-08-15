@@ -11,6 +11,7 @@ const signup = read('Signup.jsx');
 const legal = read('LegalPage.jsx');
 const styles = read('../styles/auth-liquid-glass.css');
 const carousel = read('../components/AuthBrandCarousel.jsx');
+const stravaButton = read('../assets/btn_strava_connect_with_orange.svg');
 
 for (const [name, source] of [
   ['login', login],
@@ -28,7 +29,7 @@ for (const [name, source] of [
   );
   assert.match(
     source,
-    /auth-page--liquid-glass">\s*<AuthDotField\s*\/>/,
+    /auth-page--liquid-glass"[^>]*>\s*<AuthDotField\s*\/>/,
     `${name} should render the dot field on the page background.`,
   );
   assert.doesNotMatch(
@@ -45,7 +46,33 @@ for (const [name, source] of [
     /<div className="auth-flow-divider">/,
     `${name} should not render a redundant authentication divider.`,
   );
+  assert.match(
+    source,
+    /import stravaConnectButton from ['"]\.\.\/assets\/btn_strava_connect_with_orange\.svg['"];/,
+    `${name} should use Strava's official OAuth button artwork.`,
+  );
+  assert.match(
+    source,
+    /className="auth-flow-btn__strava-official"[\s\S]*src=\{stravaConnectButton\}/,
+    `${name} should render the official Strava asset inside the OAuth control.`,
+  );
+  assert.doesNotMatch(
+    source,
+    /auth-flow-btn__icon--bolt/,
+    `${name} should not render the improvised Strava plus mark.`,
+  );
 }
+
+assert.match(
+  stravaButton,
+  /<svg width="237" height="48" viewBox="0 0 237 48"/,
+  'The vendored Strava button should retain the official 237 by 48 dimensions.',
+);
+assert.match(
+  stravaButton,
+  /fill="#FC5200"/,
+  'The vendored Strava button should retain the official Strava orange.',
+);
 
 assert.match(
   styles,
@@ -149,6 +176,11 @@ assert.match(
 );
 assert.match(
   styles,
+  /auth-flow-btn--strava\.auth-flow-btn--strava-official[\s\S]*width: 237px;[\s\S]*border-radius: 6px;[\s\S]*background: transparent;/,
+  'The official Strava button should remain unmodified at its supplied dimensions.',
+);
+assert.match(
+  styles,
   /prefers-reduced-motion: reduce/,
   'The background motion should respect reduced-motion preferences.',
 );
@@ -161,6 +193,41 @@ assert.match(
   styles,
   /\.legal-page--terms\.auth-page--liquid-glass \.legal-page-row\s*\{[\s\S]*padding: clamp\(20px, 2\.4vw, 30px\) 0;/,
   'Terms should use compact section spacing for faster scanning.',
+);
+assert.match(
+  styles,
+  /\.legal-page--terms\.auth-page--liquid-glass \.legal-page-shell\s*\{[\s\S]*background: transparent;[\s\S]*box-shadow: none;[\s\S]*backdrop-filter: none;/,
+  'Terms should not render an oversized outer glass shell.',
+);
+assert.match(
+  styles,
+  /\.legal-page--terms\.auth-page--liquid-glass \.legal-page-content\s*\{[\s\S]*border-radius: 32px;[\s\S]*background: var\(--lp-paper-clean, #fdfcf9\);/,
+  'Terms should keep the hero and section rows inside one restrained reading card.',
+);
+assert.match(
+  styles,
+  /\.legal-page--terms\.auth-page--liquid-glass::before\s*\{\s*display: none;/,
+  'Terms should disable the shared glass overlay so the dotted canvas remains visible.',
+);
+assert.match(
+  styles,
+  /\.legal-page--terms\.auth-page--liquid-glass\s*\{[\s\S]*background: #f8f5ee;/,
+  'Terms should use a flat paper canvas rather than the auth gradient shell.',
+);
+assert.match(
+  styles,
+  /\.legal-page--privacy\.auth-page--liquid-glass::before\s*\{\s*display: none;/,
+  'Privacy should disable the shared glass overlay so the dotted canvas remains visible.',
+);
+assert.match(
+  styles,
+  /\.legal-page--privacy\.auth-page--liquid-glass \.legal-page-shell\s*\{[\s\S]*background: transparent;[\s\S]*box-shadow: none;[\s\S]*backdrop-filter: none;/,
+  'Privacy should not render an oversized outer glass shell.',
+);
+assert.match(
+  styles,
+  /\.legal-page--privacy\.auth-page--liquid-glass \.legal-page-content\s*\{[\s\S]*border-radius: 32px;[\s\S]*background: var\(--lp-paper-clean, #fdfcf9\);/,
+  'Privacy should keep its overview and sections inside one restrained reading card.',
 );
 assert.match(
   legal,

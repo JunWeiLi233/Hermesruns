@@ -587,6 +587,8 @@ export default {
     "current_vdot_label": "Current VO2max",
     "vdot_trend_insight_title": "Your fitness is trending",
     "vdot_trend_insight_copy": "Comparing your last 30 days against the prior 30. When this rises, your engine is getting stronger, and you can safely build more volume into the coming weeks.",
+    "vdot_trend_empty_title": "Trend needs more runs",
+    "vdot_trend_empty_copy": "Add qualifying runs in both the last 30 days and the prior 30 days to unlock your VDOT trend.",
     "unit_km_button": "KM",
     "unit_mile_button": "Mile",
     "unit_distance_km": "Total km",

@@ -1,0 +1,279 @@
+/* ============================================================================
+   Landing Aura — global re-skin of the authenticated app shell.
+   Reference source: design.md Kinetic Editorial + the / landing surface.
+   Surface: ALL authenticated runner pages (Today Run, Runs, Analysis, Profile,
+   Schedule, Heatmap, Weather, Rewards, Settings, Muscle Training, Races, Shoes,
+   Run Detail, Prediction Detail, etc.).
+
+   This sheet loads LAST in index.css (after style.css + all _split layers +
+   the gpt-taste !important rules), so it wins the cascade. It restyles the
+   SHARED runner-shell chrome — because every app page renders the same
+   runner-shell-* classNames, one override re-skins them all. No JSX, className,
+   routing, data, or copy changes.
+
+   The target look is the / landing page's light, airy aesthetic:
+   - vivid orange (#ff6b35) + purple (rgba(100,80,220,…)) blurred gradient blobs
+   - white-to-cool-blue paper base (linear-gradient(160deg, #ffffff, #f8fafc, #eef4fb))
+   - glassy white cards + surfaces with backdrop-filter blur
+   - orange-accent interactions
+   A dark adaptation is provided for midnight/high-contrast so the app still
+   looks intentional there; the canonical target is light/default.
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   Page background — the landing hero aura, applied app-wide.
+   Wins against the gpt-taste !important rule (.hermes-site-frame[...gpt-taste]
+   .is-runner .runner-shell-page, specificity 0,4,0) by using a DOUBLED class
+   selector (0,5,0) so our !important wins regardless of bundle source order
+   (Vite/Rolldown does not guarantee @import order in the final bundle).
+   ---------------------------------------------------------------------------- */
+
+.hermes-site-frame.is-runner .runner-shell-page.runner-shell-page,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-page.runner-shell-page,
+.hermes-site-frame[data-runner-design].is-runner .runner-shell-page.runner-shell-page {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 107, 53, 0.16), transparent 28%),
+    radial-gradient(circle at 78% 22%, rgba(100, 80, 220, 0.10), transparent 28%),
+    radial-gradient(ellipse at 50% 110%, rgba(255, 107, 53, 0.08), transparent 50%),
+    linear-gradient(160deg, #ffffff 0%, #f8fafc 40%, #eef4fb 100%) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Sidebar — glassy white rail, matching the landing nav.
+   ---------------------------------------------------------------------------- */
+
+.hermes-site-frame.is-runner .runner-shell-sidebar.runner-shell-sidebar,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-sidebar.runner-shell-sidebar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.78)),
+    rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border-right: 1px solid rgba(255, 107, 53, 0.10) !important;
+  box-shadow: 1px 0 32px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Nav links: calm slate, orange active. */
+.hermes-site-frame.is-runner .runner-shell-side-link.runner-shell-side-link,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link.runner-shell-side-link {
+  color: rgba(15, 23, 42, 0.66) !important;
+  background: transparent !important;
+  transition: color 0.2s ease, background 0.2s ease !important;
+}
+
+.hermes-site-frame.is-runner .runner-shell-side-link.runner-shell-side-link:hover,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link.runner-shell-side-link:hover {
+  color: #0f172a !important;
+  background: rgba(255, 107, 53, 0.08) !important;
+}
+
+.hermes-site-frame.is-runner .runner-shell-side-link.runner-shell-side-link.is-active,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link.runner-shell-side-link.is-active {
+  color: #ff6b35 !important;
+  background: rgba(255, 107, 53, 0.12) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Topbar — translucent white glass.
+   ---------------------------------------------------------------------------- */
+
+.hermes-site-frame.is-runner .runner-shell-topbar.runner-shell-topbar,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-topbar.runner-shell-topbar {
+  background: rgba(255, 255, 255, 0.62) !important;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Canvas — transparent so the aura shows through; neutral ink.
+   ---------------------------------------------------------------------------- */
+
+.hermes-site-frame.is-runner .runner-shell-canvas.runner-shell-canvas,
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-canvas.runner-shell-canvas {
+  background: transparent !important;
+  color: #0f172a !important;
+}
+
+/* ----------------------------------------------------------------------------
+   Glassy surface motif — applied to common content-card/surface selectors
+   present across pages. Kept light-touch so per-page redesigns still read well
+   on top of the aura background.
+   ---------------------------------------------------------------------------- */
+
+.hermes-site-frame.is-runner .runner-shell-main :is(
+  .insight-card,
+  .stat-card,
+  .summary-card,
+  .panel-card,
+  .info-card,
+  .glass-card,
+  .runner-card,
+  .data-card
+) {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Generic heading + body ink for app content on the light aura. */
+.hermes-site-frame.is-runner .runner-shell-main h1,
+.hermes-site-frame.is-runner .runner-shell-main h2,
+.hermes-site-frame.is-runner .runner-shell-main h3 {
+  color: #0f172a !important;
+}
+
+.hermes-site-frame.is-runner .runner-shell-main :is(p, span, li, small, em) {
+  color: rgba(15, 23, 42, 0.7) !important;
+}
+
+/* Primary CTA buttons: the landing orange gradient. */
+.hermes-site-frame.is-runner .runner-shell-main :is(.btn-primary, .runner-shell-workout-btn) {
+  background: linear-gradient(135deg, #ff6b35, #ff8f73) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.35) !important;
+}
+
+.hermes-site-frame.is-runner .runner-shell-main :is(.btn-primary, .runner-shell-workout-btn):hover {
+  box-shadow: 0 12px 30px rgba(255, 107, 53, 0.45) !important;
+}
+
+/* Secondary buttons: glassy outline. */
+.hermes-site-frame.is-runner .runner-shell-main .btn-secondary {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Icon buttons in the topbar: glassy. */
+.hermes-site-frame.is-runner .runner-shell-icon-btn {
+  background: rgba(255, 255, 255, 0.62) !important;
+  color: rgba(15, 23, 42, 0.7) !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Avatar chip: glassy with orange ring. */
+.hermes-site-frame.is-runner .runner-shell-avatar {
+  background: linear-gradient(135deg, #ff6b35, #ff8f73) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.3) !important;
+}
+
+/* Links: orange accent. */
+.hermes-site-frame.is-runner .runner-shell-main a {
+  color: #ff6b35 !important;
+}
+
+/* Footer: transparent over the aura. */
+.hermes-site-frame.is-runner .runner-shell-footer {
+  background: transparent !important;
+  color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* ============================================================================
+   Dark / midnight / high-contrast adaptation.
+   Deep navy-black base with the same orange + purple blobs at lower opacity,
+   glassy dark surfaces, so the app stays intentional in dark mode.
+   ============================================================================ */
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-page,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-page,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-page,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-page {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 107, 53, 0.18), transparent 30%),
+    radial-gradient(circle at 78% 22%, rgba(100, 80, 220, 0.16), transparent 30%),
+    radial-gradient(ellipse at 50% 110%, rgba(255, 107, 53, 0.08), transparent 52%),
+    linear-gradient(160deg, #0b1120 0%, #0f172a 42%, #0a0f1d 100%) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-sidebar,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-sidebar,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-sidebar,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-sidebar {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(10, 15, 29, 0.82)),
+    rgba(15, 23, 42, 0.9) !important;
+  border-right-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 1px 0 32px rgba(0, 0, 0, 0.4) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-side-link,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-side-link,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link {
+  color: rgba(241, 245, 249, 0.72) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-side-link:hover,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link:hover,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-side-link:hover,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link:hover {
+  color: #ffffff !important;
+  background: rgba(255, 107, 53, 0.14) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-side-link.is-active,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link.is-active,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-side-link.is-active,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-side-link.is-active {
+  color: #ff8f73 !important;
+  background: rgba(255, 107, 53, 0.18) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-topbar,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-topbar,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-topbar,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-topbar {
+  background: rgba(15, 23, 42, 0.5) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-canvas,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-canvas,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-canvas,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame[data-gpt-taste-system="gpt-taste"].is-runner .runner-shell-canvas {
+  color: #f1f5f9 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main h1,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main h2,
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main h3,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main h1,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main h2,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main h3 {
+  color: #ffffff !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main :is(p, span, li, small, em),
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main :is(p, span, li, small, em) {
+  color: rgba(241, 245, 249, 0.7) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main :is(.insight-card, .stat-card, .summary-card, .panel-card, .info-card, .glass-card, .runner-card, .data-card),
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main :is(.insight-card, .stat-card, .summary-card, .panel-card, .info-card, .glass-card, .runner-card, .data-card) {
+  background: rgba(30, 41, 59, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-icon-btn,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-icon-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(241, 245, 249, 0.75) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main .btn-secondary,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main .btn-secondary {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame.is-runner .runner-shell-main a,
+body:not(.theme-light):not(.theme-high-contrast-light) .hermes-site-frame.is-runner .runner-shell-main a {
+  color: #ff8f73 !important;
+}

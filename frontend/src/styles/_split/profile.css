@@ -5319,6 +5319,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer {
   width: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
   padding-inline: 0;
   overflow: hidden;

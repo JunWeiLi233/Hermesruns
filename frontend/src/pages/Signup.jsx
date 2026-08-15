@@ -7,6 +7,7 @@ import AuthDotField from '../components/AuthDotField';
 import AuthBrandCarousel from '../components/AuthBrandCarousel';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
+import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseSignupStatusQuery } from '../utils/stravaLinking';
 
 const SIGNUP_STITCH_COPY = {
@@ -65,6 +66,12 @@ const SIGNUP_STITCH_COPY = {
 function formatLocalCopy(template, vars = {}) {
   return String(template || '').replace(/\{(\w+)\}/g, (_, key) => vars[key] ?? '');
 }
+
+const SIGNUP_EMAIL_ERROR_KEYS = {
+  INVALID_EMAIL: 'signup.error_invalid_email',
+  DISPOSABLE_EMAIL: 'signup.error_disposable_email',
+  INVALID_EMAIL_DOMAIN: 'signup.error_invalid_email_domain',
+};
 
 function loadRecaptchaScript(siteKey) {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -137,6 +144,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [suggestedEmail, setSuggestedEmail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pwRules, setPwRules] = useState(null);
   const [doneInfo, setDoneInfo] = useState(null);
@@ -224,6 +232,7 @@ export default function Signup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setSuggestedEmail(null);
 
     if (password !== confirmPassword) {
       setError(s('confirm_password_mismatch'));
@@ -250,7 +259,13 @@ export default function Signup() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        if (data.code === 'WEAK_PASSWORD' && Array.isArray(data.failedRules)) {
+        const emailErrorKey = SIGNUP_EMAIL_ERROR_KEYS[data.code];
+        if (emailErrorKey) {
+          setError(t(emailErrorKey));
+          if (data.code === 'INVALID_EMAIL_DOMAIN' && data.suggestedEmail) {
+            setSuggestedEmail(data.suggestedEmail);
+          }
+        } else if (data.code === 'WEAK_PASSWORD' && Array.isArray(data.failedRules)) {
           setError(data.error || t('signup.password_rules_title'));
         } else {
           setError(data.error || data.message || 'Request failed.');
@@ -284,7 +299,7 @@ export default function Signup() {
 
   if (doneInfo) {
     return (
-      <div className="auth-page auth-page--signup auth-page--liquid-glass">
+      <div className="auth-page auth-page--signup auth-page--liquid-glass" data-auth-redesign="command-entry">
         <AuthDotField />
         <main className="auth-flow-shell">
           <section className="auth-flow-brand">
@@ -329,7 +344,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="auth-page auth-page--signup auth-page--liquid-glass">
+    <div className="auth-page auth-page--signup auth-page--liquid-glass" data-auth-redesign="command-entry">
       <AuthDotField />
       <main className="auth-flow-shell">
         <section className="auth-flow-brand">
@@ -367,6 +382,22 @@ export default function Signup() {
                 <div className="error-alert is-visible" role="alert">{t('common.google_login_failed')}</div>
               )}
               {error && <div className="error-alert is-visible" role="alert">{error}</div>}
+              {suggestedEmail && (
+                <div className="error-alert is-visible signup-typo-suggestion" role="status">
+                  <span>{t('signup.typo_suggestion_prefix', { email: suggestedEmail })}</span>
+                  <button
+                    type="button"
+                    className="signup-typo-suggestion__use"
+                    onClick={() => {
+                      setEmail(suggestedEmail);
+                      setSuggestedEmail(null);
+                      setError('');
+                    }}
+                  >
+                    {t('signup.typo_suggestion_use')}
+                  </button>
+                </div>
+              )}
 
               <div className={`pwd-strength-card${!password ? ' pwd-strength-card--hidden' : ''}`}>
                 <div className="pwd-strength-header">
@@ -402,7 +433,10 @@ export default function Signup() {
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setSuggestedEmail(null);
+                  }}
                 />
               </div>
 
@@ -440,12 +474,15 @@ export default function Signup() {
             <div className="auth-flow-social">
               <button
                 type="button"
-                className="auth-flow-btn auth-flow-btn--strava"
+                className="auth-flow-btn auth-flow-btn--strava auth-flow-btn--strava-official"
                 disabled={!stravaConfigured}
                 onClick={() => startOAuth('strava')}
               >
-                <span className="auth-flow-btn__icon auth-flow-btn__icon--bolt" aria-hidden="true">+</span>
-                <span>{stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}</span>
+                <img
+                  className="auth-flow-btn__strava-official"
+                  src={stravaConnectButton}
+                  alt={stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}
+                />
               </button>
 
               {!stravaConfigured && (

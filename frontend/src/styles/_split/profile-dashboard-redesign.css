@@ -3,12 +3,14 @@
 
 /* ── Local design tokens (scoped to .hd-content) ── */
 .hd-content {
-  --hd-radius-xl: 20px;
-  --hd-radius-lg: 16px;
-  --hd-radius-md: 12px;
-  --hd-radius-sm: 8px;
-  --hd-transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  --hd-transition-bounce: 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Radii + transitions derive from the global token layer so the golden surface
+     and every other page share one source of truth. */
+  --hd-radius-xl: var(--radius-xl, 20px);
+  --hd-radius-lg: var(--radius-lg, 16px);
+  --hd-radius-md: var(--radius-md, 12px);
+  --hd-radius-sm: var(--radius-sm, 8px);
+  --hd-transition: var(--transition, 0.22s cubic-bezier(0.4, 0, 0.2, 1));
+  --hd-transition-bounce: var(--transition-bounce, 0.3s cubic-bezier(0.22, 1, 0.36, 1));
 
   /* Light-mode defaults */
   --hd-bg-card: rgba(255,255,255,0.92);
@@ -20,11 +22,13 @@
   --hd-text-primary: #1c1917;
   --hd-text-secondary: #78716c;
   --hd-text-tertiary: #a8a29e;
-  --hd-accent: #c0462b;
-  --hd-accent-soft: rgba(192,70,43,0.08);
-  --hd-accent-medium: rgba(192,70,43,0.14);
-  --hd-accent-gradient: linear-gradient(135deg, #a0392a, #e8634e);
-  --hd-coral: #f07561;
+  /* Accent now derives from the global brand token so Profile is consistent with
+     every other page rather than a divergent #c0462b island. */
+  --hd-accent: var(--brand-accent, #a0392a);
+  --hd-accent-soft: rgba(160,57,42,0.08);
+  --hd-accent-medium: rgba(160,57,42,0.14);
+  --hd-accent-gradient: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69));
+  --hd-coral: var(--accent-coral-strong, #f07561);
   --hd-coral-soft: rgba(240,117,97,0.1);
   --hd-coral-medium: rgba(240,117,97,0.18);
   --hd-green: #3d8b5e;
@@ -56,11 +60,11 @@ body.theme-midnight .hd-content {
   --hd-text-primary: #ece5dd;
   --hd-text-secondary: #9e988f;
   --hd-text-tertiary: #7a7368;
-  --hd-accent: #f07561;
+  --hd-accent: var(--accent-coral-strong, #f07561);
   --hd-accent-soft: rgba(240,117,97,0.1);
   --hd-accent-medium: rgba(240,117,97,0.18);
   --hd-accent-gradient: linear-gradient(135deg, #f07561, #ffb4a7);
-  --hd-coral: #f07561;
+  --hd-coral: var(--accent-coral-strong, #f07561);
   --hd-coral-soft: rgba(240,117,97,0.1);
   --hd-coral-medium: rgba(240,117,97,0.16);
   --hd-green: #6fa985;

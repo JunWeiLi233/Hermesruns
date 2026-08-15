@@ -45,4 +45,27 @@ assert.ok(
   `Stale half-marathon anchor should not dominate current fitness (base=${staleBaseHalf}, calibrated=${staleCalibratedHalf}).`,
 );
 
+const weatherAffectedRuns = [
+  {
+    distanceKm: 10,
+    movingTimeSeconds: 60 * 60,
+    weatherAdjustedMovingTimeSeconds: 56 * 60,
+    pacePenaltySecPerKm: 24,
+    weatherAdjusted: true,
+    startTime: now,
+  },
+];
+
+const rawWeatherAnchorPrediction = predictRaceTimeCalibrated(50, 10000, weatherAffectedRuns);
+const adjustedWeatherAnchorPrediction = predictRaceTimeCalibrated(50, 10000, weatherAffectedRuns, {
+  weatherAdjustedAnchors: true,
+});
+
+assert.ok(rawWeatherAnchorPrediction, 'Raw weather-affected prediction should exist.');
+assert.ok(adjustedWeatherAnchorPrediction, 'Weather-adjusted prediction should exist.');
+assert.ok(
+  adjustedWeatherAnchorPrediction < rawWeatherAnchorPrediction,
+  `Weather-adjusted calibration should recover time lost to conditions (raw=${rawWeatherAnchorPrediction}, adjusted=${adjustedWeatherAnchorPrediction}).`,
+);
+
 console.log('[PASS] vdot prediction ordering smoke test passed.');

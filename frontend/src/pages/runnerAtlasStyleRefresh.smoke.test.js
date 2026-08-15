@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
 const atlasBlockStart = styleSource.indexOf('/* Runner atlas style refresh final override */');
 assert.notEqual(atlasBlockStart, -1, 'Runner atlas style refresh should be recorded as a final override block.');
@@ -86,9 +86,15 @@ assert.match(
 );
 
 assert.match(
-  minimalistBlock,
+  styleSource,
   /\.runner-dashboard-page:has\(\.muscle-training-page\) \.muscle-training-page \.mt-strength-lab\[data-friendly-strength-lab="true"\] :is\([\s\S]*\.mt-today-card,[\s\S]*\.mt-readiness-card--decision[\s\S]*\)\s*\{[\s\S]*background:\s*var\(--runner-minimal-surface\)\s*!important;[\s\S]*color:\s*var\(--runner-minimal-ink\)\s*!important;/,
   'Muscle Training should specifically override its previous dark anchor cards back to minimalist light surfaces.',
+);
+
+assert.ok(
+  styleSource.lastIndexOf('background: var(--runner-minimal-surface) !important;')
+    > styleSource.indexOf('/* Runner atlas Muscle Training specificity repair */'),
+  'The light Muscle Training decision-card repair should appear after the route-local dark override.',
 );
 
 assert.match(

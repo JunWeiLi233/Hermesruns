@@ -153,7 +153,7 @@ public class RaceCourseMapSearchService {
     }
 
     private void collectSearchCandidates(Map<String, RaceCourseMapService.CourseMapCandidate> candidates, String query) {
-        String html = fetchHtml("https://www.bing.com/images/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&first=1");
+        String html = fetchHtml("https://www.bing.com/images/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&first=1&form=HDRSC2");
         if (html == null || html.isBlank()) return;
         Matcher matcher = MEDIA_URL_PATTERN.matcher(HtmlScanLimiter.bounded(html));
         int added = 0;

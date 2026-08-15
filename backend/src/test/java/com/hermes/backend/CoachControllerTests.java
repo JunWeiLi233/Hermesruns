@@ -76,7 +76,8 @@ class CoachControllerTests {
                         10.0,
                         10.1,
                         2,
-                        new CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0)
+                        new CoachRoutePreviewDto("M 10.00 10.00 L 20.00 20.00", 10.0, 10.0, 20.0, 20.0),
+                        List.of(new CoachRouteWaypointDto(40.7128, -74.0060), new CoachRouteWaypointDto(40.7134, -74.0048))
                 ),
                 null,
                 null,
@@ -240,6 +241,10 @@ class CoachControllerTests {
                 62,
                 48,
                 40,
+                84,
+                true,
+                true,
+                "GARMIN",
                 185,
                 50,
                 new AutomatedCoachService.CoachStaminaDto(95, 98, 300, 115, "down"),

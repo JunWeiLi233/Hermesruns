@@ -18,4 +18,16 @@ assert.doesNotMatch(
   'ShoeCatalog search should not clear the selected brand because the model grid only renders inside a brand selection.',
 );
 
+assert.match(
+  source,
+  /import ShoeBrandLogo from '\.\.\/components\/ShoeBrandLogo';/,
+  'ShoeCatalog should use the shared brand-logo resolver used by Add Shoes.',
+);
+
+assert.doesNotMatch(
+  source,
+  /function BrandLogo|function brandLogoSpec/,
+  'ShoeCatalog should not maintain a second synthetic brand-logo implementation.',
+);
+
 console.log('[PASS] ShoeCatalog search preserves selected brand guard passed.');

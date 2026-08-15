@@ -194,7 +194,7 @@ export default function AddShoes() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'weather_engine', icon: 'thermostat', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
+    { key: 'weather_engine', icon: 'weather', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
     { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
@@ -355,7 +355,10 @@ export default function AddShoes() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page add-shoes-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div
+      className={`runner-shell-page runner-dashboard-page add-shoes-page add-shoes-profile-redesign${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}
+      data-design-reference="profile-dashboard"
+    >
       <aside className="runner-shell-sidebar add-shoes-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand add-shoes-sidebar-brand">
           <div className="runner-dashboard-brand-copy"><HermesLogo dark /><span>{t('shoes.add_page_sidebar_brand')}</span></div>

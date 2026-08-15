@@ -1264,7 +1264,7 @@ const Shoes = memo(function Shoes() {
 
   return (
     <>
-      <div className={`runner-shell-page runner-dashboard-page shoes-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <div className={`runner-shell-page runner-dashboard-page shoes-dashboard-page shoes-atelier-redesign${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
         <aside className="runner-shell-sidebar">
           <div className="runner-shell-brand runner-dashboard-brand">
             <div className="runner-dashboard-brand-copy">
@@ -1346,7 +1346,7 @@ const Shoes = memo(function Shoes() {
           </header>
 
           <div className="runner-shell-canvas">
-            <div className="shoe-inventory-screen shoes-dashboard-shell shoes-profile-workspace">
+            <div className="shoe-inventory-screen shoes-dashboard-shell shoes-atelier-shell shoes-profile-workspace">
               {renderRotationSignal()}
 
               <section className="shoe-inventory-summary-strip" aria-label={t('shoes.health_summary_rotation')}>
@@ -1529,35 +1529,35 @@ const Shoes = memo(function Shoes() {
         cardClassName="shoe-edit-modal-card"
       >
         <form onSubmit={handleSave} className="shoe-edit-modal-form">
-          <div className="shoe-edit-modal-grid">
-            <label className="shoe-edit-modal-field">
+          <div className="shoe-edit-modal-fields">
+            <label className="shoe-edit-field">
               <span className="modal-label">{t('shoes.brand')}</span>
               <input type="text" value={formBrand} onChange={e => setFormBrand(e.target.value)} />
             </label>
 
-            <label className="shoe-edit-modal-field">
+            <label className="shoe-edit-field">
               <span className="modal-label">{t('shoes.model')}</span>
               <input type="text" value={formModel} onChange={e => setFormModel(e.target.value)} />
             </label>
 
-            <label className="shoe-edit-modal-field">
+            <label className="shoe-edit-field shoe-edit-field--wide">
               <span className="modal-label">{t('shoes.nickname')}</span>
               <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
             </label>
 
-            <label className="shoe-edit-modal-field">
+            <label className="shoe-edit-field">
               <span className="modal-label">{t('shoes.max_distance')}</span>
               <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
             </label>
           </div>
 
-          <label className="shoe-edit-modal-primary-toggle">
+          <label className="shoe-edit-primary-toggle shoe-checkbox-label">
             <input type="checkbox" checked={formPrimary} onChange={e => setFormPrimary(e.target.checked)} />
             <span className="shoe-edit-modal-toggle-control" aria-hidden="true" />
             <span className="shoe-edit-modal-toggle-copy">{t('shoes.set_primary')}</span>
           </label>
 
-          <div className="modal-actions shoe-edit-modal-actions">
+          <div className="shoe-edit-modal-actions modal-actions">
             <button type="button" className="btn-secondary modal-button" onClick={() => { setEditOpen(false); setEditingShoe(null); }}>{t('shoes.cancel')}</button>
             <button type="submit" className="btn-primary modal-button">{t('shoes.save')}</button>
           </div>
@@ -1569,92 +1569,92 @@ const Shoes = memo(function Shoes() {
         isOpen={imgPickerOpen}
         onClose={() => setImgPickerOpen(false)}
         title={t('shoes.img_picker_title')}
-        shellClassName="settings-modal-shell img-picker-modal-shell"
-        cardClassName="settings-modal-card img-picker-modal-card"
+        shellClassName="shoe-photo-modal-shell"
+        cardClassName="shoe-photo-modal-card"
       >
         {imgPickerShoe && (
-          <div className="img-picker">
-            <section className="img-picker-hero">
-              <div className="img-picker-hero-copy">
-                <span className="img-picker-kicker">{t('shoes.img_picker_title')}</span>
+          <div className="shoe-photo-studio">
+            <section className="shoe-photo-studio-hero">
+              <div className="shoe-photo-studio-title">
+                <span className="shoe-photo-studio-kicker">{t('shoes.img_picker_title')}</span>
                 <h3>{formatShoeDisplayName({ brand: imgPickerShoe.brand, model: imgPickerShoe.model, nickname: imgPickerShoe.nickname, lang })}</h3>
                 <p>{t('shoes.img_picker_copy')}</p>
               </div>
-              <div className="img-picker-hero-meta">
-                <span className="img-picker-meta-pill">{localizeShoeBrand(imgPickerShoe.brand, lang) || t('shoes.brand')}</span>
-                <span className="img-picker-meta-pill">{localizeShoeModel(imgPickerShoe.model, lang) || t('shoes.model')}</span>
-                <span className={`img-picker-meta-pill img-picker-mode-pill${shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) ? ' is-manual' : ' is-auto'}`}>
+              <div className="shoe-photo-studio-meta">
+                <span className="shoe-photo-studio-pill">{localizeShoeBrand(imgPickerShoe.brand, lang) || t('shoes.brand')}</span>
+                <span className="shoe-photo-studio-pill">{localizeShoeModel(imgPickerShoe.model, lang) || t('shoes.model')}</span>
+                <span className={`shoe-photo-studio-pill shoe-photo-studio-mode${shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) ? ' is-manual' : ' is-auto'}`}>
                   {shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) ? t('shoes.img_mode_manual') : t('shoes.img_mode_auto')}
                 </span>
               </div>
             </section>
 
             {shouldPreferManualImageSearch(imgPickerShoe.brand, imgPickerShoe.model) && (
-              <div className="img-picker-manual-note">
+              <div className="shoe-photo-studio-note">
                 {t('shoes.img_manual_search_note')}
               </div>
             )}
-            <div className="img-picker-layout">
-              <div className="img-picker-side">
-                <section className="img-picker-panel img-picker-current-panel">
-                  <div className="img-picker-section-head">
-                    <span className="img-picker-label">{t('shoes.img_current')}</span>
+            <div className="shoe-photo-studio-layout">
+              <section className="shoe-photo-studio-preview-panel">
+                  <div className="shoe-photo-studio-section-head">
+                    <span className="shoe-photo-studio-label">{t('shoes.img_current')}</span>
                     {imgPickerShoe.photoUrl && (
-                      <button type="button" className="btn-secondary img-picker-clear" onClick={clearImage}>
+                      <button type="button" className="shoe-photo-studio-clear" onClick={clearImage}>
                         {t('shoes.img_clear')}
                       </button>
                     )}
                   </div>
-                  <div className="img-picker-preview">
+                  <div className="shoe-photo-studio-preview-frame">
                     {imgPickerShoe.photoUrl
-                      ? <ProcessedDisplayImage src={imgPickerShoe.photoUrl} alt="current" className="img-picker-current-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />
+                      ? <ProcessedDisplayImage src={imgPickerShoe.photoUrl} alt="current" className="shoe-photo-studio-current-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />
                       : <div className="shoe-img-placeholder"><span>S</span></div>}
                   </div>
-                </section>
+              </section>
 
-                <section className="img-picker-panel img-picker-upload-panel">
-                  <div className="img-picker-section-head">
-                    <span className="img-picker-label">{t('shoes.img_upload_local')}</span>
+              <div className="shoe-photo-studio-tools">
+                <section className="shoe-photo-studio-tool-panel">
+                  <div className="shoe-photo-studio-section-head">
+                    <span className="shoe-photo-studio-label">{t('shoes.img_upload_local')}</span>
                   </div>
-                  <label className={`img-picker-upload-row img-picker-upload-btn${imgUploading ? ' is-busy' : ''}`}>
+                  <label className={`shoe-photo-studio-upload${imgUploading ? ' is-busy' : ''}`}>
                     <input
                       type="file"
                       accept="image/*"
-                      className="img-picker-upload-input"
+                      className="shoe-photo-studio-file-input"
                       disabled={imgUploading}
                       onChange={handleLocalImagePick}
                     />
-                    <span className="img-picker-upload-icon" aria-hidden="true">+</span>
-                    <div className="img-picker-upload-body">
+                    <span className="shoe-photo-studio-upload-mark" aria-hidden="true">+</span>
+                    <div className="shoe-photo-studio-upload-text">
                       <strong>{imgUploading ? t('shoes.img_uploading') : t('shoes.img_upload_local')}</strong>
-                      <span className="img-picker-upload-copy">{t('shoes.img_upload_hint')}</span>
+                      <span>{t('shoes.img_upload_hint')}</span>
                     </div>
                   </label>
-                  {imgUploadStatus && <div className="modal-status img-picker-upload-status">{imgUploadStatus}</div>}
+                  {imgUploadStatus && <div className="shoe-photo-studio-status">{imgUploadStatus}</div>}
                   {imgPendingUploadUrl && (
-                    <div className="img-picker-pending">
-                      <div className="img-picker-pending-head">
-                        <span className="img-picker-label">{t('shoes.img_preview_title')}</span>
+                    <div className="shoe-photo-studio-pending-panel">
+                      <div className="shoe-photo-studio-section-head">
+                        <span className="shoe-photo-studio-label">{t('shoes.img_preview_title')}</span>
                         {imgPendingUploadName && (
-                          <span className="img-picker-pending-name">{imgPendingUploadName}</span>
+                          <span className="shoe-photo-studio-file-name">{imgPendingUploadName}</span>
                         )}
                       </div>
-                      <div className="img-picker-pending-card">
+                      <div className="shoe-photo-studio-pending-card">
                         <ProcessedDisplayImage
                           src={imgPendingUploadUrl}
                           alt={t('shoes.img_preview_title')}
-                          className="img-picker-pending-img"
+                          className="shoe-photo-studio-pending-img"
                           fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
                         />
-                        <div className="img-picker-pending-copy">
+                        <div className="shoe-photo-studio-pending-copy">
                           <p>{t('shoes.img_preview_hint')}</p>
-                          <div className="img-picker-pending-actions">
-                            <button type="button" className="btn-primary img-picker-url-btn" onClick={applyPendingLocalImage}>
+                          <div className="shoe-photo-studio-pending-actions">
+                            <button type="button" className="shoe-photo-studio-primary-btn" onClick={applyPendingLocalImage}>
                               {t('shoes.img_confirm_local')}
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary img-picker-clear"
+                              className="shoe-photo-studio-clear"
                               onClick={() => applyPendingUploadState(clearPendingShoePhotoState())}
                             >
                               {t('shoes.cancel')}
@@ -1666,18 +1666,18 @@ const Shoes = memo(function Shoes() {
                   )}
                 </section>
 
-                <section className="img-picker-panel img-picker-url-panel">
-                  <div className="img-picker-section-head">
-                    <span className="img-picker-label">{t('shoes.img_paste_url')}</span>
+                <section className="shoe-photo-studio-tool-panel">
+                  <div className="shoe-photo-studio-section-head">
+                    <span className="shoe-photo-studio-label">{t('shoes.img_paste_url')}</span>
                   </div>
-                  <div className="img-picker-url-row">
+                  <div className="shoe-photo-studio-inline-row">
                     <input
-                      type="text" className="img-picker-url-input"
+                      type="text" className="shoe-photo-studio-input"
                       placeholder={t('shoes.img_paste_url')}
                       value={imgCustomUrl}
                       onChange={e => setImgCustomUrl(e.target.value)}
                     />
-                    <button type="button" className="btn-primary img-picker-url-btn"
+                    <button type="button" className="shoe-photo-studio-primary-btn"
                       disabled={!imgCustomUrl.trim()}
                       onClick={() => { selectImage(imgCustomUrl.trim()); setImgCustomUrl(''); }}>
                       {t('shoes.img_apply')}
@@ -1686,58 +1686,56 @@ const Shoes = memo(function Shoes() {
                 </section>
               </div>
 
-              <div className="img-picker-main">
-                <section className="img-picker-panel img-picker-search-panel">
-                  <div className="img-picker-search-head">
+              <section className="shoe-photo-studio-search-panel">
+                  <div className="shoe-photo-studio-search-head">
                     <div>
-                      <span className="img-picker-label">{t('shoes.img_search_title')}</span>
-                      <p className="img-picker-search-copy">{t('shoes.img_search_copy')}</p>
+                      <span className="shoe-photo-studio-label">{t('shoes.img_search_title')}</span>
+                      <p>{t('shoes.img_search_copy')}</p>
                     </div>
                   </div>
 
-                  <div className="img-picker-search-row">
+                  <div className="shoe-photo-studio-inline-row">
                     <input
-                      type="text" className="img-picker-search-input"
+                      type="text" className="shoe-photo-studio-input"
                       placeholder={t('shoes.img_search_hint')}
                       value={imgCustomQuery}
                       onChange={e => setImgCustomQuery(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); searchImages(imgPickerShoe.id, imgCustomQuery); } }}
                     />
-                    <button type="button" className="btn-primary img-picker-search-btn"
+                    <button type="button" className="shoe-photo-studio-primary-btn"
                       disabled={imgSearching}
                       onClick={() => searchImages(imgPickerShoe.id, imgCustomQuery)}>
                       {imgSearching ? '...' : t('shoes.img_search')}
                     </button>
                   </div>
 
-                  <div className="img-picker-grid">
-                    {imgSearching && <div className="img-picker-loading">{t('shoes.img_searching')}</div>}
+                  <div className="shoe-photo-studio-results">
+                    {imgSearching && <div className="shoe-photo-studio-loading">{t('shoes.img_searching')}</div>}
                     {!imgSearching && imgSearchStatus && (
-                      <div className="img-picker-search-status">
+                      <div className="shoe-photo-studio-search-status">
                         {imgSearchStatus}
                       </div>
                     )}
                     {!imgSearching && imgCandidates.length === 0 && (
-                      <div className="img-picker-empty">
+                      <div className="shoe-photo-studio-empty">
                         <strong>{t('shoes.img_no_results')}</strong>
                         <span>{t('shoes.img_empty_copy')}</span>
                       </div>
                     )}
                     {imgCandidates.map((url, i) => (
-                      <button key={i} type="button" className="img-picker-candidate"
+                      <button key={i} type="button" className="shoe-photo-studio-candidate"
                         onClick={() => selectImage(url)}>
                         <ProcessedDisplayImage src={url} alt={`candidate ${i + 1}`}
-                          className="img-picker-candidate-img"
+                          className="shoe-photo-studio-candidate-img"
                           fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
                           onError={e => { e.target.parentElement.style.display = 'none'; }} />
                       </button>
                     ))}
                   </div>
-                </section>
-              </div>
+              </section>
             </div>
 
-            <div className="modal-actions">
+            <div className="shoe-photo-studio-actions modal-actions">
               <button type="button" className="btn-secondary modal-button" onClick={() => setImgPickerOpen(false)}>
                 {t('shoes.close')}
               </button>
@@ -1771,10 +1769,6 @@ const Shoes = memo(function Shoes() {
                 </div>
               )}
               <div className="shoe-scan-modal-preview-overlay">
-                <div className="shoe-scan-modal-scan-line" aria-hidden="true" />
-                <span className="shoe-scan-modal-chip is-live">
-                  {scanStatus === 'processing' ? t('shoes.scan_processing') : t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
-                </span>
                 {scanAvailable && scanStatus !== 'done' ? (
                   <label className="shoe-scan-modal-preview-upload">
                     <input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />
@@ -1782,7 +1776,7 @@ const Shoes = memo(function Shoes() {
                   </label>
                 ) : (
                   <span className="shoe-scan-modal-chip">
-                    {scanFiles.length > 0 ? `${scanFiles.length}/${SHOE_SCAN_MAX_FILES}` : t('shoes.scan_image')}
+                    {scanFiles.length > 0 ? `${scanFiles.length}/${SHOE_SCAN_MAX_FILES}` : t('shoes.scan_max_files_hint', { max: SHOE_SCAN_MAX_FILES })}
                   </span>
                 )}
               </div>

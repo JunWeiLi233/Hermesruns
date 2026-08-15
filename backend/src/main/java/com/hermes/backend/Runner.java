@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -43,6 +45,10 @@ public class Runner {
     private String role = "USER";
 
     private String displayName;
+
+    @JdbcTypeCode(SqlTypes.LONGVARBINARY)
+    @JsonIgnore
+    private byte[] avatarImage;
 
     @Column(length = 280)
     private String settingsMantra;
@@ -175,6 +181,14 @@ public class Runner {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public byte[] getAvatarImage() {
+        return avatarImage;
+    }
+
+    public void setAvatarImage(byte[] avatarImage) {
+        this.avatarImage = avatarImage;
     }
 
     public String getSettingsMantra() {

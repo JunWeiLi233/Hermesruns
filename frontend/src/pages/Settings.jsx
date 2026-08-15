@@ -17,6 +17,8 @@ import { formatStravaSyncLabel, stravaSyncTone } from '../utils/stravaAutoSync';
 const MANTRA_STORAGE_KEY = 'hermes.settings.mantra';
 const DIGEST_STORAGE_KEY = 'hermes.settings.digest';
 const SETTINGS_REQUEST_TIMEOUT_MS = 12000;
+const MAX_PROFILE_AVATAR_BYTES = 3 * 1024 * 1024;
+const PROFILE_AVATAR_TYPES = new Set(['image/jpeg', 'image/png']);
 
 const WELLNESS_SOURCE_ROWS = [
   { key: 'sleep', labelKey: 'settings.stitch_wellness_sleep' },
@@ -76,8 +78,12 @@ export default function Settings() {
   const [loadState, setLoadState] = useState('loading');
   const [nameSaving, setNameSaving] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
+  const [avatarSaving, setAvatarSaving] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState('');
   const [stravaLinking, setStravaLinking] = useState(false);
   const [wellnessSourcePreferences, setWellnessSourcePreferences] = useState(null);
+  const [runActivities, setRunActivities] = useState([]);
+  const [runActivityState, setRunActivityState] = useState('loading');
 
   useEffect(() => {
     try {
@@ -106,6 +112,10 @@ export default function Settings() {
 
     async function loadSettings() {
       setLoadState('loading');
+      setRunActivityState('loading');
+      const activitiesPromise = apiJson('/api/activities', { signal: settingsController.signal })
+        .then((activities) => (Array.isArray(activities) ? activities : null))
+        .catch(() => null);
       try {
         const [profileData, stravaData, wellnessPreferencesData] = await Promise.all([
           apiJson('/api/profile/me', { signal: settingsController.signal }),
@@ -120,6 +130,12 @@ export default function Settings() {
         setStravaStatus(stravaData);
         setWellnessSourcePreferences(wellnessPreferencesData);
         setLoadState('ready');
+
+        activitiesPromise.then((activities) => {
+          if (cancelled) return;
+          setRunActivities(activities || []);
+          setRunActivityState(activities ? 'ready' : 'unavailable');
+        });
       } catch {
         if (!cancelled) {
           setLoadState('error');
@@ -184,8 +200,8 @@ export default function Settings() {
     setNameSaving(true);
     setNameMsg('');
     try {
-      await apiJson('/api/profile/display-name', {
-        method: 'PUT',
+      const updatedProfile = await apiJson('/api/profile/me/name', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: displayName.trim() }),
       });
@@ -194,12 +210,51 @@ export default function Settings() {
       } catch {
         // Ignore local-storage failures and still keep remote display-name save.
       }
-      setProfile((current) => ({ ...(current || {}), displayName: displayName.trim() }));
+      setProfile((current) => ({ ...(current || {}), ...(updatedProfile || {}), displayName: updatedProfile?.displayName || displayName.trim() }));
       setNameMsg(t('settings.name_saved'));
     } catch {
       setNameMsg(t('settings.name_error'));
     } finally {
       setNameSaving(false);
+    }
+  }
+
+  async function uploadAvatar(file) {
+    if (!file) return;
+    setAvatarMsg('');
+    if (!PROFILE_AVATAR_TYPES.has(file.type) || file.size > MAX_PROFILE_AVATAR_BYTES) {
+      setAvatarMsg(t('settings.avatar_invalid'));
+      return;
+    }
+
+    setAvatarSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const updatedProfile = await apiJson('/api/profile/me/avatar', {
+        method: 'PUT',
+        body: formData,
+      });
+      setProfile((current) => ({ ...(current || {}), ...(updatedProfile || {}) }));
+      setAvatarMsg(t('settings.avatar_saved'));
+    } catch {
+      setAvatarMsg(t('settings.avatar_error'));
+    } finally {
+      setAvatarSaving(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarMsg('');
+    setAvatarSaving(true);
+    try {
+      const updatedProfile = await apiJson('/api/profile/me/avatar', { method: 'DELETE' });
+      setProfile((current) => ({ ...(current || {}), ...(updatedProfile || {}), avatarUrl: null }));
+      setAvatarMsg(t('settings.avatar_removed'));
+    } catch {
+      setAvatarMsg(t('settings.avatar_error'));
+    } finally {
+      setAvatarSaving(false);
     }
   }
 
@@ -450,6 +505,13 @@ export default function Settings() {
           wellnessRows={wellnessRows}
           garminLane={garminLane}
           setupChecklist={setupChecklist}
+          runActivities={runActivities}
+          runActivityState={runActivityState}
+          avatarUrl={profile?.avatarUrl || ''}
+          avatarSaving={avatarSaving}
+          avatarMsg={avatarMsg}
+          onAvatarUpload={uploadAvatar}
+          onAvatarRemove={removeAvatar}
         />
 
       </main>

@@ -8,28 +8,31 @@
     "build": "node scripts/run-vite-build.mjs",
     "build:debug": "node scripts/run-vite-build.mjs --minify=false --cssMinify=false",
     "lint": "eslint .",
-    "test": "node scripts/run-tests.mjs",
+    "test": "npm run typecheck && npm run test:unit && npm run test:contracts",
+    "test:contracts": "node scripts/run-tests.mjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "codex": "node ../.tools/generate-codex.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@xyflow/react": "^12.11.2",
     "chart.js": "^4.5.1",
     "leaflet": "^1.9.4",
-    "leaflet.heat": "^0.2.0",
     "lucide-react": "^1.26.0",
     "react": "^19.2.7",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.8",
-    "react-leaflet": "^5.0.0",
     "react-muscle-highlighter": "^1.2.0",
     "react-router": "^8.3.0",
-    "react-window": "^2.3.0",
-    "zustand": "^5.0.14"
+    "react-window": "^2.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.4",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
@@ -39,9 +42,12 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.9.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.5.23",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.1.5"
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "nanoid": "3.3.18"

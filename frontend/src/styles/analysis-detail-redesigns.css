@@ -895,3 +895,50 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-
   font-weight: 700 !important;
   line-height: 1.2 !important;
 }
+
+/* Final live cascade for the `/runs` ledger redesign. */
+#root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary {
+  min-height: 132px !important;
+  padding: 18px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 253, 248, 0.94), rgba(235, 225, 212, 0.86)) !important;
+  box-shadow: none !important;
+  color: #191715 !important;
+}
+
+#root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary::before {
+  display: none !important;
+}
+
+#root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary span {
+  color: rgba(49, 43, 37, 0.62) !important;
+  letter-spacing: 0 !important;
+}
+
+#root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary strong {
+  width: auto !important;
+  color: #191715 !important;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+#root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  color: rgba(49, 43, 37, 0.68) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary {
+  background: linear-gradient(135deg, rgba(35, 30, 25, 0.96), rgba(24, 20, 17, 0.94)) !important;
+  color: #fff7ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary span,
+body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary p {
+  color: rgba(255, 247, 238, 0.7) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary strong {
+  color: #fff7ee !important;
+}

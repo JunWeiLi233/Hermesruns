@@ -1161,7 +1161,7 @@ function buildTechDebtReview(task, classification) {
   const likelyRelated = [];
 
   if (classification?.touchesFrontend) {
-    likelyRelated.push("frontend/src/styles/style.css");
+    likelyRelated.push("frontend/src/index.css");
     likelyRelated.push("frontend/src/i18n/translations.js");
   }
   if (classification?.touchesBackend) {
