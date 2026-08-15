@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import crypto from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -149,19 +150,176 @@ if (!resolvedScript) {
   process.exit(1);
 }
 
+// ---------------------------------------------------------------------------
+// Background-leak guards (Windows-heavy environments):
+// Codex hosts used to leave every OMX MCP server set running after a session
+// or loop round ended, stacking dozens of stray node.exe processes. The launcher
+// now (1) reaps the previous set for the same script when it belongs to a dead
+// host or to our own host's earlier round, and (2) exits with its child when
+// the parent host process is gone.
+// Set OMX_LAUNCHER_NO_TAKEOVER=1 to disable the reaping behavior.
+// ---------------------------------------------------------------------------
+
+const WATCHDOG_INTERVAL_MS = 4000;
+const TAKEOVER_KILL_GRACE_MS = 1500;
+
+function pidAlive(pid) {
+  if (!pid || pid <= 0 || pid === process.pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "EPERM";
+  }
+}
+
+function killTree(pids) {
+  for (const pid of pids) {
+    if (!pid || pid <= 0) continue;
+    for (const signal of ["SIGTERM", "SIGKILL"]) {
+      try {
+        process.kill(pid, signal);
+      } catch {
+        // already gone or inaccessible
+      }
+    }
+  }
+}
+
+const scriptTag = crypto.createHash("sha1").update(resolvedScript).digest("hex").slice(0, 16);
+const stateDir = path.join(os.tmpdir(), "omx-launcher");
+const stateFile = path.join(stateDir, `${scriptTag}-${process.pid}.json`);
+const parentPid = process.ppid || 0;
+
+function readJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeOwnState(childPid) {
+  try {
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(
+      stateFile,
+      JSON.stringify({
+        v: 1,
+        script: resolvedScript,
+        pid: process.pid,
+        childPid: childPid || 0,
+        ppid: parentPid,
+        startedAt: Date.now(),
+        heartbeat: Date.now(),
+      }),
+    );
+  } catch {
+    // state bookkeeping is best-effort; never block the server itself
+  }
+}
+
+function removeOwnState() {
+  try {
+    fs.unlinkSync(stateFile);
+  } catch {
+    // already gone
+  }
+}
+
+function listSiblingStates() {
+  try {
+    return fs
+      .readdirSync(stateDir)
+      .filter((name) => name.startsWith(`${scriptTag}-`) && name !== path.basename(stateFile))
+      .map((name) => ({ name, state: readJson(path.join(stateDir, name)) }))
+      .filter((entry) => entry.state);
+  } catch {
+    return [];
+  }
+}
+
+function reapStaleInstances() {
+  if (process.env.OMX_LAUNCHER_NO_TAKEOVER === "1") return;
+  for (const { name, state: previous } of listSiblingStates()) {
+    const statePath = path.join(stateDir, name);
+    if (!previous.pid || previous.pid === process.pid) continue;
+
+    if (!pidAlive(previous.pid)) {
+      try {
+        fs.unlinkSync(statePath);
+      } catch {
+        // already gone
+      }
+      continue;
+    }
+
+    // Only reap when the previous set is provably stale: its host is gone, or
+    // it belongs to an earlier round of the very host that just spawned us. A
+    // set owned by a different live host (a concurrent Codex session) is left
+    // alone.
+    const previousHostAlive = pidAlive(previous.ppid);
+    if (previousHostAlive && previous.ppid !== parentPid) continue;
+
+    killTree([previous.pid, previous.childPid]);
+    setTimeout(() => {
+      // SIGTERM on Windows is already TerminateProcess; this is just a
+      // defensive second pass in case either pid ignored it.
+      killTree([previous.pid, previous.childPid]);
+      try {
+        fs.unlinkSync(statePath);
+      } catch {
+        // already gone
+      }
+    }, TAKEOVER_KILL_GRACE_MS).unref();
+  }
+}
+
 const child = spawn(process.execPath, [resolvedScript, ...restArgs], {
   cwd: ROOT,
   stdio: "inherit",
   env: process.env,
 });
 
-for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+reapStaleInstances();
+writeOwnState(child.pid ?? 0);
+
+let tornDown = false;
+function teardown() {
+  if (tornDown) return;
+  tornDown = true;
+  try {
+    if (!child.killed) child.kill();
+  } catch {
+    // already gone
+  }
+}
+
+const watchdog = setInterval(() => {
+  if (!pidAlive(parentPid)) {
+    clearInterval(watchdog);
+    teardown();
+    removeOwnState();
+    setTimeout(() => process.exit(0), 250).unref();
+    return;
+  }
+  writeOwnState(child.pid ?? 0);
+}, WATCHDOG_INTERVAL_MS);
+watchdog.unref();
+
+process.on("exit", () => {
+  teardown();
+  removeOwnState();
+});
+
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"]) {
   process.on(signal, () => {
     if (!child.killed) child.kill(signal);
   });
 }
 
 child.on("exit", (code, signal) => {
+  clearInterval(watchdog);
   if (signal) {
     process.kill(process.pid, signal);
     return;

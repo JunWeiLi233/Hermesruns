@@ -1950,7 +1950,7 @@ body.theme-midnight .vdot-badge,
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
   box-shadow: 0 0 0 6px rgba(240, 117, 97, 0.12);
 }
 
@@ -2328,7 +2328,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-cinematic-legend i.is-primary {
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-cinematic-legend i.is-muted {
@@ -2462,7 +2462,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-cinematic-intensity-bar span.is-hard {
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-cinematic-intensity-labels {
@@ -3304,7 +3304,7 @@ body.theme-midnight .vdot-badge,
 
 .analysis-load-command-status-value.is-optimal,
 .analysis-load-command-status-value.is-under {
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-load-command-status-value.is-watch {
@@ -3364,7 +3364,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-load-command-ratio-value .runner-dashboard-side-link-icon {
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-load-command-ratio-track-wrap {
@@ -3442,7 +3442,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-load-command-legend i.is-acute {
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-load-command-legend i.is-chronic {
@@ -3590,7 +3590,7 @@ body.theme-midnight .vdot-badge,
   bottom: -20px;
   opacity: 0.1;
   transform: scale(2.5);
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-load-command-judgment-card h3 {
@@ -3655,7 +3655,7 @@ body.theme-midnight .vdot-badge,
 .analysis-load-command-link {
   border: 0;
   background: transparent;
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
   font-family: "Manrope", var(--font-display);
   font-size: 0.72rem;
   font-weight: 800;
@@ -3698,7 +3698,7 @@ body.theme-midnight .vdot-badge,
   height: 50px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.07);
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
   flex-shrink: 0;
 }
 
@@ -3847,7 +3847,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-intensity-command-hero h1 strong {
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-intensity-command-hero p,
@@ -3989,7 +3989,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-intensity-command-status.is-optimal {
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-intensity-command-status.is-watch {
@@ -4069,7 +4069,7 @@ body.theme-midnight .vdot-badge,
 .analysis-intensity-command-link {
   border: 0;
   background: transparent;
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
   font-family: "Manrope", var(--font-display);
   font-size: 0.78rem;
   font-weight: 800;
@@ -6310,7 +6310,7 @@ body.theme-midnight .vdot-badge,
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
   box-shadow: 0 0 18px rgba(240, 117, 97, 0.72);
 }
 
@@ -6362,7 +6362,7 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-vo2-kinetic-value-row strong {
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
   font-family: "Manrope", var(--font-display);
   font-size: clamp(4.2rem, 7vw, 6.4rem);
   font-weight: 900;
@@ -6481,7 +6481,7 @@ body.theme-midnight .vdot-badge,
 .analysis-vo2-kinetic-tooltip strong {
   display: block;
   margin-top: 4px;
-  color: #f07561;
+  color: var(--accent-coral-strong, #f07561);
   font-family: "Manrope", var(--font-display);
   font-size: 1rem;
   font-weight: 800;
@@ -6531,7 +6531,7 @@ body.theme-midnight .vdot-badge,
   padding: 0 22px;
   border: 0;
   border-radius: 999px;
-  background: #f07561;
+  background: var(--accent-coral-strong, #f07561);
   color: #140b0a;
   font-family: "Manrope", var(--font-display);
   font-size: 0.72rem;
@@ -8104,20 +8104,6 @@ body.theme-midnight .vdot-badge,
   overflow: hidden;
 }
 
-.analysis-page-shell .analysis-profile-primary::after {
-  content: "";
-  position: absolute;
-  inset: auto clamp(20px, 2vw, 34px) clamp(20px, 2vw, 34px) auto;
-  width: min(34%, 250px);
-  height: min(42%, 250px);
-  border: 1px solid rgba(var(--analysis-lab-accent-rgb), 0.16);
-  border-radius: 50%;
-  background:
-    repeating-radial-gradient(circle, rgba(var(--analysis-lab-accent-rgb), 0.12) 0 1px, transparent 1px 22px);
-  opacity: 0.44;
-  pointer-events: none;
-}
-
 .analysis-page-shell .analysis-profile-primary > * {
   position: relative;
   z-index: 1;
@@ -8287,6 +8273,19 @@ body.theme-midnight .vdot-badge,
   justify-self: end;
 }
 
+.analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-status-pill.is-muted {
+  min-height: 0;
+  padding: 0;
+  background: transparent !important;
+  color: var(--analysis-lab-muted) !important;
+}
+
+.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+  padding: 0;
+  border-color: transparent;
+  background: transparent !important;
+}
+
 .analysis-page-shell .analysis-profile-reference-card.is-load p {
   grid-area: copy;
   max-width: 30ch;
@@ -8360,11 +8359,18 @@ body.theme-midnight .vdot-badge,
   grid-column: span 3;
 }
 
-.analysis-page-shell .analysis-overview-intensity-bar,
-.analysis-page-shell .analysis-overview-risk-meter {
+.analysis-page-shell .analysis-overview-intensity-bar {
   border: 1px solid var(--analysis-lab-line);
   border-radius: 999px;
   background: var(--analysis-lab-surface-soft) !important;
+}
+
+.analysis-page-shell .analysis-overview-risk-meter {
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .analysis-page-shell .analysis-overview-intensity-bar {
@@ -8914,4 +8920,1175 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-page-shell .analysis-he
   .analysis-page-shell .analysis-heat-context__action {
     width: 100%;
   }
+}
+
+/* Coach insight Profile-aligned redesign */
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile {
+  --coach-profile-bg: #f6f3ee;
+  --coach-profile-card: rgba(255, 255, 255, 0.92);
+  --coach-profile-card-solid: #fff;
+  --coach-profile-ink: #1c1917;
+  --coach-profile-muted: #78716c;
+  --coach-profile-faint: #a8a29e;
+  --coach-profile-line: rgba(28, 25, 23, 0.09);
+  --coach-profile-line-strong: rgba(28, 25, 23, 0.15);
+  --coach-profile-accent: var(--accent-coral-strong, #ef6a54);
+  --coach-profile-accent-soft: rgba(239, 106, 84, 0.1);
+  --coach-profile-green: #3d8b5e;
+  --coach-profile-dark: #181512;
+  --coach-profile-dark-soft: #27211b;
+  --coach-profile-shadow: 0 14px 38px rgba(28, 25, 23, 0.07);
+  display: grid;
+  width: min(100%, 1540px);
+  margin: 0 auto;
+  gap: 22px;
+  color: var(--coach-profile-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-insight-detail-canvas {
+  background:
+    radial-gradient(circle at 92% 2%, rgba(239, 106, 84, 0.1), transparent 27rem),
+    linear-gradient(180deg, #faf8f5 0%, #f4f0ea 100%);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-hero {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+  isolation: isolate;
+  animation: analysis-coach-profile-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-art {
+  display: none;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  column-gap: clamp(30px, 5vw, 78px);
+  align-items: start;
+  min-width: 0;
+  padding: clamp(28px, 4vw, 58px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 85% 12%, rgba(239, 106, 84, 0.24), transparent 24rem),
+    linear-gradient(135deg, var(--coach-profile-dark-soft), var(--coach-profile-dark) 58%, #0f0d0b);
+  box-shadow: 0 24px 60px rgba(28, 25, 23, 0.18);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy::after {
+  position: absolute;
+  right: -4rem;
+  bottom: -8rem;
+  width: 24rem;
+  height: 24rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4rem rgba(255, 255, 255, 0.02),
+    0 0 0 8rem rgba(255, 255, 255, 0.015);
+  content: '';
+  pointer-events: none;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  grid-column: 1 / -1;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.68);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back:hover {
+  color: #fff;
+  transform: translateX(-3px);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back:focus-visible,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row:focus-visible,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card:focus-visible {
+  outline: 3px solid rgba(239, 106, 84, 0.55);
+  outline-offset: 4px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-kickers,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-coach,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy > h1,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-summary {
+  grid-column: 1;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-kickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-cycle-pill {
+  min-height: 28px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill {
+  border-color: rgba(239, 106, 84, 0.42);
+  background: rgba(239, 106, 84, 0.14);
+  color: #ffad9f;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-coach {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: fit-content;
+  margin: 0 0 28px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker strong {
+  color: var(--coach-profile-accent);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy > h1 {
+  max-width: 900px;
+  margin: 0;
+  color: #f8f4ef;
+  font-family: var(--font-display, "Avenir Next", "Trebuchet MS", sans-serif);
+  font-size: clamp(2.55rem, 5.4vw, 5.7rem);
+  font-style: normal;
+  font-weight: 720;
+  line-height: 0.94;
+  letter-spacing: -0.065em;
+  text-wrap: balance;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-summary {
+  max-width: 720px;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, 0.67);
+  font-size: clamp(0.96rem, 1.35vw, 1.12rem);
+  line-height: 1.7;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  grid-column: 2;
+  grid-row: 2 / span 6;
+  align-self: stretch;
+  min-height: 270px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  text-align: center;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial {
+  position: relative;
+  display: grid;
+  width: 156px;
+  height: 156px;
+  place-content: center;
+  margin: 20px 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--coach-profile-accent) var(--coach-readiness-angle), rgba(255, 255, 255, 0.09) 0);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial::before {
+  position: absolute;
+  inset: 9px;
+  border-radius: inherit;
+  background: #1b1714;
+  content: '';
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial strong,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial small {
+  position: relative;
+  z-index: 1;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial strong {
+  color: #fff;
+  font-size: 3.25rem;
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial small {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > p {
+  max-width: 220px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 142px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 12px;
+  background: var(--coach-profile-card);
+  box-shadow: 0 4px 16px rgba(28, 25, 23, 0.035);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric.is-accent {
+  border-color: rgba(239, 106, 84, 0.26);
+  background: linear-gradient(145deg, var(--coach-profile-accent-soft), var(--coach-profile-card) 72%);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > span {
+  color: var(--coach-profile-muted);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > strong {
+  margin: 14px 0 8px;
+  color: var(--coach-profile-ink);
+  font-size: clamp(1.45rem, 2.3vw, 2.15rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric.is-accent > strong {
+  color: var(--coach-profile-accent);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > small {
+  overflow: hidden;
+  color: var(--coach-profile-muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-workbench {
+  --coach-profile-top-row-height: clamp(380px, 30vw, 454px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.48fr) minmax(320px, 0.72fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-main,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-main {
+  grid-template-rows: auto var(--coach-profile-top-row-height) minmax(0, 1fr);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head {
+  display: flex;
+  min-height: 72px;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 2px 6px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head h2 {
+  margin: 0;
+  color: var(--coach-profile-ink);
+  font-family: var(--font-display, "Avenir Next", "Trebuchet MS", sans-serif);
+  font-size: clamp(1.65rem, 2.2vw, 2.35rem);
+  font-weight: 720;
+  letter-spacing: -0.05em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head p {
+  max-width: 660px;
+  margin: 7px 0 0;
+  color: var(--coach-profile-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle span {
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: var(--coach-profile-muted);
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle .is-active {
+  background: var(--coach-profile-ink);
+  color: #fff;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-recent,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-support-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 12px;
+  background: var(--coach-profile-card);
+  box-shadow: var(--coach-profile-shadow);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan {
+  height: var(--coach-profile-top-row-height);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card {
+  min-height: 0;
+  padding: clamp(22px, 3vw, 34px);
+  color: var(--coach-profile-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-grid {
+  background-image:
+    linear-gradient(var(--coach-profile-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--coach-profile-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.25;
+  mask-image: linear-gradient(to bottom, transparent, #000 25%, transparent 92%);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-head p,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-copy > p {
+  color: var(--coach-profile-muted);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-overview-card-kicker,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-panel-head > span {
+  color: var(--coach-profile-accent);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-score {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-score strong {
+  display: block;
+  color: var(--coach-profile-accent);
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  line-height: 0.9;
+  letter-spacing: -0.07em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-score small {
+  color: var(--coach-profile-muted);
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr);
+  gap: 28px;
+  align-items: end;
+  margin-top: 30px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-copy h3 {
+  margin: 0 0 10px;
+  color: var(--coach-profile-ink);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 24px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 8px;
+  background: rgba(246, 243, 238, 0.74);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile small {
+  color: var(--coach-profile-muted);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile strong {
+  display: block;
+  margin: 7px 0 4px;
+  overflow-wrap: anywhere;
+  color: var(--coach-profile-ink);
+  font-size: 1.05rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-shell {
+  position: relative;
+  min-height: 230px;
+  overflow: hidden;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(239, 106, 84, 0.04), rgba(255, 255, 255, 0.25));
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-shell svg {
+  width: 100%;
+  height: 230px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-primary {
+  fill: none;
+  stroke: var(--coach-profile-accent);
+  stroke-linecap: round;
+  stroke-width: 7;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-secondary {
+  fill: none;
+  stroke: var(--coach-profile-ink);
+  stroke-dasharray: 9 12;
+  stroke-linecap: round;
+  stroke-width: 3;
+  opacity: 0.3;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-point {
+  fill: var(--coach-profile-card-solid);
+  stroke: var(--coach-profile-accent);
+  stroke-width: 4;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 26px rgba(28, 25, 23, 0.08);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip small {
+  color: var(--coach-profile-muted);
+  font-size: 0.66rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip strong {
+  color: var(--coach-profile-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-recent {
+  padding: 22px;
+  height: 100%;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-panel-head h3 {
+  margin: 0;
+  color: var(--coach-profile-ink);
+  font-size: 1.05rem;
+  letter-spacing: -0.025em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-panel-head p {
+  margin: 7px 0 0;
+  color: var(--coach-profile-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-list {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  padding: 15px 3px;
+  border: 0;
+  border-top: 1px solid var(--coach-profile-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--coach-profile-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: padding 180ms ease, color 180ms ease;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row:hover {
+  padding-right: 10px;
+  padding-left: 10px;
+  color: var(--coach-profile-accent);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--coach-profile-accent-soft);
+  color: var(--coach-profile-accent);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-copy,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-copy span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta span {
+  color: var(--coach-profile-muted);
+  font-size: 0.72rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta {
+  text-align: right;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-empty {
+  padding: 24px 0 8px;
+  color: var(--coach-profile-muted);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint {
+  align-content: start;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan {
+  padding: 26px;
+  border-color: rgba(239, 106, 84, 0.24);
+  background:
+    linear-gradient(145deg, rgba(239, 106, 84, 0.09), transparent 48%),
+    var(--coach-profile-card);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-kicker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--coach-profile-accent);
+  font-size: 0.67rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan h3 {
+  margin: 18px 0 9px;
+  color: var(--coach-profile-ink);
+  font-size: clamp(1.4rem, 2vw, 1.85rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-plan-meta {
+  color: var(--coach-profile-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card {
+  margin-top: 22px;
+  padding: 16px;
+  border-left: 3px solid var(--coach-profile-accent);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card span {
+  color: var(--coach-profile-accent);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card p {
+  margin: 8px 0 0;
+  color: var(--coach-profile-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan {
+  padding: 20px 22px;
+  box-shadow: 0 5px 18px rgba(28, 25, 23, 0.035);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan > span {
+  color: var(--coach-profile-accent);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan h4 {
+  margin: 9px 0 7px;
+  color: var(--coach-profile-ink);
+  font-size: 1rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan p {
+  margin: 10px 0 0;
+  color: var(--coach-profile-muted);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card {
+  display: flex;
+  width: 100%;
+  min-height: 150px;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 24px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--coach-profile-accent);
+  box-shadow: 0 16px 30px rgba(239, 106, 84, 0.2);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 38px rgba(239, 106, 84, 0.27);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card .analysis-overview-card-kicker,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card h3,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card p,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card small {
+  color: #fff;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card h3 {
+  margin: 9px 0 6px;
+  font-size: 1.2rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card p {
+  margin: 0;
+  opacity: 0.76;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-meta {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-meta strong {
+  display: block;
+  color: #fff;
+  font-size: 2rem;
+  letter-spacing: -0.06em;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-evidence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-support-card {
+  min-width: 0;
+  padding: 22px;
+  box-shadow: 0 5px 20px rgba(28, 25, 23, 0.04);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-row,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--coach-profile-line);
+  border-radius: 8px;
+  background: rgba(246, 243, 238, 0.72);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip.is-active {
+  border-color: rgba(239, 106, 84, 0.34);
+  background: var(--coach-profile-accent-soft);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile small {
+  color: var(--coach-profile-muted);
+  font-size: 0.65rem;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip strong,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile strong {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: var(--coach-profile-ink);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-reason-list {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+  counter-reset: coach-reason;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-reason-list p {
+  position: relative;
+  margin: 0;
+  padding: 13px 0 13px 30px;
+  border-top: 1px solid var(--coach-profile-line);
+  color: var(--coach-profile-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  counter-increment: coach-reason;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-reason-list p::before {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  color: var(--coach-profile-accent);
+  font-size: 0.64rem;
+  font-weight: 850;
+  content: counter(coach-reason, decimal-leading-zero);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile {
+  --coach-profile-bg: #151311;
+  --coach-profile-card: rgba(255, 255, 255, 0.055);
+  --coach-profile-card-solid: #211d19;
+  --coach-profile-ink: #f1ebe4;
+  --coach-profile-muted: #aaa198;
+  --coach-profile-faint: #7f776f;
+  --coach-profile-line: rgba(255, 255, 255, 0.08);
+  --coach-profile-line-strong: rgba(255, 255, 255, 0.14);
+  --coach-profile-shadow: 0 16px 38px rgba(0, 0, 0, 0.22);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-insight-detail-canvas {
+  background:
+    radial-gradient(circle at 92% 2%, rgba(239, 106, 84, 0.12), transparent 27rem),
+    #151311;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle,
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-chart-tooltip,
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-why-card {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-tile,
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-chip,
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-tile {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+@keyframes analysis-coach-profile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1180px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-workbench {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-card,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-primary-plan {
+    height: auto;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-main {
+    grid-template-rows: auto auto auto;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-recent {
+    height: auto;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint > .analysis-coach-command-section-head,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint > .analysis-coach-command-gear-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    column-gap: 24px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+    min-height: 240px;
+    padding: 18px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial {
+    width: 130px;
+    height: 130px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile {
+    gap: 16px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-kickers,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-coach,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy > h1,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-summary,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+    grid-column: 1;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+    grid-row: auto;
+    min-height: 0;
+    flex-direction: row;
+    gap: 20px;
+    justify-content: flex-start;
+    margin-top: 26px;
+    text-align: left;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial {
+    flex: 0 0 110px;
+    width: 110px;
+    height: 110px;
+    margin: 0;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial strong {
+    font-size: 2.45rem;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > span {
+    display: none;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-metrics,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-evidence,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint > .analysis-coach-command-section-head,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-blueprint > .analysis-coach-command-gear-card {
+    grid-column: auto;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-section-head {
+    align-items: start;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy > h1 {
+    font-size: clamp(2.3rem, 13vw, 3.65rem);
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+    align-items: center;
+    padding: 14px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-performance-head {
+    align-items: end;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-stat-row,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-phase-row,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-focus-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-meta {
+    grid-column: 2;
+    grid-template-columns: 1fr auto;
+    text-align: left;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-meta {
+    width: 100%;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-hero {
+    animation: none;
+  }
+
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row,
+  .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-gear-card {
+    transition: none;
+  }
+}
+
+/* Keep the current coach-insight hero readable as a Profile surface. */
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy {
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  background:
+    radial-gradient(circle at 88% 5%, rgba(239, 106, 84, 0.1), transparent 31%),
+    linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%);
+  box-shadow: 0 14px 38px rgba(28, 25, 23, 0.07);
+  color: #1c1917;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy::after {
+  display: none;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back:hover {
+  color: #1c1917;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-cycle-pill {
+  border-color: rgba(28, 25, 23, 0.1);
+  background: rgba(28, 25, 23, 0.05);
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill {
+  border-color: rgba(192, 70, 43, 0.2);
+  background: rgba(192, 70, 43, 0.08);
+  color: #a0392a;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker strong {
+  color: #c0462b;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy > h1 {
+  color: #1c1917;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-summary {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
+  border-color: rgba(28, 25, 23, 0.09);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 28px rgba(28, 25, 23, 0.05);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > span {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial {
+  background: conic-gradient(var(--coach-profile-accent) var(--coach-readiness-angle), rgba(28, 25, 23, 0.1) 0);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial::before {
+  background: #fffdf9;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial strong {
+  color: #1c1917;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial small,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > p {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric {
+  border-color: rgba(28, 25, 23, 0.09);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 22px rgba(28, 25, 23, 0.05);
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > span,
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > small {
+  color: #78716c;
+}
+
+.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > strong {
+  color: #1c1917;
 }

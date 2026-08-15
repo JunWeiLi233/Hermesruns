@@ -117,6 +117,7 @@ class LoginControllerSecurityTests {
                 mock(SecretEncryptionService.class),
                 mock(AiUsageService.class),
                 mock(EmailVerificationService.class),
+                mock(EmailValidationService.class),
                 mock(VerificationResendLimiter.class),
                 mock(PasswordResetLimiter.class),
                 mock(PasswordResetService.class),

@@ -7,6 +7,28 @@ import nikeLogo from '../assets/brand-logos/nike.webp';
 import pumaLogo from '../assets/brand-logos/puma.png';
 import sauconyLogo from '../assets/brand-logos/saucony.png';
 import xtepLogo from '../assets/brand-logos/xtep.png';
+import altraLogo from '../assets/brand-logos/altra.svg';
+import antaLogo from '../assets/brand-logos/anta.svg';
+import bmaiLogo from '../assets/brand-logos/bmai.svg';
+import brooksLogo from '../assets/brand-logos/brooks.svg';
+import dayanLogo from '../assets/brand-logos/dayan.svg';
+import doWinLogo from '../assets/brand-logos/do-win.svg';
+import hokaLogo from '../assets/brand-logos/hoka.svg';
+import inov8Logo from '../assets/brand-logos/inov-8.svg';
+import liningLogo from '../assets/brand-logos/lining.svg';
+import macondoLogo from '../assets/brand-logos/macondo.svg';
+import merrellLogo from '../assets/brand-logos/merrell.svg';
+import mizunoLogo from '../assets/brand-logos/mizuno.svg';
+import nordaLogo from '../assets/brand-logos/norda.svg';
+import onLogo from '../assets/brand-logos/on.svg';
+import peakLogo from '../assets/brand-logos/peak.svg';
+import qiaodanLogo from '../assets/brand-logos/qiaodan.svg';
+import reebokLogo from '../assets/brand-logos/reebok.svg';
+import salomonLogo from '../assets/brand-logos/salomon.svg';
+import skechersLogo from '../assets/brand-logos/skechers.svg';
+import topoAthleticLogo from '../assets/brand-logos/topo-athletic.svg';
+import underArmourLogo from '../assets/brand-logos/under-armour.svg';
+import volantiLogo from '../assets/brand-logos/volanti.svg';
 import { getShoeBrandAssetKey, getShoeBrandFallbackSpec } from '../utils/shoeBrandLogo';
 
 const BRAND_LOGO_ASSETS = {
@@ -19,6 +41,28 @@ const BRAND_LOGO_ASSETS = {
   puma: pumaLogo,
   saucony: sauconyLogo,
   xtep: xtepLogo,
+  altra: altraLogo,
+  anta: antaLogo,
+  bmai: bmaiLogo,
+  brooks: brooksLogo,
+  dayan: dayanLogo,
+  dowin: doWinLogo,
+  hoka: hokaLogo,
+  inov8: inov8Logo,
+  lining: liningLogo,
+  macondo: macondoLogo,
+  merrell: merrellLogo,
+  mizuno: mizunoLogo,
+  norda: nordaLogo,
+  on: onLogo,
+  peak: peakLogo,
+  qiaodan: qiaodanLogo,
+  reebok: reebokLogo,
+  salomon: salomonLogo,
+  skechers: skechersLogo,
+  topoathletic: topoAthleticLogo,
+  underarmour: underArmourLogo,
+  volanti: volantiLogo,
 };
 
 function getBrandLogoAsset(brand) {

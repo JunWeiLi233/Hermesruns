@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import com.hermes.backend.rewards.DigitalCosmeticDropRepository;
+import com.hermes.backend.rewards.DigitalCosmeticsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

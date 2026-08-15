@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
-const scheduleStyles = readFileSync(path.join(root, 'styles', 'style.css'), 'utf8');
+const scheduleStyles = readFileSync(path.join(root, 'styles', 'style.generated.css'), 'utf8');
 
 assert.match(
   scheduleStyles,

@@ -15,7 +15,7 @@ const enSource = read('i18n/locales/en/pages.js');
 const zhSource = read('i18n/locales/zh-CN/pages.js');
 const profileStyle = read('styles/_split/profile.css');
 const lightStyle = read('styles/_split/light-theme-overrides.css');
-const bundledStyle = read('styles/style.css');
+const bundledStyle = read('styles/style.generated.css');
 
 for (const key of [
   'dashboard_empty_title',

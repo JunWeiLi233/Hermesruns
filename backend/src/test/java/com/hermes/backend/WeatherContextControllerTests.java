@@ -180,6 +180,52 @@ class WeatherContextControllerTests {
         verifyNoInteractions(forecastService);
     }
 
+    @Test
+    void getForecastMapsProviderRateLimitToTooManyRequests() {
+        AuthService authService = mock(AuthService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        WeatherForecastService forecastService = mock(WeatherForecastService.class);
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner()));
+        when(forecastService.fetchForecast(40.7128, -74.0060))
+                .thenThrow(new WeatherProviderRateLimitedException("Weather provider rate limited."));
+        WeatherContextController controller = controller(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                forecastService
+        );
+
+        ResponseEntity<?> response = controller.getForecast("Bearer runner-token", 40.7128, -74.0060);
+
+        assertError(response, HttpStatus.TOO_MANY_REQUESTS, "Weather provider rate limited. Please try again later.");
+    }
+
+    @Test
+    void getForecastMapsUnexpectedProviderFailureToBadGateway() {
+        AuthService authService = mock(AuthService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        WeatherAdjustedFitnessService fitnessService = mock(WeatherAdjustedFitnessService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        WeatherForecastService forecastService = mock(WeatherForecastService.class);
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner()));
+        when(forecastService.fetchForecast(40.7128, -74.0060))
+                .thenThrow(new IllegalStateException("boom"));
+        WeatherContextController controller = controller(
+                authService,
+                acclimatizationService,
+                fitnessService,
+                activityRepository,
+                forecastService
+        );
+
+        ResponseEntity<?> response = controller.getForecast("Bearer runner-token", 40.7128, -74.0060);
+
+        assertError(response, HttpStatus.BAD_GATEWAY, "Weather provider unavailable.");
+    }
+
     private WeatherContextController controller(
             AuthService authService,
             AcclimatizationService acclimatizationService,

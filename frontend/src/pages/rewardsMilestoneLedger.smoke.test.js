@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rewardsSource = readFileSync(path.join(here, 'Rewards.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const alignmentSource = readFileSync(path.join(here, '../styles/rewards-profile-alignment.css'), 'utf8');
 const indexSource = readFileSync(path.join(here, '../index.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');

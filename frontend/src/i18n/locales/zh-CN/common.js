@@ -28,7 +28,7 @@ export default {
   },
   "auth": {
     "login_success": "登录成功。",
-    "invalid_credentials": "邮箱或密码错误。",
+    "invalid_credentials": "用户名或密码无效。",
     "invalid_password": "密码错误。",
     "user_not_found": "用户不存在。",
     "email_in_use": "该邮箱已被注册。",

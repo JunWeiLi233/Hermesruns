@@ -10,11 +10,11 @@ const read = (relativePath) => readFileSync(path.join(srcRoot, relativePath), 'u
 const navSource = read('components/AnalysisSubpageNav.jsx');
 const insightSource = read('pages/AnalysisInsightDetail.jsx');
 const predictionSource = read('pages/PredictionDetail.jsx');
-const styleSource = read('styles/analysis-subnav.css');
-const enSource = read('i18n/locales/en/components.js');
-const zhSource = read('i18n/locales/zh-CN/components.js');
-
-for (const route of [
+const profileSource = read('pages/ProfileDashboard.jsx');
+const indexSource = read('index.css');
+const loadBalanceCss = read('styles/analysis-load-balance-profile-alignment.css');
+const analysisRoutes = [
+  '/analysis',
   '/analysis/load-balance',
   '/analysis/intensity',
   '/analysis/injury-risk',
@@ -23,24 +23,96 @@ for (const route of [
   '/prediction/10k',
   '/prediction/half',
   '/prediction/marathon',
-]) {
-  assert.ok(navSource.includes(route), `Analysis subpage navigation is missing ${route}.`);
+];
+
+for (const route of analysisRoutes) {
+  const routeIndex = navSource.indexOf(route);
+  assert.ok(routeIndex >= 0, `Analysis subpage navigation is missing ${route}.`);
 }
 
-assert.match(navSource, /aria-current=\{active \? 'page' : undefined\}/, 'The current analysis subsection should be exposed to assistive technology.');
+assert.match(
+  navSource,
+  /const navItems = \[[\s\S]*?key: 'analysis'[\s\S]*?\.\.\.INSIGHT_ITEMS\.map[\s\S]*?\.\.\.PREDICTION_ITEMS\.map/,
+  'The rendered rail must keep overview, insights, and predictions in that order.',
+);
+
+assert.match(
+  navSource,
+  /\{ key: 'half', route: '\/prediction\/half', icon: 'timer' \}/,
+  'Half Marathon should reuse the same timer icon as the 5K prediction link.',
+);
+
+for (const className of [
+  'runner-shell-sidebar',
+  'runner-shell-brand runner-dashboard-brand',
+  'runner-dashboard-brand-copy',
+  'runner-dashboard-sidebar-toggle',
+  'runner-shell-side-nav',
+  'runner-shell-side-link',
+  'runner-dashboard-side-link-icon',
+  'runner-dashboard-side-link-label',
+  'runner-shell-sidebar-footer',
+  'runner-shell-workout-btn runner-dashboard-workout-btn',
+]) {
+  assert.ok(navSource.includes(className), `Analysis subpages must use the Profile sidebar class ${className}.`);
+  assert.ok(profileSource.includes(className), `Profile must remain the visual parity source for ${className}.`);
+}
+
+assert.match(navSource, /import \{ RACE_DISTANCES \} from '\.\.\/utils\/vdot';/);
+assert.match(navSource, /active: item\.key === activeInsightKey/);
+assert.match(navSource, /active: item\.key === activePredictionKey/);
+assert.match(navSource, /aria-current=\{item\.active \? 'page' : undefined\}/);
+assert.match(navSource, /analysis\.subnav_title/);
+assert.match(navSource, /analysis\.pred_open_today/);
+assert.doesNotMatch(navSource, /analysis-subnav|analysis-subnav-link|analysis-subnav-current/, 'Analysis subpages must not render the obsolete sidebar styling.');
 
 for (const source of [insightSource, predictionSource]) {
   assert.match(source, /import AnalysisSubpageNav from '\.\.\/components\/AnalysisSubpageNav';/);
   assert.match(source, /<AnalysisSubpageNav/);
 }
 
-assert.match(styleSource, /\.analysis-subnav-link\.is-active/);
-assert.match(styleSource, /@media \(max-width: 860px\)[\s\S]*\.analysis-subnav-nav[\s\S]*overflow-x:\s*auto/);
-assert.match(styleSource, /@media \(prefers-reduced-motion: reduce\)/);
-
-for (const key of ['subnav_title', 'subnav_current', 'subnav_insights', 'subnav_predictions', 'subnav_aria_label']) {
-  assert.match(enSource, new RegExp(`"${key}":`), `English analysis copy is missing ${key}.`);
-  assert.match(zhSource, new RegExp(`"${key}":`), `Chinese analysis copy is missing ${key}.`);
+for (const marker of [
+  'analysis-load-profile-header',
+  'analysis-load-profile-decision',
+  'analysis-load-profile-evidence',
+  'analysis-load-profile-metrics',
+  'analysis-load-profile-ledger',
+  'analysis-load-profile-methodology',
+]) {
+  assert.ok(insightSource.includes(marker), `Load Balance is missing ${marker}.`);
 }
+
+assert.ok(
+  insightSource.indexOf('analysis-load-profile-decision') < insightSource.indexOf('analysis-load-profile-evidence'),
+  'The coaching decision must precede analytical evidence.',
+);
+assert.ok(
+  insightSource.indexOf('analysis-load-profile-ledger') < insightSource.indexOf('analysis-load-profile-methodology'),
+  'Methodology must remain supporting content after recent training.',
+);
+assert.match(insightSource, /onPointerMove=\{handleLoadPointerMove\}/);
+assert.match(insightSource, /onPointerLeave=\{handleLoadPointerLeave\}/);
+assert.match(insightSource, /navigate\('\/today-run'\)/);
+assert.match(insightSource, /navigate\(`\/run\/\$\{row\.id\}`\)/);
+assert.match(indexSource, /analysis-load-balance-profile-alignment\.css/);
+assert.match(loadBalanceCss, /prefers-reduced-motion/);
+assert.match(loadBalanceCss, /theme-midnight/);
+const loadDecisionIndex = loadBalanceCss.indexOf('.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision {');
+assert.ok(loadDecisionIndex >= 0, 'Load Balance should have a decision surface rule.');
+assert.match(
+  loadBalanceCss.slice(loadDecisionIndex, loadDecisionIndex + 760),
+  /background:[\s\S]*#fffdf9/,
+  'The Load Balance decision surface should use the white Profile treatment in the default theme.',
+);
+assert.match(
+  loadBalanceCss,
+  /\.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-decision::after\s*\{[\s\S]*display:\s*none/,
+  'The default Load Balance decision surface should not render the dark decorative rings.',
+);
+assert.match(
+  loadBalanceCss,
+  /#root\s+\.analysis-insight-detail-page\.is-load-balance\s+\.analysis-load-profile-decision\s+\.coach-identity-copy\s+strong[\s\S]*color:\s*#1c1917\s*!important/,
+  'The Load Balance coach identity should remain readable on the white decision surface.',
+);
 
 console.log('[PASS] Analysis subpage navigation guard passed.');

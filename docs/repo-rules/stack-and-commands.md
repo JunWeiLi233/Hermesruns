@@ -5,7 +5,7 @@ This file owns stack facts, commands, env vars, coding conventions, and terminal
 ## Stack
 
 - Backend: Spring Boot 4.0.3, Java 17, Maven, JPA/Hibernate
-- Frontend: React 19, Vite, React Router v7, Chart.js, Leaflet
+- Frontend: React 19, Vite, React Router 8, incremental TypeScript, Vitest/React Testing Library, Chart.js, Leaflet
 - Database: H2 in dev, PostgreSQL in prod
 - Auth: Google OAuth 2.0, Strava OAuth 2.0, password + email verification
 - Payments: Stripe Checkout
@@ -24,6 +24,9 @@ cd backend && ./mvnw -DskipTests compile
 cd frontend && npm run dev
 cd frontend && npm run build
 cd frontend && npm run lint
+cd frontend && npm run typecheck
+cd frontend && npm run test:unit
+cd frontend && npm test
 ```
 
 ## Terminal Strategy

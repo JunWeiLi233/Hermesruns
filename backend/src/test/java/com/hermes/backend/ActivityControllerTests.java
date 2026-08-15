@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
@@ -53,8 +54,8 @@ class ActivityControllerTests {
         }
 
         assertTrue(
-                methodCount < 15,
-                "ActivityController should keep declared method count below 15, actual: " + methodCount
+                methodCount < 16,
+                "ActivityController should keep declared method count below 16, actual: " + methodCount
         );
     }
 
@@ -69,7 +70,24 @@ class ActivityControllerTests {
             ReadinessService readinessService,
             RestTemplate restTemplate
     ) {
-        ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository);
+        return newController(authService, activityRepository, activityPointRepository, runnerRepository,
+                secretEncryptionService, elevationCorrectionService, acclimatizationService, readinessService,
+                restTemplate, org.mockito.Mockito.mock(org.springframework.jdbc.core.JdbcTemplate.class));
+    }
+
+    private static ActivityController newController(
+            AuthService authService,
+            ActivityRepository activityRepository,
+            ActivityPointRepository activityPointRepository,
+            RunnerRepository runnerRepository,
+            SecretEncryptionService secretEncryptionService,
+            ElevationCorrectionService elevationCorrectionService,
+            AcclimatizationService acclimatizationService,
+            ReadinessService readinessService,
+            RestTemplate restTemplate,
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate
+    ) {
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository, jdbcTemplate);
         ActivityStravaStreamService stravaStreamService = new ActivityStravaStreamService(
                 activityDataAccess,
                 runnerRepository,
@@ -637,4 +655,91 @@ class ActivityControllerTests {
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         verifyNoInteractions(activityPointRepository);
     }
+
+    // --- Run deletion ---
+
+    @Test
+    void deleteActivityRejectsUnauthenticated() {
+        AuthService authService = mock(AuthService.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = newController(
+                authService, mock(ActivityRepository.class), activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader("Bearer expired")).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.deleteActivity(101L, "Bearer expired");
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        verifyNoInteractions(activityPointRepository);
+    }
+
+    @Test
+    void deleteActivityReturns404WhenNotOwnedAndNeverDeletes() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        Runner runner = new Runner();
+        runner.setId(42L);
+        org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class), jdbcTemplate
+        );
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(101L, runner)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.deleteActivity(101L, "Bearer session-token");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        // Points + activity must never be deleted when the caller does not own it.
+        verify(jdbcTemplate, never())
+                .update(org.mockito.ArgumentMatchers.contains("delete from activity_points"), org.mockito.ArgumentMatchers.<Object>any());
+        verify(activityRepository, never()).delete(any(Activity.class));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void deleteActivityRemovesPointsThenActivityWhenOwned() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class), jdbcTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(42L);
+        Activity owned = new Activity();
+        owned.setId(101L);
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(101L, runner)).thenReturn(Optional.of(owned));
+
+        ResponseEntity<?> response = controller.deleteActivity(101L, "Bearer session-token");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // Points must be removed before the activity row (separate table).
+        org.mockito.InOrder inOrder = org.mockito.Mockito.inOrder(jdbcTemplate, activityRepository);
+        inOrder.verify(jdbcTemplate).update(
+                org.mockito.ArgumentMatchers.contains("delete from activity_points"),
+                org.mockito.ArgumentMatchers.eq(101L));
+        inOrder.verify(activityRepository).delete(owned);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getBody();
+        assertEquals(Boolean.TRUE, body.get("deleted"));
+        assertEquals(101L, body.get("id"));
+    }
 }
+

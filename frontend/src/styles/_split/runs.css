@@ -2005,6 +2005,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   grid-template-columns: clamp(136px, 30%, 168px) minmax(0, 1fr);
   gap: clamp(16px, 2vw, 22px);
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
   padding: 16px;
   border-radius: 20px;
   background: #1f1d1d;
@@ -2192,6 +2194,9 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  container: recent-run-metrics / inline-size;
 }
 
 .recent-runs-card-metric {
@@ -2201,7 +2206,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   min-height: 58px;
   min-width: 0;
   padding: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .recent-runs-card-metric span {
@@ -3253,6 +3258,357 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 
   .runs-dashboard-page .runs-profile-history button.recent-runs-card {
     grid-template-columns: 104px minmax(0, 1fr);
+  }
+}
+
+/* Runs page scale parity */
+.runs-dashboard-page .runs-profile-history {
+  gap: clamp(16px, 2vw, 24px);
+  max-width: none;
+}
+
+.runs-dashboard-page .runs-profile-cockpit {
+  grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr);
+  min-height: 288px;
+  gap: clamp(16px, 2vw, 24px);
+  padding: clamp(20px, 2.4vw, 32px);
+  border-radius: 30px;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__primary {
+  justify-content: space-between;
+  gap: clamp(20px, 3vw, 44px);
+}
+
+.runs-dashboard-page .runs-profile-cockpit .recent-runs-hero-kicker {
+  padding: 7px 12px;
+  font-size: 0.7rem;
+}
+
+.runs-dashboard-page .runs-profile-cockpit h1 {
+  margin: 12px 0 0;
+  font-size: clamp(2.8rem, 6.2vw, 5.8rem);
+  letter-spacing: -0.09em;
+  line-height: 0.9;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__primary p {
+  display: block;
+  max-width: 560px;
+  margin: 14px 0 0;
+  overflow: visible;
+  font-size: clamp(0.98rem, 1.1vw, 1.05rem);
+  line-height: 1.58;
+  -webkit-line-clamp: unset;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__actions {
+  gap: 10px;
+}
+
+.runs-dashboard-page :is(.runs-profile-primary-action, .runs-profile-secondary-action) {
+  min-height: 44px;
+  padding-inline: 16px;
+  font-size: 0.8rem;
+}
+
+.runs-dashboard-page .runs-profile-cockpit__rail {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.runs-dashboard-page .runs-profile-signal {
+  grid-column: auto;
+  min-height: 124px;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+}
+
+.runs-dashboard-page .runs-profile-signal--status {
+  grid-column: 1 / -1;
+  min-height: 108px;
+}
+
+.runs-dashboard-page .runs-profile-signal span {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+}
+
+.runs-dashboard-page .runs-profile-signal strong {
+  font-size: clamp(1.35rem, 2.2vw, 2.15rem);
+  letter-spacing: -0.06em;
+}
+
+.runs-dashboard-page .runs-profile-signal p {
+  display: block;
+  margin: 0;
+  overflow: visible;
+  font-size: 0.82rem;
+  line-height: 1.42;
+  -webkit-line-clamp: unset;
+}
+
+.runs-dashboard-page .runs-profile-workbench {
+  display: block;
+  padding: clamp(14px, 2vw, 18px);
+  border-radius: 24px;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-bar {
+  margin-bottom: 14px;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
+  min-height: 52px;
+  border-radius: 18px;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters {
+  display: block;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row--secondary {
+  margin-top: 10px;
+  padding-top: 10px;
+  padding-left: 0;
+  border-top: 1px solid var(--runs-profile-line);
+  border-left: 0;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-chip {
+  min-height: 38px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+}
+
+.runs-dashboard-page .runs-profile-glance {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip) {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px;
+  margin: 0 0 14px;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) {
+  min-height: 132px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  box-shadow: 0 18px 42px rgba(58, 43, 28, 0.08);
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) span {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) strong {
+  margin-top: 10px;
+  font-size: clamp(1.25rem, 1.6vw, 1.6rem);
+  letter-spacing: -0.06em;
+}
+
+.runs-dashboard-page .runs-profile-glance .recent-runs-insight-card p {
+  margin-top: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.runs-dashboard-page .recent-runs-card-list {
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-group {
+  gap: 12px;
+  border-radius: 24px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-header {
+  min-height: auto;
+  padding: 14px 18px 12px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-month-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 14px;
+  padding: 0 12px 12px;
+}
+
+.runs-dashboard-page .runs-profile-history button.recent-runs-card {
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 220px;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-thumb {
+  min-height: 190px;
+  border-radius: 16px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-body {
+  gap: 18px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2 {
+  font-size: clamp(1.16rem, 1.5vw, 1.42rem);
+  line-height: 1.08;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-date {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metrics {
+  gap: 10px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric {
+  min-height: 58px;
+  padding: 12px;
+  border-radius: 16px;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric span {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {
+  margin-top: 8px;
+  font-size: clamp(0.98rem, 1.35vw, 1.18rem);
+}
+
+@container recent-run-metrics (max-width: 360px) {
+  .recent-runs-card-metric {
+    padding-inline: 6px;
+  }
+
+  .recent-runs-card-metric strong {
+    font-size: clamp(0.78rem, 5cqi, 1rem);
+    letter-spacing: -0.035em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 1100px) {
+  .runs-dashboard-page .runs-profile-cockpit {
+    grid-template-columns: 1fr;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .runs-dashboard-page .runs-profile-signal--status {
+    grid-column: 1 / -1;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench {
+    display: block;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .runs-dashboard-page .runs-profile-cockpit {
+    min-height: auto;
+    padding: 20px;
+    border-radius: 26px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit h1 {
+    font-size: clamp(2.2rem, 12vw, 3.1rem);
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__rail {
+    grid-template-columns: 1fr;
+  }
+
+  .runs-dashboard-page .runs-profile-signal--status {
+    grid-column: auto;
+  }
+
+  .runs-dashboard-page .runs-profile-history button.recent-runs-card {
+    grid-template-columns: 1fr;
+  }
+
+  .runs-dashboard-page .runs-profile-history .recent-runs-thumb {
+    min-height: 160px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__actions,
+  .runs-dashboard-page .runs-profile-primary-action,
+  .runs-dashboard-page .runs-profile-secondary-action {
+    width: 100%;
+  }
+}
+
+/* Runs ledger redesign. Reference source: design.md Kinetic Editorial. */
+#root .runs-dashboard-page.runs-ledger-page {
+  min-width: 0;
+}
+
+.runs-ledger-awaiting .integration-alert-background {
+  display: none;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-month-grid {
+  grid-template-columns: 1fr !important;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-card-shell {
+  position: relative;
+  min-width: 0;
+}
+
+.runs-profile-history.runs-ledger-redesign button.recent-runs-card {
+  grid-template-columns: 160px minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px !important;
+}
+
+.runs-profile-history.runs-ledger-redesign .recent-runs-card-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--runner-profile-line);
+  border-radius: 6px;
+  background: var(--runner-profile-card);
+  color: var(--runner-profile-muted);
+}
+
+@media (max-width: 760px) {
+  .runs-profile-history.runs-ledger-redesign button.recent-runs-card {
+    grid-template-columns: 1fr;
   }
 }
 

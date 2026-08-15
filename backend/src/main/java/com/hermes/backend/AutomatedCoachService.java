@@ -641,9 +641,19 @@ public class AutomatedCoachService {
         );
     }
 
-private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
+    private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
         CoachStaminaDto stamina = buildStaminaDto(runner, s, todayWorkout);
-        ReadinessService.ReadinessResult readiness = resolveReadiness(runner, s, LocalDate.now());
+        ReadinessService.MultiSourceReadinessSnapshot snapshot =
+                readinessService.resolveReadinessSnapshot(runner, s, LocalDate.now());
+        ReadinessService.ReadinessResult readiness = resolveReadiness(snapshot, s);
+        ReadinessService.MetricAvailability availability = snapshot == null || snapshot.availability() == null
+                ? ReadinessService.MetricAvailability.none()
+                : snapshot.availability();
+        boolean readinessDataSupported = availability.any();
+        boolean sleepDataSupported = availability.sleep();
+        String sleepDataSource = sleepDataSupported && snapshot.sources() != null
+                ? snapshot.sources().sleep()
+                : null;
         return new CoachStateDto(
                 s.getVolumeKm7d(), s.getVolumeKm28d(), s.getMinutesLowZ1Z2Last7d(),
                 s.getMinutesGreyZ3Last7d(), s.getMinutesHighZ4Z5Last7d(), s.getMinutesUnknownHrLast7d(),
@@ -652,6 +662,7 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
                 s.getLastHrvStatus(), s.getLastBodyBatteryAtWake(),
                 s.getReadinessScore(), s.getReadinessVerdict(),
                 readiness.sleepScore(), readiness.hrvScore(), readiness.rhrScore(), readiness.stressScore(),
+                readiness.score(), readinessDataSupported, sleepDataSupported, sleepDataSource,
                 runner.getMaxHeartRateBpm(), runner.getRestingHeartRateBpm(), stamina,
                 coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).map(b -> new CoachTrainingBlockDto(
                         b.getRaceDistanceKm(), b.getTargetRaceDate(), b.getWeekIndex(), b.getCurrentLongRunKm(), b.getName()
@@ -661,6 +672,13 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
 
     private ReadinessService.ReadinessResult resolveReadiness(Runner runner, CoachRunnerState state, LocalDate date) {
         ReadinessService.MultiSourceReadinessSnapshot snapshot = readinessService.resolveReadinessSnapshot(runner, state, date);
+        return resolveReadiness(snapshot, state);
+    }
+
+    private ReadinessService.ReadinessResult resolveReadiness(
+            ReadinessService.MultiSourceReadinessSnapshot snapshot,
+            CoachRunnerState state
+    ) {
         if (snapshot != null && snapshot.readiness() != null) {
             return snapshot.readiness();
         }
@@ -726,6 +744,8 @@ private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachSchedul
             String lastHrvStatus, Integer lastBodyBatteryAtWake,
             Integer readinessScore, String readinessVerdict,
             Integer readinessSleep, Integer readinessHrv, Integer readinessRhr, Integer readinessStress,
+            Integer currentReadinessScore, boolean readinessDataSupported,
+            boolean sleepDataSupported, String sleepDataSource,
             Integer profileMaxHeartRateBpm, Integer profileRestingHeartRateBpm, CoachStaminaDto stamina,
             CoachTrainingBlockDto activeBlock
     ) {}

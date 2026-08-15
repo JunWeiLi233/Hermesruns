@@ -82,7 +82,7 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
         Long durationSeconds = durationSeconds(startTime, endTime);
         return new ParsedActivityData(
                 activityName,
-                ActivityType.UNKNOWN,
+                ActivityTypeResolver.fromSportLabels(firstTypeLabel(document), activityName, fileName),
                 startTime,
                 distanceMeters,
                 durationSeconds,
@@ -90,6 +90,32 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
                 null,
                 null
         );
+    }
+
+    /**
+     * GPX 1.1 carries an optional {@code <type>} under {@code <trk>} (Strava and
+     * Coros exports set it). Falls back to {@code <metadata><type>}. Combined with
+     * the track name and file name in {@link ActivityTypeResolver#fromSportLabels},
+     * named running exports ("Morning Run") import without an explicit type, while
+     * labeled non-runs ("Ride") are skipped and unlabeled generic files stay
+     * UNKNOWN and are rejected by the import layer.
+     */
+    private String firstTypeLabel(Document document) {
+        List<Element> trackElements = elementsByLocalName(document, "trk");
+        if (!trackElements.isEmpty()) {
+            String trackType = firstTextByLocalName(trackElements.get(0), "type");
+            if (trackType != null && !trackType.isBlank()) {
+                return trackType;
+            }
+        }
+        List<Element> metadataElements = elementsByLocalName(document, "metadata");
+        if (!metadataElements.isEmpty()) {
+            String metadataType = firstTextByLocalName(metadataElements.get(0), "type");
+            if (metadataType != null && !metadataType.isBlank()) {
+                return metadataType;
+            }
+        }
+        return null;
     }
 
     private String resolveName(Document document, String fileName) {

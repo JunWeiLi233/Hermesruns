@@ -1,4 +1,4 @@
-import { getBackendBaseUrl } from '../api.js';
+import { getBackendBaseUrl } from '../api.ts';
 
 const DEFAULT_MIN_LENGTH = 10;
 const DEFAULT_SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;:,.<>?/~`\"'\\";

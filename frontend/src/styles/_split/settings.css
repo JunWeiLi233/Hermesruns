@@ -4333,6 +4333,62 @@
   font-weight: 800;
 }
 
+.st-avatar-file-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.st-hero-avatar--editable {
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  isolation: isolate;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.st-hero-avatar--editable:hover,
+.st-hero-avatar--editable:focus-within {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(160, 57, 42, 0.24);
+}
+
+.st-hero-avatar--editable.is-disabled,
+.st-avatar-change.is-disabled {
+  cursor: wait;
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.st-hero-avatar--editable img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.st-hero-avatar-edit {
+  position: absolute;
+  inset: auto 5px 5px auto;
+  display: grid;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 999px;
+  background: rgba(39, 31, 27, 0.78);
+  color: #fff;
+}
+
+.st-hero-avatar-edit .runner-dashboard-side-link-icon {
+  inline-size: 14px;
+  block-size: 14px;
+}
+
 .st-hero-badge {
   position: absolute;
   bottom: -4px;
@@ -4728,6 +4784,76 @@ body:is(.theme-midnight, .theme-high-contrast) .st-checklist-item:hover {
   margin-bottom: 20px;
 }
 
+.st-avatar-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line-soft, rgba(0,0,0,0.08));
+  border-radius: var(--radius-md, 12px);
+}
+
+.st-avatar-field p,
+.st-avatar-msg {
+  margin: 3px 0 0;
+  color: var(--text-muted, #595c5d);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.st-avatar-field-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.st-avatar-change,
+.st-avatar-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-soft, rgba(0,0,0,0.1));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-strong, #2c2f30);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.st-avatar-change:hover,
+.st-avatar-change:focus-visible {
+  border-color: var(--accent-coral-strong, #f07561);
+  color: var(--brand-accent, #a0392a);
+}
+
+.st-avatar-remove {
+  color: var(--brand-accent, #a0392a);
+}
+
+.st-avatar-remove:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.st-avatar-change .runner-dashboard-side-link-icon {
+  inline-size: 15px;
+  block-size: 15px;
+}
+
+/* Provider controls and summaries stay readable when the Settings canvas is wide. */
+.settings-atlas-canvas .st-services-grid {
+  width: min(100%, 960px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 auto 20px;
+}
+
 .st-service-card {
   padding: 18px 20px;
   border-radius: var(--radius-lg, 16px);
@@ -4748,7 +4874,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-service-card {
 
 .st-service-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -4841,6 +4967,28 @@ body:is(.theme-midnight, .theme-high-contrast) .st-service-card {
   display: block;
   margin-top: 2px;
   color: var(--text-strong);
+}
+
+/* Keep the two provider cards on the same horizontal service-grid contract.
+   The generic Atlas action wants a full row; within this compact grid that
+   collapses the provider copy into a one-character column. */
+.settings-atlas-canvas .st-service-head .settings-atlas-service-action {
+  display: inline-flex;
+  width: auto;
+  min-width: fit-content;
+  flex: 0 0 auto;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.settings-atlas-canvas .st-service-head .st-service-info {
+  min-width: 0;
+}
+
+.settings-atlas-canvas .st-service-info > span {
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }
 
 /* ── Sync health ── */
@@ -5132,16 +5280,13 @@ body.theme-midnight .settings-load-back,
 }
 
 /* ── Entry animations ── */
-@keyframes st-fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.settings-atlas-canvas .st-hero { animation: st-fade-up 0.4s ease-out both; }
-.settings-atlas-canvas .st-main-grid:nth-of-type(1) { animation: st-fade-up 0.4s 0.06s ease-out both; }
-.settings-atlas-canvas .st-main-grid:nth-of-type(2) { animation: st-fade-up 0.4s 0.1s ease-out both; }
-.settings-atlas-canvas .st-services { animation: st-fade-up 0.4s 0.14s ease-out both; }
-.settings-atlas-canvas .st-bottom-grid { animation: st-fade-up 0.4s 0.18s ease-out both; }
+/* Settings entrance motion now uses the canonical app-wide hd-fade-up keyframe
+   (defined in tokens.css) instead of a local duplicate. */
+.settings-atlas-canvas .st-hero { animation: hd-fade-up 0.5s ease-out both; }
+.settings-atlas-canvas .st-main-grid:nth-of-type(1) { animation: hd-fade-up 0.5s 0.06s ease-out both; }
+.settings-atlas-canvas .st-main-grid:nth-of-type(2) { animation: hd-fade-up 0.5s 0.1s ease-out both; }
+.settings-atlas-canvas .st-services { animation: hd-fade-up 0.5s 0.14s ease-out both; }
+.settings-atlas-canvas .st-bottom-grid { animation: hd-fade-up 0.5s 0.18s ease-out both; }
 
 /* ── Responsive ── */
 @media (max-width: 960px) {
@@ -5151,4 +5296,213 @@ body.theme-midnight .settings-load-back,
   .st-bottom-grid { grid-template-columns: 1fr; }
   .st-pref-row { flex-direction: column; align-items: flex-start; }
   .st-hero-right { min-width: 0; width: 100%; }
+}
+
+/* Run activity keeps a year of completed sessions visible without turning the
+ * Settings hero into another dashboard. One cell represents one local day. */
+.st-activity-graph {
+  margin-top: 16px;
+  padding: clamp(18px, 2.2vw, 26px) clamp(18px, 2.5vw, 30px) 18px;
+  overflow: hidden;
+  border: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16));
+  border-radius: var(--radius-xl, 20px);
+  background: #fff;
+  box-shadow: var(--runner-profile-shadow, 0 20px 48px rgba(76, 54, 39, 0.08));
+}
+
+.st-activity-graph-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.st-activity-kicker {
+  margin: 0 0 5px;
+  color: var(--runner-profile-flame, #bf5b49);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.61rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.st-activity-title {
+  margin: 0;
+  color: var(--runner-profile-ink, var(--text-strong, #2c2f30));
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1rem, 1.8vw, 1.28rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+
+.st-activity-summary {
+  margin: 0;
+  color: var(--runner-profile-muted, var(--text-muted, #595c5d));
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.st-activity-grid-frame {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--runner-profile-line, rgba(72, 58, 42, 0.16));
+  scrollbar-color: color-mix(in srgb, var(--runner-profile-moss, #7aa882) 60%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+.st-activity-grid-inner {
+  width: 100%;
+  min-width: 100%;
+}
+
+.st-activity-calendar {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+}
+
+.st-activity-weekday-labels {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  gap: 4px;
+  padding-top: 20px;
+}
+
+.st-activity-weekday-labels span {
+  height: 11px;
+  color: var(--runner-profile-muted, var(--text-muted, #595c5d));
+  font-size: 0.56rem;
+  line-height: 11px;
+  white-space: nowrap;
+}
+
+.st-activity-months {
+  display: grid;
+  grid-template-columns: repeat(var(--st-activity-week-count), minmax(11px, 1fr));
+  gap: 4px;
+  min-height: 16px;
+  margin-bottom: 4px;
+}
+
+.st-activity-months span {
+  overflow: visible;
+  color: var(--runner-profile-muted, var(--text-muted, #595c5d));
+  font-size: 0.58rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.st-activity-weeks {
+  display: grid;
+  grid-template-columns: repeat(var(--st-activity-week-count), minmax(11px, 1fr));
+  gap: 4px;
+}
+
+.st-activity-week {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  gap: 4px;
+  min-width: 0;
+}
+
+.st-activity-cell {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgba(72, 58, 42, 0.06);
+  border-radius: 3px;
+  background: #f0f2f1;
+}
+
+.st-activity-weeks .st-activity-cell {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.st-activity-cell[data-level="1"] {
+  border-color: rgba(122, 168, 130, 0.22);
+  background: #d7efdc;
+}
+
+.st-activity-cell[data-level="2"] {
+  border-color: rgba(88, 159, 104, 0.26);
+  background: #a5dfb2;
+}
+
+.st-activity-cell[data-level="3"] {
+  border-color: rgba(55, 137, 75, 0.32);
+  background: #62bf78;
+}
+
+.st-activity-cell[data-level="4"] {
+  border-color: #287c47;
+  background: #287c47;
+}
+
+.st-activity-cell.is-future {
+  opacity: 0.38;
+}
+
+.st-activity-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
+  color: var(--runner-profile-muted, var(--text-muted, #595c5d));
+  font-size: 0.62rem;
+}
+
+.st-activity-legend > span:first-child {
+  margin-right: 2px;
+}
+
+.st-activity-legend > span:last-child {
+  margin-left: 2px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .st-activity-graph {
+  background: var(--runner-profile-card-strong, rgba(33, 30, 25, 0.92));
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell {
+  border-color: rgba(255, 248, 238, 0.08);
+  background: rgba(255, 248, 238, 0.07);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="1"] {
+  background: rgba(122, 168, 130, 0.34);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="2"] {
+  background: rgba(122, 189, 137, 0.58);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="3"] {
+  background: #4dbb70;
+}
+
+@media (max-width: 640px) {
+  .st-activity-graph {
+    padding: 18px 16px 16px;
+  }
+
+  .st-activity-graph-head {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .st-activity-summary {
+    text-align: left;
+  }
+
+  .st-activity-grid-inner {
+    min-width: 690px;
+  }
 }

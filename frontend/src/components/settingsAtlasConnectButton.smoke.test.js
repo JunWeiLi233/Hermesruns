@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const layoutSource = readFileSync(path.join(here, 'SettingsAtlasLayout.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/_split/settings.css'), 'utf8');
 
 assert.match(
   layoutSource,
@@ -39,6 +39,30 @@ assert.match(
   styleSource,
   /@media\s*\([^)]+\)\s*\{[\s\S]*?\.settings-atlas-service-card--garmin\s+\.settings-atlas-service-action\.is-connect\s*\{[^}]*width:\s*auto;[^}]*align-self:\s*flex-start;/s,
   'Responsive settings rules should keep the Garmin connect button compact instead of forcing it back to full width.',
+);
+
+assert.match(
+  styleSource,
+  /\.settings-atlas-canvas\s+\.st-service-head\s+\.settings-atlas-service-action\s*\{[^}]*width:\s*auto;[^}]*flex:\s*0 0 auto;[^}]*align-self:\s*center;[^}]*white-space:\s*nowrap;/s,
+  'Every Strava action state must remain compact so it cannot consume the provider-copy column in the two-card service grid.',
+);
+
+assert.match(
+  styleSource,
+  /\.st-service-head\s*\{[^}]*align-items:\s*flex-start;/s,
+  'Provider icons and actions should share the same top alignment even when one summary wraps onto multiple lines.',
+);
+
+assert.match(
+  styleSource,
+  /\.settings-atlas-canvas\s+\.st-service-info\s*>\s*span\s*\{[^}]*overflow-wrap:\s*anywhere;[^}]*line-height:\s*1\.45;/s,
+  'Provider summaries should wrap across their available grid column instead of stacking one character per line.',
+);
+
+assert.match(
+  styleSource,
+  /\.settings-atlas-canvas\s+\.st-services-grid\s*\{[^}]*width:\s*min\(100%, 960px\);[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);[^}]*margin:\s*0 auto 20px;/s,
+  'The connected-service cards should use a bounded, centered two-column grid on desktop.',
 );
 
 console.log('[PASS] Settings atlas connect button compact sizing guard passed.');

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'TodayRun.jsx'), 'utf8');
 const styleSource = [
-  readFileSync(path.join(here, '../styles/style.css'), 'utf8'),
+  readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8'),
   readFileSync(path.join(here, '../styles/_split/today-run.css'), 'utf8'),
 ].join('\n');
 const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');

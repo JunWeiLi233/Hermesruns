@@ -90,7 +90,7 @@ public class AdminShoeImageController {
 
             List<String> images;
             if (!customQuery.isBlank()) {
-                images = bingImageScraper.scrapeMultipleImages(customQuery, 12);
+                images = bingImageScraper.searchShoeImageCandidates(brand, model, customQuery, 12);
             } else {
                 images = bingImageScraper.searchShoeImageCandidates(brand, model);
             }

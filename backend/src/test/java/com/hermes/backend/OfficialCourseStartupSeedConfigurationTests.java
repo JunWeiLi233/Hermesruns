@@ -28,7 +28,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -69,7 +69,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -93,7 +93,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -127,7 +127,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -160,7 +160,7 @@ class OfficialCourseStartupSeedConfigurationTests {
         });
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -191,7 +191,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -214,7 +214,7 @@ class OfficialCourseStartupSeedConfigurationTests {
         });
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -245,7 +245,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -277,7 +277,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -308,7 +308,7 @@ class OfficialCourseStartupSeedConfigurationTests {
         });
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -346,7 +346,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -388,7 +388,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -423,7 +423,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -456,7 +456,7 @@ class OfficialCourseStartupSeedConfigurationTests {
                 .thenReturn(RaceCourseMapBulkSeedService.SeedOutcome.SEEDED);
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 
@@ -489,7 +489,7 @@ class OfficialCourseStartupSeedConfigurationTests {
         });
 
         ApplicationRunner runner = new OfficialCourseStartupSeedConfiguration()
-                .officialCourseStartupSeeder(bulkSeedService, assetRepository);
+                .officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
 
         runner.run(null);
 

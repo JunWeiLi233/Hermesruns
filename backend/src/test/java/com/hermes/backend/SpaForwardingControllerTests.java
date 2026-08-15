@@ -38,6 +38,23 @@ class SpaForwardingControllerTests {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"/admin", "/admin/"})
+    void adminLoginRoutesServeSpaShell(String path) throws Exception {
+        mockMvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+    }
+
+    @Test
+    void unknownBrowserRouteServesSpaShellForClientRedirect() throws Exception {
+        mockMvc.perform(get("/docs").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {
             "/dashboard/users",
             "/dashboard/course-maps",

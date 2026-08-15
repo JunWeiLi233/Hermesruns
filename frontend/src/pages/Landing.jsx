@@ -6,6 +6,7 @@ import { getBackendBaseUrl } from '../api';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import AppIcon from '../components/AppIcon';
 import HermesMarkSvg from '../components/HermesMarkSvg';
+import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.png';
 import shoeRunMaster from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 
@@ -276,33 +277,6 @@ function ShoeRunCycle({ scrollContainerRef }) {
         {t('landing.cinematic_hero_shoe_prompt')}
       </span>
     </figure>
-  );
-}
-
-function StravaLogo({ className = '' }) {
-  const classNames = ['landing-strava-logo', className].filter(Boolean).join(' ');
-
-  return (
-    <svg
-      className={classNames}
-      viewBox="0 0 168 48"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect width="168" height="48" rx="10" fill="#fc4c02" />
-      <text
-        x="84"
-        y="31"
-        fill="#ffffff"
-        textAnchor="middle"
-        fontFamily="'Arial Black', 'Arial Narrow', Arial, sans-serif"
-        fontSize="25"
-        fontWeight="900"
-        letterSpacing="-2.4"
-      >
-        STRAVA
-      </text>
-    </svg>
   );
 }
 
@@ -835,9 +809,8 @@ export default function Landing() {
               <p>{t('landing.cinematic_hero_text')}</p>
 
               <div className="landing-cinematic-hero-actions">
-                <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
-                  <StravaLogo />
-                  <span>{t('landing.cta_strava')}</span>
+                <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
+                  <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" />
                 </button>
                 <Link to="/signup" className="landing-cinematic-hero-alt-link">
                   {t('landing.get_started')}
@@ -1025,9 +998,8 @@ export default function Landing() {
                 <h2>{t('landing.cinematic_cta_title')}</h2>
                 <p>{t('landing.cinematic_cta_copy')}</p>
                 <div className="landing-cinematic-hero-actions">
-                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava}>
-                    <StravaLogo />
-                    <span>{t('landing.cta_strava')}</span>
+                  <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
+                    <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" />
                   </button>
                   <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--outline is-large">
                     {t('landing.get_started')}

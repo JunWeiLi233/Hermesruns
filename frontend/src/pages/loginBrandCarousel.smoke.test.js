@@ -8,7 +8,7 @@ const loginSource = readFileSync(path.join(here, 'Login.jsx'), 'utf8');
 const signupSource = readFileSync(path.join(here, 'Signup.jsx'), 'utf8');
 const carouselSource = readFileSync(path.join(here, '../components/AuthBrandCarousel.jsx'), 'utf8');
 const slideSource = readFileSync(path.join(here, '../data/authBrandSlides.js'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const translationsSource = [
   readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8'),
   readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8'),

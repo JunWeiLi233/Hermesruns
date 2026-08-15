@@ -26,6 +26,7 @@ public class SpaForwardingController {
         "/terms",
         "/privacy",
         "/admin",
+        "/admin/",
         "/dashboard",
         "/dashboard/{section:[^.]+}",
         "/dashboard/{section:[^.]+}/{detail:[^.]+}",

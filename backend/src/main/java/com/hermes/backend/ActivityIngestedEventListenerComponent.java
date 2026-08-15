@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import com.hermes.backend.rewards.DigitalCosmeticsService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
