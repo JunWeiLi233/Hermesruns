@@ -508,98 +508,101 @@
 }
 .heatmap-page-gps-loading-text {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 9px 5px 7px;
+  border: 1px solid rgba(255, 146, 119, 0.3);
+  border-radius: 999px;
+  background: rgba(255, 248, 238, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #fffaf3;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
   white-space: nowrap;
 }
 
-.heatmap-page-gps-loading-words {
+.heatmap-page-gps-loading-signal {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border: 1px solid rgba(255, 146, 119, 0.36);
+  border-radius: 50%;
+  background: rgba(255, 93, 92, 0.1);
+}
+
+.heatmap-page-gps-loading-signal::after {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid #ff785f;
+  border-radius: inherit;
+  content: '';
+  animation: heatmapGpsLockPulse 1.6s ease-out infinite;
+}
+
+.heatmap-page-gps-loading-signal > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ff9277;
+  box-shadow: 0 0 10px rgba(255, 120, 95, 0.9);
+}
+
+.heatmap-page-gps-loading-label {
+  color: #fffaf3;
+  opacity: 0.94;
+}
+
+.heatmap-page-gps-loading-bars {
   display: inline-flex;
-  align-items: baseline;
+  align-items: flex-end;
+  gap: 2px;
+  width: 13px;
+  height: 13px;
 }
 
-.heatmap-page-gps-loading-piece {
-  display: inline-block;
-  animation: heatmapGpsPieceJump 1.08s cubic-bezier(0.55, 0, 0.2, 1) infinite;
-  animation-delay: calc((var(--jump-index, 0) % 6) * -0.11s);
-  transform: translateY(0);
-  will-change: transform;
+.heatmap-page-gps-loading-bars > span {
+  width: 3px;
+  border-radius: 3px 3px 1px 1px;
+  background: #ff9277;
+  transform: scaleY(0.38);
+  transform-origin: bottom;
+  animation: heatmapGpsSignalBar 1.2s ease-in-out infinite;
 }
 
-.heatmap-page-gps-loading-piece:nth-child(6n + 1) { --jump-index: 0; --jump-high: -0.2em; }
-.heatmap-page-gps-loading-piece:nth-child(6n + 2) { --jump-index: 1; --jump-high: -0.34em; }
-.heatmap-page-gps-loading-piece:nth-child(6n + 3) { --jump-index: 2; --jump-high: -0.13em; }
-.heatmap-page-gps-loading-piece:nth-child(6n + 4) { --jump-index: 3; --jump-high: -0.28em; }
-.heatmap-page-gps-loading-piece:nth-child(6n + 5) { --jump-index: 4; --jump-high: -0.18em; }
-.heatmap-page-gps-loading-piece:nth-child(6n) { --jump-index: 5; --jump-high: -0.38em; }
+.heatmap-page-gps-loading-bars > span:nth-child(1) { height: 5px; animation-delay: -0.24s; }
+.heatmap-page-gps-loading-bars > span:nth-child(2) { height: 9px; animation-delay: -0.12s; }
+.heatmap-page-gps-loading-bars > span:nth-child(3) { height: 13px; }
 
-.heatmap-page-gps-loading-dots {
-  display: inline-flex;
-  margin-left: 0.02em;
+@keyframes heatmapGpsLockPulse {
+  0% { opacity: 0.9; transform: scale(0.45); }
+  72%, 100% { opacity: 0; transform: scale(1.35); }
 }
 
-.heatmap-page-gps-loading-dots span {
-  display: inline-block;
-  transform: translate(0, 0);
-  will-change: transform;
-}
-
-.heatmap-page-gps-loading-dots span:nth-child(1) {
-  animation: heatmapGpsDotOne 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
-}
-
-.heatmap-page-gps-loading-dots span:nth-child(2) {
-  animation: heatmapGpsDotTwo 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
-}
-
-.heatmap-page-gps-loading-dots span:nth-child(3) {
-  animation: heatmapGpsDotThree 1.35s cubic-bezier(0.74, 0, 0.22, 1) infinite;
-}
-
-@keyframes heatmapGpsPieceJump {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  42% {
-    transform: translateY(var(--jump-high, -0.24em));
-  }
-  72% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes heatmapGpsDotOne {
-  0%, 18%, 100% {
-    transform: translate(0, 0);
-  }
-  48%, 68% {
-    transform: translate(0, -0.16em);
-  }
-}
-
-@keyframes heatmapGpsDotTwo {
-  0%, 18%, 100% {
-    transform: translate(0, 0);
-  }
-  48%, 68% {
-    transform: translate(0.28em, -0.3em);
-  }
-}
-
-@keyframes heatmapGpsDotThree {
-  0%, 18%, 100% {
-    transform: translate(0, 0);
-  }
-  48%, 68% {
-    transform: translate(0.58em, -0.12em);
-  }
+@keyframes heatmapGpsSignalBar {
+  0%, 100% { opacity: 0.42; transform: scaleY(0.38); }
+  48% { opacity: 1; transform: scaleY(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .heatmap-page-gps-loading-piece,
-  .heatmap-page-gps-loading-dots span:nth-child(1),
-  .heatmap-page-gps-loading-dots span:nth-child(2),
-  .heatmap-page-gps-loading-dots span:nth-child(3) {
+  .heatmap-page-gps-loading-signal::after,
+  .heatmap-page-gps-loading-bars > span {
     animation: none;
+  }
+
+  .heatmap-page-gps-loading-signal::after {
+    opacity: 0.5;
+    transform: scale(0.72);
+  }
+
+  .heatmap-page-gps-loading-bars > span {
+    opacity: 0.86;
+    transform: scaleY(1);
   }
 }
 

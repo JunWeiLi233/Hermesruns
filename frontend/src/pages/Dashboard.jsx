@@ -7,6 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { apiFetch, apiJson } from '../api';
 import Modal from '../components/Modal';
 import AdminCourseMapPreview from '../components/AdminCourseMapPreview';
+import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
@@ -954,7 +955,7 @@ function JobQueueRowComponent({ ariaAttributes, index, style, items, selectedId,
           <small>{total > 0 ? t('dashboard.jobs_deck_processed_of_total', { processed, total }) : t('dashboard.jobs_deck_processed_only', { processed })}</small>
         </div>
         <div className="admin-jobs-terminal__ops">
-          <span className="material-symbols-outlined" aria-hidden="true">terminal</span>
+          <AppIcon name="terminal" className="material-symbols-outlined" />
         </div>
       </button>
     </div>
@@ -2559,7 +2560,7 @@ const Dashboard = memo(function Dashboard() {
                 className={`admin-command-sidebar__nav-item ops-sidebar-link${activeTab === tab.key ? ' is-active' : ''}`}
                 onClick={() => navigateToTab(tab.key)}
               >
-                <span className="material-symbols-outlined" aria-hidden="true">{TAB_ICONS[tab.key]}</span>
+                <AppIcon name={TAB_ICONS[tab.key]} className="material-symbols-outlined" />
                 <span className="admin-command-sidebar__nav-copy">
                   <strong>{t(tab.labelKey)}</strong>
                   <span>{adminRouteSurfaces[tab.key]?.navCopy || t(tab.labelKey)}</span>
@@ -2571,11 +2572,11 @@ const Dashboard = memo(function Dashboard() {
 
           <div className="admin-command-sidebar__footer ops-sidebar-footer">
             <button type="button" className="admin-command-sidebar__cta ops-sidebar-link" onClick={() => navigateToTab('courseMaps')} aria-label={t('dashboard.tab_course_maps')}>
-              <span className="material-symbols-outlined" aria-hidden="true">add</span>
+              <AppIcon name="add" className="material-symbols-outlined" />
               <span>{t('dashboard.tab_course_maps')}</span>
             </button>
             <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ops-sidebar-link" onClick={logout} aria-label={t('dashboard.nav_logout')}>
-              <span className="material-symbols-outlined" aria-hidden="true">logout</span>
+              <AppIcon name="logout" className="material-symbols-outlined" />
               <span>{t('dashboard.nav_logout')}</span>
             </button>
           </div>
@@ -2658,7 +2659,7 @@ const Dashboard = memo(function Dashboard() {
                   onClick={() => navigateToTab(op.tab)}
                 >
                   <div className="ops-action-card-icon">
-                    <span className="material-symbols-outlined" aria-hidden="true">{op.icon}</span>
+                    <AppIcon name={op.icon} className="material-symbols-outlined" />
                   </div>
                   <div className="ops-action-card-body">
                     <div className="ops-action-card-title">{t(op.titleKey)}</div>
@@ -3611,9 +3612,10 @@ const Dashboard = memo(function Dashboard() {
 
                               <div className="admin-coursemap-publish-canvas__decision-dock">
                                 <div className="admin-track-hub-footer-verdict">
-                                  <span className="admin-track-hub-footer-verdict__icon material-symbols-outlined" aria-hidden="true">
-                                    {courseMapAlignmentReady ? 'verified' : 'schedule'}
-                                  </span>
+                                  <AppIcon
+                                    name={courseMapAlignmentReady ? 'verified' : 'schedule'}
+                                    className="admin-track-hub-footer-verdict__icon material-symbols-outlined"
+                                  />
                                   <span className="admin-track-hub-footer-verdict__text">
                                     {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
                                   </span>
@@ -3811,7 +3813,7 @@ const Dashboard = memo(function Dashboard() {
                                     <span className="admin-jobs-detail__timeline-dot" aria-hidden="true" />
                                     <div className="admin-jobs-detail__timeline-main">
                                       <div className="admin-jobs-detail__timeline-meta">
-                                        <span className={`timeline-step-icon material-symbols-outlined is-${tone}`} aria-hidden="true">{iconName}</span>
+                                        <AppIcon name={iconName} className={`timeline-step-icon material-symbols-outlined is-${tone}`} />
                                         <strong>{stepName}</strong>
                                         <span>{statusLabel}</span>
                                         {timeDisplay ? <small>{timeDisplay}</small> : null}
@@ -4492,7 +4494,7 @@ const Dashboard = memo(function Dashboard() {
                 </div>
                 <div className="admin-audit-terminal__table-actions">
                   <div className="admin-audit-terminal__search">
-                    <span className="material-symbols-outlined" aria-hidden="true">search</span>
+                    <AppIcon name="search" className="material-symbols-outlined" />
                     <input
                       className="admin-audit-terminal__search-input"
                       placeholder={t('dashboard.search_audit')}
@@ -4501,7 +4503,7 @@ const Dashboard = memo(function Dashboard() {
                     />
                   </div>
                   <button type="button" className="admin-audit-terminal__download" aria-label={t('dashboard.audit_terminal_download')}>
-                    <span className="material-symbols-outlined" aria-hidden="true">download</span>
+                    <AppIcon name="download" className="material-symbols-outlined" />
                   </button>
                 </div>
               </div>
@@ -4539,7 +4541,7 @@ const Dashboard = memo(function Dashboard() {
                             <small>{item.actorEmail}</small>
                           </td>
                           <td className="admin-audit-terminal__ops">
-                            <span className="material-symbols-outlined" aria-hidden="true">terminal</span>
+                            <AppIcon name="terminal" className="material-symbols-outlined" />
                           </td>
                         </tr>
                       );
@@ -4562,23 +4564,23 @@ const Dashboard = memo(function Dashboard() {
             <div className="admin-audit-terminal__cta-grid">
               <article className="admin-audit-terminal__cta-card">
                 <div className="admin-audit-terminal__cta-icon">
-                  <span className="material-symbols-outlined" aria-hidden="true">analytics</span>
+                  <AppIcon name="analytics" className="material-symbols-outlined" />
                 </div>
                 <div>
                   <h4>{t('dashboard.audit_terminal_cta_clusters_title')}</h4>
                   <p>{t('dashboard.audit_terminal_cta_clusters_copy')}</p>
                 </div>
-                <span className="material-symbols-outlined admin-audit-terminal__cta-arrow" aria-hidden="true">chevron_right</span>
+                <AppIcon name="chevron_right" className="material-symbols-outlined admin-audit-terminal__cta-arrow" />
               </article>
               <article className="admin-audit-terminal__cta-card">
                 <div className="admin-audit-terminal__cta-icon">
-                  <span className="material-symbols-outlined" aria-hidden="true">history</span>
+                  <AppIcon name="history" className="material-symbols-outlined" />
                 </div>
                 <div>
                   <h4>{t('dashboard.audit_terminal_cta_archive_title')}</h4>
                   <p>{t('dashboard.audit_terminal_cta_archive_copy')}</p>
                 </div>
-                <span className="material-symbols-outlined admin-audit-terminal__cta-arrow" aria-hidden="true">chevron_right</span>
+                <AppIcon name="chevron_right" className="material-symbols-outlined admin-audit-terminal__cta-arrow" />
               </article>
             </div>
           </section>

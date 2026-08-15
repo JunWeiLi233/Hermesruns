@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8');
 const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
-const bundledStyle = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const bundledStyle = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
 // The run-thumbnail must render a concrete dark real-world map tile under the
 // SVG route — runners shouldn't have to imagine where the run happened.

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
-const scheduleStyles = fs.readFileSync(path.join(root, 'styles', 'style.css'), 'utf8');
+const scheduleStyles = fs.readFileSync(path.join(root, 'styles', 'style.generated.css'), 'utf8');
 const coachIdentity = fs.readFileSync(path.join(root, 'utils', 'coachIdentity.js'), 'utf8');
 const coachBadge = fs.readFileSync(path.join(root, 'components', 'CoachIdentityBadge.jsx'), 'utf8');
 

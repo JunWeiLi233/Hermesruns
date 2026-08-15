@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PreDestroy;
@@ -48,6 +50,7 @@ public class StravaSyncService {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final AiUsageService aiUsageService;
     private final StravaTokenService stravaTokenService;
+    private final ActivityDataAccess activityDataAccess;
 
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
@@ -74,7 +77,8 @@ public class StravaSyncService {
                              AutomatedCoachService automatedCoachService,
                              ApplicationEventPublisher applicationEventPublisher,
                              AiUsageService aiUsageService,
-                             StravaTokenService stravaTokenService) {
+                             StravaTokenService stravaTokenService,
+                             ActivityDataAccess activityDataAccess) {
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
         this.runnerRepository = runnerRepository;
@@ -84,6 +88,7 @@ public class StravaSyncService {
         this.applicationEventPublisher = applicationEventPublisher;
         this.aiUsageService = aiUsageService;
         this.stravaTokenService = stravaTokenService;
+        this.activityDataAccess = activityDataAccess;
     }
 
     @PreDestroy
@@ -298,7 +303,8 @@ public class StravaSyncService {
 
                     if (refreshedAccessToken == null || refreshedAccessToken.isBlank()
                             || Objects.equals(refreshedAccessToken, currentAccessToken)) {
-                        throw unauthorized;
+                        tracker.markFailed(stravaListFetchFailureMessage(unauthorized));
+                        return;
                     }
 
                     runner = freshRunner;
@@ -320,31 +326,60 @@ public class StravaSyncService {
                 }
 
                 tracker.incrementProcessedPages();
-                int runsOnPage = 0;
-                int newOrUpdatedRunsOnPage = 0;
                 for (Map<String, Object> activityData : activities) {
                     StravaActivitySyncResult r = syncSingleStravaActivity(
                             runner, tracker, activityData, gpsRateLimited, restTemplate, headers, currentAccessToken);
                     if (r == StravaActivitySyncResult.SKIPPED_NON_RUN) {
                         continue;
                     }
-                    runsOnPage++;
-                    if (r == StravaActivitySyncResult.NEW_OR_UPDATED_RUN) {
-                        newOrUpdatedRunsOnPage++;
-                    }
-                }
-
-                if (runsOnPage > 0 && newOrUpdatedRunsOnPage == 0) {
-                    tracker.markCompleted();
-                    return;
                 }
 
                 page++;
             }
             tracker.markCompleted();
         } catch (Exception exception) {
-            tracker.markFailed("Unable to sync Strava activities right now.");
+            String message = stravaListFetchFailureMessage(exception);
+            tracker.markFailed(message);
+            log.warn("Strava activity list sync failed for runner {}: {} ({})",
+                    runnerId, message, exception.getClass().getSimpleName(), exception);
         }
+    }
+
+    private String stravaListFetchFailureMessage(Exception exception) {
+        if (exception instanceof HttpStatusCodeException statusException) {
+            HttpStatus status = HttpStatus.resolve(statusException.getStatusCode().value());
+            if (status == HttpStatus.FORBIDDEN && isInactiveStravaApplicationResponse(statusException)) {
+                return "Strava application is inactive. Reactivate the Strava API app or update the credentials, then reconnect Strava.";
+            }
+            if (status == HttpStatus.UNAUTHORIZED) {
+                return "Strava authorization expired. Please relink your Strava account.";
+            }
+            if (status == HttpStatus.FORBIDDEN) {
+                return "Strava authorization was rejected. Please relink your Strava account.";
+            }
+            if (status == HttpStatus.TOO_MANY_REQUESTS) {
+                return "Strava rate limit reached. Try again later.";
+            }
+            if (status != null && status.is5xxServerError()) {
+                return "Strava is temporarily unavailable. Try again later.";
+            }
+            return "Strava sync failed with HTTP " + statusException.getStatusCode().value() + ".";
+        }
+        if (exception instanceof ResourceAccessException) {
+            return "Cannot reach Strava from this backend. Check the network and try again.";
+        }
+        return "Unable to sync Strava activities right now.";
+    }
+
+    private boolean isInactiveStravaApplicationResponse(HttpStatusCodeException exception) {
+        String body = exception.getResponseBodyAsString();
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        String normalized = body.toLowerCase(java.util.Locale.ROOT);
+        return normalized.contains("application")
+                && normalized.contains("status")
+                && normalized.contains("inactive");
     }
 
     private StravaActivitySyncResult syncSingleStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
@@ -373,6 +408,7 @@ public class StravaSyncService {
                 .orElseGet(Activity::new);
 
         boolean existingActivity = activity.getId() != null;
+        ActivitySyncSnapshot beforeSync = existingActivity ? ActivitySyncSnapshot.capture(activity) : null;
         ActivityType previousType = activity.getActivityType();
 
         if (!existingActivity) {
@@ -421,18 +457,83 @@ public class StravaSyncService {
             log.warn("Weather adjustment calculation failed during sync: {}", e.getMessage());
         }
 
+        boolean changedExistingActivity = existingActivity
+                && !Objects.equals(beforeSync, ActivitySyncSnapshot.capture(activity));
+
         Activity saved = activityRepository.save(activity);
+
+        if (!existingActivity || previousType != ActivityType.RUN) {
+            publishActivityIngested(saved);
+        } else if (changedExistingActivity) {
+            automatedCoachService.reaggregateRunner(runner.getId());
+        }
 
         if (!gpsRateLimited[0] && !activityPointRepository.existsByActivity(saved)) {
             gpsRateLimited[0] = !fetchAndSaveGpsStream(saved, stravaId, accessToken, restTemplate, headers);
         }
 
-        if (existingActivity && previousType == ActivityType.RUN) {
+        if (existingActivity && previousType == ActivityType.RUN && !changedExistingActivity) {
             tracker.incrementSkippedDuplicates();
             return StravaActivitySyncResult.DUPLICATE_RUN;
         }
         tracker.incrementImportedRuns();
         return StravaActivitySyncResult.NEW_OR_UPDATED_RUN;
+    }
+
+    private void publishActivityIngested(Activity activity) {
+        if (applicationEventPublisher != null
+                && activity != null
+                && activity.getRunner() != null
+                && activity.getRunner().getId() != null
+                && activity.getId() != null) {
+            applicationEventPublisher.publishEvent(new ActivityIngestedEvent(activity.getRunner().getId(), activity.getId()));
+        }
+    }
+
+    private record ActivitySyncSnapshot(
+            ActivityType activityType,
+            String stravaId,
+            String name,
+            Double distanceMeters,
+            double distanceKm,
+            Long durationSeconds,
+            int movingTimeSeconds,
+            String startDate,
+            LocalDateTime startTime,
+            Double averageHeartRate,
+            Double maxHeartRate,
+            Double totalElevationGain,
+            Integer calories,
+            Double averageCadence,
+            Double averageWatts,
+            Double maxSpeedMps,
+            Integer sufferScore,
+            Integer pacePenaltySecPerKm,
+            Boolean weatherAdjusted
+    ) {
+        static ActivitySyncSnapshot capture(Activity activity) {
+            return new ActivitySyncSnapshot(
+                    activity.getActivityType(),
+                    activity.getStravaId(),
+                    activity.getName(),
+                    activity.getDistanceMeters(),
+                    activity.getDistanceKm(),
+                    activity.getDurationSeconds(),
+                    activity.getMovingTimeSeconds(),
+                    activity.getStartDate(),
+                    activity.getStartTime(),
+                    activity.getAverageHeartRate(),
+                    activity.getMaxHeartRate(),
+                    activity.getTotalElevationGain(),
+                    activity.getCalories(),
+                    activity.getAverageCadence(),
+                    activity.getAverageWatts(),
+                    activity.getMaxSpeedMps(),
+                    activity.getSufferScore(),
+                    activity.getPacePenaltySecPerKm(),
+                    activity.getWeatherAdjusted()
+            );
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -571,7 +672,7 @@ public class StravaSyncService {
         String checksum = "STRAVA_" + stravaActivityId;
         activityRepository.findByRunnerAndProviderAndSourceChecksum(runner, ImportProvider.STRAVA, checksum)
                 .ifPresent(activity -> {
-                    activityPointRepository.deleteByActivity(activity);
+                    activityDataAccess.deletePointsForActivity(activity.getId());
                     activityRepository.delete(activity);
                     automatedCoachService.reaggregateRunner(runner.getId());
                 });
@@ -580,8 +681,7 @@ public class StravaSyncService {
     private void savePointsInBatches(List<ActivityPoint> points) {
         final int batchSize = 500;
         for (int i = 0; i < points.size(); i += batchSize) {
-            activityPointRepository.saveAll(points.subList(i, Math.min(i + batchSize, points.size())));
-            activityPointRepository.flush();
+            activityDataAccess.savePoints(points.subList(i, Math.min(i + batchSize, points.size())));
         }
     }
 

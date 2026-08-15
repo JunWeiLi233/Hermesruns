@@ -49,13 +49,23 @@ public class InjuryRiskService {
         Double acwr = computeAcwr(runs);
 
         String sorenessLevel = sorenessLog.map(SorenessLog::getLevel).orElse(null);
-        String combinedRisk = computeCombinedRisk(acwr, sorenessLevel);
+        int riskPoints = computeRiskPoints(acwr, sorenessLevel);
+        String combinedRisk = riskForPoints(riskPoints);
         String coachVoice = generateCoachVoice(combinedRisk, acwr, sorenessLevel);
+        List<SorenessLogSummary> recentLogs = sorenessLogRepository.findByRunnerOrderByDateDesc(runner).stream()
+                .limit(7)
+                .map(log -> new SorenessLogSummary(log.getLevel(), log.getDate()))
+                .toList();
 
         return new InjuryRiskAssessment(
                 acwr != null ? Math.round(acwr * 100.0) / 100.0 : null,
                 sorenessLevel,
                 combinedRisk,
+                coachVoice,
+                Math.round((riskPoints / 6.0f) * 100),
+                recommendationForRisk(combinedRisk),
+                "flat",
+                recentLogs,
                 coachVoice
         );
     }
@@ -121,7 +131,7 @@ public class InjuryRiskService {
         return (movingSec / 3600.0) * intensityRatio * intensityRatio * 100.0;
     }
 
-    private String computeCombinedRisk(Double acwr, String sorenessLevel) {
+    private int computeRiskPoints(Double acwr, String sorenessLevel) {
         int score = 0;
 
         if (acwr != null) {
@@ -134,9 +144,19 @@ public class InjuryRiskService {
         else if ("MEDIUM".equalsIgnoreCase(sorenessLevel)) score += 2;
         else if ("LOW".equalsIgnoreCase(sorenessLevel)) score += 1;
 
+        return score;
+    }
+
+    private String riskForPoints(int score) {
         if (score >= 5) return "HIGH";
         if (score >= 3) return "MODERATE";
         return "LOW";
+    }
+
+    private String recommendationForRisk(String risk) {
+        if ("HIGH".equals(risk)) return "rest";
+        if ("MODERATE".equals(risk)) return "caution";
+        return "ready";
     }
 
     private String generateCoachVoice(String risk, Double acwr, String sorenessLevel) {
@@ -152,5 +172,17 @@ public class InjuryRiskService {
         return "Your risk signals look manageable. Keep training but stay mindful of recovery and movement quality.";
     }
 
-    public record InjuryRiskAssessment(Double acwr, String sorenessLevel, String risk, String coachVoice) {}
+    public record SorenessLogSummary(String level, LocalDate date) {}
+
+    public record InjuryRiskAssessment(
+            Double acwr,
+            String sorenessLevel,
+            String risk,
+            String coachVoice,
+            int combinedRiskScore,
+            String recommendation,
+            String acwrTrend,
+            List<SorenessLogSummary> recentLogs,
+            String coachAdvice
+    ) {}
 }

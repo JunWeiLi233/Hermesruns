@@ -1,4 +1,4 @@
-package com.hermes.backend;
+package com.hermes.backend.rewards;
 
 public enum DigitalCosmeticTier {
     MIL_SPEC,

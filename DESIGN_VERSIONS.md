@@ -1,5 +1,355 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-14-23
+Date: 2026-08-14
+Surface: Injury-risk detail signal card on `/analysis/injury-risk`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/analysisInjuryPanelStrips.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the accidental nested glass strip behind the injury-risk score header and the three signal cells, leaving both content layers transparent on the parent risk card.
+Why: The global card sweep and light-theme signal treatment made semantic content wrappers look like extra panels, creating unnecessary bands in the risk summary.
+Preserve list: Risk score and status, signal values, outer card surface, spacing, responsive stacking, localization, themes, and keyboard behavior.
+Rollback target: `DV-2026-08-14-22`
+Notes: Presentation-only correction; no injury-risk calculations, navigation, or API behavior changed.
+
+### Version: DV-2026-08-14-19
+Date: 2026-08-14
+Surface: Run activity contribution graph on `/settings`
+Files: `frontend/src/pages/Settings.jsx`, `frontend/src/components/SettingsAtlasLayout.jsx`, `frontend/src/components/RunActivityContributionGraph.jsx`, `frontend/src/utils/runActivityContribution.js`, `frontend/src/styles/_split/settings.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/utils/runActivityContribution.test.js`, `frontend/src/pages/settingsRunActivityGraph.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a Profile-aligned, 53-week contribution graph directly below the Settings profile hero. It groups real completed run activities by local day, shows month and weekday context, has intensity levels and a legend, and remains horizontally scrollable on narrow screens.
+Why: Settings showed profile readiness but no compact evidence of the runner's actual training history.
+Preserve list: Settings loading and error recovery, profile completion, identity and preference controls, connected-service actions, activity ownership, localization, themes, responsive layout, and keyboard interaction.
+Rollback target: `DV-2026-08-14-18`
+Notes: Activity retrieval is optional; an unavailable feed leaves the rest of Settings functional and renders an explicit graph status.
+
+### Version: DV-2026-08-14-18
+Date: 2026-08-14
+Surface: Recent-run metric tiles on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsCardResponsiveGrid.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made run-card buttons and their three-metric rows shrink safely, removed value-edge cropping, and added a component-width fit rule that reduces padding and type before wrapping localized values.
+Why: Fixed tile padding and a non-wrapping value were being clipped by `overflow: hidden` when the run card's text column became narrow.
+Preserve list: Three-metric order, run navigation, route preview, localized distance/pace/time formatting, desktop card grid, mobile row, themes, and keyboard behavior.
+Rollback target: `DV-2026-08-14-17`
+Notes: Presentation-only responsive correction; no run data or formatting logic changed.
+
+### Version: DV-2026-08-14-17
+Date: 2026-08-14
+Surface: Map-backed activity header on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the overview metric rail and removed the entire activity-header block from map-backed activity pages, including its title, metadata, and actions.
+Why: The requested removal includes both the oversized title grid and the elements it contains; the distance, pace, and duration evidence rail remains.
+Preserve list: Route map, overview metrics, no-route activity header and actions, responsiveness, localization, keyboard focus, and map lifecycle behavior.
+Rollback target: `DV-2026-08-14-16`
+Notes: Presentation-only header correction; no activity, metric, or route data changed.
+
+### Version: DV-2026-08-14-16
+Date: 2026-08-14
+Surface: Personal-record celebration modal on `/profile`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profilePrModalProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the personal-record celebration as a Profile-aligned paper sheet with a contained header, modest warm record summary, divided record ledger, and charcoal dashboard action.
+Why: Its oversized celebration card obscured the record details and did not match the Profile page's light, decision-first surface system.
+Preserve list: Breakthrough detection, record values, run and date metadata, close behavior, CTA, scrolling, localization, themes, keyboard focus, and responsive layout.
+Rollback target: `DV-2026-08-14-15`
+Notes: Presentation-only modal redesign; no record calculations or persistence changed.
+
+### Version: DV-2026-08-14-15
+Date: 2026-08-14
+Surface: Import settings navigation on `/settings/import-data` and `/settings/garmin-import`
+Files: `frontend/src/components/AuthenticatedPageChrome.jsx`, `frontend/src/components/authenticatedPageChromeProfileShell.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the legacy authenticated horizontal navigation and floating language switcher with the Profile runner shell: shared left rail, contextual Settings top bar, notification/settings/profile actions, sidebar collapse, and Today Run action.
+Why: The two import destinations still used a separate navigation system, leaving an extra top bar and language control instead of the unified Profile navigation used across authenticated runner surfaces.
+Preserve list: Garmin and manual import forms, profile lookup, route transitions, import API actions, localization through Settings, responsive navigation, keyboard focus, notifications, and the profile/account routes.
+Rollback target: `DV-2026-08-14-14`
+Notes: Shared shell migration only; import data, credentials, and navigation targets are unchanged.
+
+### Version: DV-2026-08-14-14
+Date: 2026-08-14
+Surface: Leaflet map tiles across runner map surfaces
+Files: `frontend/src/index.css`, `frontend/src/pages/leafletTileSeams.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Normalized Leaflet tile compositing and overlapped the default 256px tile grid by one pixel.
+Why: Fractional tile placement exposed bright seams between adjacent map tiles in the running-home map view.
+Preserve list: Map imagery, route overlays, controls, attribution, panning, zooming, themes, responsive layout, and map-specific tile sources.
+Rollback target: `DV-2026-08-14-13`
+Notes: Rendering-only correction; no location, route, or map-provider behavior changed.
+
+### Version: DV-2026-08-14-13
+Date: 2026-08-14
+Surface: Active intensity navigation label on `/analysis/intensity`
+Files: `frontend/src/styles/analysis-intensity-profile-alignment.css`, `frontend/src/pages/analysisIntensityProfileParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the active navigation item's pill fill, border, and shadow while preserving the “强度分布” label, active color, and coral side marker.
+Why: The shared runner navigation cascade added a button-like surface behind the active label, obscuring the text-first sidebar treatment.
+Preserve list: Intensity navigation, active route state, marker, label spacing, keyboard focus, localization, responsive collapse, themes, and analysis content.
+Rollback target: `DV-2026-08-14-12`
+Notes: Presentation-only navigation cleanup; no route or analysis behavior changed.
+
+### Version: DV-2026-08-14-12
+Date: 2026-08-14
+Surface: Strava OAuth calls to action on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandHeroBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the landing page's handcrafted STRAVA text badge and replaced both OAuth calls to action with Strava's unmodified official Connect with Strava SVG.
+Why: The earlier branding correction targeted Login and Signup, while the reported control was a separate landing-page component with its own fake logo implementation.
+Preserve list: Strava OAuth routing, localized accessible labels, hero and final CTA placement, responsive layout, keyboard focus, themes, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-11`
+Notes: Root-cause correction for the landing route; authentication behavior is unchanged.
+
+### Version: DV-2026-08-14-11
+Date: 2026-08-14
+Surface: Strava OAuth controls on `/login` and `/signup`
+Files: `frontend/src/assets/btn_strava_connect_with_orange.svg`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Signup.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/pages/authLiquidGlass.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the improvised plus sign and text treatment with Strava's unmodified official Connect with Strava SVG on both authentication routes.
+Why: The previous treatment resembled a custom Strava badge instead of the real provider artwork and did not follow Strava's OAuth branding guidance.
+Preserve list: Existing OAuth click handlers, provider availability states, localized accessible labels, keyboard focus, responsive layout, light and midnight themes, and email authentication.
+Rollback target: `DV-2026-08-14-10`
+Notes: Branding-only correction; authentication routing and provider configuration behavior are unchanged.
+
+### Version: DV-2026-08-14-10
+Date: 2026-08-14
+Surface: Race-destination map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/pages/landingAirlineAnimation.smoke.test.js`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the all-destination connector with one active pin-to-pin leg at a time. Every three seconds the map advances to the next destination, remounting the aircraft on that exact segment.
+Why: Showing the entire loop at once obscured the requested stop-by-stop reading order and made it difficult to see which destination was currently connected.
+Preserve list: Calibrated city anchors, closed-loop itinerary order, race captions and countdowns, world-map reference, localization, responsive map framing, aircraft motion, and reduced-motion handling.
+Rollback target: `DV-2026-08-14-09`
+Notes: Presentation and map-sequencing correction only; race data, countdown logic, and landing navigation are unchanged.
+
+### Version: DV-2026-08-14-09
+Date: 2026-08-14
+Surface: Landing final trust row on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inherited rounded backgrounds and inset shadows from the three final trust labels while preserving the centered row and hairline dividers.
+Why: The final CTA's trust labels still inherited card chrome from the earlier trust-chip rule, creating an unwanted background strip beneath the actions.
+Preserve list: Landing copy, CTA actions, route navigation, centered layout, dividers, responsive wrapping, localization, themes, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-08`
+Notes: Presentation-only cleanup; no CTA behavior or copy changed.
+
+### Version: DV-2026-08-14-08
+Date: 2026-08-14
+Surface: Race table order column on `/`
+Files: `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a 12px leading inset to the race table's front order numbers without changing the table grid columns or row content alignment.
+Why: The order numbers were flush against the left edge of the rounded race panel and appeared visually clipped.
+Preserve list: Race data, map animation, row timing, column positions, mobile layout, localization, themes, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-07`
+Notes: Presentation-only spacing correction; no race data or navigation behavior changed.
+
+### Version: DV-2026-08-14-07
+Date: 2026-08-14
+Surface: Race-destination map on `/`
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/pages/landingAirlineAnimation.smoke.test.js`, `frontend/src/pages/landingCommandEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the normalized dashed flight overlay with one continuous curved connector through the calibrated race-destination pins; the aircraft remains the only moving route accent.
+Why: The dotted base path and second animated dash made valid destination connections look severed or detached from their markers.
+Preserve list: Calibrated city anchors, race order and caption cycle, aircraft motion, static world-map reference, localization, responsive map framing, reduced-motion handling, and landing navigation.
+Rollback target: `DV-2026-08-14-06`
+Notes: Presentation-only map-route correction; race data, countdown logic, and route behavior are unchanged.
+
+### Version: DV-2026-08-14-06
+Date: 2026-08-14
+Surface: Running-shoe brand logos on `/shoes/add` and `/shoe-catalog`
+Files: `frontend/src/utils/shoeBrandLogo.js`, `frontend/src/utils/shoeBrandLogo.test.js`, `frontend/src/assets/brand-logos/volanti.svg`, `frontend/src/assets/brand-logos/dayan.svg`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/pages/shoeCatalogSearchSelection.smoke.test.js`, `frontend/src/components/shoeBrandLogoFallback.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Corrected the live catalog aliases for 沃兰迪 and 大鲶, replaced their generic dot fallbacks with dedicated brand marks based on official brand references, and moved Shoe Catalog onto the same shared logo resolver as Add Shoes.
+Why: The catalog spellings did not match the existing alias table, so both brands fell back to emoji dots; Shoe Catalog also retained a second synthetic badge implementation that could disagree with Add Shoes.
+Preserve list: Brand and model selection, model counts, search, filters, catalog API merging, localization, responsive layout, keyboard behavior, loading states, and shoe creation flow.
+Rollback target: `DV-2026-08-14-05`
+Notes: Browser research used Volanti's official site and official 大鲶 product photography; no shoe catalog data or API contract changed.
+
+### Version: DV-2026-08-14-05
+Date: 2026-08-14
+Surface: Forecast pipeline header on `/weather`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/weatherForecastHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the unintended nested liquid-glass strips behind the forecast pipeline kicker and weather title while retaining the outer forecast panel and hourly-card surfaces.
+Why: The shared surface sweep interpreted `weather-engine-panel-head` and `weather-engine-card-kicker` as standalone cards because their semantic class names contain `-panel` and `-card`.
+Preserve list: Forecast data, hourly cards, outer panel frame, title copy, localization, themes, responsive scrolling, loading and empty states, and weather API behavior.
+Rollback target: `DV-2026-08-14-04`
+Notes: Presentation-only cascade correction; no forecast calculations, requests, or interactions changed.
+
+### Version: DV-2026-08-14-04
+Date: 2026-08-14
+Surface: Add Shoes intake grid on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Capped the Add Shoes canvas at 1500px and centered it with automatic side margins, while retaining the existing desktop, tablet, and mobile grid breakpoints.
+Why: The route-local Profile override expanded the intake grid to the full available width, making the page feel left-weighted and disconnected from the centered Profile layout.
+Preserve list: Upload flow, brand and model selection, search and filters, form submission, localization, themes, responsive behavior, focus states, and reduced-motion handling.
+Rollback target: `DV-2026-08-14-03`
+Notes: Presentation-only alignment correction; no shoe data, selection state, or API behavior changed.
+
+### Version: DV-2026-08-14-03
+Date: 2026-08-14
+Surface: Shoe performance correlation grid on `/shoes`
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Compacted the evidence-light recommendation grid by keeping its three summary metrics on one desktop row and reducing the sidecar card, detail-row, and gap heights.
+Why: The sidecar wrapped three metrics across two rows and imposed large minimum heights, stretching the paired shoe recommendation card into a mostly empty oversized panel.
+Preserve list: Recommendation content, evidence status, tagged-run metrics, shoe health, source disclosure, collapse control, localization, themes, and single-column mobile layout.
+Rollback target: `DV-2026-08-14-01`
+Notes: Presentation-only density correction; no shoe, run, retirement, or recommendation calculations changed.
+
+### Version: DV-2026-08-14-01
+Date: 2026-08-14
+Surface: Hourly forecast grid on `/weather`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/weatherForecastHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the forecast panel's light-theme rounded profile surface, solid white background, border, and shadow so the second weather grid visually belongs to the live-conditions grid above it.
+Why: A shared liquid-glass cleanup made the forecast panel transparent, leaving the hourly grid without the framed background used by the first weather grid.
+Preserve list: Hourly forecast data, card spacing, scrolling, current-slot emphasis, dark themes, localization, responsive layout, loading and empty states, and existing weather API behavior.
+Rollback target: `DV-2026-08-13-30`
+Notes: Presentation-only restoration; no forecast calculations or data contracts changed.
+
+### Version: DV-2026-08-13-30
+Date: 2026-08-13
+Surface: Recovery signals on `/schedule`
+Files: `backend/src/main/java/com/hermes/backend/ReadinessService.java`, `backend/src/main/java/com/hermes/backend/AutomatedCoachService.java`, `frontend/src/pages/Schedule.jsx`, `frontend/src/utils/scheduleRecoverySignals.js`, `frontend/src/styles/_split/schedule.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced synthetic fatigue percentages and the default 72% sleep bar with evidence-gated signals. Fatigue is explicitly marked as an estimate from recent recovery or current wellness evidence, while sleep requires an exact-date record and displays its actual score.
+Why: Cached or absent wellness data previously looked measured, which could mislead a runner making a training decision.
+Preserve list: Schedule loading, workouts, coach guidance, routes, shoes, navigation, authentication, localization, themes, responsive behavior, reduced motion, and existing wellness imports.
+Rollback target: `DV-2026-08-13-29`
+Notes: Missing or incomplete evidence now renders `No supporting data` / `暂无数据支持` with an unfilled patterned track; cached sleep remains available to legacy coaching calculations but is not presented as current-date evidence.
+
+### Version: DV-2026-08-13-29
+Date: 2026-08-13
+Surface: Training-load decision card on `/analysis/load-balance`
+Files: `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the coach decision card to the warm-white Profile surface with charcoal hierarchy, a quiet divider, and no decorative rings in the default theme; preserved the dark treatment only for midnight and high-contrast-dark themes.
+Why: The route-specific decision selector still forced a dark command-center card after the shared light-theme rules, so the actual load-balance recommendation remained visually inconsistent and low-contrast in normal white mode.
+Preserve list: ACWR and load calculations, coach recommendation, training-window content, Today Run navigation, coach identity, responsive layout, localization, keyboard focus, reduced motion, themes, and API contracts.
+Rollback target: `DV-2026-08-13-28`
+Notes: Presentation-only correction; the live static bundle was rebuilt and the route was verified with the white decision surface and no browser errors.
+
+### Version: DV-2026-08-13-28
+Date: 2026-08-13
+Surface: GPS loading indicator on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/styles/_split/heatmap.css`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the character-jump loading copy with a compact GPS-acquisition badge using static high-contrast text, a pulsing lock ring, and sequential signal bars.
+Why: Animating every character made the loading message noisy and difficult to read, especially inside the small Heatmap legend panel.
+Preserve list: GPS loading state, accessible status label, progressive heatmap loading, diagnostics, localization, responsive legend layout, and reduced-motion behavior.
+Rollback target: `DV-2026-08-13-27`
+Notes: Presentation-only loading-state redesign; no GPS fetching, caching, rendering, or API behavior changed.
+
+### Version: DV-2026-08-13-27
+Date: 2026-08-13
+Surface: Map controls on `/heatmap`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/heatmapMobileOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced Heatmap's washed-out liquid-glass controls with opaque obsidian instruments, bordered utility buttons, a coral active state, and a high-contrast keyboard focus outline.
+Why: The shared liquid-glass layer placed low-contrast pale controls directly on the dark interactive map, making navigation and zoom actions difficult to recognize.
+Preserve list: Heatmap data, map movement, recenter and zoom actions, quick-link navigation, legend data, loading and empty states, localization, responsive utility rail, reduced-motion behavior, and keyboard access.
+Rollback target: `DV-2026-08-13-26`
+Notes: Presentation-only contrast redesign; no map rendering, GPS, API, or route behavior changed.
+
+### Version: DV-2026-08-13-26
+Date: 2026-08-13
+Surface: Route recommendation card on `/schedule`
+Files: `backend/src/main/java/com/hermes/backend/CoachRouteRecommendationDto.java`, `backend/src/main/java/com/hermes/backend/CoachRouteService.java`, `backend/src/main/java/com/hermes/backend/CoachRouteWaypointDto.java`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/scheduleRoutePlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The coach-route response now includes a compact GPS trace, allowing the card's existing Leaflet/OpenStreetMap layer to become the background instead of showing a disconnected vector sketch.
+Why: The history recommendation retained precise activity coordinates server-side but delivered only a normalized preview, so the Schedule card could not activate its real map background.
+Preserve list: Route selection, distance and confidence labels, generated-route behavior, history sketch fallback for missing GPS data, localization, accessibility, responsive layout, and all existing map controls.
+Rollback target: `DV-2026-08-13-25`
+Notes: The GPS trace is sampled to the established preview-point limit; no route-selection or workout-planning logic changed.
+
+### Version: DV-2026-08-13-25
+Date: 2026-08-13
+Surface: Intensity insight coach judgment card on `/analysis/intensity`
+Files: `frontend/src/styles/analysis-intensity-profile-alignment.css`, `frontend/src/pages/analysisIntensityProfileParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the judgment card's dark gradient with the white Profile surface, ink coach copy, muted identity text, and the existing coral Today Run action.
+Why: The intensity alignment stylesheet reintroduced a dark card after the shared light-theme rules, leaving the coach recommendation grid inconsistent with the surrounding Profile design.
+Preserve list: Intensity distribution data, coach recommendation copy, coach identity, Today Run navigation, recovery companion, responsive layout, localization, keyboard focus, and API contracts.
+Rollback target: `DV-2026-08-13-24`
+Notes: Presentation-only card correction; no intensity calculations or recommendation logic changed.
+
+### Version: DV-2026-08-13-24
+Date: 2026-08-13
+Surface: Coach insight hero on `/analysis/coach-insight`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the coach-insight hero's dark command-center treatment with the white Profile surface, readable ink typography, quiet pills, a light readiness card, and a clean readiness dial.
+Why: The current coach-insight hero used a separate dark base selector that bypassed the existing Profile-aligned light rules, leaving the headline and readiness panel low-contrast in the user's view.
+Preserve list: Readiness score and dial, coach identity, insight copy, navigation, metric values, responsive layout, localization, keyboard focus, reduced motion, and API contracts.
+Rollback target: `DV-2026-08-13-23`
+Notes: Presentation-only hero correction; no coach-system calculations or recommendation content changed.
+
+### Version: DV-2026-08-13-23
+Date: 2026-08-13
+Surface: Prediction training advice rail on `/prediction/5k`, `/prediction/10k`, `/prediction/half`, and `/prediction/marathon`
+Files: `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the advice rail's dark base treatment with the white Profile surface, ink typography, coral kicker, and quiet light advice rows so the grid remains readable in the current render path.
+Why: The rail continued to render as a dark card in the user's view despite the theme-scoped light override, making the advice title low-contrast and visually inconsistent with the surrounding Profile surfaces.
+Preserve list: Training recommendation content, distance-specific guidance, prediction calculations, weather adjustment, spacing, responsive layout, localization, keyboard focus, and API contracts.
+Rollback target: `DV-2026-08-13-22`
+Notes: Presentation-only surface correction; the rail no longer depends on theme timing to receive its readable white treatment.
+
+### Version: DV-2026-08-13-22
+Date: 2026-08-13
+Surface: Training advice rail on `/prediction/5k`, `/prediction/10k`, `/prediction/half`, and `/prediction/marathon`
+Files: `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the training advice rail to the light Profile surface with ink typography, coral emphasis, and subtle light advice rows in white and high-contrast-light themes.
+Why: The same unscoped Prediction stylesheet forced this secondary grid into a dark gradient in normal white mode.
+Preserve list: Midnight and high-contrast-dark appearance, coach guidance, forecast calculations, weather adjustment, localization, responsive layout, keyboard focus, and API contracts.
+Rollback target: `DV-2026-08-13-21`
+Notes: Theme-cascade correction only; no prediction inputs, calculations, or page interactions changed.
+
+### Version: DV-2026-08-13-21
+Date: 2026-08-13
+Surface: Race forecast hero on `/prediction/5k`, `/prediction/10k`, `/prediction/half`, and `/prediction/marathon`
+Files: `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the forecast hero to a light Profile surface in white and high-contrast-light themes, with ink typography, a white confidence card, and restrained coral emphasis. Removed the dark decorative backdrop from those themes.
+Why: A late unscoped Prediction stylesheet overrode the existing light-theme rules and forced a dark hero grid with low-contrast text in normal white mode.
+Preserve list: Midnight and high-contrast-dark appearance, forecasts, weather adjustment, confidence scoring, effort pacing, coach guidance, actions, responsive layout, keyboard focus, localization, and API contracts.
+Rollback target: `DV-2026-08-13-20`
+Notes: Theme-cascade correction only; no prediction inputs, calculations, or page interactions changed.
+
+### Version: DV-2026-08-13-20
+Date: 2026-08-13
+Surface: Injury-prevention grid on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/analysisInjuryPreventionStatus.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the Risk Score and ACWR cards open their existing detail pages and exposed the daily soreness choices as pressed-state controls.
+Why: The grid looked interactive but only the soreness choices responded; its two analysis cards were inert and the selected check-in state was visual-only.
+Preserve list: Injury-risk loading and error states, soreness persistence, risk calculations, coach advice, localization, themes, responsive layout, sidebar navigation, and API contracts.
+Rollback target: `DV-2026-08-13-19`
+Notes: Interaction and accessibility correction only; no injury-risk calculations or API payloads changed.
+
+### Version: DV-2026-08-13-19
+Date: 2026-08-13
+Surface: Training load balance on `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/index.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt Load Balance around Profile's decision-first hierarchy with a compact ACWR status header, a dominant coach recommendation and training window, an asymmetric chart-and-ratio evidence workbench, compact load metrics, a recent-training ledger, and quieter methodology support.
+Why: The previous oversized title panel and equal-weight card wall buried the runner's training decision beneath analytical explanation.
+Preserve list: ACWR and load calculations, interactive chart scrubber, coaching and training-window content, Today Run and run-detail navigation, recent runs, Analysis Lab sidebar, authentication, localization, units, themes, responsive collapse, focus behavior, reduced motion, and API contracts.
+Rollback target: `DV-2026-08-13-18`
+Notes: Presentation and information-hierarchy redesign only; no API, data model, calculation, persistence, route, or user-facing copy changed.
+
+### Version: DV-2026-08-13-18
+Date: 2026-08-13
+Surface: Weather-adjusted forecasts on `/prediction/5k`, `/prediction/10k`, `/prediction/half`, and `/prediction/marathon`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/utils/vdot.js`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/utils/vdotPredictionOrdering.smoke.test.js`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted weather-corrected VDOT and corrected recent-run anchors into the primary race forecast and effort pacing when meaningful weather evidence exists. Added a compact raw-versus-adjusted impact panel with recovered time, corrected-window count, average recovery, and peak recovery; duplicate adjusted trend lines are hidden when no correction exists.
+Why: Prediction pages exposed a weather-adjusted legend but still based the headline time and pace guidance on raw weather-suppressed performance, so the correction did not help the runner make a decision.
+Preserve list: Raw forecast as a visible baseline, race-distance calibration, confidence scoring, trend history, effort ladder, coach guidance, activity loading, routing, localization, themes, responsive layout, focus behavior, and API contracts.
+Rollback target: `DV-2026-08-13-17`
+Notes: The existing activity feed already supplies weather-adjusted moving time and pace penalty, so this is a frontend model and presentation change with no backend contract migration.
+
+### Version: DV-2026-08-13-17
+Date: 2026-08-13
+Surface: Runs ledger scale on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsPageScaleParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the Runs ledger to the shared Profile-aligned canvas width, headline scale, control spacing, signal cards, insight cards, and full-size run rows instead of the compact scan-first sizing.
+Why: `/runs` rendered visibly zoomed out compared with the other authenticated runner pages because a late compact composition reduced both typography and vertical rhythm.
+Preserve list: Run data loading, search and filters, month folding, route previews, open/delete actions, Strava sync/import actions, sidebar/topbar navigation, localization, themes, responsive collapse, keyboard focus, and API contracts.
+Rollback target: `DV-2026-08-13-16`
+Notes: Presentation-only scale correction; no data, routing, interaction, or API behavior changed.
+
+### Version: DV-2026-08-13-16
+Date: 2026-08-13
+Surface: Analysis drill-down rail on `/analysis/:insightKey` and `/prediction/:distKey`
+Files: `frontend/src/components/AnalysisSubpageNav.jsx`, `frontend/src/index.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the dedicated Analysis Lab rail on all eight drill-down pages with the exact shared Profile sidebar structure, numbered active treatment, collapse control, and workout CTA styling while retaining the Analysis overview, four insight links, and four prediction links.
+Why: The specialized sidebar needed the same visual language as Profile without losing its drill-down navigation.
+Preserve list: Analysis overview, all eight analysis and prediction routes, collapse behavior, Today Run action, localization, themes, responsive behavior, keyboard access, and detail-page data and calculations.
+Rollback target: `DV-2026-08-13-15`
+Notes: Navigation presentation and information architecture only; no analysis or prediction data, API, persistence, or route contracts changed.
+
+### Version: DV-2026-08-13-01
+Date: 2026-08-13
+Surface: Add Shoe intake workflow on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/index.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recast the Add Shoe route onto the current Profile dossier system with a compact warm hero, asymmetric signal rail, 16-column intake workbench, dark brand and selected-shoe decision cards, warm model/form surfaces, and responsive single-column collapse.
+Why: The route still read as an oversized standalone shoe campaign instead of a focused extension of the runner Profile workspace.
+Preserve list: Catalog loading and local fallback, brand/category/type filters, model search and selection, nickname and distance fields, primary-shoe selection, save/cancel behavior, API contracts, localization, authentication, sidebar/topbar navigation, theme switching, focus visibility, reduced-motion behavior, and mobile scrolling.
+Rollback target: `DV-2026-08-08-34`
+Notes: Presentation-only redesign; no shoe data, validation, persistence, routing, or user-visible copy changed.
+
 Use this file to keep a durable history of meaningful Hermes UI and design-system revisions.
 
 Rules
@@ -10,6 +360,156 @@ Rules
 - Keep entries concise but concrete enough that an agent can restore or reconstruct the prior design state.
 
 ## Current Versions
+
+### Version: DV-2026-08-13-16
+Date: 2026-08-13
+Surface: Weather hourly forecast surface on `/weather`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/weatherForecastHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the warm outer color strip, backdrop, and shadow from the Weather forecast panel and hourly row while preserving the individual forecast card surfaces.
+Why: The outer band visually grouped the forecast into a separate colored block and competed with the hourly cards and heading.
+Preserve list: Forecast data, hourly card styling, current-slot emphasis, Weather navigation, localization, themes, responsive scrolling, and loading/empty states.
+Rollback target: `DV-2026-08-13-15`
+Notes: Presentation-only cleanup; no data, interaction, routing, or API behavior changed.
+
+### Version: DV-2026-08-13-15
+Date: 2026-08-13
+Surface: VO2max trend hero on `/analysis`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisVdotTrendAccent.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the concentric-circle pseudo-element from the VO2max trend hero so the Profile-aligned chart surface stays flat, quiet, and focused on the metric and bars.
+Why: The decorative ring pattern competed with the chart and overlapped the decision chips, making the otherwise minimal analysis surface feel visually noisy.
+Preserve list: VO2max calculations, chart bars and tooltips, weather-adjusted values, forecast chips, responsive layout, navigation, localization, theme behavior, and focus states.
+Rollback target: `DV-2026-08-13-14`
+Notes: Presentation-only cleanup; no data, interaction, routing, or API behavior changed.
+
+### Version: DV-2026-08-13-14
+Date: 2026-08-13
+Surface: Shared runner-shell workout CTA across authenticated pages
+Files: `frontend/src/index.css`, `frontend/src/styles/runner-shell-workout-button.css`, `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/components/runnerShellWorkoutButtonParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Standardized the sidebar workout CTA to the Image 1 coral gradient pill with white arrow and label across all runner-shell pages. Preserved the compact arrow-only geometry when the sidebar is collapsed and removed Weather's page-specific plus glyph.
+Why: Page-specific theme layers caused the same action to render with dark text, alternate gradients, or a plus icon, making navigation inconsistent across surfaces.
+Preserve list: `/today-run` navigation, localized labels, sidebar collapse behavior, themes, keyboard focus, reduced motion, and every page's existing action handler.
+Rollback target: `DV-2026-08-13-13`
+Notes: Source parity guard enumerates 13 runner pages. Targeted smoke tests, scoped ESLint, served-bundle inspection, and focused runtime sync pass. A fresh full build is currently blocked by a separate existing `index.css` import for missing `styles/add-shoes-profile-alignment.css`.
+
+### Version: DV-2026-08-13-13
+Date: 2026-08-13
+Surface: Complete midnight theme across public, runner, detail, settings, map, loading, and admin routes
+Files: `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/index.css`, `frontend/src/pages/darkModeCohesion.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Extended the Profile-derived warm charcoal midnight system across every routed surface, including public/auth/legal pages, runner and analysis detail pages, loading states, Run and Race maps, settings imports, and all seven admin dashboard tabs. Replaced dashboard and Profile remote symbol-font icons with local SVGs, darkened custom Leaflet panes, removed late white glass sheens, and compressed the admin mobile rail into a usable horizontal navigation row.
+Why: Multiple late redesign layers still reapplied white cards, translucent gray panels, light map tiles, and unavailable Material Symbols after the older dark rules, leaving midnight mode visually fragmented and some mobile routes dominated by navigation chrome.
+Preserve list: Routing, authentication and role gates, runner/admin data and actions, maps and charts, imports and integrations, calculations, localization, responsive layout behavior, keyboard focus, reduced motion, loading/empty/error states, and API contracts.
+Rollback target: `DV-2026-08-13-12`
+Notes: Live system-Chrome verification in midnight mode passes 76/76 route-and-viewport cases across desktop 1440x1000 and mobile 390x844. The matrix checks HTTP state, applied theme, document shell color, bright solid/gradient leaks, horizontal overflow, broken icon ligatures, page errors, and application error UI; admin API data was non-destructively mocked only to render the role-protected dashboard tabs. Custom admin and race map tile filters were also inspected from computed browser state. Customer playtest review confirms clear primary actions for casual runners, preserved charts/maps/evidence for experienced runners, compact navigation, and coherent loading, empty, focus, and contrast states.
+
+### Version: DV-2026-08-13-12
+Date: 2026-08-13
+Surface: Street-map background on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `docs/superpowers/specs/2026-08-13-run-detail-map-background-design.md`, `docs/superpowers/plans/2026-08-13-run-detail-map-background.md`, `DESIGN_VERSIONS.md`
+What changed: Promoted the single interactive Leaflet route map from a contained hero card to a viewport-fixed background owned by the authenticated main column, with Profile-derived activity and evidence surfaces layered above it. The map inherits the main column's computed rail offset in expanded and collapsed states, keeps controls below the sticky topbar, and returns to a contained panel below the activity header at the shared mobile breakpoint.
+Why: The contained map underused the route as the primary visual and did not deliver the requested street-map workspace, while a viewport-wide background would have leaked beneath the Runs navigation rail.
+Preserve list: Runs navigation and collapse behavior, Leaflet tiles, route fitting, zoom and drag interaction, attribution, no-route fallback, activity data, share and Strava resync, coach and telemetry evidence, gear linking, splits, themes, localization, keyboard focus, reduced motion, loading/empty states, and API contracts.
+Rollback target: `DV-2026-08-13-11`
+Notes: Browser QA at 1600x1000 proves zero-pixel map/rail boundary deltas in expanded and collapsed states, working map drag, and no horizontal overflow. Mobile QA at 390x844 proves one contained map after the activity header; dark and no-route states were also verified. A follow-up correction adds explicit `has-run-detail-map` shell state and raises the map above shared page-atmosphere layers while keeping the content canvas transparent, avoiding reliance on `:has(...)` for the critical stacking contract. The desktop overview grid is now pulled into the top visual frame beneath the activity header. Targeted smoke tests, Vite build, served-asset inspection, and runtime sync pass.
+
+### Version: DV-2026-08-13-11
+Date: 2026-08-13
+Surface: Authenticated midnight theme across Profile-style runner and settings routes
+Files: `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/index.css`, `frontend/src/pages/darkModeCohesion.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final Profile-aligned dark-theme contract that remaps light-only runner tokens to warm charcoal surfaces, repairs hard-coded light islands across Runs, Run Detail, Analysis, Weather, Shoes, Races, Garmin Import, and Import Data, darkens shared controls and the legacy settings top bar, and replaces Profile metric and empty-state symbol-font icons with local SVG icons.
+Why: Late minimalist and glass layers reapplied white surfaces after the existing dark rules, producing mixed light/dark pages, low-contrast copy, and raw icon ligatures when the remote symbol font failed.
+Preserve list: Route layout and navigation, authentication, Profile metrics, activity history and imports, analysis calculations, maps and charts, weather data, shoe and race actions, Garmin credentials and wellness sync, localization, responsive behavior, keyboard focus, reduced motion, and API contracts.
+Rollback target: `DV-2026-08-13-10`
+Notes: Theme-only cohesion pass. Browser verification covers 17 authenticated routes at desktop width and a focused mobile route set; no API, persistence, route, calculation, or user-visible copy changed.
+
+### Version: DV-2026-08-13-10
+Date: 2026-08-13
+Surface: Collapsed runner rail and Analysis subnav toggle on Profile-style routes
+Files: `frontend/src/styles/analysis-subnav.css`, `frontend/src/styles/_split/profile.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `frontend/src/components/runnerShellSidebarRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Inset the Analysis collapse control into a fixed header column, centered it below the compact brand in collapsed state, and centered the collapsed footer workout arrow on the same horizontal rail axis.
+Why: The Analysis toggle was crowded against the rail boundary, while the footer used main-axis centering on a column flex container and left its fixed-width arrow visibly offset to the left.
+Preserve list: Sidebar collapse behavior, route navigation, active states, workout action, localization, themes, keyboard focus, responsive horizontal navigation, page data, and API contracts.
+Rollback target: `DV-2026-08-13-09`
+Notes: Layout-only correction. Targeted sidebar, Analysis subnav, and prediction alignment guards pass; the frontend build, runtime sync, and `/prediction/5k` HTTP proof pass.
+
+### Version: DV-2026-08-13-09
+Date: 2026-08-13
+Surface: Connected services on `/settings`
+Files: `frontend/src/styles/_split/settings.css`, `frontend/src/components/settingsAtlasConnectButton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Bounded and centered the desktop Strava and Garmin service-card grid to a maximum width of 960px, and applied compact action sizing to both Strava connection states.
+Why: The two equal columns filled the full Settings canvas on wide displays, and the connected-state Manage action escaped the previous compact selector, compressing its provider copy into a one-character column.
+Preserve list: Strava connect and disconnect behavior, Garmin import and manual-file actions, sync health, localization, themes, keyboard focus, and responsive single-column behavior.
+Rollback target: `DV-2026-08-13-07`
+Notes: Layout-only proportion adjustment; no integration, API, routing, or copy behavior changed.
+
+### Version: DV-2026-08-13-08
+Date: 2026-08-13
+Surface: Profile-minimal Run Detail on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/index.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt Run Detail as a compact Profile-derived evidence page with a transparent shell canvas, restrained activity header, map-led overview, compact metric rail, structurally aligned Coach and Gear sections, quieter telemetry controls, and borderless tonal data panels. Removed the duplicate distance overlay from the map.
+Why: The previous route layered an oversized editorial cockpit over older Run Detail rules, making its hierarchy and card treatment feel heavier and less coherent than Profile.
+Preserve list: Runner shell, Runs navigation, map data, activity metrics, share and Strava resync, coach debrief, comparison, telemetry and chart interaction, training effect, device metrics, elevation recalibration, shoe assignment, splits, performance metrics, localization, themes, keyboard focus, loading/empty states, and responsive behavior.
+Rollback target: `working tree before this change`
+Notes: Presentation-only dual-mode redesign; no API, persistence, route, calculation, or user-visible copy contract changed. The design spec and implementation plan live under `docs/superpowers/`.
+
+### Version: DV-2026-08-13-07
+Date: 2026-08-13
+Surface: Connected services on `/settings`
+Files: `frontend/src/styles/_split/settings.css`, `frontend/src/components/settingsAtlasConnectButton.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the shared horizontal provider-card layout by constraining the Strava connect action to its label width and allowing provider summaries to use the remaining grid column.
+Why: A broad Settings action rule stretched the Strava control across the card, compressing its Chinese status copy into a one-character column and forcing both service cards to an excessive shared row height.
+Preserve list: Strava connect and disconnect behavior, Garmin import and manual-file actions, sync health, localization, themes, keyboard focus, and responsive single-column behavior.
+Rollback target: `DV-2026-08-13-06`
+Notes: Layout-only correction; no integration, API, routing, or copy behavior changed.
+
+### Version: DV-2026-08-13-06
+Date: 2026-08-13
+Surface: Analysis heat-adaptation panel on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/analysisHeatAdaptation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the standalone heat-adaptation interpretation panel from Analysis, including its live weather-context request, decision card, metric grid, and exposure timeline.
+Why: The panel duplicated the Weather surface and interrupted the Analysis page's run-performance flow.
+Preserve list: Historical per-run weather corrections, the remaining Analysis calculations, navigation, authentication, localization, units, themes, responsive behavior, and API contracts used elsewhere.
+Rollback target: `DV-2026-08-13-05`
+Notes: Presentation and request-scope cleanup; Weather remains the home for live heat-adaptation context.
+
+### Version: DV-2026-08-13-05
+Date: 2026-08-13
+Surface: Coach insight detail on `/analysis/coach-insight`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `docs/superpowers/specs/2026-08-13-analysis-coach-insight-profile-redesign.md`, `docs/superpowers/plans/2026-08-13-analysis-coach-insight-profile-redesign.md`, `DESIGN_VERSIONS.md`
+What changed: Reframed coach insight with the Profile dashboard's warm editorial hierarchy: a dark judgment and readiness hero, three compact evidence metrics, an asymmetric performance and blueprint workbench, and a quieter bottom evidence grid.
+Why: The previous oversized glass command center obscured the current coaching judgment and made the route feel disconnected from Profile's clearer daily training hierarchy.
+Preserve list: Coach model construction, readiness, forecast, workout and focus data, trend chart, recent-run navigation, blueprint sessions, Today Run action, phase and reason evidence, authentication, localization, units, themes, responsive behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-13-04`
+Notes: Presentation-only Profile alignment; no API, calculation, persistence, route, action, or user-facing copy changed.
+
+### Version: DV-2026-08-13-04
+Date: 2026-08-13
+Surface: Shoe scan preview on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/_split/shoes.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `docs/superpowers/specs/2026-08-13-shoe-scan-minimal-preview-design.md`, `docs/superpowers/plans/2026-08-13-shoe-scan-minimal-preview.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the layered scan HUD with a flat Profile-aligned preview: one quiet metadata label, compact icon and heading, readable guidance, and a small rectangular upload action.
+Why: The oversized repeated title, circular framing, corner brackets, scan line, status chip, and glossy surface competed for attention and made the upload step difficult to scan.
+Preserve list: Preview image rendering, multi-file selection, scan API behavior, AI quota and processing states, recognition results, duplicate resolution, localization, themes, keyboard access, and responsive scrolling.
+Rollback target: `DV-2026-08-13-03`
+Notes: Presentation-only simplification; no scan request, API, persistence, route, or translation contract changed.
+
+### Version: DV-2026-08-13-03
+Date: 2026-08-13
+Surface: Race prediction detail on `/prediction/:distKey`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/index.css`, `frontend/src/components/PageSkeleton.jsx`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the prediction route with the Profile dashboard's compact padded canvas, one dark forecast focal card, a four-metric evidence strip, a balanced effort-and-coach training grid, a quieter trend card, and a matching loading skeleton.
+Why: The previous route rendered every section as a large dark cockpit card, obscuring scan order and making the forecast feel disconnected from the lighter, denser Profile dashboard.
+Preserve list: Authentication, activity loading, VDOT and calibrated prediction calculations, confidence and effort models, coach guidance, chart data and tooltips, all four distance routes, Analysis Lab navigation, top-bar actions, localization, themes, responsive navigation, keyboard access, and reduced-motion behavior.
+Rollback target: `working tree before this change`
+Notes: Presentation-only Profile alignment; no API, calculation, persistence, route, interaction, or user-facing copy changed.
+
+### Version: DV-2026-08-13-02
+Date: 2026-08-13
+Surface: Shoe scan import modal on `/shoes`
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Repaired the Profile-aligned scan sheet so its component-specific width and zero-padding reset outrank the shared compact modal rule, keeping both desktop columns inside the card while retaining the single-column tablet and phone layouts.
+Why: The Shoes stylesheet loads before the shared modal stylesheet; equal-specificity selectors let the shared `500px` card width and `24px` padding win, while the scan grid still required at least `780px`, causing the right column to overflow and be clipped.
+Preserve list: Shoe image selection, scan API behavior, AI quota states, recognition results, duplicate resolution, save and cancel actions, localization, theme switching, keyboard escape behavior, overlay dismissal, and responsive scrolling.
+Rollback target: `DV-2026-08-13-01`
+Notes: Cascade and containment fix only; no component markup, copy, route, API, or persistence contract changed.
 
 ### Version: DV-2026-08-13-01
 Date: 2026-08-13
@@ -5478,3 +5978,83 @@ Why: The old generic modal used cramped fields, an oversized close control, and 
 Preserve list: Existing shoe values, update endpoint, save and cancel behavior, primary-shoe selection, validation limits, localization, theme switching, keyboard escape behavior, overlay dismissal, and mobile scrolling.
 Rollback target: `DV-2026-08-08-33`
 Notes: Presentation-only modal redesign; no API, persistence, route, inventory, or user-facing copy changed.
+
+### Version: DV-2026-08-13-01
+Date: 2026-08-13
+Surface: Run-detail sidebar on `/run/:id`
+Files: `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/styles/runs-subnav.css`, `frontend/src/components/runsSubnavAnalysisRail.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recast the run-detail sidebar as a compact analysis-style command rail with a restrained editorial grid, flattened current-run context, continuous numbered section links, a coral active marker, and a warm lower-rail import CTA.
+Why: The previous sidebar stacked several raised cards, icon tiles, and shadows, interrupting the fast numbered reading flow used by the Analysis rail.
+Preserve list: Section anchors and active observer state, run selection, recent-run shortcuts, import navigation, sidebar collapse, localization, keyboard focus, responsive horizontal navigation, theme switching, and reduced-motion behavior.
+Rollback target: `DV-2026-08-08-34`
+Notes: Presentation-only redesign; no route, API, persistence, analytics, or user-facing copy changed.
+
+### Version: DV-2026-08-14-02
+Date: 2026-08-14
+Surface: Run-detail sidebar refinement on `/run/:id`
+Files: `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/styles/runs-subnav.css`, `frontend/src/components/runsSubnavAnalysisRail.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Tightened the run-detail rail to match the Analysis sidebar's direct numbered hierarchy: the visual current-run card and section heading are removed, the activity overview starts at `01`, and recent-run switching is retained behind a compact numbered disclosure.
+Why: The initial rail restyle still preserved the legacy stacked context and always-open recent-run list, making the rail denser than the Analysis reference and leaving too little intentional quiet space.
+Preserve list: Section anchors and active observer state, activity overview navigation, current-run metadata for assistive technology, recent-run selection, import navigation, sidebar collapse, localization, keyboard focus, responsive horizontal navigation, theme switching, and reduced-motion behavior.
+Rollback target: `DV-2026-08-13-01`
+Notes: Presentation and information-hierarchy refinement only; no route, API, persistence, analytics, or user-facing copy changed.
+
+### Version: DV-2026-08-14-03
+Date: 2026-08-14
+Surface: Run-detail sidebar parity on `/run/:id`
+Files: `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/styles/runs-subnav.css`, `frontend/src/components/runsSubnavAnalysisRail.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rebuilt the run-detail rail from the shared Analysis command-rail primitives, giving it the same header, grid field, counter-driven numbering, active outline/marker, and Today Run footer action as the approved reference.
+Why: The prior route-specific CSS approximated the Analysis rail but still diverged in row geometry, counter placement, active-state material, and footer intent.
+Preserve list: Section anchors and active observer state, activity overview navigation, current-run metadata for assistive technology, recent-run selection, import navigation through the recent-run disclosure, sidebar collapse, localization, keyboard focus, responsive horizontal navigation, theme switching, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-02`
+Notes: Presentation parity refinement only; no route, API, persistence, analytics, or user-facing copy changed.
+
+### Version: DV-2026-08-14-20
+Date: 2026-08-14
+Surface: Run-detail Overview on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Consolidated distance, average pace, moving time, coach review, linked gear, recent comparison, and performance metrics inside one localized Overview card. The former standalone sections retain their existing content and controls as structured subsections of that card.
+Why: The run summary was scattered between the hero rail, coach/gear columns, comparison panel, and bottom metrics card, making a post-run scan unnecessarily fragmented.
+Preserve list: Route map behavior, coach data, shoe assignment and unlinking, recent-comparison calculation, metrics data, telemetry, splits, section anchors, localization, responsive behavior, theme switching, focus behavior, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-17`
+Notes: Structural presentation change only; no API, persistence, or analytics calculation changed.
+
+### Version: DV-2026-08-14-21
+Date: 2026-08-14
+Surface: Coach insight workbench alignment on `/analysis/coach-insight`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Gave the desktop performance card and primary plan card one shared responsive row height so the adjacent recent-training and secondary-plan grids begin on the same horizontal baseline.
+Why: Independent card content heights caused the right-hand plan stack to advance ahead of the left-hand training evidence stack, creating a visible broken grid rhythm.
+Preserve list: Coach insight content, recommendations, run navigation, Today Run action, responsive stacking, localization, themes, keyboard focus, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-20`
+Notes: Presentation-only alignment correction; the shared row height is cleared when the workbench stacks below the desktop breakpoint.
+
+### Version: DV-2026-08-14-22
+Date: 2026-08-14
+Surface: Run-detail Overview on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/pages/runDetailPerformanceMetricsRemoval.smoke.test.js`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `frontend/src/pages/runsSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the Performance Metrics grid from both Run Detail render paths and removed its dead subnavigation link.
+Why: The large metrics panel was the unwanted overview grid and continued to appear in the active checkout even after the first worktree-only change.
+Preserve list: Overview stats, coach review, linked gear, recent comparison, telemetry, splits, route map behavior, localization, responsive behavior, and theme switching.
+Rollback target: `DV-2026-08-14-20`
+Notes: The active frontend bundle was rebuilt and published to `backend/target/classes/static`.
+
+### Version: DV-2026-08-14-23
+Date: 2026-08-14
+Surface: Coach insight evidence column fill on `/analysis/coach-insight`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Stretched the left coach evidence column to the height of the right plan stack and let the recent-training card consume the remaining desktop track, removing the large empty region beneath its activity rows.
+Why: The right-side plan stack was taller than the left evidence stack, leaving unused blank space that made the workbench feel visually disconnected.
+Preserve list: Coach insight content, recommendations, run navigation, Today Run action, responsive stacking, localization, themes, keyboard focus, and reduced-motion behavior.
+Rollback target: `DV-2026-08-14-21`
+Notes: Presentation-only spacing correction; stacked layouts restore intrinsic card heights below the desktop breakpoint.
+
+### Version: DV-2026-08-14-24
+Date: 2026-08-14
+Surface: Run-detail Overview stat grid on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the accent treatment from the distance tile so distance, average pace, and moving time share the same neutral Overview surface.
+Why: The distance tile rendered as a dark isolated block while its adjacent metrics used the light card surface, breaking the visual unity of the stat grid.
+Preserve list: Metric values and units, Overview layout, route map behavior, coach review, linked gear, comparison content, localization, responsive behavior, themes, and keyboard focus.
+Rollback target: `DV-2026-08-14-22`
+Notes: Presentation-only color correction; no run calculations or data wiring changed.

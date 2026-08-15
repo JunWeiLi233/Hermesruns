@@ -1,4 +1,8 @@
-package com.hermes.backend;
+package com.hermes.backend.rewards;
+
+import com.hermes.backend.Activity;
+import com.hermes.backend.Runner;
+import com.hermes.backend.Shoe;
 
 import jakarta.persistence.*;
 

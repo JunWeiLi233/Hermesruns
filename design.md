@@ -21,6 +21,14 @@ Required skill stack for non-trivial frontend rounds:
 - `hermes-translation-sync`: required when user-visible copy changes.
 - `accesslint` or `vercel-web-interface-guidelines`: use when the work touches forms, controls, focus states, ARIA, labels, keyboard behavior, or complex responsive UI.
 
+External DESIGN.md reference intake:
+- `VoltAgent/awesome-design-md` (`https://github.com/VoltAgent/awesome-design-md`) is an approved optional reference library for non-trivial frontend design rounds. It is a source of external `DESIGN.md` references, not a replacement authority for Hermes.
+- Use it when the user names the repository, supplies a specific site/brand/style target from that collection, asks for mimic/reference implementation without a stronger local reference, or a design-review round needs a concrete external `DESIGN.md` to sharpen the concept.
+- Lock the chosen source as `reference source: awesome-design-md:<site-or-file-url>` and record why that file was selected. Do not cite the repository as active evidence unless a specific `DESIGN.md` file or site entry was actually inspected.
+- Extract only portable design primitives: atmosphere, color roles, typography hierarchy, component treatment, layout rhythm, depth/elevation, responsive behavior, and explicit do/don't guardrails.
+- Do not import logos, protected brand identity, exact product copy, screenshots/assets, route behavior, analytics, or site-specific information architecture unless the user explicitly owns or approves that material.
+- Adapt any external reference into Hermes runner value, real data, bilingual copy discipline, accessibility, auth/routing preservation, and the Kinetic Editorial system in this file.
+
 Auto-Hermes command integration:
 - `.tools/auto-hermes-skills.mjs --json` is the durable manifest for the frontend design skill stack.
 - `.tools/auto-hermes-controller.mjs` must include that manifest in `designContext` for frontend `design-review` rounds.
@@ -373,7 +381,7 @@ Before implementation, `/auto-hermes` must lock and carry forward:
 - visual goal
 - preserve list
 - round type: `visual-bug`, `interaction-bug`, `structural-redesign`, or `mimic-implementation`
-- reference source: user reference, `design.md`, current approved live surface, or generated reference
+- reference source: user reference, `design.md`, current approved live surface, selected `awesome-design-md` `DESIGN.md`, or generated reference
 - active frontend skill stack from `.tools/auto-hermes-skills.mjs`
 
 If the round is `dark` or `light` only, the reviewer must still ask:
@@ -393,6 +401,7 @@ Automatic must-fix triggers for theme work:
 - shared card families switching mode in one route but not another equivalent route
 - borders reappearing as a substitute for tonal separation
 - generic centered hero/card-wall patterns replacing a stronger approved Hermes hierarchy
+- reference-driven work claiming `awesome-design-md` without selecting and inspecting a specific reference file
 - unverified frontend design claims without live browser or browser-harness evidence
 
 ## 8. Implementation Guidance For Shared Tokens

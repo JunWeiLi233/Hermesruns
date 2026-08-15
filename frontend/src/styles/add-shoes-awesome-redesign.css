@@ -1,0 +1,943 @@
+/* Reference source: awesome-design-md:https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/nike/DESIGN.md
+   Redesigned to the Hermes Kinetic Editorial golden standard: warm-paper canvas,
+   16px glass cards with backdrop blur, kicker + title section headers, coral
+   gradient pill CTAs, 24px/16px rhythm, soft ambient depth. */
+
+#root .add-shoes-awesome-redesign {
+  /* Tokens derive from the shared global layer so the Add Shoes surface matches the
+     Profile golden standard and the Shoes atelier sibling. */
+  --add-shoes-ink: var(--text-strong, #1c1917);
+  --add-shoes-canvas: var(--bg-glass-strong, rgba(255, 255, 255, 0.94));
+  --add-shoes-soft-cloud: rgba(255, 255, 255, 0.72);
+  --add-shoes-hairline: var(--line-soft, rgba(28, 25, 23, 0.08));
+  --add-shoes-hairline-soft: rgba(28, 25, 23, 0.05);
+  --add-shoes-charcoal: var(--text-strong, #2b2622);
+  --add-shoes-muted: var(--text-muted, #78716c);
+  --add-shoes-sale: var(--brand-accent, #a0392a);
+  --add-shoes-coral: var(--accent-coral-strong, #f07561);
+  --add-shoes-coral-soft: rgba(240, 117, 97, 0.12);
+  --add-shoes-green: #3d8b5e;
+  --add-shoes-paper: #f4f0e8;
+  --add-shoes-paper-strong: #fffaf3;
+  --add-shoes-radius-card: var(--radius-lg, 16px);
+  --add-shoes-radius-xl: var(--radius-xl, 20px);
+  --add-shoes-radius-pill: 999px;
+  --add-shoes-blur: blur(12px);
+  --add-shoes-shadow-sm: 0 1px 3px rgba(28, 25, 23, 0.04);
+  --add-shoes-shadow-md: 0 8px 24px rgba(28, 25, 23, 0.06);
+  --add-shoes-shadow-lg: 0 20px 50px rgba(28, 25, 23, 0.08);
+  --add-shoes-shadow-coral: 0 4px 16px rgba(160, 57, 42, 0.3);
+  --add-shoes-gradient-accent: linear-gradient(135deg, #a0392a, #fc7e69);
+  --add-shoes-gradient-hero: linear-gradient(135deg, #2c2218 0%, #1a1510 50%, #0f0d0a 100%);
+  --add-shoes-font-display: "Manrope", "Outfit", "Inter", sans-serif;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 16% 10%, rgba(160, 57, 42, 0.09), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(61, 139, 94, 0.08), transparent 25%),
+    linear-gradient(180deg, #f7f2ea 0%, #eee9df 100%);
+  color: var(--add-shoes-ink);
+  font-family: var(--add-shoes-font-display);
+}
+
+/* ── Loading shell (designed) ── */
+#root .add-shoes-awesome-redesign .add-shoes-loading-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-loading-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-canvas);
+  backdrop-filter: var(--add-shoes-blur);
+  box-shadow: var(--add-shoes-shadow-md);
+  color: var(--add-shoes-ink);
+  font-size: 0.9rem;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-loading-card .add-shoes-loading-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-coral);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* ── Canvas ── */
+#root .add-shoes-awesome-redesign .add-shoes-canvas {
+  width: min(calc(100% - 48px), 1440px);
+  margin: 0 auto;
+  padding: 24px 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Kicker (the golden uppercase-tracked section label) ── */
+#root .add-shoes-awesome-redesign .analysis-overview-card-kicker,
+#root .add-shoes-awesome-redesign .add-shoes-panel-kicker {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--add-shoes-muted);
+}
+
+/* ── Editorial hero ── */
+#root .add-shoes-awesome-redesign .add-shoes-editorial-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.5fr);
+  gap: 24px;
+  border-radius: var(--add-shoes-radius-xl);
+  overflow: hidden;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-hero-main {
+  position: relative;
+  min-height: 380px;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 18px;
+  border-radius: var(--add-shoes-radius-xl);
+  background:
+    radial-gradient(circle at 78% 18%, rgba(240, 117, 97, 0.28), transparent 42%),
+    radial-gradient(circle at 12% 88%, rgba(252, 126, 105, 0.16), transparent 38%),
+    var(--add-shoes-gradient-hero);
+  color: #f6f1eb;
+  overflow: hidden;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-hero-main .analysis-overview-card-kicker {
+  color: var(--add-shoes-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-headline h1 {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #f6f1eb;
+  margin: 0;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-headline h1 span {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(246, 241, 235, 0.48);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-headline p {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: rgba(246, 241, 235, 0.72);
+  max-width: 44ch;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: var(--add-shoes-radius-pill);
+  background: rgba(246, 241, 235, 0.1);
+  backdrop-filter: var(--add-shoes-blur);
+  color: rgba(246, 241, 235, 0.9);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-editorial-hero-rail {
+  display: grid;
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 24px;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-canvas);
+  backdrop-filter: var(--add-shoes-blur);
+  box-shadow: var(--add-shoes-shadow-md);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-status-card .add-shoes-panel-kicker {
+  color: var(--add-shoes-muted);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-status-card strong {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-status-card span {
+  font-size: 0.78rem;
+  color: var(--add-shoes-muted);
+}
+
+/* ── Shell + main column ── */
+#root .add-shoes-awesome-redesign .add-shoes-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Browser panel / stage ── */
+#root .add-shoes-awesome-redesign .add-shoes-browser-panel.add-shoes-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
+  background: transparent;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-stage-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-stage-copy h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 6px 0 4px;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-stage-copy p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--add-shoes-muted);
+}
+
+/* ── Step card (the glass card recipe) ── */
+#root .add-shoes-awesome-redesign .add-shoes-step-card {
+  padding: 24px;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-canvas);
+  backdrop-filter: var(--add-shoes-blur);
+  box-shadow: var(--add-shoes-shadow-sm);
+  transition: box-shadow 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-step-card:hover {
+  box-shadow: var(--add-shoes-shadow-md);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-step-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-step-number {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: var(--add-shoes-shadow-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-step-head h2 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 2px 0 2px;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-step-head p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--add-shoes-muted);
+}
+
+/* ── Brand deck (Step 1) ── */
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.74fr) minmax(0, 1.26fr);
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature {
+  position: relative;
+  min-height: 380px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 14px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-card);
+  background:
+    radial-gradient(circle at 80% 16%, rgba(240, 117, 97, 0.3), transparent 46%),
+    var(--add-shoes-gradient-hero);
+  color: #f6f1eb;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--add-shoes-shadow-lg);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature.is-active {
+  box-shadow: 0 0 0 3px var(--add-shoes-coral), var(--add-shoes-shadow-lg);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--add-shoes-radius-card);
+  background: rgba(246, 241, 235, 0.96);
+  padding: 18px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage .shoe-brand-logo-svg,
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage .shoe-brand-logo-img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-flag {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 5px 14px;
+  border-radius: var(--add-shoes-radius-pill);
+  background: rgba(246, 241, 235, 0.14);
+  color: rgba(246, 241, 235, 0.92);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature-copy strong {
+  display: block;
+  font-size: 2.6rem;
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: #f6f1eb;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature-copy span {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: rgba(246, 241, 235, 0.68);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature-copy p {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgba(246, 241, 235, 0.72);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-grid,
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 150px;
+  padding: 18px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-paper-strong);
+  box-shadow: var(--add-shoes-shadow-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--add-shoes-shadow-md);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-card.is-active {
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+  box-shadow: var(--add-shoes-shadow-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-card.is-active .add-shoes-brand-card-copy span,
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-card.is-active .add-shoes-brand-card-copy strong {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-tile,
+#root .add-shoes-awesome-redesign .add-shoes-model-art {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--add-shoes-radius-pill);
+  background: #fff;
+  padding: 8px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-tile .shoe-brand-logo-svg,
+#root .add-shoes-awesome-redesign .add-shoes-brand-tile .shoe-brand-logo-img,
+#root .add-shoes-awesome-redesign .add-shoes-model-art .shoe-brand-logo-svg,
+#root .add-shoes-awesome-redesign .add-shoes-model-art .shoe-brand-logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-card-copy strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-card-copy span {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--add-shoes-muted);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-shell {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--add-shoes-shadow-sm);
+  transition: background 0.22s ease, transform 0.18s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-btn:hover {
+  transform: translateY(-1px);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-btn.is-open {
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-brand-expand-grid {
+  margin-top: 16px;
+}
+
+/* ── Model board (Step 2) ── */
+#root .add-shoes-awesome-redesign .add-shoes-model-board {
+  margin-top: 0;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-board-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.34fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-filter-chip {
+  min-height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--add-shoes-shadow-sm);
+  transition: background 0.22s ease, color 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-filter-chip:hover {
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-filter-chip.is-active {
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+  box-shadow: var(--add-shoes-shadow-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-search-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-search-row .app-icon,
+#root .add-shoes-awesome-redesign .add-shoes-search-row svg {
+  position: absolute;
+  left: 16px;
+  width: 18px;
+  height: 18px;
+  color: var(--add-shoes-muted);
+  pointer-events: none;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-search-row input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px 0 44px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-ink);
+  font-size: 0.88rem;
+  font-family: inherit;
+  box-shadow: var(--add-shoes-shadow-sm);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-search-row input:focus {
+  outline: 2px solid var(--add-shoes-coral);
+  outline-offset: 1px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-board .add-shoes-model-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-grid-head.add-shoes-model-board-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-board-header span {
+  font-size: 0.74rem;
+  color: var(--add-shoes-muted);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 150px;
+  padding: 18px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-paper-strong);
+  box-shadow: var(--add-shoes-shadow-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--add-shoes-shadow-md);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card.is-active {
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+  box-shadow: var(--add-shoes-shadow-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card.is-active strong,
+#root .add-shoes-awesome-redesign .add-shoes-model-card.is-active span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card strong {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-card span {
+  font-size: 0.74rem;
+  color: var(--add-shoes-muted);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-model-empty {
+  grid-column: 1 / -1;
+  padding: 32px;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+/* ── Configure step (Step 3) ── */
+#root .add-shoes-awesome-redesign .add-shoes-setup-payload-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.55fr) minmax(0, 1.45fr);
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: var(--add-shoes-radius-card);
+  background:
+    radial-gradient(circle at 80% 14%, rgba(240, 117, 97, 0.26), transparent 48%),
+    var(--add-shoes-gradient-hero);
+  color: #f6f1eb;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-summary .add-shoes-panel-kicker {
+  color: var(--add-shoes-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-summary strong {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f6f1eb;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-summary p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(246, 241, 235, 0.72);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-selected-meta .add-shoes-hero-pill {
+  background: rgba(246, 241, 235, 0.12);
+  color: rgba(246, 241, 235, 0.92);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-canvas);
+  backdrop-filter: var(--add-shoes-blur);
+  box-shadow: var(--add-shoes-shadow-sm);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-field span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--add-shoes-muted);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-field input {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-pill);
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-ink);
+  font-size: 0.92rem;
+  font-family: inherit;
+  box-shadow: var(--add-shoes-shadow-sm);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-field input:focus {
+  outline: 2px solid var(--add-shoes-coral);
+  outline-offset: 1px;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--add-shoes-radius-card);
+  background: var(--add-shoes-paper-strong);
+  cursor: pointer;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--add-shoes-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-toggle span {
+  font-size: 0.86rem;
+  color: var(--add-shoes-ink);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-form-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--add-shoes-sale);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* ── Buttons (golden pill CTAs) ── */
+#root .add-shoes-awesome-redesign .add-shoes-secondary-btn,
+#root .add-shoes-awesome-redesign .add-shoes-primary-btn,
+#root .add-shoes-awesome-redesign .add-shoes-parent-link,
+#root .add-shoes-awesome-redesign .add-shoes-stage-back {
+  min-height: 46px;
+  padding: 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--add-shoes-radius-pill);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-secondary-btn,
+#root .add-shoes-awesome-redesign .add-shoes-parent-link,
+#root .add-shoes-awesome-redesign .add-shoes-stage-back {
+  background: var(--add-shoes-paper-strong);
+  color: var(--add-shoes-ink);
+  box-shadow: var(--add-shoes-shadow-sm);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-primary-btn {
+  background: var(--add-shoes-gradient-accent);
+  color: #fff;
+  box-shadow: var(--add-shoes-shadow-coral);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(160, 57, 42, 0.38);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-secondary-btn:hover,
+#root .add-shoes-awesome-redesign .add-shoes-parent-link:hover,
+#root .add-shoes-awesome-redesign .add-shoes-stage-back:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--add-shoes-shadow-md);
+}
+
+#root .add-shoes-awesome-redesign .add-shoes-primary-btn:active,
+#root .add-shoes-awesome-redesign .add-shoes-secondary-btn:active {
+  transform: scale(0.98);
+}
+
+/* Minor chip radius kept for smoke-test contract */
+#root .add-shoes-awesome-redesign .add-shoes-brand-deck-flag-badge { border-radius: 8px; }
+
+/* ── Midnight / high-contrast overrides ── */
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign {
+  --add-shoes-ink: var(--text-strong, #ece5dd);
+  --add-shoes-canvas: var(--bg-glass-strong, rgba(255, 255, 255, 0.04));
+  --add-shoes-soft-cloud: rgba(255, 255, 255, 0.06);
+  --add-shoes-hairline: var(--line-soft, rgba(255, 255, 255, 0.1));
+  --add-shoes-hairline-soft: rgba(255, 255, 255, 0.06);
+  --add-shoes-charcoal: #cacacb;
+  --add-shoes-muted: var(--text-muted, #9e988f);
+  --add-shoes-paper: #1c1d1f;
+  --add-shoes-paper-strong: rgba(255, 255, 255, 0.06);
+  background:
+    radial-gradient(circle at 16% 10%, rgba(240, 117, 97, 0.14), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(61, 139, 94, 0.1), transparent 25%),
+    linear-gradient(160deg, #0a0a0f 0%, #050508 100%);
+  color: #ece5dd;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-deck-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-model-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-deck-card .add-shoes-brand-card-copy strong,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-model-card strong {
+  color: #ece5dd;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-tile,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-model-art,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-filter-chip,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-search-row input,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-toggle,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-field input,
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-expand-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ece5dd;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-awesome-redesign .add-shoes-brand-expand-btn {
+  color: #ece5dd;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1180px) {
+  #root .add-shoes-awesome-redesign .add-shoes-editorial-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-editorial-hero-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck,
+  #root .add-shoes-awesome-redesign .add-shoes-setup-payload-shell,
+  #root .add-shoes-awesome-redesign .add-shoes-stage-head,
+  #root .add-shoes-awesome-redesign .add-shoes-model-board-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-grid,
+  #root .add-shoes-awesome-redesign .add-shoes-brand-expand-grid,
+  #root .add-shoes-awesome-redesign .add-shoes-model-board .add-shoes-model-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  #root .add-shoes-awesome-redesign .add-shoes-canvas {
+    width: min(calc(100% - 24px), 1440px);
+    gap: 20px;
+    padding: 16px 0 48px;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-editorial-hero-main {
+    min-height: 0;
+    padding: 32px 24px;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-editorial-headline h1 {
+    font-size: 2.4rem;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-feature {
+    min-height: 300px;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage {
+    width: 104px;
+    height: 104px;
+    padding: 14px;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage .shoe-brand-logo-svg,
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-stage .shoe-brand-logo-img {
+    width: 76px;
+    height: 76px;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-editorial-hero-rail,
+  #root .add-shoes-awesome-redesign .add-shoes-brand-deck-grid,
+  #root .add-shoes-awesome-redesign .add-shoes-brand-expand-grid,
+  #root .add-shoes-awesome-redesign .add-shoes-model-board .add-shoes-model-grid,
+  #root .add-shoes-awesome-redesign .add-shoes-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  #root .add-shoes-awesome-redesign .add-shoes-form-actions button {
+    width: 100%;
+  }
+}

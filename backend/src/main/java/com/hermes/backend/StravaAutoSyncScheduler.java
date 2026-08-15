@@ -125,6 +125,17 @@ public class StravaAutoSyncScheduler {
                     continue;
                 }
                 stravaSyncService.fetchAndSaveStravaActivities(accessToken, runner.getId(), true, "scheduled_recent_sync");
+                StravaSyncService.StravaSyncStatusResponse status = stravaSyncService.snapshotSyncStatus(runner.getId());
+                if (status != null && "FAILED".equals(status.status())) {
+                    failed++;
+                    failures.add(failureRecord(runner, status.error()));
+                    continue;
+                }
+                if (status != null && status.active()) {
+                    failed++;
+                    failures.add(failureRecord(runner, "Strava sync did not finish before the scheduler returned."));
+                    continue;
+                }
                 synced++;
             } catch (Exception e) {
                 log.warn("Strava auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());
@@ -133,7 +144,7 @@ public class StravaAutoSyncScheduler {
             }
         }
 
-        log.info("Strava auto-sync: completed — {} synced, {} failed", synced, failed);
+        log.info("Strava auto-sync: completed: {} synced, {} failed", synced, failed);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runnerCount", stravaRunners.size());
         details.put("failures", failures);
@@ -141,7 +152,9 @@ public class StravaAutoSyncScheduler {
                 job,
                 synced,
                 failed,
-                "Global Strava sync finished.",
+                failed > 0
+                        ? "Global Strava sync finished with " + failed + (failed == 1 ? " failure." : " failures.")
+                        : "Global Strava sync finished.",
                 details
         );
     }

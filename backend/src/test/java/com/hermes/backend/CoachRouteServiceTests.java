@@ -47,6 +47,10 @@ class CoachRouteServiceTests {
         assertThat(recommendation.confidence()).isEqualTo("distance-match");
         assertThat(recommendation.activityCount()).isEqualTo(2);
         assertThat(recommendation.preview().path()).startsWith("M ");
+        assertThat(recommendation.waypoints()).containsExactly(
+                new CoachRouteWaypointDto(40.7130, -74.0059),
+                new CoachRouteWaypointDto(40.7136, -74.0047)
+        );
     }
 
     @Test

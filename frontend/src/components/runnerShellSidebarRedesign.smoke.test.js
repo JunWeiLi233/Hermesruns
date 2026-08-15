@@ -4,7 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
+const profileStyleSource = readFileSync(path.join(here, '../styles/_split/profile.css'), 'utf8');
+const runnerShellStyleSource = readFileSync(path.join(here, '../styles/_split/runner-shell.css'), 'utf8');
 
 assert.match(
   styleSource,
@@ -99,6 +101,17 @@ assert.match(
   styleSource,
   /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-dashboard-workout-btn,\s*\n\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-workout-btn\s*\{[\s\S]*width:\s*52px;[\s\S]*height:\s*60px;/,
   'Collapsed squeeze button should be a bounded pill, not an oversized red slab.',
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-sidebar-footer\s*\{[^}]*width:\s*100%;[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*center;/,
+  'Collapsed sidebar footer should center its workout arrow on the same horizontal axis as the collapse toggle.',
+);
+assert.match(
+  runnerShellStyleSource,
+  /\.runner-shell-sidebar-footer\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/,
+  'Sidebar footer should retain the column axis that makes align-items control horizontal centering.',
 );
 
 console.log('[PASS] Runner shell sidebar redesign guardrails passed.');

@@ -16,13 +16,13 @@ assert(
 );
 
 assert(
-  /const flightPath = buildCurvedFlightPath\(\[\.\.\.flightPoints, flightPoints\[0\]\]/.test(landingSource),
-  'Landing race map should close the route so the airline can loop back to the first destination.',
+  /const flightPath = buildCurvedFlightPath\(\[\.\.\.flightPoints, flightPoints\[0\]\]\.filter\(Boolean\)\);/.test(landingSource),
+  'Landing race map should keep one closed loop through every destination.',
 );
 
 assert(
   /landing-cinematic-map-flight-route-live[\s\S]*landing-cinematic-map-aircraft[\s\S]*<animateMotion dur=\{raceCycleDuration\} path=\{flightPath\} rotate="auto" repeatCount="indefinite"/.test(landingSource),
-  'Landing race map should render one looping aircraft on the route path.',
+  'Landing race map should keep one aircraft flying continuously around the route.',
 );
 
 assert(
@@ -41,7 +41,7 @@ assert(
   /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-dasharray:[\s\S]*vector-effect:\s*non-scaling-stroke;/.test(styleSource)
     && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(styleSource)
     && /\.landing-cinematic-map-aircraft-glow\s*\{[\s\S]*animation:\s*landing-cinematic-map-aircraft-glow-step/.test(styleSource),
-  'Landing race map styles should keep the route legible and give the aircraft a restrained glow.',
+  'Landing race map should keep the loop legible and animate its moving-flight accent.',
 );
 
 assert(

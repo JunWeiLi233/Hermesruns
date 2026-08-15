@@ -2543,7 +2543,7 @@ body .rewards-ledger-page .rewards-ledger-hero-cta {
   font-size: 13px;
   letter-spacing: 0.02em;
   padding: 11px 18px;
-  border-radius: var(--radius-md, 12px);
+  border-radius: 999px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;

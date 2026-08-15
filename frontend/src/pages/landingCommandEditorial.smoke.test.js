@@ -16,7 +16,7 @@ function assert(condition, message) {
 }
 
 const landingSource = read('pages/Landing.jsx');
-const styleSource = read('styles/style.css');
+const styleSource = read('styles/style.generated.css');
 const landingStyleSource = read('styles/_split/landing.css');
 const retiredHeroGridClassPair = ['landing-cinematic-hero-grid', 'landing-command-hero'].join(' ');
 
@@ -54,6 +54,11 @@ assert(
     && /\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;[\s\S]*grid-row:\s*1\s*\/\s*span\s*2;/.test(landingStyleSource)
     && /\.landing-command-card:nth-child\(2\),\s*\.landing-command-card:nth-child\(3\)\s*\{[\s\S]*grid-column:\s*8\s*\/\s*-1;/.test(landingStyleSource),
   'Landing command CSS should use the full-width asymmetric feature deck without reserving an empty column.',
+);
+
+assert(
+  /\.landing-cinematic-footer-links\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*\}/.test(landingStyleSource),
+  'Landing footer utility links should align horizontally and wrap only when the viewport is too narrow.',
 );
 
 assert(
@@ -248,15 +253,10 @@ assert(
 );
 
 assert(
-  /\.landing-cinematic-map-selection-spread,[\s\S]*\.landing-cinematic-map-selection-ping,[\s\S]*\.landing-cinematic-map-selection-ring\s*\{[\s\S]*animation-duration:\s*var\(--race-cycle-duration,\s*15s\);[\s\S]*animation-delay:\s*var\(--race-delay\)/.test(styleSource)
-    && !styleSource.includes('landing-cinematic-map-readout-line')
+  !styleSource.includes('landing-cinematic-map-readout-line')
     && !styleSource.includes('landing-cinematic-map-readout-line-step')
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-selection-spread-step/.test(styleSource)
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*fill:\s*rgba\(240,\s*117,\s*97,\s*0\.14\)/.test(styleSource)
-    && /\.landing-cinematic-map-selection-spread\s*\{[\s\S]*stroke-width:\s*1\.4/.test(styleSource)
-    && /@keyframes landing-cinematic-map-selection-spread-step\s*\{[\s\S]*r:\s*86/.test(styleSource)
-    && /\.landing-cinematic-map-selection-ring\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-selection-ring-step/.test(styleSource)
-    && /@keyframes landing-cinematic-map-selection-ring-step\s*\{[\s\S]*opacity:\s*0\.92/.test(styleSource)
+    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(styleSource)
+    && /@keyframes landing-cinematic-map-flight-route-step\s*\{[\s\S]*stroke-dashoffset:\s*-1/.test(styleSource)
     && /\.landing-cinematic-map-bottom-deck\s*\{[\s\S]*position:\s*absolute;[\s\S]*grid-template-columns:\s*minmax\(220px,\s*278px\) minmax\(0,\s*388px\);[\s\S]*justify-content:\s*space-between/.test(styleSource)
     && /\.landing-cinematic-map-guide\s*\{[\s\S]*width:\s*100%;[\s\S]*pointer-events:\s*none/.test(styleSource)
     && /\.landing-cinematic-map-guide-step\s*\{[\s\S]*animation-duration:\s*3s/.test(styleSource)
@@ -283,7 +283,12 @@ assert(
     && /\.landing-cinematic-map-caption-meta em span,[\s\S]*\.landing-cinematic-map-caption-meta small span,[\s\S]*\.landing-cinematic-map-caption-meta b span\s*\{[\s\S]*color:\s*rgba\(33,\s*30,\s*27,\s*0\.48\)/.test(styleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*animation:\s*landing-cinematic-map-caption-step var\(--race-cycle-duration,\s*15s\)/.test(styleSource)
     && /\.landing-cinematic-map-caption:first-child\s*\{[\s\S]*opacity:\s*1/.test(styleSource),
-  'Landing race map motion should explain the diagram with active race-pin selection, a readout line, sequential metric reading, delayed row matching, scaled timing, and reduced-motion fallback.',
+  'Landing race map motion should explain the diagram with an airline route, sequential metric reading, delayed row matching, scaled timing, and reduced-motion fallback.',
+);
+
+assert(
+  /\.landing-cinematic-race-row\s*>\s*\.landing-cinematic-race-order\s*\{[\s\S]*padding-left:\s*12px/.test(landingStyleSource),
+  'Landing race order numbers should have a small leading inset without shifting the table columns.',
 );
 
 assert(
@@ -333,11 +338,11 @@ assert(
 
 assert(
   /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*0\.68px;[\s\S]*dominant-baseline:\s*middle;/.test(landingStyleSource)
-    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-dasharray:\s*0\.7 1\.25;/.test(landingStyleSource)
+    && /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-width:\s*0\.9;[\s\S]*stroke-dasharray:\s*0\.7 1\.25;/.test(landingStyleSource)
     && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(landingStyleSource)
     && /\.landing-cinematic-map-aircraft-shape\s*\{[\s\S]*stroke:\s*#fffaf3;/.test(landingStyleSource)
     && /\.landing-cinematic-map-caption\s*\{[\s\S]*position:\s*absolute;/.test(landingStyleSource),
-  'Landing race map active split CSS should keep SVG pin labels and the moving airline route bounded inside the map.',
+  'Landing race map CSS should keep SVG pin labels and the moving airline route bounded inside the map.',
 );
 
 assert(
@@ -371,6 +376,11 @@ assert(
     && /\.landing-cinematic-final-card \.landing-cinematic-btn--primary\s*\{[\s\S]*linear-gradient\(135deg,\s*#a0392a 0%,\s*#fc7e69 100%\)/.test(landingStyleSource)
     && /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust\s*\{[\s\S]*display:\s*flex;[\s\S]*justify-content:\s*center/.test(landingStyleSource),
   'Landing final CTA should be a warm (#f4efe6) centered minimal card: single column, no photo panel, centered copy + actions, coral gradient primary button, and a centered row of mono trust chips. No proof grids or fake metrics.',
+);
+
+assert(
+  /\.landing-cinematic-final-card--minimal \.landing-cinematic-final-trust span\s*\{(?=[^}]*background:\s*transparent;)(?=[^}]*border-radius:\s*0;)(?=[^}]*box-shadow:\s*none;)[^}]*\}/.test(landingStyleSource),
+  'Landing final trust labels should stay text-first without inherited pill backgrounds or shadows.',
 );
 
 console.log('[PASS] Landing command editorial guardrails passed.');

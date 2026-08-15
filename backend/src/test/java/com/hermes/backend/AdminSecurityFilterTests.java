@@ -18,18 +18,20 @@ import static org.mockito.Mockito.when;
 class AdminSecurityFilterTests {
 
     @Test
-    void allowsFrontendAdminLoginPageToReachSpa() throws ServletException, IOException {
+    void allowsFrontendAdminLoginPagesToReachSpa() throws ServletException, IOException {
         AuthService authService = mock(AuthService.class);
         AdminSecurityFilter filter = new AdminSecurityFilter(authService);
 
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        MockFilterChain chain = new MockFilterChain();
+        for (String path : new String[]{"/admin", "/admin/"}) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            MockFilterChain chain = new MockFilterChain();
 
-        filter.doFilter(request, response, chain);
+            filter.doFilter(request, response, chain);
 
-        assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(chain.getRequest()).isSameAs(request);
+            assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(chain.getRequest()).isSameAs(request);
+        }
         verifyNoInteractions(authService);
     }
 

@@ -8,9 +8,10 @@ const root = path.resolve(__dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const styles = [
-  read('src/styles/style.css'),
+  read('src/styles/style.generated.css'),
   read('src/styles/_split/shoes.css'),
 ].join('\n');
+const lightThemeStyles = read('src/styles/_split/light-theme-overrides.css');
 const liquidGlassStyles = read('src/styles/all-pages-liquid-glass.css');
 const shoesPage = read('src/pages/Shoes.jsx');
 const addShoesPage = read('src/pages/AddShoes.jsx');
@@ -24,6 +25,12 @@ const assertIncludes = (source, needle, label) => {
 const assertExcludes = (source, needle, label) => {
   if (source.includes(needle)) {
     throw new Error(`${label} should not include: ${needle}`);
+  }
+};
+
+const assertMatches = (source, pattern, label) => {
+  if (!pattern.test(source)) {
+    throw new Error(`${label} missing: ${pattern}`);
   }
 };
 
@@ -69,6 +76,41 @@ assertIncludes(
   liquidGlassStyles,
   '.runner-shell-page.shoes-dashboard-page .shoe-inventory-card :is(',
   'Shoes nested-card liquid-glass reset'
+);
+assertIncludes(
+  liquidGlassStyles,
+  '  .shoe-inventory-card-subtitle,\n  .shoe-inventory-card-badges,\n  .shoe-inventory-card-metrics,\n  .shoe-inventory-card-metric,\n  .shoe-inventory-card-metric-value,',
+  'Shoes inner strip liquid-glass reset'
+);
+assertMatches(
+  liquidGlassStyles,
+  /\.runner-shell-page\.shoes-dashboard-page :is\(\.shoe-inventory-card-subtitle, \.shoe-inventory-card-metrics, \.shoe-inventory-card-metric, \.shoe-inventory-card-metric-value, \.shoe-inventory-card-progress\) \{\s*background: transparent !important;\s*\}/,
+  'Shoes pale strip background reset'
+);
+assertMatches(
+  liquidGlassStyles,
+  /\.runner-shell-page\.shoes-dashboard-page \.shoe-inventory-manage-group > \.shoe-inventory-panel-kicker \{\s*background: transparent !important;\s*border-color: transparent !important;\s*box-shadow: none !important;/,
+  'Shoes filter label strip reset'
+);
+assertMatches(
+  liquidGlassStyles,
+  /\.runner-shell-page\.shoes-dashboard-page \.shoe-rotation-signal-copy > \.shoe-inventory-panel-kicker \{\s*background: transparent !important;\s*border-color: transparent !important;\s*box-shadow: none !important;/,
+  'Shoes rotation label strip reset'
+);
+assertMatches(
+  lightThemeStyles,
+  /body\.theme-light \.shoes-profile-workspace \.shoe-inventory-card-progress \{\s*background: transparent;\s*\}/,
+  'light theme profile shoe progress strip reset'
+);
+assertMatches(
+  styles,
+  /\.shoes-profile-workspace \.shoe-rotation-signal\.is-recommend \.shoe-rotation-signal-meta \{\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/,
+  'compact fallback recommendation metric row'
+);
+assertMatches(
+  styles,
+  /@media \(max-width: 760px\)[\s\S]*?\.shoes-profile-workspace \.shoe-rotation-signal\.is-recommend \.shoe-rotation-signal-meta \{\s*grid-template-columns: minmax\(0, 1fr\);/,
+  'stacked fallback recommendation metrics on mobile'
 );
 assertIncludes(styles, 'grid-template-columns: repeat(2, minmax(0, 1fr)) !important;', 'stable Shoes desktop grid');
 assertExcludes(shoesPage, 'isInventoryCollapsed', 'duplicate inventory collapse state');

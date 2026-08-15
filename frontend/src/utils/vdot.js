@@ -154,10 +154,21 @@ function bestRecentNormalizedRaceTimeSec(runs, targetMeters, options = {}) {
 
   for (const run of runs) {
     const km = Number(run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0));
-    const sec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
+    const rawSec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
     const t = new Date(run.startTime || run.startDate || 0).getTime();
-    if (!Number.isFinite(km) || !Number.isFinite(sec) || !Number.isFinite(t)) continue;
-    if (km <= 0 || sec <= 0 || now - t > lookbackMs) continue;
+    if (!Number.isFinite(km) || !Number.isFinite(rawSec) || !Number.isFinite(t)) continue;
+    if (km <= 0 || rawSec <= 0 || now - t > lookbackMs) continue;
+
+    let sec = rawSec;
+    if (options.weatherAdjustedAnchors) {
+      const correctedSec = Number(run.weatherAdjustedMovingTimeSeconds || 0);
+      const pacePenalty = Math.max(0, Number(run.pacePenaltySecPerKm || 0));
+      if (Number.isFinite(correctedSec) && correctedSec > 0 && correctedSec < rawSec) {
+        sec = correctedSec;
+      } else if (pacePenalty > 0) {
+        sec = Math.max(1, rawSec - pacePenalty * km);
+      }
+    }
 
     const distRatio = km / targetKm;
     if (distRatio < 0.8 || distRatio > 1.2) continue;

@@ -147,6 +147,69 @@ class ReadinessServiceTests {
     }
 
     @Test
+    void readinessSnapshotDoesNotPresentCachedSleepAsCurrentDateEvidence() {
+        DailySleepDataRepository sleepRepository = mock(DailySleepDataRepository.class);
+        DailyHRVDataRepository hrvRepository = mock(DailyHRVDataRepository.class);
+        DailyStressDataRepository stressRepository = mock(DailyStressDataRepository.class);
+        DailyWellnessSummaryRepository wellnessRepository = mock(DailyWellnessSummaryRepository.class);
+        ReadinessService service = new ReadinessService(
+                sleepRepository,
+                hrvRepository,
+                stressRepository,
+                wellnessRepository
+        );
+
+        Runner runner = new Runner();
+        CoachRunnerState state = new CoachRunnerState();
+        state.setLastSleepScore(88);
+        LocalDate today = LocalDate.of(2026, 4, 25);
+
+        when(sleepRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+        when(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+        when(stressRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+        when(wellnessRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+
+        ReadinessService.MultiSourceReadinessSnapshot snapshot =
+                service.resolveReadinessSnapshot(runner, state, today);
+
+        assertThat(snapshot.readiness().sleepScore()).isEqualTo(88);
+        assertThat(snapshot.availability().sleep()).isFalse();
+        assertThat(snapshot.availability().any()).isFalse();
+    }
+
+    @Test
+    void readinessSnapshotReportsExactDateMetricEvidence() {
+        DailySleepDataRepository sleepRepository = mock(DailySleepDataRepository.class);
+        DailyHRVDataRepository hrvRepository = mock(DailyHRVDataRepository.class);
+        DailyStressDataRepository stressRepository = mock(DailyStressDataRepository.class);
+        DailyWellnessSummaryRepository wellnessRepository = mock(DailyWellnessSummaryRepository.class);
+        ReadinessService service = new ReadinessService(
+                sleepRepository,
+                hrvRepository,
+                stressRepository,
+                wellnessRepository
+        );
+
+        Runner runner = new Runner();
+        CoachRunnerState state = new CoachRunnerState();
+        LocalDate today = LocalDate.of(2026, 4, 25);
+
+        when(sleepRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today))
+                .thenReturn(List.of(sleep(today, ImportProvider.GARMIN, 91)));
+        when(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+        when(stressRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+        when(wellnessRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of());
+
+        ReadinessService.MultiSourceReadinessSnapshot snapshot =
+                service.resolveReadinessSnapshot(runner, state, today);
+
+        assertThat(snapshot.availability().sleep()).isTrue();
+        assertThat(snapshot.availability().hrv()).isFalse();
+        assertThat(snapshot.availability().any()).isTrue();
+        assertThat(snapshot.sources().sleep()).isEqualTo("GARMIN");
+    }
+
+    @Test
     void readinessTrendUsesPreferredSourcesWhenMultipleProvidersShareADate() {
         DailySleepDataRepository sleepRepository = mock(DailySleepDataRepository.class);
         DailyHRVDataRepository hrvRepository = mock(DailyHRVDataRepository.class);

@@ -1,4 +1,4 @@
-import { apiJson } from '../api.js';
+import { apiJson } from '../api.ts';
 import { getRaceImageSourceCandidates } from '../data/worldRaceCatalog.js';
 
 const RACE_IMAGE_CACHE_KEY = 'hermes.raceImageCache.v1';

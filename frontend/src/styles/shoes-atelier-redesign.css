@@ -1,0 +1,1862 @@
+/* Shoes atelier redesign.
+   Reference source: design.md Kinetic Editorial.
+   Surface: /shoes. Preserve API, auth, filters, scan modal, image picker, and shoe actions. */
+
+#root .shoes-atelier-redesign {
+  /* Ink/muted/line/accent now derive from the shared global tokens so the Shoes
+     surface uses the same vocabulary as every other page. Paper/soft/watch/dark stay
+     page-specific because they are an intentional warm-paper + watch-tone treatment. */
+  --shoe-atelier-paper: #f4f0e8;
+  --shoe-atelier-paper-strong: #fffaf3;
+  --shoe-atelier-ink: var(--text-strong, #2c2f30);
+  --shoe-atelier-muted: var(--text-muted, #68635d);
+  --shoe-atelier-line: var(--line-soft, rgba(44, 47, 48, 0.12));
+  --shoe-atelier-soft: rgba(255, 255, 255, 0.72);
+  --shoe-atelier-soft-strong: rgba(255, 255, 255, 0.92);
+  --shoe-atelier-accent: var(--brand-accent, #a0392a);
+  --shoe-atelier-accent-soft: rgba(160, 57, 42, 0.12);
+  --shoe-atelier-green: #2f6d55;
+  --shoe-atelier-watch: #79521d;
+  --shoe-atelier-dark: #2b2622;
+  --shoe-atelier-dark-soft: #36302c;
+  background:
+    radial-gradient(circle at 16% 10%, rgba(160, 57, 42, 0.09), transparent 28%),
+    radial-gradient(circle at 82% 0%, rgba(47, 109, 85, 0.08), transparent 25%),
+    linear-gradient(180deg, #f7f2ea 0%, #eee9df 100%);
+}
+
+#root .shoes-atelier-redesign .runner-shell-main,
+#root .shoes-atelier-redesign .runner-shell-canvas {
+  background: transparent;
+}
+
+#root .shoes-atelier-redesign .runner-shell-canvas {
+  padding-inline: 24px;
+}
+
+#root .shoes-atelier-redesign .shoes-atelier-shell {
+  width: min(100%, 1120px);
+  gap: 16px;
+  padding: 14px 0 44px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal,
+#root .shoes-atelier-redesign .shoe-inventory-stage,
+#root .shoes-atelier-redesign .shoe-inventory-intel-panel {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal {
+  gap: 18px;
+  margin-top: 0;
+  padding: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(43, 38, 34, 0.98), rgba(31, 28, 25, 0.98)),
+    var(--shoe-atelier-dark);
+  color: #fff6f2;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal::after {
+  top: auto;
+  right: -48px;
+  bottom: -76px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 117, 97, 0.18), transparent 66%);
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-head,
+#root .shoes-atelier-redesign .shoe-rotation-signal-pills {
+  align-items: center;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-copy {
+  gap: 8px;
+  max-width: 720px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-copy h2 {
+  color: #fff6f2;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-copy p {
+  max-width: 62ch;
+  color: rgba(255, 246, 242, 0.72);
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-body {
+  grid-template-columns: minmax(0, 1.28fr) minmax(270px, 0.72fr);
+  gap: 14px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight,
+#root .shoes-atelier-redesign .shoe-rotation-signal-empty,
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass,
+#root .shoes-atelier-redesign .shoe-rotation-signal-stat,
+#root .shoes-atelier-redesign .shoe-rotation-signal-detail-item {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight,
+#root .shoes-atelier-redesign .shoe-rotation-signal-empty {
+  min-height: auto;
+  padding: 22px;
+  background: #f6eee5;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight::after,
+#root .shoes-atelier-redesign .shoe-rotation-signal-empty::after,
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight-rail {
+  content: none;
+  display: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight-copy {
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight-kicker {
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--shoe-atelier-accent) !important;
+  font-size: 0.7rem;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight strong,
+#root .shoes-atelier-redesign .shoe-rotation-signal-empty strong {
+  max-width: none;
+  color: var(--shoe-atelier-ink) !important;
+  font-size: 2rem;
+  line-height: 1.05;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight-summary p,
+#root .shoes-atelier-redesign .shoe-rotation-signal-empty p {
+  color: rgba(44, 47, 48, 0.76);
+  font-size: 0.95rem;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass,
+#root .shoes-atelier-redesign .shoe-rotation-signal-stat,
+#root .shoes-atelier-redesign .shoe-rotation-signal-detail-item {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 246, 242, 0.78);
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass {
+  gap: 10px;
+  padding: 16px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass strong,
+#root .shoes-atelier-redesign .shoe-rotation-signal-stat strong {
+  color: #fff6f2 !important;
+  font-size: 1.35rem;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass-metric strong {
+  color: #ffb4a7 !important;
+  font-size: 1.8rem;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-pill {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 246, 242, 0.82);
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-meta {
+  gap: 10px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-stat {
+  min-height: 78px;
+  padding: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-stat small,
+#root .shoes-atelier-redesign .shoe-rotation-signal-glass-metric span,
+#root .shoes-atelier-redesign .shoe-rotation-signal-source {
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-detail-list {
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-detail-item,
+#root .shoes-atelier-redesign .shoe-rotation-signal-source {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-rotation-signal-source {
+  background: rgba(240, 117, 97, 0.15);
+  color: #ffb4a7;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-stage {
+  display: grid;
+  gap: 16px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 243, 0.94), rgba(246, 240, 231, 0.94)),
+    var(--shoe-atelier-paper-strong);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar {
+  position: relative;
+  top: auto;
+  z-index: 1;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-title h2,
+#root .shoes-atelier-redesign .shoe-inventory-hero h1,
+#root .shoes-atelier-redesign .shoe-inventory-card-copy h2 {
+  color: var(--shoe-atelier-ink) !important;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-title h2 {
+  font-size: 0.98rem;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-toggle,
+#root .shoes-atelier-redesign .shoe-inventory-chevron,
+#root .shoes-atelier-redesign .shoe-inventory-action-btn,
+#root .shoes-atelier-redesign .shoe-inventory-cta,
+#root .shoes-atelier-redesign .shoe-inventory-pill,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill,
+#root .shoes-atelier-redesign .shoe-inventory-card-action {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  letter-spacing: 0;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-topbar-toggle,
+#root .shoes-atelier-redesign .shoe-inventory-chevron,
+#root .shoes-atelier-redesign .shoe-inventory-action-btn,
+#root .shoes-atelier-redesign .shoe-inventory-pill,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill,
+#root .shoes-atelier-redesign .shoe-inventory-card-action {
+  background: rgba(44, 47, 48, 0.06);
+  color: var(--shoe-atelier-ink);
+}
+
+#root .shoes-atelier-redesign :is(
+  .shoe-inventory-topbar-toggle,
+  .shoe-inventory-chevron,
+  .shoe-inventory-action-btn,
+  .shoe-inventory-cta,
+  .shoe-inventory-pill,
+  .shoe-inventory-brand-pill,
+  .shoe-inventory-card-action,
+  .shoe-rotation-signal-toggle,
+  .shoe-rotation-signal-source
+):hover {
+  transform: translateY(-1px);
+}
+
+#root .shoes-atelier-redesign :is(
+  .shoe-inventory-topbar-toggle,
+  .shoe-inventory-chevron,
+  .shoe-inventory-action-btn,
+  .shoe-inventory-cta,
+  .shoe-inventory-pill,
+  .shoe-inventory-brand-pill,
+  .shoe-inventory-card-action,
+  .shoe-rotation-signal-toggle,
+  .shoe-rotation-signal-source
+):active {
+  transform: translateY(0);
+}
+
+#root .shoes-atelier-redesign :is(button, input):focus-visible {
+  outline: 2px solid rgba(160, 57, 42, 0.42);
+  outline-offset: 2px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-search {
+  min-width: min(320px, 100%);
+  height: 42px;
+  border-radius: 8px;
+  background: #fffaf3;
+  box-shadow: inset 0 0 0 1px var(--shoe-atelier-line);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-search input {
+  color: var(--shoe-atelier-ink);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-search input::placeholder {
+  color: rgba(104, 99, 93, 0.7);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-cta {
+  min-height: 42px;
+  height: 42px;
+  background: #3a201b !important;
+  color: #fff6f2 !important;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-cta span,
+#root .shoes-atelier-redesign .shoe-inventory-cta svg {
+  color: #fff6f2 !important;
+  fill: #fff6f2 !important;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 8px 4px 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-hero h1 {
+  font-size: 2.45rem;
+  line-height: 1;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-hero-tabs {
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-pill,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill,
+#root .shoes-atelier-redesign .shoe-inventory-action-btn {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 0.86rem;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-pill.active,
+#root .shoes-atelier-redesign .shoe-inventory-brand-pill.active,
+#root .shoes-atelier-redesign .shoe-inventory-action-btn.is-muted {
+  background: var(--shoe-atelier-accent-soft);
+  color: #7c2d22;
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-row {
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: 10px;
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill {
+  min-height: 70px;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill--health {
+  background: rgba(47, 109, 85, 0.12);
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill--warn {
+  background: rgba(160, 57, 42, 0.1);
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-pill strong {
+  color: var(--shoe-atelier-ink) !important;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-health-summary-label {
+  color: rgba(104, 99, 93, 0.86);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-strip {
+  gap: 14px;
+  margin-top: 0;
+  padding: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-grid {
+  grid-template-columns: minmax(170px, 0.7fr) minmax(0, 1.2fr) minmax(210px, 0.8fr);
+  gap: 12px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-manage-group {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.62);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-brand-pills,
+#root .shoes-atelier-redesign .shoe-inventory-manage-actions {
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-locker-brandbar {
+  max-height: 88px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-panel-kicker,
+#root .shoes-atelier-redesign .shoe-inventory-brand-label {
+  color: var(--text-muted, rgba(104, 99, 93, 0.86));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-grid {
+  gap: 10px;
+  margin-top: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-virtual-list {
+  border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card {
+  grid-template-columns: 128px minmax(0, 1fr) minmax(120px, 0.22fr);
+  gap: 16px;
+  min-height: 172px;
+  align-items: stretch;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.9);
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card:hover {
+  background: #fffaf3;
+  transform: translateY(-1px);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card.is-primary {
+  background:
+    linear-gradient(90deg, rgba(160, 57, 42, 0.08), transparent 38%),
+    rgba(255, 250, 243, 0.94);
+  box-shadow: none;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-art,
+#root .shoes-atelier-redesign .shoe-inventory-card-copy,
+#root .shoes-atelier-redesign .shoe-inventory-card-side {
+  min-width: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-image {
+  width: 128px;
+  height: 100%;
+  min-height: 144px;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 45% 28%, rgba(160, 57, 42, 0.12), transparent 40%),
+    #f0eadf;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img,
+#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img-placeholder,
+#root .shoes-atelier-redesign .shoe-preview-art {
+  border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-copy {
+  gap: 10px;
+  align-content: center;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-head {
+  gap: 10px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-copy h2 {
+  font-size: 1.45rem;
+  line-height: 1.08;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-subtitle,
+#root .shoes-atelier-redesign .shoe-inventory-card-meta,
+#root .shoes-atelier-redesign .shoe-inventory-card-retirement-text {
+  color: rgba(104, 99, 93, 0.9);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-metrics {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.38fr) minmax(180px, 0.62fr);
+  gap: 12px;
+  align-items: end;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-metric {
+  gap: 6px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-metric-value strong {
+  color: var(--shoe-atelier-accent) !important;
+  font-size: 1.8rem;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-metric-value span {
+  color: rgba(104, 99, 93, 0.9);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress,
+#root .shoes-atelier-redesign .shoe-inventory-card-retirement-bar {
+  background: rgba(44, 47, 48, 0.12);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-progress-fill {
+  background: linear-gradient(90deg, #a0392a, #d86a54);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-type-badge,
+#root .shoes-atelier-redesign .shoe-inventory-inline-pill {
+  min-width: 0;
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(44, 47, 48, 0.08);
+  color: var(--shoe-atelier-ink) !important;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-side {
+  align-content: space-between;
+  justify-items: end;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-meta {
+  gap: 6px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-actions {
+  gap: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action--cta {
+  background: #3a201b;
+  color: #fff6f2;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-action.is-danger {
+  color: #8f2f22;
+  background: rgba(160, 57, 42, 0.1);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-alert {
+  border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-status {
+  padding: 22px 14px;
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.62);
+  color: var(--shoe-atelier-muted);
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-pro-badge,
+#root .shoes-atelier-redesign .shoe-inventory-quota-badge {
+  min-height: 30px;
+  border-radius: 8px;
+  letter-spacing: 0;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-intel-panel {
+  padding: 16px;
+  background: rgba(255, 250, 243, 0.82);
+}
+
+#root .shoes-atelier-redesign .runner-shell-footer {
+  background: transparent;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign {
+  --shoe-atelier-paper: #121211;
+  --shoe-atelier-paper-strong: #181716;
+  --shoe-atelier-ink: var(--text-strong, #f7efe9);
+  --shoe-atelier-muted: var(--text-muted, rgba(244, 238, 232, 0.7));
+  --shoe-atelier-line: var(--line-soft, rgba(255, 255, 255, 0.08));
+  --shoe-atelier-soft: rgba(255, 255, 255, 0.06);
+  --shoe-atelier-soft-strong: rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(160, 57, 42, 0.16), transparent 28%),
+    linear-gradient(180deg, #11100f, #0d0d0c);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-stage,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-intel-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-stage,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-intel-panel {
+  background: rgba(27, 24, 22, 0.92);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-topbar,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-manage-strip,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-manage-group,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-health-summary-pill,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-status,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-topbar,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-manage-strip,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-manage-group,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-health-summary-pill,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-status {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card:hover,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-search,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-search {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-image,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-image {
+  background:
+    radial-gradient(circle at 45% 28%, rgba(240, 117, 97, 0.14), transparent 40%),
+    #211e1c;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-card-copy h2,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-hero h1,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-inventory-topbar-title h2,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign .shoe-health-summary-pill strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-card-copy h2,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-hero h1,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-inventory-topbar-title h2,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-redesign .shoe-health-summary-pill strong {
+  color: #f7efe9 !important;
+}
+
+#root .shoe-edit-modal-shell {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(160, 57, 42, 0.16), transparent 34%),
+    rgba(39, 35, 31, 0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#root .shoe-edit-modal-card {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(160, 57, 42, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(255, 250, 243, 0.98), rgba(239, 232, 221, 0.96));
+  color: var(--shoe-atelier-ink, #2c2f30);
+  box-shadow: 0 36px 86px rgba(44, 47, 48, 0.22);
+}
+
+#root .shoe-edit-modal-card .modal-header {
+  align-items: center;
+  padding: 24px 24px 14px;
+  border: 0;
+  background: transparent;
+}
+
+#root .shoe-edit-modal-card .modal-header h3 {
+  color: var(--shoe-atelier-ink, #2c2f30);
+  font-family: "Manrope", var(--font-display);
+  font-size: 2.15rem;
+  font-weight: 850;
+  line-height: 0.96;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-edit-modal-card .modal-close {
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(44, 47, 48, 0.08);
+  color: rgba(44, 47, 48, 0.72);
+  box-shadow: none;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#root .shoe-edit-modal-card .modal-close:hover {
+  transform: translateY(-1px);
+  background: rgba(160, 57, 42, 0.12);
+  color: #7c2d22;
+}
+
+#root .shoe-edit-modal-card .modal-form {
+  padding: 0 24px 24px;
+}
+
+#root .shoe-edit-modal-form {
+  display: grid;
+  gap: 18px;
+}
+
+#root .shoe-edit-modal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#root .shoe-edit-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+#root .shoe-edit-field--wide {
+  grid-column: 1 / -1;
+}
+
+#root .shoe-edit-field .modal-label {
+  margin: 0;
+  color: rgba(104, 99, 93, 0.9);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-edit-field input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.9);
+  color: #2c2f30;
+  font: 750 1rem/1.2 "Manrope", var(--font-body);
+  box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.08);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+#root .shoe-edit-field input:focus {
+  outline: none;
+  background: #fffaf3;
+  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.34);
+}
+
+#root .shoe-edit-primary-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(160, 57, 42, 0.1);
+  color: #5c241d;
+  font-weight: 800;
+}
+
+#root .shoe-edit-primary-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #a0392a;
+}
+
+#root .shoe-edit-modal-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  margin: 0;
+}
+
+#root .shoe-edit-modal-actions .modal-button {
+  width: 100%;
+  min-height: 46px;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#root .shoe-edit-modal-actions .modal-button:hover {
+  transform: translateY(-1px);
+}
+
+#root .shoe-edit-modal-actions .btn-secondary {
+  background: rgba(44, 47, 48, 0.08);
+  color: #2c2f30;
+}
+
+#root .shoe-edit-modal-actions .btn-primary {
+  background: linear-gradient(135deg, #a0392a, #f07561);
+  color: #fff6f2;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-modal-shell {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(240, 117, 97, 0.16), transparent 34%),
+    rgba(5, 7, 8, 0.74);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-modal-card {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(240, 117, 97, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(30, 28, 26, 0.98), rgba(17, 16, 15, 0.98));
+  color: #f7efe9;
+  box-shadow: 0 42px 110px rgba(0, 0, 0, 0.5);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-card .modal-header h3,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-modal-card .modal-header h3 {
+  color: #f7efe9;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(247, 239, 233, 0.72);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-field,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-field {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-field .modal-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-field .modal-label {
+  color: rgba(247, 239, 233, 0.68);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-field input,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-field input {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-field input:focus,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-field input:focus {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 2px rgba(240, 117, 97, 0.44);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-primary-toggle,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-primary-toggle {
+  background: rgba(240, 117, 97, 0.14);
+  color: #ffb4a7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-actions .btn-secondary,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-edit-modal-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+}
+
+#root .shoe-photo-modal-shell {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(47, 109, 85, 0.12), transparent 30%),
+    radial-gradient(circle at 78% 0%, rgba(160, 57, 42, 0.16), transparent 34%),
+    rgba(39, 35, 31, 0.34);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#root .shoe-photo-modal-card {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: min(860px, calc(100vh - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(47, 109, 85, 0.1), transparent 34%),
+    linear-gradient(145deg, rgba(255, 250, 243, 0.98), rgba(239, 232, 221, 0.96));
+  color: var(--shoe-atelier-ink, #2c2f30);
+  box-shadow: 0 38px 92px rgba(44, 47, 48, 0.22);
+}
+
+#root .shoe-photo-modal-card .modal-header {
+  align-items: center;
+  padding: 24px 24px 12px;
+  border: 0;
+  background: transparent;
+}
+
+#root .shoe-photo-modal-card .modal-header h3 {
+  color: var(--shoe-atelier-ink, #2c2f30);
+  font-family: "Manrope", var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-modal-card .modal-close {
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(44, 47, 48, 0.08);
+  color: rgba(44, 47, 48, 0.72);
+  box-shadow: none;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#root .shoe-photo-modal-card .modal-close:hover {
+  transform: translateY(-1px);
+  background: rgba(160, 57, 42, 0.12);
+  color: #7c2d22;
+}
+
+#root .shoe-photo-modal-card .modal-form {
+  max-height: calc(min(860px, 100vh - 32px) - 78px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+
+#root .shoe-photo-modal-card .img-picker {
+  gap: 16px;
+}
+
+#root .shoe-photo-modal-card .img-picker-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 95% 0%, rgba(160, 57, 42, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(43, 38, 34, 0.98), rgba(31, 28, 25, 0.98));
+}
+
+#root .shoe-photo-modal-card .img-picker-kicker,
+#root .shoe-photo-modal-card .img-picker-label {
+  color: rgba(255, 246, 242, 0.66);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-modal-card .img-picker-hero-copy h3 {
+  color: #fff6f2;
+  font-size: 2.05rem;
+  line-height: 1.03;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-modal-card .img-picker-hero-copy p,
+#root .shoe-photo-modal-card .img-picker-search-copy {
+  color: rgba(255, 246, 242, 0.74);
+}
+
+#root .shoe-photo-modal-card .img-picker-hero-meta {
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#root .shoe-photo-modal-card .img-picker-meta-pill {
+  min-height: 32px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 246, 242, 0.78);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-modal-card .img-picker-layout {
+  grid-template-columns: minmax(240px, 0.42fr) minmax(0, 0.58fr);
+  gap: 12px;
+}
+
+#root .shoe-photo-modal-card .img-picker-side,
+#root .shoe-photo-modal-card .img-picker-main {
+  gap: 12px;
+}
+
+#root .shoe-photo-modal-card .img-picker-panel {
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+#root .shoe-photo-modal-card .img-picker-panel .img-picker-label,
+#root .shoe-photo-modal-card .img-picker-pending-name {
+  color: rgba(104, 99, 93, 0.9);
+}
+
+#root .shoe-photo-modal-card .img-picker-preview,
+#root .shoe-photo-modal-card .img-picker-pending-img,
+#root .shoe-photo-modal-card .img-picker-candidate {
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 42% 18%, rgba(160, 57, 42, 0.1), transparent 40%),
+    rgba(255, 250, 243, 0.8);
+  box-shadow: none;
+}
+
+#root .shoe-photo-modal-card .img-picker-preview {
+  min-height: 174px;
+  padding: 16px;
+}
+
+#root .shoe-photo-modal-card .img-picker-upload-row,
+#root .shoe-photo-modal-card .img-picker-pending {
+  border-radius: 10px;
+  background: rgba(255, 250, 243, 0.7);
+}
+
+#root .shoe-photo-modal-card .img-picker-upload-icon {
+  border-radius: 8px;
+  background: rgba(160, 57, 42, 0.12);
+  color: #7c2d22;
+}
+
+#root .shoe-photo-modal-card .img-picker-upload-body strong,
+#root .shoe-photo-modal-card .img-picker-empty strong {
+  color: var(--shoe-atelier-ink, #2c2f30);
+}
+
+#root .shoe-photo-modal-card .img-picker-upload-copy,
+#root .shoe-photo-modal-card .img-picker-pending-copy p,
+#root .shoe-photo-modal-card .img-picker-empty,
+#root .shoe-photo-modal-card .img-picker-empty span {
+  color: rgba(104, 99, 93, 0.86);
+}
+
+#root .shoe-photo-modal-card .img-picker-url-row,
+#root .shoe-photo-modal-card .img-picker-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+#root .shoe-photo-modal-card .img-picker-url-input,
+#root .shoe-photo-modal-card .img-picker-search-input {
+  min-width: 0;
+  border-radius: 8px;
+  background: rgba(255, 250, 243, 0.9);
+  color: #2c2f30;
+  box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.08);
+}
+
+#root .shoe-photo-modal-card .img-picker-url-input:focus,
+#root .shoe-photo-modal-card .img-picker-search-input:focus {
+  outline: none;
+  background: #fffaf3;
+  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.34);
+}
+
+#root .shoe-photo-modal-card .img-picker-url-input::placeholder,
+#root .shoe-photo-modal-card .img-picker-search-input::placeholder {
+  color: rgba(104, 99, 93, 0.62);
+}
+
+#root .shoe-photo-modal-card .img-picker-url-btn,
+#root .shoe-photo-modal-card .img-picker-search-btn,
+#root .shoe-photo-modal-card .modal-actions .modal-button {
+  min-height: 42px;
+  margin: 0;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#root .shoe-photo-modal-card .img-picker-url-btn,
+#root .shoe-photo-modal-card .img-picker-search-btn {
+  background: linear-gradient(135deg, #a0392a, #f07561);
+  color: #fff6f2;
+}
+
+#root .shoe-photo-modal-card .img-picker-clear,
+#root .shoe-photo-modal-card .modal-actions .btn-secondary {
+  border: 0;
+  border-radius: 10px;
+  background: rgba(44, 47, 48, 0.08);
+  color: #2c2f30;
+}
+
+#root .shoe-photo-modal-card .img-picker-url-btn:hover,
+#root .shoe-photo-modal-card .img-picker-search-btn:hover,
+#root .shoe-photo-modal-card .img-picker-clear:hover,
+#root .shoe-photo-modal-card .modal-actions .modal-button:hover,
+#root .shoe-photo-modal-card .img-picker-candidate:hover {
+  transform: translateY(-1px);
+}
+
+#root .shoe-photo-modal-card .img-picker-grid {
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+  max-height: 390px;
+  padding: 0;
+}
+
+#root .shoe-photo-modal-card .img-picker-candidate {
+  padding: 8px;
+}
+
+#root .shoe-photo-modal-card .img-picker-candidate:hover {
+  background:
+    radial-gradient(circle at 42% 18%, rgba(160, 57, 42, 0.16), transparent 40%),
+    #fffaf3;
+}
+
+#root .shoe-photo-modal-card .img-picker-search-status,
+#root .shoe-photo-modal-card .img-picker-manual-note {
+  border-radius: 10px;
+  background: rgba(160, 57, 42, 0.1);
+  color: #7c2d22;
+}
+
+#root .shoe-photo-modal-card .modal-actions {
+  margin: 0;
+  justify-content: stretch;
+}
+
+#root .shoe-photo-modal-card .modal-actions .modal-button {
+  width: 100%;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-shell {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(102, 214, 170, 0.1), transparent 30%),
+    radial-gradient(circle at 78% 0%, rgba(240, 117, 97, 0.16), transparent 34%),
+    rgba(5, 7, 8, 0.74);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(102, 214, 170, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(30, 28, 26, 0.98), rgba(17, 16, 15, 0.98));
+  color: #f7efe9;
+  box-shadow: 0 42px 110px rgba(0, 0, 0, 0.5);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .modal-header h3,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .modal-header h3 {
+  color: #f7efe9;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(247, 239, 233, 0.72);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-panel,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-upload-row,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-pending,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-upload-row,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-pending {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-panel .img-picker-label,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-pending-name,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-panel .img-picker-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-pending-name {
+  color: rgba(247, 239, 233, 0.68);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-preview,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-pending-img,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-candidate,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-preview,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-pending-img,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-candidate {
+  background:
+    radial-gradient(circle at 42% 18%, rgba(240, 117, 97, 0.12), transparent 40%),
+    rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-upload-body strong,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-empty strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-upload-body strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-empty strong {
+  color: #f7efe9;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-upload-copy,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-pending-copy p,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-empty,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-empty span,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-upload-copy,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-pending-copy p,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-empty,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-empty span {
+  color: rgba(247, 239, 233, 0.68);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-url-input,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-search-input,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-url-input,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-search-input {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-url-input:focus,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-search-input:focus,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-url-input:focus,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-search-input:focus {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 2px rgba(240, 117, 97, 0.44);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .img-picker-clear,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-modal-card .modal-actions .btn-secondary,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .img-picker-clear,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card .modal-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+}
+
+#root .shoe-photo-studio {
+  display: grid;
+  gap: 14px;
+}
+
+#root .shoe-photo-studio-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(240, 117, 97, 0.22), transparent 34%),
+    linear-gradient(135deg, #26231f, #141413);
+  color: #fff6f2;
+}
+
+#root .shoe-photo-studio-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 18px 18px auto;
+  width: 164px;
+  height: 164px;
+  border: 1px solid rgba(255, 246, 242, 0.16);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+#root .shoe-photo-studio-title {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+}
+
+#root .shoe-photo-studio-kicker,
+#root .shoe-photo-studio-label {
+  color: rgba(255, 246, 242, 0.68);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-studio-title h3 {
+  max-width: 680px;
+  margin: 0;
+  color: #fff6f2;
+  font-family: "Manrope", var(--font-display);
+  font-size: 2.08rem;
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: 0;
+  text-transform: none;
+  text-wrap: balance;
+}
+
+#root .shoe-photo-studio-title p,
+#root .shoe-photo-studio-search-head p,
+#root .shoe-photo-studio-upload-text span,
+#root .shoe-photo-studio-pending-copy p,
+#root .shoe-photo-studio-empty,
+#root .shoe-photo-studio-empty span {
+  margin: 0;
+  color: rgba(104, 99, 93, 0.84);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+#root .shoe-photo-studio-title p {
+  max-width: 58ch;
+  color: rgba(255, 246, 242, 0.72);
+}
+
+#root .shoe-photo-studio-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#root .shoe-photo-studio-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 246, 242, 0.82);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .shoe-photo-studio-mode.is-manual {
+  background: rgba(240, 117, 97, 0.2);
+  color: #fff6f2;
+}
+
+#root .shoe-photo-studio-note,
+#root .shoe-photo-studio-status,
+#root .shoe-photo-studio-search-status {
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: rgba(160, 57, 42, 0.1);
+  color: #7c2d22;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+#root .shoe-photo-studio-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.68fr) minmax(260px, 0.82fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: start;
+}
+
+#root .shoe-photo-studio-preview-panel,
+#root .shoe-photo-studio-tool-panel,
+#root .shoe-photo-studio-pending-panel,
+#root .shoe-photo-studio-search-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.06);
+}
+
+#root .shoe-photo-studio-tools {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-section-head,
+#root .shoe-photo-studio-search-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-preview-panel .shoe-photo-studio-label,
+#root .shoe-photo-studio-tool-panel .shoe-photo-studio-label,
+#root .shoe-photo-studio-pending-panel .shoe-photo-studio-label,
+#root .shoe-photo-studio-search-panel .shoe-photo-studio-label,
+#root .shoe-photo-studio-file-name {
+  color: rgba(104, 99, 93, 0.9);
+}
+
+#root .shoe-photo-studio-preview-frame {
+  display: grid;
+  place-items: center;
+  min-height: 238px;
+  padding: 18px;
+  border-radius: 10px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 42% 18%, rgba(160, 57, 42, 0.1), transparent 40%),
+    rgba(255, 250, 243, 0.82);
+}
+
+#root .shoe-photo-studio-current-img,
+#root .shoe-photo-studio-pending-img,
+#root .shoe-photo-studio-candidate-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#root .shoe-photo-studio-upload {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 84px;
+  padding: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(255, 250, 243, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.08);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+#root .shoe-photo-studio-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+#root .shoe-photo-studio-upload-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(160, 57, 42, 0.12);
+  color: #7c2d22;
+  font-size: 1.5rem;
+  font-weight: 850;
+}
+
+#root .shoe-photo-studio-upload-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-upload-text strong,
+#root .shoe-photo-studio-empty strong {
+  color: var(--shoe-atelier-ink, #2c2f30);
+  font-weight: 850;
+}
+
+#root .shoe-photo-studio-pending-card {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-pending-img,
+#root .shoe-photo-studio-candidate {
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 42% 18%, rgba(160, 57, 42, 0.1), transparent 40%),
+    rgba(255, 250, 243, 0.82);
+}
+
+#root .shoe-photo-studio-pending-img {
+  aspect-ratio: 1 / 1;
+  padding: 8px;
+}
+
+#root .shoe-photo-studio-pending-copy,
+#root .shoe-photo-studio-pending-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-inline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+#root .shoe-photo-studio-input {
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(255, 250, 243, 0.9);
+  color: #2c2f30;
+  box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.08);
+}
+
+#root .shoe-photo-studio-input:focus {
+  outline: none;
+  background: #fffaf3;
+  box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.34);
+}
+
+#root .shoe-photo-studio-input::placeholder {
+  color: rgba(104, 99, 93, 0.62);
+}
+
+#root .shoe-photo-studio-primary-btn,
+#root .shoe-photo-studio-clear,
+#root .shoe-photo-studio-actions .modal-button {
+  min-height: 42px;
+  margin: 0;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#root .shoe-photo-studio-primary-btn {
+  background: linear-gradient(135deg, #a0392a, #f07561);
+  color: #fff6f2;
+}
+
+#root .shoe-photo-studio-clear,
+#root .shoe-photo-studio-actions .btn-secondary {
+  background: rgba(44, 47, 48, 0.08);
+  color: #2c2f30;
+}
+
+#root .shoe-photo-studio-primary-btn:hover,
+#root .shoe-photo-studio-clear:hover,
+#root .shoe-photo-studio-upload:hover,
+#root .shoe-photo-studio-candidate:hover,
+#root .shoe-photo-studio-actions .modal-button:hover {
+  transform: translateY(-1px);
+}
+
+#root .shoe-photo-studio-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 10px;
+  max-height: 430px;
+  min-height: 236px;
+  overflow: auto;
+}
+
+#root .shoe-photo-studio-candidate {
+  aspect-ratio: 1 / 1;
+  padding: 8px;
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+#root .shoe-photo-studio-candidate:hover {
+  background:
+    radial-gradient(circle at 42% 18%, rgba(160, 57, 42, 0.16), transparent 40%),
+    #fffaf3;
+}
+
+#root .shoe-photo-studio-empty,
+#root .shoe-photo-studio-loading,
+#root .shoe-photo-studio-search-status {
+  grid-column: 1 / -1;
+}
+
+#root .shoe-photo-studio-empty {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  min-height: 216px;
+  text-align: center;
+}
+
+#root .shoe-photo-studio-actions {
+  margin: 0;
+  justify-content: stretch;
+}
+
+#root .shoe-photo-studio-actions .modal-button {
+  width: 100%;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-preview-panel,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-tool-panel,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-pending-panel,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-search-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-preview-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-tool-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-pending-panel,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-search-panel {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-preview-panel .shoe-photo-studio-label,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-tool-panel .shoe-photo-studio-label,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-pending-panel .shoe-photo-studio-label,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-search-panel .shoe-photo-studio-label,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-file-name,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-preview-panel .shoe-photo-studio-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-tool-panel .shoe-photo-studio-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-pending-panel .shoe-photo-studio-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-search-panel .shoe-photo-studio-label,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-file-name {
+  color: rgba(247, 239, 233, 0.68);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-preview-frame,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-upload,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-pending-img,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-candidate,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-preview-frame,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-pending-img,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-candidate {
+  background:
+    radial-gradient(circle at 42% 18%, rgba(240, 117, 97, 0.12), transparent 40%),
+    rgba(255, 255, 255, 0.06);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-upload-text strong,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-empty strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-upload-text strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-empty strong {
+  color: #f7efe9;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-search-head p,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-upload-text span,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-pending-copy p,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-empty,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-empty span,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-search-head p,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-upload-text span,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-pending-copy p,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-empty,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-empty span {
+  color: rgba(247, 239, 233, 0.68);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-input,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-input {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-input:focus,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-input:focus {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 2px rgba(240, 117, 97, 0.44);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-clear,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-photo-studio-actions .btn-secondary,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-clear,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7efe9;
+}
+
+@media (max-width: 1040px) {
+  #root .shoes-atelier-redesign .shoe-rotation-signal-body,
+  #root .shoes-atelier-redesign .shoe-inventory-manage-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoe-photo-studio-layout {
+    grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1fr);
+  }
+
+  #root .shoe-photo-studio-search-panel {
+    grid-column: 1 / -1;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card {
+    grid-template-columns: 128px minmax(0, 1fr);
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card-side {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, auto);
+    align-items: center;
+    justify-content: space-between;
+    justify-items: start;
+  }
+}
+
+@media (max-width: 760px) {
+  #root .shoes-atelier-redesign .runner-shell-canvas {
+    padding-inline: 14px;
+  }
+
+  #root .shoes-atelier-redesign .shoe-rotation-signal,
+  #root .shoes-atelier-redesign .shoe-inventory-stage {
+    padding: 14px;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-topbar,
+  #root .shoes-atelier-redesign .shoe-inventory-topbar-actions,
+  #root .shoes-atelier-redesign .shoe-inventory-manage-head {
+    display: grid;
+    align-items: stretch;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-topbar-actions,
+  #root .shoes-atelier-redesign .shoe-inventory-search,
+  #root .shoes-atelier-redesign .shoe-inventory-cta {
+    width: 100%;
+    max-width: none;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-hero,
+  #root .shoes-atelier-redesign .shoe-health-summary-row,
+  #root .shoes-atelier-redesign .shoe-inventory-card,
+  #root .shoes-atelier-redesign .shoe-inventory-card-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-hero h1 {
+    font-size: 2rem;
+  }
+
+  #root .shoes-atelier-redesign .shoe-rotation-signal-copy h2,
+  #root .shoes-atelier-redesign .shoe-rotation-signal-highlight strong,
+  #root .shoes-atelier-redesign .shoe-rotation-signal-empty strong {
+    font-size: 1.65rem;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card-image {
+    width: 100%;
+    height: 158px;
+    min-height: 158px;
+  }
+
+  #root .shoes-atelier-redesign .shoe-inventory-card-side {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  #root .shoe-edit-modal-card {
+    width: min(100%, calc(100vw - 20px));
+  }
+
+  #root .shoe-edit-modal-card .modal-header,
+  #root .shoe-edit-modal-card .modal-form {
+    padding-inline: 18px;
+  }
+
+  #root .shoe-edit-modal-card .modal-header h3 {
+    font-size: 1.75rem;
+  }
+
+  #root .shoe-edit-modal-fields,
+  #root .shoe-edit-modal-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoe-photo-modal-card {
+    width: min(100%, calc(100vw - 20px));
+  }
+
+  #root .shoe-photo-modal-card .modal-header,
+  #root .shoe-photo-modal-card .modal-form {
+    padding-inline: 18px;
+  }
+
+  #root .shoe-photo-modal-card .modal-header h3 {
+    font-size: 1.72rem;
+  }
+
+  #root .shoe-photo-modal-card .img-picker-hero,
+  #root .shoe-photo-modal-card .img-picker-layout,
+  #root .shoe-photo-modal-card .img-picker-url-row,
+  #root .shoe-photo-modal-card .img-picker-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoe-photo-modal-card .img-picker-hero-meta {
+    align-items: flex-start;
+  }
+
+  #root .shoe-photo-studio-hero,
+  #root .shoe-photo-studio-layout,
+  #root .shoe-photo-studio-inline-row,
+  #root .shoe-photo-studio-pending-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .shoe-photo-studio-meta {
+    justify-content: flex-start;
+  }
+
+  #root .shoe-photo-studio-title h3 {
+    font-size: 1.72rem;
+  }
+
+  #root .shoe-photo-studio-search-panel {
+    grid-column: auto;
+  }
+}

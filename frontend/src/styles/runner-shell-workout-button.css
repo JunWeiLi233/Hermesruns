@@ -1,0 +1,79 @@
+/* Shared Image 1 treatment for the runner-shell workout CTA. */
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(110deg, #b64635 0%, #ed715f 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 28px rgba(160, 57, 42, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  line-height: 1;
+  text-transform: none !important;
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+}
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn:hover,
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn:focus-visible {
+  background: linear-gradient(110deg, #c4513e 0%, #f17b69 100%) !important;
+  color: #fff !important;
+  filter: none;
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 17px 32px rgba(160, 57, 42, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.28) !important;
+}
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn:focus-visible {
+  outline: 2px solid rgba(240, 117, 97, 0.65);
+  outline-offset: 3px;
+}
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-glyph,
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-glyph {
+  flex: 0 0 auto;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  line-height: 1;
+}
+
+#root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
+  overflow: visible;
+  width: auto;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#root .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer > .runner-shell-workout-btn {
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  padding: 0 !important;
+  gap: 0;
+}
+
+#root .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .runner-dashboard-page .runner-shell-sidebar-footer > .runner-shell-workout-btn {
+    transition: none;
+  }
+}

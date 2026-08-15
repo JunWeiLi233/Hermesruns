@@ -1,0 +1,1268 @@
+/* Final authenticated dark-theme contract.
+ * Route redesigns can own geometry; this layer owns dark color semantics. */
+
+body.theme-midnight :is(
+  .analysis-page-shell,
+  .runs-dashboard-page,
+  .weather-engine-page,
+  .shoes-dashboard-page,
+  .races-dashboard-page,
+  .schedule-plan-page,
+  .runner-dashboard-page:has(.muscle-training-page)
+) {
+  --runner-minimal-canvas: #171512;
+  --runner-minimal-surface: #211e19;
+  --runner-minimal-surface-soft: #2a261f;
+  --runner-minimal-ink: #fff8ee;
+  --runner-minimal-muted: rgba(255, 248, 238, 0.66);
+  --runner-minimal-line: rgba(255, 248, 238, 0.13);
+  --runner-minimal-red-bg: rgba(242, 102, 79, 0.14);
+  --runner-minimal-red-text: #ff9b87;
+  --runner-minimal-blue-bg: rgba(122, 202, 222, 0.13);
+  --runner-minimal-blue-text: #9eddea;
+  --runner-minimal-green-bg: rgba(122, 168, 130, 0.15);
+  --runner-minimal-green-text: #b5d5ba;
+  --runner-minimal-yellow-bg: rgba(217, 191, 117, 0.14);
+  --runner-minimal-yellow-text: #ead392;
+  --runner-atlas-paper: var(--runner-minimal-canvas);
+  --runner-atlas-paper-strong: #211e19;
+  --runner-atlas-card: rgba(31, 28, 23, 0.86);
+  --runner-atlas-card-strong: rgba(42, 37, 30, 0.94);
+  --runner-atlas-ink: var(--runner-minimal-ink);
+  --runner-atlas-muted: var(--runner-minimal-muted);
+  --runner-atlas-line: var(--runner-minimal-line);
+  --runner-atlas-accent: var(--runner-minimal-red-text);
+  --runner-atlas-dark: #12100e;
+  --runner-atlas-dark-soft: var(--runner-minimal-muted);
+  --runner-atlas-shadow: 0 26px 70px rgba(0, 0, 0, 0.26);
+  --runner-profile-paper: var(--runner-minimal-canvas);
+  --runner-profile-card: rgba(31, 28, 23, 0.86);
+  --runner-profile-card-strong: rgba(42, 37, 30, 0.94);
+  --runner-profile-ink: var(--runner-minimal-ink);
+  --runner-profile-muted: var(--runner-minimal-muted);
+  --runner-profile-line: var(--runner-minimal-line);
+  --hermes-glass-paper: rgba(31, 28, 23, 0.86);
+  --hermes-glass-paper-strong: rgba(42, 37, 30, 0.94);
+  --hermes-glass-ink: var(--runner-minimal-ink);
+  --hermes-glass-muted: var(--runner-minimal-muted);
+  --hermes-glass-line: var(--runner-minimal-line);
+  --hermes-glass-highlight: rgba(255, 248, 238, 0.07);
+  --hermes-glass-shadow: 0 26px 70px rgba(0, 0, 0, 0.26);
+  background: var(--runner-minimal-canvas) !important;
+  color: var(--runner-minimal-ink) !important;
+}
+
+body.theme-midnight .runner-shell-page :is(input, select, textarea) {
+  border-color: var(--runner-profile-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-profile-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .runner-shell-page :is(input, textarea)::placeholder {
+  color: rgba(255, 248, 238, 0.42) !important;
+}
+
+/* Runs */
+body.theme-midnight .runs-dashboard-page :is(
+  .runs-profile-workbench,
+  .recent-runs-stat-card,
+  .recent-runs-insight-card,
+  .recent-runs-status,
+  .recent-runs-month-group,
+  button.recent-runs-card
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: var(--runner-minimal-surface) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .runs-dashboard-page .runs-profile-signal--status {
+  border-color: rgba(122, 168, 130, 0.24) !important;
+  background: rgba(122, 168, 130, 0.11) !important;
+  color: var(--runner-minimal-green-text) !important;
+}
+
+body.theme-midnight .runs-dashboard-page .recent-runs-month-header {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(42, 37, 30, 0.94) !important;
+  color: var(--runner-minimal-ink) !important;
+}
+
+body.theme-midnight .runs-dashboard-page :is(
+  .recent-runs-card-metric,
+  .recent-runs-search-input-wrap,
+  .recent-runs-chip
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-minimal-ink) !important;
+}
+
+body.theme-midnight .runs-dashboard-page .recent-runs-chip.is-active {
+  border-color: rgba(242, 102, 79, 0.42) !important;
+  background: rgba(242, 102, 79, 0.16) !important;
+  color: #ffb2a2 !important;
+}
+
+body.theme-midnight .runs-dashboard-page .runs-profile-secondary-action {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.07) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .runs-dashboard-page .recent-runs-insight-card--primary {
+  background:
+    radial-gradient(circle at 84% 20%, rgba(242, 102, 79, 0.2), transparent 31%),
+    linear-gradient(135deg, #2a251e, #3b3026 54%, #211e19) !important;
+}
+
+/* Analysis */
+body.theme-midnight .analysis-page-shell :is(
+  .analysis-overview-hero-value,
+  .analysis-profile-decision-chip
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-page-shell.analysis-page-shell .runner-shell-canvas.runner-shell-canvas::before {
+  border-color: var(--runner-profile-line) !important;
+  background:
+    linear-gradient(90deg, rgba(255, 248, 238, 0.025) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 248, 238, 0.02) 1px, transparent 1px),
+    #211e19 !important;
+  background-size: 42px 42px, 42px 42px, auto !important;
+}
+
+body.theme-midnight .analysis-page-shell :is(
+  .analysis-overview-vo2-bars,
+  .analysis-overview-gauge-track,
+  .analysis-overview-intensity-track
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background-color: rgba(255, 248, 238, 0.07) !important;
+}
+
+/* Weather */
+body.theme-midnight .weather-engine-page :is(
+  .weather-engine-hero,
+  .weather-engine-hud-card,
+  .weather-engine-forecast-panel,
+  .weather-engine-card,
+  .weather-engine-engine-stat
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: var(--runner-minimal-surface) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .weather-engine-page .weather-engine-hero {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(122, 202, 222, 0.13), transparent 24rem),
+    linear-gradient(145deg, #211e19, #2a251e) !important;
+}
+
+body.theme-midnight .weather-engine-page :is(
+  .weather-engine-data-pill,
+  .weather-engine-forecast-slot
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-minimal-ink) !important;
+}
+
+body.theme-midnight .weather-engine-page .weather-engine-forecast-slot.is-now {
+  border-color: rgba(122, 202, 222, 0.3) !important;
+  background: rgba(122, 202, 222, 0.11) !important;
+}
+
+/* Shoes */
+body.theme-midnight .shoes-dashboard-page .shoe-rotation-signal {
+  border-color: var(--runner-minimal-line) !important;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(242, 102, 79, 0.14), transparent 22rem),
+    linear-gradient(145deg, #211e19, #2a251e) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .shoes-dashboard-page :is(
+  .shoe-rotation-signal-highlight,
+  .shoe-rotation-signal-empty,
+  .shoe-rotation-signal-glass,
+  .shoe-rotation-signal-stat,
+  .shoe-rotation-signal-detail-item,
+  .shoe-rotation-signal-source
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .shoes-dashboard-page .shoe-rotation-signal-highlight {
+  background:
+    radial-gradient(circle at 90% 8%, rgba(242, 102, 79, 0.16), transparent 18rem),
+    rgba(255, 248, 238, 0.06) !important;
+}
+
+body.theme-midnight .shoes-dashboard-page :is(
+  .shoe-rotation-signal-copy h2,
+  .shoe-rotation-signal-highlight strong,
+  .shoe-rotation-signal-glass strong,
+  .shoe-rotation-signal-stat strong
+) {
+  color: var(--runner-minimal-ink) !important;
+}
+
+/* Races */
+body.theme-midnight .races-dashboard-page .race-center-hero {
+  border-color: var(--runner-minimal-line) !important;
+  background:
+    radial-gradient(circle at 84% 12%, rgba(242, 102, 79, 0.18), transparent 24rem),
+    linear-gradient(135deg, #211e19, #2f2820) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-hero-overlay {
+  background: linear-gradient(90deg, rgba(18, 16, 14, 0.98) 0%, rgba(18, 16, 14, 0.84) 55%, rgba(18, 16, 14, 0.42) 100%) !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-hero :is(h1, p) {
+  color: var(--runner-minimal-ink) !important;
+  text-shadow: none !important;
+}
+
+body.theme-midnight .races-dashboard-page :is(
+  .race-center-country-chip,
+  .race-center-secondary-btn
+) {
+  border-color: var(--runner-minimal-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-country-chip.is-active {
+  border-color: rgba(122, 168, 130, 0.3) !important;
+  background: rgba(122, 168, 130, 0.14) !important;
+  color: var(--runner-minimal-green-text) !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-pb-card {
+  border-color: var(--runner-minimal-line) !important;
+  background: var(--runner-minimal-surface) !important;
+  color: var(--runner-minimal-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-pb-card--featured {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(242, 102, 79, 0.16), transparent 18rem),
+    linear-gradient(145deg, #2a251e, #211e19) !important;
+}
+
+body.theme-midnight .races-dashboard-page .race-center-pb-card :is(strong, span, p) {
+  color: inherit !important;
+}
+
+/* Legacy authenticated settings shell */
+body.theme-midnight .dashboard-body .top-nav {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: rgba(23, 21, 18, 0.96) !important;
+  color: #fff8ee !important;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.theme-midnight .dashboard-body :is(
+  .top-nav-brand-shell,
+  .top-nav-shortcuts--primary
+) {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: rgba(255, 248, 238, 0.045) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body .top-nav :is(.logo, .top-nav-shortcut, strong, span) {
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .dashboard-body.garmin-import-page-shell .garmin-import-page,
+body.theme-midnight .dashboard-body.import-data-page-shell .import-data-page {
+  color: #fff8ee;
+}
+
+/* Run-detail navigation and map fallback */
+body.theme-midnight .run-detail-runner-page .runs-subnav-import {
+  border-color: rgba(255, 248, 238, 0.14) !important;
+  background: rgba(255, 248, 238, 0.07) !important;
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .run-detail-runner-page .leaflet-container {
+  background: #171512 !important;
+}
+
+body.theme-midnight .run-detail-runner-page .run-detail-splits-table tbody tr,
+body.theme-midnight .run-detail-runner-page .run-detail-splits-table tbody tr:nth-child(2n) {
+  background: rgba(255, 248, 238, 0.045) !important;
+}
+
+body.theme-midnight .run-detail-runner-page .run-detail-splits-table tbody tr:nth-child(2n) {
+  background: rgba(255, 248, 238, 0.075) !important;
+}
+
+body.theme-midnight .run-detail-runner-page .run-detail-splits-table tbody tr.is-highlight {
+  background: rgba(242, 102, 79, 0.1) !important;
+}
+
+/* Analysis detail pages */
+body.theme-midnight .runner-shell-page :is(
+  .runner-shell-icon-btn,
+  .runner-shell-avatar
+) {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: rgba(255, 248, 238, 0.07) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .runner-shell-page :is(
+  .runner-shell-icon-btn:hover,
+  .runner-shell-avatar:hover
+) {
+  border-color: rgba(242, 102, 79, 0.28) !important;
+  background: rgba(255, 248, 238, 0.11) !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page .runner-shell-canvas.analysis-insight-detail-canvas {
+  background:
+    radial-gradient(circle at 7% 4%, rgba(242, 102, 79, 0.1), transparent 28rem),
+    radial-gradient(circle at 92% 0%, rgba(122, 202, 222, 0.055), transparent 30rem),
+    #171512 !important;
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance .analysis-load-command-hero {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(242, 102, 79, 0.16), transparent 38%),
+    linear-gradient(135deg, #211e19, #2a251e) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1 {
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance .analysis-load-command-hero h1 strong {
+  color: #f2664f !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance :is(
+  .analysis-load-command-ratio-card,
+  .analysis-load-command-chart-card,
+  .analysis-load-command-metric-card,
+  .analysis-load-command-window-card,
+  .analysis-load-command-sample-row,
+  .analysis-load-command-archive-button
+) {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: #211e19 !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg line {
+  stroke: rgba(255, 248, 238, 0.11) !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg text {
+  fill: rgba(255, 248, 238, 0.58) !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-injury-risk .analysis-cinematic-hero {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background:
+    radial-gradient(circle at 14% 10%, rgba(242, 102, 79, 0.16), transparent 38%),
+    linear-gradient(135deg, #211e19, #2a251e) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-injury-risk .analysis-cinematic-hero :is(h1, p) {
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-injury-risk .analysis-cinematic-card {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: #211e19 !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-injury-risk .analysis-cinematic-card--coach {
+  border-color: rgba(242, 102, 79, 0.22) !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(242, 102, 79, 0.16), transparent 18rem),
+    linear-gradient(145deg, #2a251e, #3a2520) !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight {
+  --coach-card: #211e19;
+  --coach-card-strong: #2a261f;
+  --coach-ink: #fff8ee;
+  --coach-ink-soft: rgba(255, 248, 238, 0.64);
+  --coach-eyebrow: #ff9b89;
+  --coach-line: rgba(255, 248, 238, 0.1);
+  --coach-line-strong: rgba(242, 102, 79, 0.26);
+  --coach-coral: #f2664f;
+  --coach-coral-soft: rgba(242, 102, 79, 0.13);
+  --coach-coral-strong: #ff9b89;
+  --coach-shadow: none;
+  --coach-shadow-strong: none;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero {
+  border-color: var(--coach-line) !important;
+  background:
+    radial-gradient(circle at 90% 16%, rgba(242, 102, 79, 0.16), transparent 26rem),
+    linear-gradient(135deg, #211e19, #2a251e) !important;
+  color: var(--coach-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric {
+  border-color: var(--coach-line) !important;
+  background: var(--coach-card-strong) !important;
+  color: var(--coach-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight :is(
+  .analysis-coach-command-hero-metric.is-accent,
+  .analysis-coach-command-phase-chip.is-active
+) {
+  border-color: var(--coach-line-strong) !important;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(242, 102, 79, 0.14), transparent 14rem),
+    var(--coach-card-strong) !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-window-toggle span.is-active,
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-row,
+body.theme-midnight .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-secondary-plan {
+  border-color: var(--coach-line) !important;
+  background: var(--coach-card-strong) !important;
+  color: var(--coach-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .analysis-insight-detail-page.is-intensity .analysis-intensity-command-sample-visual span {
+  border: 1px solid rgba(255, 248, 238, 0.1) !important;
+  background: rgba(23, 21, 18, 0.82) !important;
+  color: #fff8ee !important;
+}
+
+/* Race detail map */
+body.theme-midnight .race-detail-page :is(
+  .race-detail-map-stage,
+  .race-detail-map-canvas,
+  .race-detail-map-leaflet
+) {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: #211e19 !important;
+  outline-color: rgba(255, 248, 238, 0.09) !important;
+}
+
+body.theme-midnight .race-detail-page .race-detail-map-leaflet .leaflet-tile-pane {
+  filter: grayscale(0.78) invert(0.88) hue-rotate(178deg) brightness(0.68) contrast(0.9) !important;
+}
+
+body.theme-midnight .race-detail-page .race-detail-map-leaflet .leaflet-control-zoom a {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: rgba(33, 30, 25, 0.94) !important;
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .race-detail-page .race-detail-map-leaflet .leaflet-control-attribution {
+  background: rgba(23, 21, 18, 0.9) !important;
+  color: rgba(255, 248, 238, 0.56) !important;
+}
+
+body.theme-midnight .race-detail-page .race-detail-map-leaflet .leaflet-control-attribution a {
+  color: #ff9b89 !important;
+}
+
+/* Loading states must not flash the light palette between dark routes. */
+body.theme-midnight :is(
+  .page-skeleton--runner,
+  .page-skeleton--admin
+) {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(242, 102, 79, 0.1), transparent 25rem),
+    linear-gradient(145deg, #171512, #211e19 54%, #181613) !important;
+}
+
+body.theme-midnight .page-skeleton__rail {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: rgba(23, 21, 18, 0.94) !important;
+  box-shadow: 18px 0 42px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.theme-midnight .page-skeleton__rail-item--active {
+  border-color: rgba(242, 102, 79, 0.2) !important;
+  background: rgba(255, 248, 238, 0.065) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .page-skeleton--heatmap-page,
+body.theme-midnight .page-skeleton__heatmap-map-shell {
+  background: #171512 !important;
+}
+
+body.theme-midnight .today-run-command-page .today-run-coaching-answer {
+  border-color: rgba(255, 248, 238, 0.13) !important;
+  background: #211e19 !important;
+  background-image: none !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .page-skeleton__heatmap-canvas {
+  background:
+    radial-gradient(circle at 45% 42%, rgba(122, 202, 222, 0.08), transparent 34%),
+    linear-gradient(140deg, #171512, #1c2422) !important;
+}
+
+body.theme-midnight :is(
+  .page-skeleton__heatmap-brand,
+  .page-skeleton__heatmap-search,
+  .page-skeleton__heatmap-actions > .page-skeleton__block,
+  .page-skeleton__heatmap-recenter,
+  .page-skeleton__heatmap-legend,
+  .page-skeleton__heatmap-utility-rail,
+  .page-skeleton__heatmap-sessions
+) {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: rgba(33, 30, 25, 0.88) !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.2) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-final-card--minimal .landing-cinematic-final-trust span {
+  border-color: rgba(255, 248, 238, 0.12) !important;
+  background: transparent !important;
+  color: var(--lc-ink-muted) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .run-detail-profile-minimal .run-detail-icon-btn,
+body.theme-midnight .run-detail-profile-minimal .run-detail-provider-pill {
+  border: 1px solid rgba(255, 248, 238, 0.11) !important;
+  background: rgba(255, 248, 238, 0.06) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .run-detail-map-background .leaflet-control-attribution {
+  background: rgba(23, 21, 18, 0.9) !important;
+  color: rgba(255, 248, 238, 0.56) !important;
+}
+
+body.theme-midnight .run-detail-map-background .leaflet-control-attribution a {
+  color: #ff9b89 !important;
+}
+
+/* Public landing page */
+body.theme-midnight #root .landing-page--liquid-glass {
+  --lc-bg: #171512;
+  --lc-surface-low: rgba(33, 30, 25, 0.9);
+  --lc-surface-mid: rgba(42, 38, 31, 0.94);
+  --lc-ink: #fff8ee;
+  --lc-ink-muted: rgba(255, 248, 238, 0.68);
+  --lc-ink-faint: rgba(255, 248, 238, 0.46);
+  --lc-rule: rgba(255, 248, 238, 0.11);
+  --lg-edge: rgba(255, 248, 238, 0.12);
+  --lg-shadow: rgba(0, 0, 0, 0.28);
+  --lg-cyan: rgba(122, 202, 222, 0.08);
+  --lg-coral: rgba(242, 102, 79, 0.14);
+  color: var(--lc-ink) !important;
+  background:
+    radial-gradient(circle at 6% 8%, var(--lg-cyan), transparent 28rem),
+    radial-gradient(circle at 92% 30%, var(--lg-coral), transparent 32rem),
+    #171512 !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-nav,
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-nav.is-scrolled {
+  border-color: var(--lc-rule) !important;
+  background: rgba(23, 21, 18, 0.9) !important;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.2) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-brand,
+  .landing-cinematic-links a,
+  .landing-cinematic-btn--ghost
+) {
+  color: var(--lc-ink) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-brand-glyph {
+  background: rgba(255, 248, 238, 0.07) !important;
+  box-shadow: inset 0 0 0 1px var(--lc-rule) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-hero--minimal,
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-hero--minimal::after {
+  background:
+    radial-gradient(circle at 76% 28%, rgba(242, 102, 79, 0.14), transparent 24rem),
+    radial-gradient(circle at 18% 18%, rgba(122, 202, 222, 0.08), transparent 22rem),
+    #171512 !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-hero--minimal::before {
+  background:
+    linear-gradient(115deg, rgba(255, 248, 238, 0.06), transparent 34%),
+    radial-gradient(circle at 72% 32%, rgba(255, 248, 238, 0.06), transparent 28%),
+    linear-gradient(130deg, rgba(122, 202, 222, 0.06), rgba(242, 102, 79, 0.08)) !important;
+  opacity: 0.58;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-hero--minimal :is(
+  .landing-cinematic-hero-title > span:not(.is-accent),
+  .landing-cinematic-hero-copy > p,
+  .landing-cinematic-trust,
+  .landing-cinematic-trust span
+) {
+  color: var(--lc-ink) !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-features,
+  .landing-cinematic-answers,
+  .landing-cinematic-formula,
+  .landing-cinematic-races,
+  .landing-cinematic-zones,
+  .landing-cinematic-compare,
+  .landing-cinematic-final
+) {
+  background: #171512 !important;
+  color: var(--lc-ink) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-feature-card,
+  .landing-cinematic-answer-card,
+  .landing-cinematic-paper,
+  .landing-cinematic-zone,
+  .landing-cinematic-race-list,
+  .landing-cinematic-map,
+  .landing-cinematic-compare-table,
+  .landing-cinematic-final-card--minimal
+) {
+  border-color: var(--lc-rule) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 238, 0.055), transparent 42%),
+    rgba(33, 30, 25, 0.9) !important;
+  color: var(--lc-ink) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-answer-card:hover {
+  border-color: rgba(242, 102, 79, 0.3) !important;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 238, 0.075), transparent 42%),
+    rgba(42, 38, 31, 0.96) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-section-head h2,
+  .landing-cinematic-answers-title,
+  .landing-cinematic-answer-card h3,
+  .landing-cinematic-formula-copy h2,
+  .landing-cinematic-race-row strong,
+  .landing-cinematic-zone h3,
+  .landing-cinematic-compare-row > span:first-child,
+  .landing-cinematic-compare-feature,
+  .landing-cinematic-final-copy h2
+) {
+  color: var(--lc-ink) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-section-head > p,
+  .landing-cinematic-answer-card > p,
+  .landing-cinematic-formula-copy > p,
+  .landing-cinematic-formula-list p,
+  .landing-cinematic-zone p,
+  .landing-cinematic-compare-feature small,
+  .landing-cinematic-final-copy > p,
+  .landing-cinematic-final-trust span
+) {
+  color: var(--lc-ink-muted) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-btn--ghost,
+  .landing-cinematic-btn--outline,
+  .landing-cinematic-final-card .landing-cinematic-btn--outline
+) {
+  border-color: var(--lc-rule) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--lc-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass :is(
+  .landing-cinematic-btn--ghost:hover,
+  .landing-cinematic-btn--outline:hover
+) {
+  border-color: rgba(242, 102, 79, 0.32) !important;
+  background: rgba(255, 248, 238, 0.09) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-footer {
+  border-color: var(--lc-rule) !important;
+  background: #12100e !important;
+  color: var(--lc-ink) !important;
+  box-shadow: inset 0 1px 0 var(--lc-rule) !important;
+}
+
+body.theme-midnight #root .landing-page--liquid-glass .landing-cinematic-footer :is(
+  p,
+  span,
+  a
+) {
+  color: var(--lc-ink-muted) !important;
+}
+
+/* Public authentication */
+body.theme-midnight #root .auth-page--liquid-glass {
+  --auth-dot-color: 255, 248, 238;
+  --auth-dot-opacity: 0.1;
+  color: #fff8ee !important;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(242, 102, 79, 0.13), transparent 27rem),
+    radial-gradient(circle at 88% 88%, rgba(122, 202, 222, 0.07), transparent 32rem),
+    linear-gradient(135deg, #12100e, #171512 48%, #211e19) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass::before {
+  background:
+    linear-gradient(124deg, rgba(255, 248, 238, 0.035), transparent 34% 67%, rgba(242, 102, 79, 0.05)),
+    radial-gradient(circle at 78% 15%, rgba(255, 248, 238, 0.035), transparent 20rem) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass.auth-page--admin .auth-flow-card--admin {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: rgba(33, 30, 25, 0.86) !important;
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.26) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-header h3,
+body.theme-midnight #root .auth-page--liquid-glass :is(
+  .auth-flow-hero,
+  .auth-flow-stats strong,
+  .auth-flow-slide-detail strong
+) {
+  color: #fff8ee !important;
+  text-shadow: none !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass :is(
+  .auth-flow-text,
+  .auth-flow-stats span,
+  .auth-flow-slide-detail small,
+  .auth-flow-header p,
+  .auth-flow-field-note,
+  .auth-flow-status-note,
+  .auth-flow-legal,
+  .signup-link--auth,
+  .forgot-password--auth
+) {
+  color: rgba(255, 248, 238, 0.62) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-slide-detail {
+  border-color: rgba(255, 248, 238, 0.12) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass :is(
+  .auth-flow-pulse,
+  .auth-flow-kicker,
+  .form-group--auth label,
+  .label-row--auth label
+) {
+  color: #ff9b89 !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-kicker {
+  border-color: rgba(242, 102, 79, 0.2) !important;
+  background: rgba(242, 102, 79, 0.09) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .form-group--auth input {
+  border-color: rgba(255, 248, 238, 0.12) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: #fff8ee !important;
+  caret-color: #f2664f;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .form-group--auth input::placeholder {
+  color: rgba(255, 248, 238, 0.38) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .form-group--auth input:focus {
+  border-color: rgba(242, 102, 79, 0.68) !important;
+  background: rgba(255, 248, 238, 0.075) !important;
+  box-shadow: 0 0 0 3px rgba(242, 102, 79, 0.12) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn {
+  border-color: rgba(255, 248, 238, 0.12) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: #fff8ee !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn:hover:not(:disabled) {
+  border-color: rgba(242, 102, 79, 0.32) !important;
+  background: rgba(255, 248, 238, 0.09) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn--submit,
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn--submit:hover:not(:disabled) {
+  border-color: rgba(242, 102, 79, 0.32) !important;
+  background: linear-gradient(106deg, #a0392a, #c84e3b 48%, #f27664) !important;
+  color: #fffaf6 !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn--strava {
+  border-color: rgba(242, 102, 79, 0.2) !important;
+  background: rgba(242, 102, 79, 0.11) !important;
+  color: #ffb4a7 !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn--strava.auth-flow-btn--strava-official,
+body.theme-midnight #root .auth-page--liquid-glass .auth-flow-btn--strava.auth-flow-btn--strava-official:hover:not(:disabled) {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass :is(
+  .forgot-password--auth:hover,
+  .signup-link--auth a,
+  .auth-flow-legal a
+) {
+  color: #ff9b89 !important;
+}
+
+body.theme-midnight #root .auth-page--liquid-glass .error-alert {
+  border-color: rgba(242, 102, 79, 0.24) !important;
+  background: rgba(242, 102, 79, 0.1) !important;
+  color: #ffb4a7 !important;
+}
+
+/* Public legal documents */
+body.theme-midnight #root .legal-page.auth-page--liquid-glass {
+  --lp-ink: #fff8ee;
+  --lp-ink-muted: rgba(255, 248, 238, 0.66);
+  --lp-ink-faint: rgba(255, 248, 238, 0.44);
+  --lp-paper-clean: #211e19;
+  --lp-coral: #f2664f;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(242, 102, 79, 0.1), transparent 28rem),
+    #171512 !important;
+  color: var(--lp-ink) !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass .legal-page-shell {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass .legal-page-content {
+  border-color: rgba(255, 248, 238, 0.11) !important;
+  background: #211e19 !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22) !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass :is(
+  .legal-page-header,
+  .legal-page-hero--editorial,
+  .legal-page-sections--editorial,
+  .privacy-signal-strip,
+  .privacy-hero-panel
+) {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+  background: rgba(255, 248, 238, 0.025) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass :is(
+  .legal-page-back,
+  .legal-page-hero h1,
+  .legal-page-row-copy h2,
+  .privacy-signal strong
+) {
+  color: var(--lp-ink) !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass :is(
+  .legal-page-hero p,
+  .legal-page-row-copy p,
+  .privacy-signal p,
+  .legal-page-footer,
+  .legal-page-footer a
+) {
+  color: var(--lp-ink-muted) !important;
+}
+
+body.theme-midnight #root .legal-page.auth-page--liquid-glass :is(
+  .legal-page-row,
+  .legal-page-footer
+) {
+  border-color: rgba(255, 248, 238, 0.1) !important;
+}
+
+body.theme-midnight #root :is(
+  .landing-page--liquid-glass,
+  .auth-page--liquid-glass
+) :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #f2664f !important;
+  outline-offset: 3px;
+}
+
+/* Local SVG icons stay legible when the remote symbol font is unavailable. */
+.profile-dashboard-page .hd-metric-icon > svg {
+  width: 17px;
+  height: 17px;
+}
+
+.profile-dashboard-page .runner-dashboard-empty-icon > svg {
+  width: 26px;
+  height: 26px;
+}
+
+.profile-dashboard-page .runner-dashboard-empty-cta > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+/* Admin console: use the same warm charcoal hierarchy as Profile. */
+body.theme-midnight .dashboard-body.admin-command-page {
+  --admin-profile-paper: #171512;
+  --admin-profile-card: #211e19;
+  --admin-profile-card-strong: #2a261f;
+  --admin-profile-ink: #fff8ee;
+  --admin-profile-muted: rgba(255, 248, 238, 0.66);
+  --admin-profile-line: rgba(255, 248, 238, 0.13);
+  --admin-surface-dark: #211e19;
+  --admin-card-bg: #2a261f;
+  --admin-card-bg-hover: #302b24;
+  --admin-text-primary: #fff8ee;
+  --admin-text-secondary: rgba(255, 248, 238, 0.66);
+  --admin-text-muted: rgba(255, 248, 238, 0.46);
+  --admin-border-subtle: rgba(255, 248, 238, 0.13);
+  --admin-accent-glow: rgba(242, 102, 79, 0.14);
+  --hermes-glass-paper: #211e19;
+  --hermes-glass-paper-strong: #2a261f;
+  --hermes-glass-highlight: rgba(255, 248, 238, 0.035);
+  --hermes-glass-line: rgba(255, 248, 238, 0.13);
+  --hermes-glass-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+  background: #171512 !important;
+  color: #fff8ee !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page::before {
+  opacity: 0.28;
+  background:
+    radial-gradient(circle at 8% 5%, rgba(242, 102, 79, 0.1), transparent 27rem),
+    repeating-linear-gradient(90deg, rgba(255, 248, 238, 0.018) 0 1px, transparent 1px 38px) !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  .admin-command-sidebar,
+  .admin-command-topbar
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: rgba(23, 21, 18, 0.96) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  .admin-overview-hud,
+  .admin-users-command-hero,
+  .admin-users-command-console,
+  .admin-users-roster-board,
+  .admin-track-hub-hero,
+  .admin-coursemap-workbench,
+  .admin-review-workspace,
+  .admin-track-hub-stage__header,
+  .admin-track-hub-map-stage,
+  .admin-shoe-stitch-hero,
+  .admin-shoe-stitch-query-shell,
+  .admin-shoe-stitch-stage,
+  .admin-shoe-workbench,
+  .admin-jobs-command-deck__hero,
+  .admin-jobs-command-deck__spotlight,
+  .admin-jobs-command-deck__workspace,
+  .admin-jobs-terminal,
+  .admin-jobs-detail,
+  .admin-audit-terminal__hero,
+  .admin-audit-terminal__table-shell,
+  .admin-settings-studio__hero,
+  .admin-settings-studio__grid,
+  .section-card
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: #211e19 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  .ops-metric-card,
+  .ops-action-card,
+  .ops-card,
+  .admin-users-command-hero__story-card,
+  .admin-users-command-kpi,
+  .admin-users-command-bulk,
+  .admin-track-hub-hero__stat,
+  .admin-track-hub-sidebar__panel,
+  .admin-track-hub-metric-card,
+  .admin-track-hub-density-card,
+  .admin-coursemap-rail__item,
+  .admin-jobs-command-deck__summary-card,
+  .admin-jobs-command-deck__spotlight-stats article,
+  .admin-shoe-stitch-health-card,
+  .admin-audit-terminal__metric-card,
+  .admin-audit-terminal__cta-card,
+  .admin-settings-studio__panel
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: #2a261f !important;
+  background-image: none !important;
+  color: var(--admin-profile-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  .admin-users-command-hero__meta span,
+  .admin-track-hub-hero__meta span,
+  .admin-jobs-command-deck__hero-meta span,
+  .admin-audit-terminal__hero-meta span,
+  .admin-track-hub-stage__badge,
+  .admin-track-hub-sidebar__fold-toggle,
+  .admin-audit-terminal__table-pills span,
+  .admin-jobs-command-deck__hero-badge,
+  .admin-audit-terminal__hero-badge
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: rgba(255, 248, 238, 0.055) !important;
+  color: var(--admin-profile-muted) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  input,
+  select,
+  textarea,
+  .admin-users-command-toolbar,
+  .admin-users-command-console__bulk,
+  .admin-users-roster-table,
+  .admin-audit-terminal__table-wrap
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: rgba(255, 248, 238, 0.045) !important;
+  color: var(--admin-profile-ink) !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(th, td) {
+  border-color: rgba(255, 248, 238, 0.09) !important;
+  background: transparent !important;
+  color: var(--admin-profile-muted) !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(h1, h2, h3, h4, strong) {
+  color: var(--admin-profile-ink);
+}
+
+body.theme-midnight .dashboard-body.admin-command-page svg.material-symbols-outlined {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page :is(
+  .admin-coursemap-rail__preview,
+  .admin-review-preview--map
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: #211e19 !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page .admin-review-preview__map .leaflet-pane[class*="admin-review-preview__tile-pane"],
+body.theme-midnight .dashboard-body.admin-command-page .admin-review-preview__map img.leaflet-tile {
+  filter: grayscale(0.78) invert(0.88) hue-rotate(178deg) brightness(0.68) contrast(0.9) !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page .admin-review-preview--map .leaflet-control-attribution {
+  background: rgba(23, 21, 18, 0.9) !important;
+  color: var(--admin-profile-muted) !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page .admin-review-preview--map .leaflet-control-attribution a {
+  color: #ff9b87 !important;
+}
+
+body.theme-midnight .dashboard-body.admin-command-page .admin-command-route--courseMaps :is(
+  .admin-coursemap-workbench__rail,
+  .admin-coursemap-workbench__stage,
+  .admin-track-hub-map-stage__scan,
+  .admin-track-hub-map-panel,
+  .admin-track-hub-map-panel > article,
+  .admin-track-hub-map-panel__meta > article,
+  .admin-track-hub-map-stage__footer,
+  .admin-track-hub-footer-signal-card,
+  .admin-coursemap-publish-canvas__decision-dock,
+  .admin-coursemap-evidence-card,
+  .admin-coursemap-scan-timeline
+) {
+  border-color: var(--admin-profile-line) !important;
+  background: #2a261f !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body.theme-midnight :is(
+  .runner-shell-page,
+  .dashboard-body
+) :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #f2664f !important;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  body.theme-midnight .dashboard-body .top-nav {
+    background: #171512 !important;
+  }
+
+  body.theme-midnight .dashboard-body .top-nav-shortcuts--primary {
+    background: transparent !important;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar.ops-sidebar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    width: 100% !important;
+    min-height: 0;
+    padding: 10px 12px !important;
+    overflow: hidden;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar::before,
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar::after {
+    display: none;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__brand {
+    grid-column: 1;
+    min-width: 0;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__nav.ops-sidebar-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 6px;
+    padding: 2px 0 5px !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__nav.ops-sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__nav-item {
+    width: auto;
+    min-width: max-content;
+    min-height: 42px;
+    padding: 8px 11px;
+    gap: 7px;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__nav-copy > span,
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__nav-index {
+    display: none;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__footer.ops-sidebar-footer {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    gap: 6px;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__footer .ops-sidebar-link {
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-sidebar__footer .ops-sidebar-link > span {
+    display: none;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-topbar.ops-topbar {
+    min-height: 64px;
+    padding: 10px 14px !important;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-topbar__controls {
+    width: auto;
+    margin-inline-start: auto;
+  }
+
+  body.theme-midnight .dashboard-body.admin-command-page .admin-command-topbar__nav {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.theme-midnight :is(.runner-shell-page, .dashboard-body) *,
+  body.theme-midnight :is(.runner-shell-page, .dashboard-body) *::before,
+  body.theme-midnight :is(.runner-shell-page, .dashboard-body) *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

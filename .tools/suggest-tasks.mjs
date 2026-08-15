@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { buildActiveStyleBundle } from "./generate-legacy-style-bundle.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
@@ -688,7 +689,7 @@ function discoverLocalConsoleErrors() {
 }
 
 function checkMobileResponsiveness() {
-  const cssContent = readFile("frontend/src/styles/style.css");
+  const cssContent = buildActiveStyleBundle().css;
   if (!cssContent) return [];
 
   const SHELL_CLASSES = new Set([
@@ -717,7 +718,7 @@ function checkMobileResponsiveness() {
     );
     if (!hasResponsiveRule) {
       const mainClass = screenClasses[0];
-      issues.push(screenIssue(screen, "mobile_responsive", `${screen.screen} may need mobile breakpoint review (no @media rules found for its main container .${mainClass})`, [screen.file, "frontend/src/styles/style.css"], 2));
+      issues.push(screenIssue(screen, "mobile_responsive", `${screen.screen} may need mobile breakpoint review (no @media rules found for its main container .${mainClass})`, [screen.file, "frontend/src/index.css"], 2));
     }
   }
   return issues;

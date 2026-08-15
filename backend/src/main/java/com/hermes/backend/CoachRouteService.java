@@ -185,7 +185,8 @@ public class CoachRouteService {
                 targetDistanceKm,
                 representative.distanceKm(),
                 cluster.candidates().size(),
-                representative.preview()
+                representative.preview(),
+                buildRouteWaypoints(representative.samples())
         );
     }
 
@@ -236,6 +237,25 @@ public class CoachRouteService {
             sumLongitude += sample.longitude();
         }
         return new RouteCentroid(sumLatitude / samples.size(), sumLongitude / samples.size());
+    }
+
+    private List<CoachRouteWaypointDto> buildRouteWaypoints(List<RoutePointSample> samples) {
+        if (samples == null || samples.size() < 2) {
+            return List.of();
+        }
+        int stride = Math.max(1, samples.size() / ROUTE_PREVIEW_POINT_LIMIT);
+        List<CoachRouteWaypointDto> waypoints = new ArrayList<>();
+        for (int index = 0; index < samples.size(); index += stride) {
+            RoutePointSample sample = samples.get(index);
+            waypoints.add(new CoachRouteWaypointDto(sample.latitude(), sample.longitude()));
+        }
+
+        RoutePointSample lastSample = samples.get(samples.size() - 1);
+        CoachRouteWaypointDto lastWaypoint = new CoachRouteWaypointDto(lastSample.latitude(), lastSample.longitude());
+        if (waypoints.isEmpty() || !sameWaypoint(waypoints.get(waypoints.size() - 1), lastWaypoint)) {
+            waypoints.add(lastWaypoint);
+        }
+        return waypoints;
     }
 
     private CoachRoutePreviewDto buildRoutePreview(List<RoutePointSample> samples) {
@@ -309,6 +329,10 @@ public class CoachRouteService {
 
     private boolean samePreviewPoint(RoutePreviewPoint left, RoutePreviewPoint right) {
         return Math.abs(left.x() - right.x()) < 0.001 && Math.abs(left.y() - right.y()) < 0.001;
+    }
+
+    private boolean sameWaypoint(CoachRouteWaypointDto left, CoachRouteWaypointDto right) {
+        return Double.compare(left.lat(), right.lat()) == 0 && Double.compare(left.lng(), right.lng()) == 0;
     }
 
     private String formatPreviewCoordinate(double value) {

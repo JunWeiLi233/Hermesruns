@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import com.hermes.backend.rewards.DigitalCosmeticsController;
+import com.hermes.backend.rewards.DigitalCosmeticsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

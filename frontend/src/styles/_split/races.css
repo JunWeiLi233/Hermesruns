@@ -475,13 +475,13 @@
 .race-center-side-link:hover,
 .race-center-inline-link:hover,
 .race-center-inline-action:hover {
-    color: #f07561;
+    color: var(--accent-coral-strong, #f07561);
 }
 
 .race-center-topnav-link.is-active,
 .race-center-side-link.is-active,
 .race-center-mobile-link.is-active {
-    color: #f07561;
+    color: var(--accent-coral-strong, #f07561);
 }
 
 .race-center-icon-btn {
@@ -555,7 +555,7 @@
 
 .race-center-side-link.is-active {
     background: rgba(240, 117, 97, 0.08);
-    box-shadow: inset -3px 0 0 #f07561;
+    box-shadow: inset -3px 0 0 var(--accent-coral-strong, #f07561);
 }
 
 .race-center-main {
@@ -681,7 +681,7 @@
 
 .race-center-primary-btn {
     border: 0;
-    background: #f07561;
+    background: var(--accent-coral-strong, #f07561);
     color: #55160a;
 }
 
@@ -2373,7 +2373,7 @@
 
 .race-detail-map-btn,
 .race-detail-playbook-btn {
-    background: #f07561;
+    background: var(--accent-coral-strong, #f07561);
     color: #5c1408;
 }
 

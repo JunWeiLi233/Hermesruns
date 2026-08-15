@@ -587,6 +587,8 @@ export default {
     "current_vdot_label": "当前 VO2max：",
     "vdot_trend_insight_title": "你的体能正在变化",
     "vdot_trend_insight_copy": "对比你最近 30 天和之前 30 天的平均表现。往上走说明你的引擎越来越强，接下来可以安全地加量。",
+    "vdot_trend_empty_title": "趋势需要更多跑步记录",
+    "vdot_trend_empty_copy": "最近 30 天和此前 30 天都需要有符合条件的跑步记录，才能生成你的 VDOT 趋势。",
     "unit_km_button": "公里",
     "unit_mile_button": "英里",
     "unit_distance_km": "总公里数",

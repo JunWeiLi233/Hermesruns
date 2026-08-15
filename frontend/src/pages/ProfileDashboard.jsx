@@ -75,8 +75,10 @@ function writeJsonStorage(key, value) {
   if (!key || typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Ignore storage failures so the dashboard still loads.
+  } catch (error) {
+    // A silent quota failure here used to drop PR-celebration state and make
+    // the modal reappear on every visit with no trace of why.
+    console.warn('[hermes] localStorage write failed:', key, error);
   }
 }
 function withProfileDashboardTimeout(promise) {
@@ -326,48 +328,58 @@ function formatRunDate(run, lang) {
   });
 }
 
-function buildRecordSnapshot(personalRecords, runs) {
+export function buildRecordSnapshot(personalRecords, runs) {
   const latestSeenActivityId = runs.reduce((max, run) => Math.max(max, Number(run?.id || 0)), 0);
+  const records = Object.fromEntries(
+    Object.entries(personalRecords?.records || {}).map(([key, record]) => [key, {
+      key,
+      elapsedSeconds: Number(record?.elapsedSeconds || 0),
+      paceSecondsPerKm: Number(record?.paceSecondsPerKm || 0),
+      recordedAt: record?.recordedAt || null,
+      activityId: Number(record?.activityId || 0),
+    }]),
+  );
+  const longestRun = personalRecords?.longestRun ? {
+    primaryValue: Number(personalRecords.longestRun.primaryValue || 0),
+    activityId: Number(personalRecords.longestRun.activityId || 0),
+  } : null;
+  const fastestPace = personalRecords?.fastestPace ? {
+    primaryValue: Number(personalRecords.fastestPace.primaryValue || 0),
+    activityId: Number(personalRecords.fastestPace.activityId || 0),
+  } : null;
+  const mostElevation = personalRecords?.mostElevation ? {
+    primaryValue: Number(personalRecords.mostElevation.primaryValue || 0),
+    activityId: Number(personalRecords.mostElevation.activityId || 0),
+  } : null;
+
+  // The run feed is ordered by run date and capped, so imported history (old
+  // dates, brand-new activity ids) never appears in it. Fold record-holder ids
+  // into the high-water mark or the "just set this record" gate re-arms on
+  // every visit for those records.
+  const recordHolderIds = [
+    ...Object.values(records).map((record) => record.activityId),
+    longestRun?.activityId || 0,
+    fastestPace?.activityId || 0,
+    mostElevation?.activityId || 0,
+  ];
   return {
     version: PR_SNAPSHOT_VERSION,
-    latestSeenActivityId,
-    records: Object.fromEntries(
-      Object.entries(personalRecords?.records || {}).map(([key, record]) => [key, {
-        key,
-        elapsedSeconds: Number(record?.elapsedSeconds || 0),
-        paceSecondsPerKm: Number(record?.paceSecondsPerKm || 0),
-        recordedAt: record?.recordedAt || null,
-        activityId: Number(record?.activityId || 0),
-      }]),
-    ),
-    longestRun: personalRecords?.longestRun ? {
-      primaryValue: Number(personalRecords.longestRun.primaryValue || 0),
-      activityId: Number(personalRecords.longestRun.activityId || 0),
-    } : null,
-    fastestPace: personalRecords?.fastestPace ? {
-      primaryValue: Number(personalRecords.fastestPace.primaryValue || 0),
-      activityId: Number(personalRecords.fastestPace.activityId || 0),
-    } : null,
-    mostElevation: personalRecords?.mostElevation ? {
-      primaryValue: Number(personalRecords.mostElevation.primaryValue || 0),
-      activityId: Number(personalRecords.mostElevation.activityId || 0),
-    } : null,
-    acknowledgedBreakthroughs: [],
+    latestSeenActivityId: recordHolderIds.reduce((max, id) => Math.max(max, id), latestSeenActivityId),
+    records,
+    longestRun,
+    fastestPace,
+    mostElevation,
+    celebratedRecords: {},
   };
 }
 
-function getBreakthroughSignature(entry) {
-  const activityId = Number(entry?.record?.activityId || 0);
-  const recordedAt = entry?.record?.recordedAt || 'unknown-date';
-  const primaryValue = Number(
-    entry?.record?.elapsedSeconds
-      || entry?.record?.primaryValue
-      || 0,
-  );
-  return [entry?.type || 'unknown', entry?.key || 'summary', activityId, recordedAt, primaryValue].join(':');
+// One celebration slot per distance key plus the three summary records; each
+// slot is celebrated at most once per record-holding activity.
+function celebrationKeyFor(entry) {
+  return entry?.type === 'distance' ? `distance:${entry?.key}` : String(entry?.type || '');
 }
 
-function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, runs) {
+export function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, runs) {
   if (!previousSnapshot || !personalRecords || !Array.isArray(runs) || runs.length === 0) {
     return [];
   }
@@ -377,9 +389,25 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
     return [];
   }
 
+  const celebrated = previousSnapshot.celebratedRecords || {};
+  const summarySlotField = { longest: 'longestRun', pace: 'fastestPace', elevation: 'mostElevation' };
+  const isAlreadyCelebrated = (entry) => {
+    const activityId = Number(entry?.record?.activityId || 0);
+    if (activityId <= 0) return false;
+    // Snapshots written before celebratedRecords existed only carry the record
+    // maps themselves; seed from those so an upgrade never re-celebrates
+    // records the runner has already seen.
+    const celebratedId = Number(
+      celebrated[celebrationKeyFor(entry)]
+        ?? previousSnapshot.records?.[entry?.key]?.activityId
+        ?? previousSnapshot[summarySlotField[entry?.type]]?.activityId
+        ?? 0,
+    );
+    return celebratedId === activityId;
+  };
+
   const breakthroughs = [];
   const currentRecords = personalRecords.records || {};
-  const acknowledged = new Set(previousSnapshot.acknowledgedBreakthroughs || []);
 
   Object.entries(currentRecords).forEach(([key, record]) => {
     const activityId = Number(record?.activityId || 0);
@@ -394,7 +422,7 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
         key,
         record,
       };
-      if (!acknowledged.has(getBreakthroughSignature(entry))) {
+      if (!isAlreadyCelebrated(entry)) {
         breakthroughs.push(entry);
       }
     }
@@ -417,13 +445,24 @@ function collectPersonalRecordBreakthroughs(previousSnapshot, personalRecords, r
         type,
         record: current,
       };
-      if (!acknowledged.has(getBreakthroughSignature(entry))) {
+      if (!isAlreadyCelebrated(entry)) {
         breakthroughs.push(entry);
       }
     }
   });
 
   return breakthroughs;
+}
+
+export function buildAcknowledgedSnapshot(previousSnapshot, personalRecords, runs, breakthroughs) {
+  const nextSnapshot = buildRecordSnapshot(personalRecords, runs);
+  const celebratedRecords = { ...(previousSnapshot?.celebratedRecords || {}) };
+  breakthroughs.forEach((entry) => {
+    const activityId = Number(entry?.record?.activityId || 0);
+    if (activityId > 0) celebratedRecords[celebrationKeyFor(entry)] = activityId;
+  });
+  nextSnapshot.celebratedRecords = celebratedRecords;
+  return nextSnapshot;
 }
 
 function isRecord(value) {
@@ -646,11 +685,10 @@ export default function ProfileDashboard() {
             const storageKey = getPrSnapshotStorageKey(profileData.email);
             const previousSnapshot = readJsonStorage(storageKey);
             const breakthroughs = collectPersonalRecordBreakthroughs(previousSnapshot, personalRecordsData, list);
-            const nextSnapshot = buildRecordSnapshot(personalRecordsData, list);
-            const acknowledgedBreakthroughs = new Set(previousSnapshot?.acknowledgedBreakthroughs || []);
-            breakthroughs.forEach((entry) => acknowledgedBreakthroughs.add(getBreakthroughSignature(entry)));
-            nextSnapshot.acknowledgedBreakthroughs = Array.from(acknowledgedBreakthroughs);
-            writeJsonStorage(storageKey, nextSnapshot);
+            writeJsonStorage(
+              storageKey,
+              buildAcknowledgedSnapshot(previousSnapshot, personalRecordsData, list, breakthroughs),
+            );
             if (breakthroughs.length > 0) {
               setPrCelebration({
                 count: breakthroughs.length,
@@ -949,7 +987,7 @@ export default function ProfileDashboard() {
     { key: 'analysis', label: t('profile.dashboard_nav_analysis'), route: '/analysis', icon: 'insights' },
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
-    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'thermostat' },
+    { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'weather' },
     { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
@@ -1136,7 +1174,9 @@ export default function ProfileDashboard() {
             {loadState === 'ready' && runs.length === 0 && (
               <section className="runner-dashboard-empty-state" aria-labelledby="profile-empty-title">
                 <div className="runner-dashboard-empty-hero">
-                  <span className="material-symbols-outlined runner-dashboard-empty-icon" aria-hidden="true">directions_run</span>
+                  <span className="runner-dashboard-empty-icon" aria-hidden="true">
+                    <AppIcon name="directions_run" />
+                  </span>
                   <h2 id="profile-empty-title">{t('profile.dashboard_empty_title')}</h2>
                   <p>{t('profile.dashboard_empty_copy')}</p>
                 </div>
@@ -1157,11 +1197,11 @@ export default function ProfileDashboard() {
                 <p className="runner-dashboard-empty-trust">{t('profile.dashboard_empty_trust')}</p>
                 <div className="runner-dashboard-empty-actions">
                   <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--primary" onClick={() => navigate('/profile?linking=strava')}>
-                    <span className="material-symbols-outlined" aria-hidden="true">sync</span>
+                    <AppIcon name="sync" aria-hidden="true" />
                     {t('profile.dashboard_empty_cta_strava')}
                   </button>
                   <button type="button" className="runner-dashboard-empty-cta runner-dashboard-empty-cta--secondary" onClick={() => navigate('/settings/import-data')}>
-                    <span className="material-symbols-outlined" aria-hidden="true">upload_file</span>
+                    <AppIcon name="upload_file" aria-hidden="true" />
                     {t('profile.dashboard_empty_cta_files')}
                   </button>
                 </div>
@@ -1210,7 +1250,7 @@ export default function ProfileDashboard() {
                   <article className="hd-metric-card">
                     <div className="hd-metric-head">
                       <span className="hd-metric-icon">
-                        <span className="material-symbols-outlined">speed</span>
+                        <AppIcon name="speed" />
                       </span>
                       <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_vdot')}</span>
                     </div>
@@ -1235,7 +1275,7 @@ export default function ProfileDashboard() {
                   <article className="hd-metric-card">
                     <div className="hd-metric-head">
                       <span className="hd-metric-icon">
-                        <span className="material-symbols-outlined">show_chart</span>
+                        <AppIcon name="show_chart" />
                       </span>
                       <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_weekly_load')}</span>
                     </div>
@@ -1251,7 +1291,7 @@ export default function ProfileDashboard() {
                   <article className="hd-metric-card">
                     <div className="hd-metric-head">
                       <span className="hd-metric-icon">
-                        <span className="material-symbols-outlined">flag</span>
+                        <AppIcon name="flag" />
                       </span>
                       <span className="hd-metric-kicker">{t('profile.dashboard_redesign.metrics_next_race')}</span>
                     </div>
