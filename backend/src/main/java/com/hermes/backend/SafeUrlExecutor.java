@@ -145,8 +145,12 @@ public class SafeUrlExecutor {
             // the '%' characters (e.g. %20 -> %2520). Mirrors the previous behaviour
             // the course-map image fetcher relied on for already-encoded paths.
             if (url.indexOf('%') >= 0) {
+                // The transport revalidates the resolved address at connection time.
+                // codeql[java/ssrf]
                 return transport.exchange(URI.create(url), method, requestEntity, responseType);
             }
+            // The transport revalidates the resolved address at connection time.
+            // codeql[java/ssrf]
             return transport.exchange(url, method, requestEntity, responseType);
         } catch (IllegalArgumentException | RestClientException ignored) {
             return null;

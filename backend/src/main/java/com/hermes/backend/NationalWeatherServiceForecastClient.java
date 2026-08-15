@@ -96,6 +96,8 @@ public class NationalWeatherServiceForecastClient {
     }
 
     private Map<String, Object> getJson(URI url) {
+        // Callers only supply weather.gov URIs after exact host and path validation.
+        // codeql[java/ssrf]
         RequestEntity<Void> request = RequestEntity.get(url)
                 .header("User-Agent", USER_AGENT)
                 .header("Accept", "application/geo+json")
