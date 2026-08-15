@@ -141,7 +141,13 @@ public class ReadinessService {
         return new MultiSourceReadinessSnapshot(
                 readiness,
                 new MetricSources(sourceName(sleep), sourceName(hrv), sourceName(wellness), sourceName(stress)),
-                hasSelectedDailyData(sleep, hrv, stress, wellness) || hasFallbackDailyReadinessData(fallback)
+                hasSelectedDailyData(sleep, hrv, stress, wellness) || hasFallbackDailyReadinessData(fallback),
+                new MetricAvailability(
+                        sleep.value() != null,
+                        hrv.value() != null,
+                        wellness.value() != null,
+                        stress.value() != null
+                )
         );
     }
 
@@ -370,9 +376,32 @@ public class ReadinessService {
 
     public record MetricSources(String sleep, String hrv, String restingHeartRate, String stress) {}
 
-    public record MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources, boolean hasSourceData) {
+    public record MetricAvailability(boolean sleep, boolean hrv, boolean restingHeartRate, boolean stress) {
+        public boolean any() {
+            return sleep || hrv || restingHeartRate || stress;
+        }
+
+        public static MetricAvailability all() {
+            return new MetricAvailability(true, true, true, true);
+        }
+
+        public static MetricAvailability none() {
+            return new MetricAvailability(false, false, false, false);
+        }
+    }
+
+    public record MultiSourceReadinessSnapshot(
+            ReadinessResult readiness,
+            MetricSources sources,
+            boolean hasSourceData,
+            MetricAvailability availability
+    ) {
         public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources) {
-            this(readiness, sources, true);
+            this(readiness, sources, true, MetricAvailability.all());
+        }
+
+        public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources, boolean hasSourceData) {
+            this(readiness, sources, hasSourceData, hasSourceData ? MetricAvailability.all() : MetricAvailability.none());
         }
     }
 

@@ -1,4 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Dayan logo">
-  <rect width="120" height="120" rx="18" fill="#6f1d1b"/>
-  <path fill="#ffffff" d="M24 82 55 38h34L68 57h27L50 89l10-19H24Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" role="img" aria-label="Big Catfish logo">
+  <g fill="#343d47">
+    <path fill-rule="evenodd" d="M38 51c0-20 17-36 38-36h38l-10 17H77c-9 0-17 5-21 13h34c7 0 13-3 17-8l8-11h20l-14 21c-7 11-20 18-34 18H53c-8 0-15-6-15-14Zm20 0h29c7 0 13-3 17-8l-13 5H59c-2 0-3 1-3 2 0 1 1 1 2 1Z"/>
+    <path d="M31 33c10-1 19 2 27 9l-10 14c-6-6-13-9-22-8Z"/>
+  </g>
+  <text x="80" y="101" text-anchor="middle" fill="#343d47" font-family="'Microsoft YaHei','PingFang SC',Arial,sans-serif" font-size="27" font-weight="900" letter-spacing="4">大鲶</text>
 </svg>

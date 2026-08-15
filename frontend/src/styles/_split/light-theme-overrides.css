@@ -4061,6 +4061,10 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-meta span
   color: var(--text-muted);
 }
 
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-signal-row em {
+  color: color-mix(in srgb, var(--text-muted) 72%, transparent);
+}
+
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-insight span {
   border-color: rgba(17, 24, 39, 0.12);
   background: rgba(255, 255, 255, 0.72);
@@ -4108,6 +4112,14 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-row {
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-gear-bar,
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-signal-bar {
   background: rgba(171, 173, 174, 0.24);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-signal-bar.is-unsupported {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(171, 173, 174, 0.26) 0 8px,
+    rgba(171, 173, 174, 0.08) 8px 13px
+  );
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-secondary-btn {
@@ -4472,6 +4484,11 @@ body.theme-light .recent-runs-thumb {
     radial-gradient(circle at 18% 18%, rgba(252, 126, 105, 0.16), transparent 34%),
     radial-gradient(circle at 82% 78%, rgba(160, 57, 42, 0.06), transparent 30%),
     linear-gradient(180deg, #f5f6f7 0%, #eff1f2 100%);
+}
+
+body.theme-light .recent-runs-thumb.is-route-preview,
+body.theme-light .recent-runs-thumb.has-route-tile {
+  background: #15171c !important;
 }
 
 body.theme-light .recent-runs-thumb-badge {
@@ -5080,6 +5097,10 @@ body.theme-light .shoe-inventory-card-meta {
 
 body.theme-light .shoe-inventory-card-progress {
   background: rgba(171, 173, 174, 0.24);
+}
+
+body.theme-light .shoes-profile-workspace .shoe-inventory-card-progress {
+  background: transparent;
 }
 
 body.theme-light .shoe-inventory-card-retirement-bar {

@@ -6,6 +6,7 @@ import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import AuthDotField from '../components/AuthDotField';
 import AuthBrandCarousel from '../components/AuthBrandCarousel';
 import FooterNavLinks from '../components/FooterNavLinks';
+import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 
 const LOCAL_SHARED_RUNNER_EMAIL = 'strava+140971747@hermes.local';
@@ -175,7 +176,7 @@ export default function Login() {
   const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   return (
-    <div className="auth-page auth-page--login auth-page--liquid-glass">
+    <div className="auth-page auth-page--login auth-page--liquid-glass" data-auth-redesign="command-entry">
       <AuthDotField />
       <main className="auth-flow-shell">
         <section className="auth-flow-brand">
@@ -279,12 +280,15 @@ export default function Login() {
             <div className="auth-flow-social">
               <button
                 type="button"
-                className="auth-flow-btn auth-flow-btn--strava"
+                className="auth-flow-btn auth-flow-btn--strava auth-flow-btn--strava-official"
                 disabled={!stravaConfigured}
                 onClick={() => startOAuth('strava')}
               >
-                <span className="auth-flow-btn__icon auth-flow-btn__icon--bolt" aria-hidden="true">+</span>
-                <span>{t(stravaConfigured ? 'index.stitch_strava_cta' : 'index.stitch_strava_unavailable')}</span>
+                <img
+                  className="auth-flow-btn__strava-official"
+                  src={stravaConnectButton}
+                  alt={t(stravaConfigured ? 'index.stitch_strava_cta' : 'index.stitch_strava_unavailable')}
+                />
               </button>
 
               {!stravaConfigured && (

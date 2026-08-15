@@ -1,4 +1,6 @@
-package com.hermes.backend;
+package com.hermes.backend.rewards;
+
+import com.hermes.backend.Runner;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

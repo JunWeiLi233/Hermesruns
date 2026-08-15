@@ -27,6 +27,7 @@ public class ActivityImportService {
     private final ActivityRepository activityRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
+    private final ActivityDataAccess activityDataAccess;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final AcclimatizationService acclimatizationService;
 
@@ -41,12 +42,14 @@ public class ActivityImportService {
             ActivityRepository activityRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
+            ActivityDataAccess activityDataAccess,
             ApplicationEventPublisher applicationEventPublisher,
             AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
+        this.activityDataAccess = activityDataAccess;
         this.applicationEventPublisher = applicationEventPublisher;
         this.acclimatizationService = acclimatizationService;
     }
@@ -237,15 +240,13 @@ public class ActivityImportService {
                 keptPoints++;
 
                 if (batch.size() >= POINTS_BATCH_SIZE) {
-                    activityPointRepository.saveAll(batch);
-                    activityPointRepository.flush();
+                    activityDataAccess.savePoints(batch);
                     batch.clear();
                 }
             }
         }
         if (!batch.isEmpty()) {
-            activityPointRepository.saveAll(batch);
-            activityPointRepository.flush();
+            activityDataAccess.savePoints(batch);
         }
         // Help GC earlier on small-RAM servers.
         if (allPoints != null) {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(join(here, 'LegalPage.jsx'), 'utf8');
 const splitCss = readFileSync(join(here, '..', 'styles', '_split', 'misc.css'), 'utf8');
-const bundledCss = readFileSync(join(here, '..', 'styles', 'style.css'), 'utf8');
+const bundledCss = readFileSync(join(here, '..', 'styles', 'style.generated.css'), 'utf8');
 
 const requiredPageSnippets = [
   "import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';",

@@ -24,8 +24,10 @@ import { dirname } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const TRANSLATIONS_PATH = join(ROOT, 'frontend/src/i18n/translations.js');
+const LOCALE_REGISTRY_PATH = join(ROOT, 'frontend/src/i18n/localeRegistry.js');
 const PAGES_DIR = join(ROOT, 'frontend/src/pages');
 const COMPONENTS_DIR = join(ROOT, 'frontend/src/components');
+const CONTEXTS_DIR = join(ROOT, 'frontend/src/contexts');
 
 const args = process.argv.slice(2);
 const FULL = args.includes('--full') || args.includes('--all');
@@ -34,6 +36,11 @@ const HARDCODED = args.includes('--hardcoded') || args.includes('--all');
 // ─── Load translations ────────────────────────────────────────────────────────
 
 const { default: t } = await import(pathToFileURL(TRANSLATIONS_PATH).href);
+const { DEFAULT_LOCALE, SUPPORTED_LOCALES } = await import(pathToFileURL(LOCALE_REGISTRY_PATH).href);
+
+const translationLocaleIds = Object.keys(t);
+const missingBundles = SUPPORTED_LOCALES.filter(locale => !translationLocaleIds.includes(locale));
+const extraBundles = translationLocaleIds.filter(locale => !SUPPORTED_LOCALES.includes(locale));
 
 // ─── Key analysis ─────────────────────────────────────────────────────────────
 
@@ -69,7 +76,7 @@ function getValue(obj, dottedKey) {
 // ─── Hardcoded bypass scan ────────────────────────────────────────────────────
 
 /**
- * Collects all .jsx and .js files recursively under dir.
+ * Collects frontend source files recursively under dir.
  */
 function collectFiles(dir) {
   const files = [];
@@ -78,7 +85,11 @@ function collectFiles(dir) {
       const full = join(dir, entry.name);
       if (entry.isDirectory() && entry.name !== 'node_modules') {
         files.push(...collectFiles(full));
-      } else if (entry.isFile() && ['.jsx', '.js'].includes(extname(entry.name))) {
+      } else if (
+        entry.isFile()
+        && ['.jsx', '.js', '.tsx', '.ts'].includes(extname(entry.name))
+        && !/\.(?:smoke\.)?test\.[jt]sx?$/.test(entry.name)
+      ) {
         files.push(full);
       }
     }
@@ -108,30 +119,29 @@ function collectTranslationUsages(content) {
   return usages;
 }
 
-const jsxFilesForUsageScan = [
+const sourceFilesForUsageScan = [
   ...collectFiles(PAGES_DIR),
   ...collectFiles(COMPONENTS_DIR),
+  ...collectFiles(CONTEXTS_DIR),
 ];
 
-for (const file of jsxFilesForUsageScan) {
+for (const file of sourceFilesForUsageScan) {
   const content = readFileSync(file, 'utf8');
   const relPath = relative(ROOT, file).replace(/\\/g, '/');
   const lines = content.split('\n');
   const missingHits = [];
 
   for (const usage of collectTranslationUsages(content)) {
-    const existsInZh = typeof getValue(t['zh-CN'], usage.key) === 'string';
-    const existsInEn = typeof getValue(t['en'], usage.key) === 'string';
-    if (existsInZh && existsInEn) continue;
+    const missingIn = SUPPORTED_LOCALES.filter(
+      locale => typeof getValue(t[locale], usage.key) !== 'string',
+    );
+    if (missingIn.length === 0) continue;
 
     const line = content.slice(0, usage.index).split(/\r?\n/).length;
     missingHits.push({
       line,
       key: usage.key,
-      missingIn: [
-        !existsInZh ? 'zh-CN' : null,
-        !existsInEn ? 'en' : null,
-      ].filter(Boolean),
+      missingIn,
       excerpt: (lines[line - 1] || '').trim().slice(0, 140),
     });
   }
@@ -217,6 +227,15 @@ console.log('\n' + sep);
 console.log('  Hermes Translation Parity Check');
 console.log(sep);
 
+if (missingBundles.length || extraBundles.length) {
+  exitCode = 1;
+  console.log('\n  ✗ Locale registry and translation bundles differ:');
+  if (missingBundles.length) console.log(`    Missing bundles: ${missingBundles.join(', ')}`);
+  if (extraBundles.length) console.log(`    Unregistered bundles: ${extraBundles.join(', ')}`);
+} else {
+  console.log(`\n  ✓ Registry bundles: ${SUPPORTED_LOCALES.join(', ')} (fallback: ${DEFAULT_LOCALE})`);
+}
+
 // Key counts
 console.log(`\n  zh-CN leaf keys : ${zhKeys.size}`);
 console.log(`  en    leaf keys : ${enKeys.size}`);
@@ -301,7 +320,7 @@ if (HARDCODED) {
 // Exit 1 = key parity gap (BLOCKER — must fix before commit)
 // Exit 2 = bypass ternaries found but parity is clean (DEBT — track as follow-up, do not block commit)
 let finalExit = 0;
-if (missingInEn.length || missingInZh.length || sectionsMissingInEn.length || sectionsMissingInZh.length) {
+if (missingBundles.length || extraBundles.length || missingInEn.length || missingInZh.length || sectionsMissingInEn.length || sectionsMissingInZh.length) {
   finalExit = 1;
 } else if (missingUsageResults.length) {
   finalExit = 1;

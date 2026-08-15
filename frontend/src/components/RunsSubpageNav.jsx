@@ -5,11 +5,10 @@ import { formatDate } from '../utils/format';
 
 const SECTION_ITEMS = [
   { id: 'run-detail-overview', labelKey: 'run_detail.subnav_overview', icon: 'route' },
-  { id: 'run-detail-coach', labelKey: 'run_detail.subnav_coach', icon: 'psychology', optional: 'coach' },
+  { id: 'run-detail-coach', labelKey: 'run_detail.subnav_coach', icon: 'coach_review', optional: 'coach' },
   { id: 'run-detail-comparison', labelKey: 'run_detail.subnav_comparison', icon: 'trending_up', optional: 'comparison' },
   { id: 'run-detail-telemetry', labelKey: 'run_detail.subnav_telemetry', icon: 'monitor_heart' },
-  { id: 'run-detail-splits', labelKey: 'run_detail.subnav_splits', icon: 'distance' },
-  { id: 'run-detail-metrics', labelKey: 'run_detail.subnav_metrics', icon: 'speed' },
+  { id: 'run-detail-splits', labelKey: 'run_detail.subnav_splits', icon: 'splits' },
 ];
 
 function getRunDate(run, lang, fallback) {
@@ -17,17 +16,16 @@ function getRunDate(run, lang, fallback) {
   return formatted && formatted !== '--' ? formatted : fallback;
 }
 
-function RunSectionLink({ active, icon, index, label, sectionId }) {
+function RunSectionLink({ active, icon, label, sectionId }) {
   return (
     <a
-      className={`runs-subnav-link${active ? ' is-active' : ''}`}
+      className={`runner-shell-side-link runs-subnav-link${active ? ' is-active' : ''}`}
       href={`#${sectionId}`}
       aria-current={active ? 'location' : undefined}
       title={label}
     >
-      <span className="runs-subnav-link-icon" aria-hidden="true"><AppIcon name={icon} /></span>
+      <AppIcon name={icon} className="runner-dashboard-side-link-icon" aria-hidden="true" />
       <span className="runs-subnav-link-copy">{label}</span>
-      <span className="runs-subnav-link-index" aria-hidden="true">{index}</span>
     </a>
   );
 }
@@ -62,6 +60,7 @@ export default function RunsSubpageNav({
   t,
 }) {
   const [activeSection, setActiveSection] = useState('run-detail-overview');
+  const [recentRunsOpen, setRecentRunsOpen] = useState(false);
   const sectionItems = useMemo(() => SECTION_ITEMS.filter((item) => {
     if (!showSections) return false;
     if (item.optional === 'coach') return hasCoachReview;
@@ -93,7 +92,7 @@ export default function RunsSubpageNav({
   }, [run?.id, sectionItems, showSections]);
 
   return (
-    <aside className="runner-shell-sidebar runs-subnav">
+    <aside className="runner-shell-sidebar runs-subnav runs-subnav-analysis-rail">
       <div className="runner-shell-brand runner-dashboard-brand runs-subnav-header">
         <div className="runner-dashboard-brand-copy">
           <HermesLogo dark />
@@ -119,22 +118,19 @@ export default function RunsSubpageNav({
         </span>
       </div>
 
-      <nav className="runs-subnav-nav" aria-label={t('run_detail.subnav_aria_label')}>
-        <button type="button" className="runs-subnav-overview-link" onClick={() => navigate('/runs')}>
-          <span className="runs-subnav-link-icon" aria-hidden="true"><AppIcon name="history" /></span>
+      <nav className="runner-shell-side-nav runs-subnav-nav" aria-label={t('run_detail.subnav_aria_label')}>
+        <button type="button" className="runner-shell-side-link runs-subnav-overview-link" onClick={() => navigate('/runs')}>
+          <AppIcon name="history" className="runner-dashboard-side-link-icon" aria-hidden="true" />
           <span className="runs-subnav-link-copy">{t('profile.dashboard_nav_activities')}</span>
-          <span className="runs-subnav-link-index" aria-hidden="true">00</span>
         </button>
 
         {sectionItems.length > 0 && (
           <div className="runs-subnav-group runs-subnav-section-group">
-            <span className="runs-subnav-group-label">{t('run_detail.subnav_sections')}</span>
-            {sectionItems.map((item, index) => (
+            {sectionItems.map((item) => (
               <RunSectionLink
                 key={item.id}
                 active={item.id === activeSection}
                 icon={item.icon}
-                index={String(index + 1).padStart(2, '0')}
                 label={t(item.labelKey)}
                 sectionId={item.id}
               />
@@ -142,27 +138,54 @@ export default function RunsSubpageNav({
           </div>
         )}
 
-        {visibleRecentRuns.length > 0 && (
-          <div className="runs-subnav-group runs-subnav-recent-group">
-            <span className="runs-subnav-group-label">{t('run_detail.subnav_recent')}</span>
-            {visibleRecentRuns.map((recentRun, index) => (
-              <RecentRunLink
-                key={recentRun.id}
-                index={index}
-                lang={lang}
-                onSelect={onSelectRun}
-                run={recentRun}
-                t={t}
-              />
-            ))}
-          </div>
-        )}
+        <div className="runs-subnav-group runs-subnav-recent-group">
+            <button
+              type="button"
+              className="runner-shell-side-link runs-subnav-link runs-subnav-recent-toggle"
+              aria-controls="runs-subnav-recent-list"
+              aria-expanded={recentRunsOpen}
+              onClick={() => setRecentRunsOpen((current) => !current)}
+            >
+              <AppIcon name="history" className="runner-dashboard-side-link-icon" aria-hidden="true" />
+              <span className="runs-subnav-link-copy">{t('run_detail.subnav_recent')}</span>
+            </button>
+            {recentRunsOpen && (
+              <div id="runs-subnav-recent-list" className="runs-subnav-recent-list">
+                {visibleRecentRuns.map((recentRun, index) => (
+                  <RecentRunLink
+                    key={recentRun.id}
+                    index={index}
+                    lang={lang}
+                    onSelect={(selectedRun) => {
+                      setRecentRunsOpen(false);
+                      onSelectRun(selectedRun);
+                    }}
+                    run={recentRun}
+                    t={t}
+                  />
+                ))}
+                <button
+                  type="button"
+                  className="runner-shell-side-link runs-subnav-import-secondary"
+                  onClick={() => navigate('/settings/import-data')}
+                >
+                  <AppIcon name="upload_file" className="runner-dashboard-side-link-icon" aria-hidden="true" />
+                  <span className="runs-subnav-link-copy">{t('run_detail.subnav_import')}</span>
+                </button>
+              </div>
+            )}
+        </div>
       </nav>
 
       <div className="runner-shell-sidebar-footer runs-subnav-footer">
-        <button type="button" className="runs-subnav-import" onClick={() => navigate('/settings/import-data')}>
-          <AppIcon name="upload_file" aria-hidden="true" />
-          <span>{t('run_detail.subnav_import')}</span>
+        <button
+          type="button"
+          className="runner-shell-workout-btn runner-dashboard-workout-btn runs-subnav-workout"
+          onClick={() => navigate('/today-run')}
+          aria-label={t('analysis.pred_open_today')}
+        >
+          <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+          <span className="runner-dashboard-workout-btn-label">{t('analysis.pred_open_today')}</span>
         </button>
       </div>
     </aside>

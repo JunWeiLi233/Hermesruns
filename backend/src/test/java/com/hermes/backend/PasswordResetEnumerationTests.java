@@ -158,6 +158,7 @@ class PasswordResetEnumerationTests {
                 mock(SecretEncryptionService.class),
                 mock(AiUsageService.class),
                 mock(EmailVerificationService.class),
+                mock(EmailValidationService.class),
                 mock(VerificationResendLimiter.class),
                 limiter,
                 resetService,

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const styleSource = [
-  '../styles/style.css',
+  '../styles/style.generated.css',
   '../styles/admin-monitoring-dashboard.css',
 ].map((file) => readFileSync(path.join(here, file), 'utf8')).join('\n');
 const translationsSource = [

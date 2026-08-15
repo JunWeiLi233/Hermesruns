@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,9 +17,133 @@ function assert(condition, message) {
 
 const runDetailSource = read('pages/RunDetail.jsx');
 const appIconSource = read('components/AppIcon.jsx');
-const styleSource = read('styles/style.css');
+const enPageCopySource = read('i18n/locales/en/pages.js');
+const zhCnPageCopySource = read('i18n/locales/zh-CN/pages.js');
+const styleSource = read('styles/style.generated.css');
 const splitRunsStyleSource = read('styles/_split/runs.css');
 const splitLightThemeStyleSource = read('styles/_split/light-theme-overrides.css');
+const indexStyleSource = read('index.css');
+const minimalStyleRelativePath = 'styles/run-detail-profile-minimal.css';
+const minimalStyleSource = existsSync(path.join(srcRoot, minimalStyleRelativePath))
+  ? read(minimalStyleRelativePath)
+  : '';
+const overviewStart = runDetailSource.indexOf('<section id="run-detail-overview" className="run-detail-overview-card">');
+const overviewEnd = runDetailSource.indexOf('<section id="run-detail-telemetry"', overviewStart);
+
+assert(
+  runDetailSource.includes('run-detail-page run-detail-profile-cockpit run-detail-profile-minimal')
+    && indexStyleSource.includes("@import './styles/run-detail-profile-minimal.css';")
+    && indexStyleSource.indexOf("@import './styles/run-detail-profile-minimal.css';")
+      > indexStyleSource.indexOf("@import './styles/loading-skeleton.css';"),
+  'Loaded Run Detail should opt into a dedicated Profile-minimal layer imported after shared page treatments.',
+);
+
+assert(
+  overviewStart >= 0
+    && overviewEnd > overviewStart
+    && runDetailSource.includes("t('run_detail.overview_title')")
+    && runDetailSource.indexOf('run-detail-overview-stat-grid', overviewStart) < overviewEnd
+    && runDetailSource.indexOf('run-detail-debrief-section', overviewStart) < overviewEnd
+    && runDetailSource.indexOf('run-detail-gear-section', overviewStart) < overviewEnd
+    && runDetailSource.indexOf('run-detail-comparison-section', overviewStart) < overviewEnd
+    && /\.run-detail-profile-minimal\s+\.run-detail-overview-card\s*\{[\s\S]*background:\s*var\(--run-detail-card\)\s*!important;/.test(minimalStyleSource)
+    && /"overview_title": "Overview"/.test(enPageCopySource)
+    && /"overview_title": "概览"/.test(zhCnPageCopySource),
+  'Overview must be one localized card that contains coach review, linked gear, distance, pace, moving time, and recent comparison.',
+);
+
+assert(
+  !/className="run-detail-overview-stat is-accent"/.test(runDetailSource.slice(overviewStart, overviewEnd)),
+  'Overview distance, pace, and moving-time tiles should share the same neutral surface.',
+);
+
+assert(
+  minimalStyleSource.includes('.run-detail-profile-minimal {')
+    && minimalStyleSource.includes('--run-detail-card: rgba(255, 255, 255, 0.92);')
+    && minimalStyleSource.includes('--run-detail-ink: #1c1917;')
+    && minimalStyleSource.includes('--run-detail-accent: var(--brand-accent, #a0392a);')
+    && minimalStyleSource.includes('background: transparent !important;'),
+  'Run Detail should map Profile paper, card, ink, and accent tokens onto a transparent runner-shell canvas.',
+);
+
+assert(
+  /\.run-detail-profile-minimal\s+\.run-detail-topbar\s*\{[\s\S]*padding:\s*8px\s+0\s+20px\s*!important;[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*transparent\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-heading h1\s*\{[\s\S]*font-size:\s*clamp\(1\.85rem,\s*3vw,\s*2\.45rem\)\s*!important;[\s\S]*line-height:\s*1\.08;/.test(minimalStyleSource)
+    && runDetailSource.includes('className="run-detail-eyebrow"'),
+  'Run Detail should use Profile-scale header typography rather than an oversized standalone hero card.',
+);
+
+assert(
+  /\.run-detail-profile-minimal\s+\.run-detail-profile-hero\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*2\.25fr\)\s+minmax\(220px,\s*0\.75fr\);/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-profile-map\s*\{[\s\S]*min-height:\s*clamp\(360px,\s*38vw,\s*480px\);/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-profile-stat-rail\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(minimalStyleSource)
+    && !runDetailSource.includes('className="run-detail-map-overlay"'),
+  'Run Detail should lead with one route map and one compact evidence rail without a duplicate distance overlay.',
+);
+
+assert(
+  runDetailSource.includes("${points.length > 0 ? ' has-route-map-background' : ''}")
+    && runDetailSource.includes('className="run-detail-map-background"')
+    && /\{routeMapBackground\}\s*<div className="run-detail-shell">/.test(runDetailSource)
+    && !runDetailSource.includes('mapBackground = null')
+    && !runDetailSource.includes('{mapBackground}')
+    && !runDetailSource.includes('{isCompactMapLayout && routeMapBackground}')
+    && runDetailSource.includes('points.length === 0 && ('),
+  'Loaded routes should mount one in-flow Leaflet map before Overview while retaining the no-route fallback.',
+);
+
+assert(
+  /points\.length === 0 && \(\s*<section className="run-detail-hero-grid run-detail-profile-hero">[\s\S]*?<div className="run-detail-map-card run-detail-profile-map">[\s\S]*?<\/div>\s*<\/section>\s*\)\}\s*<section id="run-detail-overview" className="run-detail-overview-card">/.test(runDetailSource),
+  'Activity metrics should remain in Overview whether or not a route map is available.',
+);
+
+assert(
+  /points\.length === 0 && \(\s*<div className="run-detail-topbar">/.test(runDetailSource)
+    && !minimalStyleSource.includes('.run-detail-profile-minimal.has-route-map-background .run-detail-topbar {'),
+  'Map-backed Run Detail should remove the activity header block entirely while no-route activities retain their controls.',
+);
+
+assert(
+  /\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background\s*\{[\s\S]*position:\s*relative;[\s\S]*width:\s*100%;/.test(minimalStyleSource)
+    && /@media\s*\(min-width:\s*861px\)\s*\{[\s\S]*\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background\s*\{[\s\S]*height:\s*clamp\(360px,\s*50svh,\s*620px\);/.test(minimalStyleSource)
+    && /\.run-detail-map-background\s+\.leaflet-top\s*\{[\s\S]*top:\s*12px;/.test(minimalStyleSource),
+  'Desktop route maps should occupy the upper half of the initial viewport as an in-flow map stage.',
+);
+
+assert(
+  !runDetailSource.includes('hasMapBackground')
+    && !minimalStyleSource.includes('.runner-shell-main > .run-detail-map-background')
+    && !minimalStyleSource.includes('.has-run-detail-map'),
+  'Route maps should not use the former fixed-background shell overlay.',
+);
+
+assert(
+  /@media\s*\(min-width:\s*861px\)\s*\{[\s\S]*\.run-detail-profile-minimal\.has-route-map-background\s+\.run-detail-overview-card\s*\{[\s\S]*width:\s*100%;/.test(minimalStyleSource)
+    && !minimalStyleSource.includes('width: min(50%, 920px);'),
+  'Overview should span the page below the top map rather than sharing the map horizontally.',
+);
+
+assert(
+  /@media\s*\(max-width:\s*860px\)\s*\{[\s\S]*\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background[\s\S]*position:\s*relative;[\s\S]*height:\s*clamp\(300px,\s*82vw,\s*430px\);/.test(minimalStyleSource)
+    && runDetailSource.includes("window.matchMedia('(max-width: 860px)')")
+    && runDetailSource.includes('map.invalidateSize({ pan: false })'),
+  'Mobile should restore a contained map and Leaflet should invalidate its size after shell geometry changes.',
+);
+
+assert(
+  runDetailSource.includes('className="run-detail-overview-section run-detail-gear-section"')
+    && /run-detail-gear-section[\s\S]*<h3>\{t\('run_detail\.gear_linked'\)\}<\/h3>[\s\S]*run-detail-panel run-detail-gear-panel/.test(runDetailSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-panel,[\s\S]*\.run-detail-profile-minimal\s+\.run-detail-stat-card\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*border-radius:\s*var\(--run-detail-radius-lg\);/.test(minimalStyleSource),
+  'Coach, Gear, and evidence sections should share Profile headings and borderless tonal cards.',
+);
+
+assert(
+  /@media\s*\(max-width:\s*960px\)\s*\{[\s\S]*\.run-detail-profile-minimal\s+\.run-detail-profile-stat-rail\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/.test(minimalStyleSource)
+    && /@media\s*\(max-width:\s*680px\)\s*\{[\s\S]*\.run-detail-profile-minimal\s+\.run-detail-profile-stat-rail,[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+:is\(button,\s*a\):focus-visible\s*\{[\s\S]*outline:\s*2px solid var\(--run-detail-accent\);/.test(minimalStyleSource)
+    && /@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(minimalStyleSource),
+  'Run Detail should collapse cleanly for tablet/mobile and preserve visible keyboard focus and reduced-motion behavior.',
+);
 
 assert(
   runDetailSource.includes("import { Link, useNavigate, useParams } from 'react-router';")
@@ -46,9 +170,9 @@ assert(
 );
 
 assert(
-  runDetailSource.includes('run-detail-hero-grid run-detail-profile-hero')
+  runDetailSource.includes('run-detail-overview-card')
     && runDetailSource.includes('run-detail-map-card run-detail-profile-map')
-    && runDetailSource.includes('run-detail-stat-rail run-detail-profile-stat-rail')
+    && runDetailSource.includes('run-detail-overview-stat-grid')
     && !runDetailSource.includes('run.locationCity || run.city || run.locationName || run.location || insights?.centerLabel'),
   'Run Detail should render the profile hero, map, and stat-rail hooks targeted by the profile CSS, and the topbar metadata should not fall back to coordinate labels.',
 );
@@ -164,20 +288,18 @@ assert(
 );
 
 assert(
-  runDetailSource.indexOf('run-detail-telemetry-section') > runDetailSource.indexOf('</aside>')
-    && runDetailSource.indexOf('run-detail-telemetry-section') < runDetailSource.indexOf('run-detail-bottom-grid'),
-  'Run Detail telemetry section should render at shell level before the bottom grid so the telemetry cockpit can span the full page width.',
+  runDetailSource.indexOf('run-detail-telemetry-section') > overviewEnd,
+  'Run Detail telemetry should follow the consolidated Overview card so the telemetry cockpit can span the full page width.',
 );
 
 assert(
-  runDetailSource.indexOf('run-detail-comparison-section') > runDetailSource.indexOf('</aside>')
-    && runDetailSource.indexOf('run-detail-comparison-section') < runDetailSource.indexOf('run-detail-telemetry-section')
+  runDetailSource.indexOf('run-detail-comparison-section') > overviewStart
+    && runDetailSource.indexOf('run-detail-comparison-section') < overviewEnd
     && runDetailSource.indexOf('run-detail-splits-section') > runDetailSource.indexOf('run-detail-telemetry-section')
-    && runDetailSource.indexOf('run-detail-splits-section') < runDetailSource.indexOf('run-detail-bottom-grid')
     && !runDetailSource.includes('run-detail-comparison-arrow')
     && !runDetailSource.includes("runComparison.direction === 'slower' ? '-'")
     && !runDetailSource.includes("runComparison.direction === 'faster' ? '+'"),
-  'Run Detail comparison and splits sections should render at shell level around telemetry, and the comparison panel should no longer render arrow badges for faster or slower states.',
+  'Run Detail comparison should live in Overview, while splits remain after telemetry and comparison still avoids arrow badges.',
 );
 
 assert(
@@ -217,9 +339,10 @@ assert(
 );
 
 assert(
-  /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*background:\s*var\(--runner-profile-ink\)\s*!important;[\s\S]*color:\s*#fff8ee\s*!important;/.test(styleSource)
-    && !/\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-stat-card\.is-accent\s*\{[\s\S]*radial-gradient\(circle at 82% 18%/.test(styleSource),
-  'Run Detail accent stat card should render as a fully dark grid card without the coral radial wash.',
+  /\.run-detail-profile-minimal\s+\.run-detail-overview-stat\.is-accent\s*\{[\s\S]*background:\s*var\(--run-detail-dark\);/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-overview-stat\.is-accent\s+:is\(span, strong, em\)\s*\{[\s\S]*color:\s*var\(--run-detail-dark-ink\)\s*!important;/.test(minimalStyleSource)
+    && !/\.run-detail-profile-minimal\s+\.run-detail-overview-stat\.is-accent\s*\{[\s\S]*radial-gradient\(circle at 82% 18%/.test(minimalStyleSource),
+  'Run Detail Overview should keep its distance metric as a dark tonal cell without a coral radial wash.',
 );
 
 assert(

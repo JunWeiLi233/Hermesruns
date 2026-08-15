@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup", "/api/auth/verify-email",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
+                                "/api/auth/password-reset/request", "/api/auth/password-reset/confirm",
+                                "/api/auth/resend-verification",
                                 "/api/auth/google", "/api/auth/google/start", "/api/auth/google/callback",
                                 "/api/auth/strava", "/api/auth/strava/start", "/api/auth/strava/callback",
                                 "/api/auth/strava/webhook", "/api/auth/refresh",

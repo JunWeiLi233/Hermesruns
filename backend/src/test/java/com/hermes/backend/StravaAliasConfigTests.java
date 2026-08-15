@@ -105,7 +105,7 @@ class StravaAliasConfigTests {
                                              AiUsageService aiUsageService,
                                              StravaTokenService stravaTokenService) {
             return new StravaSyncService(activityRepository, activityPointRepository, runnerRepository,
-                    restTemplate, acclimatizationService, automatedCoachService, null, aiUsageService, stravaTokenService);
+                    restTemplate, acclimatizationService, automatedCoachService, null, aiUsageService, stravaTokenService, null);
         }
 
         @Bean

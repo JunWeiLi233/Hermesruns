@@ -48,12 +48,14 @@ function computeRecoveryState(runs, vdot) {
     })
     .sort((a, b) => new Date(b.startTime || b.startDate) - new Date(a.startTime || a.startDate));
 
-  if (recentRuns.length === 0) return { recoveryHoursLeft: 0, hasData: runs.length > 0 };
+  if (recentRuns.length === 0) return { recoveryHoursLeft: 0, hasData: false };
 
   let maxRemainingHours = 0;
+  let hasData = false;
   for (const run of recentRuns) {
     const durationMin = (run.movingTimeSeconds || 0) / 60;
     if (durationMin <= 0) continue;
+    hasData = true;
 
     const distKm = run.distanceKm || (run.distanceMeters ? run.distanceMeters / 1000 : 0);
     const paceSecPerKm = distKm > 0 ? (run.movingTimeSeconds / distKm) : 0;
@@ -78,7 +80,7 @@ function computeRecoveryState(runs, vdot) {
     if (remaining > maxRemainingHours) maxRemainingHours = remaining;
   }
 
-  return { recoveryHoursLeft: Math.min(96, Math.round(maxRemainingHours)), hasData: true };
+  return { recoveryHoursLeft: Math.min(96, Math.round(maxRemainingHours)), hasData };
 }
 
 function computeTrainingLoadSnapshot(runs, bestVdot) {
@@ -560,6 +562,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
   const metrics = {
     bestVdot,
     recoveryHours,
+    recoveryHasData: recoveryState.hasData,
     acwr,
     totalKm,
     totalSec,

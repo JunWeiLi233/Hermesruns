@@ -583,10 +583,6 @@ body.theme-midnight
 body.theme-light
   .dashboard-body
   :is(
-    .ad-metric-card,
-    .ad-ops-card,
-    .ad-card,
-    .ad-course-card,
     .admin-overview-bento__panel,
     .admin-overview-bento__workbench-card,
     .admin-settings-studio__panel,
@@ -598,10 +594,6 @@ body.theme-light
 body.theme-midnight
   .dashboard-body
   :is(
-    .ad-metric-card,
-    .ad-ops-card,
-    .ad-card,
-    .ad-course-card,
     .admin-overview-bento__panel,
     .admin-overview-bento__workbench-card,
     .admin-settings-studio__panel,

@@ -1101,6 +1101,26 @@ body.theme-high-contrast {
 .page-skeleton__insight-evidence-grid > .page-skeleton__panel, .page-skeleton__prediction-evidence-grid > .page-skeleton__panel { min-height: 220px; }
 .page-skeleton__insight-evidence-art, .page-skeleton__prediction-evidence-art { height: 72px; margin-top: 18px; border-radius: 14px; }
 .page-skeleton__prediction-main-value { width: 190px; height: 46px; margin-top: 22px; border-radius: 10px; }
+.page-skeleton__prediction-profile-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-skeleton__prediction-profile-metrics > .page-skeleton__panel { min-height: 132px; }
+.page-skeleton__prediction-profile-training { grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); }
+.page-skeleton__prediction-profile-training > .page-skeleton__panel { min-height: 308px; }
+.page-skeleton__prediction-profile-trend { min-height: 380px; margin-top: 16px; }
+.page-skeleton__prediction-profile-trend .page-skeleton__chart { margin-top: 24px; }
+
+@media (max-width: 1080px) {
+  .page-skeleton__prediction-command { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__prediction-profile-training { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__prediction-time { justify-self: start; }
+}
+
+@media (max-width: 760px) {
+  .page-skeleton__prediction-profile-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .page-skeleton__prediction-profile-metrics { grid-template-columns: minmax(0, 1fr); }
+}
 
 .page-skeleton__garmin-command, .page-skeleton__import-command, .page-skeleton__add-shoes-command, .page-skeleton__catalog-command { min-height: 240px; }
 .page-skeleton__garmin-device { min-height: 172px; margin-top: 0; border-radius: 26px; }

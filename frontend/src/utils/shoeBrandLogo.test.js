@@ -36,6 +36,18 @@ assert.equal(
   '361 degree branding should resolve to the shared 361 asset key.',
 );
 
+assert.equal(
+  getShoeBrandAssetKey('沃兰迪'),
+  'volanti',
+  'The catalog spelling for Volanti should resolve to the official Volanti asset.',
+);
+
+assert.equal(
+  getShoeBrandAssetKey('大鲶'),
+  'dayan',
+  'The Big Catfish catalog brand should resolve to its dedicated logo asset.',
+);
+
 assert.deepEqual(
   getShoeBrandFallbackSpec('Li-Ning'),
   {

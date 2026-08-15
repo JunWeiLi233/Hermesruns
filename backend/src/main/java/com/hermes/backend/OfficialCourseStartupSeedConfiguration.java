@@ -35,10 +35,36 @@ public class OfficialCourseStartupSeedConfiguration {
             Pattern.compile("\"lat\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)\\s*,\\s*\"lng\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
     private static final double NYC_WESTWARD_DETOUR_LNG = -74.0600;
 
+    /**
+     * Single daemon thread so the per-race DB checks (and any OSRM routing pass
+     * a stale course triggers) run off the boot critical path — the app serves
+     * traffic while seeding continues in the background.
+     */
+    private static final java.util.concurrent.ExecutorService SEED_EXECUTOR =
+            java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "official-course-startup-seeder");
+                thread.setDaemon(true);
+                return thread;
+            });
+
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
     @ConditionalOnProperty(name = "app.official-course.startup-seed.enabled", havingValue = "true", matchIfMissing = true)
     ApplicationRunner officialCourseStartupSeeder(
+            RaceCourseMapBulkSeedService bulkSeedService,
+            RaceCourseMapAssetRepository assetRepository
+    ) {
+        ApplicationRunner delegate = officialCourseStartupSeedRunner(bulkSeedService, assetRepository);
+        return args -> SEED_EXECUTOR.execute(() -> {
+            try {
+                delegate.run(args);
+            } catch (Exception e) {
+                logger.warn("official-course-startup-seed background pass failed: {}", e.getMessage(), e);
+            }
+        });
+    }
+
+    ApplicationRunner officialCourseStartupSeedRunner(
             RaceCourseMapBulkSeedService bulkSeedService,
             RaceCourseMapAssetRepository assetRepository
     ) {

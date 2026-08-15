@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import com.hermes.backend.billing.BillingController;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
 

@@ -147,13 +147,6 @@
     height: 1.08rem;
 }
 
-.landing-strava-logo {
-    display: block;
-    width: 78px;
-    height: auto;
-    flex: 0 0 auto;
-}
-
 .landing-cinematic-links {
     justify-content: center;
     gap: 28px;
@@ -1002,6 +995,10 @@
     box-shadow: inset 0 1px 0 var(--lc-rule);
 }
 
+.landing-cinematic-race-row > .landing-cinematic-race-order {
+    padding-left: 12px;
+}
+
 .landing-cinematic-race-row span,
 .landing-cinematic-race-row strong {
     font-size: 0.94rem;
@@ -1264,8 +1261,10 @@
 }
 
 .landing-cinematic-footer-links {
-    display: grid;
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 24px;
 }
 
 .landing-cinematic-footer-inner > p {
@@ -3959,9 +3958,8 @@ body:has(.landing-page--cinematic),
   margin-top: 32px;
 }
 
-/* Trust chips: clean minimalist centered row with hairline dividers between
-   cells — tonal separation, no card chrome. Keeps display:flex + centered
-   (smoke guard) while reading as a refined 3-cell grid. */
+/* Trust row: clean minimalist centered text with hairline dividers between
+   cells. Keep the row layout while removing the inherited pill chrome. */
 .landing-cinematic-final-card--minimal .landing-cinematic-final-trust {
   display: flex;
   flex-wrap: wrap;
@@ -3978,7 +3976,11 @@ body:has(.landing-page--cinematic),
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 0;
+  border-radius: 0;
   padding: 4px clamp(16px, 2vw, 26px);
+  background: transparent;
+  box-shadow: none;
   color: rgba(33, 28, 22, 0.6);
   font-family: var(--lc-font-mono);
   font-size: 0.7rem;
@@ -4073,6 +4075,26 @@ body:has(.landing-page--cinematic),
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.46),
     0 14px 30px rgba(160, 57, 42, 0.24);
+}
+
+.landing-page--liquid-glass .landing-cinematic-btn--strava,
+.landing-page--liquid-glass .landing-cinematic-btn--strava:hover {
+  width: 237px;
+  max-width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+}
+
+.landing-strava-connect-button {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .landing-page--liquid-glass .landing-cinematic-hero--minimal {

@@ -1,4 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 120" role="img" aria-label="Volanti logo">
-  <path fill="#f4b000" d="M34 72c45-34 93-49 144-45-24 13-45 31-63 54 32-7 66-9 101-4-49 27-101 36-156 27l23-29c-18 2-34 1-49-3Z"/>
-  <text x="150" y="111" text-anchor="middle" fill="#111827" font-family="Arial Black, Arial, sans-serif" font-size="30" font-weight="900">VOLANTI</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 124" role="img" aria-label="Volanti logo">
+  <g fill="#28313b">
+    <path d="M103 12 120 45l-10 5-16-18Z"/>
+    <path d="m91 25 12 10-11 18-14 5Z"/>
+    <path d="m77 48 11-21 7 7-11 20-15 7Z"/>
+    <path d="M48 71c35-22 79-27 119-15 13 4 24 10 34 18l-18 12c-29-16-66-22-99-14-13 3-25 8-36 15 6-7 13-12 22-16-8 1-15 1-22 0Z"/>
+    <path d="M48 88c30-18 69-20 101-9 10 3 19 8 27 14l-14 9c-24-14-55-18-83-11-11 3-21 7-31 13 6-7 13-12 21-16-7 1-14 1-21 0Z"/>
+  </g>
+  <text x="120" y="120" text-anchor="middle" fill="#28313b" font-family="Arial Black, Arial, sans-serif" font-size="27" font-weight="900" letter-spacing="5">VOLANTI</text>
 </svg>

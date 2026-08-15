@@ -1,0 +1,749 @@
+/* Profile-parity presentation for /prediction/:distKey. */
+.prediction-detail-page .prediction-profile-content {
+  --prediction-profile-radius-xl: 20px;
+  --prediction-profile-radius-lg: 16px;
+  --prediction-profile-radius-md: 12px;
+  --prediction-profile-card: rgba(255, 255, 255, 0.92);
+  --prediction-profile-card-strong: #fff;
+  --prediction-profile-card-hover: rgba(255, 255, 255, 1);
+  --prediction-profile-input: rgba(28, 25, 23, 0.04);
+  --prediction-profile-ink: #1c1917;
+  --prediction-profile-muted: #78716c;
+  --prediction-profile-faint: #a8a29e;
+  --prediction-profile-coral: #c0462b;
+  --prediction-profile-coral-soft: rgba(192, 70, 43, 0.09);
+  --prediction-profile-weather: #365f9d;
+  --prediction-profile-weather-soft: rgba(54, 95, 157, 0.09);
+  --prediction-profile-line: rgba(28, 25, 23, 0.07);
+  --prediction-profile-shadow: 0 8px 24px rgba(76, 54, 39, 0.06);
+  --prediction-profile-motion: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 28px clamp(20px, 3vw, 48px) 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--prediction-profile-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .prediction-detail-page .prediction-profile-content {
+  --prediction-profile-card: rgba(255, 255, 255, 0.04);
+  --prediction-profile-card-strong: rgba(255, 255, 255, 0.065);
+  --prediction-profile-card-hover: rgba(255, 255, 255, 0.08);
+  --prediction-profile-input: rgba(255, 255, 255, 0.05);
+  --prediction-profile-ink: #ece5dd;
+  --prediction-profile-muted: #aaa299;
+  --prediction-profile-faint: #7f776f;
+  --prediction-profile-coral: #f07561;
+  --prediction-profile-coral-soft: rgba(240, 117, 97, 0.12);
+  --prediction-profile-weather: #80a7e7;
+  --prediction-profile-weather-soft: rgba(128, 167, 231, 0.12);
+  --prediction-profile-line: rgba(255, 255, 255, 0.07);
+  --prediction-profile-shadow: none;
+}
+
+.prediction-detail-page .runner-shell-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.prediction-detail-page .prediction-profile-content > * {
+  animation: prediction-profile-rise 0.45s ease-out both;
+}
+
+.prediction-detail-page .prediction-profile-content > :nth-child(2) {
+  animation-delay: 0.07s;
+}
+
+.prediction-detail-page .prediction-profile-content > :nth-child(3) {
+  animation-delay: 0.14s;
+}
+
+.prediction-detail-page .prediction-profile-content > :nth-child(4) {
+  animation-delay: 0.21s;
+}
+
+.prediction-detail-page .prediction-forecast-hero,
+.prediction-detail-page .prediction-effort-ladder,
+.prediction-detail-page .prediction-coach-rail,
+.prediction-detail-page .prediction-evidence-tile,
+.prediction-detail-page .prediction-trend-card,
+.prediction-detail-page .prediction-weather-card {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.prediction-detail-page .prediction-forecast-hero {
+  min-height: 270px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.52fr);
+  align-items: stretch;
+  gap: clamp(24px, 4vw, 52px);
+  padding: clamp(28px, 3.4vw, 44px);
+  border-radius: var(--prediction-profile-radius-xl);
+  background:
+    radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--prediction-accent, #f07561) 24%, transparent), transparent 36%),
+    linear-gradient(135deg, #2c2218 0%, #1a1510 52%, #0f0d0a 100%) !important;
+}
+
+.prediction-detail-page .prediction-forecast-hero::before {
+  inset: auto -4% -50% auto;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--prediction-accent, #f07561) 10%, transparent) !important;
+  filter: blur(20px);
+  opacity: 0.7;
+}
+
+.prediction-detail-page .prediction-forecast-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+}
+
+.prediction-detail-page .prediction-forecast-kicker,
+.prediction-detail-page .prediction-section-heading > span,
+.prediction-detail-page .prediction-evidence-tile > span,
+.prediction-detail-page .prediction-forecast-hero-panel > span {
+  border-radius: 0;
+  color: var(--prediction-profile-faint);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.prediction-detail-page .prediction-forecast-hero :is(
+  .prediction-forecast-kicker,
+  .prediction-forecast-hero-panel > span
+) {
+  color: color-mix(in srgb, var(--prediction-accent, #f07561) 78%, #fff);
+}
+
+.prediction-detail-page .prediction-forecast-hero-copy h1 {
+  max-width: 680px;
+  margin-top: 12px;
+  color: rgba(246, 241, 235, 0.7) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.25rem, 2.1vw, 1.7rem);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  text-transform: none;
+}
+
+.prediction-detail-page .prediction-forecast-time {
+  margin-top: 8px;
+  color: #f6f1eb !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(3.2rem, 6.4vw, 5.35rem);
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+
+.prediction-detail-page .prediction-forecast-time::first-letter {
+  color: inherit;
+}
+
+.prediction-detail-page .prediction-forecast-hero-copy > p,
+.prediction-detail-page .prediction-forecast-hero-panel p {
+  max-width: 66ch;
+  margin-top: 13px;
+  color: rgba(246, 241, 235, 0.7) !important;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.prediction-detail-page .prediction-forecast-actions {
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.prediction-detail-page .prediction-forecast-action {
+  min-height: 40px;
+  padding: 9px 17px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09) !important;
+  color: rgba(246, 241, 235, 0.84) !important;
+  box-shadow: none !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: transform var(--prediction-profile-motion), background var(--prediction-profile-motion);
+}
+
+.prediction-detail-page .prediction-forecast-action:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.prediction-detail-page .prediction-forecast-action:active {
+  transform: translateY(1px);
+}
+
+.prediction-detail-page .prediction-forecast-action.is-primary {
+  background: linear-gradient(135deg, #a0392a, #e8634e) !important;
+  color: #fff8f4 !important;
+}
+
+.prediction-detail-page .prediction-forecast-action:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.74);
+  outline-offset: 3px;
+}
+
+.prediction-detail-page .prediction-forecast-hero-panel {
+  min-height: 0;
+  align-self: stretch;
+  justify-content: center;
+  padding: 24px;
+  border-radius: var(--prediction-profile-radius-lg);
+  background: rgba(255, 255, 255, 0.07) !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.prediction-detail-page .prediction-forecast-hero-panel strong {
+  margin-top: 10px;
+  color: #f6f1eb !important;
+  font-size: clamp(2.4rem, 4vw, 3.55rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.prediction-detail-page .prediction-forecast-confidence-bar {
+  height: 6px;
+  margin-top: 15px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.prediction-detail-page .prediction-forecast-confidence-bar > div {
+  background: var(--prediction-accent, #f07561);
+  box-shadow: none;
+}
+
+/* This stylesheet loads after the shared theme overrides, so light mode must reset the dark hero explicitly. */
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero {
+  border: 1px solid var(--prediction-profile-line) !important;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(240, 117, 97, 0.1), transparent 31%),
+    linear-gradient(135deg, #fffdf9 0%, #faf6f0 56%, #f5eee5 100%) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero::before {
+  display: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero :is(
+  .prediction-forecast-kicker,
+  .prediction-forecast-hero-panel > span
+) {
+  color: var(--prediction-profile-coral);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero-copy h1,
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-time,
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero-panel strong {
+  color: var(--prediction-profile-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero-copy > p,
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero-panel p {
+  color: var(--prediction-profile-muted) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-action:not(.is-primary) {
+  background: rgba(28, 25, 23, 0.06) !important;
+  color: var(--prediction-profile-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-action:not(.is-primary):hover {
+  background: var(--prediction-profile-coral-soft) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-action:focus-visible {
+  outline-color: var(--prediction-profile-coral);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-hero-panel {
+  border: 1px solid rgba(28, 25, 23, 0.08) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 10px 28px rgba(76, 54, 39, 0.05) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-forecast-confidence-bar {
+  background: rgba(28, 25, 23, 0.1);
+}
+
+.prediction-detail-page .prediction-profile-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.prediction-detail-page .prediction-evidence-tile {
+  min-height: 128px;
+  padding: 19px 21px;
+  border-radius: var(--prediction-profile-radius-lg);
+  background: var(--prediction-profile-card) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: transform var(--prediction-profile-motion), background var(--prediction-profile-motion);
+}
+
+.prediction-detail-page .prediction-evidence-tile:hover {
+  background: var(--prediction-profile-card-hover) !important;
+  transform: translateY(-2px);
+}
+
+.prediction-detail-page .prediction-evidence-tile strong {
+  display: block;
+  margin-top: 14px;
+  color: var(--prediction-profile-ink) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.prediction-detail-page .prediction-evidence-tile p {
+  margin-top: 9px;
+  color: var(--prediction-profile-muted) !important;
+  font-size: 0.72rem;
+  line-height: 1.42;
+}
+
+.prediction-detail-page .prediction-weather-card {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
+  gap: clamp(22px, 3vw, 44px);
+  align-items: center;
+  padding: 24px 28px;
+  border-radius: var(--prediction-profile-radius-xl);
+  background:
+    linear-gradient(135deg, var(--prediction-profile-card-strong), var(--prediction-profile-weather-soft)) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+}
+
+.prediction-detail-page .prediction-weather-card .prediction-section-heading > span {
+  color: var(--prediction-profile-weather);
+}
+
+.prediction-detail-page .prediction-weather-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.prediction-detail-page .prediction-weather-meta span {
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--prediction-profile-input);
+  color: var(--prediction-profile-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.prediction-detail-page .prediction-weather-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.prediction-detail-page .prediction-weather-comparison > div {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--prediction-profile-line);
+  border-radius: var(--prediction-profile-radius-md);
+  background: var(--prediction-profile-card);
+}
+
+.prediction-detail-page .prediction-weather-comparison span {
+  display: block;
+  color: var(--prediction-profile-faint);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.prediction-detail-page .prediction-weather-comparison strong {
+  display: block;
+  margin-top: 9px;
+  color: var(--prediction-profile-ink);
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: clamp(1.2rem, 2.1vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.prediction-detail-page .prediction-weather-comparison .is-adjusted {
+  border-color: color-mix(in srgb, var(--prediction-profile-weather) 34%, transparent);
+  background: var(--prediction-profile-weather-soft);
+}
+
+.prediction-detail-page .prediction-weather-comparison .is-adjusted strong {
+  color: var(--prediction-profile-weather);
+}
+
+.prediction-detail-page .prediction-weather-comparison .is-gain strong {
+  color: var(--prediction-profile-coral);
+}
+
+.prediction-detail-page .prediction-weather-empty {
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: var(--prediction-profile-radius-md);
+  background: var(--prediction-profile-input);
+  color: var(--prediction-profile-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.prediction-detail-page .prediction-profile-training-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.prediction-detail-page .prediction-effort-ladder,
+.prediction-detail-page .prediction-trend-card {
+  padding: 24px 28px;
+  border-radius: var(--prediction-profile-radius-xl);
+  background: var(--prediction-profile-card) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.prediction-detail-page .prediction-section-heading {
+  gap: 5px;
+}
+
+.prediction-detail-page .prediction-section-heading h2,
+.prediction-detail-page .prediction-coach-rail h2 {
+  margin: 0;
+  color: var(--prediction-profile-ink) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: 1.15rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.prediction-detail-page .prediction-section-heading p {
+  margin-top: 3px;
+  color: var(--prediction-profile-muted) !important;
+  font-size: 0.78rem;
+  line-height: 1.48;
+}
+
+.prediction-detail-page .prediction-effort-rows {
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.prediction-detail-page .prediction-effort-row {
+  grid-template-columns: minmax(132px, 0.8fr) minmax(140px, 1.45fr) minmax(88px, 0.42fr);
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 15px;
+  border-radius: var(--prediction-profile-radius-md);
+  background: var(--prediction-profile-card-strong) !important;
+}
+
+.prediction-detail-page .prediction-effort-row > div:first-child {
+  min-width: 0;
+}
+
+.prediction-detail-page .prediction-effort-row span {
+  color: var(--prediction-profile-faint) !important;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.prediction-detail-page .prediction-effort-row strong {
+  margin-top: 2px;
+  color: var(--prediction-profile-ink) !important;
+  font-family: "Outfit", "Manrope", var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.prediction-detail-page .prediction-effort-meter {
+  height: 6px;
+  background: var(--prediction-profile-line);
+}
+
+.prediction-detail-page .prediction-effort-meter > div {
+  box-shadow: none;
+}
+
+.prediction-detail-page .prediction-effort-pace {
+  color: var(--prediction-profile-muted) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.prediction-detail-page .prediction-coach-rail {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 26px;
+  border-radius: var(--prediction-profile-radius-xl);
+  border: 1px solid rgba(28, 25, 23, 0.07) !important;
+  background: linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+  color: #1c1917;
+}
+
+.prediction-detail-page .prediction-coach-rail .prediction-forecast-kicker {
+  color: #c0462b !important;
+}
+
+.prediction-detail-page .prediction-coach-rail h2 {
+  margin-top: 9px;
+  color: #1c1917 !important;
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
+}
+
+.prediction-detail-page .prediction-coach-rail > p {
+  margin-top: 10px;
+  color: #78716c !important;
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.prediction-detail-page .prediction-coach-points {
+  gap: 7px;
+  margin-top: 18px;
+}
+
+.prediction-detail-page .prediction-coach-points span {
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: rgba(28, 25, 23, 0.06) !important;
+  color: #1c1917 !important;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-rail {
+  border: 1px solid var(--prediction-profile-line) !important;
+  background: linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%) !important;
+  box-shadow: var(--prediction-profile-shadow) !important;
+  color: var(--prediction-profile-ink);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-rail .prediction-forecast-kicker {
+  color: var(--prediction-profile-coral) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-rail h2 {
+  color: var(--prediction-profile-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-rail > p {
+  color: var(--prediction-profile-muted) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-points span {
+  background: rgba(28, 25, 23, 0.06) !important;
+  color: var(--prediction-profile-ink) !important;
+}
+
+.prediction-detail-page .prediction-trend-card {
+  min-width: 0;
+}
+
+.prediction-detail-page .prediction-trend-heading {
+  align-items: flex-start;
+}
+
+.prediction-detail-page .prediction-trend-pills {
+  gap: 7px;
+}
+
+.prediction-detail-page .prediction-trend-pills span {
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--prediction-profile-input) !important;
+  color: var(--prediction-profile-muted) !important;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.prediction-detail-page .prediction-trend-chart {
+  min-height: 320px;
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: var(--prediction-profile-radius-lg);
+  background: var(--prediction-profile-input) !important;
+}
+
+.prediction-detail-page .prediction-detail-empty {
+  display: grid;
+  place-content: center;
+  min-height: 150px;
+  text-align: center;
+}
+
+.prediction-detail-page .prediction-detail-empty strong {
+  color: var(--prediction-profile-ink) !important;
+  font-size: 1rem;
+}
+
+.prediction-detail-page .prediction-detail-empty p {
+  max-width: 52ch;
+  margin: 7px auto 0;
+  color: var(--prediction-profile-muted) !important;
+  font-size: 0.78rem;
+}
+
+@keyframes prediction-profile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1080px) {
+  .prediction-detail-page .prediction-forecast-hero,
+  .prediction-detail-page .prediction-profile-training-grid,
+  .prediction-detail-page .prediction-weather-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prediction-detail-page .prediction-forecast-hero-panel {
+    display: grid;
+    grid-template-columns: auto minmax(120px, 0.4fr) minmax(160px, 1fr);
+    align-items: center;
+    gap: 16px;
+  }
+
+  .prediction-detail-page .prediction-forecast-hero-panel strong,
+  .prediction-detail-page .prediction-forecast-confidence-bar,
+  .prediction-detail-page .prediction-forecast-hero-panel p {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .prediction-detail-page .prediction-profile-content {
+    padding: 20px 16px 48px;
+  }
+
+  .prediction-detail-page .prediction-profile-metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .prediction-detail-page .prediction-forecast-hero {
+    padding: 26px 22px;
+  }
+
+  .prediction-detail-page .prediction-forecast-hero-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .prediction-detail-page .prediction-forecast-confidence-bar {
+    margin-top: 6px;
+  }
+
+  .prediction-detail-page .prediction-effort-ladder,
+  .prediction-detail-page .prediction-trend-card,
+  .prediction-detail-page .prediction-coach-rail,
+  .prediction-detail-page .prediction-weather-card {
+    padding: 21px;
+  }
+}
+
+@media (max-width: 560px) {
+  .prediction-detail-page .prediction-profile-content {
+    gap: 16px;
+  }
+
+  .prediction-detail-page .prediction-profile-metric-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prediction-detail-page .prediction-evidence-tile {
+    min-height: 0;
+  }
+
+  .prediction-detail-page .prediction-forecast-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .prediction-detail-page .prediction-effort-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .prediction-detail-page .prediction-effort-meter {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .prediction-detail-page .prediction-effort-pace {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .prediction-detail-page .prediction-trend-heading {
+    flex-direction: column;
+  }
+
+  .prediction-detail-page .prediction-trend-pills {
+    justify-content: flex-start;
+  }
+
+  .prediction-detail-page .prediction-trend-chart {
+    min-height: 280px;
+    padding: 8px;
+  }
+
+  .prediction-detail-page .prediction-weather-comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prediction-detail-page .prediction-profile-content > * {
+    animation: none;
+  }
+
+  .prediction-detail-page :is(
+    .prediction-forecast-action,
+    .prediction-evidence-tile
+  ) {
+    transition: none;
+  }
+}

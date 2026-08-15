@@ -3278,3 +3278,26 @@ body:is(.light-mode, .theme-light, .theme-high-contrast-light) .runner-dashboard
     inset 0 0 0 1px rgba(112, 61, 46, 0.12),
     0 24px 50px rgba(93, 53, 39, 0.12);
 }
+
+.auth-page .error-alert.signup-typo-suggestion.is-visible {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.signup-typo-suggestion__use {
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 10px;
+    padding: 6px 12px;
+    background: rgba(59, 130, 246, 0.14);
+    color: #93c5fd;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.signup-typo-suggestion__use:hover {
+    background: rgba(59, 130, 246, 0.26);
+}

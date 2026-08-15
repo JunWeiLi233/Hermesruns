@@ -35,6 +35,7 @@ export default function AppIcon({ name, className = '', title }) {
           <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
         </>
       );
+    case 'analytics':
     case 'insights':
       return titled(
         <>
@@ -96,6 +97,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M8 5H6a2 2 0 0 0 0 4h2" />
         </>
       );
+    case 'info':
     case 'help':
       return titled(
         <>
@@ -135,6 +137,14 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M7 17V11a5 5 0 1 1 10 0v6l1.5 1.5H5.5Z" />
         </>
       );
+    case 'download':
+      return titled(
+        <>
+          <path d="M12 5v10" />
+          <path d="m8.5 11.5 3.5 3.5 3.5-3.5" />
+          <path d="M5 18.5v1A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-1" />
+        </>
+      );
     case 'upload':
     case 'upload_file':
       return titled(
@@ -144,6 +154,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M5 18.5v1a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-1" />
         </>
       );
+    case 'verified':
     case 'check_circle':
       return titled(
         <>
@@ -151,6 +162,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m8.7 12.3 2.2 2.2 4.4-4.9" />
         </>
       );
+    case 'cancel':
     case 'error':
       return titled(
         <>
@@ -159,6 +171,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M12 16.5h.01" />
         </>
       );
+    case 'skip_next':
     case 'arrow_forward':
     case 'chevron_right':
       return titled(
@@ -200,6 +213,15 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M5 16c3-4.8 5.7-7.1 14-8" />
           <path d="M14.5 8H19v4.5" />
           <path d="M5 19h14" />
+        </>
+      );
+    case 'splits':
+      return titled(
+        <>
+          <ellipse cx="12" cy="12" rx="8.5" ry="5.5" />
+          <ellipse cx="12" cy="12" rx="5.2" ry="2.6" />
+          <path d="M16.4 7.7v4.2" />
+          <path d="M15 9.2h2.8" />
         </>
       );
     case 'timer':
@@ -398,6 +420,14 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M10.5 5.5a1.5 1.5 0 1 1 3 0v7.1a4.1 4.1 0 1 1-3 0Z" />
           <path d="M12 14.2v4.3" />
           <path d="M12 18.5a2 2 0 1 0 0 .1Z" />
+        </>
+      );
+    case 'weather':
+      return titled(
+        <>
+          <circle cx="16.2" cy="7.2" r="2.6" />
+          <path d="M16.2 2.7v1.1M20.7 7.2h-1.1M19.4 4l-.8.8" />
+          <path d="M7.5 18.2h8.7a3.4 3.4 0 0 0 .2-6.8 5 5 0 0 0-9.6-1.1 3.7 3.7 0 0 0 .7 7.9Z" />
         </>
       );
     case 'water_drop':
@@ -647,6 +677,14 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m11.5 17.5 2.5 2.5 2.5-2.5" />
         </>
       );
+    case 'terminal':
+      return titled(
+        <>
+          <rect x="3" y="4.5" width="18" height="15" rx="2" />
+          <path d="m7 9 3 3-3 3" />
+          <path d="M12.5 15H17" />
+        </>
+      );
     case 'monitor_heart':
       return titled(
         <>
@@ -741,6 +779,13 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M13 8.5a2 2 0 0 0 0 4" />
         </>
       );
+    case 'coach_review':
+      return titled(
+        <>
+          <path d="M5.5 4.5h13A1.5 1.5 0 0 1 20 6v8a1.5 1.5 0 0 1-1.5 1.5H11L7 19v-3.5H5.5A1.5 1.5 0 0 1 4 14V6a1.5 1.5 0 0 1 1.5-1.5Z" />
+          <path d="m8 10 2.2 2.2 4.2-4.4" />
+        </>
+      );
     case 'radio_button_unchecked':
       return titled(
         <>
@@ -767,6 +812,7 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M3.5 18h17" />
         </>
       );
+    case 'progress_activity':
     case 'sync':
       return titled(
         <>

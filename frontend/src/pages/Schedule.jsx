@@ -17,6 +17,7 @@ import { buildScheduleTargetBlockModel } from '../utils/scheduleMarathonBlock';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildWeeklyCoachSummaryModel } from '../utils/scheduleCoachSummary';
+import { buildScheduleRecoverySignals } from '../utils/scheduleRecoverySignals';
 import {
   extractRouteWaypoints,
   isRouteRecommendationUsable,
@@ -141,9 +142,9 @@ function buildReadinessModel(recommendationBundle, coachState, t) {
   else if (metrics.recoveryHours > 12) score -= 6;
   else if (metrics.recoveryHours <= 8) score += 4;
 
-  if (coachState?.lastSleepScore != null) {
-    if (coachState.lastSleepScore >= 80) score += 6;
-    else if (coachState.lastSleepScore < 60) score -= 8;
+  if (coachState?.sleepDataSupported === true && coachState?.readinessSleep != null) {
+    if (coachState.readinessSleep >= 80) score += 6;
+    else if (coachState.readinessSleep < 60) score -= 8;
   }
 
   const restingDelta = coachState?.baselineRestingHr != null && coachState?.lastNightRestingHr != null
@@ -638,17 +639,11 @@ export default function Schedule() {
     weeklyCoachSummary.focusMode,
   ]);
 
-  const fatigueLevel = readiness.score >= 86
-    ? s('fatigue_low')
-    : readiness.score >= 70
-      ? s('fatigue_moderate')
-      : s('fatigue_high');
-
-  const fatiguePct = readiness.score >= 86 ? 42 : readiness.score >= 70 ? 60 : 82;
-  const sleepPct = coachState?.lastSleepScore != null ? Math.max(12, Math.min(100, Math.round(coachState.lastSleepScore))) : 72;
-  const sleepLabel = coachState?.lastSleepScore != null && coachState.lastSleepScore >= 80
-    ? s('sleep_high')
-    : s('sleep_moderate');
+  const recoverySignals = buildScheduleRecoverySignals({
+    metrics: recommendationBundle.metrics,
+    coachState,
+    t: s,
+  });
   const targetRouteDistanceKm = Number(
     nextSession?.plannedDistanceKm
       || coachToday?.today?.plannedDistanceKm
@@ -665,7 +660,9 @@ export default function Schedule() {
     : routeRecommendation?.source === 'recent-run'
       ? 'recent-run'
       : 'history';
-  const routeWaypoints = routeRecommendation?.waypoints || null;
+  const routeWaypoints = (Array.isArray(routeRecommendation?.waypoints) ? routeRecommendation.waypoints : [])
+    .map(normalizeRouteWaypoint)
+    .filter(Boolean);
   const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
   const routeSketch = routeRecommendation?.preview || null;
   const routeSketchStartX = Number(routeSketch?.startX ?? routeSketch?.start?.[0]);
@@ -1331,15 +1328,23 @@ export default function Schedule() {
 
                 <div className="schedule-plan-signal-group">
                   <div className="schedule-plan-signal-row">
-                    <span>{s('fatigue_level')}</span>
-                    <strong>{fatigueLevel}</strong>
+                    <span>{s('fatigue_level')} <em>{s('signal_estimated')}</em></span>
+                    <strong>{recoverySignals.fatigue.label}</strong>
                   </div>
-                  <div className="schedule-plan-signal-bar"><span style={{ width: `${fatiguePct}%` }} /></div>
+                  <div className={`schedule-plan-signal-bar${recoverySignals.fatigue.supported ? '' : ' is-unsupported'}`}>
+                    <span style={{ width: `${recoverySignals.fatigue.percent ?? 0}%` }} />
+                  </div>
                   <div className="schedule-plan-signal-row">
                     <span>{s('sleep_quality')}</span>
-                    <strong>{sleepLabel}</strong>
+                    <strong>
+                      {recoverySignals.sleep.supported
+                        ? `${recoverySignals.sleep.label} · ${recoverySignals.sleep.percent} / 100`
+                        : recoverySignals.sleep.label}
+                    </strong>
                   </div>
-                  <div className="schedule-plan-signal-bar"><span className="is-sleep" style={{ width: `${sleepPct}%` }} /></div>
+                  <div className={`schedule-plan-signal-bar${recoverySignals.sleep.supported ? '' : ' is-unsupported'}`}>
+                    <span className="is-sleep" style={{ width: `${recoverySignals.sleep.percent ?? 0}%` }} />
+                  </div>
                 </div>
 
                 <button type="button" className="schedule-plan-secondary-btn" onClick={() => navigate('/analysis')}>

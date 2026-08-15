@@ -26,8 +26,33 @@ assert.match(
 
 assert.match(
   styleSource,
+  /\.recent-runs-card-metric\s*\{[\s\S]*min-width:\s*0;[\s\S]*overflow:\s*visible;/,
+  'Run metric tiles should not crop values at their inline edge.',
+);
+
+assert.match(
+  styleSource,
   /@media \(max-width: 680px\)[\s\S]*\.runs-dashboard-page \.runs-profile-history \.recent-runs-card-metrics\s*\{[\s\S]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/,
   'Mobile run cards should keep a compact three-metric row beneath the route preview.',
+);
+
+assert.match(
+  styleSource,
+  /\.recent-runs-card-metrics\s*\{[\s\S]*container:\s*recent-run-metrics \/ inline-size;/,
+  'Each run metric row should respond to its own available width.',
+);
+
+const finalMetricSizeRule = styleSource.lastIndexOf('.runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {');
+const finalMetricFitRule = styleSource.lastIndexOf('@container recent-run-metrics (max-width: 360px)');
+assert.ok(
+  finalMetricFitRule > finalMetricSizeRule,
+  'The narrow-card metric fit rule must come after the final desktop sizing block in the cascade.',
+);
+
+assert.match(
+  styleSource,
+  /@container recent-run-metrics \(max-width: 360px\)[\s\S]*\.recent-runs-card-metric\s*\{[\s\S]*padding-inline:\s*6px;[\s\S]*\.recent-runs-card-metric strong\s*\{[\s\S]*font-size:\s*clamp\(0\.78rem, 5cqi, 1rem\);[\s\S]*white-space:\s*normal;[\s\S]*overflow-wrap:\s*anywhere;/,
+  'Narrow run-card metrics should reduce padding and wrap localized values instead of cropping them.',
 );
 
 assert.doesNotMatch(

@@ -33,7 +33,17 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
 		</dependency>
 
 		<!-- Explicit Jackson: webmvc starter does not expose databind to compilation for custom services. -->
@@ -120,6 +130,11 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<!-- Dev boot speed: stop JIT at C1 (Spring-documented dev flag).
+					     Cuts startup CPU noticeably; packaged jars run untouched. -->
+					<jvmArguments>-XX:TieredStopAtLevel=1</jvmArguments>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

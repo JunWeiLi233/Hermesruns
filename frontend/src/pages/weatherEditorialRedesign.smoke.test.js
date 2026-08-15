@@ -8,7 +8,7 @@ const appSource = readFileSync(path.join(here, '../App.jsx'), 'utf8');
 const weatherSource = readFileSync(path.join(here, 'WeatherEngine.jsx'), 'utf8');
 const weatherLocationSource = readFileSync(path.join(here, '../utils/weatherLocation.js'), 'utf8');
 const navSource = readFileSync(path.join(here, '../utils/runnerShellNav.js'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
@@ -225,6 +225,12 @@ assert.match(
   liquidGlassSource,
   /\.runner-shell-page\.weather-engine-page :is\([\s\S]*\.weather-engine-card-head,[\s\S]*\.weather-engine-card-head > div[\s\S]*background:\s*transparent\s*!important;/,
   'Weather card headings should stay on their parent card surface instead of rendering as a glass strip.',
+);
+
+assert.match(
+  liquidGlassSource,
+  /\.runner-shell-page\.weather-engine-page \.weather-engine-forecast-strip\s*\{[^}]*background:\s*var\(--runner-profile-card\)\s*!important;[^}]*background-image:\s*none\s*!important;/,
+  'The forecast pipeline should retain its theme-aware paper grid background while avoiding a nested image layer.',
 );
 
 assert.match(

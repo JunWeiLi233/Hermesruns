@@ -5413,6 +5413,407 @@ body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p {
   }
 }
 
+/* Profile page scan modal finish
+   Replace the compact studio feel with the same warm bounded sheet geometry used
+   by the Profile import surfaces, while preserving the existing scan workflow,
+   state handling, and mobile single-column fallback. */
+.shoe-scan-modal-shell {
+  align-items: center;
+  padding: clamp(16px, 3vw, 40px);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(191, 91, 73, 0.18), transparent 30rem),
+    radial-gradient(circle at 86% 12%, rgba(122, 168, 130, 0.12), transparent 28rem),
+    rgba(32, 27, 22, 0.46);
+  -webkit-backdrop-filter: blur(20px) saturate(120%);
+  backdrop-filter: blur(20px) saturate(120%);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-shell {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(242, 102, 79, 0.18), transparent 30rem),
+    radial-gradient(circle at 86% 12%, rgba(122, 168, 130, 0.08), transparent 28rem),
+    rgba(16, 13, 10, 0.62);
+}
+
+.modal-card.shoe-scan-modal-card {
+  width: min(1080px, calc(100vw - 32px));
+  max-width: 1080px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--runner-profile-line) 78%, white 22%);
+  border-radius: clamp(24px, 2.4vw, 34px);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(191, 91, 73, 0.1), transparent 22rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.74), rgba(255, 248, 238, 0.38)),
+    var(--runner-profile-card-strong);
+  box-shadow: 0 34px 90px rgba(58, 42, 31, 0.24);
+  color: var(--runner-profile-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-card {
+  border-color: color-mix(in srgb, var(--runner-profile-line) 88%, transparent);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(242, 102, 79, 0.12), transparent 24rem),
+    linear-gradient(145deg, rgba(255, 248, 238, 0.04), rgba(255, 248, 238, 0.01)),
+    var(--runner-profile-card-strong);
+  box-shadow: 0 42px 110px rgba(0, 0, 0, 0.42);
+}
+
+.shoe-scan-modal-card .modal-form {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  scrollbar-gutter: stable;
+}
+
+.shoe-scan-modal-card .modal-close {
+  border: 1px solid var(--runner-profile-line);
+  background: var(--runner-profile-card);
+  color: var(--runner-profile-ink);
+  box-shadow: 0 10px 24px rgba(76, 54, 39, 0.08);
+}
+
+.shoe-scan-modal-card .modal-close:hover {
+  border-color: rgba(191, 91, 73, 0.38);
+  background: rgba(191, 91, 73, 0.12);
+  color: var(--runner-profile-flame);
+}
+
+.shoe-scan-modal-layout {
+  gap: 0;
+}
+
+.shoe-scan-modal-visual,
+.shoe-scan-modal-panel {
+  padding: clamp(24px, 3vw, 36px);
+}
+
+.shoe-scan-modal-visual {
+  gap: 20px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(191, 91, 73, 0.12), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(247, 240, 231, 0.7)),
+    var(--runner-profile-card);
+  border-bottom: 1px solid var(--runner-profile-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-visual,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-visual {
+  background:
+    radial-gradient(circle at 88% 0%, rgba(242, 102, 79, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 248, 238, 0.03), rgba(255, 248, 238, 0.01)),
+    var(--runner-profile-card);
+  border-bottom-color: var(--runner-profile-line);
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-kicker-row {
+  background: color-mix(in srgb, var(--runner-profile-flame) 8%, transparent);
+  color: var(--runner-profile-flame);
+}
+
+.shoe-scan-modal-preview {
+  min-height: clamp(240px, 32vh, 330px);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(246, 243, 238, 0.78)),
+    linear-gradient(145deg, #efe8df, #d8d9d7);
+}
+
+.shoe-scan-modal-preview-empty strong,
+.shoe-scan-modal-metrics strong,
+.shoe-scan-result-compare strong,
+.shoe-scan-modal-copy h4 {
+  color: var(--runner-profile-ink);
+}
+
+.shoe-scan-modal-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.shoe-scan-modal-copy h4 {
+  max-width: 10ch;
+  font-size: clamp(1.85rem, 2.8vw, 2.95rem);
+  letter-spacing: -0.06em;
+  line-height: 0.96;
+  text-wrap: balance;
+}
+
+.shoe-scan-modal-copy p {
+  max-width: 40ch;
+  color: var(--runner-profile-muted);
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.shoe-scan-modal-note,
+.shoe-scan-modal-status,
+.shoe-scan-modal-upload,
+.shoe-scan-result-card,
+.shoe-scan-modal-quota-after,
+.shoe-scan-modal-upgrade-card,
+.shoe-scan-modal-metrics > div {
+  border: 1px solid var(--runner-profile-line);
+  background: color-mix(in srgb, var(--runner-profile-card) 92%, white 8%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), var(--runner-profile-shadow);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-note,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-status,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upload,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-result-card,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-quota-after,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-upgrade-card,
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-metrics > div,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-note,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-status,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-result-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-quota-after,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-upgrade-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-metrics > div {
+  background: color-mix(in srgb, var(--runner-profile-card) 92%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.shoe-scan-modal-note {
+  padding: 16px 18px;
+}
+
+.shoe-scan-modal-upload {
+  padding: 22px 18px;
+  border-radius: 22px;
+  outline-color: color-mix(in srgb, var(--runner-profile-flame) 34%, transparent);
+}
+
+.shoe-scan-modal-upload:hover {
+  background: color-mix(in srgb, var(--runner-profile-flame) 5%, var(--runner-profile-card));
+}
+
+.shoe-scan-modal-upload > span:first-child,
+.shoe-scan-modal-primary,
+.shoe-scan-modal-upgrade-cta,
+.shoe-scan-choice.is-active {
+  background: var(--runner-profile-action-bg);
+  color: var(--runner-profile-action-ink);
+  box-shadow: 0 12px 26px rgba(33, 31, 26, 0.18);
+}
+
+.shoe-scan-modal-primary,
+.shoe-scan-modal-secondary {
+  min-height: 52px;
+}
+
+.shoe-scan-modal-secondary,
+.shoe-scan-choice {
+  border: 1px solid var(--runner-profile-line);
+  background: color-mix(in srgb, var(--runner-profile-card) 86%, white 14%);
+  color: var(--runner-profile-ink);
+}
+
+.shoe-scan-modal-stack {
+  gap: 22px;
+}
+
+.shoe-scan-modal-actions {
+  gap: 12px;
+}
+
+.shoe-scan-modal-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shoe-scan-results-cards {
+  max-height: min(44vh, 420px);
+}
+
+@media (min-width: 981px) {
+  .shoe-scan-modal-layout {
+    grid-template-columns: minmax(320px, 0.82fr) minmax(460px, 1.18fr) !important;
+  }
+
+  .shoe-scan-modal-visual {
+    border-right: 1px solid var(--runner-profile-line);
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 980px) {
+  .modal-card.shoe-scan-modal-card {
+    width: min(680px, calc(100vw - 24px));
+  }
+
+  .shoe-scan-modal-panel {
+    padding: clamp(24px, 5vw, 34px);
+  }
+
+  .shoe-scan-modal-copy h4 {
+    font-size: clamp(1.75rem, 7vw, 2.6rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .shoe-scan-modal-shell {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .modal-card.shoe-scan-modal-card {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 24px;
+  }
+
+  .shoe-scan-modal-panel {
+    padding: 20px;
+  }
+}
+
+/* Minimal shoe scan preview */
+.shoe-scan-modal-kicker-row {
+  gap: 8px;
+  min-height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-kicker-line {
+  width: 18px;
+  height: 1px;
+  border-radius: 0;
+  background: var(--runner-profile-flame);
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-kicker-row span {
+  color: var(--runner-profile-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview {
+  min-height: clamp(220px, 29vh, 290px);
+  border: 1px solid var(--runner-profile-line);
+  border-radius: 16px;
+  background: var(--runner-profile-card-strong);
+  box-shadow: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview {
+  background: var(--runner-profile-card-strong);
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-image {
+  filter: none;
+  opacity: 1;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-empty {
+  align-content: center;
+  justify-items: start;
+  min-height: inherit;
+  padding: clamp(28px, 4vw, 44px);
+  gap: 10px;
+  text-align: left;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-empty .runner-dashboard-side-link-icon {
+  width: 22px;
+  height: 22px;
+  margin-bottom: 8px;
+  color: var(--runner-profile-flame);
+  font-size: 1.35rem;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-empty strong {
+  max-width: none;
+  color: var(--runner-profile-ink);
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-empty p {
+  max-width: 34ch;
+  color: var(--runner-profile-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-overlay {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview::before,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview::after,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-overlay::before,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-overlay::after {
+  content: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-upload,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-chip {
+  position: static;
+  inset: auto;
+  width: auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--runner-profile-line);
+  border-radius: 8px;
+  background: var(--runner-profile-card-strong);
+  color: var(--runner-profile-ink);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-upload:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--runner-profile-flame) 58%, transparent);
+  outline-offset: 2px;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-upload:hover {
+  border-color: color-mix(in srgb, var(--runner-profile-flame) 42%, var(--runner-profile-line));
+  background: color-mix(in srgb, var(--runner-profile-flame) 5%, var(--runner-profile-card-strong));
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-upload,
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-chip,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-chip {
+  background: var(--runner-profile-card-strong);
+  color: var(--runner-profile-ink);
+}
+
+@media (max-width: 640px) {
+  .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview {
+    min-height: 220px;
+  }
+
+  .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-empty {
+    padding: 28px 24px 70px;
+  }
+
+  .modal-card.shoe-scan-modal-card .shoe-scan-modal-preview-overlay {
+    align-items: flex-end;
+    flex-direction: row;
+  }
+}
+
 /* Profile-aligned Shoes workspace */
 .shoes-profile-workspace {
   width: min(100%, 1280px);
@@ -5475,6 +5876,37 @@ body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p {
 .shoes-profile-workspace .shoe-rotation-signal-source {
   min-height: 48px;
   border-radius: 14px;
+}
+
+/* Keep the evidence-light fallback useful without letting its sidecar set an
+   oversized height for the whole two-column recommendation grid. */
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-sidecar {
+  gap: 10px;
+}
+
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-glass {
+  gap: 7px;
+  padding: 14px 16px;
+}
+
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-meta {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-stat {
+  min-height: 76px;
+  padding: 12px 10px;
+}
+
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-detail-list {
+  gap: 7px;
+}
+
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-detail-item,
+.shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-source {
+  min-height: 42px;
+  padding-block: 9px;
 }
 
 .shoe-inventory-summary-strip {
@@ -5827,6 +6259,10 @@ body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-copy p {
 
   .shoe-inventory-summary-strip,
   .shoes-profile-workspace .shoe-inventory-manage-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shoes-profile-workspace .shoe-rotation-signal.is-recommend .shoe-rotation-signal-meta {
     grid-template-columns: minmax(0, 1fr);
   }
 

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiJson } from '../api';
+import { fetchActivitySummaries } from '../api/activityApi.ts';
 import AppIcon from '../components/AppIcon';
 import AnalysisSubpageNav from '../components/AnalysisSubpageNav';
 import PageSkeleton from '../components/PageSkeleton';
@@ -20,6 +20,7 @@ import {
   vdotToPaceSecondsPerKm,
 } from '../utils/vdot';
 import { formatPaceSeconds } from '../utils/format';
+import { selectRacePrediction } from '../utils/predictionSelection.ts';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -122,8 +123,7 @@ export default function PredictionDetail() {
     (async () => {
       setLoadState('loading');
       try {
-        const activitiesData = await apiJson('/api/activities');
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
+        const list = await fetchActivitySummaries();
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setRuns(list);
         setLoadState('ready');
@@ -137,17 +137,43 @@ export default function PredictionDetail() {
   const rollingSeries = useMemo(() => computeRollingRepresentativeSeries(allVdotEntries), [allVdotEntries]);
   const currentVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const representativeVdot = currentVdot.representativeVdot || 0;
-  const trainingPaces = useMemo(() => computeTrainingPaces(representativeVdot), [representativeVdot]);
+  const adjustedVdot = currentVdot.adjustedVdot || representativeVdot;
+  const hasCurrentWeatherEvidence = currentVdot.windowEntries.some(
+    (entry) => entry.adjustedVo2max - entry.vo2max > 0.05,
+  );
 
-  const racePredictionMinutes = useMemo(() => {
+  const rawRacePredictionMinutes = useMemo(() => {
     if (!distance || representativeVdot <= 0) return null;
     return predictRaceTimeCalibrated(representativeVdot, distance.meters, runs);
   }, [distance, representativeVdot, runs]);
 
+  const adjustedRacePredictionMinutes = useMemo(() => {
+    if (!distance || adjustedVdot <= 0) return null;
+    return predictRaceTimeCalibrated(adjustedVdot, distance.meters, runs, { weatherAdjustedAnchors: true });
+  }, [adjustedVdot, distance, runs]);
+
+  const predictionSelection = useMemo(() => selectRacePrediction({
+    representativeVdot,
+    adjustedVdot,
+    rawPredictionMinutes: rawRacePredictionMinutes,
+    adjustedPredictionMinutes: adjustedRacePredictionMinutes,
+    hasWeatherEvidence: hasCurrentWeatherEvidence,
+  }), [
+    adjustedRacePredictionMinutes,
+    adjustedVdot,
+    hasCurrentWeatherEvidence,
+    rawRacePredictionMinutes,
+    representativeVdot,
+  ]);
+  const useWeatherAdjustedPrediction = predictionSelection.useWeatherAdjusted;
+  const forecastVdot = predictionSelection.forecastVdot;
+  const racePredictionMinutes = predictionSelection.predictionMinutes;
+  const trainingPaces = useMemo(() => computeTrainingPaces(forecastVdot), [forecastVdot]);
+
   const effortPredictions = useMemo(() => {
-    if (!distance || representativeVdot <= 0) return [];
+    if (!distance || forecastVdot <= 0) return [];
     return EFFORT_LEVELS.map((level) => {
-      const paceSecPerKm = vdotToPaceSecondsPerKm(representativeVdot, level.vo2Fraction);
+      const paceSecPerKm = vdotToPaceSecondsPerKm(forecastVdot, level.vo2Fraction);
       const totalSeconds = paceSecPerKm != null ? (paceSecPerKm * (distance.meters / 1000)) : null;
       return {
         ...level,
@@ -157,7 +183,7 @@ export default function PredictionDetail() {
         fill: Math.max(18, Math.min(100, Math.round(level.vo2Fraction * 100))),
       };
     });
-  }, [distance, representativeVdot, t]);
+  }, [distance, forecastVdot, t]);
 
   const confidenceBasis = useMemo(() => {
     if (!distance) return null;
@@ -175,14 +201,14 @@ export default function PredictionDetail() {
   }, [distance, runs, lang, t]);
 
   const confidenceScore = useMemo(() => calculateConfidence({
-    hasVdot: representativeVdot > 0,
+    hasVdot: forecastVdot > 0,
     hasMatch: Boolean(confidenceBasis),
     rollingCount: rollingSeries.length,
     usedTopN: currentVdot.usedTopN || 0,
-  }), [representativeVdot, confidenceBasis, rollingSeries.length, currentVdot.usedTopN]);
+  }), [forecastVdot, confidenceBasis, rollingSeries.length, currentVdot.usedTopN]);
 
   const coachRecommendation = useMemo(() => {
-    if (!distance || representativeVdot <= 0) return t('analysis.pred_coach_empty');
+    if (!distance || forecastVdot <= 0) return t('analysis.pred_coach_empty');
     const racePace = effortPredictions.find((effort) => effort.key === 'race');
     const easyPaces = trainingPaces.easy || [];
     const easyLower = easyPaces[0] != null ? formatPaceSeconds(easyPaces[0]) : '--';
@@ -200,18 +226,29 @@ export default function PredictionDetail() {
       return t('analysis.pred_coach_10k', { racePace: racePaceDisplay });
     }
     return t('analysis.pred_coach_5k', { racePace: racePaceDisplay });
-  }, [distance, representativeVdot, effortPredictions, trainingPaces, lang, t]);
+  }, [distance, forecastVdot, effortPredictions, trainingPaces, lang, t]);
 
   const trendPredictions = useMemo(() => {
     if (!distance || !rollingSeries.length) return [];
     return rollingSeries
-      .map((point) => ({
-        date: point.date,
-        raw: predictRaceTimeCalibrated(point.y, distance.meters, runs),
-        adjusted: predictRaceTimeCalibrated(point.adjustedY || point.y, distance.meters, runs),
-      }))
+      .map((point) => {
+        const raw = predictRaceTimeCalibrated(point.y, distance.meters, runs);
+        const adjustedPointVdot = point.adjustedY || point.y;
+        const adjusted = predictRaceTimeCalibrated(adjustedPointVdot, distance.meters, runs, { weatherAdjustedAnchors: true });
+        return {
+          date: point.date,
+          raw,
+          adjusted,
+          hasAdjustment: adjustedPointVdot - point.y > 0.05
+            && Number.isFinite(adjusted)
+            && Number.isFinite(raw)
+            && adjusted < raw - (1 / 60),
+        };
+      })
       .filter((point) => Number.isFinite(point.raw) && point.raw > 0);
   }, [distance, rollingSeries, runs]);
+
+  const hasWeatherTrend = trendPredictions.some((point) => point.hasAdjustment);
 
   const chartData = useMemo(() => {
     if (!trendPredictions.length) return null;
@@ -229,19 +266,19 @@ export default function PredictionDetail() {
           pointRadius: 0,
           tension: 0.4,
         },
-        {
+        ...(hasWeatherTrend ? [{
           label: t('analysis.vdot_weather_adjusted'),
           data: trendPredictions.map((point) => point.adjusted),
-          borderColor: '#818cf8',
+          borderColor: '#5275b8',
           backgroundColor: 'transparent',
           borderWidth: 2,
           borderDash: [5, 5],
           pointRadius: 0,
           tension: 0.4,
-        },
+        }] : []),
       ],
     };
-  }, [trendPredictions, lang, t, distKey]);
+  }, [trendPredictions, lang, t, distKey, hasWeatherTrend]);
 
   const chartOptions = useMemo(() => ({
     responsive: true,
@@ -281,15 +318,33 @@ export default function PredictionDetail() {
   const displayName = email?.split('@')[0] || t('profile.default_name');
   const initials = displayName.slice(0, 1).toUpperCase();
   const primaryTime = racePredictionMinutes ? formatPredictedTime(racePredictionMinutes * 60) : '--';
+  const rawPrimaryTime = rawRacePredictionMinutes ? formatPredictedTime(rawRacePredictionMinutes * 60) : '--';
+  const adjustedPrimaryTime = adjustedRacePredictionMinutes ? formatPredictedTime(adjustedRacePredictionMinutes * 60) : '--';
+  const weatherRecoveredSeconds = useWeatherAdjustedPrediction
+    ? Math.max(0, (rawRacePredictionMinutes - adjustedRacePredictionMinutes) * 60)
+    : 0;
+  const weatherImpactSamples = trendPredictions
+    .filter((point) => point.hasAdjustment)
+    .map((point) => Math.max(0, (point.raw - point.adjusted) * 60))
+    .filter((seconds) => seconds >= 1);
+  const averageWeatherRecoverySeconds = weatherImpactSamples.length
+    ? weatherImpactSamples.reduce((sum, seconds) => sum + seconds, 0) / weatherImpactSamples.length
+    : 0;
+  const peakWeatherRecoverySeconds = weatherImpactSamples.length
+    ? Math.max(...weatherImpactSamples)
+    : 0;
   const racePace = racePredictionMinutes ? formatPaceSeconds((racePredictionMinutes * 60) / (distance.meters / 1000)) : '--';
   const trendDelta = trendPredictions.length > 1
-    ? trendPredictions[trendPredictions.length - 1].raw - trendPredictions[0].raw
+    ? trendPredictions[trendPredictions.length - 1][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
+      - trendPredictions[0][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
     : null;
   const evidenceTiles = [
     {
       label: t('analysis.pred_cockpit_vdot'),
-      value: representativeVdot > 0 ? representativeVdot.toFixed(1) : '--',
-      helper: t('analysis.pred_cockpit_vdot_helper', { count: currentVdot.usedTopN || 0 }),
+      value: forecastVdot > 0 ? forecastVdot.toFixed(1) : '--',
+      helper: useWeatherAdjustedPrediction
+        ? `${t('analysis.vdot_weather_adjusted')} · ${t('analysis.vdot_raw')} ${representativeVdot.toFixed(1)}`
+        : t('analysis.pred_cockpit_vdot_helper', { count: currentVdot.usedTopN || 0 }),
     },
     {
       label: t('analysis.pred_cockpit_race_pace'),
@@ -344,7 +399,7 @@ export default function PredictionDetail() {
         </header>
 
         <div className="runner-shell-canvas">
-          <div className="prediction-forecast-cockpit">
+          <div className="prediction-profile-content prediction-forecast-cockpit">
             <section className="prediction-forecast-hero">
               <div className="prediction-forecast-hero-copy">
                 <span className="prediction-forecast-kicker">{t('analysis.pred_cockpit_kicker')}</span>
@@ -353,8 +408,8 @@ export default function PredictionDetail() {
                 <p>
                   {confidenceBasis
                     ? t('analysis.pred_cockpit_basis_recent', { km: confidenceBasis.km, date: confidenceBasis.date, pace: confidenceBasis.pace })
-                    : representativeVdot > 0
-                      ? t('analysis.pred_cockpit_basis_vdot', { vdot: representativeVdot.toFixed(1), runs: runs.length })
+                    : forecastVdot > 0
+                      ? t('analysis.pred_cockpit_basis_vdot', { vdot: forecastVdot.toFixed(1), runs: runs.length })
                       : t('analysis.pred_cockpit_basis_empty')}
                 </p>
                 <div className="prediction-forecast-actions">
@@ -377,34 +432,77 @@ export default function PredictionDetail() {
               </div>
             </section>
 
-            <section className="prediction-effort-ladder">
-              <div className="prediction-section-heading">
-                <span>{t('analysis.pred_effort_kicker')}</span>
-                <h2>{t('analysis.pred_effort_title')}</h2>
-                <p>{t('analysis.pred_effort_copy')}</p>
-              </div>
-              <div className="prediction-effort-rows">
-                {effortPredictions.length > 0 ? effortPredictions.map((level) => (
-                  <div key={level.key} className={`prediction-effort-row ${level.cssClass}`}>
-                    <div>
-                      <span>{level.label}</span>
-                      <strong>{level.timeDisplay}</strong>
-                    </div>
-                    <div className="prediction-effort-meter">
-                      <div style={{ width: `${level.fill}%` }} />
-                    </div>
-                    <span className="prediction-effort-pace">{level.paceDisplay}{t('analysis.pred_cockpit_pace_unit')}</span>
-                  </div>
-                )) : (
-                  <div className="prediction-detail-empty">
-                    <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                    <p>{t('analysis.pred_detail_empty_copy')}</p>
-                  </div>
-                )}
-              </div>
+            <section className="prediction-evidence-grid prediction-profile-metric-strip" aria-label={t('analysis.pred_evidence_title')}>
+              {evidenceTiles.map((tile) => (
+                <div key={tile.label} className="prediction-evidence-tile">
+                  <span>{tile.label}</span>
+                  <strong>{tile.value}</strong>
+                  <p>{tile.helper}</p>
+                </div>
+              ))}
             </section>
 
-            <div className="prediction-command-grid">
+            <section className={`prediction-weather-card${useWeatherAdjustedPrediction ? ' is-active' : ' is-empty'}`}>
+              <div className="prediction-section-heading">
+                <span>{t('analysis.pred_weather_kicker')}</span>
+                <h2>{t('analysis.pred_weather_title')}</h2>
+                <p>{t('analysis.pred_weather_copy')}</p>
+                {useWeatherAdjustedPrediction ? (
+                  <div className="prediction-weather-meta">
+                    <span>{t('analysis.pred_weather_samples', { count: weatherImpactSamples.length })}</span>
+                    <span>{t('analysis.pred_weather_avg', { value: formatPredictedTime(averageWeatherRecoverySeconds) })}</span>
+                    <span>{t('analysis.pred_weather_peak', { value: formatPredictedTime(peakWeatherRecoverySeconds) })}</span>
+                  </div>
+                ) : null}
+              </div>
+              {useWeatherAdjustedPrediction ? (
+                <div className="prediction-weather-comparison">
+                  <div>
+                    <span>{t('analysis.vdot_raw')}</span>
+                    <strong>{rawPrimaryTime}</strong>
+                  </div>
+                  <div className="is-adjusted">
+                    <span>{t('analysis.vdot_weather_adjusted')}</span>
+                    <strong>{adjustedPrimaryTime}</strong>
+                  </div>
+                  <div className="is-gain">
+                    <span>{t('analysis.pred_weather_gain_label')}</span>
+                    <strong>{formatPredictedTime(weatherRecoveredSeconds)}</strong>
+                  </div>
+                </div>
+              ) : (
+                <p className="prediction-weather-empty">{t('analysis.pred_weather_empty')}</p>
+              )}
+            </section>
+
+            <div className="prediction-profile-training-grid">
+              <section className="prediction-effort-ladder">
+                <div className="prediction-section-heading">
+                  <span>{t('analysis.pred_effort_kicker')}</span>
+                  <h2>{t('analysis.pred_effort_title')}</h2>
+                  <p>{t('analysis.pred_effort_copy')}</p>
+                </div>
+                <div className="prediction-effort-rows">
+                  {effortPredictions.length > 0 ? effortPredictions.map((level) => (
+                    <div key={level.key} className={`prediction-effort-row ${level.cssClass}`}>
+                      <div>
+                        <span>{level.label}</span>
+                        <strong>{level.timeDisplay}</strong>
+                      </div>
+                      <div className="prediction-effort-meter">
+                        <div style={{ width: `${level.fill}%` }} />
+                      </div>
+                      <span className="prediction-effort-pace">{level.paceDisplay}{t('analysis.pred_cockpit_pace_unit')}</span>
+                    </div>
+                  )) : (
+                    <div className="prediction-detail-empty">
+                      <strong>{t('analysis.pred_detail_empty_title')}</strong>
+                      <p>{t('analysis.pred_detail_empty_copy')}</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
               <aside className="prediction-coach-rail">
                 <span className="prediction-forecast-kicker">{t('analysis.pred_coach_kicker')}</span>
                 <h2>{t('analysis.pred_coach_title')}</h2>
@@ -415,16 +513,6 @@ export default function PredictionDetail() {
                   <span>{t('analysis.pred_coach_point_execution')}</span>
                 </div>
               </aside>
-
-              <section className="prediction-evidence-grid" aria-label={t('analysis.pred_evidence_title')}>
-                {evidenceTiles.map((tile) => (
-                  <div key={tile.label} className="prediction-evidence-tile">
-                    <span>{tile.label}</span>
-                    <strong>{tile.value}</strong>
-                    <p>{tile.helper}</p>
-                  </div>
-                ))}
-              </section>
             </div>
 
             <section className="prediction-trend-card">

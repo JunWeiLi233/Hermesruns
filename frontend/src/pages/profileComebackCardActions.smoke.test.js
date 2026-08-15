@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const profileSource = readFileSync(path.join(here, 'ProfileDashboard.jsx'), 'utf8');
 const comebackSource = readFileSync(path.join(here, '../components/ComebackMessage.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 const translationsSource = [
   readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8'),

@@ -1,0 +1,822 @@
+/* Decision-first Profile alignment for /analysis/load-balance. */
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile {
+  --load-profile-paper: #f4f1ed;
+  --load-profile-card: rgba(255, 255, 255, 0.86);
+  --load-profile-card-solid: #fffdf9;
+  --load-profile-ink: #211f1c;
+  --load-profile-muted: #756f68;
+  --load-profile-faint: #a39c94;
+  --load-profile-accent: var(--brand-accent, #a0392a);
+  --load-profile-coral: var(--accent-coral-strong, #f07561);
+  --load-profile-green: #3d8b5e;
+  --load-profile-line: rgba(38, 31, 25, 0.08);
+  --load-profile-shadow: 0 18px 46px rgba(67, 47, 33, 0.08);
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--load-profile-ink);
+  font-family: "Manrope", var(--font-body);
+}
+
+body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 28px clamp(20px, 3vw, 48px) 60px;
+  background:
+    radial-gradient(circle at 88% 2%, rgba(240, 117, 97, 0.1), transparent 26rem),
+    radial-gradient(circle at 4% 34%, rgba(160, 57, 42, 0.055), transparent 28rem),
+    var(--load-profile-paper, #f4f1ed);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(h1, h2, h3, h4, p) {
+  margin-top: 0;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 4px 2px 10px;
+  animation: analysis-load-profile-rise 420ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading {
+  min-width: 0;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--load-profile-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-back:hover {
+  color: var(--load-profile-accent);
+  background: var(--load-profile-card-solid);
+  transform: translateX(-2px);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-back .runner-dashboard-side-link-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-kicker {
+  display: block;
+  width: fit-content;
+  margin: 0 0 7px;
+  padding: 0;
+  background: transparent !important;
+  color: var(--load-profile-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.28em;
+  margin: 0;
+  color: var(--load-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  font-style: italic;
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 strong {
+  color: var(--load-profile-accent);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ring {
+  position: relative;
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    var(--load-profile-coral) 0 var(--load-progress),
+    rgba(33, 31, 28, 0.08) var(--load-progress) 100%
+  );
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ring::after {
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background: var(--load-profile-paper);
+  content: "";
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ring strong {
+  position: relative;
+  z-index: 1;
+  color: var(--load-profile-ink);
+  font-size: 1.18rem;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness-copy {
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness-copy > span {
+  color: var(--load-profile-faint);
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-status-value {
+  color: var(--load-profile-ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-status-value:is(.is-optimal, .is-under) {
+  color: var(--load-profile-green);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-status-value.is-watch {
+  color: #aa741a;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-status-value.is-risk {
+  color: #c34231;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision {
+  position: relative;
+  display: grid;
+  min-height: 236px;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
+  gap: 28px;
+  overflow: hidden;
+  padding: 32px 36px;
+  border: 1px solid var(--load-profile-line);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(240, 117, 97, 0.1), transparent 27rem),
+    linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%);
+  box-shadow: 0 14px 38px rgba(67, 47, 33, 0.07);
+  color: var(--load-profile-ink);
+  animation: analysis-load-profile-rise 440ms 60ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision::after {
+  display: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision-copy,
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window {
+  position: relative;
+  z-index: 1;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision .analysis-load-coach-badge {
+  margin-bottom: 20px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision .analysis-load-profile-kicker {
+  color: var(--load-profile-accent) !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision :is(
+  .coach-identity-copy strong,
+  h2,
+  .analysis-load-profile-window strong
+) {
+  color: var(--load-profile-ink) !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision :is(
+  .coach-identity-copy span,
+  .analysis-load-profile-decision-copy > p,
+  .analysis-load-profile-window p
+) {
+  color: var(--load-profile-muted) !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window > span,
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window small {
+  color: var(--load-profile-faint) !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision h2 {
+  max-width: 23ch;
+  margin-bottom: 12px;
+  color: var(--load-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.55rem, 2.8vw, 2.25rem);
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision-copy > p {
+  max-width: 66ch;
+  margin-bottom: 7px;
+  color: var(--load-profile-muted);
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-primary-action {
+  margin-top: 14px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--load-profile-accent), var(--load-profile-coral));
+  box-shadow: 0 8px 22px rgba(160, 57, 42, 0.28);
+  color: #fff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-primary-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(160, 57, 42, 0.35);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window {
+  align-self: stretch;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 22px 0 22px 28px;
+  border-left: 1px solid var(--load-profile-line);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window > span,
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window small {
+  color: var(--load-profile-faint);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window strong {
+  margin: 10px 0 8px;
+  color: var(--load-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  font-weight: 850;
+  letter-spacing: -0.06em;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-window p {
+  margin-bottom: 20px;
+  color: var(--load-profile-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision .coach-identity-copy strong {
+  color: #1c1917 !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-evidence {
+  display: grid;
+  grid-template-columns: minmax(0, 1.62fr) minmax(260px, 0.72fr);
+  gap: 16px;
+  animation: analysis-load-profile-rise 440ms 110ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(
+  .analysis-load-profile-chart-card,
+  .analysis-load-profile-ratio-card,
+  .analysis-load-command-metric-card,
+  .analysis-load-profile-ledger,
+  .analysis-load-command-methodology-card
+) {
+  border: 0 !important;
+  background: var(--load-profile-card) !important;
+  box-shadow: var(--load-profile-shadow) !important;
+  color: var(--load-profile-ink) !important;
+  backdrop-filter: blur(14px);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-chart-card {
+  min-height: 340px;
+  padding: 22px 24px;
+  border-radius: 16px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-panel-head h2,
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-section-head h2 {
+  color: var(--load-profile-ink);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-legend span {
+  color: var(--load-profile-muted);
+  font-size: 0.67rem;
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-legend i.is-chronic {
+  background: #8db9e7;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-wrap {
+  min-height: 250px;
+  margin-top: 20px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg {
+  height: 250px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg line {
+  stroke: rgba(33, 31, 28, 0.09);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg text {
+  fill: rgba(33, 31, 28, 0.5);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-badge {
+  top: 4px;
+  right: 4px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, var(--load-profile-accent), var(--load-profile-coral));
+  box-shadow: 0 12px 24px rgba(160, 57, 42, 0.2);
+  color: #fff;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-badge :is(strong, span) {
+  color: #fff;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip {
+  border: 0;
+  background: rgba(31, 26, 22, 0.92);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card {
+  min-height: 340px;
+  padding: 24px;
+  border-radius: 16px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card > div > span {
+  color: var(--load-profile-faint);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card p {
+  margin: 0;
+  color: var(--load-profile-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-value strong {
+  color: var(--load-profile-ink);
+  font-size: clamp(3.2rem, 6vw, 4.7rem);
+  font-style: italic;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-track {
+  height: 8px;
+  background: rgba(33, 31, 28, 0.08);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-labels {
+  color: var(--load-profile-faint);
+  font-size: 0.57rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  animation: analysis-load-profile-rise 440ms 160ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-metric-card {
+  min-height: 118px;
+  padding: 18px 20px;
+  border-radius: 14px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card > span {
+  color: var(--load-profile-faint);
+  font-size: 0.63rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card strong {
+  margin-top: 12px;
+  color: var(--load-profile-ink);
+  font-size: clamp(1.65rem, 2.6vw, 2.2rem);
+  font-weight: 850;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card small {
+  display: block;
+  margin-top: 8px;
+  color: var(--load-profile-muted);
+  font-size: 0.66rem;
+  line-height: 1.35;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card.is-risk strong {
+  color: #c34231;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card.is-watch strong {
+  color: #aa741a;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger {
+  padding: 22px 24px 18px;
+  border-radius: 16px;
+  animation: analysis-load-profile-rise 440ms 210ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger .analysis-load-command-section-head {
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-link {
+  color: var(--load-profile-accent);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-list {
+  gap: 8px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-sample-row {
+  padding: 14px 16px;
+  border: 0 !important;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62) !important;
+  box-shadow: none !important;
+  color: var(--load-profile-ink) !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-row:hover {
+  background: var(--load-profile-card-solid) !important;
+  transform: translateY(-1px);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: rgba(160, 57, 42, 0.075);
+  color: var(--load-profile-accent);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-row h3,
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-metrics strong {
+  color: var(--load-profile-ink);
+  font-size: 0.92rem;
+  font-style: normal;
+  letter-spacing: -0.02em;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-row p,
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-metrics span {
+  color: var(--load-profile-muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-archive-button {
+  padding: 9px 16px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: rgba(160, 57, 42, 0.075) !important;
+  box-shadow: none !important;
+  color: var(--load-profile-accent) !important;
+  font-size: 0.67rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-methodology {
+  animation: analysis-load-profile-rise 440ms 260ms ease-out both;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-methodology-card {
+  padding: 22px 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.42) !important;
+  box-shadow: none !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-content {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.35fr) minmax(0, 1fr);
+  gap: 30px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-formula {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-formula-box {
+  color: var(--load-profile-ink);
+  font-size: 0.88rem;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-formula-fraction hr {
+  border-top-color: var(--load-profile-ink);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-grid {
+  gap: 20px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-method-item h3 {
+  margin-bottom: 7px;
+  color: var(--load-profile-ink);
+  font-size: 0.78rem;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-method-item p {
+  margin: 0;
+  color: var(--load-profile-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(button, [tabindex]):focus-visible {
+  outline: 2px solid var(--load-profile-coral);
+  outline-offset: 3px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile {
+  --load-profile-paper: #171512;
+  --load-profile-card: rgba(255, 248, 238, 0.055);
+  --load-profile-card-solid: #25211c;
+  --load-profile-ink: #fff8ee;
+  --load-profile-muted: #aaa198;
+  --load-profile-faint: #7f776f;
+  --load-profile-accent: #f2664f;
+  --load-profile-coral: #ff876f;
+  --load-profile-green: #77b98f;
+  --load-profile-line: rgba(255, 248, 238, 0.08);
+  --load-profile-shadow: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas {
+  background:
+    radial-gradient(circle at 88% 2%, rgba(242, 102, 79, 0.1), transparent 26rem),
+    #171512 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile-back {
+  background: rgba(255, 248, 238, 0.055);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision {
+  border-color: var(--load-profile-line);
+  background:
+    radial-gradient(circle at 84% 18%, rgba(242, 102, 79, 0.23), transparent 27rem),
+    linear-gradient(135deg, #2a211a 0%, #191512 58%, #100e0c 100%);
+  box-shadow: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision::after {
+  position: absolute;
+  right: -6%;
+  bottom: -46%;
+  display: block;
+  width: 370px;
+  height: 370px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 50%;
+  box-shadow: 0 0 0 42px rgba(255, 255, 255, 0.018), 0 0 0 88px rgba(255, 255, 255, 0.012);
+  content: "";
+  pointer-events: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(
+  .analysis-load-profile-chart-card,
+  .analysis-load-profile-ratio-card,
+  .analysis-load-command-metric-card,
+  .analysis-load-profile-ledger,
+  .analysis-load-command-methodology-card
+) {
+  border: 0 !important;
+  background: var(--load-profile-card) !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-sample-row {
+  background: rgba(255, 248, 238, 0.035) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg line {
+  stroke: rgba(255, 248, 238, 0.1);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg text {
+  fill: rgba(255, 248, 238, 0.5);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-track,
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-icon {
+  background: rgba(255, 248, 238, 0.075);
+}
+
+@keyframes analysis-load-profile-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1180px) {
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-evidence {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card {
+    min-height: 220px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas {
+    padding: 20px 16px 44px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile {
+    gap: 14px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-header {
+    align-items: flex-end;
+    gap: 14px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-back {
+    margin-bottom: 13px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 {
+    font-size: clamp(1.55rem, 8vw, 2rem);
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness {
+    gap: 9px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ring {
+    width: 60px;
+    height: 60px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ring strong {
+    font-size: 0.94rem;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness-copy {
+    min-width: 0;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 24px;
+    border-radius: 18px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-window {
+    padding: 20px 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 0;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-chart-card,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-methodology-card {
+    padding: 18px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-panel-head,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-wrap {
+    min-height: 220px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-svg {
+    height: 220px;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-row,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-main,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-metrics {
+    align-items: flex-start;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-row {
+    flex-direction: column;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-sample-metrics {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-content,
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(
+    .analysis-load-profile-header,
+    .analysis-load-profile-decision,
+    .analysis-load-profile-evidence,
+    .analysis-load-profile-metrics,
+    .analysis-load-profile-ledger,
+    .analysis-load-profile-methodology
+  ) {
+    animation: none;
+  }
+
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(button, .analysis-load-command-sample-row) {
+    transition: none;
+  }
+}

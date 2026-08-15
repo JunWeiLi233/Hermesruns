@@ -28,7 +28,7 @@ export default {
   },
   "auth": {
     "login_success": "Login successful.",
-    "invalid_credentials": "Invalid email or password.",
+    "invalid_credentials": "Invalid password/username",
     "invalid_password": "Invalid password.",
     "user_not_found": "User not found.",
     "email_in_use": "Email already in use.",
