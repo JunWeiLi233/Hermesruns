@@ -29,6 +29,21 @@ assert.match(
   /fetchMetricTrendItems\('\/api\/admin\/audit'\)/,
   'Audit chart should page the audit API for dated events.'
 );
+assert.doesNotMatch(
+  dashboardSource,
+  /admin\.kinetic\.chart_' \+/,
+  'Chart status copy must use static t() keys so the translation scanner can see them.',
+);
+assert.match(
+  dashboardSource,
+  /t\('admin\.kinetic\.chart_loading'\)/,
+  'Loading chart state must use admin.kinetic.chart_loading.',
+);
+assert.match(
+  dashboardSource,
+  /t\('admin\.kinetic\.chart_error'\)/,
+  'Error chart state must use admin.kinetic.chart_error.',
+);
 
 assert.match(
   kineticStyleSource,

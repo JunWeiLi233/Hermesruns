@@ -2891,7 +2891,11 @@ const Dashboard = memo(function Dashboard() {
                   </div>
                 )}
                 {overviewCharts.users.status !== 'ready' && (
-                  <div className="ops-chart-state">{t('admin.kinetic.chart_' + overviewCharts.users.status)}</div>
+                  <div className="ops-chart-state">
+                    {overviewCharts.users.status === 'error'
+                      ? t('admin.kinetic.chart_error')
+                      : t('admin.kinetic.chart_loading')}
+                  </div>
                 )}
                 {overviewCharts.users.status === 'ready' && !(overviewCharts.users.series?.labels?.length > 0) && (
                   <div className="ops-chart-state">{t('admin.kinetic.metric_trend_empty')}</div>
@@ -2931,7 +2935,11 @@ const Dashboard = memo(function Dashboard() {
                   </div>
                 )}
                 {overviewCharts.audit.status !== 'ready' && (
-                  <div className="ops-chart-state">{t('admin.kinetic.chart_' + overviewCharts.audit.status)}</div>
+                  <div className="ops-chart-state">
+                    {overviewCharts.audit.status === 'error'
+                      ? t('admin.kinetic.chart_error')
+                      : t('admin.kinetic.chart_loading')}
+                  </div>
                 )}
                 {overviewCharts.audit.status === 'ready' && !(overviewCharts.audit.series?.labels?.length > 0) && (
                   <div className="ops-chart-state">{t('admin.kinetic.metric_trend_empty')}</div>
