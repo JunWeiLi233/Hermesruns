@@ -461,8 +461,10 @@
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-card {
-  grid-template-columns: 128px minmax(0, 1fr) minmax(120px, 0.22fr);
-  gap: 16px;
+  /* The card markup stacks card-top (art/copy/side row) → metrics → actions;
+     the old 3-track grid squeezed the whole card-top into one column. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
   min-height: 172px;
   align-items: stretch;
   padding: 14px;
@@ -1735,7 +1737,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-studio-
   }
 
   #root .shoes-atelier-redesign .shoe-inventory-card {
-    grid-template-columns: 128px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #root .shoes-atelier-redesign .shoe-inventory-card-side {

@@ -63,8 +63,8 @@ for (const [label, source] of [
 
   assert.match(
     source,
-    /\.runs-dashboard-page\s+\.runs-profile-signal--count\s+:is\(span,\s*strong,\s*p\)\s*\{[\s\S]*color:\s*#ffffff\s*!important;[\s\S]*opacity:\s*1;/,
-    `${label} should keep the Full History count-card text white and fully visible.`,
+    /\.runs-dashboard-page\s+\.runs-profile-signal\s+:is\(span,\s*strong,\s*p\)\s*\{[\s\S]*color:\s*#ffffff\s*!important;[\s\S]*opacity:\s*1;/,
+    `${label} should keep every cockpit signal-card text white and fully visible.`,
   );
 
   assert.match(
@@ -88,8 +88,8 @@ assert.match(
 
 assert.match(
   contrastFixes,
-  /#root\s+\.runs-dashboard-page\s+\.runs-profile-signal--count\s+:is\(span,\s*strong,\s*p\)\s*\{[\s\S]*color:\s*#ffffff\s*!important;[\s\S]*opacity:\s*1\s*!important;/,
-  'Runs contrast fixes should override the light-mode dashboard strong blanket so the Full History count card stays white.',
+  /#root\s+\.runs-dashboard-page\s+\.runs-profile-signal\s+:is\(span,\s*strong,\s*p\)\s*\{[\s\S]*color:\s*#ffffff\s*!important;[\s\S]*opacity:\s*1\s*!important;/,
+  'Runs contrast fixes should override the light-mode dashboard strong blanket so every cockpit signal card stays white.',
 );
 
 console.log('[PASS] Runs profile-aligned cockpit guardrails passed.');

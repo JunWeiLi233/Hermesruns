@@ -23,6 +23,25 @@ import {
   mergeCourseMapQueueItems,
 } from '../utils/courseMapCatalogQueue.js';
 import { getDashboardTopbarTabKeys } from '../utils/dashboardTopbarNav';
+import {
+  ArcElement,
+  BarController,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  DoughnutController,
+  Filler,
+  Legend,
+  LineController,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Title,
+  Tooltip,
+} from 'chart.js';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutController, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
 function ShoeImage({ src, alt, className, noImageLabel }) {
   const [processed, setProcessed] = useState(null);
@@ -86,6 +105,9 @@ const TAB_ROUTE_MAP = {
 
 const COURSE_MAP_UPLOAD_ACCEPT = 'image/*,application/pdf,.pdf';
 const ADMIN_JOB_STATUS_REQUEST_TIMEOUT_MS = 10000;
+// The accounts table caps at 5 rows per page; operators page through with the
+// arrow pager instead of a long scroll.
+const USERS_TABLE_PAGE_SIZE = 5;
 const ADMIN_JOB_POLL_INTERVAL_MS = 2000;
 
 function normalizeDashboardPathname(pathname) {
@@ -964,6 +986,59 @@ function JobQueueRowComponent({ ariaAttributes, index, style, items, selectedId,
 
 // ── end row components ─────────────────────────────────────────────────────
 
+const METRIC_TREND_PAGE_SIZE = 100;
+const METRIC_TREND_MAX_PAGES = 10;
+
+const METRIC_TREND_ENDPOINTS = {
+  users: '/api/admin/users',
+  shoes: '/api/admin/shoes',
+};
+
+async function fetchMetricTrendItems(endpoint) {
+  const items = [];
+  for (let page = 0; page < METRIC_TREND_MAX_PAGES; page += 1) {
+    const params = new URLSearchParams({ page: String(page), size: String(METRIC_TREND_PAGE_SIZE) });
+    const data = await apiJson(`${endpoint}?${params.toString()}`);
+    const pageItems = Array.isArray(data?.items) ? data.items : [];
+    items.push(...pageItems);
+    const totalPages = Number(data?.totalPages) || 1;
+    if (page + 1 >= totalPages || pageItems.length === 0) break;
+  }
+  return items;
+}
+
+function buildCumulativeDailySeries(items) {
+  const perDay = new Map();
+  for (const item of items) {
+    if (!item?.createdAt) continue;
+    const day = String(item.createdAt).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}/.test(day)) continue;
+    perDay.set(day, (perDay.get(day) || 0) + 1);
+  }
+  const days = [...perDay.keys()].sort();
+  const labels = [];
+  const values = [];
+  let running = 0;
+  for (const day of days) {
+    running += perDay.get(day);
+    labels.push(day);
+    values.push(running);
+  }
+  return { labels, values };
+}
+
+function buildDailyCountSeries(items, field = 'createdAt', limitDays = 14) {
+  const perDay = new Map();
+  for (const item of items) {
+    if (!item?.[field]) continue;
+    const day = String(item[field]).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}/.test(day)) continue;
+    perDay.set(day, (perDay.get(day) || 0) + 1);
+  }
+  const days = [...perDay.keys()].sort().slice(-limitDays);
+  return { labels: days, values: days.map(day => perDay.get(day) || 0) };
+}
+
 const Dashboard = memo(function Dashboard() {
   const { logout, login, isAuthenticated } = useAuth();
   const { t, lang, setLang } = useI18n();
@@ -980,6 +1055,9 @@ const Dashboard = memo(function Dashboard() {
   const [shoesPage, setShoesPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
   const [jobsPage, setJobsPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
   const [auditPage, setAuditPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
+  const [metricTrendTab, setMetricTrendTab] = useState(null);
+  const [metricTrends, setMetricTrends] = useState({});
+  const [overviewCharts, setOverviewCharts] = useState({ users: { status: 'loading', series: null }, audit: { status: 'loading', series: null } });
   const [savedFilters, setSavedFilters] = useState([]);
   const [catalogInventory, setCatalogInventory] = useState([]);
   const [catalogQuery, setCatalogQuery] = useState('');
@@ -1117,6 +1195,7 @@ const Dashboard = memo(function Dashboard() {
   const loadUsers = useCallback(async () => {
     const params = new URLSearchParams({
       page: String(userQuery.page || 0),
+      size: String(USERS_TABLE_PAGE_SIZE),
       search: userQuery.search || '',
       role: userQuery.role || '',
       status: userQuery.status || '',
@@ -1277,6 +1356,56 @@ const Dashboard = memo(function Dashboard() {
     loadShoes,
     loadUsers,
   ]);
+
+  const toggleMetricTrend = useCallback((metric) => {
+    setMetricTrendTab(prev => (prev === metric ? null : metric));
+  }, []);
+
+  // Fetched-once-per-metric guard. The effect must not depend on metricTrends:
+  // writing the loading entry re-runs the effect, whose cleanup would cancel
+  // the in-flight fetch and leave the panel stuck on "loading" forever.
+  const metricTrendFetchedRef = useRef({});
+  const overviewChartsFetchedRef = useRef(false);
+
+  // Overview charts: cumulative user growth line + audit events per day bars.
+  // Fetched once per session; the shoe-photo doughnut derives from queues.
+  useEffect(() => {
+    if (activeTab !== 'overview' || loadState !== 'ready') return;
+    if (overviewChartsFetchedRef.current) return;
+    overviewChartsFetchedRef.current = true;
+    fetchMetricTrendItems(METRIC_TREND_ENDPOINTS.users)
+      .then(items => {
+        setOverviewCharts(prev => ({ ...prev, users: { status: 'ready', series: buildCumulativeDailySeries(items) } }));
+      })
+      .catch(() => {
+        setOverviewCharts(prev => ({ ...prev, users: { status: 'error', series: null } }));
+      });
+    fetchMetricTrendItems('/api/admin/audit')
+      .then(items => {
+        setOverviewCharts(prev => ({ ...prev, audit: { status: 'ready', series: buildDailyCountSeries(items) } }));
+      })
+      .catch(() => {
+        setOverviewCharts(prev => ({ ...prev, audit: { status: 'error', series: null } }));
+      });
+  }, [activeTab, loadState]);
+
+  useEffect(() => {
+    if (!metricTrendTab) return;
+    const metric = metricTrendTab;
+    if (!METRIC_TREND_ENDPOINTS[metric]) return;
+    if (metricTrendFetchedRef.current[metric]) return;
+    metricTrendFetchedRef.current[metric] = true;
+    setMetricTrends(prev => (prev[metric] ? prev : { ...prev, [metric]: { status: 'loading', series: null } }));
+    fetchMetricTrendItems(METRIC_TREND_ENDPOINTS[metric])
+      .then(items => {
+        setMetricTrends(prev => ({ ...prev, [metric]: { status: 'ready', series: buildCumulativeDailySeries(items) } }));
+      })
+      .catch(err => {
+        delete metricTrendFetchedRef.current[metric];
+        const sessionExpired = err?.status === 401 || err?.status === 403;
+        setMetricTrends(prev => ({ ...prev, [metric]: { status: 'error', series: null, sessionExpired } }));
+      });
+  }, [metricTrendTab]);
 
   const loadCourseMapScanTimeline = useCallback(async (raceId) => {
     if (!raceId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
@@ -1946,12 +2075,19 @@ const Dashboard = memo(function Dashboard() {
 
   const queueCards = useMemo(() => {
     if (!queues) return [];
-    const raceCourseMapPending = Array.isArray(queues.raceCourseMapsPendingReview)
-      ? queues.raceCourseMapsPendingReview.length
-      : Number(queues.raceCourseMapsPendingReviewCount || queues.pendingRaceCourseMaps || 0);
-    const raceCourseMapMissing = Array.isArray(queues.raceCourseMapsMissing)
-      ? queues.raceCourseMapsMissing.length
-      : Number(queues.raceCourseMapsMissingCount || queues.missingRaceCourseMaps || 0);
+    // Queue endpoints return some fields as arrays and others as counts;
+    // Number(arrayLike) is NaN, so coerce per shape before rendering.
+    const toCount = (value) => (Array.isArray(value) ? value.length : Number(value) || 0);
+    const raceCourseMapPending = toCount(
+      queues.raceCourseMapsPendingReview
+        ?? queues.raceCourseMapsPendingReviewCount
+        ?? queues.pendingRaceCourseMaps,
+    );
+    const raceCourseMapMissing = toCount(
+      queues.raceCourseMapsMissing
+        ?? queues.raceCourseMapsMissingCount
+        ?? queues.missingRaceCourseMaps,
+    );
     return [
       { titleKey: 'dashboard.queue_pending_course_maps', count: raceCourseMapPending, key: 'pending', tab: 'courseMaps' },
       { titleKey: 'dashboard.queue_missing_course_maps', count: raceCourseMapMissing, key: 'missing', tab: 'courseMaps' },
@@ -2047,17 +2183,12 @@ const Dashboard = memo(function Dashboard() {
     ? liveCourseMapPreview.routePoints.length
     : Number(liveCourseMapPreview?.pointCount || 0);
   const courseMapRoutePoints = Array.isArray(courseMapDisplayPreview?.routePoints) ? courseMapDisplayPreview.routePoints : [];
-  const courseMapElevationSamples = Array.isArray(courseMapDisplayPreview?.elevationSamples) ? courseMapDisplayPreview.elevationSamples : [];
-  const courseMapElevationGainValue = courseMapElevationSamples.length > 1
-    ? Math.max(0, Math.round(Math.max(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0))) - Math.min(...courseMapElevationSamples.map((sample) => Number(sample.elevation || sample.altitude || sample.y || 0)))))
-    : null;
   const courseMapSatellitesConnected = String(Math.min(8, Math.max(1, courseMapsPage.items?.length || 1))).padStart(2, '0');
   const courseMapActiveActions = Object.values(courseMapActions).filter((action) => Boolean(action?.type));
   const selectedCourseMapAction = selectedCourseMapId
     ? courseMapActions[selectedCourseMapId] || { raceId: null, type: '' }
     : { raceId: null, type: '' };
   const courseMapAction = selectedCourseMapAction;
-  const courseMapComputeLoad = Math.min(95, 24 + (courseMapSummary.pending * 11) + (courseMapActiveActions.length ? 7 : 0));
   const courseMapActionProgress = getCourseMapActionProgress(courseMapAction);
   const courseMapActionIsSelected = Boolean(courseMapAction.type);
   const courseMapPointCount = courseMapRoutePoints.length || Number(courseMapDisplayPreview?.pointCount || 12482);
@@ -2544,10 +2675,9 @@ const Dashboard = memo(function Dashboard() {
       <div className="admin-command-layout">
         <aside className="admin-command-sidebar ops-sidebar" aria-label={t('admin.kinetic.sidebar_brand')}>
           <div className="admin-command-sidebar__brand ops-sidebar-brand">
-            <HermesLogo dark />
-            <div>
-              <div className="ops-sidebar-brand-wordmark">{t('admin.kinetic.sidebar_brand')}</div>
-              <div className="ops-sidebar-brand-sub">{t('admin.kinetic.sidebar_brand_sub')}</div>
+            <div className="ops-sidebar-brand-copy">
+              <HermesLogo dark />
+              <span>{t('admin.kinetic.sidebar_brand_sub')}</span>
             </div>
           </div>
 
@@ -2561,21 +2691,14 @@ const Dashboard = memo(function Dashboard() {
                 onClick={() => navigateToTab(tab.key)}
               >
                 <AppIcon name={TAB_ICONS[tab.key]} className="material-symbols-outlined" />
-                <span className="admin-command-sidebar__nav-copy">
-                  <strong>{t(tab.labelKey)}</strong>
-                  <span>{adminRouteSurfaces[tab.key]?.navCopy || t(tab.labelKey)}</span>
-                </span>
-                <span className="admin-command-sidebar__nav-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className="ops-sidebar-link-label">{t(tab.labelKey)}</span>
+                <span className="admin-command-sidebar__nav-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
               </button>
             ))}
           </nav>
 
           <div className="admin-command-sidebar__footer ops-sidebar-footer">
-            <button type="button" className="admin-command-sidebar__cta ops-sidebar-link" onClick={() => navigateToTab('courseMaps')} aria-label={t('dashboard.tab_course_maps')}>
-              <AppIcon name="add" className="material-symbols-outlined" />
-              <span>{t('dashboard.tab_course_maps')}</span>
-            </button>
-            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ops-sidebar-link" onClick={logout} aria-label={t('dashboard.nav_logout')}>
+            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ops-sidebar-cta" onClick={logout} aria-label={t('dashboard.nav_logout')}>
               <AppIcon name="logout" className="material-symbols-outlined" />
               <span>{t('dashboard.nav_logout')}</span>
             </button>
@@ -2617,27 +2740,245 @@ const Dashboard = memo(function Dashboard() {
         {activeTab === 'overview' && overview && (
           <div className="admin-command-route__surface ops-page">
 
-            {/* Kinetic Editorial: metric strip */}
+            {/* Kinetic Editorial: metric strip — one label per card; the kicker
+                slot used to repeat the same translation key as the label.
+                The first two cards toggle a growth-trend line chart. */}
             <div className="ops-metric-strip">
-              <div className="ops-metric-card">
-                <div className="ops-metric-kicker">{t('admin.kinetic.metric_active_users')}</div>
+              <button
+                type="button"
+                className={`ops-metric-card ops-metric-card--toggle${metricTrendTab === 'users' ? ' is-active' : ''}`}
+                aria-pressed={metricTrendTab === 'users'}
+                onClick={() => toggleMetricTrend('users')}
+              >
                 <div className="ops-metric-value">{usersPage.totalItems || 0}</div>
                 <div className="ops-metric-label">{t('admin.kinetic.metric_active_users')}</div>
-              </div>
-              <div className="ops-metric-card">
-                <div className="ops-metric-kicker">{t('admin.kinetic.metric_shoes_inventory')}</div>
+              </button>
+              <button
+                type="button"
+                className={`ops-metric-card ops-metric-card--toggle${metricTrendTab === 'shoes' ? ' is-active' : ''}`}
+                aria-pressed={metricTrendTab === 'shoes'}
+                onClick={() => toggleMetricTrend('shoes')}
+              >
                 <div className="ops-metric-value">{shoesPage.totalItems || 0}</div>
                 <div className="ops-metric-label">{t('admin.kinetic.metric_shoes_inventory')}</div>
-              </div>
+              </button>
               <div className="ops-metric-card">
-                <div className="ops-metric-kicker">{t('admin.kinetic.metric_audit_24h')}</div>
                 <div className="ops-metric-value">{auditPage.totalItems || 0}</div>
                 <div className="ops-metric-label">{t('admin.kinetic.metric_audit_24h')}</div>
               </div>
               <div className="ops-metric-card">
-                <div className="ops-metric-kicker">{t('admin.kinetic.metric_pending_maps')}</div>
                 <div className="ops-metric-value">{courseMapsPage.items?.filter(item => getCourseMapPending(item)).length || 0}</div>
                 <div className="ops-metric-label">{t('admin.kinetic.metric_pending_maps')}</div>
+              </div>
+            </div>
+
+            {/* Queue-health stat card grid (runner-profile card style):
+                one white card per queue count, tone dot for attention. */}
+            <div className="ops-queue-grid">
+              {queueCards.slice(0, 4).map((card) => (
+                <div key={card.key} className={`ops-queue-card${card.count > 0 ? ' is-attention' : ''}`}>
+                  <span className="ops-queue-card__dot" aria-hidden="true" />
+                  <strong className="ops-queue-card__value">{card.count.toLocaleString()}</strong>
+                  <span className="ops-queue-card__label">{t(card.titleKey)}</span>
+                </div>
+              ))}
+            </div>
+
+            {metricTrendTab && (() => {
+              const trend = metricTrends[metricTrendTab] || { status: 'loading', series: null };
+              const titleKey = metricTrendTab === 'users'
+                ? 'admin.kinetic.metric_trend_users_title'
+                : 'admin.kinetic.metric_trend_shoes_title';
+              const lineColor = metricTrendTab === 'users' ? '#f07561' : '#5b8cff';
+              return (
+                <div className="ops-card ops-metric-chart-panel" data-metric={metricTrendTab}>
+                  <div className="ops-card-head">
+                    <div>
+                      <div className="ops-kicker">{t('admin.kinetic.metric_trend_kicker')}</div>
+                      <h3 className="ops-card-title">{t(titleKey)}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="ops-metric-chart-close"
+                      aria-label={t('admin.kinetic.metric_trend_close')}
+                      onClick={() => setMetricTrendTab(null)}
+                    >
+                      <AppIcon name="close" className="material-symbols-outlined" />
+                    </button>
+                  </div>
+                  {trend.status === 'loading' && (
+                    <div className="ops-metric-chart-state">{t('admin.kinetic.metric_trend_loading')}</div>
+                  )}
+                  {trend.status === 'error' && (
+                    <div className="ops-metric-chart-state is-error">
+                      {trend.sessionExpired ? t('admin.kinetic.metric_trend_session_expired') : t('admin.kinetic.metric_trend_error')}
+                    </div>
+                  )}
+                  {trend.status === 'ready' && !(trend.series?.labels?.length > 0) && (
+                    <div className="ops-metric-chart-state">{t('admin.kinetic.metric_trend_empty')}</div>
+                  )}
+                  {trend.status === 'ready' && trend.series?.labels?.length > 0 && (
+                    <div className="ops-metric-chart-canvas">
+                      <Line
+                        data={{
+                          labels: trend.series.labels,
+                          datasets: [{
+                            label: t('admin.kinetic.metric_trend_dataset'),
+                            data: trend.series.values,
+                            fill: true,
+                            borderColor: lineColor,
+                            backgroundColor: `${lineColor}1f`,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            tension: 0.25,
+                          }],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: { mode: 'index', intersect: false },
+                          },
+                          scales: {
+                            x: { title: { display: true, text: t('admin.kinetic.metric_trend_axis_date') } },
+                            y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: t('admin.kinetic.metric_trend_axis_count') } },
+                          },
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Overview charts: user growth line, audit events bars, shoe
+                photo status doughnut — reference admin-portal graphs. */}
+            <div className="ops-chart-grid">
+              <div className="ops-card ops-chart-card">
+                <div className="ops-card-head">
+                  <div>
+                    <div className="ops-kicker">{t('admin.kinetic.charts_kicker')}</div>
+                    <h3 className="ops-card-title">{t('admin.kinetic.chart_users_title')}</h3>
+                  </div>
+                </div>
+                {overviewCharts.users.status === 'ready' && overviewCharts.users.series?.labels?.length > 0 && (
+                  <div className="ops-chart-canvas">
+                    <Line
+                      data={{
+                        labels: overviewCharts.users.series.labels,
+                        datasets: [{
+                          label: t('admin.kinetic.metric_trend_dataset'),
+                          data: overviewCharts.users.series.values,
+                          fill: true,
+                          borderColor: '#f07561',
+                          backgroundColor: '#f075611f',
+                          pointRadius: 3,
+                          pointHoverRadius: 5,
+                          tension: 0.25,
+                        }],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+                        scales: {
+                          x: { title: { display: true, text: t('admin.kinetic.metric_trend_axis_date') } },
+                          y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: t('admin.kinetic.metric_trend_axis_count') } },
+                        },
+                      }}
+                    />
+                  </div>
+                )}
+                {overviewCharts.users.status !== 'ready' && (
+                  <div className="ops-chart-state">
+                    {overviewCharts.users.status === 'error'
+                      ? t('admin.kinetic.chart_error')
+                      : t('admin.kinetic.chart_loading')}
+                  </div>
+                )}
+                {overviewCharts.users.status === 'ready' && !(overviewCharts.users.series?.labels?.length > 0) && (
+                  <div className="ops-chart-state">{t('admin.kinetic.metric_trend_empty')}</div>
+                )}
+              </div>
+
+              <div className="ops-card ops-chart-card">
+                <div className="ops-card-head">
+                  <div>
+                    <div className="ops-kicker">{t('admin.kinetic.charts_kicker')}</div>
+                    <h3 className="ops-card-title">{t('admin.kinetic.chart_audit_title')}</h3>
+                  </div>
+                </div>
+                {overviewCharts.audit.status === 'ready' && overviewCharts.audit.series?.labels?.length > 0 && (
+                  <div className="ops-chart-canvas">
+                    <Bar
+                      data={{
+                        labels: overviewCharts.audit.series.labels,
+                        datasets: [{
+                          label: t('admin.kinetic.chart_audit_dataset'),
+                          data: overviewCharts.audit.series.values,
+                          backgroundColor: '#5b8cff',
+                          borderRadius: 6,
+                          maxBarThickness: 26,
+                        }],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                          x: { title: { display: true, text: t('admin.kinetic.metric_trend_axis_date') } },
+                          y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: t('admin.kinetic.metric_trend_axis_count') } },
+                        },
+                      }}
+                    />
+                  </div>
+                )}
+                {overviewCharts.audit.status !== 'ready' && (
+                  <div className="ops-chart-state">
+                    {overviewCharts.audit.status === 'error'
+                      ? t('admin.kinetic.chart_error')
+                      : t('admin.kinetic.chart_loading')}
+                  </div>
+                )}
+                {overviewCharts.audit.status === 'ready' && !(overviewCharts.audit.series?.labels?.length > 0) && (
+                  <div className="ops-chart-state">{t('admin.kinetic.metric_trend_empty')}</div>
+                )}
+              </div>
+
+              <div className="ops-card ops-chart-card">
+                <div className="ops-card-head">
+                  <div>
+                    <div className="ops-kicker">{t('admin.kinetic.charts_kicker')}</div>
+                    <h3 className="ops-card-title">{t('admin.kinetic.chart_shoes_title')}</h3>
+                  </div>
+                </div>
+                <div className="ops-chart-canvas ops-chart-canvas--donut">
+                  <Doughnut
+                    data={{
+                      labels: [
+                        t('admin.kinetic.chart_shoes_label_live'),
+                        t('admin.kinetic.chart_shoes_label_pending'),
+                        t('admin.kinetic.chart_shoes_label_missing'),
+                      ],
+                      datasets: [{
+                        data: [
+                          Math.max(0, (shoesPage.totalItems || 0) - (queues?.unverifiedShoePhotos?.length || 0) - (queues?.missingShoeImages?.length || 0)),
+                          queues?.unverifiedShoePhotos?.length || 0,
+                          queues?.missingShoeImages?.length || 0,
+                        ],
+                        backgroundColor: ['#22a06b', '#f07561', '#f5b545'],
+                        borderWidth: 0,
+                      }],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } } },
+                      cutout: '62%',
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -3317,32 +3658,22 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'courseMaps' && (
-          <div className="admin-command-route__surface ops-page">
-            <section className="admin-track-hub-hero">
-              <div className="admin-track-hub-hero__copy">
-                <span className="section-intro-kicker admin-track-hub-hero__eyebrow">{t('dashboard.course_maps_kicker')}</span>
+          <div className="admin-command-route__surface ops-page admin-coursemap-rework">
+            <section className="admin-coursemap-rework__hero">
+              <div className="admin-coursemap-rework__hero-copy">
+                <span className="section-intro-kicker">{t('dashboard.course_maps_kicker')}</span>
                 <h1>{t('dashboard.course_maps_title')}</h1>
-                <p className="admin-track-hub-hero__intro">{t('dashboard.course_maps_intro')}</p>
-                <div className="admin-track-hub-hero__meta">
-                  <span>{t('dashboard.course_maps_meta_system_online')}</span>
-                  <span>{t('dashboard.course_maps_meta_active_pipelines', { count: courseMapActivePipelines })}</span>
-                </div>
+                <p>{t('dashboard.course_maps_intro')}</p>
               </div>
-              <div className="admin-track-hub-hero__stats">
-                <div className="admin-track-hub-hero__stat">
-                  <span>{t('dashboard.course_maps_stat_satellites')}</span>
-                  <strong>{courseMapSatellitesConnected}</strong>
-                </div>
-                <div className="admin-track-hub-hero__stat">
-                  <span>{t('dashboard.course_maps_stat_compute_load')}</span>
-                  <strong>{courseMapComputeLoad}%</strong>
-                </div>
+              <div className="admin-coursemap-rework__hero-meta">
+                <span>{t('dashboard.course_maps_meta_system_online')}</span>
+                <span>{t('dashboard.course_maps_meta_active_pipelines', { count: courseMapActivePipelines })}</span>
+                <span>{t('dashboard.course_maps_stat_satellites')}: {courseMapSatellitesConnected}</span>
               </div>
-              <div className="admin-track-hub-hero__atmosphere" aria-hidden="true" />
             </section>
 
-            <div className="admin-track-hub-grid admin-coursemap-workbench">
-                <aside className="admin-coursemap-workbench__rail admin-track-hub-sidebar">
+            <div className="admin-coursemap-rework__grid">
+                <aside className="admin-coursemap-rework__rail admin-track-hub-sidebar">
                   <section className={`admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue${courseMapQueueCollapsed ? ' is-collapsed' : ''}`}>
                   <div className="admin-coursemap-workbench__rail-head">
                     <div>
@@ -3396,48 +3727,22 @@ const Dashboard = memo(function Dashboard() {
                     </button>
                   </div>
                   </section>
-
-                  <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--metrics">
-                  <div className="admin-track-hub-sidebar__metrics">
-                    <div className="admin-track-hub-metric-card">
-                      <span>{t('dashboard.course_maps_metric_elevation')}</span>
-                      <strong>{courseMapElevationGainValue != null ? courseMapElevationGainValue : 412}</strong>
-                      <small>{t('dashboard.course_maps_metric_meters')}</small>
-                    </div>
-                    <div className="admin-track-hub-metric-card">
-                      <span>{t('dashboard.course_maps_metric_surface_quality')}</span>
-                      <strong>{courseMapSurfaceQuality}</strong>
-                      <small>{t('dashboard.course_maps_metric_grade')}</small>
-                    </div>
-                  </div>
-                  </section>
-
-                  <section className="admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--density">
-                  <div className="admin-track-hub-density-card">
-                    <span>{t('dashboard.course_maps_metric_point_density')}</span>
-                    <div className="admin-track-hub-density-card__row">
-                      <strong>{courseMapPointCount.toLocaleString()}</strong>
-                      <p>{t('dashboard.course_maps_metric_point_density_copy')}</p>
-                    </div>
-                  </div>
-                  </section>
                 </aside>
 
-                <section className="admin-coursemap-workbench__stage admin-track-hub-stage">
+                <section className="admin-coursemap-rework__stage">
                   {!selectedCourseMapId && (
                     <div className="history-status">{t('dashboard.course_maps_empty_workspace')}</div>
                   )}
                   {selectedCourseMapId && (
-                    <div className="admin-review-workspace admin-track-hub-stage__shell">
-                      <div className="admin-track-hub-stage__header">
+                    <div className="admin-coursemap-rework__stack">
+                      <div className="admin-coursemap-rework__card admin-coursemap-rework__card--head">
                         <div>
-                          <span className="section-intro-kicker admin-track-hub-stage__eyebrow">{t('dashboard.review_workspace_kicker')}</span>
+                          <span className="section-intro-kicker">{t('dashboard.review_workspace_kicker')}</span>
                           <div className="admin-track-hub-stage__title-row">
                             <h3>{getCourseMapRaceName(selectedCourseMapItem || {})}</h3>
                             <span className={`admin-track-hub-stage__badge is-${getCourseMapStatus(selectedCourseMapItem || {})}`}>{t(`dashboard.review_state_${getCourseMapStatus(selectedCourseMapItem || {})}`)}</span>
                           </div>
                           <p>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</p>
-                          {renderCourseMapProgressCard('header')}
                         </div>
                         <div className="admin-track-hub-stage__actions">
                           <button
@@ -3457,22 +3762,9 @@ const Dashboard = memo(function Dashboard() {
                           </button>
                         </div>
                       </div>
+                      {renderCourseMapProgressCard('header')}
 
-                      <div className="admin-track-hub-map-stage admin-track-hub-map-stage--compare">
-                        <div className="admin-track-hub-map-stage__headerband">
-                          <div className="admin-track-hub-map-stage__scan">
-                            <span className="admin-track-hub-map-stage__scan-indicator" aria-hidden="true" />
-                            <div>
-                              <span>{t('dashboard.course_maps_stage_scan_area')}</span>
-                              <strong>{getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}</strong>
-                            </div>
-                          </div>
-                          <div className="admin-track-hub-map-stage__compare-copy">
-                            <span>{t('dashboard.course_maps_stage_preview_comparison')}</span>
-                            <strong>{getCourseMapRaceName(selectedCourseMapItem || {})}</strong>
-                          </div>
-                        </div>
-
+                      <div className="admin-coursemap-rework__card admin-coursemap-rework__card--compare">
                         <div className="admin-track-hub-map-stage__compare-grid">
                           <article className="admin-track-hub-map-panel admin-track-hub-map-panel--live">
                             <div className="admin-track-hub-map-panel__head">
@@ -3548,89 +3840,68 @@ const Dashboard = memo(function Dashboard() {
                               <strong>{courseMapPrimarySourceLabel}</strong>
                             </div>
                             <div className="admin-track-hub-map-stage__telemetry-card">
-                              <span>{t('dashboard.course_maps_stage_extraction_pipeline')}</span>
-                              <strong>{t('dashboard.course_maps_run_pipeline')}</strong>
-                            </div>
-                            <div className="admin-track-hub-map-stage__telemetry-card">
                               <span>{t('dashboard.course_maps_stage_point_count')}</span>
                               <strong>{courseMapPointCount.toLocaleString()}</strong>
                             </div>
                           </div>
-                          <button type="button" className="btn-secondary btn-inline-md admin-track-hub-map-stage__telemetry-action" onClick={openCourseMapUploadPicker}>
+                          <button type="button" className="btn-secondary btn-inline-md" onClick={openCourseMapUploadPicker}>
                             {t('dashboard.course_maps_upload')}
                           </button>
                         </div>
                       </div>
 
-                      <div className="admin-track-hub-workspace-stack">
-                        <input id={courseMapUploadInputId} className="hidden" type="file" accept={COURSE_MAP_UPLOAD_ACCEPT} onChange={handleCourseMapUploadSelection} />
+                      <input id={courseMapUploadInputId} className="hidden" type="file" accept={COURSE_MAP_UPLOAD_ACCEPT} onChange={handleCourseMapUploadSelection} />
 
-                        <div className="admin-coursemap-publish-layout admin-coursemap-publish-layout--bridge admin-track-hub-footer-grid">
-                          <section className="admin-track-hub-review-shell admin-track-hub-footer-panel admin-track-hub-footer-panel--review">
-                            <div className="admin-track-hub-review-shell__head">
-                              <span className="section-intro-kicker">{t('dashboard.course_maps_footer_parameters')}</span>
-                              <h4>{getCourseMapRaceName(selectedCourseMapItem || {})}</h4>
-                            </div>
-                            <div className="admin-track-hub-review-grid admin-track-hub-footer-signal-grid">
-                              {courseMapFooterSignals.map((signal) => (
-                                <article key={signal.key} className={`admin-track-hub-footer-signal-card is-${signal.key}`}>
-                                  <div className="admin-track-hub-footer-signal-card__row">
-                                    <span>{signal.label}</span>
-                                    <strong>{signal.value}</strong>
-                                  </div>
-                                  <div className="admin-track-hub-footer-signal-card__bar">
-                                    <div className="admin-track-hub-footer-signal-card__bar-fill" style={{ width: `${signal.meter}%` }} />
-                                  </div>
-                                  <p>{signal.copy}</p>
-                                </article>
-                              ))}
-                            </div>
-                          </section>
+                      {courseMapFooterSignals.length > 0 && (
+                        <div className="admin-coursemap-rework__card admin-coursemap-rework__card--signals">
+                          <div className="admin-coursemap-rework__card-head">
+                            <span className="section-intro-kicker">{t('dashboard.course_maps_footer_parameters')}</span>
+                          </div>
+                          <div className="admin-track-hub-footer-signal-grid">
+                            {courseMapFooterSignals.map((signal) => (
+                              <article key={signal.key} className={`admin-track-hub-footer-signal-card is-${signal.key}`}>
+                                <div className="admin-track-hub-footer-signal-card__row">
+                                  <span>{signal.label}</span>
+                                  <strong>{signal.value}</strong>
+                                </div>
+                                <div className="admin-track-hub-footer-signal-card__bar">
+                                  <div className="admin-track-hub-footer-signal-card__bar-fill" style={{ width: `${signal.meter}%` }} />
+                                </div>
+                                <p>{signal.copy}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                          <section className={`admin-coursemap-publish-canvas admin-track-hub-footer-panel admin-track-hub-footer-panel--publish is-${courseMapRecommendation.tone}`}>
-                            <div className="admin-coursemap-publish-canvas__header">
-                              <div>
-                                <span className="admin-coursemap-publish-canvas__kicker">{t('dashboard.course_maps_footer_output')}</span>
-                                <h4>{getCourseMapRaceName(selectedCourseMapItem || {})}</h4>
-                              </div>
-                              <div className="admin-coursemap-publish-canvas__meta">
-                                <span className={`admin-shoe-status-badge admin-review-badge admin-review-badge--${getCourseMapStatus(selectedCourseMapItem || {})}`}>
-                                  {t(`dashboard.review_state_${getCourseMapStatus(selectedCourseMapItem || {})}`)}
+                          <div className="admin-coursemap-rework__card admin-coursemap-rework__card--decision">
+                            <div className="admin-coursemap-rework__card-head">
+                              <span className="section-intro-kicker">{t('dashboard.course_maps_footer_output')}</span>
+                            </div>
+                            {courseMapDisplaySummary ? (
+                              <p className="admin-coursemap-rework__summary">{courseMapLocalizedSummary}</p>
+                            ) : null}
+                            <div className="admin-coursemap-publish-canvas__decision-dock">
+                              <div className="admin-track-hub-footer-verdict">
+                                <AppIcon
+                                  name={courseMapAlignmentReady ? 'verified' : 'schedule'}
+                                  className="admin-track-hub-footer-verdict__icon material-symbols-outlined"
+                                />
+                                <span className="admin-track-hub-footer-verdict__text">
+                                  {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
                                 </span>
                               </div>
+                              <button
+                                type="button"
+                                className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
+                                disabled={courseMapActionIsSelected}
+                                onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
+                              >
+                                {courseMapRecommendation.cta}
+                              </button>
                             </div>
-
-                            <div className="admin-track-hub-footer-publish-body">
-                              <div className="admin-coursemap-publish-canvas__identity">
-                                <p className="admin-coursemap-publish-canvas__location">
-                                  {getCourseMapLocation(selectedCourseMapItem) || t('dashboard.course_maps_location_fallback')}
-                                </p>
-                                {courseMapDisplaySummary ? (
-                                  <p className="admin-coursemap-publish-canvas__copy">{courseMapLocalizedSummary}</p>
-                                ) : null}
-                              </div>
-
-                              <div className="admin-coursemap-publish-canvas__decision-dock">
-                                <div className="admin-track-hub-footer-verdict">
-                                  <AppIcon
-                                    name={courseMapAlignmentReady ? 'verified' : 'schedule'}
-                                    className="admin-track-hub-footer-verdict__icon material-symbols-outlined"
-                                  />
-                                  <span className="admin-track-hub-footer-verdict__text">
-                                    {courseMapAlignmentReady ? t('dashboard.course_maps_alignment_verified') : courseMapRecommendation.title}
-                                  </span>
-                                </div>
-                                <button
-                                  type="button"
-                                  className="btn-primary btn-inline-md admin-coursemap-publish-canvas__primary"
-                                  disabled={courseMapActionIsSelected}
-                                  onClick={() => runRecommendedCourseMapAction(courseMapRecommendation)}
-                                >
-                                  {courseMapRecommendation.cta}
-                                </button>
-                              </div>
-                              {renderCourseMapProgressCard('dock')}
-
+                            {renderCourseMapProgressCard('dock')}
+                            {courseMapFooterOutputCards.length > 0 && (
                               <aside className="admin-coursemap-evidence-stack admin-track-hub-footer-output-grid">
                                 {courseMapFooterOutputCards.map((card) => (
                                   <article key={card.key} className="admin-coursemap-evidence-card admin-track-hub-footer-output-card is-refresh">
@@ -3639,77 +3910,33 @@ const Dashboard = memo(function Dashboard() {
                                   </article>
                                 ))}
                               </aside>
-                            </div>
-                          </section>
+                            )}
+                          </div>
 
-                          <section className="admin-coursemap-ops-band admin-track-hub-footer-panel admin-track-hub-footer-panel--ops">
-                            <div className="admin-coursemap-ops-band__header">
-                              <div>
-                                <span className="admin-coursemap-action-group__label">{t('dashboard.course_maps_footer_operator')}</span>
-                                <p>{courseMapRecommendation.body}</p>
-                              </div>
+                          <div className="admin-coursemap-rework__card admin-coursemap-rework__card--actions">
+                            <div className="admin-coursemap-rework__card-head">
+                              <span className="section-intro-kicker">{t('dashboard.course_maps_secondary_actions_label')}</span>
                             </div>
-                            <div className="admin-coursemap-publish-canvas__actions">
-                              <div className="admin-coursemap-publish-canvas__secondary">
-                                <span className="admin-coursemap-publish-canvas__secondary-label">{t('dashboard.course_maps_secondary_actions_label')}</span>
-                                <div className="admin-coursemap-publish-canvas__secondary-row">
-                                  {courseMapSecondaryActions.map((action) => (
-                                    <button
-                                      key={action.key}
-                                      type="button"
-                                      className="btn-secondary btn-inline-md"
-                                      disabled={action.disabled}
-                                      onClick={() => runCourseMapSecondaryAction(action.key)}
-                                    >
-                                      {action.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="admin-coursemap-workbench__actions">
-                              <div className="admin-coursemap-action-group">
-                                <span className="admin-coursemap-action-group__label">{t('dashboard.course_maps_action_group_source')}</span>
-                                <div className="admin-coursemap-action-group__buttons">
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={() => scanCourseMapSources(selectedCourseMapId)}>
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_source_scanning') : t('dashboard.course_maps_source_scan')}
-                                  </button>
-                                  <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={openCourseMapUploadPicker}>
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'upload' ? t('dashboard.course_maps_uploading') : t('dashboard.course_maps_upload')}
-                                  </button>
-                                </div>
-                                <p>{t('dashboard.course_maps_action_group_source_hint')}</p>
-                              </div>
-
-                              <div className="admin-coursemap-action-group">
-                                <span className="admin-coursemap-action-group__label">{t('dashboard.course_maps_action_group_analysis')}</span>
-                                <div className="admin-coursemap-action-group__buttons">
+                            <div className="admin-coursemap-rework__action-rows">
+                              <div className="admin-coursemap-publish-canvas__secondary-row">
+                                {courseMapSecondaryActions.map((action) => (
                                   <button
+                                    key={action.key}
                                     type="button"
                                     className="btn-secondary btn-inline-md"
-                                    disabled={!pendingCourseMapPreview || courseMapActionIsSelected}
-                                    onClick={() => reanalyzeCourseMap(selectedCourseMapId)}
+                                    disabled={action.disabled}
+                                    onClick={() => runCourseMapSecondaryAction(action.key)}
                                   >
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'reanalyze' ? t('dashboard.course_maps_reanalyzing') : t('dashboard.course_maps_reanalyze')}
+                                    {action.label}
                                   </button>
-                                  <button
-                                    type="button"
-                                    className="btn-primary btn-inline-md"
-                                    disabled={!courseMapSourcePreview || courseMapActionIsSelected}
-                                    onClick={() => runMarathonPipeline(selectedCourseMapId)}
-                                  >
-                                    {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'refresh'
-                                      ? t('dashboard.course_maps_refreshing_preview')
-                                      : courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'pipeline'
-                                        ? t('dashboard.course_maps_pipeline_running')
-                                        : t('dashboard.course_maps_run_pipeline')}
-                                  </button>
-                                </div>
-                                <p>{t('dashboard.course_maps_action_group_analysis_hint')}</p>
+                                ))}
+                                <button type="button" className="btn-secondary btn-inline-md" disabled={courseMapActionIsSelected} onClick={() => scanCourseMapSources(selectedCourseMapId)}>
+                                  {courseMapAction.raceId === selectedCourseMapId && courseMapAction.type === 'scan' ? t('dashboard.course_maps_source_scanning') : t('dashboard.course_maps_source_scan')}
+                                </button>
                               </div>
+                              {courseMapRecommendation.body && <p className="admin-coursemap-rework__hint">{courseMapRecommendation.body}</p>}
                             </div>
-                          </section>
-                        </div>
+                          </div>
 
                         <div className="admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline">
                           <style>{`
@@ -3843,7 +4070,6 @@ const Dashboard = memo(function Dashboard() {
                           <div className="history-status">{t('dashboard.course_maps_backend_pending')}</div>
                         )}
                       </div>
-                    </div>
                   )}
                 </section>
               </div>
@@ -3851,65 +4077,45 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'shoes' && (
-          <div className="admin-command-route__surface ops-page">
-            <SectionCard className="section-card--compact section-card--spaced">
-              <div className="admin-shoe-stitch-hero">
-                <div className="admin-shoe-stitch-hero__copy">
-                  <span className="section-intro-kicker admin-shoe-stitch-hero__eyebrow">{t('dashboard.shoe_stitch_kicker')}</span>
-                  <h2 className="section-intro-title">{t('dashboard.shoe_stitch_title')}</h2>
-                  <p className="admin-shoe-stitch-hero__text">{t('dashboard.shoe_stitch_copy')}</p>
-                </div>
-                <div className="admin-shoe-stitch-hero__stats">
-                  <div className="admin-shoe-stitch-hero__stat">
-                    <span>{t('dashboard.shoe_stitch_stat_pending')}</span>
-                    <strong>{shoeReviewSummary.pending}</strong>
-                  </div>
-                  <div className="admin-shoe-stitch-hero__stat">
-                    <span>{t('dashboard.shoe_stitch_stat_live_ratio')}</span>
-                    <strong>{shoeLiveRatio}%</strong>
-                  </div>
-                  <div className="admin-shoe-stitch-hero__stat">
-                    <span>{t('dashboard.shoe_stitch_stat_records')}</span>
-                    <strong>{shoesPage.totalItems || shoeReviewSummary.total}</strong>
-                  </div>
-                </div>
+          <div className="admin-command-route__surface ops-page admin-shoe-rework">
+            <section className="admin-shoe-rework__hero">
+              <div className="admin-shoe-rework__hero-copy">
+                <span className="section-intro-kicker">{t('dashboard.shoe_stitch_kicker')}</span>
+                <h1>{t('dashboard.shoe_stitch_title')}</h1>
+                <p>{t('dashboard.shoe_stitch_copy')}</p>
               </div>
-            </SectionCard>
-
-            <SectionCard className="section-card--compact section-card--spaced">
-              <div className="admin-shoe-stitch-query-grid">
-                <div className="admin-shoe-stitch-query-shell">
-                  <div className="admin-shoe-stitch-query-shell__inputs">
-                    <input
-                      className="admin-shoe-filter admin-shoe-stitch-query-shell__search"
-                      placeholder={t('dashboard.shoe_stitch_search_placeholder')}
-                      value={shoeQuery.search}
-                      onChange={e => setShoeQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))}
-                    />
-                    <select className="admin-shoe-filter admin-shoe-stitch-query-shell__filter" value={shoeQuery.queue} onChange={e => setShoeQuery(prev => ({ ...prev, queue: e.target.value, page: 0 }))}>
-                      <option value="">{t('dashboard.filter_all_shoes')}</option>
-                      <option value="missing_photo">{t('dashboard.filter_missing_image')}</option>
-                      <option value="pending_preview">{t('dashboard.filter_pending_preview')}</option>
-                      <option value="live">{t('dashboard.filter_live_image')}</option>
-                    </select>
-                  </div>
-                  <div className="admin-shoe-stitch-query-shell__actions">
-                    <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('shoes')}>{t('dashboard.btn_save_filter')}</button>
-                    <button type="button" className="btn-secondary btn-inline-md" onClick={() => downloadExport(`/api/admin/shoes/export?search=${encodeURIComponent(shoeQuery.search)}&queue=${encodeURIComponent(shoeQuery.queue)}`, 'admin-shoes.csv')}>{t('dashboard.btn_export_csv')}</button>
-                    <button type="button" className="btn-primary btn-inline-md" onClick={openAdminShoeForm}>{t('dashboard.btn_add_shoe')}</button>
-                    <button type="button" className="btn-primary btn-inline-md" onClick={() => setCatalogFormOpen(true)}>{t('dashboard.btn_add_catalog')}</button>
-                  </div>
-                </div>
-
-                <div className="admin-shoe-stitch-health-card">
-                  <span>{t('dashboard.shoe_stitch_health_label')}</span>
-                  <strong>{shoeRepositorySync}%</strong>
-                  <p>{t('dashboard.shoe_stitch_health_copy')}</p>
-                </div>
+              <div className="admin-shoe-rework__hero-meta">
+                <span>{t('dashboard.shoe_stitch_stat_pending')}: {shoeReviewSummary.pending}</span>
+                <span>{t('dashboard.shoe_stitch_stat_live_ratio')}: {shoeLiveRatio}%</span>
+                <span>{t('dashboard.shoe_stitch_stat_records')}: {shoesPage.totalItems || shoeReviewSummary.total}</span>
+                <span>{t('dashboard.shoe_stitch_health_label')}: {shoeRepositorySync}%</span>
               </div>
-            </SectionCard>
+            </section>
 
-            <SectionCard className="section-card--compact section-card--spaced">
+            <div className="admin-shoe-rework__card admin-shoe-rework__card--controls">
+              <div className="admin-shoe-rework__inputs">
+                <input
+                  className="admin-shoe-filter"
+                  placeholder={t('dashboard.shoe_stitch_search_placeholder')}
+                  value={shoeQuery.search}
+                  onChange={e => setShoeQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))}
+                />
+                <select className="admin-shoe-filter" value={shoeQuery.queue} onChange={e => setShoeQuery(prev => ({ ...prev, queue: e.target.value, page: 0 }))}>
+                  <option value="">{t('dashboard.filter_all_shoes')}</option>
+                  <option value="missing_photo">{t('dashboard.filter_missing_image')}</option>
+                  <option value="pending_preview">{t('dashboard.filter_pending_preview')}</option>
+                  <option value="live">{t('dashboard.filter_live_image')}</option>
+                </select>
+              </div>
+              <div className="admin-shoe-rework__actions">
+                <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('shoes')}>{t('dashboard.btn_save_filter')}</button>
+                <button type="button" className="btn-secondary btn-inline-md" onClick={() => downloadExport(`/api/admin/shoes/export?search=${encodeURIComponent(shoeQuery.search)}&queue=${encodeURIComponent(shoeQuery.queue)}`, 'admin-shoes.csv')}>{t('dashboard.btn_export_csv')}</button>
+                <button type="button" className="btn-primary btn-inline-md" onClick={openAdminShoeForm}>{t('dashboard.btn_add_shoe')}</button>
+                <button type="button" className="btn-primary btn-inline-md" onClick={() => setCatalogFormOpen(true)}>{t('dashboard.btn_add_catalog')}</button>
+              </div>
+            </div>
+
+            <div className="admin-shoe-rework__grid">
               <div className="admin-shoe-workbench admin-shoe-workbench--stitch">
                 <aside className="admin-shoe-workbench__queue admin-shoe-stitch-queue">
                   <div className="admin-shoe-workbench__queue-head">
@@ -4081,8 +4287,8 @@ const Dashboard = memo(function Dashboard() {
                   )}
                 </section>
               </div>
-            </SectionCard>
-            <SectionCard className="section-card--compact section-card--spaced">
+            </div>
+            <div className="admin-shoe-rework__card admin-shoe-rework__card--catalog">
               <div className="history-list-header">
                 <h3>{t('dashboard.catalog_title')}</h3>
                 <p>{t('dashboard.catalog_inventory_count', { count: filteredCatalogItems.length })}</p>
@@ -4111,9 +4317,9 @@ const Dashboard = memo(function Dashboard() {
                 )}
               </div>
               {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
-            </SectionCard>
+            </div>
             {savedFilters.length > 0 && (
-              <SectionCard className="section-card--compact">
+              <div className="admin-shoe-rework__card admin-shoe-rework__card--saved">
                 <h3 className="section-title-sm">{t('dashboard.saved_filters')}</h3>
                 <div className="saved-filter-list">
                   {savedFilters.map(filter => (
@@ -4123,7 +4329,7 @@ const Dashboard = memo(function Dashboard() {
                     </div>
                   ))}
                 </div>
-              </SectionCard>
+              </div>
             )}
           </div>
         )}
@@ -4914,10 +5120,28 @@ export default Dashboard;
 function Pagination({ pageData, onPageChange, t }) {
   if (!pageData || (pageData.totalPages || 0) <= 1) return null;
   return (
-    <div className="pagination-row">
-      <button type="button" className="btn-secondary btn-inline-sm" disabled={pageData.page <= 0} onClick={() => onPageChange(pageData.page - 1)}>{t('dashboard.pagination_prev')}</button>
-      <span>{t('dashboard.pagination_page', { current: pageData.page + 1, total: pageData.totalPages })}</span>
-      <button type="button" className="btn-secondary btn-inline-sm" disabled={pageData.page + 1 >= pageData.totalPages} onClick={() => onPageChange(pageData.page + 1)}>{t('dashboard.pagination_next')}</button>
+    <div className="pagination-row pagination-row--arrows">
+      <button
+        type="button"
+        className="pagination-arrow"
+        disabled={pageData.page <= 0}
+        onClick={() => onPageChange(pageData.page - 1)}
+        aria-label={t('dashboard.pagination_prev')}
+      >
+        <span aria-hidden="true">‹</span>
+      </button>
+      <span className="pagination-page-indicator">
+        {t('dashboard.pagination_page', { current: pageData.page + 1, total: pageData.totalPages })}
+      </span>
+      <button
+        type="button"
+        className="pagination-arrow pagination-arrow--next"
+        disabled={pageData.page + 1 >= pageData.totalPages}
+        onClick={() => onPageChange(pageData.page + 1)}
+        aria-label={t('dashboard.pagination_next')}
+      >
+        <span aria-hidden="true">›</span>
+      </button>
     </div>
   );
 }

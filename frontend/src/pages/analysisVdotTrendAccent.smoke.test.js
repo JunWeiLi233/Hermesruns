@@ -131,8 +131,8 @@ assert.match(
 
 assert.match(
   analysisSplitStyleSource,
-  /\.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
-  'Analysis VO2 hero should not paint a background strip behind the title and metric card.',
+  /\.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*#ffffff\s*!important;/,
+  'Analysis VO2 hero should render on a plain white card surface.',
 );
 
 assert.doesNotMatch(
@@ -143,14 +143,14 @@ assert.doesNotMatch(
 
 assert.match(
   analysisSplitStyleSource,
-  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
-  'Analysis VO2 hero background removal should survive the later specificity clamp.',
+  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary\s*\{[\s\S]*background:\s*#ffffff\s*!important;/,
+  'Analysis VO2 hero white surface should survive the later specificity clamp.',
 );
 
 assert.match(
   liquidGlassStyleSource,
-  /\.runner-dashboard-page \.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*transparent\s*!important;/,
-  'The shared liquid-glass layer should not repaint the Analysis VO2 hero as a cream panel.',
+  /\.runner-dashboard-page \.analysis-page-shell \.analysis-profile-primary\s*\{[\s\S]*background:\s*#ffffff\s*!important;/,
+  'The shared liquid-glass layer should keep the Analysis VO2 hero on a white card instead of a cream panel.',
 );
 
 assert.match(

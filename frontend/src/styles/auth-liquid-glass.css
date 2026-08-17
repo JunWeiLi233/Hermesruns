@@ -183,6 +183,92 @@
   margin-top: -2px;
 }
 
+/* The command-entry base (auth.css) centers slide children, so the chip rows
+   shrink-wrap and drift away from the left-aligned text stack — visibly
+   detached at wider viewports. Stretch slide children and span the full
+   slide width so the details and stats rows sit flush with the text column. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide {
+  align-items: stretch;
+}
+
+/* The slide viewport shrink-wraps under the copy column's centering. Give it
+   a fixed reading-column width (460px) centered in the brand panel, per the
+   user's placement drawing: the block sits centered like the wordmark above,
+   while the slide's own children stay left-aligned within it. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-viewport {
+  width: 100%;
+  max-width: 460px;
+}
+
+/* The command-entry base stretches the brand inner to the full panel height
+   and packs its children at the top, leaving a dead zone under the carousel
+   on tall windows (>=1080px) while the form column stays centered. Center the
+   wordmark + slide group vertically to match, biased upward per the user's
+   nudge (padding-bottom shifts the centered group up by half its value). */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand-inner {
+  justify-content: center;
+  /* Upward bias (144px → 72px lift) plus rightward bias (96px → 48px shift),
+     per the user's dot-grid nudges. */
+  padding-bottom: 144px;
+  padding-left: 96px;
+}
+
+/* The brand inner is capped at 660px but was packed at the panel's left, so
+   on wide windows (>=1920px) the slide block sat left of the panel's center.
+   Center the inner horizontally so the carousel block reads central. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand {
+  justify-content: center;
+}
+
+/* Website logo beside the HERMES title, with the block pinned to the brand
+   panel's top-left corner. The carousel below keeps its centered placement
+   and biases. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-wrap {
+  position: absolute;
+  top: 34px;
+  left: 44px;
+  width: auto;
+  max-width: none;
+  align-items: flex-start;
+  z-index: 2;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-logo {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+
+/* Flow slides keep only the headline block (hero + paragraph); the kicker
+   pill, details, and stats chip rows are hidden per the user's request. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide > .auth-flow-kicker,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide > .auth-flow-slide-details,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide > .auth-flow-stats {
+  display: none;
+}
+
+/* The social login block (Strava/Google buttons + status notes) is removed
+   from the login and signup cards per the user's request. CSS-scoped; the
+   buttons and OAuth handlers remain in the markup. */
+#root .auth-page--liquid-glass.auth-page--login .auth-flow-social,
+#root .auth-page--liquid-glass.auth-page--signup .auth-flow-social {
+  display: none;
+}
+
+#root .auth-page--liquid-glass .auth-flow-slide-details {
+  width: 100%;
+}
+
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-text {
+  margin-inline: 0;
+}
+
 #root .auth-page--liquid-glass .auth-flow-slide-detail {
   min-width: 0;
   display: flex;
@@ -469,6 +555,15 @@
 
 #root .auth-page--liquid-glass .signup-link--auth {
   margin-top: 22px;
+}
+
+/* The legal links row moved from the form side's bottom edge to sit directly
+   under the signup/signin prompt row inside the auth cards. */
+#root .auth-page--liquid-glass.auth-page--login .auth-flow-legal--inline,
+#root .auth-page--liquid-glass.auth-page--signup .auth-flow-legal--inline {
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 0;
 }
 
 #root .auth-page--liquid-glass .error-alert {

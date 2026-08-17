@@ -43,6 +43,16 @@ public class RaceCourseMapService {
     private static final int ABRUPT_ELEVATION_DELTA_THRESHOLD_METERS = 8;
     private static final String AUTO_ACQUIRE_SOURCE = "admin-auto-acquire";
     private static final int MAX_AUTO_ACQUIRE_CANDIDATES = 6;
+    /** Admin list rows ship a coarse polyline; thumbnails draw ~18 sampled points. */
+    private static final int LIST_ROUTE_POINT_LIMIT = 32;
+    // The dashboard boot calls the list builder three times (overview,
+    // queues, list) and every tab switch refreshes queues; a short TTL memo
+    // collapses those into one build while staying too brief to mask an
+    // operator's own edits for long. Writes still invalidate immediately.
+    private static final long LIST_ROWS_CACHE_TTL_MS = 5_000;
+    private final Object listRowsCacheLock = new Object();
+    private volatile List<RaceCourseMapAdminRow> cachedListRows;
+    private volatile long cachedListRowsAtMillis;
     private static final String STAGED_UPLOAD_SUMMARY = "Hermes saved this upload and queued it for automatic Qwen scanning.";
 
     @SuppressWarnings("unused")
@@ -330,6 +340,7 @@ public class RaceCourseMapService {
         asset.setLiveElevationSamplesJson(writeJson(samples));
         asset.setLiveTotalClimbMeters(totalClimb);
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
         return new RaceCourseMapResult(
                 liveResult.imageUrl(),
                 liveResult.source(),
@@ -666,6 +677,7 @@ public class RaceCourseMapService {
             applyLiveResult(asset, resolved, actorEmail, updatedAt);
         }
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
         return resolved;
     }
 
@@ -691,6 +703,7 @@ public class RaceCourseMapService {
         asset.setPendingUpdatedAt(LocalDateTime.now());
         asset.setPendingUpdatedByEmail(actorEmail);
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
     }
 
     public void acceptPendingCourseMap(String raceId, String actorEmail) {
@@ -703,6 +716,7 @@ public class RaceCourseMapService {
         applyLiveResult(asset, toResult(asset, false), actorEmail, LocalDateTime.now());
         clearPending(asset);
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
     }
 
     public void clearPendingCourseMap(String raceId) {
@@ -710,12 +724,29 @@ public class RaceCourseMapService {
                 .orElseThrow(() -> new IllegalArgumentException("Race course-map asset not found."));
         clearPending(asset);
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
     }
 
     public List<RaceCourseMapAdminRow> listRaceCourseMaps() {
-        return raceCourseMapAssetRepository.findAll().stream()
+        List<RaceCourseMapAdminRow> cached = cachedListRows;
+        if (cached != null && System.currentTimeMillis() - cachedListRowsAtMillis < LIST_ROWS_CACHE_TTL_MS) {
+            return cached;
+        }
+        List<RaceCourseMapAdminRow> rows = raceCourseMapAssetRepository.findAll().stream()
                 .map(this::toAdminRow)
                 .toList();
+        synchronized (listRowsCacheLock) {
+            cachedListRows = rows;
+            cachedListRowsAtMillis = System.currentTimeMillis();
+        }
+        return rows;
+    }
+
+    private void invalidateListRowsCache() {
+        synchronized (listRowsCacheLock) {
+            cachedListRows = null;
+            cachedListRowsAtMillis = 0L;
+        }
     }
 
     public RaceCourseMapAdminDetail getAdminDetail(String raceId) {
@@ -824,14 +855,14 @@ public class RaceCourseMapService {
                     "routePoints", routePoints.size(),
                     "routeDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0,
                     "targetDistanceKm", distanceKm == null ? "" : distanceKm,
-                    "raceType", raceType.name()
+                    "raceType", raceType == null ? "" : raceType.name()
             ));
             scanWatcher.record("course_map.plausibility_failed", "FAILED", "Qwen route hints failed course-map plausibility checks.", Map.of(
                     "reason", plausibilityVerdict.reason() == null ? "" : plausibilityVerdict.reason(),
                     "routePoints", routePoints.size(),
                     "routeDistanceKm", Math.round(geometryService.polylineDistanceKm(routePoints) * 100.0) / 100.0,
                     "targetDistanceKm", distanceKm == null ? "" : distanceKm,
-                    "raceType", raceType.name()
+                    "raceType", raceType == null ? "" : raceType.name()
             ));
             scanWatcher.beginStep("course_map.city_level_fallback", "Checking city-level reference eligibility.");
             RaceCourseMapResult cityLevelResult = buildCityLevelAdminRoadMarathonResultIfEligible(
@@ -1130,7 +1161,10 @@ public class RaceCourseMapService {
                 }
             }
             scanWatcher.completeStep("course_map.post_qwen_stylized_fallback", "SKIPPED", "Post-Qwen stylized city-level fallback was not eligible.");
-            if ((resolved.imageUrl() == null || resolved.imageUrl().isBlank()) && asset.imageUrl() != null && !asset.imageUrl().isBlank()) {
+            if ((resolved == null || resolved.imageUrl() == null || resolved.imageUrl().isBlank()) && asset.imageUrl() != null && !asset.imageUrl().isBlank()) {
+                return new RaceCourseMapResult(asset.imageUrl(), source, false, 0, fallbackSummary, null, List.of(), List.of(), null, false);
+            }
+            if (resolved == null) {
                 return new RaceCourseMapResult(asset.imageUrl(), source, false, 0, fallbackSummary, null, List.of(), List.of(), null, false);
             }
             if (shouldUseMaterializedUploadPreview(resolved.imageUrl(), asset.imageUrl())) {
@@ -1235,9 +1269,7 @@ public class RaceCourseMapService {
         }
         OverlayBounds cityBounds = buildCityLevelBounds(latitude, longitude, distanceKm);
         String cityLabel = city == null || city.isBlank() ? "the race city" : city.trim();
-        String failureNote = directFailureReason == null || directFailureReason.isBlank()
-                ? "Qwen did not return usable route geometry before city-level fallback."
-                : "Direct Qwen alignment failed first: " + directFailureReason;
+        String failureNote = "Direct Qwen alignment failed first: " + directFailureReason;
         String summary = "Hermes accepted this stylized upload as a city-level course-map match for a standard road marathon in "
                 + cityLabel
                 + ". The upload is treated as a city-level map reference, not a distance-accurate route overlay. "
@@ -2534,6 +2566,7 @@ public class RaceCourseMapService {
         asset.setPendingOverlayBoundsJson(writeJson(resolved.overlayBounds())); asset.setPendingRoutePointsJson(writeJson(resolved.routePoints())); asset.setPendingElevationSamplesJson(writeJson(resolved.elevationSamples()));
         asset.setPendingTotalClimbMeters(resolved.totalClimbMeters()); asset.setPendingAiAssisted(resolved.aiAssisted()); asset.setPendingUpdatedAt(updatedAt); asset.setPendingUpdatedByEmail(actorEmail);
         raceCourseMapAssetRepository.save(asset);
+        invalidateListRowsCache();
     }
 
     private void clearPending(RaceCourseMapAsset asset) {
@@ -2607,14 +2640,23 @@ public class RaceCourseMapService {
     }
 
     private RaceCourseMapResult toResult(RaceCourseMapAsset asset, boolean live) {
+        return toResult(asset, live, true);
+    }
+
+    /**
+     * List mode (parseElevation=false) skips reading the per-row elevation
+     * JSON entirely: the admin list/rail UI renders route thumbnails only,
+     * and parsing 82 elevation arrays dominated the endpoint build time.
+     */
+    private RaceCourseMapResult toResult(RaceCourseMapAsset asset, boolean live, boolean parseElevation) {
         String imageUrl = live ? asset.getLiveImageUrl() : asset.getPendingImageUrl();
         String source = live ? asset.getLiveSource() : asset.getPendingSource();
         Integer confidence = live ? asset.getLiveConfidence() : asset.getPendingConfidence();
         String summary = sanitizeStoredCourseMapSummary(live ? asset.getLiveSummary() : asset.getPendingSummary());
         String overlayBoundsJson = live ? asset.getLiveOverlayBoundsJson() : asset.getPendingOverlayBoundsJson();
         String routePointsJson = live ? asset.getLiveRoutePointsJson() : asset.getPendingRoutePointsJson();
-        String elevationSamplesJson = live ? asset.getLiveElevationSamplesJson() : asset.getPendingElevationSamplesJson();
-        Integer totalClimb = live ? asset.getLiveTotalClimbMeters() : asset.getPendingTotalClimbMeters();
+        String elevationSamplesJson = parseElevation ? (live ? asset.getLiveElevationSamplesJson() : asset.getPendingElevationSamplesJson()) : null;
+        Integer totalClimb = parseElevation ? (live ? asset.getLiveTotalClimbMeters() : asset.getPendingTotalClimbMeters()) : null;
         Boolean aiAssisted = live ? asset.getLiveAiAssisted() : asset.getPendingAiAssisted();
         OverlayBounds overlayBounds = readJson(overlayBoundsJson, new TypeReference<OverlayBounds>() {}, null);
         List<RoutePoint> routePoints = readJson(routePointsJson, new TypeReference<List<RoutePoint>>() {}, List.of());
@@ -2637,14 +2679,33 @@ public class RaceCourseMapService {
     }
 
     private RaceCourseMapAdminRow toAdminRow(RaceCourseMapAsset asset) {
-        return new RaceCourseMapAdminRow(asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(), buildPreviewSnapshot(asset, false), buildPreviewSnapshot(asset, true), asset.getUpdatedAt() == null ? null : asset.getUpdatedAt().toString(), asset.getPendingImageUrl() != null && !asset.getPendingImageUrl().isBlank());
+        return new RaceCourseMapAdminRow(asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(), buildPreviewSnapshot(asset, false, false), buildPreviewSnapshot(asset, true, false), asset.getUpdatedAt() == null ? null : asset.getUpdatedAt().toString(), asset.getPendingImageUrl() != null && !asset.getPendingImageUrl().isBlank());
     }
 
     private PreviewSnapshot buildPreviewSnapshot(RaceCourseMapAsset asset, boolean pending) {
-        RaceCourseMapResult result = toResult(asset, !pending);
+        return buildPreviewSnapshot(asset, pending, true);
+    }
+
+    /**
+     * List-mode snapshots skip the materialized base64 preview image and ship
+     * a coarse route polyline instead of the full-resolution points: admin
+     * list/rail thumbnails draw ~18 sampled points, while the per-race detail
+     * endpoint (getAdminDetail) still returns full-fidelity previews for the
+     * interactive workbench. Shipping full previews for every row made the
+     * admin dashboard download ~170MB per load. Elevation samples and climb
+     * totals are also dropped in list mode — the list/rail UI renders
+     * route thumbnails only, and parsing per-row elevation JSON dominated
+     * the list build time once the catalog seeded full course data.
+     */
+    private PreviewSnapshot buildPreviewSnapshot(RaceCourseMapAsset asset, boolean pending, boolean materializeImage) {
+        RaceCourseMapResult result = toResult(asset, !pending, materializeImage);
         String updatedAt = pending ? (asset.getPendingUpdatedAt() == null ? null : asset.getPendingUpdatedAt().toString()) : (asset.getLiveUpdatedAt() == null ? null : asset.getLiveUpdatedAt().toString());
         if ((result.imageUrl() == null || result.imageUrl().isBlank()) && (result.summary() == null || result.summary().isBlank())) return null;
-        String previewImageUrl = imageService.buildDisplayablePreviewImageUrl(result.imageUrl());
+        String previewImageUrl = materializeImage ? imageService.buildDisplayablePreviewImageUrl(result.imageUrl()) : null;
+        List<RoutePoint> routePoints = result.routePoints() == null ? List.of() : result.routePoints();
+        if (!materializeImage) {
+            routePoints = downsampleRoutePoints(routePoints, LIST_ROUTE_POINT_LIMIT);
+        }
         return new PreviewSnapshot(
                 result.imageUrl(),
                 previewImageUrl,
@@ -2653,12 +2714,22 @@ public class RaceCourseMapService {
                 result.confidence(),
                 updatedAt,
                 result.overlayBounds(),
-                result.routePoints() == null ? List.of() : result.routePoints(),
-                result.elevationSamples() == null ? List.of() : result.elevationSamples(),
-                result.totalClimbMeters(),
+                routePoints,
+                materializeImage && result.elevationSamples() != null ? result.elevationSamples() : List.of(),
+                materializeImage ? result.totalClimbMeters() : null,
                 result.aiAssisted(),
                 result.courseMapDetected()
         );
+    }
+
+    private List<RoutePoint> downsampleRoutePoints(List<RoutePoint> points, int maxPoints) {
+        if (points == null || points.size() <= maxPoints) return points == null ? List.of() : points;
+        double stride = (points.size() - 1) / (double) (maxPoints - 1);
+        List<RoutePoint> sampled = new ArrayList<>(maxPoints);
+        for (int i = 0; i < maxPoints; i++) {
+            sampled.add(points.get((int) Math.round(i * stride)));
+        }
+        return sampled;
     }
 
     private RaceCourseMapResult sanitizeStoredLiveResult(RaceCourseMapAsset asset, RaceCourseMapResult liveResult) {

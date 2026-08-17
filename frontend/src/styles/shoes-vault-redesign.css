@@ -327,8 +327,9 @@
 
 #root .shoes-atelier-redesign .shoe-inventory-card {
   position: relative;
-  grid-template-columns: 120px minmax(0, 1fr) minmax(116px, 0.22fr);
-  gap: 18px;
+  /* Stacked rows: card-top (art/copy/side row) → metrics → actions. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   min-height: 184px;
   padding: 18px;
   border: 1px solid var(--vault-line);

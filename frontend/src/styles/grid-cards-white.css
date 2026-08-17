@@ -1,0 +1,43 @@
+/*
+ * Pure-white light-theme grid cards (DV-2026-08-15-03 / DV-2026-08-15-04).
+ *
+ * Extends the Profile white-card decision to the other runner grids: the
+ * Analysis insight cards, the Runs ledger insight strip, the Shoes
+ * inventory grid, and the Settings connected-services grid keep warm cream
+ * paper from the liquid-glass/ledger layers. This file is imported last,
+ * so these light-theme-only guards win the final cascade without touching
+ * midnight/high-contrast surfaces.
+ */
+
+body.theme-light #root .analysis-page-shell .analysis-overview-card--vdot-insight {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+body.theme-light #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+body.theme-light #root .shoes-dashboard-page .shoe-inventory-card {
+  background: #ffffff !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body.theme-light #root .shoes-dashboard-page .shoe-inventory-summary-tile:not(.is-active):not(.is-warning) {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* The Strava and Garmin provider cards sit inside the near-white
+   .st-services section; the runner-shell [class*="-card"] glass sweep
+   repaints them with cream --hermes-glass-paper plus blur, which reads
+   beige against that section. Pin them to the plain white surface. */
+body.theme-light #root .settings-control-page .st-service-card {
+  background: #ffffff !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
