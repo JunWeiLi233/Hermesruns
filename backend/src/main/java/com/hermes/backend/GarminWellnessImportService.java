@@ -31,7 +31,6 @@ public class GarminWellnessImportService {
     private final DailyHRVDataRepository hrvDataRepository;
     private final DailyStressDataRepository stressDataRepository;
     private final BodyCompositionDataRepository bodyCompositionRepository;
-    private final RunnerRepository runnerRepository;
     private final CoachRunnerStateRepository coachRunnerStateRepository;
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<Long, WellnessSyncTracker> syncStates = new ConcurrentHashMap<>();
@@ -51,7 +50,6 @@ public class GarminWellnessImportService {
             DailyHRVDataRepository hrvDataRepository,
             DailyStressDataRepository stressDataRepository,
             BodyCompositionDataRepository bodyCompositionRepository,
-            RunnerRepository runnerRepository,
             CoachRunnerStateRepository coachRunnerStateRepository,
             ObjectMapper objectMapper
     ) {
@@ -60,7 +58,6 @@ public class GarminWellnessImportService {
         this.hrvDataRepository = hrvDataRepository;
         this.stressDataRepository = stressDataRepository;
         this.bodyCompositionRepository = bodyCompositionRepository;
-        this.runnerRepository = runnerRepository;
         this.coachRunnerStateRepository = coachRunnerStateRepository;
         this.objectMapper = objectMapper;
     }

@@ -6,6 +6,7 @@ import { getBackendBaseUrl, apiFetch, apiJson } from '../api';
 import AuthDotField from '../components/AuthDotField';
 import AuthBrandCarousel from '../components/AuthBrandCarousel';
 import FooterNavLinks from '../components/FooterNavLinks';
+import HermesMarkSvg from '../components/HermesMarkSvg';
 import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 
@@ -182,7 +183,10 @@ export default function Login() {
         <section className="auth-flow-brand">
           <div className="auth-flow-brand-inner">
             <div className="auth-flow-wordmark-wrap">
-              <h1 className="auth-flow-wordmark">HERMES</h1>
+              <div className="auth-flow-wordmark-row">
+                <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
+                <h1 className="auth-flow-wordmark">HERMES</h1>
+              </div>
               <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>
 
@@ -314,11 +318,11 @@ export default function Login() {
               <span>{t('index.signup_prompt')}</span>
               <Link to="/signup">{t('index.signup_link')}</Link>
             </div>
-          </div>
 
-          <footer className="auth-flow-legal">
-            <FooterNavLinks publicOnly={true} />
-          </footer>
+            <footer className="auth-flow-legal auth-flow-legal--inline">
+              <FooterNavLinks publicOnly={true} />
+            </footer>
+          </div>
         </section>
       </main>
     </div>

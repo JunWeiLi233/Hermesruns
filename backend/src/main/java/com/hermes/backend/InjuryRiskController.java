@@ -48,7 +48,7 @@ public class InjuryRiskController {
         if (!(normalizedLevel.equals("LOW") || normalizedLevel.equals("MEDIUM") || normalizedLevel.equals("HIGH"))) {
             return ResponseEntity.badRequest().body(Map.of("error", "level must be LOW, MEDIUM, or HIGH."));
         }
-        String notes = body.getOrDefault("notes", null);
+        String notes = body == null ? null : body.get("notes");
         if (notes != null && notes.length() > 500) {
             return ResponseEntity.badRequest().body(Map.of("error", "notes must be 500 characters or fewer."));
         }

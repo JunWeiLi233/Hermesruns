@@ -646,7 +646,8 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
         }
         QwenRouteParameterClient qwenRouteParameterClient = mock(QwenRouteParameterClient.class);
         MarathonRouteExtractionService service = new MarathonRouteExtractionService(qwenRouteParameterClient, new ObjectMapper());
-        ReflectionTestUtils.setField(service, "pythonExecutable", python.toString());
+        String pythonExecutable = python == null ? null : python.toString();
+        ReflectionTestUtils.setField(service, "pythonExecutable", pythonExecutable);
         ReflectionTestUtils.setField(service, "pythonScriptPath", Path.of("src", "main", "resources", "python", "extract_route_path.py").toString());
         ReflectionTestUtils.setField(service, "extractionTimeoutSeconds", 30L);
 

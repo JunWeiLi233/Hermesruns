@@ -280,6 +280,7 @@ public class QwenPersistentWorkerClient {
     }
 
     static final class WorkerUnavailableException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
         WorkerUnavailableException(String message) {
             super(message);
         }

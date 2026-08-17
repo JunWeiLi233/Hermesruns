@@ -1,5 +1,345 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-15-34
+Date: 2026-08-15
+Surface: Admin shoe feature-card action buttons on `/dashboard/shoes`
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminShoesRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The shoe spotlight card actions (打开审核台 / 替换预览 / 永久删除) were full-width 14px-radius rectangles forced by the monitoring stylesheet's `> button { width: 100% }` grid rule. They are now compact circular pills matching the rework button model: the actions row wraps as flex, every button (including the delete) hugs its content at 38px height with radius 999px — red gradient for the primary, soft fill for secondary/delete.
+Why: The user showed the card buttons as the fix target and the pill style as the model.
+Preserve list: All button behaviors/disabled states/labels, review-desk and replace-preview flows, delete confirmation, card layout otherwise, midnight/high-contrast theming.
+Rollback target: `DV-2026-08-15-33`
+Notes: Browser-verified live on localhost:8080 `/dashboard/shoes` post build+sync: all 6 card action buttons render 70–93px wide × 38px, radius 999px (was 620×43, radius 14px). Suite 194/195 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-33
+Date: 2026-08-15
+Surface: Admin shoes tab restructure on `/dashboard/shoes`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminShoesRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restructured the shoes tab from four heavy SectionCards into the Profile-style rework system matching DV-31: a clean hero card with four stat chips (待审核/上线率/记录数/库同步), a controls card (search + filter inputs left, save/export/add-shoe/add-catalog actions right), the workbench grid (queue rail + stage) as one card, and catalog/saved-filters cards — all on the shared white card tokens. The old hero stats block and the floating health card are folded into the hero chips. Shoes secondary buttons adopt the DV-32 soft-pill system with important overrides.
+Why: The user asked to redesign dashboard/shoes based on the Profile page and restructure it.
+Preserve list: All data wiring and actions (search/filter/save/export/add shoe/add catalog/bulk actions/queue list/pagination/feature cards/repository table/catalog grid/saved filters), shoe review flows, i18n keys, midnight/high-contrast theming via tokens.
+Rollback target: `DV-2026-08-15-32`
+Notes: Browser-verified live on localhost:8080 `/dashboard/shoes` post build+sync: hero 1032px with 4 chips, controls card, workbench grid (2047px), catalog card (441px), 7 secondary buttons all border 0, zero legacy SectionCards. Suite 194/195 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-32
+Date: 2026-08-15
+Surface: Admin course-maps action buttons on `/dashboard/course-maps`
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/dashboardCourseMapReworkStack.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Redesigned the rework surface's action buttons into reference admin-portal style: secondary actions are soft filled neutral pills (7% ink fill, no hard border, 40px min-height, hover deepens + 1px lift), the rail's refresh stays compact (36px), archives is a centered full-width pill, and the red gradient stays exclusive to primary CTAs. Later `!important` sweeps (all-pages-liquid-glass / admin-monitoring) were repainting some secondary pills with hard borders, so the rework rule carries important flags with higher specificity.
+Why: The user asked to redesign the course-maps buttons (5 crops).
+Preserve list: All button behaviors/disabled states/labels, DV-10 circular pill geometry, DV-31 card layout, midnight/high-contrast theming.
+Rollback target: `DV-2026-08-15-31`
+Notes: Browser-verified live on localhost:8080 `/dashboard/course-maps` post build+sync: all 10 inline buttons render border 0 with the soft fill (previously a mix of 0px/1px). Backend restarted this round after the background process died; DB unaffected. Suite 193/194 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-31
+Date: 2026-08-15
+Surface: Admin course-maps workbench restructure on `/dashboard/course-maps`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/dashboardCourseHubRedesign.smoke.test.js`, `frontend/src/pages/dashboardCourseMapSummarySurface.smoke.test.js`, `frontend/src/pages/dashboardCourseMapReworkStack.smoke.test.js`, `frontend/src/pages/dashboardCourseMapWorkbenchRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restructured the messy nested track-hub into a Profile-style layout: a clean hero card (kicker/title/intro/meta chips — decorative satellite/compute stats and atmosphere removed); a two-column grid of race-selection rail + stacked white stage cards — head (name/status/location/primary actions), progress, map comparison (live vs pending + telemetry), review signals, decision (summary + verdict dock + recommended CTA + evidence), consolidated actions (secondary actions + source scan in one row), and the scan timeline. Removed: rail metrics/density decorative panels, map-stage headerband, duplicated publish-canvas header, and the ops band's duplicate action groups (primary actions live in the head card once).
+Why: The user called the course-maps tab messy and asked for a restructure based on the Profile page.
+Preserve list: All data wiring and actions (search/filter/list/pagination/archives, reanalyze, pipeline, scan, upload, secondary actions, recommended action, timeline), AdminCourseMapPreview map panels, upload input, i18n keys, midnight/high-contrast theming via profile-card tokens.
+Rollback target: `DV-2026-08-15-30`
+Notes: Browser-verified live on localhost:8080 `/dashboard/course-maps` post build+sync: hero 1032px wide, rail 360px, stage with 5 cards (head 137 / compare 603 / signals 351 / decision 430 / actions 143px), zero legacy panels; typecheck clean. Four old-structure guardrails rewritten to pin the rework (two superseded files removed, two new files added). Suite 193/194 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-30
+Date: 2026-08-15
+Surface: Admin dashboard overview charts on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/i18n/locales/zh-CN/admin.js`, `frontend/src/i18n/locales/en/admin.js`, `frontend/src/pages/adminOverviewCharts.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a reference admin-portal charts row under the queue stat grid: 用户增长 cumulative line (reuses the DV-09 paged createdAt fetch), 每日审计事件 bars (audit API paged and bucketed per day, last 14 days), and a 跑鞋图片状态 doughnut (verified / pending review / missing image from queues + shoe totals). Chart.js Bar/Doughnut controllers registered; new copy in both locales; loading/error/empty states per chart.
+Why: The user clarified the reference images came from an external admin portal and asked to copy the grids + graphs (functional charts), not just styling.
+Preserve list: Metric strip + trend toggle (DV-09), queue card grid (DV-29), ops/health/audit cards, once-per-session fetch guard, midnight/high-contrast theming via the card tokens.
+Rollback target: `DV-2026-08-15-29`
+Notes: Browser-verified live on localhost:8080 `/dashboard` post build+sync: 3 chart cards render; user-growth line and shoe doughnut draw live data; the audit bar chart shows its empty state correctly because the fresh dev DB currently has zero audit events (lost in the earlier DB reset) — it fills as admin actions log. Suite 194/195 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-29
+Date: 2026-08-15
+Surface: Admin dashboard overview queue card grid on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminOverviewQueueCardGrid.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a runner-profile-style stat card grid under the overview metric strip: four white rounded cards (auto-fit minmax(170px,1fr)) showing 待发布赛道图 / 缺失赛道图 / 待审核跑鞋图片 / 缺失跑鞋图片 — each with a tone dot (green ok, coral when the count is non-zero), a big Manrope value, and an uppercase label. Cards use the `--admin-profile-card`/`--admin-profile-line` tokens so midnight/high-contrast flip automatically.
+Why: The user asked to add grids like the reference image to the dashboard overview.
+Preserve list: Metric strip and trend toggles (DV-09), health/audit cards below, queue data sources, tab routing, i18n keys (reused dashboard.queue_*), midnight/high-contrast theming.
+Rollback target: `DV-2026-08-15-28`
+Notes: Browser-verified live on localhost:8080 `/dashboard` post build+sync: 4 cards at 250×104, values 0/0/0/3, attention dot lit only on 缺失跑鞋图片. Suite 193/194 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-28
+Date: 2026-08-15
+Surface: Admin arrow pager optical parity on `/dashboard` tables
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the drop shadow from the red next-arrow button so both pager circles render as visually identical 36×36 discs (neutral ‹ / red ›); the shadow had made the next button read larger than its twin.
+Why: The user asked to make sure the two pager circles are the same size.
+Preserve list: Arrow sizes/radius/aria/disabled states, red accent on next, page indicator, all DV-27 pagination behavior, midnight/high-contrast theming.
+Rollback target: `DV-2026-08-15-27`
+Notes: Browser-verified live on localhost:8080 `/dashboard/users` post build+sync: both arrows 36×36 with box-shadow none. Suite 192/193 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-27
+Date: 2026-08-15
+Surface: Admin users table pagination on `/dashboard/users`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminUsersTablePagination.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The accounts table now requests `size=5` from `/api/admin/users` (new `USERS_TABLE_PAGE_SIZE` constant), and the shared `Pagination` component was redesigned into an arrow pager: a neutral circular ‹ button, a 第 X / Y 页 indicator, and a red-gradient circular › next button (36px, radius 999px, aria-labelled, disabled states). The pager redesign applies to all five admin tables consistently; only the users table changed page size.
+Why: The user asked for a max of 5 accounts per table page with a "->" arrow button to page forward.
+Preserve list: Search/role/status/queue filters and saved-filter behavior, row actions, other tables' page sizes (default 20), i18n keys (`pagination_prev/next/page` reused as aria/text), overview metrics (totalItems unchanged), midnight/high-contrast theming.
+Rollback target: `DV-2026-08-15-26`
+Notes: Browser-verified live on localhost:8080 `/dashboard/users` post build+sync with 7 dev users: page 1 renders exactly 5 rows (第 1 / 2 页, prev disabled), clicking the › arrow loads page 2 with 2 rows (第 2 / 2 页, next disabled); backend API returns 5 items / totalPages 2 at size=5. Three throwaway `pager-test-*.local` accounts were created on the dev DB to exercise paging. Suite 192/193 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-26
+Date: 2026-08-15
+Surface: Signup page `/signup` parity with the login redesign
+Files: `frontend/src/pages/Signup.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Ported the login redesign to /signup: HermesMarkSvg added left of the HERMES title in both signup render branches (main + done state) with the shared corner-pin CSS; the social block (Strava/Google + notes) is now hidden on signup as on login; the legal footer moved inside the card to sit centered under the 已有账号？登录 row. Carousel trims/centering/biases already applied via the shared `command-entry` scope.
+Why: The user asked to redesign the signup page based on the recent login changes.
+Preserve list: Signup form fields/validation/password strength, email typo suggestions, banners, OAuth handlers (hidden not removed), done-state screen, both locales, midnight/high-contrast theming, login page rules.
+Rollback target: `DV-2026-08-15-25`
+Notes: Browser-verified live on localhost:8080 `/signup` post build+sync: logo 30×30 at (106,108) with absolute wrap, social display:none, legal row inside the card under the signin row, kicker/details/stats display:none. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-25
+Date: 2026-08-15
+Surface: Login card footer links on `/login`
+Files: `frontend/src/pages/Login.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the 条款/隐私/支持 legal links row from the form side's bottom edge (outside the card) into the card, directly under the 还没有账号？立即注册 row — markup reorder plus a centered `--inline` variant (10px top margin). The form side's bottom is now clear.
+Why: The user asked to move that row to sit under the signup prompt.
+Preserve list: Link targets and publicOnly set, signup link behavior, form/social-removal rules, DV-24 corner logo, midnight/high-contrast theming, signup page footer (unchanged).
+Rollback target: `DV-2026-08-15-24`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: legal row inside `.auth-flow-card`, signup bottom 809 → legal 821–835. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-24
+Date: 2026-08-15
+Surface: Login page brand corner logo on `/login`
+Files: `frontend/src/pages/Login.jsx`, `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the website mark (`HermesMarkSvg`, the favicon H+route icon) to the left of the HERMES title in a centered row, and moved the whole wordmark block (logo + title + pulse label) out of the centered flow into the brand panel's top-left corner (absolute at 34px/44px). The carousel below keeps its centered placement, biases, and trimmed content from DV-21/23; the DV-17 wordmark-column rule is superseded.
+Why: The user asked to add the website logo left of the HERMES title and move them to the left-up corner.
+Preserve list: Carousel rotation/timing/random slide order, hero + paragraph copy, pulse label, form column, social-block removal (DV-22), slide trims (DV-21/23), midnight/high-contrast auth surfaces, signup surface (unchanged this round).
+Rollback target: `DV-2026-08-15-23`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: logo 30×30 at (106,108), title row beside it, pulse under the logo edge, wrap position absolute; slides still centered at 173→633. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-23
+Date: 2026-08-15
+Surface: Login page flow slide kicker on `/login` (and shared auth brand carousel)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the per-slide kicker pill (e.g. 会自己读的赛道图) to the flow-slide hide list — the last chip-shaped element still rendering on every slide. Slides now show only the hero headline and the paragraph.
+Why: The user reported the chip removal as incomplete across all slides; the kicker was the remaining per-slide chip element on /login.
+Preserve list: Carousel rotation/timing/random slide order, hero + paragraph copy and both locales, pulse label under the wordmark, form column, DV-14 through DV-22 rules (alignment, biases, social block removal).
+Rollback target: `DV-2026-08-15-22`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: kicker/details/stats all display:none; hero + paragraph visible. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-22
+Date: 2026-08-15
+Surface: Login card social login block on `/login`
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the social login block (disabled Strava/Google buttons plus their "not configured" status notes) from the login card. CSS-scoped to the liquid-glass login page only; the buttons, OAuth handlers, and the signup surface's copy remain in the markup.
+Why: The user asked to remove this part of the login card.
+Preserve list: Email/password form and login submit, 还没有账号/立即注册 link, 条款/隐私/支持 legal links, forgot-password link, local mock hint, signup page social block, admin login, DV-14 through DV-21 carousel rules.
+Rollback target: `DV-2026-08-15-21`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: .auth-flow-social display:none; submit button, signup link, and legal links all visible. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-21
+Date: 2026-08-15
+Surface: Login page flow slide content on `/login` (and shared auth brand carousel)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Corrected DV-20's inverted trim (user: "you remove the part that i am asking to reserve"): the headline block (kicker + hero + paragraph) is the part to keep, and the details/stats chip rows are now the hidden parts. CSS-scoped as before; slide data/component unchanged.
+Why: The user clarified that the "image part" was the big headline block, not the chip cards.
+Preserve list: Carousel rotation/timing/random slide order, slide data and both locales, DV-17 wordmark/slide left-edge alignment, DV-18/19 biases, form column layout, admin login variant (no carousel), midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-20`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: details/stats display:none; kicker/hero/text visible at the wordmark's left edge (x=173). Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-20
+Date: 2026-08-15
+Surface: Login page flow slide content on `/login` (and shared auth brand carousel)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Flow slides now render only the visual chip block (details + stats cards); the kicker, hero headline, and paragraph are hidden on the liquid-glass command-entry surfaces. The slide data/component are unchanged (CSS-scoped), so the copy returns if the hide rule is dropped.
+Why: The user asked to keep only the image (chip-block) part of the flow slide and remove the other parts.
+Preserve list: Carousel rotation/timing/random slide order, slide data and both locales, DV-17 wordmark/slide left-edge alignment (chips stay aligned), DV-18/19 biases, form column layout, admin login variant (no carousel), midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-19`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: kicker/hero/text display:none, details+stats 460px wide at the wordmark's left edge (x=173). Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-19
+Date: 2026-08-15
+Surface: Login page brand column horizontal bias on `/login`
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Nudged the wordmark + slide cluster rightward two dot units per the user's request: a 96px `padding-left` bias on the horizontally-centered brand inner shifts the group 48px right, stacking on DV-18's 72px upward bias. Wordmark/slide left-edge alignment is preserved (whole group moves as one).
+Why: The user asked to move the entire brand column content right by two dots after DV-18.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, DV-14/16/17 alignment rules, DV-15 centering behavior, DV-18 upward bias, form column layout, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-18`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: wordmark/slide/details left edge 125→173 (+48px), top unchanged from DV-18. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-18
+Date: 2026-08-15
+Surface: Login page brand column vertical bias on `/login`
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Nudged the entire wordmark + slide cluster upward per the user's request ("3 dot points up"): a 144px `padding-bottom` bias on the vertically-centered brand inner lifts the group 72px while keeping the centering behavior intact.
+Why: The user asked to move the entire brand column content up after DV-17's alignment.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, DV-14/16/17 horizontal alignment, DV-15 vertical centering behavior, form column layout, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-17`
+Notes: Browser-verified live on localhost:8080 `/login` at 1280×1080 post build+sync: wordmark 282→210, slide 432→360 (both lifted exactly 72px), form card unchanged. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-17
+Date: 2026-08-15
+Surface: Login page wordmark/slide edge alignment on `/login`
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Aligned the HERMES wordmark with the flow slide info (user request): the wordmark wrap now uses the same 460px centered column as the slide viewport with its content anchored left, so the title, the 训练脉动已连接 pulse label, and the slide copy (hero/paragraph/chips) all share one left edge. Previously the wordmark was a narrow centered box whose left edge sat 150px right of the slide block's edge at 1920.
+Why: The user asked to align the flow slide info with the Hermes title.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, DV-14 internal left alignment, DV-15 vertical centering, DV-16 horizontal centering, form column layout, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-16`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: at 1920×1080 wordmark/pulse/viewport all start at x=295 (wrap 295→755 = slide column); at 1280×1080 all start at x=125. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-16
+Date: 2026-08-15
+Surface: Login page carousel block horizontal placement at wide windows on `/login`
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: At wide windows the capped 660px brand inner packed at the panel's left (command-entry `justify-content: flex-start`), so the centered 460px slide block sat left of the panel's center (centerline 408 vs 501 at 1920). The brand now centers its inner horizontally, moving the wordmark + slide cluster to the panel's content centerline.
+Why: The user reported the flow slides as "too left" at 1920×1080 and asked for central placement.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, DV-14 slide-internal left alignment, DV-15 vertical centering, form column layout, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-15`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: at 1920×1080 the slide block moved 178→638 / 295→755 (centerline 408→525, matching the panel content center and wordmark); at 1280×1080 unchanged (inner fills the panel, centering is a no-op). Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-15
+Date: 2026-08-15
+Surface: Login page brand column vertical placement on `/login` at large windows (≥1080px height)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The command-entry base stretches `.auth-flow-brand-inner` to the full panel height and packs its children at the top — invisible at 720px height, but on tall windows (user tests at 1280×1080+) it left a ~540px dead zone under the carousel while the form column stayed centered. The brand inner now centers its content group vertically, so the wordmark + slide cluster sits mid-panel matching the form column.
+Why: The user reported the placement fix "doesn't work" at larger windows and asked for verification at 1280×1080 or more.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, horizontal centering from DV-14, form column layout, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints (mobile top-stack unchanged below 760px).
+Rollback target: `DV-2026-08-15-14`
+Notes: Browser-verified live on localhost:8080 `/login` at 1280×1080 post build+sync: content group 282→830 centered exactly in the 64→1048 panel (centerline 556 both), form card 244→905. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-14
+Date: 2026-08-15
+Surface: Login page brand carousel block placement on `/login` (shared auth command-entry slides)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Followed the user's placement drawing: the slide block now sits horizontally centered in the brand panel on the wordmark's centerline, at a fixed 460px reading-column width (`width: 100%; max-width: 460px` on the viewport under the base centering), replacing DV-13's left-anchored cap. Rows inside stay left-aligned from DV-11.
+Why: The user drew the desired placement after DV-13's left-anchored column still read as mispositioned.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, kicker pill, hero type scale, 3-col details and 2-col stats grids, form column, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-13`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: panel 62→648 (centerline 355), wordmark 275→435, viewport/slide/details/stats 125→585 — same centerline, 63px margins each side; hero/text left-aligned inside the block. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-13
+Date: 2026-08-15
+Surface: Login page brand carousel block width on `/login` (shared auth command-entry slides)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Follow-up to DV-12 (user: "still too outward"): the full-panel stretch let the details/stats chip rows run to the panel's far-right boundary (648px), 214px past the paragraph's 44ch column (434px) and only 53px from the form — an overhang that read as pushed out toward the form. The slide viewport now caps at a 460px reading-column width, left-anchored at the panel padding: hero/text/chips share one coherent column whose ragged edge ends near the paragraph, with a ~180px gap to the form.
+Why: The user reported the carousel chip block as still extending too far outward after DV-12's panel-width stretch.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, kicker pill, hero type scale, 3-col details and 2-col stats grids, form column, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-12`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: all layers left-anchored at 62, hero/text end 434-435, viewport/slide/details/stats cap at 522, form card starts at 701. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-12
+Date: 2026-08-15
+Surface: Login page brand carousel block position on `/login` (shared auth command-entry slides)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Follow-up to DV-11 with the user's element-level identification (`auth-flow-slide`): the command-entry base also centers the `.auth-flow-copy` column's children, so the slide viewport shrink-wrapped to ~373px and floated centered inside the 586px brand panel with ~107px dead margins each side. The liquid-glass skin now stretches the copy column too, so the whole slide block (viewport + slide + hero + text + details + stats) spans the panel's content width and sits flush with the panel edges.
+Why: The user reported the `auth-flow-slide` block itself as still "placed too outward" after DV-11's per-row fix.
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, kicker pill, hero type scale, stats grid layout, form column, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-11`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: copy/viewport/slide/details all 62→648 (panel-flush), hero left-aligned 62→435, `align-items: stretch` on both the copy column and the slide. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-11
+Date: 2026-08-15
+Surface: Login page brand carousel slide layout on `/login` (and the shared auth command-entry slides)
+Files: `frontend/src/styles/auth-liquid-glass.css`, `frontend/src/pages/loginSlideChipsAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The command-entry base rule centers slide children (`align-items: center`), so the slide-details and stats chip rows shrink-wrapped to their content and drifted away from the left-aligned kicker/hero/paragraph — visibly detached and pushed outward at wider viewports. The liquid-glass skin now stretches slide children (`align-items: stretch`), spans the details grid at 100% slide width, and pins the paragraph's `margin-inline: 0`, so every layer sits flush on the slide's left edge.
+Why: The user reported the carousel chip portion on the login page as "placed too outward" (screenshots: tight crop of the chip rows + full-page view).
+Preserve list: Carousel rotation/timing/random slide order, slide copy and both locales, kicker pill styling, hero type scale, stats grid 2-column layout, form column, admin login variant, midnight/high-contrast auth surfaces, responsive breakpoints.
+Rollback target: `DV-2026-08-15-10`
+Notes: Browser-verified live on localhost:8080 `/login` post build+sync: slide `align-items: stretch`, kicker/hero/text/details/stats all flush at left 169 → right 542 of the 373px slide. Suite 191/192 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-10
+Date: 2026-08-15
+Surface: Admin console inline action buttons across `/dashboard` tabs (course-maps, jobs, shoes, settings)
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminInlineButtonsCircular.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: All admin `btn-inline-md` actions (运行提取管线 / AI 扫描上传 / 开始 Strava 同步 / 添加跑鞋 / 添加到目录 / 登出) are now compact circular pills: `width: auto`, `border-radius: 999px`, centered content, 20px inline padding. The course-map workbench action rows switched from a stretching `minmax(150px, 1fr)` grid to wrapping flex rows; the stage-header row centers its pills instead of stretching them to the 91px header height; the decision-dock primary CTA went from a full-dock bar (width 100%, 52-58px) to a compact right-aligned 44px pill. Primary CTAs keep the red gradient.
+Why: The user reported these buttons as abnormal stretched bars and asked for normal circular buttons matching the compact pill reference (red background).
+Preserve list: Button labels/behaviors/disabled states, red gradient on primary CTAs, neutral secondary styling, modal footer buttons, sidebar CTA pill from DV-08, tab routing, admin auth, midnight/high-contrast theming, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-09`
+Notes: Browser-verified live on localhost:8080 after build+sync — 运行提取管线 122×36 pill, AI 扫描上传 dock CTA 126×44 pill (was 649×52), 开始 Strava 同步 148×36, 添加跑鞋 93×35, 添加到目录 106×35, 登出 67×36, all radius 999px. Suite 190/191 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-09
+Date: 2026-08-15
+Surface: Admin dashboard overview metric strip on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/dashboardMetricTrendChart.smoke.test.js`, `frontend/src/i18n/locales/en/admin.js`, `frontend/src/i18n/locales/zh-CN/admin.js`, `DESIGN_VERSIONS.md`
+What changed: The Active Athletes and Shoes Inventory metric cards are now toggle buttons (aria-pressed, coral active edge). Clicking either opens a Chart.js line-graph panel under the strip showing that metric's cumulative daily growth, lazily fetched page-capped from `/api/admin/users` / `/api/admin/shoes` `createdAt`; clicking again (or the panel close button) hides it. Loading/empty/error states included.
+Why: The user asked that clicking these two cards display a line graph of the metric.
+Preserve list: The other two metric cards stay static, metric values and labels, ops grid/health/audit sections, tab routing, admin auth, midnight/high-contrast theming, localization in both locales, responsive behavior, keyboard focus.
+Rollback target: `DV-2026-08-15-08`
+Notes: Frontend lint/build pass, runtime static sync PASS, suite 190/191 (one pre-existing shoesGridVisibility failure also failing on the clean tree). First round shipped an effect bug (deps included metricTrends, so writing the loading entry cancelled the in-flight fetch and the panel hung on 正在加载趋势…); fixed with a ref-based once-per-metric guard. Browser-verified live on localhost:8080 with a diagnostic admin session: card click opens the panel and the Chart.js canvas renders (995×260), reload keeps the session. A 401/403 trend failure now shows a session-expired message (会话已过期，请重新登录) instead of a generic error, since dead server-side sessions — not the chart — were behind the reported 403s and refresh kick-outs (single-session tokens die on re-login elsewhere / DB rebuild). Diagnostic session on runner id=3 was minted and then invalidated; id=33 untouched.
+
+### Version: DV-2026-08-15-08
+Date: 2026-08-15
+Surface: Admin dashboard sidebar navigation on `/dashboard`
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminSidebarProfileNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the kinetic editorial sidebar rows with the Profile-page navigation design: nav items are now single-label pills (icon + label + tiny top-right index, 42px, radius 15px) with the runner radial-gradient active treatment and coral edge bar; the brand block uses the profile brand-copy pattern (HermesLogo + uppercase subtitle); the footer logout became the gradient CTA pill mirroring the profile workout button. New `--admin-nav-*` tokens mirror the runner `--runner-nav-*` set, with midnight/high-contrast redefinitions so pills stay readable on dark.
+Why: The user asked to apply the Profile page navigation bar design to the admin console.
+Preserve list: Seven admin tabs and their routes/behavior, logout behavior, topbar tabs, midnight/high-contrast admin surfaces (dark-mode-cohesion layers unchanged), icon sizing fix from DV-2026-08-15-07, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-07`
+Notes: Dropped the per-item sub-copy lines to match the profile pill anatomy (icon + one label). Live verified on localhost:8080 `/dashboard` light theme after build+sync: 156px rail, 42px/15px-radius pills, coral active gradient, 999px gradient CTA. Full suite 188/189 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-07
+Date: 2026-08-15
+Surface: Admin dashboard sidebar icons on `/dashboard`
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminSidebarIconSizing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a light-theme size box for `svg.material-symbols-outlined` inside `.admin-command-page` (`width/height: 1.15rem`, `flex: 0 0 auto`) in `admin-kinetic-editorial.css`.
+Why: `AppIcon` renders viewBox-only SVGs with no width/height attributes; in light theme nothing constrained them, so the intrinsic 300px default got clamped by the container and the sidebar nav icons rendered ~96-111px inside 42-52px buttons, crowding the labels. The midnight theme already carried the identical fix in `dark-mode-cohesion.css`; light mode was missing its counterpart.
+Preserve list: Icon stroke art and colors, sidebar nav order and numbering, active-link tint, topbar icons, midnight/high-contrast sizing, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-06`
+Notes: Live verified on localhost:8080 `/dashboard` after build+sync: all 8 sidebar icons now 18x18px. Guardrail test pins the light-theme box and the midnight counterpart so the pair cannot drift apart.
+
+### Version: DV-2026-08-15-06
+Date: 2026-08-15
+Surface: Admin dashboard overview on `/dashboard` (sidebar brand, metric strip, system-health queue rows)
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/dashboardOverviewDedup.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Fixed the broken-looking admin overview: removed the sidebar wordmark that printed "HERMES" a second time next to the HermesLogo, dropped the sidebar footer CTA that duplicated the course-maps nav item, removed the per-card `ops-metric-kicker` line that repeated the same translation key as `ops-metric-label` (every metric label appeared twice), and made queue counts shape-aware (`toCount`: arrays count length, non-numeric coerces to 0) so 待发布赛道图 renders 8 instead of NaN (`/api/admin/queues` returns `pendingRaceCourseMaps` as an array and the old `Number(array)` coercion produced NaN).
+Why: The user reported the admin dashboard frontend design as broken; live reproduction showed duplicated brand/labels and a NaN KPI as the visible defects.
+Preserve list: Sidebar nav order and numbering, topbar tabs, metric values and data wiring, ops action grid, system-health dot tones, audit feed, midnight/high-contrast surfaces, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-05`
+Notes: Verified live on localhost:8080 `/dashboard` via admin session DOM snapshot after build+sync: single HERMES brand, single label per metric card, queue row shows 8/0/3/8 with no NaN. All 26 dashboard smoke suites plus the new dedup guardrail pass; full contract suite 186/187 (one pre-documented concurrent-session shoes failure).
+
+### Version: DV-2026-08-15-05
+Date: 2026-08-15
+Surface: Settings connected-services grid on `/settings` (Strava and Garmin Connect provider cards)
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/settingsServiceCardsWhite.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a light-theme-only guard in `grid-cards-white.css` (imported last) pinning `.st-service-card` to `#ffffff` with `background-image: none` and `backdrop-filter: none`.
+Why: The runner-shell liquid-glass sweep matches `[class*="-card"]` and repainted both provider cards with the cream `--hermes-glass-paper` plus blur, so the two-card services grid read beige inside the near-white `.st-services` section; the user asked for the grid backgrounds to be white.
+Preserve list: Two-column grid geometry, provider icons and tinted icon chips, connect/manage button variants, Garmin meta stats row, connected outline, midnight/high-contrast dark card surfaces, data wiring, localization.
+Rollback target: `DV-2026-08-15-04`
+Notes: Guardrail test pins the white guard, its light-theme-only scoping, and the last-position import of `grid-cards-white.css` so the glass sweep cannot reclaim the grid.
+
+### Version: DV-2026-08-15-04
+Date: 2026-08-15
+Surface: Settings wellness hub grid on `/settings` (健康数据同步 sleep/HRV/stress/body-composition rows)
+Files: `frontend/src/styles/_split/settings.css`, `frontend/src/pages/settingsWellnessHub.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: `.st-wellness-row` changed from the `rgba(0,0,0,0.02)` gray tint to `#ffffff`, with a theme-aware `var(--line-soft)` border added so each row stays readable on the white card.
+Why: The four source rows read as gray tiles over the pure-white settings atlas card; the user asked for the grid background to be white, continuing the DV-2026-08-15 white-card series.
+Preserve list: Row layout, padding, radii, source pill styling, midnight/high-contrast dark row surface, wellness source-preference data wiring, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-03`
+Notes: Presentation-only color change; the dark-theme row override is untouched and `--line-soft` resolves per theme. Guardrail test extended to pin the white row background and reject the old gray tint.
+
+### Version: DV-2026-08-15-03
+Date: 2026-08-15
+Surface: Analysis VO2max trend hero on `/analysis`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/analysisVdotTrendAccent.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The VO2max hero (`.analysis-profile-primary`) now renders as a plain white card in light mode: the base rule, the doubled-class specificity clamp, and both liquid-glass overrides changed from `transparent` to `#ffffff !important`; training-zones/predictions table cards also moved to pure white.
+Why: The hero was deliberately transparent, so the cream analysis canvas showed through and the card read beige next to the white reference cards; the user asked for the grid background to be white.
+Preserve list: Bar chart interactions and tooltips, hero value block, header layout, midnight/high-contrast dark surfaces, all metric calculations, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-02`
+Notes: Live bundle verified: every light-theme rule resolving `.analysis-profile-primary` background now yields `#fff`, with midnight rules still painting dark surfaces. Guardrail test updated to pin the white surface at all three specificity tiers. Live in-browser check of `/analysis` was not possible this round: the local login flow stopped responding to submit (in-flight concurrent session state), so proof is bundle-level plus suite-level.
+
+### Version: DV-2026-08-15-02
+Date: 2026-08-15
+Surface: Profile dashboard bottom grid on `/profile` (race predictions, stamina, streak, weekly digest cards)
+Files: `frontend/src/styles/_split/profile-dashboard-redesign.css`, `frontend/src/pages/profileRecentActivityHeader.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Extended the white-surface override `:is()` list to also cover `.hd-predictions-card`, `.hd-stamina-card`, `.hd-streak-card`, and `.profile-weekly-digest-card` (plus hover), and the recent-activity sessions card now resolves to the plain white token.
+Why: The runner-shell liquid-glass sweep matches any `[class*="-card"]` and repainted the bottom-grid and digest cards with the cream `--hermes-glass-paper` token, so the DV-2026-08-15-01 variable change alone left exactly those four card groups beige (verified by live computed styles before/after).
+Preserve list: Card layout, radii, borders, hover states, dark-mode surfaces, gradients inside card content, data wiring, localization, responsive behavior.
+Rollback target: `DV-2026-08-15-01`
+Notes: Guardrail test updated: the sessions card and bottom-grid cards must stay on `var(--hd-bg-card)`, and a new assertion pins the extended `:is()` override so the glass sweep cannot reclaim the grid.
+
+### Version: DV-2026-08-15-01
+Date: 2026-08-15
+Surface: Profile dashboard card grids on `/profile` (weekly digest, training grid, bottom predictions/stamina/streak grid, rewards, metric cards)
+Files: `frontend/src/styles/_split/profile-dashboard-redesign.css`, `DESIGN_VERSIONS.md`
+What changed: Light-mode `--hd-bg-card` changed from `rgba(255,255,255,0.92)` to solid `#ffffff`, turning every Profile dashboard grid card background pure white.
+Why: The 92%-opacity white over the cream page background read as an off-white/beige tint; the user asked for the grid card backgrounds to be white.
+Preserve list: Card layout, radii, borders, hover/elevated states, dark-mode values, text colors, accents, all data wiring, localization, and responsive behavior.
+Rollback target: `DV-2026-08-14-24`
+Notes: Presentation-only token change; dark theme and Run Detail's separate `--run-detail-card` token untouched.
+
 ### Version: DV-2026-08-14-23
 Date: 2026-08-14
 Surface: Injury-risk detail signal card on `/analysis/injury-risk`
@@ -6058,3 +6398,33 @@ Why: The distance tile rendered as a dark isolated block while its adjacent metr
 Preserve list: Metric values and units, Overview layout, route map behavior, coach review, linked gear, comparison content, localization, responsive behavior, themes, and keyboard focus.
 Rollback target: `DV-2026-08-14-22`
 Notes: Presentation-only color correction; no run calculations or data wiring changed.
+
+### Version: DV-2026-08-15-03
+Date: 2026-08-15
+Surface: Runner grid cards on `/analysis`, `/runs`, `/run/:id`, and `/shoes`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/styles/grid-cards-white.css`, `frontend/src/index.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Extended the Profile pure-white card decision to the other runner surfaces: the Analysis physiology-lab surface token is now `#ffffff`, Run Detail card/map tokens dropped their cream translucency, and a new last-imported `grid-cards-white.css` pins the VDOT insight card, Runs ledger insight strip, and Shoes inventory cards to `#ffffff` in light theme.
+Why: Those grids still rendered warm cream paper (`#fffefb`, `rgba(255,252,246,0.94)`, ledger gradients) after the Profile grids went white, so the surfaces disagreed.
+Preserve list: Midnight/high-contrast surfaces, the dark Run Detail debrief and accent stat tiles, the Shoes is-active/is-warning summary tints, the injury card's coral left edge, data wiring, localization, and responsive behavior.
+Rollback target: `DV-2026-08-15-02`
+Notes: Light theme only. Live computed-style check on localhost:8080 confirms Analysis bento/table/VDOT cards, Runs insight and stat cards, Shoes inventory cards, and Run Detail overview/gear/telemetry panels all render `rgb(255, 255, 255)`.
+
+### Version: DV-2026-08-15-04
+Date: 2026-08-15
+Surface: Weather hero status row on `/weather`
+Files: `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/styles/_split/weather.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the hero status row (coral pulse dot plus the 实时环境状态 / Live engine status kicker) and its now-dead CSS and locale keys; the hero now starts directly with the temperature row.
+Why: The decorative live-status pill cluttered the top of the weather hero without adding decision value.
+Preserve list: Temperature display, engine-status copy next to the temperature (引擎在线/Engine online), condition line, data pills, forecast strip, heat-adaptation guidance, localization, themes, responsive behavior, and keyboard focus.
+Rollback target: `DV-2026-08-15-03`
+Notes: Presentation-only removal in both locales. Live check on localhost:8080/weather confirms the status row/dot/label are gone (0 occurrences) while the hero temperature and engine-status copy still render.
+
+### Version: DV-2026-08-15-05
+Date: 2026-08-15
+Surface: Runs cockpit signal cards on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: All three cockpit signal cards (完整历史 count, 最近来源 latest source, STRAVA connected status) now render every label, value, and note in pure white at full opacity: the runs.css white override was broadened from the count card to every `.runs-profile-signal`, and the light-theme `!important` strong blanket in contrast-fixes.css got the matching all-signal-cards exemption so dark #2c2f30 values like STRAVA and Strava 自动同步 no longer sit unreadably on the near-black #191512 cards.
+Why: The dashboard strong blanket recolored the signal-card values dark on their dark surfaces, making 最近来源 and the connection status unreadable.
+Preserve list: Card backgrounds and borders, cockpit layout, status live/muted variants, midnight/high-contrast surfaces, data wiring, localization, responsive behavior, and keyboard focus.
+Rollback target: `DV-2026-08-15-04`
+Notes: Light theme only. Live computed-style check on localhost:8080/runs confirms all nine text nodes across the three cards render rgb(255,255,255) with opacity 1.

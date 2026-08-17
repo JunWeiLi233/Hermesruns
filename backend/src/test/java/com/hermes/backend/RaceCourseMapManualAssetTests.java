@@ -318,6 +318,43 @@ class RaceCourseMapManualAssetTests {
     }
 
     @Test
+    void listRaceCourseMapsShipsCoarseRoutesWithoutMaterializedPreviewImages() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+
+        java.util.ArrayList<RoutePoint> denseRoute = new java.util.ArrayList<>();
+        for (int i = 0; i < 500; i++) {
+            denseRoute.add(new RoutePoint(-6.2 + (i * 0.0001), 106.8 + (i * 0.0001), i == 0 ? "Start" : null));
+        }
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("dense-marathon");
+        asset.setRaceName("Dense Marathon");
+        asset.setCity("Jakarta");
+        asset.setCountry("Indonesia");
+        asset.setPendingImageUrl("local-course-map:dense-marathon.png");
+        asset.setPendingSource("admin-upload");
+        asset.setPendingSummary("Hermes aligned this upload.");
+        asset.setPendingUpdatedAt(LocalDateTime.now());
+        asset.setPendingRoutePointsJson(new ObjectMapper().writeValueAsString(denseRoute));
+        when(repository.findAll()).thenReturn(List.of(asset));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        List<RaceCourseMapAdminRow> rows = service.listRaceCourseMaps();
+
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).hasPendingPreview()).isTrue();
+        PreviewSnapshot pending = rows.get(0).pendingPreview();
+        assertThat(pending).isNotNull();
+        assertThat(pending.imageUrl()).isEqualTo("local-course-map:dense-marathon.png");
+        assertThat(pending.previewImageUrl()).isNull();
+        assertThat(pending.routePoints()).hasSize(32);
+        assertThat(pending.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(pending.routePoints().get(31).lat()).isEqualTo(denseRoute.get(499).lat());
+    }
+
+    @Test
     void uploadPendingCourseMapAcceptsUndecodableWebpCityMarathonAsCityLevelOnly() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
@@ -1173,4 +1210,40 @@ class RaceCourseMapManualAssetTests {
                 ))
         );
     }
+
+    @Test
+    void listRaceCourseMapsSkipsElevationAndCachesRowsWithinTtl() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("perf-cache-marathon");
+        asset.setRaceName("Perf Cache Marathon");
+        asset.setCity("Perf City");
+        asset.setCountry("JP");
+        String routeJson = "[{\"lat\":35.68,\"lng\":139.76,\"label\":\"Start\"},{\"lat\":35.69,\"lng\":139.77}]" +
+                ",".repeat(0) + "";
+        StringBuilder points = new StringBuilder("[");
+        for (int i = 0; i < 40; i++) {
+            if (i > 0) points.append(',');
+            points.append("{\"lat\":").append(35.68 + i * 0.001).append(",\"lng\":").append(139.76 + i * 0.001).append('}');
+        }
+        points.append(']');
+        asset.setPendingRoutePointsJson(points.toString());
+        asset.setPendingElevationSamplesJson("[100, 105, 110, 115, 120]");
+        asset.setPendingImageUrl("data:image/png;base64,perfcache");
+        when(repository.findAll()).thenReturn(java.util.List.of(asset));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        java.util.List<RaceCourseMapAdminRow> first = service.listRaceCourseMaps();
+        java.util.List<RaceCourseMapAdminRow> second = service.listRaceCourseMaps();
+
+        org.junit.jupiter.api.Assertions.assertSame(first, second, "Second list call within the TTL must reuse the cached rows.");
+        org.junit.jupiter.api.Assertions.assertTrue(first.get(0).pendingPreview().elevationSamples().isEmpty(),
+                "List-mode rows must skip the per-row elevation payload.");
+        verify(repository, org.mockito.Mockito.times(1)).findAll();
+    }
+
 }

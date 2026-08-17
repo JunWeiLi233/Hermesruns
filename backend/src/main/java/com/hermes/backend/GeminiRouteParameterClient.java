@@ -83,12 +83,10 @@ public class GeminiRouteParameterClient {
         this.systemConfigService = systemConfigService;
     }
 
-    @SuppressWarnings("unchecked")
     public RouteParametersDTO extractRouteParameters(String imageFilePath) {
         return extractRouteParameters(imageFilePath, null, null, null, null);
     }
 
-    @SuppressWarnings("unchecked")
     public RouteParametersDTO extractRouteParameters(
             String imageFilePath,
             String raceName,
@@ -138,6 +136,7 @@ public class GeminiRouteParameterClient {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + aiModel + ":generateContent";
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+        @SuppressWarnings({"unchecked", "rawtypes"})
         ResponseEntity<Map> response = exchangeWithTransientGeminiRetry(url, entity);
 
         String text = extractResponseText(response.getBody());
