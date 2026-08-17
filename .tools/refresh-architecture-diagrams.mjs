@@ -175,21 +175,40 @@ function humanizeComponentName(name) {
     .replace(/\bId\b/g, "ID");
 }
 
+const FEATURED_RUNNER_PATHS = [
+  "/today-run",
+  "/profile",
+  "/runs",
+  "/analysis",
+  "/shoes",
+  "/races",
+  "/schedule",
+  "/weather",
+];
+
 function parseRoutes(appSource) {
   const routes = [];
   const regex = /<Route\s+path="([^"]+)"\s+element={<([^]+?)}\s*\/>/g;
   for (const match of appSource.matchAll(regex)) {
     const routePath = match[1];
     const elementSource = match[2];
-    let audience = "public";
-    if (elementSource.includes("AdminOnlyRoute")) audience = "admin";
-    else if (elementSource.includes("UserOnlyRoute")) audience = "runner";
-    else if (elementSource.includes("Navigate")) audience = "redirect";
-
     const innerComponent =
       elementSource.match(/><([A-Z][A-Za-z0-9]*)\s*\/>/)?.[1]
-      || elementSource.match(/<([A-Z][A-Za-z0-9]*)\s*\/>/)?.[1]
+      || elementSource.match(/<([A-Z][A-Za-z0-9]*)\s*\/?>/)?.[1]
       || "Unknown";
+
+    let audience = "public";
+    if (
+      elementSource.includes("AdminOnlyRoute")
+      || routePath === "/admin"
+      || innerComponent === "AdminLogin"
+    ) {
+      audience = "admin";
+    } else if (elementSource.includes("UserOnlyRoute")) {
+      audience = "runner";
+    } else if (elementSource.includes("Navigate")) {
+      audience = "redirect";
+    }
 
     routes.push({
       path: routePath,
@@ -209,12 +228,35 @@ function formatRouteList(routes, limit = 6) {
   return subset;
 }
 
-function summarizeAudience(routes, audience) {
+function formatFeaturedRouteList(routes, featuredPaths, limit = 8) {
+  const featuredSet = new Set(featuredPaths);
+  const featured = featuredPaths
+    .map((path) => routes.find((route) => route.path === path))
+    .filter(Boolean);
+  const rest = routes.filter((route) => !featuredSet.has(route.path));
+  return formatRouteList([...featured, ...rest], limit);
+}
+
+function summarizeAudience(routes, audience, options = {}) {
   const filtered = routes.filter((route) => route.audience === audience);
+  const examples = options.featuredPaths
+    ? formatFeaturedRouteList(filtered, options.featuredPaths, options.limit || 8)
+    : formatRouteList(filtered, options.limit || (audience === "runner" ? 8 : 5));
   return {
     count: filtered.length,
-    examples: formatRouteList(filtered, audience === "runner" ? 8 : 5),
+    examples,
   };
+}
+
+function detectNpmDependencyMajor(rootDir, packageRelPath, packageName) {
+  try {
+    const pkg = JSON.parse(readText(rootDir, packageRelPath));
+    const raw = pkg.dependencies?.[packageName] || pkg.devDependencies?.[packageName] || "";
+    const match = String(raw).match(/(\d+)/);
+    return match ? Number(match[1]) : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseAgentLanes(agentWorkflowSource) {
@@ -282,7 +324,7 @@ function createArrow(arrow) {
 
 function createLegend(items, x, y) {
   const rowHeight = 18;
-  const width = 200;
+  const width = 248;
   const height = 18 + (items.length * rowHeight);
   const entries = items.map((item, index) => {
     const fill = PALETTE[`${item.kind}Fill`] || PALETTE.externalFill;
@@ -329,9 +371,9 @@ function renderSvgDocument(spec) {
   ${buildGrid(spec.width, spec.height)}
   <text x="40" y="42" fill="${PALETTE.text}" font-size="24" font-weight="700" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">${escapeXml(spec.title)}</text>
   <text x="40" y="64" fill="${PALETTE.muted}" font-size="11" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">${escapeXml(spec.subtitle)}</text>
-  ${arrows}
   ${groups}
   ${boxes}
+  ${arrows}
   ${legend}
 </svg>
 `;
@@ -374,7 +416,7 @@ function renderHtmlDocument(spec, svgMarkup) {
         color: var(--text);
       }
       .container {
-        max-width: 1280px;
+        max-width: 1320px;
         margin: 0 auto;
         padding: 32px;
       }
@@ -555,64 +597,122 @@ function createAgentWorkflowSpec(agentLanes) {
   };
 }
 
-function createSaasArchitectureSpec(routeSummary, lazyPageNames) {
-  const users = routeForBox(48, 120, 170, 92);
-  const publicUi = routeForBox(282, 92, 222, 122);
-  const runnerUi = routeForBox(282, 252, 222, 140);
-  const adminUi = routeForBox(282, 430, 222, 92);
-  const frontend = routeForBox(566, 180, 190, 112);
-  const backend = routeForBox(806, 118, 200, 138);
-  const services = routeForBox(806, 310, 200, 148);
-  const database = routeForBox(1070, 170, 160, 94);
-  const integrations = routeForBox(1070, 314, 160, 158);
+function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}) {
+  const users = routeForBox(40, 140, 176, 100);
+  const publicUi = routeForBox(276, 84, 236, 118);
+  const runnerUi = routeForBox(276, 218, 236, 168);
+  const adminUi = routeForBox(276, 404, 236, 92);
+  const frontend = routeForBox(560, 118, 204, 118);
+  const auth = routeForBox(560, 256, 204, 96);
+  const backend = routeForBox(812, 96, 214, 150);
+  const services = routeForBox(812, 268, 214, 156);
+  const database = routeForBox(1072, 108, 188, 108);
+  const integrations = routeForBox(1072, 240, 188, 184);
 
   const publicLines = routeSummary.public.examples;
   const runnerLines = routeSummary.runner.examples;
   const adminLines = routeSummary.admin.examples;
   const pageCount = lazyPageNames.length;
+  const reactLabel = stackFacts.reactLabel || "React + Vite";
+  const routerLabel = stackFacts.routerLabel || "React Router";
 
   return {
     slug: SAAS_DIAGRAM_SLUG,
     title: "Hermes SaaS Application Architecture",
-    subtitle: "Public entry, runner shell, admin tooling, backend services, data stores, and third-party integrations.",
-    width: 1280,
-    height: 740,
+    subtitle: "Public entry, runner shell, admin tooling, JWT API boundary, data stores, and third-party integrations.",
+    width: 1320,
+    height: 780,
     groups: [
-      { x: 248, y: 64, width: 286, height: 490, label: "React Route Families", kind: "cloud" },
-      { x: 784, y: 86, width: 468, height: 408, label: "Spring Boot Runtime + Integrations", kind: "cloud" },
+      { x: 248, y: 58, width: 292, height: 474, label: "React Route Families", kind: "cloud" },
+      { x: 540, y: 86, width: 244, height: 304, label: "Client Runtime + Auth", kind: "security" },
+      { x: 792, y: 70, width: 488, height: 376, label: "Spring Boot Runtime + Integrations", kind: "cloud" },
     ],
     boxes: [
       { ...users, kind: "external", title: "Users", lines: ["public visitors", "signed-in runners", "admin operators"] },
       { ...publicUi, kind: "frontend", title: `Public Routes (${routeSummary.public.count})`, lines: publicLines },
       { ...runnerUi, kind: "frontend", title: `Runner Routes (${routeSummary.runner.count})`, lines: runnerLines },
-      { ...adminUi, kind: "frontend", title: `Admin / Redirect (${routeSummary.admin.count + routeSummary.redirect.count})`, lines: [...adminLines, `redirects: ${routeSummary.redirect.count}`] },
-      { ...frontend, kind: "frontend", title: "React + Vite SPA", lines: [`lazy pages: ${pageCount}`, "React Router 7", "shared runner shell + themes"] },
-      { ...backend, kind: "backend", title: "Spring Boot API", lines: ["auth + controllers", "REST endpoints", "serves built SPA on :8080"] },
-      { ...services, kind: "backend", title: "Domain Services", lines: ["analysis / coaching", "imports / sync jobs", "races / shoes / workflow tools", "weather + billing + route extraction"] },
-      { ...database, kind: "database", title: "Data Layer", lines: ["H2 local-first default", "PostgreSQL optional", "JPA / Hibernate persistence"] },
-      { ...integrations, kind: "cloud", title: "External Integrations", lines: ["Strava OAuth + sync", "Google OAuth", "Garmin Connect", "Stripe", "Open-Meteo", "AI providers / route extraction"] },
+      { ...adminUi, kind: "frontend", title: `Admin Routes (${routeSummary.admin.count})`, lines: adminLines },
+      {
+        ...frontend,
+        kind: "frontend",
+        title: `${reactLabel} SPA`,
+        lines: [
+          routerLabel,
+          `lazy pages: ${pageCount}`,
+          "shared runner shell + themes",
+          `legacy redirects: ${routeSummary.redirect.count}`,
+        ],
+      },
+      {
+        ...auth,
+        kind: "security",
+        title: "Auth Gates",
+        lines: ["UserOnlyRoute", "AdminOnlyRoute", "JWT on /api"],
+      },
+      {
+        ...backend,
+        kind: "backend",
+        title: "Spring Boot API",
+        lines: ["auth + controllers", "REST /api", "serves SPA on :8080", "inbound webhooks"],
+      },
+      {
+        ...services,
+        kind: "backend",
+        title: "Domain Services",
+        lines: [
+          "analysis / coaching",
+          "imports / wellness sync",
+          "races / shoes / maps",
+          "weather + billing",
+        ],
+      },
+      {
+        ...database,
+        kind: "database",
+        title: "Data Layer",
+        lines: ["H2 local default", "PostgreSQL production", "JPA / Hibernate"],
+      },
+      {
+        ...integrations,
+        kind: "cloud",
+        title: "External Integrations",
+        lines: [
+          "Strava OAuth + webhook",
+          "Google OAuth + Health",
+          "Garmin Connect",
+          "Stripe checkout",
+          "Open-Meteo + NWS",
+          "Gemini + maps",
+        ],
+      },
     ],
     arrows: [
-      lineArrow(users.centerX, users.centerY, publicUi.x, publicUi.centerY, "browse"),
-      lineArrow(users.centerX, users.centerY + 20, runnerUi.x, runnerUi.centerY, "train"),
-      lineArrow(users.centerX, users.centerY + 40, adminUi.x, adminUi.centerY, "operate"),
-      lineArrow(publicUi.x + publicUi.width, publicUi.centerY, frontend.x, frontend.centerY - 28, "route"),
-      lineArrow(runnerUi.x + runnerUi.width, runnerUi.centerY, frontend.x, frontend.centerY, "shell"),
-      lineArrow(adminUi.x + adminUi.width, adminUi.centerY, frontend.x, frontend.centerY + 32, "dashboard"),
-      lineArrow(frontend.x + frontend.width, frontend.centerY, backend.x, backend.centerY, "/api"),
+      lineArrow(users.centerX, users.centerY - 18, publicUi.x, publicUi.centerY, "browse"),
+      lineArrow(users.centerX, users.centerY, runnerUi.x, runnerUi.centerY, "train"),
+      lineArrow(users.centerX, users.centerY + 22, adminUi.x, adminUi.centerY, "operate"),
+      lineArrow(publicUi.x + publicUi.width, publicUi.centerY, frontend.x, frontend.centerY - 18, "route"),
+      lineArrow(runnerUi.x + runnerUi.width, runnerUi.centerY, auth.x, auth.centerY - 10, "UserOnlyRoute"),
+      lineArrow(adminUi.x + adminUi.width, adminUi.centerY, auth.x, auth.y + auth.height, "AdminOnlyRoute"),
+      lineArrow(auth.centerX, auth.y, frontend.centerX, frontend.y + frontend.height, "session"),
+      lineArrow(frontend.x + frontend.width, frontend.centerY, backend.x, backend.centerY + 8, "host SPA"),
+      lineArrow(auth.x + auth.width, auth.centerY, backend.x, backend.y + backend.height - 18, "/api + JWT"),
       lineArrow(backend.centerX, backend.y + backend.height, services.centerX, services.y, "service calls"),
       lineArrow(backend.x + backend.width, backend.centerY, database.x, database.centerY, "persist"),
-      lineArrow(services.x + services.width, services.centerY, database.x, database.centerY + 24, "state"),
-      lineArrow(services.x + services.width, services.centerY, integrations.x, integrations.centerY, "sync / webhooks"),
-      lineArrow(integrations.x, integrations.centerY - 26, services.x + services.width, services.centerY - 12, "provider data", { dashed: true, color: PALETTE.securityStroke }),
+      lineArrow(services.x + services.width, services.centerY - 8, database.x, database.y + database.height, "store"),
+      lineArrow(services.x + services.width, services.centerY + 28, integrations.x, integrations.centerY + 8, "sync"),
+      lineArrow(integrations.x, Math.min(integrations.y + 36, backend.y + backend.height + 8), backend.x + backend.width, backend.y + backend.height - 8, "webhooks", { dashed: true, color: PALETTE.securityStroke }),
+      lineArrow(integrations.x, integrations.centerY + 40, services.x + services.width, services.y + services.height - 18, "provider data", { dashed: true, color: PALETTE.securityStroke }),
     ],
     legend: [
       { kind: "frontend", label: "client routes and SPA runtime" },
-      { kind: "backend", label: "Spring Boot controllers and services" },
+      { kind: "security", label: "auth gates / JWT boundary" },
+      { kind: "backend", label: "Spring Boot API / services" },
       { kind: "database", label: "persistent application state" },
       { kind: "cloud", label: "third-party providers and infra edges" },
       { kind: "external", label: "human users / operators" },
     ],
+    legendX: 1040,
+    legendY: 590,
     cards: [
       {
         title: "Route Inventory",
@@ -620,27 +720,27 @@ function createSaasArchitectureSpec(routeSummary, lazyPageNames) {
           `Public routes: ${routeSummary.public.count}`,
           `Runner routes: ${routeSummary.runner.count}`,
           `Admin routes: ${routeSummary.admin.count}`,
-          `Redirect routes: ${routeSummary.redirect.count}`,
+          `Legacy redirects: ${routeSummary.redirect.count}`,
         ],
       },
       {
         title: "Product Surface",
         items: [
           `Detected lazy pages: ${pageCount}`,
-          `Examples: ${lazyPageNames.slice(0, 6).map(humanizeComponentName).join(", ")}${pageCount > 6 ? "..." : ""}`,
-          "Runner shell, admin dashboard, and public auth remain the three main surface families.",
+          `${reactLabel}; ${routerLabel}.`,
+          "Primary runner surfaces: Today Run, Profile, Runs, Analysis, Shoes, Races, Schedule, Weather.",
         ],
       },
       {
         title: "Service Edges",
         items: [
-          "Backend owns auth, imports, coaching, analytics, billing, and race tooling.",
-          "Third-party edges currently include Strava, Google, Garmin, Stripe, weather, and AI providers.",
-          "Route/page changes in frontend/src/pages or App routing now trigger diagram regeneration on clean auto-commit.",
+          "Spring Boot serves the built SPA on :8080 and the JSON API under /api.",
+          "UserOnlyRoute / AdminOnlyRoute gate pages; api.js attaches the JWT.",
+          "Strava and Stripe webhooks hit controllers; weather falls back from Open-Meteo to NWS.",
         ],
       },
     ],
-    footer: "Generated from Hermes route map, lazy-page inventory, and integration-aware repo rules.",
+    footer: "Generated from App.jsx routes, frontend/package.json, and integration-aware repo rules.",
   };
 }
 
@@ -707,16 +807,22 @@ export function runArchitectureDiagramRefresh(rawArgs = process.argv.slice(2)) {
   const lazyPageNames = extractLazyPageNames(appSource);
   const routes = parseRoutes(appSource);
   const routeSummary = {
-    public: summarizeAudience(routes, "public"),
-    runner: summarizeAudience(routes, "runner"),
+    public: summarizeAudience(routes, "public", { limit: 6 }),
+    runner: summarizeAudience(routes, "runner", { featuredPaths: FEATURED_RUNNER_PATHS, limit: 8 }),
     admin: summarizeAudience(routes, "admin"),
     redirect: summarizeAudience(routes, "redirect"),
+  };
+  const reactMajor = detectNpmDependencyMajor(args.rootDir, "frontend/package.json", "react");
+  const routerMajor = detectNpmDependencyMajor(args.rootDir, "frontend/package.json", "react-router");
+  const stackFacts = {
+    reactLabel: reactMajor ? `React ${reactMajor} + Vite` : "React + Vite",
+    routerLabel: routerMajor ? `React Router ${routerMajor}` : "React Router",
   };
   const agentLanes = parseAgentLanes(workflowSource);
 
   const specs = [
     createAgentWorkflowSpec(agentLanes),
-    createSaasArchitectureSpec(routeSummary, lazyPageNames),
+    createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts),
   ];
 
   const writtenPaths = [];
