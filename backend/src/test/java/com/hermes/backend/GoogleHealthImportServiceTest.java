@@ -24,7 +24,6 @@ class GoogleHealthImportServiceTest {
     private DailySleepDataRepository sleepDataRepository;
     private DailyHRVDataRepository hrvDataRepository;
     private DailyStressDataRepository stressDataRepository;
-    private RunnerRepository runnerRepository;
     private CoachRunnerStateRepository coachRunnerStateRepository;
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private GoogleHealthImportService service;
@@ -35,12 +34,11 @@ class GoogleHealthImportServiceTest {
         sleepDataRepository = mock(DailySleepDataRepository.class);
         hrvDataRepository = mock(DailyHRVDataRepository.class);
         stressDataRepository = mock(DailyStressDataRepository.class);
-        runnerRepository = mock(RunnerRepository.class);
         coachRunnerStateRepository = mock(CoachRunnerStateRepository.class);
         objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
         service = new GoogleHealthImportService(
                 wellnessSummaryRepository, sleepDataRepository, hrvDataRepository,
-                stressDataRepository, runnerRepository, coachRunnerStateRepository, objectMapper
+                stressDataRepository, coachRunnerStateRepository, objectMapper
         );
     }
 

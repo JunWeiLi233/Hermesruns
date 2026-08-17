@@ -30,9 +30,12 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         // geolocation=(self): allow browser geolocation for same-origin UI (e.g. weather bar).
         httpResponse.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=()");
+        // script-src has no 'unsafe-inline': the built SPA loads exactly one external
+        // module script and reCAPTCHA loads from the Google origins listed below.
+        // style-src keeps 'unsafe-inline' for dynamic style injection from bundled UI libs.
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
+                "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                 "img-src 'self' data: https: blob:; " +
                 "font-src 'self' https://fonts.gstatic.com; " +

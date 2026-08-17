@@ -175,9 +175,11 @@ public class AcclimatizationService {
 
     private WeatherCoordinates resolveCoordinates(Runner runner, Double requestedLatitude, Double requestedLongitude) {
         if (requestedLatitude != null || requestedLongitude != null) {
-            return isValidGpsCoordinate(requestedLatitude, requestedLongitude)
-                    ? new WeatherCoordinates(requestedLatitude, requestedLongitude)
-                    : null;
+            if (requestedLatitude == null || requestedLongitude == null
+                    || !isValidGpsCoordinate(requestedLatitude, requestedLongitude)) {
+                return null;
+            }
+            return new WeatherCoordinates(requestedLatitude, requestedLongitude);
         }
 
         List<Object[]> latestLatLng = activityPointRepository.findLatestLatLngByRunnerAndType(

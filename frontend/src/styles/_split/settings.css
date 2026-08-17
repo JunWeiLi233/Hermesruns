@@ -5081,6 +5081,8 @@ body:is(.theme-midnight, .theme-high-contrast) .st-sync-pill.is-muted {
   gap: 6px;
 }
 
+/* Wellness rows sit on pure white like the other settings atlas cards; the
+   soft border keeps each row readable now that the gray tint is gone. */
 .st-wellness-row {
   display: flex;
   align-items: center;
@@ -5088,7 +5090,8 @@ body:is(.theme-midnight, .theme-high-contrast) .st-sync-pill.is-muted {
   gap: 12px;
   padding: 10px 14px;
   border-radius: var(--radius-md, 12px);
-  background: rgba(0,0,0,0.02);
+  border: 1px solid var(--line-soft, rgba(171, 173, 174, 0.15));
+  background: #ffffff;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .st-wellness-row {
@@ -5505,4 +5508,18 @@ body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="3"]
   .st-activity-grid-inner {
     min-width: 690px;
   }
+}
+
+/* Settings atlas grids sit on pure white in light themes; the runner-shell
+   glass sweep would otherwise repaint every st-card with the tinted paper. */
+.settings-atlas-canvas .st-card {
+  border-color: var(--line-soft, rgba(0, 0, 0, 0.08)) !important;
+  background: #ffffff !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .settings-atlas-canvas .st-card {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }

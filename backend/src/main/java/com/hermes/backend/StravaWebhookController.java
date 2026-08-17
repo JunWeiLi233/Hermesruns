@@ -35,19 +35,29 @@ import java.util.concurrent.Executors;
  * curl -X POST https://www.strava.com/api/v3/push_subscriptions \
  *   -d client_id=YOUR_ID -d client_secret=YOUR_SECRET \
  *   -d callback_url=https://YOUR_DOMAIN/api/strava/webhook \
- *   -d verify_token=hermes-strava-webhook
+ *   -d verify_token=YOUR_STRAVA_WEBHOOK_VERIFY_TOKEN
  * </pre>
+ *
+ * <p>The {@code hermes-strava-webhook} default is a development convenience only;
+ * production must set {@code STRAVA_WEBHOOK_VERIFY_TOKEN} to a long random secret
+ * ({@link ProductionSecurityValidator} fails startup otherwise when Strava is
+ * enabled, and this controller rejects the default outright in production).</p>
  */
 @RestController
 @RequestMapping("/api/strava/webhook")
 public class StravaWebhookController {
     private static final long[] WEBHOOK_RETRY_DELAYS_MS = {0L, 1500L, 5000L};
 
+    private static final String DEFAULT_VERIFY_TOKEN = "hermes-strava-webhook";
+
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
     private final RunnerRepository runnerRepository;
     private final StravaSyncService stravaSyncService;
     private final ExecutorService webhookExecutor;
+
+    @Value("${hermes.environment:development}")
+    private String environment;
 
     @Value("${strava.webhook.verify-token:hermes-strava-webhook}")
     private String verifyToken;
@@ -83,6 +93,14 @@ public class StravaWebhookController {
             @RequestParam("hub.verify_token") String token,
             @RequestParam("hub.challenge") String challenge) {
 
+        // Fail closed: an unset token must never validate, and the documented
+        // development default is public knowledge so production rejects it too.
+        if (verifyToken == null || verifyToken.isBlank()
+                || (isProduction() && DEFAULT_VERIFY_TOKEN.equals(verifyToken.trim()))) {
+            log.warn("Strava webhook validation failed: verify token is unset or uses the development default");
+            return ResponseEntity.status(403).body(Map.of("error", "Forbidden"));
+        }
+
         if (!"subscribe".equals(mode) || !verifyToken.equals(token)) {
             log.warn("Strava webhook validation failed: mode={}, token mismatch={}", mode, !verifyToken.equals(token));
             return ResponseEntity.status(403).body(Map.of("error", "Forbidden"));
@@ -109,7 +127,7 @@ public class StravaWebhookController {
             @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
             HttpServletRequest request) {
 
-        boolean isProd = "production".equals(System.getenv("HERMES_ENV"));
+        boolean isProd = isProduction();
         if (isProd && (stravaClientSecret == null || stravaClientSecret.isBlank()
                 || !verifyStravaSignature(body, signature))) {
             log.warn("Strava webhook rejected: HMAC signature mismatch or missing secret");
@@ -162,17 +180,7 @@ public class StravaWebhookController {
             return ResponseEntity.status(403).body("UNKNOWN_OWNER");
         }
 
-        // Handle deauthorization
-        if ("athlete".equals(objectType) && "update".equals(aspectType)) {
-            Map<String, Object> updates = map(event.get("updates"));
-            if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
-                log.info("Strava deauthorization for athlete {}", ownerId);
-                // Don't delete data — just log it. User can re-connect.
-            }
-            return ResponseEntity.ok("EVENT_RECEIVED");
-        }
-
-        if (!"activity".equals(objectType) || objectId == null) {
+        if (!"activity".equals(objectType)) {
             return ResponseEntity.ok("EVENT_RECEIVED");
         }
 
@@ -222,6 +230,10 @@ public class StravaWebhookController {
                 return;
             }
         }
+    }
+
+    private boolean isProduction() {
+        return environment != null && "production".equalsIgnoreCase(environment.trim());
     }
 
     private boolean verifyStravaSignature(String body, String signatureHeader) {

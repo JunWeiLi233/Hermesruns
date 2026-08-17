@@ -19,6 +19,19 @@
 
 /* ── Sidebar ──────────────────────────────────────────────────────────── */
 
+/* Profile-page navigation design applied to the admin command rail: the
+   token values mirror .runner-dashboard-page's runner-nav-* set so the
+   admin sidebar navigates like the runner Profile page. */
+.dashboard-body.admin-command-page {
+  --admin-nav-ink: #201a17;
+  --admin-nav-muted: rgba(32, 26, 23, 0.62);
+  --admin-nav-line: rgba(112, 61, 46, 0.13);
+  --admin-nav-active: #a0392a;
+  --admin-nav-active-soft: rgba(160, 57, 42, 0.15);
+  --admin-nav-hover-bg: rgba(255, 255, 255, 0.56);
+  --admin-nav-active-bg: rgba(255, 255, 255, 0.86);
+}
+
 .dashboard-body.admin-command-page .ops-sidebar {
   width: 240px;
   flex-shrink: 0;
@@ -35,71 +48,226 @@
 
 .dashboard-body.admin-command-page .ops-sidebar-brand {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid var(--line-soft, rgba(171,173,174,0.15));
+  flex-direction: column;
+  gap: 8px;
+  min-height: 70px;
+  padding: 4px 6px 14px;
+  border-bottom: 1px solid var(--admin-nav-line);
 }
 
-.dashboard-body.admin-command-page .ops-sidebar-brand-wordmark {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+.dashboard-body.admin-command-page .ops-sidebar-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-brand-copy > span:not(.hermes-logo) {
+  color: var(--admin-nav-muted);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--brand-accent, #a0392a);
-}
-
-.dashboard-body.admin-command-page .ops-sidebar-brand-sub {
-  font-size: 0.68rem;
-  color: var(--text-muted, #595c5d);
-  font-weight: 500;
 }
 
 .dashboard-body.admin-command-page .ops-sidebar-nav {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px 10px;
+  gap: 7px;
+  padding: 12px 8px;
   overflow-y: auto;
 }
 
 .dashboard-body.admin-command-page .ops-sidebar-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 10px;
+  min-height: 42px;
+  padding: 9px 34px 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 15px;
   background: transparent;
-  color: var(--text-muted, #595c5d);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
+  color: var(--admin-nav-muted);
+  font-size: 0.69rem;
+  font-weight: 850;
+  letter-spacing: 0.015em;
+  line-height: 1.05;
   text-align: left;
-  transition: background 0.15s, color 0.15s;
   width: 100%;
+  cursor: pointer;
+  transform: translateZ(0);
+  transition:
+    background 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.dashboard-body.admin-command-page .ops-sidebar-link:hover {
-  background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 8%, transparent);
-  color: var(--text-strong, #2c2f30);
-}
-
-.dashboard-body.admin-command-page .ops-sidebar-link.is-active {
-  background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent);
-  color: var(--accent-coral-strong, #f07561);
+.dashboard-body.admin-command-page .ops-sidebar-link .ops-sidebar-link-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashboard-body.admin-command-page .ops-sidebar-link .material-symbols-outlined {
-  font-size: 18px;
-  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link .admin-command-sidebar__nav-index {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  color: color-mix(in srgb, var(--admin-nav-muted) 56%, transparent);
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link::after {
+  content: "";
+  position: absolute;
+  inset: 9px auto 9px 5px;
+  width: 0;
+  border-radius: 999px;
+  background: var(--admin-nav-active);
+  opacity: 0;
+  transition:
+    width 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link:hover {
+  border-color: var(--admin-nav-line);
+  background: var(--admin-nav-hover-bg);
+  color: var(--admin-nav-ink);
+  transform: translate3d(2px, 0, 0);
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link.is-active {
+  border-color: rgba(160, 57, 42, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, var(--admin-nav-active-soft), transparent 42%),
+    var(--admin-nav-active-bg);
+  color: var(--admin-nav-active);
+  box-shadow:
+    0 14px 28px rgba(105, 68, 48, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link.is-active .admin-command-sidebar__nav-index {
+  color: rgba(160, 57, 42, 0.72);
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-link.is-active::after {
+  width: 3px;
+  opacity: 0.9;
 }
 
 .dashboard-body.admin-command-page .ops-sidebar-footer {
-  padding: 12px 10px;
-  border-top: 1px solid var(--line-soft, rgba(171,173,174,0.15));
+  display: flex;
+  padding: 6px 4px 0;
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 46px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--admin-nav-active) 22%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.36), transparent 32%),
+    linear-gradient(135deg, #c94e3d, #a0392a);
+  color: #fff8f4;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  box-shadow: 0 16px 30px rgba(160, 57, 42, 0.22);
+  cursor: pointer;
+  transition: filter 180ms ease, transform 180ms ease;
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-cta:hover {
+  filter: saturate(1.04) brightness(1.03);
+  transform: translate3d(0, -1px, 0);
+}
+
+.dashboard-body.admin-command-page .ops-sidebar-cta .material-symbols-outlined {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+/* AppIcon renders viewBox-only SVGs: without an explicit box they fall back
+   to the 300px intrinsic size and get clamped by the container, blowing the
+   sidebar nav icons up to ~96px in light theme. Midnight already pins this
+   in dark-mode-cohesion.css; this is the light-theme counterpart. */
+.dashboard-body.admin-command-page svg.material-symbols-outlined {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
+}
+
+/* ── Circular action buttons (DV-2026-08-15-10) ──────────────────────────
+   Inline admin actions (run pipeline / AI scan / Strava sync / add shoe /
+   add catalog / logout) inherited the global .btn-primary bar treatment:
+   hard radius-sm corners, and the course-map workbench grid stretched each
+   button to a full grid cell. Normalize them to compact circular pills. */
+.dashboard-body.admin-command-page .btn-inline-md {
+  width: auto;
+  justify-content: center;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-radius: 999px;
+}
+
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__secondary-row,
+.dashboard-body.admin-command-page .admin-coursemap-action-group__buttons {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__secondary-row > .btn-inline-md,
+.dashboard-body.admin-command-page .admin-coursemap-action-group__buttons > .btn-inline-md {
+  width: auto;
+}
+
+/* The stage-header grid used to stretch its action pills to the full header
+   height (91px); keep them compact and vertically centered instead. */
+.dashboard-body.admin-command-page .admin-track-hub-stage__actions {
+  align-items: center;
+}
+
+/* The decision-dock primary CTA (AI 扫描上传 / 发布) was a full-dock bar
+   (width 100%, min-height 52-58px); make it a compact circular pill too. */
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__primary {
+  width: auto;
+  min-height: 44px;
+}
+
+/* At ≤1360px the base stylesheet collapses the dock to a single column,
+   which left the compact pill alone on its own row at the far edge. Keep
+   the dock as one row: verdict left, pill right, vertically centered. */
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__decision-dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__decision-dock .admin-coursemap-publish-canvas__primary {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 /* ── Topbar ───────────────────────────────────────────────────────────── */
@@ -175,14 +343,14 @@
 }
 
 .dashboard-body.admin-command-page .ops-metric-card {
-  background: var(--bg-glass-strong, rgba(255,255,255,0.92));
-  border: 1px solid var(--line-soft, rgba(171,173,174,0.15));
-  border-radius: var(--radius-md, 12px);
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 18px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: var(--shadow-card, 0 10px 28px rgba(44,47,48,0.05));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
 }
 
 .dashboard-body.admin-command-page .ops-metric-kicker {
@@ -207,6 +375,73 @@
   color: var(--text-muted, #595c5d);
 }
 
+/* Metric cards that toggle the growth-trend line chart */
+.dashboard-body.admin-command-page .ops-metric-card--toggle {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-body.admin-command-page .ops-metric-card--toggle:hover {
+  border-color: var(--accent-coral-strong, #f07561);
+  transform: translateY(-1px);
+}
+
+.dashboard-body.admin-command-page .ops-metric-card--toggle:focus-visible {
+  outline: none;
+  border-color: var(--accent-coral-strong, #f07561);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-coral-strong, #f07561) 18%, transparent);
+}
+
+.dashboard-body.admin-command-page .ops-metric-card--toggle.is-active {
+  border-color: var(--accent-coral-strong, #f07561);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent);
+}
+
+/* Growth-trend line chart panel opened from the metric strip */
+.dashboard-body.admin-command-page .ops-metric-chart-panel {
+  margin-bottom: 24px;
+}
+
+.dashboard-body.admin-command-page .ops-metric-chart-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-soft, rgba(171,173,174,0.25));
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--text-muted, #595c5d);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-body.admin-command-page .ops-metric-chart-close:hover {
+  color: var(--text-strong, #2c2f30);
+  border-color: var(--accent-coral-strong, #f07561);
+}
+
+.dashboard-body.admin-command-page .ops-metric-chart-canvas {
+  position: relative;
+  height: 260px;
+}
+
+.dashboard-body.admin-command-page .ops-metric-chart-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  font-size: 0.85rem;
+  color: var(--text-muted, #595c5d);
+}
+
+.dashboard-body.admin-command-page .ops-metric-chart-state.is-error {
+  color: var(--accent-coral-strong, #f07561);
+}
+
 /* ── Ops grid ─────────────────────────────────────────────────────────── */
 
 .dashboard-body.admin-command-page .ops-action-grid {
@@ -227,25 +462,25 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-glass-strong, rgba(255,255,255,0.92));
-  border: 1px solid var(--line-soft, rgba(171,173,174,0.15));
-  border-radius: var(--radius-md, 12px);
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 18px;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  box-shadow: var(--shadow-card, 0 10px 28px rgba(44,47,48,0.05));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
   width: 100%;
 }
 
 .dashboard-body.admin-command-page .ops-action-card:hover {
-  border-color: var(--accent-coral-strong, #f07561);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(44, 47, 48, 0.09);
 }
 
 .dashboard-body.admin-command-page .ops-action-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent);
   display: flex;
   align-items: center;
@@ -690,6 +925,17 @@
 
 /* ── Dark mode overrides ──────────────────────────────────────────────── */
 
+body.theme-midnight .dashboard-body.admin-command-page,
+body.theme-high-contrast .dashboard-body.admin-command-page {
+  --admin-nav-ink: #fff7ef;
+  --admin-nav-muted: rgba(255, 247, 239, 0.64);
+  --admin-nav-line: rgba(255, 238, 226, 0.12);
+  --admin-nav-active: #ff9a86;
+  --admin-nav-active-soft: rgba(255, 154, 134, 0.2);
+  --admin-nav-hover-bg: rgba(255, 238, 226, 0.07);
+  --admin-nav-active-bg: rgba(255, 238, 226, 0.08);
+}
+
 body.theme-midnight .dashboard-body.admin-command-page .ops-sidebar,
 body.theme-high-contrast .dashboard-body.admin-command-page .ops-sidebar {
   background: rgba(0,0,0,0.85);
@@ -802,4 +1048,468 @@ body.theme-high-contrast .dashboard-body.admin-command-page .ops-audit-row {
     margin-left: 0;
     min-height: 100vh;
   }
+}
+
+/* ── Arrow pager for admin tables (DV-2026-08-15-27) ─────────────────────
+   Table footers page with compact circular arrow buttons: neutral prev,
+   red-accent next (the "->" control), page indicator between. */
+.dashboard-body.admin-command-page .pagination-row--arrows {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.dashboard-body.admin-command-page .pagination-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--admin-nav-active, #c94e3d) 26%, transparent);
+  border-radius: 999px;
+  background: var(--surface-card, rgba(255, 255, 255, 0.86));
+  color: var(--text-strong, #2b2f30);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-body.admin-command-page .pagination-arrow:hover:not(:disabled) {
+  background: rgba(240, 117, 97, 0.12);
+  color: #a0392a;
+}
+
+.dashboard-body.admin-command-page .pagination-arrow--next {
+  border-color: transparent;
+  background: linear-gradient(135deg, #c94e3d, #a0392a);
+  color: #fff8f4;
+}
+
+.dashboard-body.admin-command-page .pagination-arrow--next:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b54737, #8f3024);
+  color: #fff8f4;
+}
+
+.dashboard-body.admin-command-page .pagination-arrow:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.dashboard-body.admin-command-page .pagination-page-indicator {
+  min-width: 64px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #595c5d);
+}
+
+/* ── Overview queue-health card grid (DV-2026-08-15-29) ───────────────────
+   Runner-profile style white stat cards: tone dot, big value, label; the
+   tokens flip for midnight/high-contrast automatically. */
+.dashboard-body.admin-command-page .ops-queue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dashboard-body.admin-command-page .ops-queue-card {
+  display: grid;
+  gap: 3px;
+  padding: 16px 18px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 18px;
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  box-shadow: 0 12px 26px rgba(44, 47, 48, 0.05);
+}
+
+.dashboard-body.admin-command-page .ops-queue-card__dot {
+  justify-self: start;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22a06b;
+}
+
+.dashboard-body.admin-command-page .ops-queue-card.is-attention .ops-queue-card__dot {
+  background: #f07561;
+}
+
+.dashboard-body.admin-command-page .ops-queue-card__value {
+  font-family: "Manrope", var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text-strong, #2b2f30);
+}
+
+.dashboard-body.admin-command-page .ops-queue-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted, #595c5d);
+}
+
+/* ── Overview charts row (DV-2026-08-15-30) ───────────────────────────────
+   Reference admin-portal graphs: user growth line, audit bars, shoe photo
+   doughnut, on the same white card surface as the queue stat grid. */
+.dashboard-body.admin-command-page .ops-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dashboard-body.admin-command-page .ops-chart-card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.dashboard-body.admin-command-page .ops-chart-canvas {
+  position: relative;
+  height: 220px;
+}
+
+.dashboard-body.admin-command-page .ops-chart-canvas--donut {
+  height: 220px;
+}
+
+.dashboard-body.admin-command-page .ops-chart-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 220px;
+  font-size: 0.85rem;
+  color: var(--text-muted, #595c5d);
+}
+
+/* ── Course-maps rework (DV-2026-08-15-31) ─────────────────────────────────
+   Profile-page principles: a calm hero, one rail + stacked white cards in
+   the stage — one job per card, no duplicated headers or decorative panels. */
+.admin-command-page .admin-coursemap-rework__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 22px;
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
+}
+
+.admin-command-page .admin-coursemap-rework__hero-copy h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.admin-command-page .admin-coursemap-rework__hero-copy p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.9rem;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-coursemap-rework__hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-command-page .admin-coursemap-rework__hero-meta span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-coursemap-rework__grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.admin-command-page .admin-coursemap-rework__stage {
+  min-width: 0;
+}
+
+.admin-command-page .admin-coursemap-rework__stack {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-command-page .admin-coursemap-rework__card {
+  padding: 18px 20px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 22px;
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
+}
+
+.admin-command-page .admin-coursemap-rework__card--head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 18px;
+}
+
+.admin-command-page .admin-coursemap-rework__card--head h3 {
+  margin: 4px 0 6px;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.admin-command-page .admin-coursemap-rework__card--head > div > p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-coursemap-rework__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-command-page .admin-coursemap-rework__summary {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-coursemap-rework__hint {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-coursemap-rework__action-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-command-page .admin-coursemap-rework__card .admin-coursemap-publish-canvas__decision-dock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(240, 117, 97, 0.14), transparent 60%),
+    var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  border: 1px solid rgba(240, 117, 97, 0.22);
+}
+
+@media (max-width: 1180px) {
+  .admin-command-page .admin-coursemap-rework__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Course-maps button system (DV-2026-08-15-32) ──────────────────────────
+   Reference admin-portal buttons: soft filled neutral pills for secondary
+   actions (no hard border), red gradient reserved for the primary CTA. */
+.admin-command-page .admin-coursemap-rework .btn-secondary.btn-inline-md,
+.admin-command-page .admin-coursemap-rework .admin-track-hub-sidebar .btn-secondary.btn-inline-md {
+  min-height: 40px;
+  padding: 0 18px;
+  /* !important: later sweeps (all-pages-liquid-glass, admin-monitoring)
+     repaint .btn-secondary with hard borders unless overridden here. */
+  border: 0 !important;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 7%, transparent) !important;
+  color: var(--text-strong, #2b2f30) !important;
+  font-weight: 650;
+  box-shadow: none !important;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.admin-command-page .admin-coursemap-rework .btn-secondary.btn-inline-md:hover:not(:disabled),
+.admin-command-page .admin-coursemap-rework .admin-track-hub-sidebar .btn-secondary.btn-inline-md:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 12%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.admin-command-page .admin-coursemap-rework .btn-secondary.btn-inline-md:disabled {
+  opacity: 0.42;
+}
+
+.admin-command-page .admin-coursemap-rework .btn-primary.btn-inline-md {
+  min-height: 40px;
+  padding: 0 20px;
+}
+
+.admin-command-page .admin-coursemap-rework .admin-track-hub-sidebar__search .btn-secondary.btn-inline-md {
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.admin-command-page .admin-coursemap-rework .admin-track-hub-sidebar__archives {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ── Shoes rework (DV-2026-08-15-33) ────────────────────────────────────────
+   Same Profile-style card system as the course-maps rework: clean hero with
+   stat chips, a controls card, workbench grid, and catalog/saved cards. */
+.admin-command-page .admin-shoe-rework__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 24px;
+  padding: 22px 24px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 22px;
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
+}
+
+.admin-command-page .admin-shoe-rework__hero-copy h1 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+
+.admin-command-page .admin-shoe-rework__hero-copy p {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.9rem;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-shoe-rework__hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-command-page .admin-shoe-rework__hero-meta span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted, #595c5d);
+}
+
+.admin-command-page .admin-shoe-rework__card {
+  margin-top: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  border-radius: 22px;
+  background: var(--admin-profile-card, rgba(255, 251, 242, 0.84));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
+}
+
+.admin-command-page .admin-shoe-rework__card--controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+}
+
+.admin-command-page .admin-shoe-rework__inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1 1 320px;
+}
+
+.admin-command-page .admin-shoe-rework__inputs .admin-shoe-filter {
+  min-width: 180px;
+}
+
+.admin-command-page .admin-shoe-rework__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-command-page .admin-shoe-rework__grid {
+  margin-top: 14px;
+}
+
+/* Same soft-pill button treatment as the course-maps rework, with the
+   important overrides so later sweeps cannot repaint. */
+.admin-command-page .admin-shoe-rework .btn-secondary.btn-inline-md {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0 !important;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 7%, transparent) !important;
+  color: var(--text-strong, #2b2f30) !important;
+  font-weight: 650;
+  box-shadow: none !important;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.admin-command-page .admin-shoe-rework .btn-secondary.btn-inline-md:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 12%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.admin-command-page .admin-shoe-rework .btn-primary.btn-inline-md {
+  min-height: 40px;
+  padding: 0 20px;
+}
+
+/* ── Shoe feature-card action pills (DV-2026-08-15-34) ──────────────────────
+   The old full-width grid buttons with hard borders become compact pills
+   matching the rework button system. */
+.admin-command-page .admin-shoe-rework .admin-shoe-stitch-feature-card__actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-template-columns: none !important;
+}
+
+.admin-command-page .admin-shoe-rework .admin-shoe-stitch-feature-card__actions > .btn-primary {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #c94e3d, #a0392a) !important;
+  color: #fff8f4 !important;
+  box-shadow: none !important;
+}
+
+.admin-command-page .admin-shoe-rework .admin-shoe-stitch-feature-card__actions > .btn-secondary {
+  min-height: 38px;
+  padding: 0 18px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 7%, transparent) !important;
+  color: var(--text-strong, #2b2f30) !important;
+  box-shadow: none !important;
+}
+
+.admin-command-page .admin-shoe-rework .admin-shoe-stitch-feature-card__actions > .btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-strong, #2b2f30) 12%, transparent) !important;
+}
+
+.admin-command-page .admin-shoe-rework .admin-shoe-stitch-feature-card__actions > button {
+  width: auto !important;
+  min-height: 38px;
+  padding: 0 18px;
+  border-radius: 999px !important;
 }

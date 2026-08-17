@@ -171,6 +171,7 @@ public class FitActivityFileParser implements ActivityFileParser {
             ));
         }
 
+        @SuppressWarnings("null")
         private ParsedActivityData toParsedActivityData(String fileName) {
             if (points.isEmpty()) {
                 throw new IllegalArgumentException(

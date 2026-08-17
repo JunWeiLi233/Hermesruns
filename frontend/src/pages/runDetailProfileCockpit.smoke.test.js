@@ -59,7 +59,7 @@ assert(
 
 assert(
   minimalStyleSource.includes('.run-detail-profile-minimal {')
-    && minimalStyleSource.includes('--run-detail-card: rgba(255, 255, 255, 0.92);')
+    && minimalStyleSource.includes('--run-detail-card: #ffffff;')
     && minimalStyleSource.includes('--run-detail-ink: #1c1917;')
     && minimalStyleSource.includes('--run-detail-accent: var(--brand-accent, #a0392a);')
     && minimalStyleSource.includes('background: transparent !important;'),

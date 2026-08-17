@@ -28,14 +28,20 @@ assert.match(
 
 assert.match(
   redesignStyleSource,
-  /\.runner-shell-page \.hd-content \.hd-sessions-card\s*\{[\s\S]*border-color:\s*var\(--hermes-glass-line\) !important;[\s\S]*var\(--hermes-glass-highlight\)[\s\S]*var\(--hermes-glass-paper\) !important;[\s\S]*backdrop-filter:\s*blur\(18px\) saturate\(132%\);/,
-  'The recent-activity grid should restore the shared warm glass surface while only the header strip is removed.',
+  /\.runner-shell-page \.hd-content \.hd-sessions-card\s*\{[\s\S]*border-color:\s*var\(--hd-line-strong\) !important;[\s\S]*background:\s*var\(--hd-bg-card\) !important;[\s\S]*backdrop-filter:\s*none;/,
+  'The recent-activity grid should stay on the plain white card surface while only the header strip is removed.',
 );
 
 assert.match(
   redesignStyleSource,
   /\.hd-session-row:hover\s*\{[\s\S]*background:\s*var\(--hd-bg-card-elevated\);/,
   'Session rows should keep their existing hover surface for interaction feedback.',
+);
+
+assert.match(
+  redesignStyleSource,
+  /\.runner-shell-page \.hd-content :is\([\s\S]*\.hd-predictions-card,[\s\S]*\.hd-stamina-card,[\s\S]*\.hd-streak-card,[\s\S]*\.profile-weekly-digest-card[\s\S]*\)\s*\{[\s\S]*background:\s*var\(--hd-bg-card\) !important;/,
+  'The bottom-grid cards (predictions, stamina, streak, weekly digest) must stay on the white card surface, not the liquid-glass sweep.',
 );
 
 console.log('[PASS] Profile recent-activity header background guardrails passed.');

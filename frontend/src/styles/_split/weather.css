@@ -174,20 +174,6 @@
   align-content: end;
 }
 
-.weather-engine-status-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.weather-engine-status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #f07561;
-  box-shadow: 0 0 0 6px rgba(240, 117, 97, 0.18);
-}
-
 .weather-engine-kicker,
 .weather-engine-card-kicker {
   display: inline-flex;

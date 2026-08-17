@@ -95,6 +95,18 @@ const FRONTEND_DESIGN_STACK = [
   },
 ];
 
+const FRONTEND_REFERENCE_LIBRARIES = [
+  {
+    name: "awesome-design-md",
+    required: false,
+    phase: "reference-intake",
+    url: "https://github.com/VoltAgent/awesome-design-md",
+    use: "Optional curated external DESIGN.md library for mimic/reference frontend rounds. Select and inspect a specific file, then adapt only portable design primitives into Hermes.",
+    authority: "Reference only. design.md remains the Hermes visual authority and filters any imported reference.",
+    lockFormat: "reference source: awesome-design-md:<site-or-file-url>",
+  },
+];
+
 function resolveSkill(entry) {
   const found = entry.candidates.find((candidate) => fs.existsSync(candidate));
   return {
@@ -120,11 +132,13 @@ export function buildAutoHermesSkillsManifest() {
     frontendDesign: {
       trigger: "Non-trivial frontend rounds: layout, hierarchy, visual redesign, mimic/reference implementation, theme, responsive, empty/loading/error state, copy, or interaction treatment.",
       stack,
+      referenceLibraries: FRONTEND_REFERENCE_LIBRARIES,
       unavailableRequired: stack.filter((skill) => skill.required === true && !skill.available).map((skill) => skill.name),
       commandNotes: [
         "Read design.md before meaningful UI edits.",
         "Use design-taste-frontend and frontend-design as the default quality lenses.",
         "Use ui-ux-pro-max only as supplemental research that is filtered through design.md.",
+        "When using awesome-design-md, lock a specific DESIGN.md source and adapt primitives only; do not clone brand assets, copy, or site-specific IA.",
         "Verify touched routes with Browser or browser-harness fallback before claiming live design success.",
       ],
     },
@@ -149,6 +163,18 @@ function renderMarkdown(manifest) {
   if (manifest.frontendDesign.unavailableRequired.length) {
     lines.push("");
     lines.push(`Missing required: ${manifest.frontendDesign.unavailableRequired.join(", ")}`);
+  }
+  if (manifest.frontendDesign.referenceLibraries.length) {
+    lines.push("");
+    lines.push("## Reference Libraries");
+    lines.push("");
+    for (const library of manifest.frontendDesign.referenceLibraries) {
+      lines.push(`- ${library.name}: required: ${library.required} | phase: ${library.phase}`);
+      lines.push(`  URL: ${library.url}`);
+      lines.push(`  Use: ${library.use}`);
+      lines.push(`  Authority: ${library.authority}`);
+      lines.push(`  Lock: ${library.lockFormat}`);
+    }
   }
   return `${lines.join("\n")}\n`;
 }

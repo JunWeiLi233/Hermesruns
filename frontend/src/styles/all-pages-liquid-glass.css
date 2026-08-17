@@ -569,10 +569,12 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page :is(
     var(--runner-profile-card) !important;
 }
 
-/* The Analysis VO2 hero should sit directly on the page surface rather than
- * becoming a second cream panel inside the analysis canvas. */
+/* The Analysis VO2 hero renders as a plain white card so it reads as the same
+ * surface family as the adjacent reference cards instead of a transparent
+ * panel floating on the cream analysis canvas. */
 .runner-dashboard-page .analysis-page-shell .analysis-profile-primary {
-  background: transparent !important;
+  background: #ffffff !important;
+  background-image: none !important;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .runner-dashboard-page .analysis-page-shell .analysis-profile-primary {
@@ -943,11 +945,11 @@ body:is(.theme-light, .theme-midnight, .theme-high-contrast) .heatmap-page :is(
   backdrop-filter: none !important;
 }
 
-/* The primary VO2 card has the same shared `-card` collision. Remove the
- * parent band and header wrapper fill, but leave the kicker badge and metric
- * value card intentionally styled. */
+/* The primary VO2 card has the same shared `-card` collision. Keep the card on
+ * the plain white surface and strip the header wrapper fill, but leave the
+ * kicker badge and metric value card intentionally styled. */
 .runner-dashboard-page .analysis-page-shell .analysis-profile-primary {
-  background: transparent !important;
+  background: #ffffff !important;
   background-image: none !important;
 }
 
