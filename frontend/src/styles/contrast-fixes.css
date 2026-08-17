@@ -112,7 +112,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   color: var(--text-strong, #2c2f30) !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal--count :is(span, strong, p) {
+/* All cockpit signal cards sit on the near-black #191512 surface, not just the
+   count card, so every label, value, and note stays white there. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal :is(span, strong, p) {
   color: #ffffff !important;
   opacity: 1 !important;
 }

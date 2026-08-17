@@ -651,7 +651,7 @@ public class AutomatedCoachService {
                 : snapshot.availability();
         boolean readinessDataSupported = availability.any();
         boolean sleepDataSupported = availability.sleep();
-        String sleepDataSource = sleepDataSupported && snapshot.sources() != null
+        String sleepDataSource = sleepDataSupported && snapshot != null && snapshot.sources() != null
                 ? snapshot.sources().sleep()
                 : null;
         return new CoachStateDto(

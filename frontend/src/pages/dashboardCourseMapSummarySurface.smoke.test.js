@@ -14,8 +14,8 @@ assert.match(
 
 assert.match(
   dashboardSource,
-  /courseMapDisplaySummary \? \(\s*<p className="admin-coursemap-publish-canvas__copy">\{courseMapLocalizedSummary\}<\/p>/,
-  'Dashboard should surface the active course-map summary in the publish/output panel.',
+  /courseMapDisplaySummary \? \(\s*<p className="admin-coursemap-rework__summary">\{courseMapLocalizedSummary\}<\/p>/,
+  'Dashboard should surface the active course-map summary in the rework decision card.',
 );
 
 console.log('[PASS] Dashboard course-map summary surface guard passed.');

@@ -44,6 +44,7 @@
 @import './styles/dark-mode-cohesion.css';
 @import './styles/analysis-load-balance-profile-alignment.css';
 @import './styles/add-shoes-profile-alignment.css';
+@import './styles/grid-cards-white.css';
 @import './styles/runner-shell-workout-button.css';
 
 /* Leaflet positions default 256px tiles at fractional screen coordinates.
@@ -57,5 +58,3 @@
   mix-blend-mode: normal !important;
   backface-visibility: hidden;
 }
-
-@config '../tailwind.config.js';

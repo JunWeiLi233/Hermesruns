@@ -53,6 +53,38 @@ class StravaWebhookControllerTests {
     }
 
     @Test
+    void validateSubscriptionRejectsBlankVerifyToken() {
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
+        ReflectionTestUtils.setField(controller, "verifyToken", "");
+
+        ResponseEntity<?> response = controller.validateSubscription("subscribe", "", "challenge-123");
+
+        assertError(response, HttpStatus.FORBIDDEN, "Forbidden");
+    }
+
+    @Test
+    void validateSubscriptionRejectsDevelopmentDefaultTokenInProduction() {
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
+        ReflectionTestUtils.setField(controller, "environment", "production");
+
+        ResponseEntity<?> response = controller.validateSubscription("subscribe", VALID_TOKEN, "challenge-123");
+
+        assertError(response, HttpStatus.FORBIDDEN, "Forbidden");
+    }
+
+    @Test
+    void validateSubscriptionAcceptsConfiguredSecretTokenInProduction() {
+        StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
+        ReflectionTestUtils.setField(controller, "environment", "production");
+        ReflectionTestUtils.setField(controller, "verifyToken", "long-random-production-secret");
+
+        ResponseEntity<?> response = controller.validateSubscription("subscribe", "long-random-production-secret", "challenge-123");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(Map.of("hub.challenge", "challenge-123"));
+    }
+
+    @Test
     void handleEventRejectsMissingRequiredFields() {
         StravaWebhookController controller = createController(mock(RunnerRepository.class), mock(StravaSyncService.class));
 

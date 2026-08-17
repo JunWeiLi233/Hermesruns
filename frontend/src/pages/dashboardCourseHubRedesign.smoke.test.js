@@ -5,54 +5,37 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
-const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
+// DV-2026-08-15-31 rework: the hero is a clean card (kicker/title/intro/meta
+// chips) — no decorative stats block or atmosphere layer.
 assert.match(
   dashboardSource,
-  /admin-track-hub-hero/,
-  'Course maps should expose the transplanted race-track hub hero instead of only a utility header bar.',
-);
-
-assert.match(
-  dashboardSource,
-  /admin-track-hub-grid/,
-  'Course maps should render the two-column track hub grid from the supplied reference.',
+  /admin-coursemap-rework__hero[\s\S]*?course_maps_title[\s\S]*?admin-coursemap-rework__hero-meta/,
+  'Course maps should expose the clean rework hero with kicker, title, intro, and meta chips.',
 );
 
 assert.match(
   dashboardSource,
-  /admin-track-hub-sidebar/,
-  'Course maps should render a left-side course management workspace.',
+  /admin-coursemap-rework__grid/,
+  'Course maps should render the two-column rail + stage grid.',
 );
 
 assert.match(
   dashboardSource,
-  /admin-track-hub-stage/,
-  'Course maps should render a right-side course intelligence stage.',
+  /admin-coursemap-rework__rail admin-track-hub-sidebar/,
+  'Course maps should render a left-side race-selection rail.',
 );
 
 assert.match(
   dashboardSource,
-  /admin-track-hub-map-stage/,
-  'Course maps should render the dominant map/source stage within the course intelligence area.',
+  /admin-coursemap-rework__stage/,
+  'Course maps should render the stacked stage column for the selected race.',
 );
 
-assert.match(
-  styleSource,
-  /\.admin-track-hub-hero\s*\{/,
-  'Course map styles should define the new hero shell.',
+assert.doesNotMatch(
+  dashboardSource,
+  /admin-track-hub-hero__atmosphere/,
+  'The decorative hero atmosphere layer should stay removed.',
 );
 
-assert.match(
-  styleSource,
-  /\.admin-track-hub-grid\s*\{/,
-  'Course map styles should define the new workspace grid.',
-);
-
-assert.match(
-  styleSource,
-  /\.admin-track-hub-map-stage\s*\{/,
-  'Course map styles should define the dominant map stage.',
-);
-
-console.log('[PASS] Dashboard course hub redesign guardrails passed.');
+console.log('[PASS] Dashboard course-maps hero guard passed.');

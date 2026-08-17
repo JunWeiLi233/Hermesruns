@@ -24,7 +24,6 @@ const WEATHER_PAGE_COPY = {
     page_kicker: '环境判断',
     page_title: '先读天气，再锁定今天的配速。',
     page_copy: '把当前温度、未来 12 小时走势和 Hermes 热适应判断放在同一块决策面板里，让你先看环境压力，再决定今天是推进还是保守。',
-    hero_status: '实时环境状态',
     hero_status_ready: '引擎在线',
     hero_status_fallback: '等待天气数据',
     hero_condition: '当前体感',
@@ -87,7 +86,6 @@ const WEATHER_PAGE_COPY = {
     page_kicker: 'Environment Read',
     page_title: "Read the weather first, then lock today's pace.",
     page_copy: 'Bring live temperature, the next 12 hours, and Hermes heat-adaptation judgment into one decision surface so runners can assess environmental stress before choosing how hard to push.',
-    hero_status: 'Live engine status',
     hero_status_ready: 'Engine online',
     hero_status_fallback: 'Waiting on weather',
     hero_condition: 'Current condition',
@@ -148,7 +146,10 @@ const WEATHER_PAGE_COPY = {
 const ADAPTATION_BAR_LEVELS = [46, 62, 74, 54, 68, 100, 78, 56, 38, 28];
 const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 10000;
 const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 15000;
-const WEATHER_GEOLOCATION_TIMEOUT_MS = 8000;
+// Geolocation is a location refinement, never a gate: the page paints from
+// the server-side location immediately and re-fetches when device
+// coordinates arrive. A stale answer is worth more than a slow prompt.
+const WEATHER_GEOLOCATION_TIMEOUT_MS = 3500;
 
 function pageText(lang, key) {
   const copy = WEATHER_PAGE_COPY[lang] || WEATHER_PAGE_COPY.en;
@@ -393,24 +394,15 @@ export default function WeatherEngine() {
       setLoadState('loading');
       setForecastState('loading');
       try {
-        const [profileData, browserCoordinates] = await Promise.all([
-          apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null),
-          getBrowserCoordinates(),
-        ]);
+        // Profile only gates the first paint; geolocation is a background
+        // refinement so an unanswered permission prompt can never hold the
+        // page on its skeleton.
+        const profileData = await apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null);
+        const contextPromise = apiJson('/api/v1/weather/context', { signal: contextController.signal }).catch(() => null);
 
         if (cancelled) return;
         setProfile(profileData && typeof profileData === 'object' ? profileData : null);
         setLoadState('ready');
-
-        const contextParams = new URLSearchParams();
-        if (browserCoordinates) {
-          contextParams.set('latitude', browserCoordinates.latitude);
-          contextParams.set('longitude', browserCoordinates.longitude);
-        }
-        const contextUrl = contextParams.toString()
-          ? `/api/v1/weather/context?${contextParams.toString()}`
-          : '/api/v1/weather/context';
-        const contextPromise = apiJson(contextUrl, { signal: contextController.signal }).catch(() => null);
 
         const fetchForecast = async (coordinates) => {
           const forecastTimeout = window.setTimeout(
@@ -447,25 +439,41 @@ export default function WeatherEngine() {
           }
         };
 
-        // Use device coordinates first so the forecast follows the runner rather than a historical run.
-        const browserForecastPromise = browserCoordinates
-          ? applyForecast(browserCoordinates)
-          : null;
+        // Paint immediately from the server-side location (the runner's
+        // history), then refine with device coordinates if geolocation
+        // resolves in time.
         const weatherData = await contextPromise;
         if (cancelled) return;
         window.clearTimeout(contextTimeout);
         const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
         setWeatherContext(ctx);
 
-        if (!browserForecastPromise) {
-          const fallbackCoordinates = normalizeWeatherCoordinates(ctx?.latitude, ctx?.longitude);
-          if (fallbackCoordinates) {
-            await applyForecast(fallbackCoordinates);
-          } else {
-            setLiveWeather(null);
-            setForecast([]);
-            setForecastState('empty');
-          }
+        const fallbackCoordinates = normalizeWeatherCoordinates(ctx?.latitude, ctx?.longitude);
+        if (fallbackCoordinates) {
+          void applyForecast(fallbackCoordinates);
+        } else {
+          setLiveWeather(null);
+          setForecast([]);
+          setForecastState('empty');
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          getBrowserCoordinates().then((browserCoordinates) => {
+            if (cancelled || !browserCoordinates) return;
+            setWeatherContext((prev) => (prev == null ? prev : { ...prev, ...browserCoordinates }));
+            void applyForecast(browserCoordinates);
+            // Refine the heat-adaptation context with the device location so
+            // the engine reads the runner's actual environment.
+            const contextParams = new URLSearchParams({
+              latitude: String(browserCoordinates.latitude),
+              longitude: String(browserCoordinates.longitude),
+            });
+            apiJson(`/api/v1/weather/context?${contextParams.toString()}`, { signal: contextController.signal })
+              .then((refined) => {
+                if (!cancelled && refined && typeof refined === 'object') setWeatherContext(refined);
+              })
+              .catch(() => null);
+          });
         }
       } catch {
         window.clearTimeout(contextTimeout);
@@ -615,10 +623,6 @@ export default function WeatherEngine() {
           <section className="weather-engine-hero-shell">
             <div className="weather-engine-hero">
               <div className="weather-engine-hero-primary">
-                <div className="weather-engine-status-row">
-                  <span className="weather-engine-status-dot" aria-hidden="true" />
-                  <span className="weather-engine-kicker">{wt('hero_status')}</span>
-                </div>
                 <div className="weather-engine-temp-row">
                   <div className="weather-engine-temp-display">{heroTemperature}</div>
                   <div className="weather-engine-temp-context">

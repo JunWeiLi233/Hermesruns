@@ -51,6 +51,7 @@ public class GoogleGeocodingClient {
         return true;
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public List<GeocodedAnchorPointDTO> geocodeAnchorPoints(
             String raceName,
             String city,
@@ -889,7 +890,6 @@ public class GoogleGeocodingClient {
                 .trim();
     }
 
-    @SuppressWarnings("unchecked")
     private GeocodedAnchorPointDTO parseResponse(String anchorLabel, String query, Map<String, Object> body) {
         if (body == null) {
             throw new IllegalStateException("Google geocoding returned an empty response for anchor '" + anchorLabel + "'.");
