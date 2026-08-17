@@ -46,8 +46,22 @@ const PROFILE_DASHBOARD_BATCH_TIMEOUT_MS = 1400;
 
 function buildDashboardCacheSnapshot(dashboardData) {
   if (!dashboardData || !dashboardData.profile) return null;
+  // Cache only the fields the dashboard first paint reads. Full activity
+  // objects can carry route maps/telemetry that blow past the 5 MB
+  // localStorage quota for active accounts (QuotaExceededError).
+  const slimRunForCache = (run) => ({
+    id: run?.id,
+    name: run?.name,
+    startTime: run?.startTime,
+    startDate: run?.startDate,
+    distanceKm: run?.distanceKm,
+    distanceMeters: run?.distanceMeters,
+    movingTimeSeconds: run?.movingTimeSeconds,
+    paceSecondsPerKm: run?.paceSecondsPerKm,
+    averagePaceSecondsPerKm: run?.averagePaceSecondsPerKm,
+  });
   const cappedRuns = Array.isArray(dashboardData.runs)
-    ? dashboardData.runs.slice(0, DASHBOARD_CACHE_RUN_LIMIT)
+    ? dashboardData.runs.slice(0, DASHBOARD_CACHE_RUN_LIMIT).map(slimRunForCache)
     : [];
   return {
     cachedAt: Date.now(),
@@ -73,9 +87,38 @@ function readJsonStorage(key) {
 
 function writeJsonStorage(key, value) {
   if (!key || typeof window === 'undefined') return;
+  let payload;
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    payload = JSON.stringify(value);
+  } catch {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, payload);
   } catch (error) {
+    // Quota exceeded: the origin's storage is full. Evict this key plus the
+    // other per-account caches (old fat dashboard/runs snapshots) so a slim
+    // snapshot can land; all of them rehydrate from the API on next visit.
+    try {
+      window.localStorage.removeItem(key);
+      window.localStorage.setItem(key, payload);
+      return;
+    } catch { /* keep evicting */ }
+    try {
+      const evictPrefixes = ['hermes_profile_dashboard_', 'hermes_runs_v1_'];
+      const doomed = [];
+      for (let i = 0; i < window.localStorage.length; i += 1) {
+        const storedKey = window.localStorage.key(i);
+        if (storedKey && evictPrefixes.some((prefix) => storedKey.startsWith(prefix))) {
+          doomed.push(storedKey);
+        }
+      }
+      for (const storedKey of doomed) window.localStorage.removeItem(storedKey);
+      window.localStorage.setItem(key, payload);
+      return;
+    } catch {
+      // fall through to the warn below
+    }
     // A silent quota failure here used to drop PR-celebration state and make
     // the modal reappear on every visit with no trace of why.
     console.warn('[hermes] localStorage write failed:', key, error);

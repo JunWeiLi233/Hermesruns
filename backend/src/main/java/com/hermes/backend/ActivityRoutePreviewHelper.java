@@ -112,7 +112,6 @@ final class ActivityRoutePreviewHelper {
             if (row == null || row.length < 2) continue;
             Double lat = ((Number) row[0]).doubleValue();
             Double lng = ((Number) row[1]).doubleValue();
-            if (lat == null || lng == null) continue;
             out.add(new LatLngPoint(lat, lng));
         }
         return out;

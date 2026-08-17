@@ -1,7 +1,7 @@
 /* Run Detail: minimal Profile-derived evidence surface. */
 
 .run-detail-profile-minimal {
-  --run-detail-card: rgba(255, 255, 255, 0.92);
+  --run-detail-card: #ffffff;
   --run-detail-card-raised: #ffffff;
   --run-detail-card-soft: rgba(28, 25, 23, 0.035);
   --run-detail-ink: #1c1917;
@@ -943,8 +943,8 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-profile-minimal {
 }
 
 .run-detail-profile-minimal.has-route-map-background {
-  --run-detail-map-card: rgba(255, 252, 246, 0.94);
-  --run-detail-map-heading: rgba(255, 252, 246, 0.9);
+  --run-detail-map-card: #ffffff;
+  --run-detail-map-heading: #ffffff;
   position: relative;
   z-index: 1;
 }

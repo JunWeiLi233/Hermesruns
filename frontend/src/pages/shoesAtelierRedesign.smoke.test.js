@@ -36,7 +36,9 @@ assert.ok(
   '#root .shoes-atelier-redesign .shoe-inventory-manage-grid',
   'grid-template-columns: minmax(170px, 0.7fr) minmax(0, 1.2fr) minmax(210px, 0.8fr);',
   '#root .shoes-atelier-redesign .shoe-inventory-card {',
-  'grid-template-columns: 128px minmax(0, 1fr) minmax(120px, 0.22fr);',
+  // Stacked rows (card-top → metrics → actions); card-top carries the
+  // art/copy/side track grid. See shoeInventoryCardLayout.smoke.test.js.
+  'grid-template-columns: minmax(0, 1fr);',
   'border-radius: 8px;',
   '#root .shoes-atelier-redesign .shoe-inventory-topbar {',
   'position: relative;',

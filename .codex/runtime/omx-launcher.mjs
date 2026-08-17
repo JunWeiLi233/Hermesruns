@@ -155,13 +155,27 @@ if (!resolvedScript) {
 // Codex hosts used to leave every OMX MCP server set running after a session
 // or loop round ended, stacking dozens of stray node.exe processes. The launcher
 // now (1) reaps the previous set for the same script when it belongs to a dead
-// host or to our own host's earlier round, and (2) exits with its child when
-// the parent host process is gone.
-// Set OMX_LAUNCHER_NO_TAKEOVER=1 to disable the reaping behavior.
+// host or to our own host's earlier round, (2) kills the child server of a
+// dead launcher instead of only deleting its state file, (3) bounds how many
+// live sets may exist per script across hosts (LRU eviction, oldest first), and
+// (4) exits with its child when the parent host process is gone.
+// Set OMX_LAUNCHER_NO_TAKEOVER=1 to disable the reaping/eviction behavior.
 // ---------------------------------------------------------------------------
 
 const WATCHDOG_INTERVAL_MS = 4000;
 const TAKEOVER_KILL_GRACE_MS = 1500;
+// A dead launcher's state file freezes at its last heartbeat; long-frozen
+// childPid values may have been recycled by the OS, so never act on them.
+const STATE_TRUST_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// Live sets from other hosts are still protected, but only up to this many;
+// beyond that the oldest set is evicted so a day of Codex conversations
+// cannot stack dozens of idle sets. OMX_MAX_SETS_PER_SCRIPT overrides.
+const DEFAULT_MAX_SETS_PER_SCRIPT = 2;
+
+function maxSetsPerScript() {
+  const parsed = Number.parseInt(process.env.OMX_MAX_SETS_PER_SCRIPT || "", 10);
+  return Number.isFinite(parsed) && parsed >= 1 ? parsed : DEFAULT_MAX_SETS_PER_SCRIPT;
+}
 
 function pidAlive(pid) {
   if (!pid || pid <= 0 || pid === process.pid) return false;
@@ -187,7 +201,9 @@ function killTree(pids) {
 }
 
 const scriptTag = crypto.createHash("sha1").update(resolvedScript).digest("hex").slice(0, 16);
-const stateDir = path.join(os.tmpdir(), "omx-launcher");
+// OMX_LAUNCHER_STATE_DIR isolates the takeover bookkeeping (used by tests so
+// they never touch a real Codex session's sets).
+const stateDir = process.env.OMX_LAUNCHER_STATE_DIR || path.join(os.tmpdir(), "omx-launcher");
 const stateFile = path.join(stateDir, `${scriptTag}-${process.pid}.json`);
 const parentPid = process.ppid || 0;
 
@@ -241,11 +257,20 @@ function listSiblingStates() {
 
 function reapStaleInstances() {
   if (process.env.OMX_LAUNCHER_NO_TAKEOVER === "1") return;
+  const now = Date.now();
+  const liveOtherHostSets = [];
   for (const { name, state: previous } of listSiblingStates()) {
     const statePath = path.join(stateDir, name);
     if (!previous.pid || previous.pid === process.pid) continue;
 
     if (!pidAlive(previous.pid)) {
+      // Dead launcher: its child server is orphaned and the state file is the
+      // only record of it. Kill the child while the record is still young
+      // enough to trust, then drop the file.
+      const recorded = Number(previous.heartbeat || previous.startedAt || 0);
+      if (recorded > 0 && now - recorded < STATE_TRUST_MAX_AGE_MS) {
+        killTree([previous.childPid]);
+      }
       try {
         fs.unlinkSync(statePath);
       } catch {
@@ -257,21 +282,46 @@ function reapStaleInstances() {
     // Only reap when the previous set is provably stale: its host is gone, or
     // it belongs to an earlier round of the very host that just spawned us. A
     // set owned by a different live host (a concurrent Codex session) is left
-    // alone.
+    // alone unless the per-script set cap below evicts it as the oldest.
     const previousHostAlive = pidAlive(previous.ppid);
-    if (previousHostAlive && previous.ppid !== parentPid) continue;
+    if (previousHostAlive && previous.ppid !== parentPid) {
+      liveOtherHostSets.push({ statePath, state: previous });
+      continue;
+    }
 
-    killTree([previous.pid, previous.childPid]);
-    setTimeout(() => {
-      // SIGTERM on Windows is already TerminateProcess; this is just a
-      // defensive second pass in case either pid ignored it.
-      killTree([previous.pid, previous.childPid]);
-      try {
-        fs.unlinkSync(statePath);
-      } catch {
-        // already gone
-      }
-    }, TAKEOVER_KILL_GRACE_MS).unref();
+    killSet(statePath, previous);
+  }
+
+  evictSetsOverCap(liveOtherHostSets);
+}
+
+function killSet(statePath, state) {
+  killTree([state.pid, state.childPid]);
+  setTimeout(() => {
+    // SIGTERM on Windows is already TerminateProcess; this is just a
+    // defensive second pass in case either pid ignored it.
+    killTree([state.pid, state.childPid]);
+    try {
+      fs.unlinkSync(statePath);
+    } catch {
+      // already gone
+    }
+  }, TAKEOVER_KILL_GRACE_MS).unref();
+}
+
+function evictSetsOverCap(liveOtherHostSets) {
+  // Counting ourselves, keep at most maxSetsPerScript() live sets for this
+  // script machine-wide; evict the oldest first. An actively used session is
+  // almost always the newest set, so LRU eviction only touches sets the host
+  // forgot to close.
+  const allowedOthers = maxSetsPerScript() - 1;
+  if (liveOtherHostSets.length <= allowedOthers) return;
+  const evictable = liveOtherHostSets
+    .slice()
+    .sort((a, b) => (a.state.startedAt || 0) - (b.state.startedAt || 0));
+  while (evictable.length > allowedOthers) {
+    const oldest = evictable.shift();
+    killSet(oldest.statePath, oldest.state);
   }
 }
 

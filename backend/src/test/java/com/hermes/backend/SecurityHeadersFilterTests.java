@@ -24,6 +24,20 @@ class SecurityHeadersFilterTests {
     }
 
     @Test
+    void contentSecurityPolicyBlocksInlineScripts() throws Exception {
+        SecurityHeadersFilter filter = new SecurityHeadersFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        String csp = response.getHeader("Content-Security-Policy");
+        String scriptSrc = csp.substring(csp.indexOf("script-src"), csp.indexOf("style-src"));
+        assertThat(scriptSrc).doesNotContain("'unsafe-inline'");
+        assertThat(scriptSrc).doesNotContain("'unsafe-eval'");
+    }
+
+    @Test
     void contentSecurityPolicyAllowsRecaptchaAssetsUsedBySignup() throws Exception {
         SecurityHeadersFilter filter = new SecurityHeadersFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/signup");

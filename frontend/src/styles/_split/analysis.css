@@ -7995,7 +7995,7 @@ body.theme-midnight .vdot-badge,
 .analysis-page-shell {
   --analysis-lab-paper: #f4f7f5;
   --analysis-lab-paper-2: #eef4f3;
-  --analysis-lab-surface: #fffefb;
+  --analysis-lab-surface: #ffffff;
   --analysis-lab-surface-soft: #f8faf7;
   --analysis-lab-ink: #1b2220;
   --analysis-lab-muted: #62726d;
@@ -8100,7 +8100,7 @@ body.theme-midnight .vdot-badge,
   grid-template-rows: auto minmax(220px, 1fr) auto auto;
   min-height: clamp(500px, 34rem, 560px);
   padding: clamp(24px, 2.8vw, 42px) !important;
-  background: transparent !important;
+  background: #ffffff !important;
   overflow: hidden;
 }
 
@@ -8408,6 +8408,26 @@ body.theme-midnight .vdot-badge,
   gap: clamp(14px, 1.6vw, 24px);
 }
 
+/* Training-zones / predictions tables sit on pure white, including the header
+   strip, instead of the lab surface tints. */
+.analysis-page-shell .analysis-profile-table-card {
+  background: #ffffff !important;
+}
+
+.analysis-page-shell .analysis-profile-table-card .analysis-overview-table-head {
+  background: #ffffff !important;
+}
+
+/* VO2max hero and coach cards drop their tinted/gradient lab backgrounds.
+   Doubled classes match the contrast-repair rules that force transparency. */
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary {
+  background: #ffffff !important;
+}
+
+.analysis-page-shell.analysis-page-shell .analysis-profile-reference-card.analysis-profile-reference-card.is-coach {
+  background: #ffffff !important;
+}
+
 .analysis-page-shell .analysis-overview-table-head {
   padding: 20px clamp(20px, 2.2vw, 32px);
   border-bottom: 1px solid var(--analysis-lab-line);
@@ -8572,7 +8592,7 @@ body.theme-midnight .vdot-badge,
 
 .analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary {
   border-radius: 8px !important;
-  background: transparent !important;
+  background: #ffffff !important;
 }
 
 /* Analysis VO2 contrast repair */
