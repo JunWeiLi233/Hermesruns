@@ -74,14 +74,12 @@ class HealthImportServiceTests {
         DailySleepDataRepository sleepDataRepository = mock(DailySleepDataRepository.class);
         DailyHRVDataRepository hrvDataRepository = mock(DailyHRVDataRepository.class);
         DailyStressDataRepository stressDataRepository = mock(DailyStressDataRepository.class);
-        RunnerRepository runnerRepository = mock(RunnerRepository.class);
         CoachRunnerStateRepository coachRunnerStateRepository = mock(CoachRunnerStateRepository.class);
         GoogleHealthImportService service = new GoogleHealthImportService(
                 wellnessSummaryRepository,
                 sleepDataRepository,
                 hrvDataRepository,
                 stressDataRepository,
-                runnerRepository,
                 coachRunnerStateRepository,
                 new ObjectMapper()
         );

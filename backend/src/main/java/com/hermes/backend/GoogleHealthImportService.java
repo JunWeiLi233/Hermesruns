@@ -23,7 +23,6 @@ public class GoogleHealthImportService {
     private final DailySleepDataRepository sleepDataRepository;
     private final DailyHRVDataRepository hrvDataRepository;
     private final DailyStressDataRepository stressDataRepository;
-    private final RunnerRepository runnerRepository;
     private final CoachRunnerStateRepository coachRunnerStateRepository;
     private final ObjectMapper objectMapper;
 
@@ -43,7 +42,6 @@ public class GoogleHealthImportService {
             DailySleepDataRepository sleepDataRepository,
             DailyHRVDataRepository hrvDataRepository,
             DailyStressDataRepository stressDataRepository,
-            RunnerRepository runnerRepository,
             CoachRunnerStateRepository coachRunnerStateRepository,
             ObjectMapper objectMapper
     ) {
@@ -51,7 +49,6 @@ public class GoogleHealthImportService {
         this.sleepDataRepository = sleepDataRepository;
         this.hrvDataRepository = hrvDataRepository;
         this.stressDataRepository = stressDataRepository;
-        this.runnerRepository = runnerRepository;
         this.coachRunnerStateRepository = coachRunnerStateRepository;
         this.objectMapper = objectMapper;
     }

@@ -85,13 +85,13 @@ assert.match(
 
 assert.match(
   weatherSource,
-  /apiJson\('\/api\/profile\/me', \{ signal: (?:controller|contextController)\.signal \}\)[\s\S]*apiJson\(contextUrl, \{ signal: (?:controller|contextController)\.signal \}\)/,
+  /apiJson\('\/api\/profile\/me', \{ signal: (?:controller|contextController)\.signal \}\)[\s\S]*apiJson\(`\/api\/v1\/weather\/context\?\$\{contextParams\.toString\(\)\}`, \{ signal: (?:controller|contextController)\.signal \}\)/,
   'Weather page should attach the timeout abort signal to its profile and location-aware weather context requests.',
 );
 
 assert.match(
   weatherSource,
-  /contextParams\.set\('latitude', browserCoordinates\.latitude\)[\s\S]*contextParams\.set\('longitude', browserCoordinates\.longitude\)/,
+  /new URLSearchParams\(\{\s*latitude: String\(browserCoordinates\.latitude\),\s*longitude: String\(browserCoordinates\.longitude\),\s*\}\)/,
   'Weather page should send the browser location to the backend weather context endpoint.',
 );
 

@@ -7,6 +7,7 @@ package com.hermes.backend;
  * generic provider outage.
  */
 public class WeatherProviderRateLimitedException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
 
     public WeatherProviderRateLimitedException(String message) {
         super(message);

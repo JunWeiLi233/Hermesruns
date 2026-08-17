@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 class WeatherForecastServiceTests {
 
     @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
     void fetchForecastUsesFixedOpenMeteoEndpointAndExpectedFields() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         Map<String, Object> payload = Map.of("current", Map.of("temperature_2m", 21.5));

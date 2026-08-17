@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 public class AiProviderException extends IllegalStateException {
+    private static final long serialVersionUID = 1L;
     private final String provider;
     private final String operation;
     private final boolean retryable;

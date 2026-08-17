@@ -22,6 +22,7 @@ Use this directory as the durable record system for repository rules that are to
 | Session setup, task execution, runtime proof, loop behavior, checkpoints, and agent sync | `runtime-and-workflow.md` |
 | Commit, push, privacy, and required pre-publish checks | `git-and-publish.md` |
 | Stack, commands, env vars, coding conventions, and terminal strategy | `stack-and-commands.md` |
+| Security baseline, checklist enforcement map, and security change rules | `security.md` |
 
 ## Rules For Maintaining This Record System
 

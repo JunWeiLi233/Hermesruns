@@ -16,9 +16,27 @@ function readRunsCache(email) {
   } catch { return null; }
 }
 
+// Cache only the fields run cards render. Full activity objects (with
+// routePreview point arrays) blow past the 5 MB localStorage quota; cards
+// lazily fetch route previews via routePreviewFallbacks when missing.
+const RUNS_CACHE_RUN_LIMIT = 500;
+const slimRunForRunsCache = (run) => ({
+  id: run?.id,
+  name: run?.name,
+  startTime: run?.startTime,
+  startDate: run?.startDate,
+  distanceKm: run?.distanceKm,
+  distanceMeters: run?.distanceMeters,
+  movingTimeSeconds: run?.movingTimeSeconds,
+  provider: run?.provider,
+});
+
 function writeRunsCache(email, runs, profile, stravaStatus) {
   try {
-    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs, profile, stravaStatus, cachedAt: Date.now() }));
+    const cachedRuns = Array.isArray(runs)
+      ? runs.slice(0, RUNS_CACHE_RUN_LIMIT).map(slimRunForRunsCache)
+      : [];
+    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs: cachedRuns, profile, stravaStatus, cachedAt: Date.now() }));
   } catch { /* ignore */ }
 }
 import { useI18n } from '../contexts/I18nContext';
@@ -1409,7 +1427,6 @@ const Runs = memo(function Runs() {
             <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
               <div className="runs-profile-cockpit__primary">
                 <div className="runs-profile-cockpit__heading">
-                  <span className="recent-runs-hero-kicker">{t('runs.eyebrow')}</span>
                   <h1 id="runs-profile-title">{t('runs.heading')}</h1>
                   <p>{t('runs.page_copy')}</p>
                 </div>

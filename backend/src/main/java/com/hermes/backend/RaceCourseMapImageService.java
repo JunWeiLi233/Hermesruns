@@ -460,7 +460,7 @@ public class RaceCourseMapImageService {
     private String localCourseMapContentHash(String fileName) {
         int hashSeparator = localCourseMapHashSeparator(fileName);
         int extensionSeparator = fileName == null ? -1 : fileName.lastIndexOf('.');
-        if (hashSeparator < 0 || extensionSeparator <= hashSeparator + 1) return "";
+        if (fileName == null || hashSeparator < 0 || extensionSeparator <= hashSeparator + 1) return "";
         String hash = fileName.substring(hashSeparator + 1, extensionSeparator);
         return hash.matches("[0-9a-f]{16}") ? hash : "";
     }

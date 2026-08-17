@@ -4584,7 +4584,7 @@ class RaceCourseMapServiceTests {
 
     private BufferedImage decodeDataUrlImage(String dataUrl) throws Exception {
         int commaIndex = dataUrl == null ? -1 : dataUrl.indexOf(',');
-        if (commaIndex < 0) return null;
+        if (dataUrl == null || commaIndex < 0) return null;
         byte[] bytes = Base64.getDecoder().decode(dataUrl.substring(commaIndex + 1));
         return ImageIO.read(new java.io.ByteArrayInputStream(bytes));
     }
