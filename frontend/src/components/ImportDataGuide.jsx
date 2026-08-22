@@ -7,8 +7,8 @@ export default function ImportDataGuide() {
   const { t } = useI18n();
   return (
     <aside className="import-guide" aria-labelledby="import-guide-title">
-      <span className="import-guide-kicker">{t('profile.import_guide_kicker')}</span>
       <h3 id="import-guide-title" className="import-guide-title">{t('profile.import_guide_title')}</h3>
+      <span className="import-guide-kicker">{t('profile.import_guide_kicker')}</span>
       <p className="import-guide-intro">{t('profile.import_guide_intro')}</p>
       <ol className="import-guide-list">
         {Array.from({ length: QUICK_STEP_COUNT }, (_, index) => (

@@ -28,12 +28,92 @@ for (const sectionId of [
 
 assert.match(navSource, /aria-current=\{active \? 'location' : undefined\}/, 'The visible run section should be exposed to assistive technology.');
 assert.match(navSource, /IntersectionObserver/, 'Runs navigation should track the visible detail section.');
+for (const railControl of [
+  'runs-subnav-overview-link',
+  'run-detail-overview',
+  'run-detail-coach',
+  'run-detail-comparison',
+  'run-detail-telemetry',
+  'run-detail-splits',
+  'runs-subnav-recent-toggle',
+]) {
+  assert.ok(navSource.includes(railControl), `Run Detail rail is missing the ${railControl} control.`);
+}
+assert.match(
+  navSource,
+  /function RunSectionLink\(\{ active, icon, label, onActivate, sectionId \}\)/,
+  'Run Detail section links should be able to activate their own rail item before the browser finishes scrolling.',
+);
+assert.match(
+  navSource,
+  /onClick=\{\(\) => onActivate\(sectionId\)\}/,
+  'Run Detail section links should keep the active rail item in sync with direct anchor clicks.',
+);
+assert.match(
+  navSource,
+  /const updateActiveSection = \(\) => \{[\s\S]*?getBoundingClientRect\(\)\.top <= activeMarker[\s\S]*?visibleTargets\[visibleTargets\.length - 1\]/,
+  'Run Detail navigation should choose the last section above its scroll marker so nested sections cannot activate a neighboring item.',
+);
+assert.match(
+  navSource,
+  /const isAtPageEnd = window\.innerHeight \+ window\.scrollY >= document\.documentElement\.scrollHeight - 2/,
+  'Run Detail navigation should recognize when the final section is visible at the bottom of the document.',
+);
+assert.match(
+  navSource,
+  /const nextTarget = isAtPageEnd \? targets\[targets\.length - 1\] : visibleTargets\[visibleTargets\.length - 1\] \|\| targets\[0\]/,
+  'Run Detail navigation should activate the final section when the page cannot scroll it up to the marker.',
+);
+assert.match(
+  navSource,
+  /window\.addEventListener\('scroll', updateActiveSection, \{ passive: true \}\)/,
+  'Run Detail navigation should recompute its active section as the page scrolls.',
+);
+assert.match(
+  navSource,
+  /if \(!showSections\) return undefined;[\s\S]*?const observer = typeof IntersectionObserver === 'undefined' \? null : new IntersectionObserver/,
+  'Run Detail navigation should retain scroll tracking even when IntersectionObserver is unavailable.',
+);
+assert.match(
+  navSource,
+  /new IntersectionObserver\(\(\) => \{\s*updateActiveSection\(\);/,
+  'Run Detail navigation should recompute after observer exit events as well as entry events.',
+);
 assert.match(navSource, /recentRuns\.slice\(0, 4\)/, 'Runs navigation should keep the recent-activity list bounded.');
+assert.match(
+  navSource,
+  /aria-controls=\{recentRunsOpen \? 'runs-subnav-recent-list' : undefined\}/,
+  'The recent-run toggle should only reference a mounted list when the disclosure is open.',
+);
+assert.match(
+  navSource,
+  /const recentRunsActive = activeSection === 'runs-subnav-recent-toggle';/,
+  'Clicking the recent-runs disclosure should move the rail highlight to 近期跑步.',
+);
+assert.match(navSource, /setActiveSection\('runs-subnav-recent-toggle'\)/);
+assert.match(navSource, /recentRunsActive \? ' is-active' : ''/);
+assert.match(
+  navSource,
+  /aria-current=\{recentRunsActive \? 'location' : undefined\}/,
+  'The active recent-runs item should be exposed to assistive technology.',
+);
 assert.match(runDetailSource, /import RunsSubpageNav from '\.\.\/components\/RunsSubpageNav';/);
 assert.match(runDetailSource, /<RunsSubpageNav/);
 assert.match(runDetailSource, /sessionStorage\.setItem\('hermes_selected_run'/, 'Recent-run navigation should seed the existing detail cache.');
 
 assert.match(navSource, /runner-shell-side-link runs-subnav-link/);
+assert.match(
+  styleSource,
+  /\.run-detail-runner-page\.is-sidebar-collapsed \.runs-subnav-link-copy\s*\{[^}]*display:\s*none;/,
+  'The default run-detail rail should hide link labels and remain icon-only.',
+);
+assert.match(
+  styleSource,
+  /@media \(min-width: 1100px\)[\s\S]*?\.run-detail-runner-page\.is-sidebar-collapsed:has\(> \.runner-shell-sidebar:hover\) \.runs-subnav-link-copy,[\s\S]*?\.run-detail-runner-page\.is-sidebar-collapsed:has\(> \.runner-shell-sidebar:focus-within\) \.runs-subnav-link-copy\s*\{[^}]*display:\s*inline;/,
+  'Run-detail labels should return when the collapsed rail expands on hover or keyboard focus.',
+);
+assert.match(navSource, /aria-label=\{label\}/, 'Run-detail section links should retain accessible labels when their copy is hidden.');
+assert.match(navSource, /aria-label=\{t\('run_detail\.subnav_recent'\)\}/, 'The recent-runs control should retain an accessible label when collapsed.');
 assert.match(runnerShellStyleSource, /\.runner-shell-side-link\.is-active/);
 assert.match(
   navSource,

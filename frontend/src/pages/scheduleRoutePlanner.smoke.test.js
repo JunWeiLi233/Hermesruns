@@ -6,9 +6,54 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scheduleSource = readFileSync(path.join(here, 'Schedule.jsx'), 'utf8');
 const scheduleCss = readFileSync(path.join(here, '../styles/_split/schedule.css'), 'utf8');
+const scheduleLightThemeCss = readFileSync(path.join(here, '../styles/_split/light-theme-overrides.css'), 'utf8');
 // Translations are split into locale files; check both
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/pages.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/pages.js'), 'utf8');
+
+assert.doesNotMatch(
+  scheduleSource,
+  /const heroKicker\b|className="schedule-plan-kicker"/,
+  'Schedule should not render the standalone week label above the plan title.',
+);
+
+assert.match(
+  scheduleSource,
+  /className="schedule-plan-day-today-badge">\{s\('today_badge'\)\}<\/span>/,
+  'Schedule should render the current-day badge through the locale layer.',
+);
+
+assert.match(
+  scheduleCss,
+  /\.schedule-plan-day-today-badge\s*\{/,
+  'Schedule should keep the current-day badge styling on the translated element.',
+);
+
+assert.doesNotMatch(
+  scheduleCss,
+  /content:\s*"TODAY"/,
+  'Schedule should not hardcode the current-day label in CSS.',
+);
+
+assert.match(
+  scheduleLightThemeCss,
+  /\.schedule-plan-day-today-badge\s*\{[\s\S]*?background:\s*rgba\(89,\s*92,\s*93,\s*0\.12\);[\s\S]*?color:\s*#595c5d;/,
+  'The light Schedule current-day badge should use a neutral grey surface and text.',
+);
+
+assert.doesNotMatch(
+  scheduleLightThemeCss,
+  /\.schedule-plan-day\.is-today::before/,
+  'Schedule should not keep the stale red pseudo-element override for the translated badge.',
+);
+
+for (const [locale, source] of [['en', enSource], ['zh-CN', zhSource]]) {
+  assert.match(
+    source,
+    /"today_badge":/,
+    `${locale} translations should include the current-day badge label.`,
+  );
+}
 
 assert.match(
   scheduleSource,

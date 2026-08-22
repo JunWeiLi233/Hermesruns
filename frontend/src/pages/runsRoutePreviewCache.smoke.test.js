@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8');
+const runsCacheSource = readFileSync(path.join(here, 'runsCache.ts'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
 
@@ -18,6 +19,12 @@ assert.match(
   runsSource,
   /apiJson\(`\/api\/activities\/route-previews\?\$\{params\.toString\(\)\}`\)/,
   'Runs page should batch-load visible thumbnail preview metadata through the route-previews endpoint.',
+);
+
+assert.match(
+  runsSource,
+  /const runsPromise = apiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
+  'Runs should normalize the direct /api/activities response to an array before sorting and rendering activity cards.',
 );
 
 assert.match(
@@ -80,14 +87,57 @@ assert.match(
   'Run cards should prefer the batch point-derived preview and only use feed routePreview as a temporary fallback.',
 );
 
-assert.ok(
-  [...runsSource.matchAll(/setRoutePreviewFallbacks\(\(current\)/g)].length >= 2,
-  'Runs page should batch-merge routePreviewFallbacks for initial prewarm and for later viewport hydration.',
+const requestRoutePreviewsStart = runsSource.indexOf('const requestRoutePreviews = useCallback');
+const loadRunsStart = runsSource.indexOf('const loadRuns = useCallback');
+assert.ok(requestRoutePreviewsStart >= 0 && loadRunsStart > requestRoutePreviewsStart, 'Runs page should define one stable route-preview request coordinator callback before loadRuns.');
+const requestRoutePreviewsSource = runsSource.slice(requestRoutePreviewsStart, loadRunsStart);
+
+assert.match(
+  requestRoutePreviewsSource,
+  /const requestGeneration = routePreviewRequestCoordinatorRef\.current\.getGeneration\(\);[\s\S]*let retryableIds = await routePreviewRequestCoordinatorRef\.current\.waitFor\(candidateIds\);[\s\S]*routePreviewRequestCoordinatorRef\.current\.getGeneration\(\) !== requestGeneration[\s\S]*let claim = routePreviewRequestCoordinatorRef\.current\.claimWithToken\(retryableIds\);/,
+  'Runs route-preview requests should wait for every candidate owner before claiming a batch and should abandon the retry when its generation is stale.',
 );
 
-assert.ok(
-  [...runsSource.matchAll(/setRouteBboxes\(\(current\)/g)].length >= 2,
-  'Runs page should batch-merge routeBboxes for cache seed hydration, initial prewarm, and later viewport hydration.',
+assert.match(
+  requestRoutePreviewsSource,
+  /while \(claim\.ids\.length !== retryableIds\.length\)[\s\S]*routePreviewRequestCoordinatorRef\.current\.release\(claim\.ids, claim\.token\)[\s\S]*await routePreviewRequestCoordinatorRef\.current\.waitFor\(pendingIds\)[\s\S]*claim = routePreviewRequestCoordinatorRef\.current\.claimWithToken\(retryableIds\)/,
+  'A race during claiming should release only the partial owner and wait/retry the complete candidate set instead of fetching a partial overlap.',
+);
+
+assert.match(
+  requestRoutePreviewsSource,
+  /const \{ previewUpdates, bboxUpdates, terminalIds = \[\] \} = await fetchRoutePreviewBatch\(claim\.ids\);/,
+  'Every route-preview request path should fetch only the IDs claimed by the shared coordinator token.',
+);
+
+assert.match(
+  requestRoutePreviewsSource,
+  /if \(!routePreviewRequestCoordinatorRef\.current\.isCurrent\(claim\.token\) \|\| !isCurrent\(\)\) \{[\s\S]*routePreviewRequestCoordinatorRef\.current\.release\(claim\.ids, claim\.token\);[\s\S]*return;\s*\}/,
+  'A successful response ignored by a stale generation or visible effect must release only its own claims so a current effect can retry them.',
+);
+
+assert.match(
+  requestRoutePreviewsSource,
+  /setRoutePreviewFallbacks\(\(current\)[\s\S]*setRouteBboxes\(\(current\)[\s\S]*routePreviewRequestCoordinatorRef\.current\.settle\(\[\.\.\.claim\.ids, \.\.\.terminalIds\], claim\.token\)/,
+  'The shared callback should merge preview and bbox updates before terminally settling a current successful response, including NO_ROUTE/DEFERRED results.',
+);
+
+assert.equal(
+  [...requestRoutePreviewsSource.matchAll(/setRoutePreviewFallbacks\(\(current\)/g)].length,
+  1,
+  'Runs route-preview fallback updates should have one shared merge path.',
+);
+
+assert.equal(
+  [...requestRoutePreviewsSource.matchAll(/setRouteBboxes\(\(current\)/g)].length,
+  1,
+  'Runs route-preview bbox updates should have one shared merge path.',
+);
+
+assert.equal(
+  [...runsSource.matchAll(/fetchRoutePreviewBatch\(/g)].length,
+  2,
+  'Only the shared request callback should call fetchRoutePreviewBatch besides its function declaration.',
 );
 
 assert.match(
@@ -105,19 +155,112 @@ assert.match(
 assert.match(
   runsSource,
   /data-run-id=\{run\.id \|\| ''\}/,
-  'Run cards should expose data-run-id so browser proof can compare a thumbnail to /run/:runId route data.',
+  'Run cards should expose data-run-id so browser proof can compare a thumbnail to /runs/:runId route data.',
 );
 
 assert.match(
   runsSource,
-  /setStravaStatus\(hit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);[\s\S]*const preloadIds = sorted[\s\S]*fetchRoutePreviewBatch\(preloadIds\)/,
+  /setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);[\s\S]*const preloadIds = sorted[\s\S]*requestRoutePreviews\(preloadIds(?:, \{ isCurrent: isCurrentLoad \})?\)/,
   'Runs page should paint cached history before prewarming route previews.',
 );
 
 assert.match(
   runsSource,
-  /setAllRuns\(list\);[\s\S]*setLoadState\('ready'\);[\s\S]*if \(preloadIds\.length > 0\) \{[\s\S]*fetchRoutePreviewBatch\(preloadIds\)/,
+  /const cachedHit = readRunsCache\(localStorage, email, Date\.now\(\)\);\s*if \(fromCache && cachedHit && isCurrentLoad\(\)\) \{/,
+  'Non-cache Runs refreshes should still read the v2 snapshot for last-known-good metadata fallback.',
+);
+
+assert.match(
+  runsSource,
+  /let latestProfile = [\s\S]*cachedHit\?\.profile[\s\S]*let latestStrava = [\s\S]*cachedHit\?\.stravaStatus/,
+  'Runs revalidation should seed profile and Strava metadata from current state or the existing snapshot.',
+);
+
+assert.match(
+  runsSource,
+  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null\)/,
+  'Runs should not replace a complete cache snapshot with null metadata after a partial revalidation failure.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /if \(cachedHit\) \{[\s\S]*?setLoadState\('ready'\);[\s\S]*?return;\s*\}\s*\}\s*\n\s*\/\/ Fire the three calls in parallel/,
+  'A valid Runs cache hit should continue into fresh revalidation instead of returning early.',
+);
+
+assert.match(
+  runsSource,
+  /await apiJson\(`\/api\/activities\/\$\{run\.id\}`, [\s\S]*?invalidateRunsCache\(localStorage, email\)/,
+  'Deleting a run should invalidate the cached Runs snapshot so the next visit cannot resurrect it.',
+);
+
+assert.match(
+  runsSource,
+  /setAllRuns\(list\);[\s\S]*setLoadState\('ready'\);[\s\S]*if \(preloadIds\.length > 0\) \{[\s\S]*requestRoutePreviews\(preloadIds(?:, \{ isCurrent: isCurrentLoad \})?\)/,
   'Runs page should paint fresh /api/activities results before route-preview enrichment finishes.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /RUNS_CACHE_RUN_LIMIT|slice\(0,\s*RUNS_CACHE_RUN_LIMIT\)/,
+  'Runs cache writes should not retain the old 500-row truncation.',
+);
+
+assert.match(
+  runsCacheSource,
+  /RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v2_';[\s\S]*runs\.map\(slimRunForRunsCache\)[\s\S]*sourceCount: runs\.length[\s\S]*complete: true/,
+  'Runs cache should write every slim run as a complete v2 snapshot with its source count.',
+);
+
+assert.match(
+  runsCacheSource,
+  /parsed\.complete !== true[\s\S]*parsed\.runs\.length !== parsed\.sourceCount/,
+  'Runs cache reads should only accept complete snapshots whose source count matches the cached array.',
+);
+
+const cachePaintStart = runsSource.indexOf('if (fromCache && cachedHit && isCurrentLoad()) {');
+const freshActivitiesStart = runsSource.indexOf("const runsPromise = apiJson('/api/activities')");
+assert.ok(cachePaintStart >= 0 && freshActivitiesStart > cachePaintStart, 'Runs cache paint should be defined before fresh activity revalidation.');
+const cacheToRevalidationSource = runsSource.slice(cachePaintStart, freshActivitiesStart);
+assert.match(cacheToRevalidationSource, /setAllRuns\(sorted\);[\s\S]*setProfile\(cachedHit\.profile\);[\s\S]*setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/);
+const cacheHitBlock = cacheToRevalidationSource.match(/if \(fromCache && cachedHit && isCurrentLoad\(\)\) \{[\s\S]*?\n\s{6}\}\n\s{4}\}/)?.[0] || '';
+assert.ok(cacheHitBlock, 'Runs cache paint should have a recognizable guarded cache-hit block.');
+assert.doesNotMatch(cacheHitBlock, /\breturn;/, 'A valid cache hit should not return before fresh activity revalidation starts.');
+
+assert.match(
+  runsSource,
+  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null\) \{\s*writeRunsCache\(localStorage, email, latestRuns, latestProfile, latestStrava, Date\.now\(\)\);\s*\}/,
+  'Fresh activity responses should rewrite the complete slim Runs cache.',
+);
+
+assert.match(
+  runsSource,
+  /const resetRoutePreviewState = useCallback\(\(\) => \{[\s\S]*routePreviewRequestCoordinatorRef\.current\.reset\(\);[\s\S]*\}, \[\]\);/,
+  'Runs should centralize route-preview coordinator reset behavior in one callback.',
+);
+
+assert.match(
+  runsSource,
+  /const refreshRuns = useCallback\(\(\) => \{\s*runsLoadGenerationRef\.current\.invalidate\(\);\s*resetRoutePreviewState\(\);[\s\S]*setRoutePreviewFallbacks\(\{\}\);[\s\S]*setRouteBboxes\(\{\}\);[\s\S]*return loadRuns\(\);/,
+  'Refreshes triggered by sync/import should reset route-preview coordination alongside fallback and bbox state.',
+);
+
+assert.match(
+  runsSource,
+  /function handleStravaSyncFinished\(\) \{\s*refreshRuns\(\);/,
+  'Completed Strava sync should use the route-preview reset refresh path.',
+);
+
+assert.match(
+  runsSource,
+  /setImportModalOpen\(false\);\s*refreshRuns\(\);/,
+  'Successful activity import should use the route-preview reset refresh path.',
+);
+
+assert.match(
+  runsSource,
+  /await apiJson\(`\/api\/activities\/\$\{run\.id\}`, \{ method: 'DELETE' \}\);\s*resetRoutePreviewState\(\);/,
+  'Deleting an activity should reset route-preview coordination before its cached card state is removed.',
 );
 
 assert.doesNotMatch(
@@ -184,6 +327,18 @@ assert.match(
   runsSource,
   /new IntersectionObserver\(\(entries\) => \{[\s\S]*setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns\.length\)\)/,
   'Runs history should expand when page scrolling brings the loader sentinel into view.',
+);
+
+assert.match(
+  runsSource,
+  /if \(!hasMoreRuns \|\| loadState !== 'ready'\) return undefined;[\s\S]*?\}, \[filteredRuns\.length, hasMoreRuns, loadState, visibleRunsCount\]\);/,
+  'Runs history should re-arm the loader observer after each visible batch changes.',
+);
+
+assert.match(
+  runsSource,
+  /className="recent-runs-load-more"[\s\S]*onClick=\{\(\) => setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns\.length\)\)\}[\s\S]*\{t\('runs\.load_more'\)\}/,
+  'Runs history should expose a manual load-more control when IntersectionObserver is unavailable.',
 );
 
 assert.doesNotMatch(

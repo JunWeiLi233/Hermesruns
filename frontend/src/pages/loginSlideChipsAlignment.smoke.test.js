@@ -81,6 +81,36 @@ assert.match(
   /auth-flow-wordmark-row[\s\S]*?HermesMarkSvg[\s\S]*?auth-flow-wordmark-logo[\s\S]*?auth-flow-wordmark">HERMES/,
   'Login should render the Hermes mark left of the HERMES title.',
 );
+assert.match(
+  loginSource,
+  /const stravaConfigured = authProviders\?\.stravaConfigured === true;/,
+  'Login should fail closed until the backend reports Strava credentials are ready.',
+);
+assert.match(
+  loginSource,
+  /const googleConfigured = authProviders\?\.googleConfigured === true;/,
+  'Login should fail closed until the backend reports Google credentials are ready.',
+);
+assert.doesNotMatch(
+  loginSource,
+  /apiFetch\('\/api\/auth\/strava\/status'\)/,
+  'Login should use the shared backend provider-readiness response instead of a fail-open Strava status fallback.',
+);
+assert.match(
+  loginSource,
+  /hasConfiguredSocialProvider\s*=\s*stravaConfigured\s*\|\|\s*googleConfigured/,
+  'Login should render the provider action group only when at least one provider is ready.',
+);
+assert.match(
+  loginSource,
+  /stravaConfigured\s*&&\s*\(\s*<button[\s\S]*?auth-flow-btn--strava/,
+  'Login should render Strava only when the backend marks it configured.',
+);
+assert.match(
+  loginSource,
+  /googleConfigured\s*&&\s*\(\s*<button[\s\S]*?auth-flow-btn--google/,
+  'Login should render Google only when the backend marks it configured.',
+);
 
 // The legal links row moved from the form side's bottom edge into the card,
 // directly under the 还没有账号？立即注册 row.
@@ -117,10 +147,16 @@ assert.match(
   'Flow slides should render only hero + paragraph (kicker/details/stats hidden).',
 );
 
-// The social login block (Strava/Google buttons + status notes) is removed
-// from the login and signup cards; OAuth handlers stay in markup.
+// The login provider group is visible when the backend says a provider is
+// ready. Signup keeps its existing scoped hide rule until that surface is
+// intentionally restored too.
+assert.doesNotMatch(
+  authGlassSource,
+  /#root \.auth-page--liquid-glass\.auth-page--login \.auth-flow-social[\s\S]*?display:\s*none/,
+  'Login should not hide the backend-gated social login block.',
+);
 assert.match(
   authGlassSource,
-  /#root \.auth-page--liquid-glass\.auth-page--login \.auth-flow-social,\s*#root \.auth-page--liquid-glass\.auth-page--signup \.auth-flow-social\s*\{[^}]*display:\s*none/,
-  'Login and signup cards should not render the social login block.',
+  /#root \.auth-page--liquid-glass\.auth-page--signup \.auth-flow-social\s*\{[^}]*display:\s*none/,
+  'Signup should retain its existing scoped social-login hide rule.',
 );

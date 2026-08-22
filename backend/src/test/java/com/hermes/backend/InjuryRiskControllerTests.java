@@ -13,6 +13,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class InjuryRiskControllerTests {
@@ -58,13 +59,14 @@ class InjuryRiskControllerTests {
     void logSorenessReturnsResponseForValidInput() {
         AuthService authService = mock(AuthService.class);
         InjuryRiskService injuryRiskService = mock(InjuryRiskService.class);
+        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
         Runner runner = runner();
         SorenessLog expected = new SorenessLog(runner, LocalDate.now(), "HIGH", "Hamstring tight");
         expected.setId(1L);
         expected.setCreatedAt(LocalDateTime.now());
         when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
         when(injuryRiskService.logSoreness(runner, "HIGH", "Hamstring tight")).thenReturn(expected);
-        InjuryRiskController controller = new InjuryRiskController(injuryRiskService, authService);
+        InjuryRiskController controller = new InjuryRiskController(injuryRiskService, authService, automatedCoachService);
 
         ResponseEntity<?> response = controller.logSoreness(
                 Map.of("level", "high", "notes", "Hamstring tight"),
@@ -75,6 +77,7 @@ class InjuryRiskControllerTests {
         Map<?, ?> body = (Map<?, ?>) response.getBody();
         assertThat(body.get("id")).isEqualTo(1L);
         assertThat(body.get("level")).isEqualTo("HIGH");
+        verify(automatedCoachService).replanFutureSchedule(runner);
     }
 
     @Test

@@ -79,9 +79,12 @@ body.theme-midnight .runs-dashboard-page :is(
 }
 
 body.theme-midnight .runs-dashboard-page .runs-profile-signal--status {
-  border-color: rgba(122, 168, 130, 0.24) !important;
-  background: rgba(122, 168, 130, 0.11) !important;
-  color: var(--runner-minimal-green-text) !important;
+  border-color: var(--runner-minimal-line) !important;
+  background: var(--runs-profile-card-strong) !important;
+  color: var(--runs-profile-ink) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 36px rgba(0, 0, 0, 0.18) !important;
 }
 
 body.theme-midnight .runs-dashboard-page .recent-runs-month-header {
@@ -92,7 +95,6 @@ body.theme-midnight .runs-dashboard-page .recent-runs-month-header {
 
 body.theme-midnight .runs-dashboard-page :is(
   .recent-runs-card-metric,
-  .recent-runs-search-input-wrap,
   .recent-runs-chip
 ) {
   border-color: var(--runner-minimal-line) !important;
@@ -111,6 +113,25 @@ body.theme-midnight .runs-dashboard-page .runs-profile-secondary-action {
   background: rgba(255, 248, 238, 0.07) !important;
   color: var(--runner-minimal-ink) !important;
   box-shadow: none !important;
+}
+
+body.theme-midnight .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
+  border-color: rgba(255, 248, 242, 0.28) !important;
+  background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69)) !important;
+  color: #fff8f2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 14px 28px rgba(160, 57, 42, 0.2) !important;
+}
+
+body.theme-midnight .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input {
+  background: transparent !important;
+  color: #fff8f2 !important;
+  caret-color: #fff8f2 !important;
+}
+
+body.theme-midnight .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input::placeholder {
+  color: rgba(255, 248, 242, 0.78) !important;
 }
 
 body.theme-midnight .runs-dashboard-page .recent-runs-insight-card--primary {

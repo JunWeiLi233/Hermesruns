@@ -10,8 +10,14 @@ const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liqu
 
 assert.match(
   detailSource,
-  /className="analysis-cinematic-card-head"[\s\S]*?className="analysis-cinematic-signal-row"/,
-  'Injury-risk detail should keep the score header and signal row structure that the strip reset targets.',
+  /className="analysis-cinematic-hero analysis-profile-v2-header"/,
+  'Injury-risk detail should keep the Profile score-header structure that the strip reset targets.',
+);
+
+assert.match(
+  detailSource,
+  /className="analysis-cinematic-signal-row analysis-profile-v2-metric-strip"/,
+  'Injury-risk detail should preserve its signal row while promoting it to the Profile-style metric strip.',
 );
 
 const cardSweepIndex = liquidGlassSource.lastIndexOf('[class*="-card"]');

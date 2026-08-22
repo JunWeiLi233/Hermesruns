@@ -253,10 +253,8 @@
   display: none;
 }
 
-/* The social login block (Strava/Google buttons + status notes) is removed
-   from the login and signup cards per the user's request. CSS-scoped; the
-   buttons and OAuth handlers remain in the markup. */
-#root .auth-page--liquid-glass.auth-page--login .auth-flow-social,
+/* Signup keeps its existing scoped social-login hide rule. Login renders
+   each provider only after the backend reports it ready. */
 #root .auth-page--liquid-glass.auth-page--signup .auth-flow-social {
   display: none;
 }

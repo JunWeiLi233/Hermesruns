@@ -244,6 +244,8 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                     count(*) over (partition by ap.activity_id) as activity_point_count
                 from activity_points ap
                 where ap.activity_id in (:activityIds)
+                  and ap.latitude between -90 and 90
+                  and ap.longitude between -180 and 180
             )
             select activity_id, latitude, longitude, sequence_index
             from ranked_points
@@ -274,6 +276,8 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                 count(*) as point_count
             from activity_points ap
             where ap.activity_id in (:activityIds)
+              and ap.latitude between -90 and 90
+              and ap.longitude between -180 and 180
             group by ap.activity_id
             """, nativeQuery = true)
     List<Object[]> findRoutePreviewBboxesByActivityIds(@Param("activityIds") List<Long> activityIds);

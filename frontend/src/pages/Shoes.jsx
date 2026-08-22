@@ -19,14 +19,12 @@ import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profi
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
-import { kmOf } from '../utils/analysisInsights';
 import PageSkeleton from '../components/PageSkeleton';
 import {
   buildRecentShoeSignal,
   calculateRotationHealth,
   getRunTimestamp,
   predictRetirement,
-  RECENT_SHOE_SIGNAL_WINDOW_DAYS,
 } from '../utils/shoeRotation';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -206,34 +204,6 @@ function formatPaceForDisplay(paceSecPerKm, unit, t) {
   return `${mins}:${secs}/${unit === 'mile' ? t('analysis.unit_distance_mile') : t('analysis.unit_distance_km')}`;
 }
 
-function formatRotationDateValue(timestamp, lang, t) {
-  if (!timestamp) return t('shoes.rotation_no_tagged_record');
-
-  const now = new Date();
-  const date = new Date(timestamp);
-  const sameYear = now.getFullYear() === date.getFullYear();
-  return new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', sameYear
-    ? { month: 'short', day: 'numeric' }
-    : { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
-}
-
-function formatRotationUsageValue(count, total, t) {
-  if (!total) {
-    return t('shoes.rotation_no_tagged_runs_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS });
-  }
-
-  return t('shoes.rotation_tagged_runs_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS, count, total });
-}
-
-function formatMileageLeftValue(currentKm, maxKm, unit, distanceUnitLabel, t) {
-  if (!maxKm || maxKm <= 0) return t('shoes.mileage_cap_not_set');
-
-  const remainingKm = Math.max(0, Number(maxKm || 0) - Number(currentKm || 0));
-  if (remainingKm <= 0) return t('shoes.mileage_cap_reached');
-
-  return t('shoes.mileage_approx_left', { distance: formatDistanceValue(remainingKm, unit, 0), unit: distanceUnitLabel });
-}
-
 function matchesInventoryCategory(shoe, category) {
   if (!category || category === 'all') return true;
   if (category === 'daily') return ['daily', 'stability'].includes(shoe?.type);
@@ -308,7 +278,7 @@ const Shoes = memo(function Shoes() {
   const [imgUploading, setImgUploading] = useState(false);
   const [imgPendingUploadUrl, setImgPendingUploadUrl] = useState('');
   const [imgPendingUploadName, setImgPendingUploadName] = useState('');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarMenuRef = useRef(null);
@@ -331,7 +301,6 @@ const Shoes = memo(function Shoes() {
   const [scannedShoes, setScannedShoes] = useState([]);
   const [scanPreviewUrl, setScanPreviewUrl] = useState('');
   const [aiQuota, setAiQuota] = useState(null);
-  const [isRotationSignalCollapsed, setIsRotationSignalCollapsed] = useState(false);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
   const aiQuotaLimit = getShoeScanQuotaLimit(aiQuota);
@@ -480,9 +449,6 @@ const Shoes = memo(function Shoes() {
       || retirement?.remainingKm <= 100
       || (retirement?.daysLeft != null && retirement.daysLeft <= 30);
   }).length;
-  const recentRunsWindow = shoeSignal.recentRuns;
-  const performanceFallback = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
-  const isOwnedFallback = performanceFallback?.type === 'fallback' || performanceFallback?.type === 'primary';
   const shoePerformanceInsights = (() => {
     const topInsight = shoeSignal.performanceInsights.topInsight;
     if (!topInsight) return shoeSignal.performanceInsights;
@@ -507,21 +473,6 @@ const Shoes = memo(function Shoes() {
       },
     };
   })();
-  const recentTaggedRuns = recentRunsWindow.filter((run) => run?.shoeId);
-  const recentUsageByShoe = (() => {
-    const usage = new Map();
-    for (const run of recentTaggedRuns) {
-      const shoeId = run?.shoeId;
-      if (!shoeId) continue;
-      const nextStamp = getRunTimestamp(run);
-      const existing = usage.get(shoeId) || { count: 0, latest: 0 };
-      usage.set(shoeId, {
-        count: existing.count + 1,
-        latest: Math.max(existing.latest, nextStamp),
-      });
-    }
-    return usage;
-  })();
   const usageByShoe = useMemo(() => {
     const usage = new Map();
     for (const run of runs) {
@@ -536,213 +487,6 @@ const Shoes = memo(function Shoes() {
     }
     return usage;
   }, [runs]);
-
-  const recentWindowLabel = t('shoes.rotation_recent_window', { days: RECENT_SHOE_SIGNAL_WINDOW_DAYS });
-  const recentSignalCopy = t('shoes.rotation_signal_copy');
-  const recentRotationEmpty = activeShoes.length > 0
-    ? t('shoes.rotation_empty_no_data')
-    : t('shoes.rotation_empty_no_shoes');
-
-  const rotationSignalShoe = performanceFallback?.shoe || null;
-  const rotationSignalFeatureTitle = rotationSignalShoe
-    ? formatShoeDisplayName({
-      brand: rotationSignalShoe.brand,
-      model: rotationSignalShoe.model,
-      nickname: rotationSignalShoe.nickname,
-      lang,
-    })
-    : t('shoes.performance_inline_title');
-  const rotationSignalUsage = rotationSignalShoe?.id
-    ? (usageByShoe.get(rotationSignalShoe.id) || { count: 0, latest: 0 })
-    : { count: 0, latest: 0 };
-  const rotationSignalRecentUsage = rotationSignalShoe?.id
-    ? (recentUsageByShoe.get(rotationSignalShoe.id) || { count: 0, latest: 0 })
-    : { count: 0, latest: 0 };
-  const rotationSignalLastWornItem = rotationSignalShoe
-    ? t('shoes.rotation_last_worn', { date: formatRotationDateValue(rotationSignalUsage.latest, lang, t) })
-    : null;
-  const rotationSignalRecentUsageItem = rotationSignalShoe
-    ? t('shoes.rotation_recent_usage', { detail: formatRotationUsageValue(rotationSignalRecentUsage.count, recentTaggedRuns.length, t) })
-    : null;
-  const rotationSignalMileageLeftItem = rotationSignalShoe
-    ? t('shoes.rotation_mileage_left', { detail: formatMileageLeftValue(rotationSignalShoe.currentDistanceKm, rotationSignalShoe.maxDistanceKm, unit, distanceUnitLabel, t) })
-    : null;
-  const rotationSignalEvidenceSentence = rotationSignalShoe
-    ? t('shoes.rotation_evidence_sentence_format', { last: rotationSignalLastWornItem, recent: rotationSignalRecentUsageItem, mileage: rotationSignalMileageLeftItem })
-    : '';
-  const rotationSignalFeatureSummary = performanceFallback?.type === 'insight'
-    ? `${shoePerformanceInsights.topInsight.summary} ${rotationSignalEvidenceSentence}`.trim()
-    : performanceFallback?.type === 'rotation'
-      ? t('shoes.rotation_fallback_rotation', { evidence: rotationSignalEvidenceSentence })
-      : isOwnedFallback
-        ? t('shoes.rotation_fallback_primary', { evidence: rotationSignalEvidenceSentence })
-        : recentRotationEmpty;
-  const rotationSignalMetaItems = performanceFallback
-    ? [
-      rotationSignalLastWornItem,
-      rotationSignalRecentUsageItem,
-      rotationSignalMileageLeftItem,
-      performanceFallback.type === 'insight'
-        ? t('shoes.performance_sample', { count: shoePerformanceInsights.topInsight.sampleCount })
-        : null,
-      performanceFallback.type === 'insight'
-        ? t('shoes.performance_compare_sample', { count: shoePerformanceInsights.topInsight.compareCount })
-        : null,
-      performanceFallback.type === 'insight' && shoePerformanceInsights.topInsight.cadenceDelta != null
-        ? t('shoes.performance_cadence_delta', { value: `${shoePerformanceInsights.topInsight.cadenceDelta > 0 ? '+' : ''}${shoePerformanceInsights.topInsight.cadenceDelta.toFixed(1)}` })
-        : null,
-      performanceFallback.avgPace != null
-        ? t('shoes.perf_your_avg_pace', { pace: formatPaceForDisplay(performanceFallback.avgPace, unit, t) })
-        : null,
-    ].filter(Boolean)
-    : [];
-  const rotationSignalSideTitle = performanceFallback?.type === 'insight'
-    ? t('shoes.rotation_status_insight')
-    : performanceFallback?.type === 'rotation'
-      ? t('shoes.rotation_status_rotation')
-      : isOwnedFallback
-        ? t('shoes.rotation_status_fallback')
-        : recentWindowLabel;
-  const rotationSignalSideCopy = performanceFallback?.type === 'insight'
-    ? t('shoes.rotation_side_insight')
-    : performanceFallback?.type === 'rotation'
-      ? t('shoes.rotation_side_rotation')
-      : isOwnedFallback
-        ? t('shoes.rotation_side_primary')
-        : recentRotationEmpty;
-  const rotationSignalAvgPace = performanceFallback?.type === 'insight'
-    ? shoePerformanceInsights.topInsight?.paceSecPerKm ?? null
-    : performanceFallback?.avgPace ?? null;
-  const rotationSignalTotalDistance = recentTaggedRuns.reduce((sum, run) => sum + kmOf(run), 0);
-  const rotationSignalHighlightLabel = isOwnedFallback
-    ? t('shoes.rotation_highlight_fallback')
-    : t('shoes.rotation_highlight_pick');
-  const rotationSignalSourceLabel = isOwnedFallback
-    ? t('shoes.rotation_source_fallback')
-    : t('shoes.rotation_source_rotation');
-  const rotationSignalSourceHref = null;
-  const rotationSignalStatusPill = performanceFallback?.type === 'insight'
-    ? { label: t('shoes.rotation_badge_confident'), className: ' is-positive' }
-    : performanceFallback?.type === 'rotation'
-      ? { label: t('shoes.rotation_badge_evidence'), className: ' is-watch' }
-      : isOwnedFallback
-        ? { label: t('shoes.rotation_badge_fallback'), className: ' is-watch' }
-        : null;
-
-  const renderRotationSignal = (inside = false) => (
-    <section className={`shoe-rotation-signal${inside ? ' shoe-rotation-signal--inside' : ''}${shoePerformanceInsights.topInsight?.positive ? ' is-positive' : ''}${!shoePerformanceInsights.topInsight && isOwnedFallback ? ' is-recommend' : ''}${isRotationSignalCollapsed ? ' is-collapsed' : ''}`}>
-      <div className="shoe-rotation-signal-head">
-        <div className="shoe-rotation-signal-copy">
-          <span className="shoe-inventory-panel-kicker">{t('shoes.performance_inline_title')}</span>
-          <h2>{t('shoes.performance_heading')}</h2>
-          <p>{recentSignalCopy}</p>
-        </div>
-        <div className="shoe-rotation-signal-pills">
-          <span className="shoe-rotation-signal-pill">{recentWindowLabel}</span>
-          <span className="shoe-rotation-signal-pill is-soft">
-            {t('shoes.rotation_recent_tagged_count', { count: recentTaggedRuns.length })}
-          </span>
-          {rotationSignalStatusPill && (
-            <span className={`shoe-rotation-signal-pill${rotationSignalStatusPill.className}`}>
-              {rotationSignalStatusPill.label}
-            </span>
-          )}
-          <button
-            type="button"
-            className="shoe-rotation-signal-toggle"
-            onClick={() => setIsRotationSignalCollapsed((current) => !current)}
-            aria-expanded={!isRotationSignalCollapsed}
-            aria-controls="shoe-rotation-signal-panel"
-            aria-label={isRotationSignalCollapsed ? t('shoes.rotation_expand') : t('shoes.rotation_collapse')}
-          >
-            <AppIcon
-              name={isRotationSignalCollapsed ? 'chevron_right' : 'expand_more'}
-              className="runner-dashboard-side-link-icon"
-            />
-          </button>
-        </div>
-      </div>
-
-      {!isRotationSignalCollapsed && (
-        <div className="shoe-rotation-signal-body" id="shoe-rotation-signal-panel">
-        {(shoePerformanceInsights.topInsight || performanceFallback) ? (
-          <>
-            <div className="shoe-rotation-signal-highlight">
-              <div className="shoe-rotation-signal-highlight-copy">
-                <span className="shoe-rotation-signal-highlight-kicker">{rotationSignalHighlightLabel}</span>
-                <strong>{rotationSignalFeatureTitle}</strong>
-                <div className="shoe-rotation-signal-highlight-summary">
-                  <p>{rotationSignalFeatureSummary}</p>
-                </div>
-              </div>
-              <div className="shoe-rotation-signal-highlight-rail" aria-hidden="true" />
-            </div>
-            <div className="shoe-rotation-signal-sidecar">
-              <div className="shoe-rotation-signal-glass">
-                <span className="shoe-inventory-panel-kicker">{recentWindowLabel}</span>
-                <strong>{rotationSignalSideTitle}</strong>
-                <p>{rotationSignalSideCopy}</p>
-                {rotationSignalAvgPace != null && (
-                  <div className="shoe-rotation-signal-glass-metric">
-                    <strong>{formatPaceForDisplay(rotationSignalAvgPace, unit, t)}</strong>
-                    <span>{unit === 'mile' ? t('shoes.per_mile_avg_pace') : t('shoes.per_km_avg_pace')}</span>
-                  </div>
-                )}
-              </div>
-              <div className="shoe-rotation-signal-meta">
-                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{t('shoes.tagged_distance')}</small>
-                  <strong>{formatDistanceValue(rotationSignalTotalDistance, unit)} {distanceUnitLabel}</strong>
-                </span>
-                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{t('shoes.tagged_runs')}</small>
-                  <strong>{t('shoes.tagged_runs_count', { count: recentTaggedRuns.length })}</strong>
-                </span>
-                <span className="shoe-rotation-signal-stat shoe-rotation-signal-stat--metric">
-                  <small>{t('shoes.rotation_health_label')}</small>
-                  <strong className={cx(
-                    rotationHealth.status === 'excellent' && 'is-positive',
-                    rotationHealth.status === 'good' && 'is-positive',
-                    rotationHealth.status === 'stale' && 'is-negative',
-                    rotationHealth.status === 'minimal' && 'is-muted'
-                  )}>
-                    {t(`shoes.rotation_health_${rotationHealth.status}`)}
-                  </strong>
-                </span>
-              </div>              <div className="shoe-rotation-signal-detail-list">
-                {rotationSignalMetaItems.map((item) => (
-                  <span key={item} className="shoe-rotation-signal-detail-item">{item}</span>
-                ))}
-              </div>
-              {rotationSignalSourceHref ? (
-                <a
-                  className="shoe-rotation-signal-source"
-                  href={rotationSignalSourceHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span>{rotationSignalSourceLabel}</span>
-                  <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-                </a>
-              ) : (
-                <div className="shoe-rotation-signal-source is-static">
-                  <span>{rotationSignalSourceLabel}</span>
-                  <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="shoe-rotation-signal-empty">
-            <span className="shoe-rotation-signal-highlight-kicker">{t('shoes.performance_inline_title')}</span>
-            <strong>{t('shoes.performance_heading')}</strong>
-            <p>{recentRotationEmpty}</p>
-          </div>
-        )}
-        </div>
-      )}
-    </section>
-  );
 
   const navItems = useMemo(() => getRunnerShellNavItems({
     t,
@@ -1347,8 +1091,6 @@ const Shoes = memo(function Shoes() {
 
           <div className="runner-shell-canvas">
             <div className="shoe-inventory-screen shoes-dashboard-shell shoes-atelier-shell shoes-profile-workspace">
-              {renderRotationSignal()}
-
               <section className="shoe-inventory-summary-strip" aria-label={t('shoes.health_summary_rotation')}>
                 <article className="shoe-inventory-summary-tile is-active">
                   <span>{t('shoes.health_summary_rotation')}</span>
@@ -1367,7 +1109,6 @@ const Shoes = memo(function Shoes() {
               <section className="shoe-inventory-stage">
                 <header className="shoe-inventory-workspace-head">
                   <div className="shoe-inventory-workspace-copy">
-                    <span className="shoe-inventory-panel-kicker">{t('shoes.stitch_surface_label')}</span>
                     <h1>{t('shoes.stitch_inventory_title')}</h1>
                     <p>{t('shoes.page_copy')}</p>
                   </div>

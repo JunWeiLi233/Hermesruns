@@ -21,7 +21,7 @@ export default function Rewards() {
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarMenuRef = useRef(null);
 

@@ -16,6 +16,12 @@ assert.match(
 );
 
 assert.match(
+  styleSource,
+  /#root \.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vo2 \.analysis-overview-card-kicker\s*\{[^}]*color:\s*var\(--accent-coral-strong\)\s*!important;/,
+  'The Analysis VO2 context label should use the coach card coral accent without recoloring the VO2max title.',
+);
+
+assert.match(
   liquidGlassStyleSource,
   /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--injury :is\(\s*\.analysis-overview-card-title-block,\s*\.analysis-overview-card-kicker,\s*\.analysis-overview-metric-title\s*\)\s*\{[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important/,
   'The Analysis injury-risk card should keep its heading text on the parent surface instead of showing a glass-paper strip behind the words.',
@@ -117,10 +123,43 @@ assert.ok(
   'The Analysis injury-risk heading reset must remain after the shared liquid-glass card sweep.',
 );
 
+const intensityKickerResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '#root .runner-shell-page.analysis-page-shell .analysis-overview-card--intensity .analysis-overview-card-kicker {',
+);
+assert.ok(
+  intensityKickerResetIndex > analysisCardSweepIndex,
+  'The Analysis intensity heading reset must remain after the shared liquid-glass card sweep.',
+);
 assert.match(
-  liquidGlassStyleSource,
-  /\.runner-shell-page\.analysis-page-shell \.analysis-overview-card--intensity \.analysis-overview-card-kicker\s*\{[\s\S]*background:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important;/,
-  'The Analysis intensity label should stay on the card surface instead of showing a separate pill background.',
+  liquidGlassStyleSource.slice(intensityKickerResetIndex),
+  /background:\s*transparent\s*!important[\s\S]*background-color:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important[\s\S]*box-shadow:\s*none\s*!important/,
+  'The Analysis intensity label should stay on the card surface instead of showing a separate panel strip.',
+);
+
+const intensityCardResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '#root .runner-shell-page.analysis-page-shell .analysis-overview-card--intensity {',
+);
+assert.ok(
+  intensityCardResetIndex > analysisCardSweepIndex,
+  'The Analysis intensity card surface reset must remain after the shared liquid-glass card sweep.',
+);
+assert.match(
+  liquidGlassStyleSource.slice(intensityCardResetIndex),
+  /background:\s*#ffffff\s*!important[\s\S]*background-image:\s*none\s*!important/,
+  'The Analysis intensity summary must not render a second cream panel behind its text.',
+);
+
+const injuryIntensityCopyResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '#root .runner-shell-page.analysis-insight-detail-page.is-injury-risk .analysis-cinematic-intensity-card-copy {',
+);
+assert.ok(
+  injuryIntensityCopyResetIndex > analysisCardSweepIndex,
+  'The injury-risk intensity copy reset must remain after the shared liquid-glass card sweep.',
+);
+assert.match(
+  liquidGlassStyleSource.slice(injuryIntensityCopyResetIndex),
+  /background:\s*transparent\s*!important[\s\S]*background-color:\s*transparent\s*!important[\s\S]*background-image:\s*none\s*!important[\s\S]*box-shadow:\s*none\s*!important/,
+  'The injury-risk intensity text wrapper should stay on the metric card surface instead of showing a cream panel strip.',
 );
 
 assert.match(
@@ -182,6 +221,12 @@ const analysisLabEnd = analysisSplitStyleSource.indexOf('/* Analysis heat-adapta
 const analysisLabBlock = analysisSplitStyleSource.slice(
   analysisLabSplitStart,
   analysisLabEnd === -1 ? analysisSplitStyleSource.length : analysisLabEnd,
+);
+
+assert.match(
+  analysisLabBlock,
+  /\/\* Analysis VO2 inner grids use a neutral light-grey surface[\s\S]*?\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary :is\(\s*\.analysis-overview-hero-value,\s*\.analysis-profile-decision-chip\s*\)\s*\{[\s\S]*background:\s*#f3f4f4 !important;[\s\S]*\.analysis-overview-vo2-bars\s*\{[\s\S]*background:[\s\S]*#f3f4f4 !important;/,
+  'Analysis VO2 value, chart, and decision grids should use the requested light-grey inner surface.',
 );
 
 assert.ok(

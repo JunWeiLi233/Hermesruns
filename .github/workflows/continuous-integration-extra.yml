@@ -73,6 +73,7 @@ jobs:
             .tools/auto-hermes-prompt-compact.test.mjs \
             .tools/auto-hermes-push-main.test.mjs \
             .tools/auto-hermes-security.test.mjs \
+            .tools/check-functionality-direction-tree.test.mjs \
             .tools/ci-workflow-hygiene.test.mjs \
             .tools/dependabot-config.test.mjs \
             .tools/coderabbit-config.test.mjs \

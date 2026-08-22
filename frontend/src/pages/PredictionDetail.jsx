@@ -10,6 +10,8 @@ import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import predictionFiveKHeroImage from '../assets/generated/prediction-5k-hero.png';
+import predictionTenKHeroImage from '../assets/generated/prediction-10k-hero.png';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
@@ -111,9 +113,10 @@ export default function PredictionDetail() {
 
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const distance = useMemo(() => RACE_DISTANCES.find((d) => d.key === distKey), [distKey]);
+  const showConfidencePanel = distance?.key !== '5k' && distance?.key !== '10k' && distance?.key !== 'half';
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -400,7 +403,7 @@ export default function PredictionDetail() {
 
         <div className="runner-shell-canvas">
           <div className="prediction-profile-content prediction-forecast-cockpit">
-            <section className="prediction-forecast-hero">
+            <section className={`prediction-forecast-hero${showConfidencePanel ? '' : ' is-confidence-removed'}${distance?.key === '5k' ? ' is-five-k' : distance?.key === '10k' ? ' is-ten-k' : ''}`}>
               <div className="prediction-forecast-hero-copy">
                 <span className="prediction-forecast-kicker">{t('analysis.pred_cockpit_kicker')}</span>
                 <h1>{t('analysis.pred_cockpit_title', { dist: title })}</h1>
@@ -422,14 +425,22 @@ export default function PredictionDetail() {
                 </div>
               </div>
 
-              <div className="prediction-forecast-hero-panel" aria-label={t('analysis.pred_cockpit_confidence')}>
-                <span>{t('analysis.pred_cockpit_confidence')}</span>
-                <strong>{confidenceScore}%</strong>
-                <div className="prediction-forecast-confidence-bar">
-                  <div style={{ width: `${confidenceScore}%` }} />
+              {distance?.key === '5k' || distance?.key === '10k' ? (
+                <div className="prediction-forecast-hero-media" aria-hidden="true">
+                  <img src={distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage} alt="" loading="eager" decoding="async" />
                 </div>
-                <p>{formatTrendDelta(trendDelta, t)}</p>
-              </div>
+              ) : null}
+
+              {showConfidencePanel ? (
+                <div className="prediction-forecast-hero-panel" aria-label={t('analysis.pred_cockpit_confidence')}>
+                  <span>{t('analysis.pred_cockpit_confidence')}</span>
+                  <strong>{confidenceScore}%</strong>
+                  <div className="prediction-forecast-confidence-bar">
+                    <div style={{ width: `${confidenceScore}%` }} />
+                  </div>
+                  <p>{formatTrendDelta(trendDelta, t)}</p>
+                </div>
+              ) : null}
             </section>
 
             <section className="prediction-evidence-grid prediction-profile-metric-strip" aria-label={t('analysis.pred_evidence_title')}>

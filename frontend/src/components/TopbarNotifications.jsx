@@ -166,7 +166,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
             {visibleItems.length > 0 ? visibleItems.map((item) => (
               <article key={item.id} className="runner-shell-notification-card">
                 <div className="runner-shell-notification-card-copy">
-                  <span>{item.eyebrow}</span>
+                  <div className="runner-shell-notification-eyebrow">{item.eyebrow}</div>
                   <strong>{item.title}</strong>
                   <p>{item.body}</p>
                 </div>
@@ -176,7 +176,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
                   aria-label={`${copy.deleteLabel}: ${item.title}`}
                   onClick={() => handleDeleteMessage(item.id)}
                 >
-                  <AppIcon name="delete_sweep" className="runner-dashboard-side-link-icon" />
+                  <AppIcon name="close" className="runner-dashboard-side-link-icon" />
                 </button>
               </article>
             )) : (

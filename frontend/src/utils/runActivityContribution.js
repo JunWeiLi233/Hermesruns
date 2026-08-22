@@ -33,9 +33,15 @@ function activityDistanceKm(activity) {
   return Number.isFinite(distanceMeters) && distanceMeters > 0 ? distanceMeters / 1000 : 0;
 }
 
-function contributionLevel(count) {
+function contributionLevel(distanceKm, count) {
   if (count <= 0) return 0;
-  return Math.min(4, count + 1);
+
+  const normalizedDistanceKm = Number(distanceKm);
+  if (!Number.isFinite(normalizedDistanceKm) || normalizedDistanceKm <= 0) return 1;
+  if (normalizedDistanceKm < 5) return 1;
+  if (normalizedDistanceKm < 10) return 2;
+  if (normalizedDistanceKm < 15) return 3;
+  return 4;
 }
 
 export function buildRunActivityCalendar(runs, { now = new Date(), weeks = DEFAULT_WEEKS } = {}) {
@@ -73,7 +79,7 @@ export function buildRunActivityCalendar(runs, { now = new Date(), weeks = DEFAU
         date,
         count,
         distanceKm: totals?.distanceKm || 0,
-        level: contributionLevel(count),
+        level: contributionLevel(totals?.distanceKm || 0, count),
         isFuture,
       };
     });
