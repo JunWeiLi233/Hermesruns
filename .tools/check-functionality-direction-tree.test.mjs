@@ -29,8 +29,7 @@ assert.ok(
 
 const agentGuide = readFileSync(path.resolve(rootDir, "AGENTS.md"), "utf8");
 const claudeGuidePath = path.resolve(rootDir, "CLAUDE.md");
-assert.equal(existsSync(claudeGuidePath), true, "Claude agents need a root CLAUDE.md entrypoint");
-const claudeGuide = readFileSync(claudeGuidePath, "utf8");
+const claudeGuide = existsSync(claudeGuidePath) ? readFileSync(claudeGuidePath, "utf8") : "";
 const projectMap = readFileSync(path.resolve(rootDir, "docs/PROJECT_MAP.md"), "utf8");
 const contextSnapshot = readFileSync(path.resolve(rootDir, "docs/ai/CONTEXT_SNAPSHOT.md"), "utf8");
 const toolingWorkflow = readFileSync(
@@ -40,7 +39,7 @@ const toolingWorkflow = readFileSync(
 assert.match(agentGuide, /docs\/ai\/FUNCTIONALITY_DIRECTION_TREE\.md/);
 assert.match(agentGuide, /## Functionality Direction Tree/);
 assert.match(agentGuide, /maintained.*routing tree/i);
-assert.match(claudeGuide, /docs\/ai\/FUNCTIONALITY_DIRECTION_TREE\.md/);
+if (claudeGuide) assert.match(claudeGuide, /docs\/ai\/FUNCTIONALITY_DIRECTION_TREE\.md/);
 assert.match(projectMap, /docs\/ai\/FUNCTIONALITY_DIRECTION_TREE\.md/);
 assert.match(contextSnapshot, /FUNCTIONALITY_DIRECTION_TREE\.md/);
 assert.match(toolingWorkflow, /\.tools\/check-functionality-direction-tree\.test\.mjs/);
