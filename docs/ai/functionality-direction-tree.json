@@ -483,7 +483,7 @@
       "label": "Frontend build publication and live runtime drift",
       "aliases": ["build output", "runtime sync", "stale asset", "backend static", "website not updated"],
       "readFirst": ["frontend/scripts/run-vite-build.mjs", "frontend/vite.config.js", "backend/src/main/java/com/hermes/backend/SpaForwardingController.java"],
-      "thenCheck": ["backend/src/main/java/com/hermes/backend/StaticAssetCacheConfig.java", "backend/src/main/resources/static/index.html", "AGENTS.md"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/StaticAssetCacheConfig.java", "frontend/scripts/run-vite-build.mjs", "AGENTS.md"],
       "verify": ["cd frontend && node scripts/run-vite-build.mjs"]
     }
   ]
