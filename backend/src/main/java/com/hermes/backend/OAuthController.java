@@ -150,9 +150,7 @@ public class OAuthController {
 
     @GetMapping("/auth/providers")
     public ResponseEntity<Map<String, Object>> getAuthProviders() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("googleConfigured", systemConfigService.isGoogleConfigured());
-        response.put("stravaConfigured", systemConfigService.isStravaConfigured());
+        Map<String, Object> response = new HashMap<>(systemConfigService.getOAuthProviderStatus());
         response.put("recaptchaSiteKey", recaptchaSiteKey);
         response.put("recaptchaRequired", hasText(recaptchaSecretKey));
         response.put("recaptchaConfigured", hasText(recaptchaSecretKey) && hasText(recaptchaSiteKey));

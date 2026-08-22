@@ -79,16 +79,49 @@ body:is(.theme-midnight, .theme-high-contrast) .prediction-detail-page .predicti
 }
 
 .prediction-detail-page .prediction-forecast-hero {
+  --prediction-forecast-hero-pad: clamp(28px, 3.4vw, 44px);
   min-height: 270px;
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.52fr);
   align-items: stretch;
   gap: clamp(24px, 4vw, 52px);
-  padding: clamp(28px, 3.4vw, 44px);
+  padding: var(--prediction-forecast-hero-pad);
   border-radius: var(--prediction-profile-radius-xl);
   background:
     radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--prediction-accent, #f07561) 24%, transparent), transparent 36%),
     linear-gradient(135deg, #2c2218 0%, #1a1510 52%, #0f0d0a 100%) !important;
+}
+
+.prediction-detail-page .prediction-forecast-hero.is-confidence-removed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.prediction-detail-page .prediction-forecast-hero.is-five-k {
+  grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.52fr);
+  padding-right: 0;
+}
+
+.prediction-detail-page .prediction-forecast-hero.is-ten-k {
+  grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.52fr);
+  padding-right: 0;
+}
+
+.prediction-detail-page .prediction-forecast-hero-media {
+  margin-block: calc(-1 * var(--prediction-forecast-hero-pad));
+  min-width: 0;
+  min-height: 210px;
+  overflow: hidden;
+  border-radius: 0 var(--prediction-profile-radius-xl) var(--prediction-profile-radius-xl) 0;
+  background: #19231a;
+}
+
+.prediction-detail-page .prediction-forecast-hero-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 210px;
+  object-fit: cover;
+  object-position: center;
 }
 
 .prediction-detail-page .prediction-forecast-hero::before {
@@ -551,7 +584,7 @@ body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .predi
 
 body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .prediction-coach-rail {
   border: 1px solid var(--prediction-profile-line) !important;
-  background: linear-gradient(135deg, #fffdf9 0%, #faf6f0 58%, #f5eee5 100%) !important;
+  background: #fff !important;
   box-shadow: var(--prediction-profile-shadow) !important;
   color: var(--prediction-profile-ink);
 }
@@ -638,6 +671,26 @@ body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .predi
   .prediction-detail-page .prediction-profile-training-grid,
   .prediction-detail-page .prediction-weather-card {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .prediction-detail-page .prediction-forecast-hero.is-five-k {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: var(--prediction-forecast-hero-pad);
+  }
+
+  .prediction-detail-page .prediction-forecast-hero.is-five-k .prediction-forecast-hero-media {
+    margin-block: 0;
+    border-radius: var(--prediction-profile-radius-lg);
+  }
+
+  .prediction-detail-page .prediction-forecast-hero.is-ten-k {
+    grid-template-columns: minmax(0, 1fr);
+    padding-right: var(--prediction-forecast-hero-pad);
+  }
+
+  .prediction-detail-page .prediction-forecast-hero.is-ten-k .prediction-forecast-hero-media {
+    margin-block: 0;
+    border-radius: var(--prediction-profile-radius-lg);
   }
 
   .prediction-detail-page .prediction-forecast-hero-panel {

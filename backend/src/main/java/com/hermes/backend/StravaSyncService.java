@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 @Service
 public class StravaSyncService {
 
-    private static final int STRAVA_POINTS_BATCH_SIZE = 500;
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
 
     private static final Logger log = LoggerFactory.getLogger(StravaSyncService.class);
@@ -536,9 +535,9 @@ public class StravaSyncService {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private boolean fetchAndSaveGpsStream(Activity activity, String stravaId, String accessToken,
                                           RestTemplate restTemplate, HttpHeaders headers) {
+        List<ActivityPoint> points = null;
         try {
             String url = "https://www.strava.com/api/v3/activities/" + stravaId
                     + "/streams?keys=latlng,time,distance,altitude,heartrate,cadence";
@@ -548,43 +547,46 @@ public class StravaSyncService {
 
             List<Map<String, Object>> streams = response.getBody();
             if (streams == null) return true;
-            List<List<Double>> latlng = null;
-            List<Number> time = null;
-            List<Number> distance = null;
-            List<Number> altitude = null;
-            List<Number> heartRate = null;
-            List<Number> cadence = null;
+            List<?> latlng = null;
+            List<?> time = null;
+            List<?> distance = null;
+            List<?> altitude = null;
+            List<?> heartRate = null;
+            List<?> cadence = null;
             for (Map<String, Object> stream : streams) {
-                if (!stream.containsKey("type")) continue;
+                if (stream == null || !stream.containsKey("type")) continue;
                 String type = String.valueOf(stream.get("type"));
                 Object dataObj = stream.get("data");
-                if ("latlng".equals(type) && dataObj instanceof List<?> l) latlng = (List<List<Double>>) l;
-                if ("time".equals(type) && dataObj instanceof List<?> l) time = (List<Number>) l;
-                if ("distance".equals(type) && dataObj instanceof List<?> l) distance = (List<Number>) l;
-                if ("altitude".equals(type) && dataObj instanceof List<?> l) altitude = (List<Number>) l;
-                if ("heartrate".equals(type) && dataObj instanceof List<?> l) heartRate = (List<Number>) l;
-                if ("cadence".equals(type) && dataObj instanceof List<?> l) cadence = (List<Number>) l;
+                if ("latlng".equals(type) && dataObj instanceof List<?> l) latlng = l;
+                if ("time".equals(type) && dataObj instanceof List<?> l) time = l;
+                if ("distance".equals(type) && dataObj instanceof List<?> l) distance = l;
+                if ("altitude".equals(type) && dataObj instanceof List<?> l) altitude = l;
+                if ("heartrate".equals(type) && dataObj instanceof List<?> l) heartRate = l;
+                if ("cadence".equals(type) && dataObj instanceof List<?> l) cadence = l;
             }
             if (latlng == null || latlng.isEmpty()) return true;
 
-            final int batchSize = STRAVA_POINTS_BATCH_SIZE;
             int total = latlng.size();
             int stride = total > MAX_POINTS_PER_ACTIVITY
                     ? Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY))
                     : 1;
 
-            List<ActivityPoint> batch = new ArrayList<>(batchSize);
-            int totalSaved = 0;
+            points = new ArrayList<>(Math.min(total, MAX_POINTS_PER_ACTIVITY));
             int seq = 0;
 
             for (int i = 0; i < total; i += stride) {
-                List<Double> coord = latlng.get(i);
-                if (coord == null || coord.size() < 2) continue;
+                Object coordObj = latlng.get(i);
+                if (!(coordObj instanceof List<?> coord) || coord.size() < 2) continue;
+                if (!(coord.get(0) instanceof Number latitude)
+                        || !(coord.get(1) instanceof Number longitude)
+                        || !isValidLatLng(latitude, longitude)) {
+                    continue;
+                }
 
                 ActivityPoint point = new ActivityPoint();
                 point.setActivity(activity);
-                point.setLatitude(coord.get(0));
-                point.setLongitude(coord.get(1));
+                point.setLatitude(latitude.doubleValue());
+                point.setLongitude(longitude.doubleValue());
                 point.setSequenceIndex(seq++);
                 point.setElapsedSeconds(numberAt(time, i) == null ? null : numberAt(time, i).intValue());
                 point.setDistanceMeters(numberAt(distance, i) == null ? null : numberAt(distance, i).doubleValue());
@@ -593,24 +595,8 @@ public class StravaSyncService {
                 point.setHeartRate(numberAt(heartRate, i) == null ? null : numberAt(heartRate, i).intValue());
                 Number cad = numberAt(cadence, i);
                 point.setCadence(cad == null ? null : (int) Math.round(cad.doubleValue() * 2.0));
-                batch.add(point);
-
-                if (batch.size() >= batchSize) {
-                    activityPointRepository.saveAll(batch);
-                    activityPointRepository.flush();
-                    totalSaved += batch.size();
-                    batch.clear();
-                }
+                points.add(point);
             }
-
-            if (!batch.isEmpty()) {
-                activityPointRepository.saveAll(batch);
-                activityPointRepository.flush();
-                totalSaved += batch.size();
-            }
-
-            log.info("GPS cached: {} ({} pts)", stravaId, totalSaved);
-            return true;
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode().value() == 429) {
@@ -623,6 +609,12 @@ public class StravaSyncService {
             log.warn("GPS fetch skipped for {}: {}", stravaId, e.getMessage());
             return true;
         }
+
+        if (points != null && !points.isEmpty()) {
+            activityDataAccess.savePointsIfAbsentAtomically(activity.getId(), points);
+        }
+        log.info("GPS cached: {} ({} pts)", stravaId, points == null ? 0 : points.size());
+        return true;
     }
 
     public SingleActivitySyncResult syncStravaActivityById(Runner runner, long stravaActivityId) {
@@ -678,13 +670,6 @@ public class StravaSyncService {
                 });
     }
 
-    private void savePointsInBatches(List<ActivityPoint> points) {
-        final int batchSize = 500;
-        for (int i = 0; i < points.size(); i += batchSize) {
-            activityDataAccess.savePoints(points.subList(i, Math.min(i + batchSize, points.size())));
-        }
-    }
-
     @Scheduled(fixedDelay = 600_000)
     void cleanupStaleSyncTrackers() {
         long cutoff = System.currentTimeMillis() - 1_800_000;
@@ -715,9 +700,21 @@ public class StravaSyncService {
         }
     }
 
-    private static Number numberAt(List<Number> list, int i) {
+    private static Number numberAt(List<?> list, int i) {
         if (list == null || i < 0 || i >= list.size()) return null;
-        return list.get(i);
+        Object value = list.get(i);
+        return value instanceof Number number ? number : null;
+    }
+
+    private static boolean isValidLatLng(Number latitude, Number longitude) {
+        double latitudeValue = latitude.doubleValue();
+        double longitudeValue = longitude.doubleValue();
+        return Double.isFinite(latitudeValue)
+                && Double.isFinite(longitudeValue)
+                && latitudeValue >= -90d
+                && latitudeValue <= 90d
+                && longitudeValue >= -180d
+                && longitudeValue <= 180d;
     }
 
     /**

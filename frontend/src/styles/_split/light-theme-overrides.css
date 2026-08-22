@@ -2251,15 +2251,11 @@ body.theme-light .runner-shell-notification-card p {
 }
 
 body.theme-light .runner-shell-notification-card {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 248, 248, 0.88)),
-    rgba(255, 255, 255, 0.86);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 12px 24px rgba(44, 47, 48, 0.06);
+  background: transparent;
+  box-shadow: none;
 }
 
-body.theme-light .runner-shell-notification-card span {
+body.theme-light .runner-shell-notification-eyebrow {
   color: var(--brand-accent-strong);
 }
 
@@ -2353,8 +2349,6 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-chart-tool
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-hero p,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-kicker,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-side-head span,
-body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-risk-status span,
-body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-risk-copy,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-signal-row span,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-sample-copy span,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-sample-metrics span,
@@ -2394,10 +2388,6 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-card--coac
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-card--interactive:hover,
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-card--interactive:focus-visible {
   box-shadow: 0 22px 42px rgba(44, 47, 48, 0.08);
-}
-
-body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-risk-glow {
-  background: rgba(252, 126, 105, 0.2);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .analysis-cinematic-coach-icon,
@@ -2531,8 +2521,7 @@ body.theme-light .analysis-load-command-chart-col span,
 body.theme-light .analysis-load-command-metric-card span,
 body.theme-light .analysis-load-command-judgment-card > span,
 body.theme-light .analysis-load-command-sample-metrics span,
-body.theme-light .analysis-load-command-window-card h4,
-body.theme-light .analysis-load-command-chart-badge span {
+body.theme-light .analysis-load-command-window-card h4 {
   color: rgba(89, 92, 93, 0.82);
 }
 
@@ -2544,8 +2533,7 @@ body.theme-light .analysis-load-command-metric-card strong,
 body.theme-light .analysis-load-command-judgment-card h3,
 body.theme-light .analysis-load-command-window-meta strong,
 body.theme-light .analysis-load-command-sample-row h3,
-body.theme-light .analysis-load-command-sample-metrics strong,
-body.theme-light .analysis-load-command-chart-badge strong {
+body.theme-light .analysis-load-command-sample-metrics strong {
   color: var(--text-strong);
 }
 
@@ -2586,15 +2574,6 @@ body.theme-light .analysis-load-command-judgment-card p {
 body.theme-light .analysis-load-command-chart-tooltip {
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 16px 32px rgba(44, 47, 48, 0.08);
-}
-
-body.theme-light .analysis-load-command-chart-badge {
-  background: linear-gradient(135deg, rgba(160, 57, 42, 0.92), rgba(252, 126, 105, 0.84));
-}
-
-body.theme-light .analysis-load-command-chart-badge strong,
-body.theme-light .analysis-load-command-chart-badge span {
-  color: #fff7f4;
 }
 
 body.theme-light .analysis-load-command-metric-card.is-accent,
@@ -4170,9 +4149,9 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today {
     0 20px 34px rgba(160, 57, 42, 0.12);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today::before {
-  background: rgba(160, 57, 42, 0.12);
-  color: var(--brand-accent-strong);
+body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day-today-badge {
+  background: rgba(89, 92, 93, 0.12);
+  color: #595c5d;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today .schedule-plan-day-tag,
@@ -4352,9 +4331,9 @@ body.theme-high-contrast-light .schedule-plan-day.is-today {
     0 14px 28px rgba(160, 57, 42, 0.1);
 }
 
-body.theme-high-contrast-light .schedule-plan-day.is-today::before {
-  background: rgba(160, 57, 42, 0.14);
-  color: #7a281d;
+body.theme-high-contrast-light .schedule-plan-day-today-badge {
+  background: rgba(89, 92, 93, 0.16);
+  color: #454c51;
 }
 
 body.theme-high-contrast-light .schedule-plan-kicker,

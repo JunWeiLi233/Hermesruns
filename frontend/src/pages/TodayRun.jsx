@@ -346,7 +346,7 @@ export default function TodayRun() {
   const [coachPayload, setCoachPayload] = useState(null);
   const [weatherContext, setWeatherContext] = useState(null);
   const [isDownshifted, setIsDownshifted] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [heatDismissed, setHeatDismissed] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
     return window.localStorage.getItem(`hermes_heat_strip_dismissed_${today}`) === '1';
@@ -391,7 +391,10 @@ export default function TodayRun() {
     plan,
     reasons,
     metrics,
-  } = useMemo(() => getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery: isDownshifted, coachPayload }), [runs, races, t, lang, weatherContext, isDownshifted, coachPayload]);
+  } = useMemo(
+    () => getTodayRunRecommendation({ runs, races, t, lang, unit, weatherContext, forceRecovery: isDownshifted, coachPayload }),
+    [runs, races, t, lang, unit, weatherContext, isDownshifted, coachPayload],
+  );
 
   const morningBriefing = useMemo(
     () => generateMorningBriefing({ recommendation, metrics, lang }),

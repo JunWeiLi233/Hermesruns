@@ -7,6 +7,12 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import PageSkeleton from '../components/PageSkeleton';
+import { buildHeatmapRenderPointPool, isValidGpsCoordinate } from './heatmapRenderPointPool';
+import {
+  HEATMAP_CACHE_STORE_NAME,
+  openHeatmapCacheDb,
+  getHeatmapCacheKey,
+} from './heatmapCache';
 import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -21,9 +27,6 @@ const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
 const HEATMAP_CANVAS_PADDING = 0.25;
 const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;
-const HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1';
-const HEATMAP_CACHE_STORE_NAME = 'heatmaps';
-const HEATMAP_CACHE_DB_VERSION = 1;
 const HEATMAP_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const SPEED_BANDS = [
   { key: 'slow', min: 0, color: '#ff375f' },
@@ -90,43 +93,11 @@ function normalizeHeatPointForRender(point) {
   };
 }
 
-function buildHeatmapRenderPointPool(points, limit) {
-  if (!Array.isArray(points) || points.length === 0) return [];
-
-  const cappedLimit = Math.max(1, Number(limit) || HEATMAP_PREVIEW_RENDER_POINT_LIMIT);
-  const stride = Math.max(1, Math.ceil(points.length / cappedLimit));
-  const renderPoints = [];
-  for (let index = 0; index < points.length; index += stride) {
-    const point = points[index];
-    if (isValidGpsCoordinate(point?.latitude, point?.longitude)) {
-      renderPoints.push(point);
-    }
-  }
-  return buildVisibleGpsDots(renderPoints);
-}
-
 function normalizePointSpeedRatios(points) {
   if (!Array.isArray(points) || points.length === 0) return [];
   if (points[0] && Number.isFinite(points[0].visualSpeedRatio)) return points;
 
   return points.map(normalizeHeatPointForRender);
-}
-
-function isValidGpsCoordinate(latitude, longitude) {
-  return Number.isFinite(latitude)
-    && Number.isFinite(longitude)
-    && latitude >= -90
-    && latitude <= 90
-    && longitude >= -180
-    && longitude <= 180;
-}
-
-
-
-function buildVisibleGpsDots(points) {
-  if (!Array.isArray(points) || points.length === 0) return [];
-
-  return points.filter((point) => isValidGpsCoordinate(point?.latitude, point?.longitude));
 }
 
 function buildMergedHeatmapPayload(basePayload, points, loadPhase = 'complete') {
@@ -148,28 +119,6 @@ function buildMergedHeatmapPayload(basePayload, points, loadPhase = 'complete') 
     },
     page: null,
   };
-}
-
-function getHeatmapCacheKey(accountEmail) {
-  const normalizedEmail = typeof accountEmail === 'string' ? accountEmail.trim().toLowerCase() : '';
-  return normalizedEmail ? `profile-heatmap:${normalizedEmail}` : null;
-}
-
-function openHeatmapCacheDb() {
-  if (typeof window === 'undefined' || !window.indexedDB) return Promise.resolve(null);
-
-  return new Promise((resolve) => {
-    const request = window.indexedDB.open(HEATMAP_CACHE_DB_NAME, HEATMAP_CACHE_DB_VERSION);
-    request.onupgradeneeded = () => {
-      const database = request.result;
-      if (!database.objectStoreNames.contains(HEATMAP_CACHE_STORE_NAME)) {
-        database.createObjectStore(HEATMAP_CACHE_STORE_NAME, { keyPath: 'key' });
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => resolve(null);
-    request.onblocked = () => resolve(null);
-  });
 }
 
 function readHeatmapCacheRecord(database, key) {
@@ -803,16 +752,6 @@ export default function Heatmap() {
   }, [hasBounds, heatmapState]);
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const pointCount = Number(heatmap?.pointCount || 0);
-  const diagnostics = heatmap?.diagnostics || null;
-  const receivedGpsPointCount = Number(diagnostics?.returnedGpsPointCount ?? points.length);
-  const sourceGpsPointCount = Number(diagnostics?.sourceGpsPointCount ?? pointCount);
-  const gpsLoadComplete = diagnostics?.complete !== false;
-  const gpsReceivedLabel = gpsLoadComplete && sourceGpsPointCount > 0
-    ? `${receivedGpsPointCount}/${sourceGpsPointCount}`
-    : t('heatmap.page_gps_loading_full');
-  const gpsLoadingLabelRoot = gpsReceivedLabel.replace(/\.{3}$/, '');
-  const activityCount = Number(heatmap?.activityCount || 0);
-  const densityPerRun = activityCount > 0 ? Math.round(pointCount / activityCount) : 0;
   const centerLatitude = bounds ? (bounds.minLatitude + bounds.maxLatitude) / 2 : null;
   const centerLongitude = bounds ? (bounds.minLongitude + bounds.maxLongitude) / 2 : null;
   const centerLabel = bounds
@@ -983,36 +922,6 @@ export default function Heatmap() {
                 ))}
               </div>
 
-              <div className="heatmap-page-legend-meta">
-                <div>
-                  <span>{t('heatmap.page_center_label')}</span>
-                  <strong>{centerLabel}</strong>
-                </div>
-                <div className="is-density">
-                  <span>{t('heatmap.page_density_label')}</span>
-                  <strong>{densityPerRun}</strong>
-                </div>
-                <div className={cx('is-density', diagnostics?.complete === false && 'is-warning')}>
-                  <span>{t('heatmap.page_gps_received_label')}</span>
-                  <strong>
-                    {gpsLoadComplete ? gpsReceivedLabel : (
-                      <span className="heatmap-page-gps-loading-text" aria-label={gpsReceivedLabel}>
-                        <span className="heatmap-page-gps-loading-signal" aria-hidden="true">
-                          <span />
-                        </span>
-                        <span className="heatmap-page-gps-loading-label" aria-hidden="true">
-                          {gpsLoadingLabelRoot}
-                        </span>
-                        <span className="heatmap-page-gps-loading-bars" aria-hidden="true">
-                          <span />
-                          <span />
-                          <span />
-                        </span>
-                      </span>
-                    )}
-                  </strong>
-                </div>
-              </div>
             </aside>
 
           </>

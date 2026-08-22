@@ -9,6 +9,7 @@ const weatherSource = readFileSync(path.join(here, 'WeatherEngine.jsx'), 'utf8')
 const weatherLocationSource = readFileSync(path.join(here, '../utils/weatherLocation.js'), 'utf8');
 const navSource = readFileSync(path.join(here, '../utils/runnerShellNav.js'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
+const weatherSplitStyleSource = readFileSync(path.join(here, '../styles/_split/weather.css'), 'utf8');
 const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
@@ -51,6 +52,30 @@ assert.match(
   weatherSource,
   /weather-engine-card--judgment/,
   'Weather page should render the coach judgment companion card.',
+);
+
+assert.doesNotMatch(
+  weatherSource,
+  /<span className="weather-engine-card-kicker">\{wt\('heat_engine_title'\)\}<\/span>/,
+  'Weather heat-adaptation card should not render the removed kicker badge.',
+);
+
+assert.doesNotMatch(
+  weatherSource,
+  /<span className="weather-engine-card-kicker">\{wt\('coach_title'\)\}<\/span>/,
+  'Weather coach judgment card should not render the removed kicker badge.',
+);
+
+assert.match(
+  weatherSource,
+  /weather-engine-card--judgment[\s\S]*<h2>\{wt\('coach_title'\)\}<\/h2>/,
+  'Removing the coach judgment kicker must preserve the card title and functionality.',
+);
+
+assert.match(
+  weatherSource,
+  /weather-engine-card--engine[\s\S]*<h2>\{wt\('heat_engine_title'\)\}<\/h2>/,
+  'Removing the kicker badge must preserve the heat-adaptation card title and functionality.',
 );
 
 assert.match(
@@ -113,10 +138,10 @@ assert.match(
   'Weather requests should use documented Best Match model selection with land-grid elevation matching.',
 );
 
-assert.match(
+assert.doesNotMatch(
   weatherSource,
-  /forecast_title:\s*'Forecast Pipeline \/\/ 12H'/,
-  'Weather forecast panels should keep the compact pipeline label.',
+  /forecast_title:\s*'Forecast Pipeline \/\/ 12H'|weather-engine-card-kicker[^\n]*wt\(['"]forecast_title['"]\)/,
+  'Weather forecast panels should not render the removed pipeline title.',
 );
 
 assert.doesNotMatch(
@@ -222,6 +247,24 @@ assert.match(
 );
 
 assert.match(
+  styleSource,
+  /\.weather-engine-engine-icon > svg(?:,\s*\.weather-engine-judge-mark > svg)?\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*overflow:\s*visible;/,
+  'The Weather heat-adaptation thermometer should render its complete SVG inside the icon tile.',
+);
+
+assert.match(
+  weatherSplitStyleSource,
+  /\.weather-engine-engine-icon > svg,\s*\.weather-engine-judge-mark > svg\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*overflow:\s*visible;/,
+  'The heat-adaptation and coach-judgment icons should share the same SVG box so they sit on one horizontal level.',
+);
+
+assert.match(
+  styleSource,
+  /\.weather-engine-card-head--judgment\s*\{[^}]*align-items:\s*flex-start;/,
+  'The heat-adaptation and coach-judgment card titles should share the same top alignment.',
+);
+
+assert.match(
   liquidGlassSource,
   /\.runner-shell-page\.weather-engine-page :is\([\s\S]*\.weather-engine-card-head,[\s\S]*\.weather-engine-card-head > div[\s\S]*background:\s*transparent\s*!important;/,
   'Weather card headings should stay on their parent card surface instead of rendering as a glass strip.',
@@ -231,6 +274,12 @@ assert.match(
   liquidGlassSource,
   /\.runner-shell-page\.weather-engine-page \.weather-engine-forecast-strip\s*\{[^}]*background:\s*var\(--runner-profile-card\)\s*!important;[^}]*background-image:\s*none\s*!important;/,
   'The forecast pipeline should retain its theme-aware paper grid background while avoiding a nested image layer.',
+);
+
+assert.match(
+  styleSource,
+  /body:is\(\.theme-light,\s*\.theme-high-contrast-light\)\s+\.weather-engine-page \.weather-engine-data-pill\s*\{[^}]*background:\s*rgba\(44,\s*47,\s*48,\s*0\.06\)\s*!important;/,
+  'Weather metric strips should use a neutral light-grey surface in light themes.',
 );
 
 assert.match(

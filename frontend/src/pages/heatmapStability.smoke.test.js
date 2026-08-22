@@ -5,7 +5,15 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const heatmapSource = readFileSync(path.join(here, 'Heatmap.jsx'), 'utf8');
+const heatmapCacheSource = readFileSync(path.join(here, 'heatmapCache.js'), 'utf8');
+const heatmapRenderPoolSource = readFileSync(path.join(here, 'heatmapRenderPointPool.js'), 'utf8');
 const heatmapStyleSource = readFileSync(path.join(here, '../styles/_split/heatmap.css'), 'utf8');
+
+assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-filter-pill\.is-active\s*\{[\s\S]*?background:\s*rgba\(255,\s*142,\s*126,\s*0\.22\);[\s\S]*?color:\s*#9b3f33;/,
+  'Heatmap active filter pills should use a light-red highlight treatment.',
+);
 
 assert.match(
   heatmapSource,
@@ -43,14 +51,14 @@ assert.match(
 );
 
 assert.match(
-  heatmapSource,
-  /function isValidGpsCoordinate\(latitude, longitude\) \{[\s\S]*?latitude >= -90[\s\S]*?latitude <= 90[\s\S]*?longitude >= -180[\s\S]*?longitude <= 180/,
+  heatmapRenderPoolSource,
+  /export function isValidGpsCoordinate\(latitude, longitude\) \{[\s\S]*?latitude >= -90[\s\S]*?latitude <= 90[\s\S]*?longitude >= -180[\s\S]*?longitude <= 180/,
   'Heatmap should reject out-of-range coordinates before drawing GPS dots.',
 );
 assert.match(
   heatmapSource,
-  /function buildVisibleGpsDots\(points\) \{[\s\S]*?return points\.filter\(\(point\) => isValidGpsCoordinate\(point\?\.latitude, point\?\.longitude\)\)/,
-  'Heatmap should render only real backend GPS points with valid coordinates.',
+  /import \{ buildHeatmapRenderPointPool, isValidGpsCoordinate \} from '\.\/heatmapRenderPointPool';/,
+  'Heatmap should share the validated render-pool coordinate guard with the map canvas.',
 );
 assert.match(
   heatmapSource,
@@ -66,6 +74,11 @@ assert.doesNotMatch(
   heatmapSource,
   /heatmap-sessions-card|heatmap-sessions-list|visibleRuns|viewBounds/,
   'Heatmap should not retain the removed viewport sessions drawer or its viewport activity matching state.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /heatmap-page-legend-meta|page_center_label|page_density_label|page_gps_received_label/,
+  'Heatmap should keep the legend focused on route colors instead of rendering the three summary grids.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -106,20 +119,31 @@ assert.match(
   heatmapSource,
   /fetchCompleteHeatmap\(heatmapController\.signal, \(partialHeatmap\) => \{[\s\S]*?setHeatmap\(partialHeatmap\);[\s\S]*?setHeatmapState\('ready'\);/,
   'Heatmap should switch to ready state on the first progressive page instead of waiting for every GPS point.',
-);assert.match(
-  heatmapSource,
-  /HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1'[\s\S]*?HEATMAP_CACHE_STORE_NAME = 'heatmaps'[\s\S]*?HEATMAP_CACHE_MAX_AGE_MS = 7 \* 24 \* 60 \* 60 \* 1000/,
-  'Heatmap should define a durable IndexedDB cache for complete GPS payloads.',
 );
 assert.match(
   heatmapSource,
+  /HEATMAP_CACHE_MAX_AGE_MS = 7 \* 24 \* 60 \* 60 \* 1000/,
+  'Heatmap should retain a bounded age for complete GPS payloads.',
+);
+assert.match(
+  heatmapCacheSource,
+  /HEATMAP_CACHE_DB_NAME = 'hermes_heatmap_cache_v1'[\s\S]*?HEATMAP_CACHE_STORE_NAME = 'heatmaps'[\s\S]*?HEATMAP_CACHE_DB_VERSION = 1/,
+  'Heatmap should define a durable IndexedDB cache for complete GPS payloads.',
+);
+assert.match(
+  heatmapCacheSource,
   /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:\$\{normalizedEmail\}/,
   'Heatmap cache should be keyed from the authenticated account email so every official-site user gets an isolated cache.',
 );
 assert.match(
-  heatmapSource,
+  heatmapCacheSource,
   /function openHeatmapCacheDb\(\)[\s\S]*?window\.indexedDB\.open\(HEATMAP_CACHE_DB_NAME, HEATMAP_CACHE_DB_VERSION\)[\s\S]*?createObjectStore\(HEATMAP_CACHE_STORE_NAME, \{ keyPath: 'key' \}\)/,
   'Heatmap should use IndexedDB instead of localStorage for large GPS point caches.',
+);
+assert.match(
+  heatmapSource,
+  /import \{[\s\S]*?HEATMAP_CACHE_STORE_NAME,[\s\S]*?openHeatmapCacheDb,[\s\S]*?getHeatmapCacheKey,[\s\S]*?\} from '\.\/heatmapCache';/,
+  'Heatmap should use the shared cache module so deletion can invalidate the same record it reads.',
 );
 assert.match(
   heatmapSource,
@@ -143,8 +167,18 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500[\s\S]*?HEATMAP_FULL_RENDER_POINT_LIMIT = 12000[\s\S]*?buildHeatmapRenderPointPool\(points, limit\)[\s\S]*?const stride = Math\.max\(1, Math\.ceil\(points\.length \/ cappedLimit\)\)[\s\S]*?latestPreviewRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_PREVIEW_RENDER_POINT_LIMIT\)[\s\S]*?latestFullRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_FULL_RENDER_POINT_LIMIT\)[\s\S]*?const renderPoints = renderMode === 'preview'[\s\S]*?latestPreviewRenderPointsRef\.current[\s\S]*?latestFullRenderPointsRef\.current[\s\S]*?for \(const point of renderPoints\)/,
+  /HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500[\s\S]*?HEATMAP_FULL_RENDER_POINT_LIMIT = 12000[\s\S]*?latestPreviewRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_PREVIEW_RENDER_POINT_LIMIT\)[\s\S]*?latestFullRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_FULL_RENDER_POINT_LIMIT\)[\s\S]*?const renderPoints = renderMode === 'preview'[\s\S]*?latestPreviewRenderPointsRef\.current[\s\S]*?latestFullRenderPointsRef\.current[\s\S]*?for \(const point of renderPoints\)/,
   'Heatmap canvas should draw from capped preview/full render pools so zoom never scans the full GPS array.',
+);
+assert.match(
+  heatmapRenderPoolSource,
+  /const buckets = new Map\(\)[\s\S]*?sampleBucket\([\s\S]*?selectedEntries[\s\S]*?sort\(\(left, right\) => left\.index - right\.index\)/,
+  'Heatmap render pools should allocate samples per activity and preserve source order instead of using one global stride.',
+);
+assert.doesNotMatch(
+  heatmapRenderPoolSource,
+  /const stride = Math\.max\(1, Math\.ceil\(points\.length \/ cappedLimit\)\)/,
+  'Heatmap render pools should not drop an entire small activity because of global index stride sampling.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -256,17 +290,6 @@ assert.doesNotMatch(
   /apiJson\('\/api\/profile\/heatmap', \{ signal: heatmapController\.signal \}\)/,
   'Heatmap should not rely on the old single massive GPS response.',
 );
-assert.match(
-  heatmapSource,
-  /const diagnostics = heatmap\?\.diagnostics \|\| null;[\s\S]*?const gpsLoadComplete = diagnostics\?\.complete !== false;[\s\S]*?const gpsReceivedLabel = gpsLoadComplete && sourceGpsPointCount > 0[\s\S]*?: t\('heatmap\.page_gps_loading_full'\);/,
-  'Heatmap should show received/source GPS diagnostics only after full loading completes, not for preview coverage.',
-);
-assert.match(
-  heatmapSource,
-  /const gpsLoadingLabelRoot = gpsReceivedLabel\.replace\(\/\\\.\{3\}\$\/, ''\);[\s\S]*?className="heatmap-page-gps-loading-text"[\s\S]*?className="heatmap-page-gps-loading-signal"[\s\S]*?className="heatmap-page-gps-loading-label"[\s\S]*?\{gpsLoadingLabelRoot\}[\s\S]*?className="heatmap-page-gps-loading-bars"/,
-  'Heatmap loading GPS label should stay readable beside a dedicated acquisition signal and progress bars.',
-);
-
 assert.match(
   heatmapStyleSource,
   /heatmap-page-gps-loading-text[\s\S]*?border-radius: 999px[\s\S]*?heatmap-page-gps-loading-signal::after[\s\S]*?animation: heatmapGpsLockPulse 1\.6s[\s\S]*?heatmap-page-gps-loading-bars > span[\s\S]*?animation: heatmapGpsSignalBar 1\.2s[\s\S]*?@keyframes heatmapGpsLockPulse[\s\S]*?@keyframes heatmapGpsSignalBar[\s\S]*?prefers-reduced-motion: reduce[\s\S]*?heatmap-page-gps-loading-bars > span/,

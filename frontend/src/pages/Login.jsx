@@ -26,37 +26,16 @@ export default function Login() {
   const [showResend, setShowResend] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
-  const [stravaStatus, setStravaStatus] = useState(null);
   const [authProviders, setAuthProviders] = useState(null);
 
-  const stravaConfigured = stravaStatus?.configured !== false;
+  const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
+  const hasConfiguredSocialProvider = stravaConfigured || googleConfigured;
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
     navigate(isAdmin ? '/dashboard' : '/profile');
   }, [isAuthenticated, authHydrated, isAdmin, navigate]);
-
-  useEffect(() => {
-    let cancelled = false;
-    apiFetch('/api/auth/strava/status')
-      .then(async (response) => {
-        if (!response.ok) {
-          return null;
-        }
-        return response.json().catch(() => null);
-      })
-      .then((res) => {
-        if (!cancelled) setStravaStatus(res || null);
-      })
-      .catch(() => {
-        if (!cancelled) setStravaStatus(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,11 +148,6 @@ export default function Login() {
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=login`;
   }
 
-  const stravaStatusReason = stravaStatus?.reason?.trim();
-  const stravaUnavailableHint = stravaStatusReason
-    ? `Strava OAuth is off on this server: ${stravaStatusReason}`
-    : t('index.stitch_strava_hint');
-  const googleUnavailableHint = t('common.google_not_configured');
   const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   return (
@@ -281,38 +255,34 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="auth-flow-social">
-              <button
-                type="button"
-                className="auth-flow-btn auth-flow-btn--strava auth-flow-btn--strava-official"
-                disabled={!stravaConfigured}
-                onClick={() => startOAuth('strava')}
-              >
-                <img
-                  className="auth-flow-btn__strava-official"
-                  src={stravaConnectButton}
-                  alt={t(stravaConfigured ? 'index.stitch_strava_cta' : 'index.stitch_strava_unavailable')}
-                />
-              </button>
+            {hasConfiguredSocialProvider && (
+              <div className="auth-flow-social">
+                {stravaConfigured && (
+                  <button
+                    type="button"
+                    className="auth-flow-btn auth-flow-btn--strava auth-flow-btn--strava-official"
+                    onClick={() => startOAuth('strava')}
+                  >
+                    <img
+                      className="auth-flow-btn__strava-official"
+                      src={stravaConnectButton}
+                      alt={t('index.stitch_strava_cta')}
+                    />
+                  </button>
+                )}
 
-              {!stravaConfigured && (
-                <p className="auth-flow-status-note auth-flow-status-note--strava">{stravaUnavailableHint}</p>
-              )}
-
-              <button
-                type="button"
-                className="auth-flow-btn auth-flow-btn--google"
-                disabled={!googleConfigured}
-                onClick={() => startOAuth('google')}
-              >
-                <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t(googleConfigured ? 'index.google' : 'common.google_not_configured')}</span>
-              </button>
-
-              {!googleConfigured && (
-                <p className="auth-flow-status-note auth-flow-status-note--google">{googleUnavailableHint}</p>
-              )}
-            </div>
+                {googleConfigured && (
+                  <button
+                    type="button"
+                    className="auth-flow-btn auth-flow-btn--google"
+                    onClick={() => startOAuth('google')}
+                  >
+                    <span className="auth-flow-google-g" aria-hidden="true">G</span>
+                    <span>{t('index.google')}</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="signup-link signup-link--auth">
               <span>{t('index.signup_prompt')}</span>

@@ -114,6 +114,12 @@
   background: #f6eee5;
 }
 
+/* Keep the recommendation highlight aligned with the neutral light-grey grid
+ * surfaces used by the rest of the refreshed dashboard. */
+#root .shoes-atelier-redesign .shoe-rotation-signal-highlight {
+  background: #f3f4f4 !important;
+}
+
 #root .shoes-atelier-redesign .shoe-rotation-signal-highlight::after,
 #root .shoes-atelier-redesign .shoe-rotation-signal-empty::after,
 #root .shoes-atelier-redesign .shoe-rotation-signal-highlight-rail {
@@ -317,11 +323,12 @@
   min-width: min(320px, 100%);
   height: 42px;
   border-radius: 8px;
-  background: #fffaf3;
-  box-shadow: inset 0 0 0 1px var(--shoe-atelier-line);
+  background: #f1f2f2;
+  box-shadow: none;
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-search input {
+  background: transparent !important;
   color: var(--shoe-atelier-ink);
 }
 
@@ -493,8 +500,10 @@
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-card-image {
+  display: grid;
+  place-items: center;
   width: 128px;
-  height: 100%;
+  height: 144px;
   min-height: 144px;
   border-radius: 8px;
   background:
@@ -506,6 +515,11 @@
 #root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img-placeholder,
 #root .shoes-atelier-redesign .shoe-preview-art {
   border-radius: 8px;
+}
+
+#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img {
+  object-fit: contain;
+  object-position: center;
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-card-copy {

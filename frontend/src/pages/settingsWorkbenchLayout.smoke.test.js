@@ -105,6 +105,12 @@ assert.match(
   'Settings card headings should stay on the parent card surface instead of showing glass-paper strips behind the words.',
 );
 
+assert.match(
+  liquidGlassStyleSource,
+  /\.runner-shell-page\.settings-control-page \.st-services :is\(\s*\.st-card-head,\s*\.st-card-head > div,\s*\.st-kicker,\s*\.st-card-title\s*\)\s*{[\s\S]*?background:\s*transparent\s*!important[\s\S]*?background-image:\s*none\s*!important/,
+  'The connected-services heading should stay on the outer surface instead of showing a panel strip behind 数据服务.',
+);
+
 const settingsCardSweepIndex = liquidGlassStyleSource.lastIndexOf('[class*="-card"]');
 const settingsHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
   '.runner-shell-page.settings-control-page .st-card :is(',
@@ -112,6 +118,14 @@ const settingsHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
 assert.ok(
   settingsHeadingResetIndex > settingsCardSweepIndex,
   'The Settings heading reset must remain after the shared liquid-glass card sweep.',
+);
+
+const settingsServicesHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
+  '.runner-shell-page.settings-control-page .st-services :is(',
+);
+assert.ok(
+  settingsServicesHeadingResetIndex > settingsCardSweepIndex,
+  'The connected-services heading reset must remain after the shared liquid-glass card sweep.',
 );
 
 assert.match(

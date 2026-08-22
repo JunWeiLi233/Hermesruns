@@ -940,6 +940,23 @@ body.theme-midnight .vdot-badge,
   color: var(--text-muted);
 }
 
+/* Keep the VDOT heading in its original header position while centering only
+   the explanatory empty-state copy within the card. */
+.analysis-page-shell .analysis-profile-reference-card.is-trend.is-empty {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: start;
+}
+
+.analysis-page-shell .analysis-profile-reference-card.is-trend.is-empty .analysis-overview-insight-copy {
+  align-self: end;
+  justify-self: center;
+  width: min(100%, 34rem);
+  max-width: 34rem;
+  margin: 0;
+  text-align: center;
+}
+
 .analysis-overview-grid--summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 14px;
@@ -1980,11 +1997,6 @@ body.theme-midnight .vdot-badge,
   gap: 16px;
 }
 
-.analysis-cinematic-main-column {
-  display: grid;
-  gap: 16px;
-}
-
 .analysis-cinematic-card {
   position: relative;
   overflow: hidden;
@@ -2009,22 +2021,6 @@ body.theme-midnight .vdot-badge,
   transform: translateY(-4px);
   box-shadow: 0 28px 64px rgba(0, 0, 0, 0.3);
   outline: none;
-}
-
-.analysis-cinematic-card--risk {
-  padding: 28px;
-  min-height: 320px;
-}
-
-.analysis-cinematic-risk-glow {
-  position: absolute;
-  top: -60px;
-  right: -70px;
-  width: 220px;
-  height: 220px;
-  border-radius: 999px;
-  background: rgba(240, 117, 97, 0.18);
-  filter: blur(80px);
 }
 
 .analysis-cinematic-card-head,
@@ -2068,13 +2064,6 @@ body.theme-midnight .vdot-badge,
   letter-spacing: -0.04em;
 }
 
-.analysis-cinematic-risk-status {
-  position: relative;
-  z-index: 1;
-  text-align: right;
-}
-
-.analysis-cinematic-risk-tone,
 .analysis-cinematic-chart-tooltip strong,
 .analysis-cinematic-sample-copy strong,
 .analysis-cinematic-sample-metrics strong,
@@ -2084,26 +2073,6 @@ body.theme-midnight .vdot-badge,
   font-family: "Manrope", var(--font-display);
 }
 
-.analysis-cinematic-risk-tone {
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  font-style: italic;
-  letter-spacing: -0.06em;
-}
-
-.analysis-cinematic-risk-tone.is-low {
-  color: #f49787;
-}
-
-.analysis-cinematic-risk-tone.is-moderate {
-  color: #ffb56f;
-}
-
-.analysis-cinematic-risk-tone.is-high {
-  color: #ff7b69;
-}
-
-.analysis-cinematic-risk-status span,
-.analysis-cinematic-risk-copy,
 .analysis-cinematic-signal-row span,
 .analysis-cinematic-sample-copy span,
 .analysis-cinematic-sample-metrics span,
@@ -2112,16 +2081,6 @@ body.theme-midnight .vdot-badge,
   color: rgba(232, 226, 220, 0.6);
 }
 
-.analysis-cinematic-risk-status span {
-  display: block;
-  margin-top: 6px;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.analysis-cinematic-risk-copy,
 .analysis-cinematic-coach-copy p {
   max-width: 760px;
   margin: 18px 0 0;
@@ -2369,7 +2328,14 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-cinematic-point {
-  fill: #f07561;
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f07561;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .analysis-cinematic-chart-tooltip {
@@ -2500,7 +2466,6 @@ body.theme-midnight .vdot-badge,
 }
 
 @media (max-width: 760px) {
-  .analysis-cinematic-card--risk,
   .analysis-cinematic-card--coach,
   .analysis-cinematic-card--trend,
   .analysis-cinematic-card--samples,
@@ -2519,7 +2484,6 @@ body.theme-midnight .vdot-badge,
     grid-template-columns: 1fr;
   }
 
-  .analysis-cinematic-risk-status,
   .analysis-cinematic-sample-metrics {
     text-align: left;
   }
@@ -3245,8 +3209,7 @@ body.theme-midnight .vdot-badge,
 .analysis-load-command-metric-card span,
 .analysis-load-command-judgment-card > span,
 .analysis-load-command-sample-metrics span,
-.analysis-load-command-window-card h4,
-.analysis-load-command-chart-badge span {
+.analysis-load-command-window-card h4 {
   color: rgba(243, 237, 232, 0.56);
   font-size: 0.74rem;
   font-weight: 700;
@@ -3262,8 +3225,7 @@ body.theme-midnight .vdot-badge,
 .analysis-load-command-judgment-card h3,
 .analysis-load-command-window-meta strong,
 .analysis-load-command-sample-row h3,
-.analysis-load-command-sample-metrics strong,
-.analysis-load-command-chart-badge strong {
+.analysis-load-command-sample-metrics strong {
   margin: 0;
   font-family: "Manrope", var(--font-display);
   color: #f8f4ef;
@@ -3359,7 +3321,7 @@ body.theme-midnight .vdot-badge,
 
 .analysis-load-command-ratio-value strong {
   font-size: clamp(4rem, 8vw, 5.8rem);
-  font-style: italic;
+  font-style: normal;
   letter-spacing: -0.1em;
 }
 
@@ -3503,27 +3465,6 @@ body.theme-midnight .vdot-badge,
 .analysis-load-command-chart-tooltip strong {
   font-size: 0.82rem;
   font-family: "Manrope", var(--font-display);
-}
-
-.analysis-load-command-chart-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(240, 117, 97, 0.94);
-  color: #2f120f;
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
-  pointer-events: none;
-}
-
-.analysis-load-command-chart-badge strong,
-.analysis-load-command-chart-badge span {
-  color: #2f120f;
 }
 
 .analysis-load-command-metric-grid {
@@ -3767,10 +3708,6 @@ body.theme-midnight .vdot-badge,
 
   .analysis-load-command-chart-svg {
     height: 220px;
-  }
-
-  .analysis-load-command-chart-badge {
-    right: 8px;
   }
 
   .analysis-load-command-sample-main,
@@ -6722,85 +6659,6 @@ body.theme-midnight .vdot-badge,
   margin-bottom: 10px;
 }
 
-/* Analysis Methodology Sections */
-
-.analysis-load-command-methodology {
-  margin-top: 24px;
-}
-
-.analysis-load-command-methodology-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  padding: 24px;
-}
-
-.analysis-load-command-methodology-content {
-  margin-top: 16px;
-}
-
-.analysis-vdot-methodology-intro {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 24px;
-  max-width: 700px;
-}
-
-.analysis-load-command-methodology-formula {
-  margin-bottom: 28px;
-  display: flex;
-  justify-content: center;
-}
-
-.analysis-formula-box {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.1rem;
-}
-
-.analysis-formula-fraction {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.analysis-formula-fraction hr {
-  width: 100%;
-  border: none;
-  border-top: 1px solid var(--text-primary);
-  margin: 0;
-}
-
-.analysis-load-command-methodology-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-}
-
-.analysis-method-item h3 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.analysis-method-item p {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-@media (max-width: 768px) {
-  .analysis-load-command-methodology-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-}
-
 .analysis-overview-vo2-bar-col {
   outline: none;
 }
@@ -7653,7 +7511,6 @@ body.theme-midnight .vdot-badge,
   .schedule-plan-page,
   .runner-dashboard-page:has(.muscle-training-page)
 ) :is(
-  .analysis-profile-decision-chip,
   .recent-runs-card-metric,
   .recent-runs-chip,
   .weather-engine-data-pill,
@@ -8286,11 +8143,18 @@ body.theme-midnight .vdot-badge,
   background: transparent !important;
 }
 
+.analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker {
+  padding: 0;
+  border-color: transparent;
+  background: transparent !important;
+}
+
 .analysis-page-shell .analysis-profile-reference-card.is-load p {
   grid-area: copy;
   max-width: 30ch;
   margin: 0;
   color: var(--analysis-lab-muted) !important;
+  text-align: left;
 }
 
 .analysis-page-shell .analysis-profile-reference-card.is-coach,
@@ -8322,8 +8186,35 @@ body.theme-midnight .vdot-badge,
   text-transform: uppercase;
 }
 
+/* These labels are headings, not status badges. Keep both reference cards on
+ * the same plain text treatment so their copy starts on one horizontal line. */
+.analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker,
+.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+  display: inline !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy,
+.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
+  display: grid;
+  align-content: start;
+  gap: 0;
+}
+
+.analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy h3,
+.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  margin-top: 10px;
+}
+
 .analysis-page-shell .analysis-overview-coach-badge {
-  border: 1px solid var(--analysis-lab-line) !important;
+  border: 0 !important;
   border-radius: 8px;
   background: var(--analysis-lab-surface-soft) !important;
 }
@@ -8593,6 +8484,21 @@ body.theme-midnight .vdot-badge,
 .analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary {
   border-radius: 8px !important;
   background: #ffffff !important;
+}
+
+/* Analysis VO2 inner grids use a neutral light-grey surface while the hero
+ * card remains white, keeping the chart and metric tiles visually grouped. */
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary :is(
+  .analysis-overview-hero-value,
+  .analysis-profile-decision-chip
+) {
+  background: #f3f4f4 !important;
+}
+
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary .analysis-overview-vo2-bars {
+  background:
+    linear-gradient(rgba(27, 34, 32, 0.06) 1px, transparent 1px),
+    #f3f4f4 !important;
 }
 
 /* Analysis VO2 contrast repair */
@@ -9530,7 +9436,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-page-shell .analysis-he
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-session-list {
   display: grid;
-  gap: 0;
+  gap: 10px;
   margin-top: 12px;
 }
 
@@ -9784,8 +9690,9 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-page-shell .analysis-he
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-reason-list {
   display: grid;
-  gap: 0;
+  gap: 8px;
   margin-top: 12px;
+  padding: 8px;
   counter-reset: coach-reason;
 }
 
