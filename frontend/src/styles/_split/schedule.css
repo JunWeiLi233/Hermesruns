@@ -242,15 +242,14 @@
   transform: translateY(-2px);
 }
 
-.schedule-plan-day.is-today::before {
-  content: "TODAY";
+.schedule-plan-day-today-badge {
   position: absolute;
   top: 10px;
   right: 10px;
   padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(240, 117, 97, 0.18);
-  color: #ffb4a7;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.14em;

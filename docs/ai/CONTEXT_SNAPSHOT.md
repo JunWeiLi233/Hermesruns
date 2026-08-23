@@ -19,6 +19,9 @@ serves the built SPA and API routes use `/api`.
    the local code does not establish the boundary.
 4. Use the smallest relevant lint, test, build, or runtime proof command.
 
+For behavior-led tasks without an obvious owner, read
+`docs/ai/FUNCTIONALITY_DIRECTION_TREE.md` and its JSON manifest before searching broadly.
+
 ## Where to look next
 
 - Frontend routes and providers: `frontend/src/App.jsx`; API client:

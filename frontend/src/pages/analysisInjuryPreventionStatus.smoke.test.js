@@ -30,6 +30,30 @@ assert.match(
   'The injury risk card should open the existing injury-risk detail page.',
 );
 
+assert.doesNotMatch(
+  analysisSource,
+  /<span className="analysis-overview-card-kicker">\{t\('analysis\.stitch_injury_prevention_risk_kicker'\)\}<\/span>/,
+  'The combined-risk card should not render the removable risk kicker pill.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /<span className="analysis-overview-card-kicker">\{t\('analysis\.stitch_injury_prevention_soreness_kicker'\)\}<\/span>/,
+  'The soreness card should not render the removable daily check-in kicker pill.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /<span className="analysis-overview-card-kicker">\{t\('analysis\.stitch_injury_prevention_acwr_kicker'\)\}<\/span>/,
+  'The ACWR card should not render the removable load-balance kicker pill.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /<span className="analysis-overview-card-kicker" style=\{\{ marginTop: '14px' \}\}>\{t\('analysis\.stitch_injury_prevention_coach_kicker'\)\}<\/span>/,
+  'The coach-advice card should not render the removable kicker pill.',
+);
+
 assert.match(
   analysisSource,
   /Card 2: ACWR Monitor[\s\S]*?<button[\s\S]*?analysis-overview-card--interactive[\s\S]*?onClick=\{\(\) => navigate\('\/analysis\/load-balance'\)\}[\s\S]*?stitch_injury_prevention_acwr_title[\s\S]*?<\/button>/,

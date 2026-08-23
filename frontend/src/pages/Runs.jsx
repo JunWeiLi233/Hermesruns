@@ -1,44 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
+import { buildRunDetailPath } from '../utils/runRoute';
 
-const RUNS_CACHE_TTL_MS = 86400000;
 const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
 const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
-
-function readRunsCache(email) {
-  try {
-    const raw = localStorage.getItem(`hermes_runs_v1_${email}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.cachedAt || Date.now() - parsed.cachedAt > RUNS_CACHE_TTL_MS) return null;
-    return parsed;
-  } catch { return null; }
-}
-
-// Cache only the fields run cards render. Full activity objects (with
-// routePreview point arrays) blow past the 5 MB localStorage quota; cards
-// lazily fetch route previews via routePreviewFallbacks when missing.
-const RUNS_CACHE_RUN_LIMIT = 500;
-const slimRunForRunsCache = (run) => ({
-  id: run?.id,
-  name: run?.name,
-  startTime: run?.startTime,
-  startDate: run?.startDate,
-  distanceKm: run?.distanceKm,
-  distanceMeters: run?.distanceMeters,
-  movingTimeSeconds: run?.movingTimeSeconds,
-  provider: run?.provider,
-});
-
-function writeRunsCache(email, runs, profile, stravaStatus) {
-  try {
-    const cachedRuns = Array.isArray(runs)
-      ? runs.slice(0, RUNS_CACHE_RUN_LIMIT).map(slimRunForRunsCache)
-      : [];
-    localStorage.setItem(`hermes_runs_v1_${email}`, JSON.stringify({ runs: cachedRuns, profile, stravaStatus, cachedAt: Date.now() }));
-  } catch { /* ignore */ }
-}
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
 import AppIcon from '../components/AppIcon';
@@ -52,6 +18,10 @@ import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
+import { createRoutePreviewRequestCoordinator } from './runsRequestCoordinator';
+import { canonicalizeRunsCacheEmail, createRunsLoadGeneration, invalidateRunsCache, readRunsCache, writeRunsCache } from './runsCache';
+import { invalidateHeatmapCache } from './heatmapCache';
+import { captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
 
 const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
@@ -60,7 +30,7 @@ function localizeStravaSyncMessage(message, t) {
   if (!raw) return '';
   if (raw === 'Strava sync started') return t('profile.strava_sync_started');
   if (/No Strava/i.test(raw)) return t('profile.strava_sync_not_linked');
-  if (/application.*inactive|inactive.*application|api app/i.test(raw)) return t('profile.strava_sync_app_inactive');
+  if (/application.*inactive|inactive.*application|api app/i.test(raw)) return t('settings.stitch_strava_active');
   if (/invalid|expired|relink/i.test(raw)) return t('profile.strava_sync_relink_required');
   return raw;
 }
@@ -467,11 +437,16 @@ const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE * 3;
 function normalizeRoutePreviewBatch(data) {
   const previewUpdates = {};
   const bboxUpdates = {};
-  if (!Array.isArray(data)) return { previewUpdates, bboxUpdates };
+  const terminalIds = [];
+  if (!Array.isArray(data)) return { previewUpdates, bboxUpdates, terminalIds };
 
   data.forEach((entry) => {
     const activityId = Number(entry?.activityId);
     if (!Number.isFinite(activityId)) return;
+    const availability = String(entry?.availability || '').toUpperCase();
+    if (availability === 'READY' || availability === 'NO_ROUTE' || availability === 'DEFERRED') {
+      terminalIds.push(activityId);
+    }
     const pointCount = Number(entry?.pointCount);
     const points = Array.isArray(entry?.points)
       ? entry.points
@@ -495,7 +470,7 @@ function normalizeRoutePreviewBatch(data) {
     }
   });
 
-  return { previewUpdates, bboxUpdates };
+  return { previewUpdates, bboxUpdates, terminalIds };
 }
 
 async function fetchRoutePreviewBatch(ids) {
@@ -504,7 +479,7 @@ async function fetchRoutePreviewBatch(ids) {
       .map((id) => Number(id))
       .filter((id) => Number.isFinite(id) && id > 0)
     : [];
-  if (normalizedIds.length === 0) return { previewUpdates: {}, bboxUpdates: {} };
+  if (normalizedIds.length === 0) return { previewUpdates: {}, bboxUpdates: {}, terminalIds: [] };
   const params = new URLSearchParams({ ids: normalizedIds.join(',') });
   const data = await apiJson(`/api/activities/route-previews?${params.toString()}`);
   return normalizeRoutePreviewBatch(data);
@@ -545,7 +520,7 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onD
           title={t('runs.delete')}
           onClick={(e) => { e.stopPropagation(); onDelete(run); }}
         >
-          <AppIcon name="delete_sweep" />
+          <AppIcon name="close" />
         </button>
       )}
     </div>
@@ -557,7 +532,7 @@ const Runs = memo(function Runs() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [allRuns, setAllRuns] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -590,7 +565,16 @@ const Runs = memo(function Runs() {
   // change when they deliberately fold a month. Using a Set of keys keeps
   // the state O(1) per toggle and short-circuits on the empty default.
   const [collapsedMonthKeys, setCollapsedMonthKeys] = useState(() => new Set());
-  const routePreviewBatchInflightRef = useRef(new Set());
+  const routePreviewRequestCoordinatorRef = useRef(null);
+  if (routePreviewRequestCoordinatorRef.current === null) {
+    routePreviewRequestCoordinatorRef.current = createRoutePreviewRequestCoordinator();
+  }
+  const runsLoadGenerationRef = useRef(null);
+  if (runsLoadGenerationRef.current === null) {
+    runsLoadGenerationRef.current = createRunsLoadGeneration();
+  }
+  const runsIdentity = canonicalizeRunsCacheEmail(email);
+  const runsMetadataRef = useRef({ identity: null, profile: null, stravaStatus: null });
   const loadMoreSentinelRef = useRef(null);
 
   const toggleMonthFold = useCallback((monthKey) => {
@@ -602,46 +586,86 @@ const Runs = memo(function Runs() {
     });
   }, []);
 
+  const resetRoutePreviewState = useCallback(() => {
+    routePreviewRequestCoordinatorRef.current.reset();
+  }, []);
+
+  const requestRoutePreviews = useCallback(async (candidateIds, { isCurrent = () => true } = {}) => {
+    if (!isCurrent()) return;
+    const requestGeneration = routePreviewRequestCoordinatorRef.current.getGeneration();
+    let retryableIds = await routePreviewRequestCoordinatorRef.current.waitFor(candidateIds);
+    if (!isCurrent() || routePreviewRequestCoordinatorRef.current.getGeneration() !== requestGeneration || retryableIds.length === 0) return;
+
+    let claim = routePreviewRequestCoordinatorRef.current.claimWithToken(retryableIds);
+    while (claim.ids.length !== retryableIds.length) {
+      const pendingIds = [...retryableIds];
+      routePreviewRequestCoordinatorRef.current.release(claim.ids, claim.token);
+      retryableIds = await routePreviewRequestCoordinatorRef.current.waitFor(pendingIds);
+      if (!isCurrent() || routePreviewRequestCoordinatorRef.current.getGeneration() !== requestGeneration || retryableIds.length === 0) return;
+      claim = routePreviewRequestCoordinatorRef.current.claimWithToken(retryableIds);
+    }
+
+    try {
+      const { previewUpdates, bboxUpdates, terminalIds = [] } = await fetchRoutePreviewBatch(claim.ids);
+      if (!routePreviewRequestCoordinatorRef.current.isCurrent(claim.token) || !isCurrent()) {
+        routePreviewRequestCoordinatorRef.current.release(claim.ids, claim.token);
+        return;
+      }
+      if (Object.keys(previewUpdates).length > 0) {
+        setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
+      }
+      if (Object.keys(bboxUpdates).length > 0) {
+        setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
+      }
+      routePreviewRequestCoordinatorRef.current.settle([...claim.ids, ...terminalIds], claim.token);
+    } catch {
+      // Preserve the current retry behavior: only transport/server failures
+      // release these IDs; successful NO_ROUTE/DEFERRED responses stay terminal.
+      routePreviewRequestCoordinatorRef.current.release(claim.ids, claim.token);
+    }
+  }, []);
+
   const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
-    if (fromCache) {
-      const hit = readRunsCache(email);
-      if (hit) {
-        const sorted = [...hit.runs].sort((a, b) => runDate(b) - runDate(a));
-        setAllRuns(sorted);
-        setProfile(hit.profile);
-        setStravaStatus(hit.stravaStatus);
-        setLoadState('ready');
-        const preloadIds = sorted
-          .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
-          .map((run) => run?.id)
-          .filter((id) => Number.isFinite(Number(id)));
-        if (preloadIds.length > 0) {
-          fetchRoutePreviewBatch(preloadIds)
-            .then(({ previewUpdates, bboxUpdates }) => {
-              if (Object.keys(previewUpdates).length > 0) {
-                setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
-              }
-              if (Object.keys(bboxUpdates).length > 0) {
-                setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
-              }
-            })
-            .catch(() => {
-              // Ignore cache-prewarm failures and let the visible-run effect retry.
-            });
-        }
+    const loadToken = runsLoadGenerationRef.current.begin();
+    const isCurrentLoad = () => runsLoadGenerationRef.current.isCurrent(loadToken);
+    const cachedHit = readRunsCache(localStorage, email, Date.now());
+
+    if (fromCache && cachedHit && isCurrentLoad()) {
+      const sorted = [...cachedHit.runs].sort((a, b) => runDate(b) - runDate(a));
+      setAllRuns(sorted);
+      setProfile(cachedHit.profile);
+      setStravaStatus(cachedHit.stravaStatus);
+      if (runsIdentity) {
+        runsMetadataRef.current.profile = cachedHit.profile;
+        runsMetadataRef.current.stravaStatus = cachedHit.stravaStatus;
+      }
+      setLoadState('ready');
+      const preloadIds = sorted
+        .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
+        .map((run) => run?.id)
+        .filter((id) => Number.isFinite(Number(id)));
+      if (preloadIds.length > 0) {
+        requestRoutePreviews(preloadIds, { isCurrent: isCurrentLoad });
       }
     }
+
+    if (!isCurrentLoad()) return;
 
     // Fire the three calls in parallel but apply each result as it resolves,
     // so the (heavy) runs payload paints as soon as it arrives instead of
     // waiting for /api/profile/me and /api/auth/strava/status to finish too.
     let latestRuns = null;
-    let latestProfile = null;
-    let latestStrava = null;
+    let latestProfile = runsIdentity
+      ? (runsMetadataRef.current.profile ?? cachedHit?.profile ?? null)
+      : (cachedHit?.profile ?? null);
+    let latestStrava = runsIdentity
+      ? (runsMetadataRef.current.stravaStatus ?? cachedHit?.stravaStatus ?? null)
+      : (cachedHit?.stravaStatus ?? null);
     let runsFailed = false;
 
     const runsPromise = apiJson('/api/activities')
       .then((data) => {
+        if (!isCurrentLoad()) return;
         const list = Array.isArray(data) ? data : [];
         list.sort((a, b) => runDate(b) - runDate(a));
         latestRuns = list;
@@ -652,21 +676,11 @@ const Runs = memo(function Runs() {
         setAllRuns(list);
         setLoadState('ready');
         if (preloadIds.length > 0) {
-          fetchRoutePreviewBatch(preloadIds)
-            .then(({ previewUpdates, bboxUpdates }) => {
-              if (Object.keys(previewUpdates).length > 0) {
-                setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
-              }
-              if (Object.keys(bboxUpdates).length > 0) {
-                setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
-              }
-            })
-            .catch(() => {
-              // Visible-run effect retries preview hydration; do not block run history paint.
-            });
+          requestRoutePreviews(preloadIds, { isCurrent: isCurrentLoad });
         }
       })
       .catch((err) => {
+        if (!isCurrentLoad()) return;
         runsFailed = true;
         if (err && err.message !== 'Unauthorized') {
           setLoadState((prev) => (prev === 'ready' ? prev : 'error'));
@@ -674,21 +688,45 @@ const Runs = memo(function Runs() {
       });
 
     const profilePromise = apiJson('/api/profile/me')
-      .then((data) => { setProfile(data); latestProfile = data; })
+      .then((data) => {
+        if (!isCurrentLoad() || data == null) return;
+        setProfile(data);
+        if (runsIdentity) runsMetadataRef.current.profile = data;
+        latestProfile = data;
+      })
       .catch(() => {});
 
     const stravaPromise = apiJson('/api/auth/strava/status')
-      .then((data) => { setStravaStatus(data); latestStrava = data; })
+      .then((data) => {
+        if (!isCurrentLoad() || data == null) return;
+        setStravaStatus(data);
+        if (runsIdentity) runsMetadataRef.current.stravaStatus = data;
+        latestStrava = data;
+      })
       .catch(() => {});
 
     await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
-    if (!runsFailed && latestRuns) {
-      writeRunsCache(email, latestRuns, latestProfile, latestStrava);
+    if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
+      writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
     }
-  }, [email]);
+  }, [email, requestRoutePreviews, runsIdentity]);
+
+  const refreshRuns = useCallback(() => {
+    runsLoadGenerationRef.current.invalidate();
+    resetRoutePreviewState();
+    setRoutePreviewFallbacks({});
+    setRouteBboxes({});
+    return loadRuns();
+  }, [loadRuns, resetRoutePreviewState]);
+
+  useEffect(() => {
+    runsLoadGenerationRef.current.invalidate();
+    runsMetadataRef.current = { identity: runsIdentity, profile: null, stravaStatus: null };
+  }, [runsIdentity]);
 
   useEffect(() => {
     if (!isAuthenticated) {
+      runsLoadGenerationRef.current.invalidate();
       navigate('/login');
       return;
     }
@@ -699,14 +737,14 @@ const Runs = memo(function Runs() {
     if (!isAuthenticated) return undefined;
 
     function handleStravaSyncFinished() {
-      loadRuns();
+      refreshRuns();
     }
 
     window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
     return () => {
       window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
     };
-  }, [isAuthenticated, loadRuns]);
+  }, [isAuthenticated, refreshRuns]);
 
   const pollManualStravaSyncCompletion = useCallback(async () => {
     const deadlineMs = Date.now() + RUNS_STRAVA_SYNC_POLL_DEADLINE_MS;
@@ -720,11 +758,15 @@ const Runs = memo(function Runs() {
         break;
       }
 
-      setStravaStatus((current) => ({
-        ...(current || {}),
-        linked: current?.linked ?? true,
-        syncStatus,
-      }));
+      setStravaStatus((current) => {
+        const next = {
+          ...(current || {}),
+          linked: current?.linked ?? true,
+          syncStatus,
+        };
+        if (runsIdentity) runsMetadataRef.current.stravaStatus = next;
+        return next;
+      });
 
       if (syncStatus?.active) {
         sawActiveSync = true;
@@ -735,7 +777,7 @@ const Runs = memo(function Runs() {
         || (sawActiveSync && !syncStatus?.active);
 
       if (finished) {
-        await loadRuns();
+        await refreshRuns();
         if (syncStatus?.status === 'FAILED') {
           setIntegrationNotice(localizeStravaSyncMessage(syncStatus.error, t) || t('profile.strava_sync_failed'));
           setIntegrationNoticeTone('alert');
@@ -749,9 +791,9 @@ const Runs = memo(function Runs() {
       await new Promise((resolve) => window.setTimeout(resolve, RUNS_STRAVA_SYNC_POLL_INTERVAL_MS));
     }
 
-    await loadRuns();
+    await refreshRuns();
     return null;
-  }, [loadRuns, t]);
+  }, [refreshRuns, runsIdentity, t]);
 
   async function handleStravaConnect() {
     setStravaLinking(true);
@@ -794,7 +836,7 @@ const Runs = memo(function Runs() {
       const response = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
       if (!response.ok) throw new Error();
       setImportModalOpen(false);
-      loadRuns();
+      refreshRuns();
     } catch {
       setImportStatus(t('profile.import_failed'));
     }
@@ -872,7 +914,7 @@ const Runs = memo(function Runs() {
 
   useEffect(() => {
     setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
-  }, [activeMode, allRuns.length, runsSort, searchQuery, selectedMonth, selectedYear]);
+  }, [activeMode, runsSort, searchQuery, selectedMonth, selectedYear]);
 
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
@@ -993,7 +1035,7 @@ const Runs = memo(function Runs() {
 
   function openRun(run) {
     sessionStorage.setItem('hermes_selected_run', JSON.stringify(run));
-    navigate(`/run/${run.id || ''}`);
+    navigate(buildRunDetailPath(run.id || ''));
   }
 
   function confirmDeleteRun(run) {
@@ -1009,9 +1051,12 @@ const Runs = memo(function Runs() {
   async function handleDeleteRun() {
     const run = deleteTarget;
     if (!run || deleting) return;
+    const deleteScrollPosition = captureRunsScrollPosition(window);
+    runsLoadGenerationRef.current.invalidate();
     setDeleting(true);
     try {
       await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
+      resetRoutePreviewState();
       // Optimistically remove from state + clear per-run caches.
       setAllRuns(prev => prev.filter(r => r.id !== run.id));
       setRoutePreviewFallbacks(prev => {
@@ -1027,7 +1072,10 @@ const Runs = memo(function Runs() {
         return next;
       });
       try { localStorage.removeItem(`${ROUTE_BBOX_CACHE_PREFIX}${run.id}`); } catch { /* ignore */ }
+      await invalidateHeatmapCache(email);
+      invalidateRunsCache(localStorage, email);
       setDeleteTarget(null);
+      restoreRunsScrollPosition(window, deleteScrollPosition);
     } catch {
       setIntegrationNotice(t('runs.delete_failed'));
       setIntegrationNoticeTone('alert');
@@ -1046,13 +1094,13 @@ const Runs = memo(function Runs() {
       setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
     }, {
       root: null,
-      rootMargin: '240px 0px 360px',
+      rootMargin: getRunsLoadMoreRootMargin(window.innerHeight),
       threshold: 0.01,
     });
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [filteredRuns.length, hasMoreRuns, loadState]);
+  }, [filteredRuns.length, hasMoreRuns, loadState, visibleRunsCount]);
 
   useEffect(() => {
     if (!Array.isArray(routePreviewRuns) || routePreviewRuns.length === 0) return undefined;
@@ -1072,7 +1120,7 @@ const Runs = memo(function Runs() {
     // 2. Batch-fetch preview points + bbox for the visible window plus a short
     // lookahead so runners do not watch cards visibly "upgrade" while scrolling.
     const pendingRuns = routePreviewRuns.filter((run) => {
-      if (!run?.id || routePreviewBatchInflightRef.current.has(run.id)) return false;
+      if (!run?.id) return false;
       const hasPointPreview = run.id in routePreviewFallbacks;
       const hasBbox = run.id in routeBboxes || !!readBboxFromPreview(routePreviewFallbacks[run.id] || run.routePreview);
       return !hasPointPreview || !hasBbox;
@@ -1081,32 +1129,11 @@ const Runs = memo(function Runs() {
 
     let cancelled = false;
     const pendingIds = pendingRuns.map((run) => run.id);
-    pendingIds.forEach((id) => routePreviewBatchInflightRef.current.add(id));
-
-    async function loadRoutePreviewBatch() {
-      try {
-        const { previewUpdates, bboxUpdates } = await fetchRoutePreviewBatch(pendingIds);
-        if (!cancelled) {
-          if (Object.keys(previewUpdates).length > 0) {
-            setRoutePreviewFallbacks((current) => ({ ...current, ...previewUpdates }));
-          }
-          if (Object.keys(bboxUpdates).length > 0) {
-            setRouteBboxes((current) => ({ ...current, ...bboxUpdates }));
-          }
-        }
-      } catch {
-        // Leave state untouched on transport/server failure so the next visible-run
-        // pass can retry instead of freezing a card into legacy preview mode.
-      } finally {
-        pendingIds.forEach((id) => routePreviewBatchInflightRef.current.delete(id));
-      }
-    }
-
-    loadRoutePreviewBatch();
+    requestRoutePreviews(pendingIds, { isCurrent: () => !cancelled });
     return () => {
       cancelled = true;
     };
-  }, [routePreviewRuns, routeBboxes, routePreviewFallbacks]);
+  }, [requestRoutePreviews, routePreviewRuns, routeBboxes, routePreviewFallbacks]);
 
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
@@ -1454,19 +1481,42 @@ const Runs = memo(function Runs() {
                 <article className="runs-profile-signal runs-profile-signal--count">
                   <span>{t('runs.full_history')}</span>
                   <strong>{countText}</strong>
-                  <p>{t('runs.full_history_copy')}</p>
                 </article>
                 <article className="runs-profile-signal">
-                  <span>{t('runs.latest_source')}</span>
-                  <strong>{latestSource}</strong>
-                  <p>{t('runs.latest_source_note')}</p>
-                </article>
+                      <span>{t('runs.latest_source')}</span>
+                      <strong>{latestSource}</strong>
+                    </article>
                 <article className={`runs-profile-signal runs-profile-signal--status${stravaLinked ? ' is-live' : ' is-muted'}`}>
                   <span>{t(stravaLinked ? 'runs.awaiting_error_code_linked' : 'runs.awaiting_error_code_disconnected')}</span>
                   <strong>{stravaLinked ? t('runs.awaiting_pipeline_strava') : t('runs.awaiting_pipeline_manual')}</strong>
-                  <p>{awaitingStatus}</p>
                 </article>
               </div>
+            </section>
+            <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
+              <section className="recent-runs-stats-grid">
+                <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
+                <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
+                <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
+              </section>
+              {filteredRuns.length > 0 ? (
+                <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
+                  <article className="recent-runs-insight-card recent-runs-insight-card--primary">
+                    <span>{t('runs.stitch_pattern_title')}</span>
+                    <strong>{t('runs.insight_runs_count', { count: filteredRuns.length })}</strong>
+                    <p>{t('runs.insight_active_days', { count: activeDaysCount })}</p>
+                  </article>
+                  <article className="recent-runs-insight-card">
+                    <span>{t('runs.insight_fastest_label')}</span>
+                    <strong>{fastestRun ? formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang) : '--'}</strong>
+                    <p>{fastestRun?.run?.name || t('runs.default_run_name')}</p>
+                  </article>
+                  <article className="recent-runs-insight-card">
+                    <span>{t('runs.insight_longest_label')}</span>
+                    <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
+                    <p>{longestRun?.name || t('runs.default_run_name')}</p>
+                  </article>
+                </section>
+              ) : null}
             </section>
             <section id="recent-runs-filters" className="recent-runs-chip-stack runs-profile-workbench">
               <div className="recent-runs-search-bar">
@@ -1500,32 +1550,6 @@ const Runs = memo(function Runs() {
                 </div>
                 <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
               </div>
-            </section>
-            <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
-              <section className="recent-runs-stats-grid">
-                <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
-              </section>
-              {filteredRuns.length > 0 ? (
-                <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
-                  <article className="recent-runs-insight-card recent-runs-insight-card--primary">
-                    <span>{t('runs.stitch_pattern_title')}</span>
-                    <strong>{t('runs.insight_runs_count', { count: filteredRuns.length })}</strong>
-                    <p>{t('runs.insight_active_days', { count: activeDaysCount })}</p>
-                  </article>
-                  <article className="recent-runs-insight-card">
-                    <span>{t('runs.insight_fastest_label')}</span>
-                    <strong>{fastestRun ? formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang) : '--'}</strong>
-                    <p>{fastestRun?.run?.name || t('runs.default_run_name')}</p>
-                  </article>
-                  <article className="recent-runs-insight-card">
-                    <span>{t('runs.insight_longest_label')}</span>
-                    <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
-                    <p>{longestRun?.name || t('runs.default_run_name')}</p>
-                  </article>
-                </section>
-              ) : null}
             </section>
             <section className="recent-runs-card-list" aria-label={t('runs.full_history')}>
           {loadState === 'loading' ? <div className="recent-runs-status recent-runs-status--loading">{t('runs.loading')}</div> : null}
@@ -1584,7 +1608,15 @@ const Runs = memo(function Runs() {
                 </div>
                 {hasMoreRuns ? (
                   <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
-                    <span>{t('runs.loading')}</span>
+                    {typeof IntersectionObserver === 'undefined' ? (
+                      <button
+                        type="button"
+                        className="recent-runs-load-more"
+                        onClick={() => setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length))}
+                      >
+                        {t('runs.load_more')}
+                      </button>
+                    ) : <span>{t('runs.loading')}</span>}
                   </div>
                 ) : null}
               </>
@@ -1601,6 +1633,7 @@ const Runs = memo(function Runs() {
         isOpen={!!deleteTarget}
         onClose={closeDeleteModal}
         title={t('runs.delete_title')}
+        icon={<AppIcon name="delete_sweep" className="runs-delete-modal-icon" />}
         shellClassName="runs-delete-modal-shell"
         cardClassName="runs-delete-modal-card"
       >

@@ -16,8 +16,20 @@ assert.equal(calendar.weeks.at(-1).days.at(-1).date.getDay(), 0, 'The graph shou
 
 const mayTwelfth = calendar.weeks.flatMap((week) => week.days).find((day) => day.key === '2025-05-12');
 assert.equal(mayTwelfth?.count, 2, 'Runs completed on the same date should be accumulated in one contribution cell.');
-assert.equal(mayTwelfth?.level, 3, 'Two runs in one day should receive a visibly stronger intensity level.');
+assert.equal(mayTwelfth?.level, 2, 'A 9.5 km day should receive the middle distance intensity level.');
 assert.equal(mayTwelfth?.distanceKm, 9.5, 'Runs completed on the same date should expose their total distance in km.');
+
+const distanceCalendar = buildRunActivityCalendar([
+  { id: 'short', startTime: '2025-05-12T07:00:00', distanceKm: 4 },
+  { id: 'medium', startTime: '2025-05-13T07:00:00', distanceKm: 8 },
+  { id: 'long', startTime: '2025-05-14T07:00:00', distanceKm: 14 },
+  { id: 'longest', startTime: '2025-05-15T07:00:00', distanceKm: 22 },
+], { now });
+const distanceLevels = distanceCalendar.weeks
+  .flatMap((week) => week.days)
+  .filter((day) => day.count > 0)
+  .map((day) => day.level);
+assert.deepEqual(distanceLevels, [1, 2, 3, 4], 'Longer daily distances should progress from lighter to darker green levels.');
 
 const futureDay = calendar.weeks.flatMap((week) => week.days).find((day) => day.key === '2025-05-16');
 assert.equal(futureDay?.count, 0, 'Future activities must not be rendered as completed run activity.');

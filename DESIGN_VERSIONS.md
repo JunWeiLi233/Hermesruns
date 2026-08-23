@@ -1,5 +1,1327 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-22-005
+Date: 2026-08-22
+Surface: Coach Insight today-training plan
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `frontend/src/pages/analysisInsightDataPreservation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Limited the “本天训练计划” panel to the primary today session and removed the three secondary weekly sessions from this panel.
+Why: The panel was labeled as today’s plan but rendered quality, long-run, and support sessions for the rest of the week.
+Preserve list: Today session slot, title, target, rationale, Today Run CTA, coach model data, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-22-004`
+
+### Version: DV-2026-08-22-004
+Date: 2026-08-22
+Surface: Coach Insight daily plan context
+Files: `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/i18n/locales/en/components.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the Coach Insight plan heading and supporting copy from a weekly window to today’s training plan.
+Why: The panel presents the next actionable session, so weekly wording did not match the visible content or recommendation context.
+Preserve list: Plan cards, session data, schedule behavior, navigation, Coach Insight evidence and ACWR surfaces, localization parity, accessibility, responsive behavior, themes, and unrelated routes.
+Rollback target: `DV-2026-08-22-003`
+
+### Version: DV-2026-08-22-003
+Date: 2026-08-22
+Surface: Coach Insight recent-training title strip
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachRecentPanelStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the recent-training panel surface and kept only the title container transparent, preserving the “最近训练” heading and the row panels beneath it.
+Why: The previous strip fix removed the panel background too broadly; the requested change applies only to the title strip.
+Preserve list: Recent-training title, row backgrounds and spacing, recent-run data, navigation, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-22-002`
+
+### Version: DV-2026-08-22-002
+Date: 2026-08-22
+Surface: Coach Insight recent-training panel strip
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachRecentPanelStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the recent-training panel's background, border, and shadow so its heading sits directly on the Coach Insight surface while individual training rows retain their own panels.
+Why: The recent-training heading inherited a full-width panel strip that visually separated the text from the surrounding Coach Insight layout.
+Preserve list: Recent-training copy and data, row backgrounds, navigation, spacing, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-22-001`
+
+### Version: DV-2026-08-22-001
+Date: 2026-08-22
+Surface: Coach Insight reasons card surface
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachReasonsSpacing.smoke.test.js`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the Coach Insight reasons card background while making only the “本周计划依据” title and description panel transparent.
+Why: The previous strip-removal rule made the entire reasons card transparent instead of removing only the nested panel strip.
+Preserve list: Reason copy and ordering, light-grey evidence rows, numbering, Coach Insight ACWR chart, tooltip behavior, performance window toggle, decision surface, recent sessions, plan sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-130`
+
+### Version: DV-2026-08-21-130
+Date: 2026-08-21
+Surface: Coach Insight evidence reason grids
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restyled the four Coach Insight reason rows with a light-grey fill, no border, and no shadow.
+Why: The evidence rows still inherited border-led glass styling after the phase cards were simplified.
+Preserve list: Reason copy and ordering, generated values, Coach Insight ACWR chart, tooltip behavior, performance window toggle, decision surface, recent sessions, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-129`
+
+### Version: DV-2026-08-21-129
+Date: 2026-08-21
+Surface: Coach Insight reason grids
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachReasonsSpacing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added 8px outer padding and row gaps to the four Coach Insight reason grids so each item has clear separation from its neighbors and the support card edge.
+Why: The four evidence rows were packed together with no route-level spacing, making the grid read as one continuous strip.
+Preserve list: Reason copy and ordering, generated values, numbering, card hierarchy, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-128`
+
+### Version: DV-2026-08-21-128
+Date: 2026-08-21
+Surface: Coach Insight phase grid cards
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restyled the Coach Insight phase cards with a light-grey fill, no border, and no shadow.
+Why: The phase cards had visible coral outlines that made the grid feel heavier than the surrounding Profile surface.
+Preserve list: Phase labels and active state, Coach Insight ACWR chart, tooltip behavior, performance window toggle, decision surface, recent sessions, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-127`
+
+### Version: DV-2026-08-21-127
+Date: 2026-08-21
+Surface: Coach Insight phase grid panel strip
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inherited themed strip from the Coach Insight phase grid while preserving the title, description, and individual phase chips.
+Why: The phase grid’s header area appeared as a separate beige panel strip instead of sharing the surrounding card surface.
+Preserve list: Phase labels and active state, Coach Insight ACWR chart, tooltip behavior, performance window toggle, decision surface, recent sessions, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-126`
+
+### Version: DV-2026-08-21-126
+Date: 2026-08-21
+Surface: Coach Insight recent-session runner icon
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachRunnerIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the outlined `directions_run` glyph in Coach Insight recent-session cards with the shared solid `load_balance_runner` icon already used by the Injury Risk surface.
+Why: The recent-session cards were the remaining analysis surface using the older runner glyph instead of the repository's current runner icon treatment.
+Preserve list: Recent-session data, navigation, zone color treatment, card layout, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-125`
+
+### Version: DV-2026-08-21-125
+Date: 2026-08-21
+Surface: Coach Insight ACWR performance copy
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant Coach Insight phase title and description above the ACWR chart and expanded the chart to the full performance-card width.
+Why: The “推进兑现周” copy duplicated the Coach decision context and occupied valuable chart space on the Coach Insight page.
+Preserve list: ACWR chart data, tooltip behavior, performance window toggle, readiness ring, decision surface, recent sessions, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-124`
+
+### Version: DV-2026-08-21-124
+Date: 2026-08-21
+Surface: Coach Insight ACWR chart tooltip parity
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachAcwrChart.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the Coach Insight tooltip to the Load Balance reference with the wider 168px card, left-aligned date, visible coral header marker, divider, and right-aligned metric values.
+Why: The previous Coach tooltip used a centered header and hidden marker, so it did not visually match the requested reference tooltip.
+Preserve list: ACWR values, chart hover behavior, 7-day/28-day selection, accessibility history, localization, dark-theme behavior, responsive behavior, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-123`
+
+### Version: DV-2026-08-21-123
+Date: 2026-08-21
+Surface: Coach Insight performance stat cards
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `frontend/src/pages/analysisCoachLoadBalanceParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the actual 7-day volume, 28-day volume, and current VDOT stat row rendered inside the Coach Insight performance panel, including its unused model data.
+Why: The earlier strip removal targeted a different legacy container; these cards were still emitted through `coachSystem.statCards` inside the performance card.
+Preserve list: Coach Insight title/subtitle, readiness ring, decision CTA, ACWR chart, performance panel, recent sessions, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-122`
+
+### Version: DV-2026-08-21-122
+Date: 2026-08-21
+Surface: Coach Insight forecast strip cache guard
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `frontend/src/pages/analysisCoachLoadBalanceParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the Coach Insight forecast strip removed from JSX and added a route-scoped `display: none` guard so stale cached chunks cannot remount its legacy markup visually.
+Why: The served source had no forecast strip, but the screenshot showed the old cards, indicating an older cached route chunk could still be mounted in the browser.
+Preserve list: Coach Insight header, readiness ring, decision surface, ACWR chart, plan/evidence sections, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-121`
+
+### Version: DV-2026-08-21-121
+Date: 2026-08-21
+Surface: Coach Insight ACWR chart tooltip
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachAcwrChart.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restyled the Coach ACWR tooltip to match the reference Load Balance treatment with a centered white card, coral outline, centered date header, separator, and acute/chronic metric rows with colored indicators.
+Why: Coach Insight was inheriting the dark Load Balance tooltip surface instead of the requested light tooltip design.
+Preserve list: ACWR values, chart hover behavior, 7-day/28-day selection, accessibility history, localization, dark-theme variables, responsive behavior, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-120`
+
+### Version: DV-2026-08-21-120
+Date: 2026-08-21
+Surface: Coach Insight ACWR performance chart
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachAcwrChart.smoke.test.js`, `frontend/src/pages/analysisCoachWindowToggle.smoke.test.js`, `frontend/src/pages/analysisInsightDataPreservation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the Coach Insight pace/cadence mini-trend with the Load Balance acute/chronic ACWR chart geometry, axes, filled acute series, hover scrubber, and ACWR tooltip while keeping the 7-day/28-day window control.
+Why: Coach Insight was showing a different four-point running trend instead of the ACWR graph used as the analysis load reference.
+Preserve list: Coach Insight decision layout, window control, chart data methodology, Load Balance chart behavior, tooltips, accessibility history, localization, themes, responsive behavior, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-119`
+
+### Version: DV-2026-08-21-119
+Date: 2026-08-21
+Surface: Coach Insight forecast metric strip
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant Coach Insight forecast metric strip containing the 7-day volume, 28-day volume, and current VDOT cards while preserving the page header, readiness ring, decision surface, chart, and evidence sections.
+Why: The three cards duplicated information already available in the Coach Insight decision and evidence areas and crowded the top of the page.
+Preserve list: Coach Insight title/subtitle, readiness ring, key workout CTA, performance chart, recent sessions, plan cards, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-118`
+
+### Version: DV-2026-08-21-118
+Date: 2026-08-21
+Surface: Coach Insight performance window toggle
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachWindowToggle.smoke.test.js`, `frontend/src/pages/analysisInsightDataPreservation.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the static 7-day/28-day labels with accessible buttons that switch the Coach Insight performance chart between bounded recent windows.
+Why: The control was rendered as aria-hidden spans and never changed chart state or data.
+Preserve list: Coach Insight copy, chart styling, tooltip behavior, readiness ring, data calculations outside the selected chart window, navigation, accessibility, themes, responsive behavior, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-117`
+
+### Version: DV-2026-08-21-117
+Date: 2026-08-21
+Surface: Coach Insight hero status chips
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant “你的教练面板” and “当前训练窗口：发力” pills from the Coach Insight hero while preserving the heading, readiness ring, decision surface, and training content.
+Why: The two chips duplicated surrounding context and created visual noise in the Coach Insight header.
+Preserve list: Coach Insight data, heading/subtitle, readiness ring, decision CTA, metrics, evidence, localization, accessibility, responsive behavior, themes, and unrelated analysis routes.
+Rollback target: `DV-2026-08-21-116`
+
+### Version: DV-2026-08-21-116
+Date: 2026-08-21
+Surface: Injury Risk chart tooltip header
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInjuryRiskGraphParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative red marker from the Injury Risk tooltip header while preserving the colored metric indicators below it.
+Why: The header marker added an unnecessary red dot in the tooltip's upper-right corner and did not carry information beyond the chart metric rows.
+Preserve list: Tooltip values, chart interaction, red/blue metric-row markers, positioning bounds, responsive behavior, themes, accessibility, and other analysis routes.
+Rollback target: `DV-2026-08-21-115`
+
+### Version: DV-2026-08-21-115
+Date: 2026-08-21
+Surface: Injury Risk chart tooltip containment
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInjuryRiskGraphParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Bounded the Injury Risk chart tooltip inside the graph by removing the inherited upward transform, clamping its desktop anchor, constraining its width, and switching to inset full-width placement on small screens.
+Why: The legacy tooltip transform double-offset the route-specific position, pushing high-point tooltips above the graph; unconstrained width could also exceed the plot area.
+Preserve list: Injury trend data, hover/scrubber behavior, chart lines, axis labels, metric cards, themes, responsive layout, accessibility, navigation, and other analysis routes.
+Rollback target: `DV-2026-08-21-114`
+
+### Version: DV-2026-08-21-114
+Date: 2026-08-21
+Surface: Coach Insight Load Balance parity redesign
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachLoadBalanceParity.smoke.test.js`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Recomposed Coach Insight around the Load Balance Profile anatomy with a dark decision hero, right-side training window, aligned metric strip, and route-scoped evidence rhythm.
+Why: Coach Insight needed the same clear decision-first hierarchy and page spacing as Load Balance while retaining Coach-specific data and actions.
+Preserve list: Coach Insight data, copy, readiness ring, chart/tooltips, plan/session navigation, `/today-run`, localization, accessibility, themes, responsive behavior, Load Balance selectors, and unrelated routes.
+Rollback target: `DV-2026-08-21-113`
+
+### Version: DV-2026-08-21-113
+Date: 2026-08-21
+Surface: Injury Risk recent-run runner icon
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisInjuryRunnerIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reused the dedicated `load_balance_runner` icon in Injury Risk recent-run cards while preserving each card's existing zone color.
+Why: The Injury Risk cards used the older outlined runner icon instead of the clearer filled runner silhouette already established on Load Balance.
+Preserve list: Injury signal data, zone colors, card layout, interactions, themes, responsive behavior, navigation, and accessibility.
+Rollback target: `DV-2026-08-21-112`
+
+### Version: DV-2026-08-21-112
+Date: 2026-08-21
+Surface: Injury Risk trend graph point geometry
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisTrendPointGeometry.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rendered trend points as fixed-size CSS circles positioned over the stretched SVG plot.
+Why: The chart intentionally uses `preserveAspectRatio="none"` for the line layout, which stretched SVG circle markers into ovals.
+Preserve list: Trend lines, area fill, tooltip interaction, chart coordinates, labels, responsive layout, themes, and data behavior.
+Rollback target: `DV-2026-08-21-111`
+
+### Version: DV-2026-08-21-111
+Date: 2026-08-21
+Surface: Load Balance recent-run runner icon source geometry
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/loadBalanceRunnerIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the custom runner approximation with the official Font Awesome 6 Free Solid `person-running` path, centered into the existing 24x24 icon canvas.
+Why: The requested reference uses the recognizable Font Awesome silhouette and the earlier custom path did not match its proportions closely enough.
+Preserve list: Load Balance-only scope, current-color theming, row interaction, zone-specific icons, shared `directions_run` consumers, tile sizing, themes, responsive behavior, navigation, and accessibility.
+Rollback target: `DV-2026-08-21-110`
+Notes: The copied icon geometry is attributed to Font Awesome under CC BY 4.0.
+
+### Version: DV-2026-08-21-110
+Date: 2026-08-21
+Surface: Load Balance recent-run runner icon leg geometry
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/loadBalanceRunnerIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Split the lower body into distinct lifted and trailing leg silhouettes so both legs remain visible at the compact sample-row size.
+Why: The first filled runner path only exposed one leg contour, making the icon read as incomplete.
+Preserve list: Head, torso, arm drive, zone-specific icons, shared `directions_run` consumers, colors, tile sizing, themes, responsive behavior, navigation, and accessibility.
+Rollback target: `DV-2026-08-21-109`
+
+### Version: DV-2026-08-21-109
+Date: 2026-08-21
+Surface: Load Balance ACWR trend icon scale
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceRatioStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated ACWR trend icon class, enlarged the triangle to 26px, and shifted it 6px to the right.
+Why: The shared dashboard icon sizing made the triangle look undersized and too close to the `0.00` value.
+Preserve list: ACWR value, trend semantics, color, card layout, spacing outside the icon, responsive behavior, themes, and data wiring.
+Rollback target: `DV-2026-08-21-108`
+
+### Version: DV-2026-08-21-108
+Date: 2026-08-21
+Surface: Load Balance recent-run runner icon
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/loadBalanceRunnerIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a dedicated filled runner silhouette with a lifted knee, trailing leg, and opposing arm drive for generic Load Balance recent-run rows.
+Why: The shared outlined `directions_run` icon read as a running upper body attached to a standing lower body at the small sample-row size.
+Preserve list: Zone-specific icons, shared `directions_run` consumers, Load Balance data, row interaction, colors, tile sizing, themes, responsive behavior, navigation, and accessibility.
+Rollback target: `DV-2026-08-21-107`
+Notes: The new icon uses the existing current-color accent and is scoped to the Load Balance fallback only.
+
+### Version: DV-2026-08-21-107
+Date: 2026-08-21
+Surface: Load Balance ACWR route override
+Files: `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceRatioStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the higher-specificity route override that reintroduced italic styling on the primary ACWR ratio value.
+Why: The shared typography fix was being superseded by the Load Balance profile alignment stylesheet, so the rendered `0.00` remained italic.
+Preserve list: ACWR semantics, trend icon, ratio scale, spacing, responsive behavior, themes, and data wiring.
+Rollback target: `DV-2026-08-21-106`
+
+### Version: DV-2026-08-21-106
+Date: 2026-08-21
+Surface: Load Balance tooltip compatibility publish
+Files: `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisLoadBalanceChartInteraction.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Regenerated the compatibility stylesheet so the published Load Balance tooltip matches the solid-white source design.
+Why: The source and generated runtime stylesheet had diverged, leaving older tooltip text colors available to the served page.
+Preserve list: Tooltip content, hover behavior, chart geometry, marker treatment, layout, themes, responsive behavior, and data wiring.
+Rollback target: `DV-2026-08-21-105`
+Notes: This synchronizes the existing white-tooltip design; it does not alter the chart's data or interaction model.
+
+### Version: DV-2026-08-21-105
+Date: 2026-08-21
+Surface: Load Balance ACWR ratio typography
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisLoadBalanceRatioStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed italic styling from the primary ACWR ratio value so values such as `0.00` render upright.
+Why: The large ratio value was displayed in an unintended italic face that conflicted with the surrounding metric typography.
+Preserve list: ACWR value, trend icon, ratio semantics, spacing, responsive sizing, themes, and data wiring.
+Rollback target: `DV-2026-08-21-104`
+
+### Version: DV-2026-08-21-104
+Date: 2026-08-21
+Surface: Load Balance tooltip text color
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceChartInteraction.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the tooltip date and both load values to solid white, removing the inline acute/chronic color overrides.
+Why: The tooltip information remained difficult to read because its content used mixed gray, red, and blue colors against the dark surface.
+Preserve list: Tooltip content, hover behavior, chart geometry, marker treatment, layout, themes, responsive behavior, and data wiring.
+Rollback target: `DV-2026-08-21-103`
+Notes: Legend colors remain unchanged; only the tooltip content uses the requested all-white treatment.
+
+### Version: DV-2026-08-21-103
+Date: 2026-08-21
+Surface: Load Balance coach decision title cascade hardening
+Files: `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceHeroMedia.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Added a high-specificity Load Balance route rule that keeps the coach decision title white regardless of shared Profile stylesheet order.
+Why: The title remained dark when a shared Profile heading rule won the cascade in the rendered page.
+Preserve list: Coach identity, supporting copy, CTA, card layout, themes, responsive behavior, navigation, and data wiring.
+Rollback target: `DV-2026-08-21-102`
+Notes: The rule is limited to the Load Balance decision h2 and uses the existing dark-card white token.
+
+### Version: DV-2026-08-21-102
+Date: 2026-08-21
+Surface: Load Balance chart interaction readability
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceChartInteraction.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved hover markers outside the plot clip and added explicit light text colors for the dark tooltip surface.
+Why: Zero-valued points were clipped at the chart baseline, while the tooltip inherited low-contrast light-theme text colors.
+Preserve list: Chart data, paths, scale, hover selection, legend colors, tooltip content, layout, themes, responsive behavior, and data wiring.
+Rollback target: `DV-2026-08-21-101`
+Notes: The marker layer remains visually above the baseline without changing the underlying data geometry.
+
+### Version: DV-2026-08-21-101
+Date: 2026-08-21
+Surface: Load Balance coach decision title cascade
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisProfileVisualAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Added a final route-scoped rule that keeps the Load Balance coach decision title white after shared Profile heading styles are applied.
+Why: The shared Profile heading cascade overrode the earlier Load Balance readability rule, leaving the dark-card title nearly invisible.
+Preserve list: Coach identity, supporting copy, CTA, card layout, themes, responsive behavior, navigation, and data wiring.
+Rollback target: `DV-2026-08-21-100`
+Notes: The override is scoped to the Load Balance focus card and does not change other Analysis titles.
+
+### Version: DV-2026-08-21-100
+Date: 2026-08-21
+Surface: Load Balance coach decision text contrast
+Files: `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceHeroMedia.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Set the Elias Brooks identity label and coach decision title to white on the dark Load Balance focus card, including the light-theme route override.
+Why: The dark focus card inherited dark ink for the coach identity and decision title, making both unreadable.
+Preserve list: Coach decision content, supporting copy, CTA, decorative track visual, card layout, themes, responsive behavior, navigation, and data wiring.
+Rollback target: `DV-2026-08-21-99`
+Notes: The change is limited to the two requested text roles and leaves supporting copy muted for hierarchy.
+
+### Version: DV-2026-08-21-99
+Date: 2026-08-21
+Surface: Load Balance chart and ratio card height parity
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisProfileVisualAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Made the Load Balance evidence grid stretch its chart and ratio cards to the same row height.
+Why: The shared Profile evidence grid used `align-items: start`, leaving the ratio card visibly shorter than the chart card.
+Preserve list: Load Balance data, chart, ratio content, card widths, responsive single-column stacking, themes, navigation, and existing metrics.
+Rollback target: `DV-2026-08-21-98`
+Notes: The override is route-scoped and leaves the existing responsive one-column rule intact.
+
+### Version: DV-2026-08-21-98
+Date: 2026-08-21
+Surface: Coach Insight readiness ring
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachReadinessRing.smoke.test.js`, `docs/superpowers/specs/2026-08-13-analysis-coach-insight-profile-redesign.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the Coach Insight CSS conic-gradient dial with a square SVG track and rounded progress arc, keeping the readiness score centered and accessible.
+Why: The old ring combined a 68px flex basis with a 156px height, rendering as a tall ellipse and separating the score from the visual center.
+Preserve list: Readiness score, readiness copy, coach data model, navigation, themes, responsive behavior, and all other Analysis detail routes.
+Rollback target: `DV-2026-08-21-97`
+Notes: The new ring is fixed to a 1:1 aspect ratio with a non-shrinking responsive size (112px mobile, up to 144px desktop).
+
+### Version: DV-2026-08-21-97
+Date: 2026-08-21
+Surface: Realistic Load Balance decision hero
+Files: `frontend/src/assets/generated/load-balance-track.png`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceHeroMedia.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied track photograph as a cropped, gradient-masked hero visual behind the Load Balance coaching decision grid.
+Why: The decision surface needed a grounded running context and more realistic depth without competing with the coach guidance or training-window copy.
+Preserve list: Load Balance copy, chart and metric data, coach action, contrast in light and dark themes, responsive stacking, navigation, and accessibility behavior.
+Rollback target: `DV-2026-08-21-96`
+Notes: The photo is decorative with an empty alt attribute, bundled locally, and reduced in opacity on narrow screens.
+
+### Version: DV-2026-08-21-96
+Date: 2026-08-21
+Surface: Circular Load Balance readiness ring
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisProfileVisualAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Locked the Load Balance readiness ring to equal dimensions, a fixed flex basis, and a 1:1 aspect ratio with a circular border radius.
+Why: The header flex row could compress the ring’s rendered width independently from its height, making the indicator appear oval.
+Preserve list: Load Balance status value, progress treatment, header layout, page spacing, themes, responsive behavior, and data behavior.
+Rollback target: `DV-2026-08-21-95`
+Notes: The route-specific guard runs after the shared Profile ring rules so the final effective geometry remains circular.
+
+### Version: DV-2026-08-21-95
+Date: 2026-08-21
+Surface: Prediction-style side gutters on Analysis Injury Risk and Coach Insight
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Applied the same centered `1480px` profile frame, minimum side gutter, responsive canvas gutter, and mobile padding contract to `/analysis/injury-risk` and `/analysis/coach-insight`.
+Why: Those two analysis pages still used full-width profile wrappers and did not match the side spacing established by `/prediction/5k` and Load Balance.
+Preserve list: Injury Risk and Coach Insight content, charts, metrics, coach guidance, themes, navigation, responsive behavior, and data behavior.
+Rollback target: `DV-2026-08-21-94`
+Notes: Shared the route-scoped canvas and profile wrapper rules without changing page-specific content or calculations.
+
+### Version: DV-2026-08-21-94
+Date: 2026-08-21
+Surface: Visible side gutters around Analysis Load Balance
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Added an explicit centered Load Balance frame with a 16px minimum side gutter and preserved the Prediction 5k content padding contract.
+Why: Resetting the outer canvas padding left the Load Balance page visually flush against the viewport edges when its inner wrapper was not yet reflected by the served page.
+Preserve list: Load Balance content, vertical rhythm, charts, metrics, themes, navigation, responsive behavior, and data behavior.
+Rollback target: `DV-2026-08-21-93`
+Notes: Mobile Load Balance returns to a full-width profile with the same 16px horizontal content padding as Prediction 5k.
+
+### Version: DV-2026-08-21-93
+Date: 2026-08-21
+Surface: Prediction and Analysis Load Balance side-gutter parity
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Moved Load Balance's content into the same centered 1480px profile wrapper and horizontal padding contract used by `/prediction/5k`.
+Why: Load Balance was still using a full-width inner profile, producing visibly smaller left and right gutters than Prediction 5k.
+Preserve list: Load Balance content, vertical rhythm, charts, metrics, themes, navigation, responsive behavior, and data behavior.
+Rollback target: `DV-2026-08-21-92`
+Notes: Reset the outer canvas padding and transferred the page spacing to the centered profile wrapper, including the mobile padding contract.
+
+### Version: DV-2026-08-21-92
+Date: 2026-08-21
+Surface: Effective Analysis Load Balance horizontal alignment with `/prediction/5k`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Matched Load Balance's horizontal canvas inset to Prediction 5k's final zero-padding canvas while preserving Load Balance's vertical spacing.
+Why: The prior comparison used an intermediate Prediction rule and left a responsive horizontal inset on Load Balance.
+Preserve list: Load Balance content, vertical rhythm, charts, metrics, themes, navigation, and data behavior.
+Rollback target: `DV-2026-08-21-91`
+Notes: Updated the smoke guard to read the final Prediction Profile alignment rule.
+
+### Version: DV-2026-08-21-91
+Date: 2026-08-21
+Surface: Analysis Load Balance canvas alignment with `/prediction/5k`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Matched the Load Balance detail canvas to the Prediction 5k canvas with full width, no max-width cap, zero outer margin, and the same responsive horizontal inset.
+Why: Load Balance was still constrained by the shared 1390px alignment rule, leaving a larger right-side gutter than Prediction 5k.
+Preserve list: Load Balance content, chart and metric layout, page background, responsive vertical spacing, themes, navigation, and data behavior.
+Rollback target: `DV-2026-08-21-90`
+Notes: Added a focused source guard that compares both route canvas alignment contracts.
+
+### Version: DV-2026-08-21-90
+Date: 2026-08-21
+Surface: Default versus expanded runner sidebar workout CTA
+Files: `frontend/src/styles/runner-shell-workout-button.css`, `frontend/src/styles/_split/profile.css`, `frontend/src/components/runnerShellSidebarRedesign.smoke.test.js`, `frontend/src/components/runnerShellWorkoutButtonParity.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the compact CTA to a 60px circle by default and limited the 132px right-extending treatment to hover and keyboard-focus expansion states.
+Why: The widened CTA correctly occupied the marked right-side space but became a pill while the navigation rail was still in its default compact mode.
+Preserve list: Workout navigation, coral treatment, arrow and label alignment, compact rail geometry, expanded-sidebar behavior, responsive layout, themes, and accessibility labels.
+Rollback target: `DV-2026-08-21-89`
+Notes: Added state-specific width guards for default circular and expanded right-extending geometry.
+
+### Version: DV-2026-08-21-89
+Date: 2026-08-21
+Surface: Right-extending compact runner sidebar workout CTA
+Files: `frontend/src/styles/runner-shell-workout-button.css`, `frontend/src/styles/_split/profile.css`, `frontend/src/components/runnerShellSidebarRedesign.smoke.test.js`, `frontend/src/components/runnerShellWorkoutButtonParity.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Extended the collapsed runner workout CTA to 132px and released the compact sidebar overflow so the button can occupy the marked space to the right.
+Why: The previous 60px cap left the CTA constrained to the rail and did not use the adjacent space indicated in the reference.
+Preserve list: Workout navigation, coral treatment, arrow and label alignment, sidebar navigation, expanded-sidebar behavior, responsive layout, themes, and accessibility labels.
+Rollback target: `DV-2026-08-21-88`
+Notes: Added focused width and overflow guards for the right-extending compact CTA.
+
+### Version: DV-2026-08-21-88
+Date: 2026-08-21
+Surface: Collapsed runner sidebar workout CTA
+Files: `frontend/src/styles/runner-shell-workout-button.css`, `frontend/src/styles/_split/profile.css`, `frontend/src/components/runnerShellSidebarRedesign.smoke.test.js`, `frontend/src/components/runnerShellWorkoutButtonParity.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Extended the compact sidebar workout button from 52px to 60px wide while keeping its 60px height and centered rail alignment.
+Why: The narrow CTA clipped the visible workout label when the left sidebar expanded over the compact rail.
+Preserve list: Workout navigation, coral treatment, arrow glyph, expanded-sidebar behavior, sidebar width, responsive layout, themes, and accessibility labels.
+Rollback target: `DV-2026-08-20-87`
+Notes: Added focused source and parity guards for the wider compact CTA geometry.
+
+### Version: DV-2026-08-20-87
+Date: 2026-08-20
+Surface: Weather analysis-card icon alignment on `/weather`
+Files: `frontend/src/styles/_split/weather.css`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Put the heat-adaptation and coach-judgment SVGs in the same full-size child box so the two card icons share one horizontal level.
+Why: The coach icon did not inherit the heat icon’s full SVG sizing rule, causing the visible glyphs to sit at different positions within their grid headers.
+Preserve list: Weather card content, icon meanings, light and dark themes, responsive card layout, weather data, and coach guidance.
+Rollback target: `DV-2026-08-20-86`
+Notes: Added a focused guard for the shared SVG box rule.
+
+### Version: DV-2026-08-20-86
+Date: 2026-08-20
+Surface: Settings language icon proportions on `/settings`
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/components/appIconCoverage.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Enlarged `文` and positioned the smaller `A` immediately to its right on a lower baseline.
+Why: The first explicit-character treatment made `文` too small and placed the pair too far apart vertically.
+Preserve list: Language switching behavior, icon color and sizing, Settings layout, accessibility attributes, localization, and all other AppIcon glyphs.
+Rollback target: `DV-2026-08-20-85`
+Notes: Extended the language-icon guard with exact size and placement checks.
+
+### Version: DV-2026-08-20-85
+Date: 2026-08-20
+Surface: Settings language icon on `/settings`
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/components/appIconCoverage.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Replaced the ambiguous language path glyph with explicit `文` and `A` characters.
+Why: The previous outline approximation rendered the Chinese side as an unreadable mark at the small Settings icon size.
+Preserve list: Language switching behavior, icon color and sizing, Settings layout, accessibility attributes, localization, and all other AppIcon glyphs.
+Rollback target: `DV-2026-08-20-84`
+Notes: Added a focused source guard requiring both visible language characters.
+
+### Version: DV-2026-08-20-84
+Date: 2026-08-20
+Surface: Runs overview section order on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsCompactOverview.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Moved the `runs-profile-glance` summary cards above the `recent-runs-filters` search and filter panel.
+Why: The Runs page should show the activity summary before the controls, matching the requested overview flow.
+Preserve list: Search behavior, filter state, summary calculations, history cards, responsive stacking, themes, and run navigation.
+Rollback target: `DV-2026-08-20-83`
+Notes: Added an order guard so the summary remains before the filters in the rendered page structure.
+
+### Version: DV-2026-08-20-83
+Date: 2026-08-20
+Surface: Settings connected-service manage button on `/settings`
+Files: `frontend/src/styles/_split/settings.css`, `frontend/src/pages/settingsServiceCardsWhite.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Centered the connected Strava `管理` label inside its full-width service action button.
+Why: The non-connect state lacked the flex alignment declarations that the connect state already had, leaving the label pinned toward the left.
+Preserve list: Connected-service actions, Strava linking/disconnect behavior, Garmin controls, button sizing, responsive layout, themes, and Settings data wiring.
+Rollback target: `DV-2026-08-20-82`
+Notes: Added a focused guard for centered text in the managed service action.
+
+### Version: DV-2026-08-20-82
+Date: 2026-08-20
+Surface: Settings activity graph intensity on `/settings`
+Files: `frontend/src/utils/runActivityContribution.js`, `frontend/src/utils/runActivityContribution.test.js`, `DESIGN_VERSIONS.md`
+What changed: Mapped activity-cell shades to each day’s accumulated run distance, progressing from light green for shorter runs to dark green for longer runs.
+Why: The graph was using run count for intensity even though the cell model already tracked daily distance.
+Preserve list: Activity dates, daily aggregation, tooltip distances, future-day handling, legend levels, responsive layout, themes, and Settings data loading.
+Rollback target: `DV-2026-08-20-81`
+Notes: Added distance-band coverage for 4 km, 8 km, 14 km, and 22 km days.
+
+### Version: DV-2026-08-20-81
+Date: 2026-08-20
+Surface: Weather heat-adaptation thermometer icon on `/weather`
+Files: `frontend/src/styles/_split/weather.css`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Constrained the thermometer SVG to the full icon tile and kept its overflow visible so the bottom bulb cannot be clipped.
+Why: The bottom of the thermometer icon was slightly hidden by the surrounding white card margin in the supplied reference.
+Preserve list: Icon color, tile size, card layout, title alignment, adaptation data, responsive behavior, themes, and weather interactions.
+Rollback target: `DV-2026-08-20-80`
+Notes: Added a focused guard for complete SVG rendering inside the heat-adaptation icon tile.
+
+### Version: DV-2026-08-20-80
+Date: 2026-08-20
+Surface: Analysis import modal export-help title on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Set `找不到导出入口？` to solid black in the Analysis import modal.
+Why: The export-help title was rendering as muted grey instead of the requested black text.
+Preserve list: Modal layout, border, expansion behavior, `查看品牌路径` hint, provider details, import controls, responsive behavior, Runs modal styling, and localization.
+Rollback target: `DV-2026-08-20-79`
+Notes: Scoped the override to the Analysis modal’s export-help summary title only.
+
+### Version: DV-2026-08-20-79
+Date: 2026-08-20
+Surface: Runs canvas gutter on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared atlas canvas pseudo-surface from the Runs page so no rounded background edge remains in the outer history gutter.
+Why: The decorative canvas layer was still painting a visible sliver outside the rounded month-group grid.
+Preserve list: Month-group radius and clipping, white grid surfaces, page spacing, responsive layout, themes, and run interactions.
+Rollback target: `DV-2026-08-20-78`
+Notes: Added a focused guard requiring the Runs canvas pseudo-surface to stay removed.
+
+### Version: DV-2026-08-20-78
+Date: 2026-08-20
+Surface: Runs month-group grid container on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Clipped the month group’s white header and card surfaces inside its existing 24px rounded container so the outer grid keeps the same circular corners as the other Runs cards.
+Why: The child white surfaces were painting beyond the rounded month-group edge and making its background look square.
+Preserve list: Month collapse behavior, month header, run cards, metric tiles, spacing, white light-theme surfaces, responsive layout, themes, and run data interactions.
+Rollback target: `DV-2026-08-20-77`
+Notes: Added `overflow: hidden` and a focused grid-surface guard.
+
+### Version: DV-2026-08-20-77
+Date: 2026-08-20
+Surface: Runs search focus treatment on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsSearchFocusStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral border and focus ring from the Runs search field when clicked, preserving the normal light wrapper surface and a neutral keyboard-visible outline.
+Why: Clicking the search bar should not make the field jump into a red-accent state.
+Preserve list: Search behavior, clear control, placeholder/text contrast, normal border and shadow, keyboard accessibility, filters, responsive layout, themes, and run data interactions.
+Rollback target: `DV-2026-08-20-76`
+Notes: Added a scoped guard for both the input focus rule and the wrapper `:focus-within` rule.
+
+### Version: DV-2026-08-20-76
+Date: 2026-08-20
+Surface: Runs history title typography on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsTitleTypography.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Explicitly set the main `跑步历史` title to `font-style: normal`.
+Why: The title rendered with an unintended italic/slanted glyph treatment.
+Preserve list: Title size, weight, spacing, content, hero layout, controls, responsive behavior, localization, and all Run data interactions.
+Rollback target: `DV-2026-08-20-75`
+Notes: Added a focused typography guard for the scoped Runs history heading.
+
+### Version: DV-2026-08-20-75
+Date: 2026-08-20
+Surface: Analysis import modal icon/title left alignment on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Aligned the upload icon’s left edge with the first word of `把跑步带进 Hermes`, while keeping `导入训练数据` immediately beside the icon.
+Why: The modal header and guide card should share the same content start line in the supplied reference.
+Preserve list: Title/icon order, vertical centering, close control, guide kicker placement, import controls, responsive layout, Runs styling, and localization.
+Rollback target: `DV-2026-08-20-74`
+Notes: Added matching desktop/mobile padding and a focused left-edge alignment guard.
+
+### Version: DV-2026-08-20-74
+Date: 2026-08-20
+Surface: Runs page grid separation on `/runs`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared white canvas and history-list background between Runs grids while keeping the individual cards and loading status white.
+Why: Separate Runs grids should read as distinct surfaces instead of one connected white sheet.
+Preserve list: Run data, grid/card layout, loading copy, white loading state, responsive behavior, filters, controls, themes, and interactions.
+Rollback target: `DV-2026-08-20-73`
+Notes: Added focused guardrails for transparent spacing surfaces and the preserved white loading status.
+
+### Version: DV-2026-08-20-73
+Date: 2026-08-20
+Surface: Analysis import modal header vertical alignment on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Vertically centered `导入训练数据` with the upload icon while keeping the header horizontally left-aligned.
+Why: The title sat too high relative to the icon in the supplied reference.
+Preserve list: White modal design, title/icon order, close control, guide content, buttons, upload behavior, responsive layout, Runs styling, and localization.
+Rollback target: `DV-2026-08-20-72`
+Notes: Updated the focused header alignment guardrail and retained the icon’s 56px footprint.
+
+### Version: DV-2026-08-20-72
+Date: 2026-08-20
+Surface: Analysis import data modal restored to the previous light design
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Restored the Analysis-only import modal to its previous white sheet, dark typography, and light internal guide/source surfaces.
+Why: The black-and-white experiment was not the desired final direction.
+Preserve list: Header alignment, disabled submit treatment, modal dimensions, close control, guide content, file selection, validation, submission, responsive stacking, Runs styling, and localization.
+Rollback target: `DV-2026-08-20-71`
+Notes: Reverted only the color-surface change and retained the existing Analysis modal layout guardrails.
+
+### Version: DV-2026-08-20-71
+Date: 2026-08-20
+Surface: Analysis import modal action buttons
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restyled the disabled `导入 0 个文件` submit button to match the neighboring `取消` button surface instead of using a grey primary fill.
+Why: Disabled and cancel actions should share the same neutral modal treatment when no files are selected.
+Preserve list: Disabled state, upload behavior, button labels, two-column layout, responsive stacking, dark-theme treatment, and localization.
+Rollback target: `DV-2026-08-20-70`
+Notes: Kept reduced opacity to communicate that importing is unavailable until files are selected.
+
+### Version: DV-2026-08-20-70
+Date: 2026-08-20
+Surface: Analysis import modal header alignment on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the upload icon and `导入训练数据` together at the start of the modal header by overriding the shared `space-between` distribution.
+Why: The import title should sit next to its upload affordance instead of being pushed to the opposite edge of the modal.
+Preserve list: `3 步完成` placement below `把跑步带进 Hermes`, modal close control, import guide content, file selection, validation, submission, responsive stacking, Runs styling, and localization.
+Rollback target: `DV-2026-08-20-69`
+Notes: Added a focused source guard and verified the same rule in the served CSS bundle.
+
+### Version: DV-2026-08-20-69
+Date: 2026-08-20
+Surface: Analysis import data modal black surface on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Changed the Analysis-only import modal and its guide/source surfaces to opaque black with white text, while preserving the existing layout, accents, buttons, and upload behavior.
+Why: The supplied reference shows the `导入数据` modal using a black background and white typography.
+Preserve list: Modal dimensions, close control, three-step guide, file selection, validation, submission, responsive stacking, Runs import styling, and localization.
+Rollback target: `DV-2026-08-20-68`
+Notes: Added focused guardrails for the black sheet, white text, and black internal surfaces.
+
+### Version: DV-2026-08-20-68
+Date: 2026-08-20
+Surface: Analysis import guide title and kicker order on `/analysis`
+Files: `frontend/src/components/Modal.jsx`, `frontend/src/components/ImportDataGuide.jsx`, `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored `导入训练数据` to the modal header beside the upload icon and placed `3 步完成` directly below `把跑步带进 Hermes` inside the guide card.
+Why: The guide card should own its three-step cue, matching the supplied reference hierarchy.
+Preserve list: Modal behavior, upload icon and plain-X close control, guide title and kicker copy, import instructions, Runs layout, localization, and import behavior.
+Rollback target: `DV-2026-08-20-67`
+Notes: Removed the temporary shared modal eyebrow wiring and added a source-order guard for the guide heading.
+
+### Version: DV-2026-08-20-67
+Date: 2026-08-20
+Surface: Runs loading grid white surface on `/runs`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Extended the Runs canvas and loading grid to a solid white light-theme surface, kept the localized loading copy readable, and removed the warm decorative loading layer.
+Why: The Runs loading screenshot still showed a cream/red-tinted background behind `正在加载你的跑步记录...`.
+Preserve list: Run data, month grouping, search/filter controls, loading copy, responsive layout, themes, localization, and interactions.
+Rollback target: `DV-2026-08-20-66`
+Notes: Added a focused smoke guard for both light-theme body classes, the canvas surface, and the loading copy.
+
+### Version: DV-2026-08-20-66
+Date: 2026-08-20
+Surface: Runs delete modal close control
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the outer border, background, and rounded shape from the Runs delete modal close control so only the X remains visible.
+Why: The delete modal should use the same plain-X close treatment as the import modals.
+Preserve list: Delete confirmation behavior, upper-right hit area, keyboard and overlay dismissal, modal card styling, actions, and unrelated modal controls.
+Rollback target: `DV-2026-08-20-65`
+Notes: Kept the hover state transparent and added a focused no-circle guardrail.
+
+### Version: DV-2026-08-20-65
+Date: 2026-08-20
+Surface: Runs and Analysis import modal close controls
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the plain-X close treatment to the shared Runs import modal and removed the hover state that recreated a circle.
+Why: Runs should match Analysis while keeping the close control visually limited to the X.
+Preserve list: Close hit area, upper-right positioning, keyboard and overlay dismissal, Runs and Analysis import behavior, and unrelated modal close controls.
+Rollback target: `DV-2026-08-20-64`
+Notes: Added a shared Profile import guardrail covering the no-circle border, radius, and background.
+
+### Version: DV-2026-08-20-64
+Date: 2026-08-20
+Surface: Analysis import modal close control on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the circular border, background, and radius from the Analysis import modal close control so only the X remains visible.
+Why: The reference close control should read as a plain X rather than an outlined circle.
+Preserve list: Close hit area, upper-right positioning, keyboard and overlay dismissal, Runs modal close styling, and the rest of the Analysis import modal.
+Rollback target: `DV-2026-08-20-63`
+Notes: Added a scoped no-circle guardrail without changing the shared modal close treatment.
+
+### Version: DV-2026-08-20-63
+Date: 2026-08-20
+Surface: Analysis import modal header alignment on `/analysis`
+Files: `frontend/src/components/Modal.jsx`, `frontend/src/components/ImportDataGuide.jsx`, `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved `3 步完成` into the Analysis modal header beside the coral upload icon and placed `导入训练数据` directly beneath it in the same header copy block.
+Why: The modal header should align the icon with the three-step cue while keeping the import title immediately beside the icon.
+Preserve list: Shared modal behavior, Runs import modal layout, import controls, title and kicker copy, close control, responsive spacing, localization, and Analysis import behavior.
+Rollback target: `DV-2026-08-20-62`
+Notes: Kept the three-step kicker visible in Runs by making its guide rendering opt-out only for Analysis.
+
+### Version: DV-2026-08-20-62
+Date: 2026-08-20
+Surface: Analysis Injury Risk full-width canvas parity on `/analysis/injury-risk`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisIntensityProfileParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed Injury Risk's desktop `1390px` canvas cap so its content shell uses the same full-width canvas as Intensity while retaining the existing inner padding.
+Why: The capped canvas left a large unused area on the right and did not match the reference detail route's horizontal alignment.
+Preserve list: Left content inset, sidebar, page content, cards, responsive structure, localization, and route behavior.
+Rollback target: `DV-2026-08-20-61`
+Notes: Kept the focused 16px medium/small left-inset guard and added a desktop canvas parity guard.
+
+### Version: DV-2026-08-20-61
+Date: 2026-08-20
+Surface: Analysis import modal header on `/analysis`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Placed the coral upload icon to the left of `导入训练数据` and explicitly reset the title to normal, non-italic styling.
+Why: The modal header should follow the supplied reference composition with the icon and title on one horizontal line.
+Preserve list: Modal behavior, import controls, title copy, close control, responsive spacing, localization, Runs import styling, and the rest of the Analysis modal reference treatment.
+Rollback target: `DV-2026-08-20-60`
+Notes: Added focused guardrails for horizontal icon placement and non-italic title rendering.
+
+### Version: DV-2026-08-20-60
+Date: 2026-08-20
+Surface: Analysis import data modal on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the Analysis `导入数据` modal into a left-aligned white reference sheet with a coral upload badge, circular upper-right close control, single-column import flow, flattened source surfaces, and rounded actions.
+Why: The Analysis import modal needed to match the supplied white reference treatment without changing import behavior.
+Preserve list: Import guide, FIT/GPX, COROS, Huawei file inputs, selected-file counts, validation/error announcements, upload/cancel actions, localization, loading state, close/Escape/overlay behavior, Runs import styling, and responsive layout.
+Rollback target: `DV-2026-08-20-59`
+Notes: Added Analysis-only source/style guardrails and verified the built served CSS.
+
+### Version: DV-2026-08-20-59
+Date: 2026-08-20
+Surface: Analysis Injury Risk left-edge alignment on `/analysis/injury-risk`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisIntensityProfileParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched Injury Risk's responsive left inset to the 16px content start used by the Intensity page.
+Why: The two Analysis subpages should share the same left alignment at medium and small viewport widths.
+Preserve list: Sidebar, page content, cards, right-side spacing, responsive structure, localization, and route behavior.
+Rollback target: `DV-2026-08-20-58`
+Notes: Added a focused cross-page alignment guard for the medium and small breakpoints.
+
+### Version: DV-2026-08-20-58
+Date: 2026-08-20
+Surface: Analysis empty VDOT trend copy alignment on `/analysis`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisCoachKickerSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Bottom-aligned the empty VDOT trend explanation so it lines up with the neighboring coach identity block.
+Why: The centered paragraph sat above the coach block instead of sharing its lower alignment.
+Preserve list: VDOT heading, `--` marker, copy, card geometry, responsive layout, localization, and analysis data behavior.
+Rollback target: `DV-2026-08-20-57`
+Notes: Kept the two-row empty-card grid and changed only the copy alignment to the grid's end edge.
+
+### Version: DV-2026-08-20-57
+Date: 2026-08-20
+Surface: Runs delete-confirmation warning copy on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reduced the warning sentence to `0.84rem`, keeping it visibly smaller than the regular-weight confirmation line.
+Why: The warning should read as supporting information beneath the run-name confirmation, not compete with it.
+Preserve list: Modal surface, title typography, icon, close-button placement, copy, actions, delete behavior, localization, dark-theme support, and responsive layout.
+Rollback target: `DV-2026-08-20-56`
+Notes: Added a focused guard for the warning-size contract.
+
+### Version: DV-2026-08-20-56
+Date: 2026-08-20
+Surface: Runs delete-confirmation modal typography on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the delete title upright and unskewed, and changed the run-name confirmation line to regular weight.
+Why: The supplied modal reference calls for neutral typography without an italic title or bold confirmation copy.
+Preserve list: Modal surface, icon, close-button placement, copy, actions, delete behavior, localization, dark-theme support, and responsive layout.
+Rollback target: `DV-2026-08-20-55`
+Notes: Added focused style guards for the title and confirmation-line typography.
+
+### Version: DV-2026-08-20-55
+Date: 2026-08-20
+Surface: Analysis empty VDOT trend card on `/analysis`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisCoachKickerSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Centered the empty VDOT trend explanation within the remaining card grid space below its heading.
+Why: The paragraph was sitting too close to the title instead of occupying the empty card area.
+Preserve list: VDOT heading, `--` marker, copy, card geometry, responsive layout, localization, and analysis data behavior.
+Rollback target: `DV-2026-08-20-54`
+Notes: Made only the empty trend card a two-row grid and centered its explanatory paragraph.
+
+### Version: DV-2026-08-20-54
+Date: 2026-08-20
+Surface: Schedule current-day badge color on `/schedule`
+Files: `frontend/src/styles/_split/schedule.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/scheduleRoutePlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the current-day badge strip from coral to neutral grey across light, high-contrast-light, and dark treatments.
+Why: The current-day strip should use a quieter grey accent instead of the red highlight.
+Preserve list: Localized badge text, geometry, placement, current-day detection, weekly plan content, responsive layout, and schedule behavior.
+Rollback target: `DV-2026-08-20-53`
+Notes: Updated the light-theme overrides to target the translated badge element instead of the removed pseudo-element.
+
+### Version: DV-2026-08-20-53
+Date: 2026-08-20
+Surface: Runs delete-confirmation modal light surface on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Scoped the solid-white light-theme override to the actual Runs `runner-shell-page` root so the shared liquid-glass modal cascade cannot repaint the delete sheet grey; kept the dark-theme counterpart on the same scope.
+Why: The prior white base rule was overridden because the delete modal is rendered inside Runs' own `runner-shell-page`, not an authenticated `dashboard-body` wrapper.
+Preserve list: Close-button placement, modal hierarchy, icon, copy, actions, delete behavior, loading/disabled state, localization, keyboard escape handling, overlay dismissal, dark-theme support, and responsive behavior.
+Rollback target: `DV-2026-08-20-52`
+Notes: Added an ancestor-aware smoke guard and verified the functional override in the served production CSS.
+
+### Version: DV-2026-08-20-52
+Date: 2026-08-20
+Surface: Empty VDOT trend card on `/analysis`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachKickerSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Centered the “趋势需要更多跑步记录” empty-state copy within its bento grid card while keeping the `--` marker anchored in the header.
+Why: The empty trend message should occupy the card as a deliberate centered state instead of sitting against the upper-left edge.
+Preserve list: Card geometry, VDOT calculations, copy, unavailable marker, responsive layout, localization, and theme styling.
+Rollback target: `DV-2026-08-20-51`
+Notes: Added route-scoped alignment rules and a focused CSS guard.
+
+### Version: DV-2026-08-20-51
+Date: 2026-08-20
+Surface: Schedule current-day badge on `/schedule`
+Files: `frontend/src/pages/Schedule.jsx`, `frontend/src/styles/_split/schedule.css`, `frontend/src/styles/style.generated.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/scheduleRoutePlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Localized the current-day badge, showing `今天` in Chinese and `TODAY` in English.
+Why: The badge was hardcoded in CSS and stayed in English on the Chinese Schedule page.
+Preserve list: Badge geometry, colors, placement, current-day detection, weekly plan content, responsive layout, and schedule behavior.
+Rollback target: `DV-2026-08-20-50`
+Notes: Replaced the CSS pseudo-element with a translated element and added locale/style guardrails.
+
+### Version: DV-2026-08-20-50
+Date: 2026-08-20
+Surface: Schedule plan hero on `/schedule`
+Files: `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/scheduleRoutePlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the standalone `第 1 周` week-label kicker above the Schedule plan title.
+Why: The label was an unnecessary decorative strip in the Schedule hero.
+Preserve list: Plan title, weekly workout grid, coach guidance, metrics, route planning, responsive layout, localization, and schedule behavior.
+Rollback target: `DV-2026-08-20-49`
+Notes: Added a focused source guard proving the standalone week label is not rendered.
+
+### Version: DV-2026-08-20-49
+Date: 2026-08-20
+Surface: Runs delete-confirmation modal surface on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the light delete-confirmation sheet solid white instead of inheriting the translucent profile card surface.
+Why: The modal background was visibly grey in the supplied reference and needed a clean white treatment.
+Preserve list: Close-button placement, modal hierarchy, icon, copy, actions, delete behavior, responsive layout, localization, and dark-theme surface override.
+Rollback target: `DV-2026-08-20-48`
+Notes: Extended the focused modal guard for the white light-theme surface and preserved the dark-theme fallback.
+
+### Version: DV-2026-08-20-48
+Date: 2026-08-20
+Surface: Runs active filter chips on `/runs`
+Files: `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final light-theme override so selected time and ranking filters use a pale-red fill, red border, and red text.
+Why: The shared theme cascade was leaving the selected filter highlight green despite the Runs red accent.
+Preserve list: Inactive filters, filter behavior, spacing, responsive layout, localization, map/heatmap styling, and dark-theme treatment.
+Rollback target: `DV-2026-08-20-47`
+Notes: Scoped the override to the light and high-contrast-light Runs workbench filter chips.
+
+### Version: DV-2026-08-20-47
+Date: 2026-08-20
+Surface: Heatmap filter highlights on `/heatmap`
+Files: `frontend/src/styles/_split/heatmap.css`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed active filter pills to a light-red highlight with matching red text.
+Why: The selected filter should align with the app's red accent without overpowering the map controls.
+Preserve list: Inactive pills, filter behavior, spacing, map rendering, responsive layout, localization, and theme controls.
+Rollback target: `DV-2026-08-20-46`
+Notes: Kept the active state scoped to Heatmap filter pills only.
+
+### Version: DV-2026-08-20-46
+Date: 2026-08-20
+Surface: Runs delete-confirmation close control on `/runs`
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Anchored the delete modal close button to the card's upper-right corner, with responsive top/right offsets for small screens.
+Why: The close control was aligned beside the title instead of occupying the modal's expected top-right position.
+Preserve list: Modal hierarchy, icon, copy, actions, close behavior, delete behavior, responsive layout, localization, and theme treatment.
+Rollback target: `DV-2026-08-20-45`
+Notes: Extended the existing reference-style guard with an absolute top/right positioning contract.
+
+### Version: DV-2026-08-20-45
+Date: 2026-08-20
+Surface: Weather analysis card title alignment on `/weather`
+Files: `frontend/src/styles/_split/weather.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Top-aligned the coach judgment card header so `教练判断` sits horizontally level with `热适应引擎`.
+Why: The judgment header's centered alignment placed its title lower than the neighboring heat-adaptation title.
+Preserve list: Card contents, icons, metrics, guidance, actions, responsive layout, localization, and theme surfaces.
+Rollback target: `DV-2026-08-20-44`
+Notes: Changed only the judgment header alignment and added a focused style guard.
+
+### Version: DV-2026-08-20-44
+Date: 2026-08-20
+Surface: Runs delete-confirmation modal on `/runs`
+Files: `frontend/src/components/Modal.jsx`, `frontend/src/pages/Runs.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the delete confirmation into a compact light reference-style sheet with a contextual delete icon, restrained close control, readable hierarchy, and rounded cancel/confirm actions.
+Why: The existing modal used a grey glass panel, oversized dark close button, italic title treatment, and trapezoid delete action that did not match the supplied reference modal.
+Preserve list: Delete confirmation copy, cancel/close behavior, destructive action behavior, loading/disabled state, localization, keyboard escape handling, overlay dismissal, dark-theme support, and responsive behavior.
+Rollback target: `DV-2026-08-20-43`
+Notes: Added a focused source-contract guard for the reference geometry and scoped the style to the Runs delete modal.
+
+### Version: DV-2026-08-20-43
+Date: 2026-08-20
+Surface: Heatmap legend on `/heatmap`
+Files: `frontend/src/pages/Heatmap.jsx`, `frontend/src/pages/heatmapStability.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the three summary grids for map center, per-run density, and GPS received counts.
+Why: The heatmap should keep the legend focused on route colors and the map itself.
+Preserve list: Map rendering, route points, speed legend, controls, loading behavior, responsive layout, localization, and data fetching.
+Rollback target: `DV-2026-08-20-42`
+Notes: Removed the now-unused summary calculations and loading-label rendering while preserving diagnostics for map loading internals.
+
+### Version: DV-2026-08-20-42
+Date: 2026-08-20
+Surface: Weather coach judgment card on `/weather`
+Files: `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the small `教练判断` kicker badge while preserving the coach judgment card title, guidance, and actions.
+Why: The badge duplicated the visible card heading and added an unnecessary label above it.
+Preserve list: Coach judgment logic, quote, decision callout, status metadata, actions, localization, responsive layout, and theme surfaces.
+Rollback target: `DV-2026-08-20-41`
+Notes: Added a focused guard proving only the kicker is removed while the card title remains.
+
+### Version: DV-2026-08-20-41
+Date: 2026-08-20
+Surface: Runs import activity button on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `DESIGN_VERSIONS.md`
+What changed: Made the `导入活动文件` secondary action button use a solid white background.
+Why: The import control should match the white card surfaces shown in the Runs layout.
+Preserve list: Border, icon, text, spacing, hover behavior, responsive sizing, midnight styling, localization, and import behavior.
+Rollback target: `DV-2026-08-20-40`
+Notes: Kept the dark-theme override unchanged.
+
+### Version: DV-2026-08-20-40
+Date: 2026-08-20
+Surface: Runs loading history grid on `/runs`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the light-theme Runs loading grid solid white and removed its pale red top/loading strip while preserving the centered loading copy.
+Why: The loading state should match the white Runs history grid without adding a decorative red band during data fetch.
+Preserve list: Loading copy, loading/data behavior, history card geometry, responsive layout, localization, midnight/high-contrast styling, and Runs data behavior.
+Rollback target: `DV-2026-08-20-39`
+Notes: Added final-cascade guards for the loading surface and its pseudo-element, with a focused red-green smoke check.
+
+### Version: DV-2026-08-20-39
+Date: 2026-08-20
+Surface: Runs profile signal labels on `/runs`
+Files: `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the two profile signal-card labels grey while preserving black values and notes on the white cards.
+Why: The labels should be visually secondary to the full-history count and provider value.
+Preserve list: White card surfaces, black values, card layout, search behavior, responsive styling, localization, themes, and Runs data behavior.
+Rollback target: `DV-2026-08-20-38`
+Notes: Added separate light-theme guards for grey labels and black values/notes.
+
+### Version: DV-2026-08-20-38
+Date: 2026-08-20
+Surface: Runs connected-source status card on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/pages/runsLedgerRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Corrected the connected-state card treatment by restoring the `STRAVA 已连接` kicker and removing only the status paragraph beneath the `Strava 自动同步` title.
+Why: The title and connection kicker should remain; only the connected-state status paragraph was requested to be removed.
+Preserve list: Strava title, connection kicker, sync behavior, connection controls, disconnected-state messaging, card layout, responsive behavior, localization parity, themes, and run data behavior.
+Rollback target: `DV-2026-08-20-37`
+Notes: The focused Runs guard now proves the kicker remains while the `{awaitingStatus}` paragraph is absent.
+
+### Version: DV-2026-08-20-37
+Date: 2026-08-20
+Surface: Runs page heading copy on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the localized explanatory paragraph beneath the main “跑步历史” heading.
+Why: The introductory Runs page context was requested back.
+Preserve list: Heading, card layout, run data, fallback-state messaging, localization, responsive behavior, and theme surfaces.
+Rollback target: `DV-2026-08-20-36`
+Notes: Updated the focused guard to require the restored paragraph.
+
+### Version: DV-2026-08-20-36
+Date: 2026-08-20
+Surface: Runs page heading copy on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the explanatory paragraph beneath the main “跑步历史” heading while preserving the heading, layout, and alternate awaiting-import copy.
+Why: The main Runs cockpit should show the page title without redundant introductory text.
+Preserve list: Heading, card layout, run data, fallback-state messaging, localization keys still in use, responsive behavior, and theme surfaces.
+Rollback target: `DV-2026-08-20-35`
+Notes: Added a focused guard for the main cockpit paragraph omission.
+
+### Version: DV-2026-08-20-35
+Date: 2026-08-20
+Surface: Runs connected-source status card on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/pages/runsLedgerRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the connected-state “Strava 已连接” kicker from the Runs status card while preserving the Strava auto-sync title, status copy, actions, and disconnected-state prompt.
+Why: The connected-state kicker was requested to be removed from the card.
+Preserve list: Strava sync behavior, connection controls, disconnected-state messaging, card hierarchy, responsive layout, localization parity, themes, and run data behavior.
+Rollback target: `DV-2026-08-20-34`
+Notes: Removed the linked-state translation key and added a focused guard proving the connected kicker is not rendered.
+
+### Version: DV-2026-08-20-34
+Date: 2026-08-20
+Surface: Strava connected-sync status on `/settings` and `/runs`
+Files: `frontend/src/utils/stravaAutoSync.js`, `frontend/src/pages/Runs.jsx`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/utils/stravaAutoSync.test.js`, `frontend/src/pages/runsLedgerRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inactive-API warning copy from the connected Strava status and kept the normal connected-sync label in its place.
+Why: The inactive-app warning was requested to be removed from the connected Strava card.
+Preserve list: Strava connection state, sync polling, reconnect and disconnect actions, status tones, card layout, localization parity, responsive behavior, and data behavior.
+Rollback target: `DV-2026-08-20-33`
+Notes: Removed the now-unused inactive-app translation key from both locale files and added focused guards for the fallback label and warning omission.
+
+### Version: DV-2026-08-20-33
+Date: 2026-08-20
+Surface: Runs full-history signal card on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/pages/runsFullHistoryHelperCopy.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the helper sentence beneath the full-history run count while preserving the card label and count.
+Why: The helper copy was requested to be removed from the Runs history summary.
+Preserve list: Full-history label, run count, other signal cards, run navigation, card layout, responsive behavior, localization, theme treatment, and data behavior.
+Rollback target: `DV-2026-08-20-32`
+Notes: Added a focused guard proving the helper is absent while the full-history count remains.
+
+### Version: DV-2026-08-20-32
+Date: 2026-08-20
+Surface: Runs latest-source signal card on `/runs`
+Files: `frontend/src/pages/Runs.jsx`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the explanatory sentence below the latest provider name while keeping the “最近来源” label and provider value.
+Why: The latest-source card should show only the source identity without redundant helper copy.
+Preserve list: Card layout, source calculation, provider display, white/black typography treatment, localization parity, responsive behavior, and Runs data behavior.
+Rollback target: `DV-2026-08-20-31`
+Notes: Removed the unused latest-source note key from both locale files and added a focused omission guard.
+
+### Version: DV-2026-08-20-31
+Date: 2026-08-20
+Surface: Runs profile signal grid typography on `/runs`
+Files: `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the three white profile signal cards' light-theme labels, values, and notes to black profile ink.
+Why: The signal-card typography should remain black against the white grid surfaces.
+Preserve list: White card surfaces, three-card geometry, text hierarchy, search behavior, responsive layout, localization, themes, and existing Runs data behavior.
+Rollback target: `DV-2026-08-20-30`
+Notes: Updated the focused guard for the black signal-card text treatment.
+
+### Version: DV-2026-08-20-30
+Date: 2026-08-20
+Surface: Weather heat-adaptation card on `/weather`
+Files: `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the small `热适应引擎` kicker badge while preserving the card title, adaptation metrics, status, and coaching logic.
+Why: The badge was redundant with the visible card heading and added an unnecessary label to the weather page.
+Preserve list: Heat-adaptation calculations, unavailable-state handling, localization, card layout, responsive behavior, themes, and actions.
+Rollback target: `DV-2026-08-20-29`
+Notes: Added a focused guard proving only the kicker is removed and the engine card title remains.
+
+### Version: DV-2026-08-20-29
+Date: 2026-08-20
+Surface: Weather hourly forecast header on `/weather`
+Files: `frontend/src/pages/WeatherEngine.jsx`, `frontend/src/pages/weatherEditorialRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `FORECAST PIPELINE // 12H` kicker from the forecast panel while keeping the Weather heading and hourly forecast strip intact.
+Why: The forecast panel should not show the extra pipeline title above its existing Weather heading.
+Preserve list: Forecast data loading, hourly cards, Weather heading, panel layout, localization, responsive behavior, and theme surfaces.
+Rollback target: `DV-2026-08-20-28`
+Notes: Added a focused guard proving the removed title is not rendered.
+
+### Version: DV-2026-08-20-28
+Date: 2026-08-20
+Surface: Runs profile signal grid typography on `/runs`
+Files: `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the three white profile signal cards' light-theme labels, values, and notes to the shared red brand accent.
+Why: The card typography should carry the same red visual language as the surrounding Runs actions while preserving the white grid surfaces.
+Preserve list: White card surfaces, three-card geometry, text hierarchy, search behavior, responsive layout, localization, themes, and existing Runs data behavior.
+Rollback target: `DV-2026-08-20-27`
+Notes: Added a focused guard for the red signal-card text treatment.
+
+### Version: DV-2026-08-20-27
+Date: 2026-08-20
+Surface: Runs search field on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the default/light Runs search field to a solid white surface with ink-colored input, placeholder, icon, and clear-control states; the midnight/high-contrast coral override remains intact.
+Why: The search bar should stay white in the light Runs layout instead of inheriting the coral profile accent treatment.
+Preserve list: Search behavior, clear control, focus behavior, workbench layout, responsive sizing, localization, filters, and dark-theme treatment.
+Rollback target: `DV-2026-08-20-26`
+Notes: Updated the focused visual guard and regenerated the compatibility CSS bundle.
+
+### Version: DV-2026-08-20-26
+Date: 2026-08-20
+Surface: Runs profile signal grid on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the three profile signal cards to the white profile-card surface with ink-colored text while leaving the search field on the shared coral gradient.
+Why: The signal grids should remain white; only the search surface uses the coral treatment.
+Preserve list: Three-card grid geometry, status classes, text hierarchy, search behavior, responsive layout, localization, themes, and existing Runs data behavior.
+Rollback target: `DV-2026-08-20-25`
+Notes: Updated the Runs visual guard and generated CSS compatibility bundle.
+
+### Version: DV-2026-08-20-25
+Date: 2026-08-20
+Surface: Analysis insight canvas margins on `/analysis/injury-risk`, `/analysis/coach-insight`, and `/analysis/load-balance`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInsightCanvasMarginAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the 16px left offset from the shared insight canvas so all three Profile-aligned analysis routes use the same zero outer margin as `/analysis/intensity`.
+Why: The three routes were visibly shifted relative to the canonical intensity canvas.
+Preserve list: Route-local content, navigation, responsive padding, theme surfaces, interactions, localization, and data behavior.
+Rollback target: `DV-2026-08-20-24`
+Notes: Added a focused red-green guard for the canonical and shared canvas margin contract.
+
+### Version: DV-2026-08-20-24
+Date: 2026-08-20
+Surface: Runs history grids on `/runs`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the light-theme month groups, headers, run cards, and distance/pace/moving-time tiles solid white, including the former coral accent tile, while preserving the page shell and dark-theme surfaces.
+Why: The Runs history grid was reading as tinted cream against the requested light-white treatment.
+Preserve list: Run-card layout, metric typography, route previews, hover/focus states, responsive behavior, localization, and midnight/high-contrast styling.
+Rollback target: `DV-2026-08-20-23`
+Notes: Added a red-green guard for the final light-theme white-grid cascade; focused Runs, lint, and production build verification follow this change.
+
+### Version: DV-2026-08-20-23
+Date: 2026-08-20
+Surface: Runs search field background continuity on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the search input itself transparent so the wrapper's shared red gradient paints continuously behind the icon and text instead of receiving a translucent white glass overlay.
+Why: The global runner input surface was creating a lighter second background inside the red search field.
+Preserve list: Search behavior, placeholder/icon contrast, clear control, focus behavior, workbench layout, responsive sizing, themes, and filter behavior.
+Rollback target: `DV-2026-08-20-22`
+Notes: Extended the visual guard to require the transparent input layer in both active and generated CSS.
+
+### Version: DV-2026-08-20-22
+Date: 2026-08-20
+Surface: Runs search field on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the shared terracotta-to-coral brand gradient, white search text, readable placeholder/icon treatment, and warm shadow to the Runs search field, including high-contrast and midnight overrides.
+Why: The search field remained a flat white or charcoal surface after the three summary grids adopted the primary training action’s coral visual language.
+Preserve list: Search input behavior, clear control, focus behavior, workbench layout, responsive sizing, localization, themes, and filter behavior.
+Rollback target: `DV-2026-08-20-21`
+Notes: Extended the Runs profile visual guard to cover the search surface and generated compatibility CSS.
+
+### Version: DV-2026-08-20-21
+Date: 2026-08-20
+Surface: Run-detail navigation links on `/run/:runId`
+Files: `frontend/src/utils/runRoute.js`, `frontend/src/utils/runRoute.smoke.test.js`, `frontend/src/pages/Runs.jsx`, `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/analysisProfileStructuralRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Centralized run-detail URL construction on `/run/:runId` and updated run cards, recent runs, analysis insight samples, and profile record links to use the canonical route.
+Why: The run detail page is mounted at `/run/:id`; duplicated link construction could send users to the incorrect `/runs/:runId` path.
+Preserve list: `/runs` collection navigation, run selection/session caching, analysis/profile actions, localization, responsive behavior, and existing route guards.
+Rollback target: `DV-2026-08-20-20`
+Notes: Route helper smoke guard and focused Run Detail/analysis guards pass; lint and production build verification follow this change.
+
+### Version: DV-2026-08-20-20
+Date: 2026-08-20
+Surface: Runs profile signal grid on `/runs`
+Files: `frontend/src/styles/_split/runs.css`, `frontend/src/styles/dark-mode-cohesion.css`, `frontend/src/pages/runsHeroOverlayContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the shared terracotta-to-coral brand gradient, white type, warm highlight, and coral shadow from the primary training action to all three profile signal cards, including the midnight status override.
+Why: The three summary grids used a near-black surface that did not match the primary action’s coral visual language.
+Preserve list: Three-card grid geometry, status classes, text hierarchy, responsive layout, localization, light/dark themes, and existing Runs data behavior.
+Rollback target: `DV-2026-08-20-19`
+Notes: Added a red-green guard to keep all signal-card states on the shared gradient and prevent the midnight status override from reverting to green.
+
+### Version: DV-2026-08-20-19
+Date: 2026-08-20
+Surface: Run-detail `近期跑步` navigation highlight on `/run/:runId`
+Files: `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/pages/runsSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Gave the recent-runs disclosure its own active navigation key and applied the same highlighted rail treatment and `aria-current` state used by section links.
+Why: Clicking `近期跑步` left the final visible content section highlighted instead of moving the rail highlight to the clicked item.
+Preserve list: Section scroll tracking, recent-run disclosure behavior, recent-run selection/navigation, bounded recent list, labels, icons, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-18`
+Notes: Red-green recent-navigation guard passes; focused Run Detail guards, lint, and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-18
+Date: 2026-08-20
+Surface: Run-detail map focus toggle on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a reversible map-owned focus mode: clicking the route map promotes it to a full viewport and hides the content grids; clicking the map again restores the grids.
+Why: Users need a way to inspect the route without the Overview, telemetry, and splits surfaces competing for the map canvas.
+Preserve list: OSM tile source, route-first fitting, drag and wheel zoom, route line and markers, controls, attribution, overview/telemetry/splits interactions, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-17`
+Notes: Focused route-map, cockpit, and dark-mode guards pass; lint and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-17
+Date: 2026-08-20
+Surface: Run-detail map mouse interaction on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Preserved Leaflet dragging and wheel zoom, and allowed mouse events to pass through the transparent top content canvas while keeping Overview and detail sections interactive.
+Why: The map was visible as a background but the overlay canvas could intercept drag and wheel gestures.
+Preserve list: OSM tile source, route-first fitting, route line and markers, controls, attribution, overview/telemetry/splits interactions, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-16`
+Notes: Focused route-map, cockpit, and dark-mode guards pass; lint and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-16
+Date: 2026-08-20
+Surface: Run-detail section navigation rail on `/run/:runId`
+Files: `frontend/src/components/RunsSubpageNav.jsx`, `frontend/src/pages/runsSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the seven-item numbered command rail aligned with the Run Detail flow—跑步记录, five in-page section anchors, and近期跑步—made direct anchor clicks, nested-section scrolling, and the document-end boundary resolve to the matching active item, and kept the recent-run disclosure reference valid only while its list is mounted.
+Why: The rail could highlight a neighboring section after clicking `近期对比`, `运动数据`, or the final `分圈` panel because the old observer chose the nearest intersecting entry; the collapsed disclosure also exposed a dangling `aria-controls` target.
+Preserve list: Reference rail order and labels, section anchors, optional coach/comparison items, recent-run controls, responsive overflow behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-15`
+Notes: Red-green navigation guard passes; focused Run Detail guards, lint, production build, and live `/run/1680` click-through verification pass.
+
+### Version: DV-2026-08-20-15
+Date: 2026-08-20
+Surface: Run-detail route-first background map reveal on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Fit the Leaflet route into the responsive top reveal while retaining the full-page OpenStreetMap background, and moved the background wash below the route overlay so the line and markers remain visible.
+Why: The top area was showing empty base-map space because the route was fitted against the full page-height background and then covered by the map wash.
+Preserve list: OSM tile source, route line, start/finish markers, controls, attribution, overview/telemetry/splits content, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-14`
+Notes: Focused route-map, cockpit, and dark-mode guards pass; lint and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-14
+Date: 2026-08-20
+Surface: Run-detail OpenStreetMap background with route-first reveal on `/run/:runId`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the route map to a full-shell absolute background while preserving the larger responsive top reveal above `概览`.
+Why: The route should remain the page's visual background, not become a separate fixed-height map stage.
+Preserve list: OSM tile source, route line, start/finish markers, controls, attribution, overview/telemetry/splits content, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-13`
+Notes: Focused route-map, cockpit, and dark-mode guards pass; lint and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-13
+Date: 2026-08-20
+Surface: Run-detail route-map-first stage on `/run/:runId`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Converted the reserved space above `概览` into a real responsive OpenStreetMap route viewport: 420–680px on desktop and 320–460px on narrow screens, with the Overview content placed below it.
+Why: The running route must be visible first; a large empty gap did not provide enough map context.
+Preserve list: OSM tile source, route line, start/finish markers, controls, attribution, overview/telemetry/splits content, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-12`
+Notes: Focused route-map, cockpit, and dark-mode guards pass; lint and forced production build verification are recorded after this change.
+
+### Version: DV-2026-08-20-12
+Date: 2026-08-20
+Surface: Run-detail splits table light surface on `/run/:runId`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the beige zebra bands from the light/default splits table and gave the table, every body row, and every body cell the same white card surface.
+Why: The user asked the grid background to maintain a light white style instead of alternating into darker warm bands.
+Preserve list: Split values, headers, fastest-split coral emphasis, show-all behavior, spacing, horizontal overflow, responsive layout, and dark-theme row treatments.
+Rollback target: `DV-2026-08-20-11`
+Notes: Red-green split-surface contract passes; all five focused Run Detail/source-authority checks pass; lint passes with 0 errors and one unrelated existing `Analysis.jsx` warning; production build and atomic static swap pass. Live browser verification on `/run/1680` confirms all five rendered rows and every cell are `rgb(255, 255, 255)`, while highlighted text remains `rgb(160, 57, 42)`.
+
+### Version: DV-2026-08-20-11
+Date: 2026-08-20
+Surface: Run-detail Overview map breathing room refinement on `/run/:runId`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Increased the reserved OpenStreetMap band above `概览` from a compact gap to a more prominent responsive region: 180–300px on desktop and 112–176px on narrow screens.
+Why: The previous map gap still felt too compressed against the Overview card.
+Preserve list: Overview content, map layer and interactions, route data, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-10`
+Notes: Updated spacing guard, focused Run Detail guards, lint, and forced production build pass.
+
+### Version: DV-2026-08-20-10
+Date: 2026-08-20
+Surface: Run-detail Overview map breathing room on `/run/:runId`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a responsive reserved band above the `概览` / Overview card so the OpenStreetMap page background remains visible between the shell top bar and the first content card.
+Why: The Overview card was starting too close to the top bar and covering the map context the page now uses as its background.
+Preserve list: Overview content, map layer and interactions, route data, responsive behavior, themes, localization, and keyboard focus.
+Rollback target: `DV-2026-08-20-09`
+Notes: Desktop and mobile spacing are pinned by the OpenStreetMap background guard; focused Run Detail guards, lint, and forced production build pass.
+
+### Version: DV-2026-08-20-09
+Date: 2026-08-20
+Surface: Run-detail OpenStreetMap page background on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailOpenStreetMapBackground.smoke.test.js`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Promoted the existing OpenStreetMap Leaflet layer from an in-flow map stage to a shell-level page background behind the Run Detail canvas, while preserving the route line, start/finish markers, zoom controls, attribution, responsive sizing, and dark-theme treatment.
+Why: The route map should establish the visual context for the whole `/run/:runId` surface instead of appearing as a separate block before Overview.
+Preserve list: Route data, map tile source, markers, map interactions, overview/telemetry/splits content, localization, responsive behavior, themes, and keyboard focus.
+Rollback target: `DV-2026-08-20-08`
+Notes: OpenStreetMap background, existing cockpit, and dark-mode guards pass; lint exits 0 with one unrelated Analysis.jsx warning; forced production build and atomic static swap pass. The repository runtime-sync helper is absent, so live backend proof remains unverified here.
+
+### Version: DV-2026-08-20-08
+Date: 2026-08-20
+Surface: Run-detail splits table on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the 分圈 / Splits heading and its action into the splits table panel, with panel-aligned spacing so the heading row and table read as one connected grid.
+Why: The section heading sat outside the table card, separating the label and action from the split data they control.
+Preserve list: Split expansion/collapse behavior, split data, table columns, row highlighting, localization, responsive overflow, themes, and keyboard focus.
+Rollback target: `DV-2026-08-20-07`
+Notes: Structural presentation-only change; no split data wiring or table behavior changed.
+
+### Version: DV-2026-08-20-07
+Date: 2026-08-20
+Surface: Run-detail splits action on `/run/:id`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the existing rounded dark 重新校准 action treatment to the 查看全部 / Show all splits control, including its height, padding, minimum width, and surface styling.
+Why: The splits control used a smaller text-link treatment while the nearby recalibration action used a clearer touch-friendly pill, creating inconsistent action hierarchy.
+Preserve list: Split expansion/collapse behavior, split data, table layout, localization, responsive behavior, themes, and keyboard focus.
+Rollback target: `DV-2026-08-20-06`
+Notes: Presentation-only action styling; no split data or interaction behavior changed.
+
+### Version: DV-2026-08-20-06
+Date: 2026-08-20
+Surface: Run-detail elevation-quality warning on `/run/:runId`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailElevationWarning.smoke.test.js`, `docs/superpowers/specs/2026-08-20-run-detail-elevation-warning-design.md`, `docs/superpowers/plans/2026-08-20-run-detail-elevation-warning.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the mismatched pink warning surface with a neutral Signal card, added a narrow terracotta warning rail, and gave the 重新校准 action a padded dark pill treatment that remains readable at desktop and mobile widths.
+Why: The previous warning color did not belong to the Run Detail cockpit, and the recalibration label could lose its internal spacing.
+Preserve list: Warning copy, visibility conditions, recalibration handler/API, loading state, localization, themes, keyboard focus, and responsive behavior.
+Rollback target: `DV-2026-08-20-05`
+Notes: Focused Run Detail, cockpit, and dark-mode guards pass; lint exits 0 with one unrelated Analysis.jsx warning; production build and atomic static swap pass. Browser live proof was not performed in this source-only checkout.
+
+### Version: DV-2026-08-20-05
+Date: 2026-08-20
+Surface: Run-detail telemetry heading on `/run/:id`
+Files: `frontend/src/styles/run-detail-profile-minimal.css`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the pill background, shadow, blur, padding, and rounded treatment from the connected 运动数据 / Telemetry heading while preserving its text and shared panel placement.
+Why: The heading strip added a second surface inside the telemetry card and made the new connected grid feel segmented.
+Preserve list: Telemetry panel surface, metric tab grid, chart selection, values and units, focus readout, responsive behavior, localization, themes, and keyboard focus.
+Rollback target: `DV-2026-08-20-04`
+Notes: Presentation-only surface cleanup; no telemetry data wiring or chart behavior changed.
+
+### Version: DV-2026-08-20-04
+Date: 2026-08-20
+Surface: Run-detail telemetry on `/run/:id`
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the 运动数据 / Telemetry heading into the telemetry panel so the section label and its metric tab grid share one connected card and grid flow.
+Why: The heading was visually detached above the telemetry card, making the label feel like a separate control instead of the title of the data grid below.
+Preserve list: Telemetry tabs, chart selection, telemetry values and units, focus readout, training-effect data, unavailable metrics, elevation warnings, responsive behavior, localization, themes, and keyboard focus.
+Rollback target: `DV-2026-08-20-03`
+Notes: Structural presentation-only change; no telemetry data wiring, chart behavior, or API contract changed.
+
+### Version: DV-2026-08-20-03
+Date: 2026-08-20
+Surface: Profile-structured analysis detail pages on `/analysis/injury-risk`, `/analysis/coach-insight`, and `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/styles/style.generated.css`, `frontend/src/pages/analysisProfileStructuralRedesign.smoke.test.js`, `frontend/src/pages/analysisInsightDataPreservation.smoke.test.js`, `frontend/src/pages/analysisProfileVisualAlignment.smoke.test.js`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `frontend/src/pages/analysisInjuryPanelStrips.smoke.test.js`, `docs/superpowers/plans/2026-08-20-analysis-profile-structural-redesign.md`, `DESIGN_VERSIONS.md`
+What changed: Replaced the first pass's color-only alignment with the Profile page's actual composition: a compact context/readiness header, one decisive prescription or judgment surface, a long-value-safe metric strip, asymmetric evidence/history regions, and quieter support cards. Removed the coach-insight and injury-risk back-to-analysis controls and their navigation handlers. The repair restores v2 responsive cascade authority, exposes coach/injury/load chart histories to assistive technology, and renders the rationale for every coach plan.
+Why: The user asked for another redesign because matching Profile requires its information hierarchy and pacing, not only its palette.
+Preserve list: Existing data/model wiring, coach performance chart and plans, injury trend/pointer/samples/analysis links, load pointers/samples/methodology/today/runs actions, the unrelated intensity branch, dual-mode theming, keyboard focus, reduced motion, and responsive behavior.
+Rollback target: `DV-2026-08-20-02`
+Notes: Eight focused structural/data/route contracts pass; lint passes with 0 errors and one pre-existing `Analysis.jsx` warning. The full suite is 202/205 with three unrelated failures (`topbarNotifications`, `runDetailElevationWarning`, and `settingsRunActivityGraph`); the Run Detail failure belongs to concurrent DV-04/DV-05 work above. Production build and atomic static swap pass, the active CSS/route bundle contains all three v2 scopes and accessible-history markers, and localhost responds HTTP 200. Visual browser proof remains unavailable because CDP is not running and the in-app screenshot RPC timed out. This workspace is a source copy without Git metadata.
+
+### Version: DV-2026-08-20-02
+Date: 2026-08-20
+Surface: Profile-aligned analysis detail pages on `/analysis/injury-risk`, `/analysis/coach-insight`, and `/analysis/load-balance`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/index.css`, `frontend/src/pages/analysisProfileVisualAlignment.smoke.test.js`, `docs/superpowers/plans/2026-08-20-analysis-profile-visual-alignment.md`, `DESIGN_VERSIONS.md`
+What changed: Added a shared Profile-reference alignment layer with warm paper/white-card/ink/muted/coral hierarchy, Profile shell canvas/topbar geometry, route-scoped injury/coach/load surfaces, midnight/high-contrast themes, responsive no-clipping behavior, focus-visible states, and reduced-motion handling.
+Why: The Profile page is the visual reference for these analysis surfaces, not Login.
+Preserve list: All route data, charts, samples, methodology, navigation/actions, and the already-removed intensity/load back controls remain as-is; no JSX changes.
+Rollback target: `DV-2026-08-20-01`
+Notes: Focused alignment contract, PostCSS, and lint checks pass (0 errors with one pre-existing warning). Build and runtime browser proof remain pending until verification. This workspace is a source copy without Git metadata.
+
+### Version: DV-2026-08-20-01
+Date: 2026-08-20
+Surface: Analysis rail Coach Insight icon on `/analysis/coach-insight`
+Files: `frontend/src/components/AnalysisSubpageNav.jsx`, `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/analysisCoachIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the abstract psychology glyph beside 教练洞察 with a dedicated 24px coach bust: a simple visor, face, and shoulders in the existing rounded currentColor stroke language.
+Why: The previous brain-like outline did not read as a coach at sidebar size; simple coach references consistently use a human bust plus one clear coaching cue.
+Preserve list: Analysis routes, labels, button behavior, accessible nav labeling, shared icon sizing, themes, and all data wiring.
+Rollback target: Previous `psychology` mapping and glyph.
+Notes: Source-level icon smoke test and AppIcon drift guard pass. No Git metadata or live browser runtime was available in this source-only checkout.
+
 ### Version: DV-2026-08-15-34
 Date: 2026-08-15
 Surface: Admin shoe feature-card action buttons on `/dashboard/shoes`
@@ -6428,3 +7750,223 @@ Why: The dashboard strong blanket recolored the signal-card values dark on their
 Preserve list: Card backgrounds and borders, cockpit layout, status live/muted variants, midnight/high-contrast surfaces, data wiring, localization, responsive behavior, and keyboard focus.
 Rollback target: `DV-2026-08-15-04`
 Notes: Light theme only. Live computed-style check on localhost:8080/runs confirms all nine text nodes across the three cards render rgb(255,255,255) with opacity 1.
+
+### Version: DV-2026-08-21-01
+Date: 2026-08-21
+Surface: Load-balance chart tooltip on `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceTooltip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the dark chart tooltip surface with a pure-white data card and switched its date, labels, and values to the light load-balance ink palette while retaining coral and blue acute/chronic markers.
+Why: The tooltip should belong to the page's light chart surface and keep the selected load values legible at a glance.
+Preserve list: Tooltip date and metric data, pointer scrubbing behavior, chart geometry, acute/chronic color semantics, responsive sizing, localization, themes, and keyboard/accessibility behavior.
+Rollback target: `DV-2026-08-15-05`
+Notes: Presentation-only tooltip correction; no load calculations or chart interaction changed.
+
+### Version: DV-2026-08-21-02
+Date: 2026-08-21
+Surface: Load-balance chart legend on `/analysis/load-balance`
+Files: `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceLegend.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the 负荷分数 legend dot to the solid coral load line and the 步频基线 dot to the dashed blue baseline line.
+Why: The legend markers must explain the graph through the same color language as the plotted series.
+Preserve list: Legend labels, line semantics, chart data, scrubbing behavior, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-01`
+Notes: Presentation-only legend correction; no calculations or graph interaction changed.
+
+### Version: DV-2026-08-21-03
+Date: 2026-08-21
+Surface: Injury-risk signal graph on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisInjuryRiskGraphParity.smoke.test.js`, `frontend/src/pages/analysisInjuryRiskGridRemoval.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the Injury Risk signal graph to the Load Balance chart language with a light card, compact header and legend, coral primary series, blue dashed comparison series, uncluttered points, and a white structured tooltip.
+Why: The two analysis graphs should share the same visual grammar so series meaning, hover state, and chart hierarchy are immediately recognizable across routes.
+Preserve list: Injury-risk calculations, trend data, pointer scrubbing, tooltip values, localization, themes, responsive layout, and keyboard/accessibility behavior.
+Rollback target: `DV-2026-08-21-02`
+Notes: Presentation-only alignment; the existing responsive evidence grid was also corrected to avoid a blank removed risk area at the medium breakpoint.
+
+### Version: DV-2026-08-21-04
+Date: 2026-08-21
+Surface: Injury-risk graph point geometry on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisInjuryRiskGraphPoints.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Preserved the injury chart SVG aspect ratio and reduced the hover dot from a 7px radius to 6px so markers render as compact circles like Load Balance.
+Why: The stretched SVG viewBox turned circular markers into ovals, making the hover state look inconsistent with the paired graph.
+Preserve list: Series data, pointer scrubbing, tooltip values, chart geometry, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-03`
+Notes: Presentation-only marker correction; no calculations or hover behavior changed.
+
+### Version: DV-2026-08-21-06
+Date: 2026-08-21
+Surface: Load Balance ACWR trend icon on `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/analysisLoadBalanceTrendIcon.smoke.test.js`, `frontend/src/pages/analysisLoadBalanceRatioStyle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the fixed triangle beside the ACWR value with a data-driven icon: a horizontal dash for no change, an upward trend arrow for increases, and a downward trend arrow for decreases.
+Why: The icon should communicate the direction of the ACWR trend instead of implying a constant warning state.
+Preserve list: ACWR values, chart data, ratio calculations, tooltip behavior, localization, themes, responsive layout, and keyboard/accessibility behavior.
+Rollback target: `DV-2026-08-21-05`
+Notes: Presentation-only trend-state correction; the comparison uses the latest ACWR against the previous available acute/chronic ratio.
+
+### Version: DV-2026-08-21-05
+Date: 2026-08-21
+Surface: Coach Insight recent training rows on `/analysis/coach-insight`
+Files: `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisCoachRecentRunSpacing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a 10px vertical gap between recent training rows so each run reads as a distinct item instead of a touching stack.
+Why: The recent-run list lacked breathing room between activities, making the three rows visually merge together.
+Preserve list: Run ordering, metrics, navigation, hover behavior, localization, responsive layout, themes, and keyboard/accessibility behavior.
+Rollback target: `DV-2026-08-21-04`
+Notes: Presentation-only spacing correction; no run data or interaction behavior changed.
+
+### Version: DV-2026-08-21-07
+Date: 2026-08-21
+Surface: Injury-risk intensity metric icon on `/analysis/injury-risk`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/components/AppIcon.jsx`, `frontend/src/pages/analysisInjuryIntensityIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the generic architecture triangle beside 强度分布 with a dedicated three-bar intensity distribution glyph using a shared baseline and ascending bar heights.
+Why: The icon should communicate a distribution of training intensity rather than a generic structural or warning symbol.
+Preserve list: Intensity percentages, navigation to `/analysis/intensity`, card layout, localization, themes, responsive sizing, and keyboard/accessibility behavior.
+Rollback target: `DV-2026-08-21-06`
+Notes: Presentation-only icon correction; no intensity calculations or card interaction changed.
+
+### Version: DV-2026-08-21-08
+Date: 2026-08-21
+Surface: Coach Insight 7/28-day window focus highlight on `/analysis/coach-insight`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachWindowToggle.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the focused window-toggle outline from the coral accent to the analysis ink token, matching the black active control.
+Why: The selected 7-day/28-day highlighter should keep a black treatment instead of showing a red border.
+Preserve list: Window selection behavior, active state, accessibility focus visibility, localization, themes, responsive layout, and chart data.
+Rollback target: `DV-2026-08-21-07`
+Notes: Presentation-only focus-highlight correction; dark and high-contrast themes continue to resolve the shared ink token.
+
+### Version: DV-2026-08-21-09
+Date: 2026-08-21
+Surface: Coach Insight weekly-plan reasons panel on `/analysis/coach-insight`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachReasonsSpacing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the gradient/shadow surface surrounding the “本周计划依据” heading and kept the numbered reason rows as the visible cards.
+Why: The surrounding panel strip competed with the heading and made the reason list read as one tinted block.
+Preserve list: Reason content, ordering, row spacing, numbering, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-08`
+Notes: Presentation-only surface cleanup; no coach calculations or recommendation logic changed.
+
+### Version: DV-2026-08-21-10
+Date: 2026-08-21
+Surface: Coach Insight primary training-plan card on `/analysis/coach-insight`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Aligned the primary training-plan card with the neighboring neutral cards using a white surface, shared dark ink, matching border/shadow treatment, and a light-grey distance pill; removed the coral accent line from the rationale block.
+Why: The previous light card override left older cream-on-coral text rules active, making the plan content nearly invisible and visually inconsistent with the adjacent grids.
+Preserve list: Plan content, session selection, navigation actions, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-09`
+Notes: Presentation-only surface correction; no coach calculations, data fetching, or API behavior changed.
+
+### Version: DV-2026-08-21-131
+Date: 2026-08-22
+Surface: Coach Insight primary training-plan card sizing on `/analysis/coach-insight`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Let the primary training-plan card size to its content and opt it out of the shared stretched workbench row while retaining the neighboring card surface treatment.
+Why: The shared desktop row height left a large empty lower half beneath the rationale block, making the card look visually broken despite the correct content and colors.
+Preserve list: Plan content, session selection, navigation actions, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-130`
+Notes: Presentation-only sizing correction; no coach calculations, data fetching, or API behavior changed.
+
+### Version: DV-2026-08-21-132
+Date: 2026-08-22
+Surface: Coach Insight primary-plan rationale grid on `/analysis/coach-insight`
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the rationale grid to the shared soft-coral fill while keeping its borderless treatment and dark readable text.
+Why: The neutral grey rationale block looked disconnected from the Coach Insight coral visual language after the card surface cleanup.
+Preserve list: Rationale copy, plan content, session selection, navigation actions, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-131`
+Notes: Presentation-only color correction; no coach calculations, data fetching, or API behavior changed.
+
+### Version: DV-2026-08-21-133
+Date: 2026-08-22
+Surface: 10K prediction forecast hero on `/prediction/10k`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the confidence panel from the 10K forecast hero and expanded the remaining hero content to the full available width.
+Why: The confidence grid was not part of the requested 10K prediction summary and occupied a visually dominant secondary column.
+Preserve list: Forecast calculations, weather adjustment, evidence tiles, effort ladder, trend chart, half-marathon confidence omission, localization, navigation, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-21-132`
+Notes: Presentation-only route-specific removal; no prediction calculations, data fetching, or API behavior changed.
+
+### Version: DV-2026-08-22-134
+Date: 2026-08-22
+Surface: Half-marathon prediction forecast hero on `/prediction/half`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionHalfConfidencePanel.smoke.test.js`, `frontend/src/pages/predictionProfileAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the confidence panel from the half-marathon forecast hero and expanded the remaining forecast content to the full available width.
+Why: The half-marathon prediction view no longer needs the confidence card shown in the reference image.
+Preserve list: Prediction calculations, result time, weather adjustment, pace data, evidence grid, other prediction-distance layouts, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-21-133`
+Notes: Presentation-only route-specific removal; confidence calculations remain available to prediction routes that still render the panel.
+
+### Version: DV-2026-08-22-135
+Date: 2026-08-22
+Surface: 5K prediction forecast hero on `/prediction/5k`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/assets/generated/prediction-5k-hero.png`, `frontend/src/pages/predictionFiveKHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied street-running image as the right-side media in the 5K forecast hero and restored a two-column hero layout only for that route.
+Why: The 5K prediction hero needed a visual replacement for its right-side area while keeping the forecast copy prominent on the left.
+Preserve list: Forecast calculations, result time, evidence tiles, weather adjustment, other prediction-distance layouts, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-22-134`
+Notes: Presentation-only route-scoped media replacement; the image is decorative and uses an empty alt attribute.
+
+### Version: DV-2026-08-22-139
+Date: 2026-08-22
+Surface: 5K prediction forecast hero media sizing on `/prediction/5k`
+Files: `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionFiveKHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Expanded the 5K hero to an equal two-column split so the supplied image fills the entire right half of the hero grid.
+Why: The first media treatment left the right-side visual narrower than the available hero space.
+Preserve list: Forecast copy, image crop, calculations, other prediction-distance layouts, localization, themes, responsive collapse, and accessibility.
+Rollback target: `DV-2026-08-22-138`
+Notes: Presentation-only layout sizing correction; the 5K media still collapses to a single column below the responsive breakpoint.
+
+### Version: DV-2026-08-22-140
+Date: 2026-08-22
+Surface: 5K prediction forecast hero media edge spacing on `/prediction/5k`
+Files: `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/pages/predictionFiveKHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the narrower right-side media column and removed the hero padding around the image so it uses the available top, right, and bottom space flush to the hero edge.
+Why: The equal-width revision was not the intended composition; the image should stay in the original secondary column without an extra padded frame.
+Preserve list: Forecast copy, image crop, calculations, other prediction-distance layouts, localization, themes, responsive collapse, and accessibility.
+Rollback target: `DV-2026-08-22-139`
+Notes: Presentation-only spacing correction; the image regains its rounded inset treatment when the hero collapses on smaller screens.
+
+### Version: DV-2026-08-22-141
+Date: 2026-08-22
+Surface: 10K prediction forecast hero on `/prediction/10k`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/assets/generated/prediction-10k-hero.png`, `frontend/src/pages/predictionTenKHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied Forbidden City running image to the 10K hero’s right-side media column using the same edge-to-edge treatment as the 5K hero.
+Why: The 10K prediction hero needed a route-specific visual in the secondary column while keeping its forecast copy on the left.
+Preserve list: Forecast calculations, result time, evidence tiles, weather adjustment, 5K and other prediction-distance layouts, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-22-140`
+Notes: Presentation-only route-scoped media addition; the image is decorative and uses an empty alt attribute.
+
+### Version: DV-2026-08-22-136
+Date: 2026-08-22
+Surface: Coach Insight equipment-strategy card on `/analysis/coach-insight`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the equipment-strategy card showing the focus percentage and Today Run shortcut from the Coach Insight blueprint sidebar.
+Why: The card was a redundant grid in the requested Coach Insight surface and distracted from the primary training blueprint.
+Preserve list: Primary plan content, session navigation, readiness calculations, recent sessions, localization, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-22-135`
+Notes: Presentation-only card removal; no coach calculations, data fetching, or API behavior changed.
+
+### Version: DV-2026-08-22-137
+Date: 2026-08-22
+Surface: Shared personalized running planner across Today Run, Profile, Schedule, and `/analysis/coach-insight`
+Files: `backend/src/main/java/com/hermes/backend/PersonalizedRunningPlanner.java`, `backend/src/main/java/com/hermes/backend/AutomatedCoachService.java`, `frontend/src/utils/personalizedCoachPlan.js`, `frontend/src/utils/todayRun.js`, `frontend/src/pages/TodayRun.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/Schedule.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, localized page copy, focused planner tests, `DESIGN_VERSIONS.md`
+What changed: Replaced independent static recommendation paths with one backend-authored, deterministic 14-day planner driven by recent volume and frequency, preferred run days, recent hard-session spacing, readiness, soreness/injury risk, and the nearest saved race goal. All four surfaces now consume the same structured workout, target, pace range, phase, confidence, and rationale while retaining their prior local calculation as an API-failure fallback.
+Why: The previous surfaces could recommend different workouts for the same runner and day, and future schedule rows stayed fixed after training or recovery data changed.
+Preserve list: Completed workouts, user route notes, authentication, shoe recommendations, route generation, units, bilingual copy, weather pace adjustment, manual Today Run recovery override, themes, responsive layout, and accessibility behavior.
+Rollback target: `DV-2026-08-22-136`
+Notes: Product-logic change. Future uncompleted schedule rows are recalculated; completed workouts remain historical evidence rather than mutable plan output.
+
+### Version: DV-2026-08-22-138
+Date: 2026-08-22
+Surface: Shoes page inventory search bar on `/shoes`
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoesAtelierRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the search bar to a light-grey surface, removed its inset strip, and forced the text input to remain transparent.
+Why: The white background behind the placeholder text broke the search control into two visible layers instead of one cohesive field.
+Preserve list: Search filtering, input semantics, icon, placeholder localization, focus behavior, responsive sizing, themes, and the rest of the Shoes layout.
+Rollback target: `DV-2026-08-22-137`
+Notes: Presentation-only search surface correction; no shoe data or filtering behavior changed.
+
+### Version: DV-2026-08-22-142
+Date: 2026-08-22
+Surface: Shoes page inventory image alignment on `/shoes`
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoesAtelierRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Gave the shoe image frame a definite desktop height, centered its contents with grid alignment, and explicitly centered the contained shoe image.
+Why: The previous percentage-height image chain depended on an auto-height grid item, allowing wide shoe images to remain visually top-biased inside the card frame.
+Preserve list: Shoe image loading and background processing, image-picker interaction, card layout, mobile sizing, responsive behavior, themes, and all shoe data/actions.
+Rollback target: `DV-2026-08-22-141`
+Notes: Presentation-only image-slot correction; no image URLs, processing API, or shoe data behavior changed.

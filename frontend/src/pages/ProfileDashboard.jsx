@@ -19,6 +19,7 @@ import { getTodayRunRecommendation } from '../utils/todayRun';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
 import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
+import { buildRunDetailPath } from '../utils/runRoute';
 import { calculateStreaks, getDaysSinceLastRun } from '../utils/streakUtils';
 import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 import ComebackMessage from '../components/ComebackMessage';
@@ -645,7 +646,7 @@ export default function ProfileDashboard() {
   const { unit } = useUnit();
   const navigate = useNavigate();
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
@@ -940,7 +941,10 @@ export default function ProfileDashboard() {
     if (useFullDashboardMetrics || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) return runs;
     return runs.slice(0, DASHBOARD_FIRST_PAINT_RUN_LIMIT);
   }, [runs, useFullDashboardMetrics]);
-  const todayBundle = useMemo(() => getTodayRunRecommendation({ runs: dashboardMetricRuns, t, lang }), [dashboardMetricRuns, t, lang]);
+  const todayBundle = useMemo(
+    () => getTodayRunRecommendation({ runs: dashboardMetricRuns, t, lang, unit, coachPayload: coachToday }),
+    [dashboardMetricRuns, t, lang, unit, coachToday],
+  );
   const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
   const weeklyBars = useMemo(() => buildWeekBars(dashboardMetricRuns, lang), [lang, dashboardMetricRuns]);
   const profileVdot = useMemo(() => estimateCurrentVdot(dashboardMetricRuns), [dashboardMetricRuns]);
@@ -1413,7 +1417,7 @@ export default function ProfileDashboard() {
                             key={run.id}
                             type="button"
                             className="hd-session-row"
-                            onClick={() => navigate(`/run/${run.id}`)}
+                            onClick={() => navigate(buildRunDetailPath(run.id))}
                           >
                             <div className="hd-session-left">
                               <span className={`hd-session-dot tone-${tone}`} />

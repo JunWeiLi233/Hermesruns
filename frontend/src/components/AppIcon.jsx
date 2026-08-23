@@ -122,6 +122,18 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m13.5 20-.5-4 2-2 2.5.5" />
         </>
       );
+    case 'load_balance_runner':
+      return titled(
+        <>
+          {/* Font Awesome 6 Free Solid person-running geometry, CC BY 4.0. */}
+          <path
+            transform="translate(1.5 0) scale(0.046875)"
+            fill="currentColor"
+            stroke="none"
+            d="M320 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM125.7 175.5c9.9-9.9 23.4-15.5 37.5-15.5c1.9 0 3.8 .1 5.6 .3L137.6 254c-9.3 28 1.7 58.8 26.8 74.5l86.2 53.9-25.4 88.8c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l28.7-100.4c5.9-20.6-2.6-42.6-20.7-53.9L238 299l30.9-82.4 5.1 12.3C289 264.7 323.9 288 362.7 288l21.3 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-21.3 0c-12.9 0-24.6-7.8-29.5-19.7l-6.3-15c-14.6-35.1-44.1-61.9-80.5-73.1l-48.7-15c-11.1-3.4-22.7-5.2-34.4-5.2c-31 0-60.8 12.3-82.7 34.3L57.4 153.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l23.1-23.1zM91.2 352L32 352c-17.7 0-32 14.3-32 32s14.3 32 32 32l69.6 0c19 0 36.2-11.2 43.9-28.5L157 361.6l-9.5-6c-17.5-10.9-30.5-26.8-37.9-44.9L91.2 352z"
+          />
+        </>
+      );
     case 'person':
       return titled(
         <>
@@ -197,6 +209,12 @@ export default function AppIcon({ name, className = '', title }) {
         <>
           <path d="M4 12h16" />
           <path d="m14 8 4 4-4 4" />
+        </>
+      );
+    case 'horizontal_rule':
+      return titled(
+        <>
+          <path d="M5 12h14" />
         </>
       );
     case 'show_chart':
@@ -422,6 +440,14 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M12 18.5a2 2 0 1 0 0 .1Z" />
         </>
       );
+    case 'heat_adaptation':
+      return titled(
+        <>
+          <path d="M14.25 13.8V4.5a2.25 2.25 0 0 0-4.5 0v9.3a5.25 5.25 0 1 0 4.5 0Z" />
+          <path d="M12 7v9.6" />
+          <circle cx="12" cy="17.6" r="2.25" fill="currentColor" stroke="none" />
+        </>
+      );
     case 'weather':
       return titled(
         <>
@@ -594,6 +620,15 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="m12 4 8 14H4Z" />
           <path d="M9 12h6" />
           <path d="M12 4v14" />
+        </>
+      );
+    case 'intensity_distribution':
+      return titled(
+        <>
+          <path d="M4 19.5h16" />
+          <path d="M6.5 19v-5" />
+          <path d="M12 19V9" />
+          <path d="M17.5 19V5" />
         </>
       );
     case 'boot':
@@ -779,6 +814,32 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M13 8.5a2 2 0 0 0 0 4" />
         </>
       );
+    case 'coach':
+      return titled(
+        <>
+          <g
+            className="app-icon-coach-silhouette"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12.3 4.65c-1.72 0-3.12 1.4-3.12 3.12v1.15c0 1.8 1.4 3.2 3.12 3.2s3.12-1.4 3.12-3.2V7.77c0-1.72-1.4-3.12-3.12-3.12Z" />
+            <path d="M9.55 7.25h5.5" />
+            <path d="m9.6 7.55.7 1.2h4l.7-1.2" />
+            <path d="M10.9 11.2v1.4c0 .8.6 1.4 1.4 1.4s1.4-.6 1.4-1.4v-1.4" />
+            <path d="M10.7 12.7v1.3l1.55 2" />
+            <path d="M13.9 12.7v1.3l-1.55 2" />
+            <path d="M12.3 15.55c-.55 0-.95.45-.95 1s.4 1 .95 1h.45v1h.8v-2.35c0-.36-.3-.65-.65-.65h-.6Z" />
+            <path d="M8.8 15.6v3.75" />
+            <path d="M15.8 15.6v3.75" />
+            <path d="M5.2 18.55h3.6" />
+            <path d="M15.8 18.55h3.5" />
+            <path d="M10.9 12.6 8 13.2c-1.35.3-2.2 1.25-2.45 2.55l-.65 3.6h14.8l-.65-3.6c-.25-1.3-1.1-2.25-2.45-2.55l-2.8-.6" />
+          </g>
+        </>
+      );
     case 'coach_review':
       return titled(
         <>
@@ -825,12 +886,8 @@ export default function AppIcon({ name, className = '', title }) {
     case 'translate':
       return titled(
         <>
-          <path d="M4 6h9" />
-          <path d="M8.5 4v2" />
-          <path d="M11 14c-2.5-1.5-4.5-4-5.5-8" />
-          <path d="M4 14c2-5 5-8 9-8" />
-          <path d="M12.5 20.5 16 12l3.5 8.5" />
-          <path d="M13.5 18h5" />
+          <text x="2" y="12" fill="currentColor" stroke="none" fontFamily="Microsoft YaHei, sans-serif" fontSize="11" fontWeight="700">文</text>
+          <text x="14" y="20" fill="currentColor" stroke="none" fontFamily="Arial, sans-serif" fontSize="8" fontWeight="700">A</text>
         </>
       );
     case 'trending_up':

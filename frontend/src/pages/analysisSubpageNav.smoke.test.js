@@ -77,23 +77,24 @@ for (const marker of [
   'analysis-load-profile-evidence',
   'analysis-load-profile-metrics',
   'analysis-load-profile-ledger',
-  'analysis-load-profile-methodology',
 ]) {
   assert.ok(insightSource.includes(marker), `Load Balance is missing ${marker}.`);
 }
+
+assert.doesNotMatch(
+  insightSource,
+  /analysis-load-profile-methodology|analysis-load-command-methodology-card/,
+  'Load Balance must not render the removed ACWR methodology grid.',
+);
 
 assert.ok(
   insightSource.indexOf('analysis-load-profile-decision') < insightSource.indexOf('analysis-load-profile-evidence'),
   'The coaching decision must precede analytical evidence.',
 );
-assert.ok(
-  insightSource.indexOf('analysis-load-profile-ledger') < insightSource.indexOf('analysis-load-profile-methodology'),
-  'Methodology must remain supporting content after recent training.',
-);
 assert.match(insightSource, /onPointerMove=\{handleLoadPointerMove\}/);
 assert.match(insightSource, /onPointerLeave=\{handleLoadPointerLeave\}/);
 assert.match(insightSource, /navigate\('\/today-run'\)/);
-assert.match(insightSource, /navigate\(`\/run\/\$\{row\.id\}`\)/);
+assert.match(insightSource, /navigate\(buildRunDetailPath\(row\.id\)\)/);
 assert.match(indexSource, /analysis-load-balance-profile-alignment\.css/);
 assert.match(loadBalanceCss, /prefers-reduced-motion/);
 assert.match(loadBalanceCss, /theme-midnight/);
@@ -111,8 +112,8 @@ assert.match(
 );
 assert.match(
   loadBalanceCss,
-  /#root\s+\.analysis-insight-detail-page\.is-load-balance\s+\.analysis-load-profile-decision\s+\.coach-identity-copy\s+strong[\s\S]*color:\s*#1c1917\s*!important/,
-  'The Load Balance coach identity should remain readable on the white decision surface.',
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-decision \.coach-identity-copy strong[\s\S]*color:\s*#fff8f1\s*!important/,
+  'The Load Balance coach identity should remain readable over the track-backed decision surface.',
 );
 
 console.log('[PASS] Analysis subpage navigation guard passed.');

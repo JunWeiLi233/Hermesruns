@@ -5124,6 +5124,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 .runner-dashboard-page .runner-dashboard-sidebar-toggle {
+  display: none;
   width: 30px;
   height: 30px;
   border: 1px solid var(--runner-nav-line);
@@ -5293,7 +5294,11 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-nav {
   width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
   overflow: hidden;
 }
 
@@ -5301,7 +5306,9 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   width: 52px;
   max-width: 52px;
   min-height: 44px;
+  align-items: center;
   justify-content: center;
+  margin-inline: auto;
   padding: 10px !important;
   overflow: hidden;
 }
@@ -5327,9 +5334,9 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-workout-btn,
 .runner-dashboard-page.is-sidebar-collapsed .runner-shell-workout-btn {
-  width: 52px;
-  min-width: 52px;
-  max-width: 52px;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
   height: 60px;
   min-height: 60px;
   padding: 0;
@@ -5340,6 +5347,165 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
 .runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-workout-btn-label {
   display: none;
+}
+
+/* The rail is compact at rest and unfolds over the same desktop grid when the
+ * pointer or keyboard focus enters it. The React toggle still acts as a pin:
+ * explicitly expanding it removes `is-sidebar-collapsed` and keeps the full
+ * navigation open until the user toggles it again. */
+@media (min-width: 1100px) {
+  .runner-dashboard-page.runner-shell-page.is-sidebar-collapsed {
+    grid-template-columns: var(--runner-nav-collapsed-width) minmax(0, 1fr) !important;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover),
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) {
+    grid-template-columns: var(--runner-nav-expanded-width) minmax(0, 1fr) !important;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-sidebar,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-sidebar {
+    width: var(--runner-nav-expanded-width) !important;
+    min-width: var(--runner-nav-expanded-width) !important;
+    max-width: none !important;
+    padding: 16px 10px 14px !important;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-main,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-main {
+    margin-left: var(--runner-nav-expanded-width) !important;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-brand,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-brand {
+    width: auto;
+    min-width: 0;
+    justify-content: initial;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-brand,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-brand {
+    width: auto;
+    padding: 4px 6px 14px;
+    justify-content: initial;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-brand-copy,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-brand-copy {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    align-items: flex-start;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo),
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
+    display: inline-block;
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-brand .hermes-logo,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-brand .hermes-logo {
+    width: auto;
+    min-width: 0;
+    justify-content: initial;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-brand .hermes-logo__word,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-brand .hermes-logo__mark,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-brand .hermes-logo__word,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-brand .hermes-logo__mark {
+    display: inline;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-sidebar-toggle,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-sidebar-toggle {
+    width: 30px;
+    height: 30px;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-side-nav,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-side-nav {
+    width: auto;
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-side-link,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-side-link {
+    width: 100%;
+    max-width: none;
+    min-height: 42px;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 9px 34px 9px 16px !important;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-side-link-label,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-side-link-label {
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-side-link::before,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-side-link::before {
+    display: block;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-side-link::after,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-side-link::after {
+    inset: 9px auto 9px 5px;
+    width: 0;
+    height: auto;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-side-link.is-active::after,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-side-link.is-active::after {
+    width: 3px;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-sidebar-footer,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-sidebar-footer {
+    width: auto;
+    align-items: stretch;
+    justify-content: initial;
+    padding: 6px 4px 0;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-workout-btn,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-workout-btn,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-workout-btn,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-workout-btn {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: auto;
+    min-height: 46px;
+    padding: 7px 10px;
+    border-radius: 14px;
+    overflow: visible;
+  }
+
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-workout-btn-label,
+  .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-workout-btn-label {
+    display: inline;
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
 }
 
 @media (max-width: 860px) {

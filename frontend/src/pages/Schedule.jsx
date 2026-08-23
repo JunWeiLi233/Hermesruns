@@ -358,7 +358,7 @@ export default function Schedule() {
 
   const s = useCallback((key, vars) => t(`schedule.${key}`, vars), [t]);
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
@@ -424,8 +424,8 @@ export default function Schedule() {
   }, [isAuthenticated, navigate]);
 
   const recommendationBundle = useMemo(
-    () => getTodayRunRecommendation({ runs, t, lang }),
-    [runs, t, lang],
+    () => getTodayRunRecommendation({ runs, t, lang, unit, coachPayload: coachToday }),
+    [runs, t, lang, unit, coachToday],
   );
   const vdotTrend = useMemo(
     () => computeVdotTrend(runs),
@@ -479,9 +479,6 @@ export default function Schedule() {
   }), [lang, t]);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
-  const heroKicker = targetBlock.name
-    ? `${targetBlock.name}: ${s('phase_label', { week: targetBlock.weekIndex || 1 })}`
-    : s('phase_label', { week: 1 });
   const heroTitle = targetBlock.hasActiveBlock
     ? targetBlock.isMarathonBlock
       ? s('hero_title_marathon')
@@ -1088,7 +1085,6 @@ export default function Schedule() {
         <div className="runner-shell-canvas schedule-plan-canvas">
           <section className={`schedule-plan-hero${targetBlock.hasActiveBlock ? ' is-block-active' : ''}${targetBlock.isMarathonBlock ? ' is-marathon-block' : ''}`}>
             <div className="schedule-plan-hero-copy">
-              <span className="schedule-plan-kicker">{heroKicker}</span>
               <h1>{heroTitle}</h1>
               {heroSummary.length > 0 ? (
                 <div className="schedule-plan-hero-summary">
@@ -1131,6 +1127,7 @@ export default function Schedule() {
                   key={day.key}
                   className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}${isReadinessDeferred ? ' is-readiness-deferred' : ''}`}
                 >
+                  {day.isToday ? <span className="schedule-plan-day-today-badge">{s('today_badge')}</span> : null}
                   <div>
                     <div className="schedule-plan-day-head">
                       <p className="schedule-plan-day-label">{day.dayLabel}</p>

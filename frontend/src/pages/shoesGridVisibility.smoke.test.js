@@ -13,6 +13,7 @@ const styles = [
 ].join('\n');
 const lightThemeStyles = read('src/styles/_split/light-theme-overrides.css');
 const liquidGlassStyles = read('src/styles/all-pages-liquid-glass.css');
+const gridCardsStyles = read('src/styles/grid-cards-white.css');
 const shoesPage = read('src/pages/Shoes.jsx');
 const addShoesPage = read('src/pages/AddShoes.jsx');
 
@@ -33,6 +34,12 @@ const assertMatches = (source, pattern, label) => {
     throw new Error(`${label} missing: ${pattern}`);
   }
 };
+
+assertMatches(
+  styles,
+  /\.shoes-profile-workspace \.shoe-inventory-filterbar\s*\{\s*background: #f1f2f2;\s*\}/,
+  'light-grey Shoes inventory filter grid surface'
+);
 
 [
   '.shoes-dashboard-page',
@@ -65,7 +72,6 @@ const assertMatches = (source, pattern, label) => {
   'shoe-inventory-card-metrics',
   'shoe-inventory-card-side',
   'shoe-inventory-manage-grid',
-  'shoe-rotation-signal',
   'shoes-profile-workspace',
   'shoe-inventory-summary-strip',
   'shoe-inventory-workspace-head',
@@ -97,6 +103,36 @@ assertMatches(
   /\.runner-shell-page\.shoes-dashboard-page \.shoe-rotation-signal-copy > \.shoe-inventory-panel-kicker \{\s*background: transparent !important;\s*border-color: transparent !important;\s*box-shadow: none !important;/,
   'Shoes rotation label strip reset'
 );
+assertExcludes(
+  gridCardsStyles,
+  '.shoes-dashboard-page.shoes-atelier-redesign {',
+  'Shoes light-theme page background should remain the original warm surface'
+);
+assertMatches(
+  gridCardsStyles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoes-dashboard-page\.shoes-atelier-redesign \.shoe-inventory-stage\s*\{[\s\S]*background: #fff !important;[\s\S]*background-image: none !important;[\s\S]*box-shadow: none !important;/,
+  'Shoes light-theme stage should be solid white without a panel gradient'
+);
+assertMatches(
+  gridCardsStyles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoes-dashboard-page\.shoes-atelier-redesign \.shoe-inventory-workspace-copy > \.shoe-inventory-panel-kicker\s*\{[\s\S]*background: transparent !important;[\s\S]*border-color: transparent !important;[\s\S]*box-shadow: none !important;/,
+  'Shoes workspace kicker should not render a panel strip behind the text'
+);
+assertMatches(
+  gridCardsStyles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoes-dashboard-page\.shoes-atelier-redesign \.shoe-inventory-search\s*\{[\s\S]*border: 0 !important;[\s\S]*box-shadow: none !important;/,
+  'Shoes search bar should not render a border or inset outline'
+);
+assertMatches(
+  gridCardsStyles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoes-dashboard-page\.shoes-atelier-redesign \.shoe-inventory-search input:focus-visible\s*\{[\s\S]*border: 0 !important;[\s\S]*outline: none !important;[\s\S]*box-shadow: none !important;/,
+  'Shoes focused search input should not render the red focus outline'
+);
+assertMatches(
+  styles,
+  /#root \.shoes-atelier-redesign \.shoe-rotation-signal-highlight\s*\{\s*background: #f3f4f4 !important;\s*\}/,
+  'Shoes recommendation highlight light-grey surface'
+);
 assertMatches(
   lightThemeStyles,
   /body\.theme-light \.shoes-profile-workspace \.shoe-inventory-card-progress \{\s*background: transparent;\s*\}/,
@@ -116,6 +152,11 @@ assertIncludes(styles, 'grid-template-columns: repeat(2, minmax(0, 1fr)) !import
 assertExcludes(shoesPage, 'isInventoryCollapsed', 'duplicate inventory collapse state');
 assertExcludes(shoesPage, 'Collapse running shoes inventory', 'hardcoded inventory accessibility copy');
 assertExcludes(shoesPage, 'Expand running shoes inventory', 'hardcoded inventory accessibility copy');
+assertExcludes(
+  shoesPage,
+  "<span className=\"shoe-inventory-panel-kicker\">{t('shoes.stitch_surface_label')}</span>",
+  'Shoes inventory header should not render the redundant panel kicker',
+);
 
 [
   'add-shoes-brand-deck-grid',

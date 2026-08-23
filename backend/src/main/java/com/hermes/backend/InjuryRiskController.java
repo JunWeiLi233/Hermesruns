@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,21 @@ public class InjuryRiskController {
 
     private final InjuryRiskService injuryRiskService;
     private final AuthService authService;
+    private final AutomatedCoachService automatedCoachService;
 
     public InjuryRiskController(InjuryRiskService injuryRiskService, AuthService authService) {
+        this(injuryRiskService, authService, null);
+    }
+
+    @Autowired
+    public InjuryRiskController(
+            InjuryRiskService injuryRiskService,
+            AuthService authService,
+            AutomatedCoachService automatedCoachService
+    ) {
         this.injuryRiskService = injuryRiskService;
         this.authService = authService;
+        this.automatedCoachService = automatedCoachService;
     }
 
     @GetMapping("/status")
@@ -52,7 +64,9 @@ public class InjuryRiskController {
         if (notes != null && notes.length() > 500) {
             return ResponseEntity.badRequest().body(Map.of("error", "notes must be 500 characters or fewer."));
         }
-        SorenessLog logEntry = injuryRiskService.logSoreness(runnerOpt.get(), normalizedLevel, notes);
+        Runner runner = runnerOpt.get();
+        SorenessLog logEntry = injuryRiskService.logSoreness(runner, normalizedLevel, notes);
+        if (automatedCoachService != null) automatedCoachService.replanFutureSchedule(runner);
         return ResponseEntity.ok(Map.of(
                 "id", logEntry.getId(),
                 "level", logEntry.getLevel(),

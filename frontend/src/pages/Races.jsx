@@ -325,7 +325,7 @@ const Races = memo(function Races() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [races, setRaces] = useState([]);

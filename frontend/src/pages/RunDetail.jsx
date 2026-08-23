@@ -10,6 +10,7 @@ import RunsSubpageNav from '../components/RunsSubpageNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { formatDuration, formatLongDate, formatPaceSeconds } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { buildRunDetailPath } from '../utils/runRoute';
 import { formatShoeDisplayName } from '../utils/shoeNames';
 import {
   Chart as ChartJS,
@@ -214,10 +215,11 @@ export default function RunDetail() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isCompactMapLayout, setIsCompactMapLayout] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches
   ));
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [profile, setProfile] = useState(null);
   const [run, setRun] = useState(() => readSelectedRunFromSession(id));
   const [isBootstrappingRun, setIsBootstrappingRun] = useState(true);
@@ -459,23 +461,39 @@ export default function RunDetail() {
       if (disposed || !mapRef.current) return;
 
       const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: true, dragging: true });
+      map.on('click', () => setIsMapExpanded((current) => !current));
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
 
       const line = L.polyline(points, { color: '#f07561', weight: 4, opacity: 0.92 }).addTo(map);
-      map.fitBounds(line.getBounds(), { padding: [24, 24] });
+      const focusRouteAtTop = () => {
+        const mapHeight = mapRef.current?.clientHeight || 0;
+        if (mapHeight < 64) return;
+        const routeRevealHeight = isCompactMapLayout
+          ? Math.min(460, Math.max(320, window.innerWidth * 0.82))
+          : Math.min(680, Math.max(420, window.innerHeight * 0.58));
+        const bottomPadding = Math.max(24, mapHeight - routeRevealHeight + 24);
+        map.fitBounds(line.getBounds(), {
+          paddingTopLeft: [24, 24],
+          paddingBottomRight: [24, bottomPadding],
+        });
+      };
 
       L.circleMarker(points[0], { radius: 6, color: '#121212', fillColor: '#121212', fillOpacity: 1, weight: 2 })
         .bindTooltip(t('run_detail.start')).addTo(map);
       L.circleMarker(points[points.length - 1], { radius: 7, color: '#f49787', fillColor: '#f49787', fillOpacity: 1 })
         .bindTooltip(t('run_detail.finish')).addTo(map);
 
-      const resizeMap = () => map.invalidateSize({ pan: false });
+      const resizeMap = () => {
+        map.invalidateSize({ pan: false });
+        focusRouteAtTop();
+      };
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(resizeMap);
         resizeObserver.observe(mapRef.current);
       }
+      resizeMap();
       resizeTimeoutId = window.setTimeout(resizeMap, 0);
       mapInstanceRef.current = map;
     });
@@ -490,6 +508,14 @@ export default function RunDetail() {
       }
     };
   }, [insights, isCompactMapLayout, points, t]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || typeof window === 'undefined') return undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      mapInstanceRef.current?.invalidateSize({ pan: false });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isMapExpanded]);
 
   const distKm = useMemo(() => {
     if (!run) return null;
@@ -743,7 +769,7 @@ export default function RunDetail() {
     setTelemetry(null);
     setElevationStatus(null);
     setSelectedTelemetryPoint(null);
-    navigate(`/run/${selectedRun.id}`);
+    navigate(buildRunDetailPath(selectedRun.id));
   }
 
   function renderRunnerShell(content, {
@@ -752,7 +778,7 @@ export default function RunDetail() {
     showSections = false,
   } = {}) {
     return (
-      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page${points.length > 0 ? ' has-route-map-page-background' : ''}${isMapExpanded ? ' is-route-map-expanded' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
         <RunsSubpageNav
           collapsed={isSidebarCollapsed}
           hasCoachReview={hasCoachReview}
@@ -768,6 +794,12 @@ export default function RunDetail() {
         />
 
         <main className="runner-shell-main">
+          {points.length > 0 && (
+            <div className="run-detail-map-background">
+              <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
+            </div>
+          )}
+
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
               <RunnerShellTopNav
@@ -866,12 +898,6 @@ export default function RunDetail() {
   const aerobicEffect = Number(trainingEffect?.aerobic);
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
   const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
-  const routeMapBackground = points.length > 0 ? (
-    <div className="run-detail-map-background">
-      <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
-    </div>
-  ) : null;
-
   return renderRunnerShell(
     <div className={`run-detail-page run-detail-profile-cockpit run-detail-profile-minimal${points.length > 0 ? ' has-route-map-background' : ''}`}>
       {points.length === 0 && (
@@ -901,8 +927,6 @@ export default function RunDetail() {
           </div>
         </div>
       )}
-
-      {routeMapBackground}
 
       <div className="run-detail-shell">
         {points.length === 0 && (
@@ -1050,12 +1074,12 @@ export default function RunDetail() {
         </section>
 
         <section id="run-detail-telemetry" className="run-detail-section run-detail-telemetry-section">
-          <div className="run-detail-section-head run-detail-telemetry-heading">
-            <div>
-              <h2>{t('run_detail.telemetry_title')}</h2>
-            </div>
-          </div>
           <div className="run-detail-panel run-detail-telemetry-panel">
+            <div className="run-detail-section-head run-detail-telemetry-heading">
+              <div>
+                <h2>{t('run_detail.telemetry_title')}</h2>
+              </div>
+            </div>
             <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
               {telemetryTabDefinitions.map((definition) => {
                 const displaySample = definition.displaySample;
@@ -1154,7 +1178,7 @@ export default function RunDetail() {
               <div className="run-detail-warning">
                 <p>{t('run_detail.elevation_warning')}</p>
                 {elevationStatus?.canRecalibrate && (
-                  <button type="button" className="run-detail-link-btn" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                  <button type="button" className="run-detail-link-btn run-detail-warning-action" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
                     {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
                   </button>
                 )}
@@ -1164,15 +1188,15 @@ export default function RunDetail() {
         </section>
 
         <section id="run-detail-splits" className="run-detail-section run-detail-splits-section">
-          <div className="run-detail-section-head">
-            <h2>{t('run_detail.splits')}</h2>
-            {lapRows.length > 5 && (
-              <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
-                {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
-              </button>
-            )}
-          </div>
           <div className="run-detail-panel run-detail-table-panel">
+            <div className="run-detail-section-head">
+              <h2>{t('run_detail.splits')}</h2>
+              {lapRows.length > 5 && (
+                <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
+                  {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+                </button>
+              )}
+            </div>
             <table className="run-detail-splits-table">
               <thead>
                 <tr>

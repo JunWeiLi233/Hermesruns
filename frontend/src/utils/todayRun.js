@@ -1,5 +1,6 @@
 import { formatPace, formatDistance } from './format';
 import { estimateCurrentVdot, computeTrainingPaces } from './vdot';
+import { resolvePersonalizedCoachRecommendation } from './personalizedCoachPlan';
 
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
@@ -229,6 +230,7 @@ function computeMicrocycleSnapshot(runs, nowMs) {
 
 function getRecommendationTone(type, t) {
   switch (type) {
+    case t('today_run.personalized_type_rest'):
     case t('profile.today_run_type_recovery'):
       return { key: 'recovery', icon: 'R', accent: '#94a3b8' };
     case t('profile.today_run_type_easy'):
@@ -245,6 +247,12 @@ function buildPlan(type, t, metrics) {
   const easyPace = metrics.easyPace;
   const thresholdPace = metrics.thresholdPace;
   const intervalPace = metrics.intervalPace;
+
+  if (type === t('today_run.personalized_type_rest')) {
+    return [
+      { label: t('today_run.plan_step_1'), value: t('today_run.personalized_plan_rest') },
+    ];
+  }
 
   if (type === t('profile.today_run_type_recovery')) {
     return [
@@ -305,7 +313,7 @@ function buildReasons(recommendation, t, metrics) {
   return reasons;
 }
 
-export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext, forceRecovery, coachPayload }) {
+export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherContext, forceRecovery, coachPayload }) {
   const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
@@ -558,6 +566,15 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
         : t('profile.today_run_purpose_base'),
     };
   }
+  const personalized = forceRecovery ? null : resolvePersonalizedCoachRecommendation({
+    coachPayload,
+    t,
+    lang,
+    unit,
+    weatherPenaltySecPerKm: penalty,
+  });
+  if (personalized) recommendation = personalized.recommendation;
+
   const tone = getRecommendationTone(recommendation.type, t);
   const metrics = {
     bestVdot,
@@ -586,6 +603,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, weatherContext
     tone,
     metrics,
     plan: buildPlan(recommendation.type, t, metrics),
-    reasons: buildReasons(recommendation, t, metrics),
+    reasons: personalized?.reasons || buildReasons(recommendation, t, metrics),
+    personalizedPlan: personalized?.plan || null,
   };
 }

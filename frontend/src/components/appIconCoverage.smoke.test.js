@@ -84,6 +84,28 @@ assert.doesNotMatch(
   'AppIcon default fallback should not render the harsh "?" glyph (circle + bar + dot).',
 );
 
+const translateIconSource = appIconSource.match(/case 'translate':[\s\S]*?case 'trending_up':/)?.[0] || '';
+assert.match(
+  translateIconSource,
+  /<text[^>]*>文<\/text>/,
+  'The Settings language icon should visibly use the Chinese 文 character.',
+);
+assert.match(
+  translateIconSource,
+  /<text[^>]*>A<\/text>/,
+  'The Settings language icon should visibly use the Latin A character.',
+);
+assert.match(
+  translateIconSource,
+  /<text x="2" y="12"[^>]*fontSize="11"[^>]*>文<\/text>/,
+  'The Chinese 文 glyph should be large enough to read at the Settings icon size.',
+);
+assert.match(
+  translateIconSource,
+  /<text x="14" y="20"[^>]*fontSize="8"[^>]*>A<\/text>/,
+  'The A glyph should sit beside 文 while remaining visibly below it.',
+);
+
 console.log(
   `[PASS] AppIcon icon-name drift guardrail: ${used.size} names used, ${definedCases.size} defined.`
 );

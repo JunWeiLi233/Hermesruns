@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -14,6 +15,8 @@ import java.util.Optional;
 
 @Service
 public class ActivityDataAccess {
+
+    private static final int POINT_INSERT_BATCH_SIZE = 500;
 
     /**
      * Bulk insert for GPS points. JDBC batched because ActivityPoint uses an
@@ -167,25 +170,46 @@ public class ActivityDataAccess {
         if (points == null || points.isEmpty()) {
             return;
         }
-        jdbcTemplate.batchUpdate(INSERT_POINT_SQL, points, points.size(), (ps, point) -> {
-            Activity activity = point.getActivity();
-            if (activity == null || activity.getId() == null) {
-                throw new IllegalArgumentException("ActivityPoint batch insert requires a persisted activity");
-            }
-            ps.setLong(1, activity.getId());
-            ps.setInt(2, point.getSequenceIndex());
-            ps.setDouble(3, point.getLatitude());
-            ps.setDouble(4, point.getLongitude());
-            setNullableInt(ps, 5, point.getElapsedSeconds());
-            setNullableDouble(ps, 6, point.getDistanceMeters());
-            setNullableDouble(ps, 7, point.getElevationMeters());
-            setNullableDouble(ps, 8, point.getElevationRawMeters());
-            setNullableDouble(ps, 9, point.getElevationCorrectedMeters());
-            setNullableInt(ps, 10, point.getHeartRate());
-            setNullableInt(ps, 11, point.getCadence());
-            setNullableDouble(ps, 12, point.getGroundContactTimeMs());
-            setNullableDouble(ps, 13, point.getVerticalOscillationMm());
-        });
+        jdbcTemplate.batchUpdate(INSERT_POINT_SQL, points, POINT_INSERT_BATCH_SIZE, ActivityDataAccess::bindPointInsert);
+    }
+
+    @Transactional
+    public boolean savePointsIfAbsentAtomically(Long activityId, List<ActivityPoint> points) {
+        if (activityId == null || points == null || points.isEmpty()) {
+            return false;
+        }
+
+        Activity lockedActivity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new IllegalArgumentException("Activity not found: " + activityId));
+        if (activityPointRepository.existsByActivity(lockedActivity)) {
+            return false;
+        }
+
+        for (ActivityPoint point : points) {
+            point.setActivity(lockedActivity);
+        }
+        jdbcTemplate.batchUpdate(INSERT_POINT_SQL, points, POINT_INSERT_BATCH_SIZE, ActivityDataAccess::bindPointInsert);
+        return true;
+    }
+
+    private static void bindPointInsert(PreparedStatement ps, ActivityPoint point) throws SQLException {
+        Activity activity = point.getActivity();
+        if (activity == null || activity.getId() == null) {
+            throw new IllegalArgumentException("ActivityPoint batch insert requires a persisted activity");
+        }
+        ps.setLong(1, activity.getId());
+        ps.setInt(2, point.getSequenceIndex());
+        ps.setDouble(3, point.getLatitude());
+        ps.setDouble(4, point.getLongitude());
+        setNullableInt(ps, 5, point.getElapsedSeconds());
+        setNullableDouble(ps, 6, point.getDistanceMeters());
+        setNullableDouble(ps, 7, point.getElevationMeters());
+        setNullableDouble(ps, 8, point.getElevationRawMeters());
+        setNullableDouble(ps, 9, point.getElevationCorrectedMeters());
+        setNullableInt(ps, 10, point.getHeartRate());
+        setNullableInt(ps, 11, point.getCadence());
+        setNullableDouble(ps, 12, point.getGroundContactTimeMs());
+        setNullableDouble(ps, 13, point.getVerticalOscillationMm());
     }
 
     private static void setNullableInt(PreparedStatement ps, int index, Integer value) throws SQLException {
