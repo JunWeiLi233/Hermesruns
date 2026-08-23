@@ -156,6 +156,15 @@ public class LocalSharedRunnerBootstrapService {
         LocalDate anchorDate = LocalDate.now().minusDays(1);
         int seeded = 0;
         for (int index = 0; index < ACTIVITY_SEED_COUNT; index++) {
+            String sourceChecksum = SHARED_RUNNER_SEED_VERSION + "-" + (index + 1);
+            if (activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                    runner,
+                    ImportProvider.STRAVA,
+                    sourceChecksum
+            )) {
+                continue;
+            }
+
             double distanceKm = distancesKm[index];
             int paceSecondsPerKm = 292 + (index % 6) * 12 + (distanceKm >= 18 ? 18 : 0);
             int durationSeconds = (int) Math.round(distanceKm * paceSecondsPerKm);
@@ -176,7 +185,7 @@ public class LocalSharedRunnerBootstrapService {
             activity.setStartTime(startTime);
             activity.setStartDate(startTime.toString());
             activity.setSourceFileName(SHARED_RUNNER_SOURCE_FILE);
-            activity.setSourceChecksum(SHARED_RUNNER_SEED_VERSION + "-" + (index + 1));
+            activity.setSourceChecksum(sourceChecksum);
             activity.setAverageHeartRate(136.0 + (index % 5) * 4.0 + (distanceKm >= 18 ? 5.0 : 0.0));
             activity.setMaxHeartRate(168.0 + (index % 4) * 3.0);
             activity.setAverageCadence(170.0 + (index % 7));

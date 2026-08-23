@@ -830,7 +830,7 @@ body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page :is(
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .weather-engine-page .weather-engine-data-pill {
-  background: rgba(160, 57, 42, 0.06) !important;
+  background: rgba(44, 47, 48, 0.06) !important;
   border: 1px solid rgba(160, 57, 42, 0.14) !important;
 }
 

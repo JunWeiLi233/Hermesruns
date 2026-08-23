@@ -144,6 +144,7 @@ echo cd /d "%ROOT%">> "%BOOT_SCRIPT%"
 echo call .tools\run-backend.cmd>> "%BOOT_SCRIPT%"
 
 echo [2/4] Waking up Spring Boot (Java)...
+if exist "%HERMES_BACKEND_LOG%" del "%HERMES_BACKEND_LOG%" >nul 2>nul
 start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 
 :: 3. Start the Python Analytics Engine when Python is available
@@ -169,6 +170,7 @@ goto :wait_for_backend
 
 :retry_backend
 echo [2/4] Waking up Spring Boot (Java)...
+if exist "%HERMES_BACKEND_LOG%" del "%HERMES_BACKEND_LOG%" >nul 2>nul
 start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 :wait_for_backend
 echo [4/4] Waiting for Spring Boot on localhost:8080...
@@ -186,6 +188,17 @@ for /l %%I in (1,1,120) do (
     powershell -NoProfile -Command ^
         "$ok = $false; $err = ''; try { $c = New-Object Net.Sockets.TcpClient; $iar = $c.BeginConnect('127.0.0.1', 8080, $null, $null); if ($iar.AsyncWaitHandle.WaitOne(1500)) { $c.EndConnect($iar); $ok = $c.Connected } else { $err = 'tcp-timeout' } } catch { $err = 'tcp:' + $_.Exception.Message }; if ($c) { try { $c.Close() } catch {} }; if ($ok) { $httpOk = $false; try { $r = Invoke-WebRequest -Uri '%HEALTH_URL%' -UseBasicParsing -TimeoutSec 4 -MaximumRedirection 0; $httpOk = ($r.StatusCode -lt 500); if (-not $httpOk) { $err = 'http-' + $r.StatusCode } } catch { $err = 'http:' + $_.Exception.Message }; if ($httpOk) { exit 0 } else { Add-Content -Path '%ROOT%\backend_probe.log' -Value ('tcp-up-but-' + $err) -ErrorAction SilentlyContinue; exit 0 } } else { Add-Content -Path '%ROOT%\backend_probe.log' -Value ($err) -ErrorAction SilentlyContinue; exit 1 }"
     if not errorlevel 1 goto :open_app
+    if exist "%HERMES_BACKEND_LOG%" (
+        findstr /C:"Application run failed" /C:"BUILD FAILURE" /C:"DataIntegrityViolationException" "%HERMES_BACKEND_LOG%" >nul 2>nul
+        if not errorlevel 1 (
+            echo.
+            echo [Hermes] Spring Boot exited before binding localhost:8080.
+            echo [Hermes] Backend failure details:
+            powershell -NoProfile -Command ^
+                "Get-Content '%HERMES_BACKEND_LOG%' -Tail 25 | Where-Object { $_ -match 'ERROR|Caused by|Exception|BUILD FAILURE|Application run failed' } | Select-Object -Last 15"
+            goto :startup_failed
+        )
+    )
     powershell -NoProfile -Command "[Console]::Write('.')"
     timeout /t 1 /nobreak > nul
 )

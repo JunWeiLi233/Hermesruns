@@ -47,8 +47,8 @@ assert.match(
 
 assert.match(
   unifiedStyleSource,
-  /#root\s+\.runner-dashboard-page\.is-sidebar-collapsed\s+\.runner-shell-sidebar-footer\s*>\s*\.runner-shell-workout-btn[\s\S]*width:\s*52px\s*!important;[\s\S]*height:\s*60px\s*!important;/,
-  'Collapsed runner rails should keep the centered arrow button geometry.',
+  /#root\s+\.runner-dashboard-page\.is-sidebar-collapsed\s+\.runner-shell-sidebar-footer\s*>\s*\.runner-shell-workout-btn[\s\S]*width:\s*60px\s*!important;[\s\S]*height:\s*60px\s*!important;/,
+  'Collapsed runner rails should keep the default workout CTA circular.',
 );
 
 for (const relativePath of pageFiles) {

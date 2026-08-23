@@ -43,6 +43,7 @@
 @import './styles/run-detail-profile-minimal.css';
 @import './styles/dark-mode-cohesion.css';
 @import './styles/analysis-load-balance-profile-alignment.css';
+@import './styles/analysis-profile-visual-alignment.css';
 @import './styles/add-shoes-profile-alignment.css';
 @import './styles/grid-cards-white.css';
 @import './styles/runner-shell-workout-button.css';
@@ -57,4 +58,29 @@
   max-height: none !important;
   mix-blend-mode: normal !important;
   backface-visibility: hidden;
+}
+
+/* VO2MAX labels are headings, not status badges. */
+.runner-shell-page.analysis-page-shell :is(
+  .analysis-overview-card--vo2 .analysis-overview-card-kicker,
+  .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker
+) {
+  display: inline !important;
+  width: auto !important;
+  max-width: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Keep the VO2max card's context label on the shared warm-red accent. */
+#root .runner-shell-page.analysis-page-shell .analysis-overview-card--vo2 .analysis-overview-card-kicker {
+  color: var(--accent-coral-strong) !important;
 }

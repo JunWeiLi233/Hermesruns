@@ -370,8 +370,10 @@ class OAuthControllerTests {
                 systemConfigService, null, null
         );
 
-        when(systemConfigService.isGoogleConfigured()).thenReturn(true);
-        when(systemConfigService.isStravaConfigured()).thenReturn(true);
+        when(systemConfigService.getOAuthProviderStatus()).thenReturn(Map.of(
+                "googleConfigured", true,
+                "stravaConfigured", true
+        ));
 
         var response = controller.getAuthProviders();
 
@@ -391,8 +393,10 @@ class OAuthControllerTests {
                 systemConfigService, null, null
         );
 
-        when(systemConfigService.isGoogleConfigured()).thenReturn(false);
-        when(systemConfigService.isStravaConfigured()).thenReturn(false);
+        when(systemConfigService.getOAuthProviderStatus()).thenReturn(Map.of(
+                "googleConfigured", false,
+                "stravaConfigured", false
+        ));
 
         var response = controller.getAuthProviders();
 

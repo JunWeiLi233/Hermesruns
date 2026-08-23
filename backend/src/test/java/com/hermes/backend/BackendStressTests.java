@@ -25,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
@@ -345,8 +346,13 @@ class BackendStressTests {
                 .doReturn(Optional.of(recoveredState))
                 .when(stateRepository)
                 .findByRunner(runner);
-        when(stateRepository.save(any(CoachRunnerState.class)))
-                .thenThrow(new DataIntegrityViolationException("duplicate state"));
+        when(stateRepository.save(any(CoachRunnerState.class))).thenAnswer(invocation -> {
+            CoachRunnerState state = invocation.getArgument(0);
+            if (state == recoveredState) {
+                return recoveredState;
+            }
+            throw new DataIntegrityViolationException("duplicate state");
+        });
         when(scheduleRepository.findByRunnerAndScheduledDateBetween(any(), any(), any()))
                 .thenReturn(fullSchedule(runner, LocalDate.now(), 14));
         when(blockRepository.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.empty());
@@ -354,7 +360,8 @@ class BackendStressTests {
         AutomatedCoachService service = service(stateRepository, scheduleRepository, blockRepository, alertRepository);
 
         assertThatCode(() -> service.getCoachState(runner)).doesNotThrowAnyException();
-        verify(stateRepository).save(any(CoachRunnerState.class));
+        verify(stateRepository).save(argThat(state -> state != recoveredState));
+        verify(stateRepository).save(recoveredState);
     }
 
     // ================================================================
@@ -640,7 +647,8 @@ class BackendStressTests {
         AutomatedCoachService service = new AutomatedCoachService(
                 runnerRepository, activityRepository,
                 stateRepository, scheduleRepository, blockRepository, alertRepository,
-                mock(ShoeTrackerService.class), mock(CoachRouteService.class), mock(ReadinessService.class));
+                mock(ShoeTrackerService.class), mock(CoachRouteService.class), mock(ReadinessService.class),
+                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class));
 
         assertThatCode(() -> service.nightlyAuditAllRunners()).doesNotThrowAnyException();
 
@@ -888,7 +896,10 @@ class BackendStressTests {
                 alertRepository,
                 mock(ShoeTrackerService.class),
                 mock(CoachRouteService.class),
-                mock(ReadinessService.class)
+                mock(ReadinessService.class),
+                new PersonalizedRunningPlanner(),
+                mock(RaceEventRepository.class),
+                mock(InjuryRiskService.class)
         );
     }
 

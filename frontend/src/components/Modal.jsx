@@ -4,7 +4,7 @@ function joinClasses(...values) {
   return values.filter(Boolean).join(' ');
 }
 
-export default function Modal({ isOpen, onClose, title, children, shellClassName = '', cardClassName = '' }) {
+export default function Modal({ isOpen, onClose, title, children, icon = null, shellClassName = '', cardClassName = '' }) {
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -35,6 +35,7 @@ export default function Modal({ isOpen, onClose, title, children, shellClassName
     <div className={joinClasses('modal-shell', shellClassName)} onClick={handleOverlayClick} role="presentation">
       <div className={joinClasses('modal-card', cardClassName)} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-header">
+          {icon ? <div className="modal-header-icon" aria-hidden="true">{icon}</div> : null}
           <h3>{title}</h3>
           <button type="button" className="modal-close" onClick={onClose}>
             &times;

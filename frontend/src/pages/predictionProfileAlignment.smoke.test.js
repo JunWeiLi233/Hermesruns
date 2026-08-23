@@ -47,6 +47,16 @@ assert.match(
   /const hasWeatherTrend = trendPredictions\.some\(/,
   'Prediction history should distinguish a real weather correction from an overlapping duplicate series.',
 );
+assert.match(
+  pageSource,
+  /prediction-forecast-hero\$\{showConfidencePanel \? '' : ' is-confidence-removed'\}/,
+  'The prediction hero should omit the confidence panel on the 5K, 10K, and half-marathon routes.',
+);
+assert.match(
+  pageSource,
+  /\{showConfidencePanel \? \([\s\S]*?prediction-forecast-hero-panel[\s\S]*?\) : null\}/,
+  'The confidence panel should remain available on prediction routes that still use it.',
+);
 
 const glassImport = indexSource.indexOf("@import './styles/all-pages-liquid-glass.css';");
 const predictionImport = indexSource.indexOf("@import './styles/prediction-profile-alignment.css';");
@@ -89,10 +99,20 @@ assert.match(
 );
 assert.match(
   styleSource.slice(lightCoachIndex, lightCoachIndex + 900),
-  /#fffdf9/,
+  /background:\s*#fff\s*!important;/,
   'The light-theme coach advice rail should use a white Profile surface instead of the dark grid.',
 );
+assert.match(
+  styleSource.slice(lightCoachIndex, lightCoachIndex + 900),
+  /background:\s*#fff\s*!important;/,
+  'The /prediction/5k coach advice grid should keep a solid white background in the light theme.',
+);
 assert.match(styleSource, /:focus-visible/);
+assert.match(
+  styleSource,
+  /\.prediction-detail-page \.prediction-forecast-hero\.is-confidence-removed\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+  'The 10K forecast hero should expand its remaining content when the confidence panel is removed.',
+);
 assert.match(styleSource, /@media \(max-width:\s*1080px\)/);
 assert.match(styleSource, /@media \(max-width:\s*560px\)/);
 assert.match(styleSource, /@media \(prefers-reduced-motion:\s*reduce\)/);

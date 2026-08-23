@@ -1,0 +1,490 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Route an AI agent from a reported Hermes behavior to the smallest frontend/backend ownership slice that can diagnose and fix it.",
+  "diagnosisOrder": [
+    "Match the symptom to a feature label or alias.",
+    "Open frontend.entrypoints and backend.entrypoints before searching broadly.",
+    "Trace the listed API prefixes through frontend/src/api.ts and the owning controller.",
+    "Read supporting services and persistence only when the controller call chain reaches them.",
+    "Add or update the nearest listed tests, then run the feature verification commands.",
+    "For website or backend runtime claims, also run the runtime proof gates in AGENTS.md."
+  ],
+  "features": [
+    {
+      "id": "authentication-access",
+      "label": "Authentication and account access",
+      "routingNotes": "Use this branch for credential and provider access; admin dashboard behavior routes to admin-operations after authentication succeeds.",
+      "aliases": ["login", "signup", "password reset", "email verification", "Google OAuth", "admin login"],
+      "routes": ["/login", "/signup", "/forgot-password", "/admin"],
+      "apiPrefixes": ["/api/auth/**"],
+      "contracts": ["JWT lifecycle", "role hydration", "provider availability", "password and captcha rules"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Login.jsx", "frontend/src/pages/Signup.jsx", "frontend/src/pages/ForgotPassword.jsx", "frontend/src/pages/AdminLogin.jsx", "frontend/src/contexts/AuthContext.jsx"],
+        "supporting": ["frontend/src/App.jsx", "frontend/src/api.ts", "frontend/src/utils/passwordRules.js"],
+        "styles": ["frontend/src/styles/_split/auth.css"],
+        "tests": ["frontend/src/pages/signupRecaptcha.smoke.test.js", "frontend/src/pages/signupEmailValidation.smoke.test.js", "frontend/src/pages/adminLoginA11yCopy.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/LoginController.java", "backend/src/main/java/com/hermes/backend/OAuthController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/AuthService.java", "backend/src/main/java/com/hermes/backend/EmailVerificationService.java", "backend/src/main/java/com/hermes/backend/PasswordResetService.java", "backend/src/main/java/com/hermes/backend/RecaptchaVerifier.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/Runner.java", "backend/src/main/java/com/hermes/backend/RunnerRepository.java", "backend/src/main/java/com/hermes/backend/LoginAttemptStore.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/LoginControllerTests.java", "backend/src/test/java/com/hermes/backend/LoginControllerSecurityTests.java", "backend/src/test/java/com/hermes/backend/OAuthControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/signupRecaptcha.smoke.test.js", "cd backend && ./mvnw -q -Dtest=LoginControllerTests,LoginControllerSecurityTests,OAuthControllerTests test"]
+    },
+    {
+      "id": "runner-profile",
+      "label": "Runner profile and dashboard",
+      "routingNotes": "Use profile for identity and dashboard state; subscription checkout or quota enforcement routes to billing-subscriptions.",
+      "aliases": ["profile", "runner dashboard", "personal records", "weekly digest", "quota"],
+      "routes": ["/profile"],
+      "apiPrefixes": ["/api/profile/**", "/api/weekly-digest"],
+      "contracts": ["profile identity", "dashboard batch payload", "personal records", "quota and weekly summary"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Profile.jsx", "frontend/src/pages/ProfileDashboard.jsx"],
+        "supporting": ["frontend/src/utils/profileIdentity.js", "frontend/src/components/RunActivityContributionGraph.jsx"],
+        "styles": ["frontend/src/styles/_split/profile.css", "frontend/src/styles/_split/profile-dashboard-redesign.css"],
+        "tests": ["frontend/src/pages/profileDashboardBatchEndpoint.smoke.test.js", "frontend/src/pages/profileIdentityEditing.smoke.test.js", "frontend/src/pages/profileDashboardPrCelebration.vitest.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ProfileController.java", "backend/src/main/java/com/hermes/backend/WeeklyDigestController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/PersonalRecordService.java", "backend/src/main/java/com/hermes/backend/WeeklyDigestService.java", "backend/src/main/java/com/hermes/backend/QuotaService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/Runner.java", "backend/src/main/java/com/hermes/backend/ActivityRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ProfileControllerTests.java", "backend/src/test/java/com/hermes/backend/PersonalRecordServiceTest.java", "backend/src/test/java/com/hermes/backend/WeeklyDigestServiceTests.java"]
+      },
+      "verify": ["node frontend/src/pages/profileDashboardBatchEndpoint.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ProfileControllerTests,PersonalRecordServiceTest,WeeklyDigestServiceTests test"]
+    },
+    {
+      "id": "activities-runs",
+      "label": "Runs list and activity lifecycle",
+      "routingNotes": "Use runs for already-ingested activity lifecycle; upload and normalization routes to activity-import, and reward effects route to rewards-cosmetics.",
+      "aliases": ["runs", "activities", "run list", "delete run", "route previews"],
+      "routes": ["/runs"],
+      "apiPrefixes": ["/api/activities", "/api/activities/route-previews", "/api/activities/{id}"],
+      "contracts": ["activity summaries", "pagination and route previews", "delete behavior", "Strava/import refresh"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Runs.jsx"],
+        "supporting": ["frontend/src/api/activityApi.ts", "frontend/src/pages/runsCache.ts", "frontend/src/pages/runsRequestCoordinator.ts", "frontend/src/components/RunsSubpageNav.jsx", "frontend/src/utils/stravaLinking.js"],
+        "styles": ["frontend/src/styles/_split/runs.css", "frontend/src/styles/runs-subnav.css"],
+        "tests": ["frontend/src/pages/runsRoutePreviewCache.smoke.test.js", "frontend/src/api/activityApi.vitest.ts", "frontend/src/pages/runsCache.vitest.ts", "frontend/src/pages/runsRequestCoordinator.vitest.ts", "frontend/src/pages/runsThumbDarkMapTile.smoke.test.js", "frontend/src/pages/runsCardResponsiveGrid.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ActivityController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/ActivityDataAccess.java", "backend/src/main/java/com/hermes/backend/ActivityRoutePreviewHelper.java", "backend/src/main/java/com/hermes/backend/StravaSyncService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/Activity.java", "backend/src/main/java/com/hermes/backend/ActivityRepository.java", "backend/src/main/java/com/hermes/backend/ActivityPointRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ActivityControllerTests.java", "backend/src/test/java/com/hermes/backend/ActivityDataAccessTests.java", "backend/src/test/java/com/hermes/backend/ActivityStravaStreamServiceTests.java", "backend/src/test/java/com/hermes/backend/StravaSyncServiceTests.java"]
+      },
+      "verify": ["node frontend/src/pages/runsRoutePreviewCache.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ActivityControllerTests,StravaSyncServiceTests test"]
+    },
+    {
+      "id": "run-detail",
+      "label": "Run detail, telemetry, and elevation",
+      "routingNotes": "Use this branch for one activity's detail payload and presentation; list, import, and reward side effects stay with their owning branches.",
+      "aliases": ["run detail", "telemetry", "heart rate samples", "elevation recalibration", "shoe assignment"],
+      "routes": ["/run/:id", "/run"],
+      "apiPrefixes": ["/api/activities/{id}/**", "/api/shoes/{shoeId}/assign/{activityId}"],
+      "contracts": ["points", "analytics", "telemetry", "elevation status", "shoe assignment"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/RunDetail.jsx"],
+        "supporting": ["frontend/src/utils/format.js", "frontend/src/components/RunLevelMedal.jsx"],
+        "styles": ["frontend/src/styles/_split/runs.css", "frontend/src/styles/run-detail-profile-minimal.css"],
+        "tests": ["frontend/src/pages/runDetailProfileCockpit.smoke.test.js", "frontend/src/pages/runDetailPerformanceMetricsRemoval.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ActivityController.java", "backend/src/main/java/com/hermes/backend/ShoeController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/ActivityTelemetryResponseBuilder.java", "backend/src/main/java/com/hermes/backend/ActivityAnalyticsHelper.java", "backend/src/main/java/com/hermes/backend/ElevationCorrectionService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/Activity.java", "backend/src/main/java/com/hermes/backend/ActivityPoint.java", "backend/src/main/java/com/hermes/backend/Shoe.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ActivityControllerTests.java", "backend/src/test/java/com/hermes/backend/ElevationCorrectionServiceTests.java", "backend/src/test/java/com/hermes/backend/ShoeControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/runDetailProfileCockpit.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ActivityControllerTests,ElevationCorrectionServiceTests,ShoeControllerTests test"]
+    },
+    {
+      "id": "analysis-predictions",
+      "label": "Analysis, insights, and predictions",
+      "routingNotes": "Use analysis for derived insights and predictions; import failures on the shared analysis route belong to activity-import.",
+      "aliases": ["analysis", "VDOT", "ACWR", "prediction", "training zones", "injury risk"],
+      "routes": ["/analysis", "/analysis/:insightKey", "/prediction/:distKey"],
+      "apiPrefixes": ["/api/activities/analysis", "/api/injury-risk/**", "/api/profile/me"],
+      "contracts": ["analysis snapshot", "VDOT ordering", "training load", "injury status and soreness"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Analysis.jsx", "frontend/src/pages/AnalysisInsightDetail.jsx", "frontend/src/pages/PredictionDetail.jsx"],
+        "supporting": ["frontend/src/utils/analysisInsights.js", "frontend/src/utils/vdot.js", "frontend/src/utils/predictionSelection.ts"],
+        "styles": ["frontend/src/styles/_split/analysis.css", "frontend/src/styles/all-pages-liquid-glass.css", "frontend/src/styles/analysis-profile-visual-alignment.css", "frontend/src/styles/prediction-profile-alignment.css"],
+        "tests": ["frontend/src/utils/analysisSnapshotContract.test.js", "frontend/src/utils/predictionSelection.vitest.ts", "frontend/src/pages/analysisInjuryPreventionStatus.smoke.test.js", "frontend/src/pages/analysisInjuryProfileV2Ring.smoke.test.js", "frontend/src/pages/profileImportModalDesign.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ActivityController.java", "backend/src/main/java/com/hermes/backend/InjuryRiskController.java", "backend/src/main/java/com/hermes/backend/ProfileController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/InjuryRiskService.java", "backend/src/main/java/com/hermes/backend/ReadinessService.java", "backend/src/main/java/com/hermes/backend/PersonalRecordService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/ActivityRepository.java", "backend/src/main/java/com/hermes/backend/SorenessLogRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ActivityControllerTests.java", "backend/src/test/java/com/hermes/backend/InjuryRiskControllerTests.java", "backend/src/test/java/com/hermes/backend/InjuryRiskServiceTests.java"]
+      },
+      "verify": ["node frontend/src/pages/profileImportModalDesign.smoke.test.js", "node frontend/src/pages/analysisInjuryProfileV2Ring.smoke.test.js", "node frontend/src/utils/analysisSnapshotContract.test.js", "cd frontend && npm run test:unit -- --run src/utils/predictionSelection.vitest.ts", "cd backend && ./mvnw -q -Dtest=ActivityControllerTests,InjuryRiskControllerTests,InjuryRiskServiceTests test"]
+    },
+    {
+      "id": "heatmap",
+      "label": "Activity heatmap",
+      "routingNotes": "Use heatmap for map data, cache, and rendering; activity list or reward behavior remains with activities-runs or rewards-cosmetics.",
+      "aliases": ["heatmap", "GPS cache", "map coverage", "heat points"],
+      "routes": ["/heatmap"],
+      "apiPrefixes": ["/api/profile/heatmap", "/api/activities/heatmap"],
+      "contracts": ["paged heat points", "coverage mode", "runner-scoped cache", "map rendering"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Heatmap.jsx"],
+        "supporting": ["frontend/src/api.ts"],
+        "styles": ["frontend/src/styles/_split/heatmap.css"],
+        "tests": ["frontend/src/pages/heatmapStability.smoke.test.js", "frontend/src/pages/heatmapMobileOverlay.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ProfileController.java", "backend/src/main/java/com/hermes/backend/ActivityController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/TtlCacheStore.java", "backend/src/main/java/com/hermes/backend/ActivityDataAccess.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/ActivityPointRepository.java", "backend/src/main/java/com/hermes/backend/ActivityRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ProfileControllerTests.java", "backend/src/test/java/com/hermes/backend/ActivityControllerTests.java", "backend/src/test/java/com/hermes/backend/TtlCacheStoreTests.java"]
+      },
+      "verify": ["node frontend/src/pages/heatmapStability.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ProfileControllerTests,ActivityControllerTests,TtlCacheStoreTests test"]
+    },
+    {
+      "id": "today-run-coaching",
+      "label": "Today Run and automated coaching",
+      "routingNotes": "Use this branch for the shared personalized plan consumed by Today Run, Profile, Schedule, and Coach Insight, not generic profile dashboard fields.",
+      "aliases": ["today run", "coach plan", "personalized planner", "readiness", "recovery", "training block"],
+      "routes": ["/today-run", "/profile", "/schedule", "/analysis/coach-insight"],
+      "apiPrefixes": ["/api/today/dashboard", "/api/coach/**"],
+      "contracts": ["today dashboard batch", "coach state", "recommended workout", "readiness and recovery"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/TodayRun.jsx", "frontend/src/pages/ProfileDashboard.jsx", "frontend/src/pages/Schedule.jsx", "frontend/src/pages/AnalysisInsightDetail.jsx"],
+        "supporting": ["frontend/src/utils/todayRun.js", "frontend/src/utils/personalizedCoachPlan.js", "frontend/src/utils/todayRunAcwrInsight.js", "frontend/src/components/CoachIdentityBadge.jsx"],
+        "styles": ["frontend/src/styles/_split/today-run.css"],
+        "tests": ["frontend/src/pages/todayRunBatchEndpoint.smoke.test.js", "frontend/src/utils/personalizedCoachPlan.vitest.js", "frontend/src/utils/personalizedCoachPlannerIntegration.smoke.test.js", "frontend/src/utils/todayRunIntent.test.js", "frontend/src/utils/todayRunCoachDistance.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ProfileController.java", "backend/src/main/java/com/hermes/backend/CoachController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/PersonalizedRunningPlanner.java", "backend/src/main/java/com/hermes/backend/AutomatedCoachService.java", "backend/src/main/java/com/hermes/backend/ReadinessService.java", "backend/src/main/java/com/hermes/backend/CoachRouteService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/CoachRunnerStateRepository.java", "backend/src/main/java/com/hermes/backend/CoachScheduledWorkoutRepository.java", "backend/src/main/java/com/hermes/backend/CoachTrainingBlockRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/PersonalizedRunningPlannerTests.java", "backend/src/test/java/com/hermes/backend/CoachControllerTests.java", "backend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java", "backend/src/test/java/com/hermes/backend/ReadinessServiceTests.java"]
+      },
+      "verify": ["cd frontend && npm.cmd exec vitest run src/utils/personalizedCoachPlan.vitest.js", "node frontend/src/utils/personalizedCoachPlannerIntegration.smoke.test.js", "cd backend && ./mvnw -q -Dtest=PersonalizedRunningPlannerTests,CoachControllerTests,AutomatedCoachServiceTests,ReadinessServiceTests test"]
+    },
+    {
+      "id": "weather",
+      "label": "Weather engine and fitness interpretation",
+      "routingNotes": "Use weather for forecast and weather-adjusted interpretation, separating upstream provider failures from presentation.",
+      "aliases": ["weather", "forecast", "weather context", "heat adaptation", "fitness interpretation"],
+      "routes": ["/weather"],
+      "apiPrefixes": ["/api/v1/weather/**"],
+      "contracts": ["location inputs", "forecast", "running context", "weather-adjusted fitness"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/WeatherEngine.jsx"],
+        "supporting": ["frontend/src/utils/weatherLocation.js", "frontend/src/utils/weatherCodeIcon.js", "frontend/src/components/WeatherGlyph.jsx"],
+        "styles": ["frontend/src/styles/_split/weather.css"],
+        "tests": ["frontend/src/pages/weatherEngineFastPaint.smoke.test.js", "frontend/src/utils/weatherLocation.test.js", "frontend/src/utils/analysisVo2BarsWeather.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/WeatherContextController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/WeatherForecastService.java", "backend/src/main/java/com/hermes/backend/WeatherAdjustedFitnessService.java", "backend/src/main/java/com/hermes/backend/NationalWeatherServiceForecastClient.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/ActivityWeatherCorrection.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/WeatherContextControllerTests.java", "backend/src/test/java/com/hermes/backend/WeatherForecastServiceTests.java", "backend/src/test/java/com/hermes/backend/WeatherAdjustedFitnessServiceTests.java"]
+      },
+      "verify": ["node frontend/src/pages/weatherEngineFastPaint.smoke.test.js", "cd backend && ./mvnw -q -Dtest=WeatherContextControllerTests,WeatherForecastServiceTests,WeatherAdjustedFitnessServiceTests test"]
+    },
+    {
+      "id": "shoes-catalog-ai-scan",
+      "label": "Shoes, catalog, recommendations, and AI scan",
+      "routingNotes": "Use this branch for shoe inventory, catalog, scan, and assignment; activity history remains with activities-runs or run-detail.",
+      "aliases": ["shoes", "shoe catalog", "shoe recommendation", "AI shoe scan", "shoe image", "shoe mileage"],
+      "routes": ["/shoes", "/shoes/add", "/shoe-catalog"],
+      "apiPrefixes": ["/api/shoes/**", "/api/shoe-catalog/**"],
+      "contracts": ["inventory lifecycle", "catalog selection", "image validation", "scan quota", "activity assignment"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Shoes.jsx", "frontend/src/pages/AddShoes.jsx", "frontend/src/pages/ShoeCatalog.jsx"],
+        "supporting": ["frontend/src/components/ShoeRecommendation.jsx", "frontend/src/utils/shoeRotation.js", "frontend/src/utils/shoeImagePickerState.js", "frontend/src/data/shoeCatalog.js"],
+        "styles": ["frontend/src/styles/_split/shoes.css", "frontend/src/styles/add-shoes-profile-alignment.css"],
+        "tests": ["frontend/src/pages/shoesGridVisibility.smoke.test.js", "frontend/src/pages/shoeCatalogSearchSelection.smoke.test.js", "frontend/src/pages/shoeScanModalLayout.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ShoeController.java", "backend/src/main/java/com/hermes/backend/ShoeImageController.java", "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/ShoeTrackerService.java", "backend/src/main/java/com/hermes/backend/AiShoeScanService.java", "backend/src/main/java/com/hermes/backend/ShoeImageAssetService.java", "backend/src/main/java/com/hermes/backend/ShoeIdentityService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/ShoeRepository.java", "backend/src/main/java/com/hermes/backend/ShoeCatalogBrandRepository.java", "backend/src/main/java/com/hermes/backend/ShoeCatalogModelRepository.java", "backend/src/main/java/com/hermes/backend/ShoeImageAssetRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ShoeControllerTests.java", "backend/src/test/java/com/hermes/backend/ShoeImageControllerTests.java", "backend/src/test/java/com/hermes/backend/ShoeCatalogControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/shoeCatalogSearchSelection.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ShoeControllerTests,ShoeImageControllerTests,ShoeCatalogControllerTests test"]
+    },
+    {
+      "id": "races-course-maps",
+      "label": "Races, elevation, and course maps",
+      "routingNotes": "Use races for saved race and course-map behavior; admin publishing uses admin-operations as the control owner.",
+      "aliases": ["races", "race detail", "course map", "race elevation", "official race image"],
+      "routes": ["/races", "/races/details/:raceId"],
+      "apiPrefixes": ["/api/races/**", "/api/maps/**"],
+      "contracts": ["saved race lifecycle", "course map geometry", "elevation profile", "map tile proxy"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Races.jsx", "frontend/src/pages/RacesDetail.jsx"],
+        "supporting": ["frontend/src/utils/raceDetailPresentation.js", "frontend/src/utils/raceDetailMapTrust.js", "frontend/src/data/worldRaceCatalog.js"],
+        "styles": ["frontend/src/styles/_split/races.css"],
+        "tests": ["frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js", "frontend/src/utils/raceDetailMapTrust.test.js", "frontend/src/pages/racesCatalogDistancePrecision.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/RaceController.java", "backend/src/main/java/com/hermes/backend/MapTileController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/RaceCourseMapService.java", "backend/src/main/java/com/hermes/backend/RaceElevationProfileService.java", "backend/src/main/java/com/hermes/backend/RaceOfficialImageService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/RaceEventRepository.java", "backend/src/main/java/com/hermes/backend/RaceCourseMapAssetRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/RaceControllerTests.java", "backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java", "backend/src/test/java/com/hermes/backend/MapTileControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js", "cd backend && ./mvnw -q -Dtest=RaceControllerTests,RaceCourseMapServiceTests,MapTileControllerTests test"]
+    },
+    {
+      "id": "schedule-route-planning",
+      "label": "Schedule and route planning",
+      "routingNotes": "Use schedule for planned workouts and route validity, distinct from completed activity telemetry.",
+      "aliases": ["schedule", "route planner", "planned route", "coach schedule", "route anchor"],
+      "routes": ["/schedule"],
+      "apiPrefixes": ["/api/coach/schedule", "/api/route/**"],
+      "contracts": ["scheduled workouts", "route start anchor", "planned route geometry", "recent routes"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Schedule.jsx"],
+        "supporting": ["frontend/src/utils/scheduleRoute.js", "frontend/src/utils/scheduleCoachSummary.js", "frontend/src/utils/routeRecommendation.js"],
+        "styles": ["frontend/src/styles/_split/schedule.css"],
+        "tests": ["frontend/src/pages/scheduleRoutePlanner.smoke.test.js", "frontend/src/utils/scheduleCoachSummary.test.js", "frontend/src/utils/routeRecommendation.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/RoutePlannerController.java", "backend/src/main/java/com/hermes/backend/CoachController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/RoutePlannerService.java", "backend/src/main/java/com/hermes/backend/CoachRouteService.java", "backend/src/main/java/com/hermes/backend/RouteHeatmapAnchorService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/PlannedRouteRepository.java", "backend/src/main/java/com/hermes/backend/CoachScheduledWorkoutRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/RoutePlannerServiceTests.java", "backend/src/test/java/com/hermes/backend/CoachRouteServiceTests.java", "backend/src/test/java/com/hermes/backend/CoachControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/scheduleRoutePlanner.smoke.test.js", "cd backend && ./mvnw -q -Dtest=RoutePlannerServiceTests,CoachRouteServiceTests,CoachControllerTests test"]
+    },
+    {
+      "id": "muscle-training",
+      "label": "Muscle training plans and check-ins",
+      "routingNotes": "Use this branch for strength plans, sessions, and check-ins rather than run coaching recommendations.",
+      "aliases": ["muscle training", "strength plan", "muscle heatmap", "training check-in", "exercise library"],
+      "routes": ["/muscle-training"],
+      "apiPrefixes": ["/api/training/muscle/**"],
+      "contracts": ["strength profile", "weekly plan", "today check-in", "muscle metrics"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/MuscleTraining.jsx"],
+        "supporting": ["frontend/src/components/MuscleHeatmap.jsx", "frontend/src/utils/muscleSlugMapper.js"],
+        "styles": ["frontend/src/styles/_split/muscle-training.css", "frontend/src/styles/muscle-training-profile-alignment.css"],
+        "tests": ["frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js", "frontend/src/pages/muscleTrainingPlanVideoMapping.smoke.test.js", "frontend/src/components/muscleHeatmapSource.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/MuscleTrainingController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java", "backend/src/main/java/com/hermes/backend/MuscleTrainingProfileService.java", "backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java", "backend/src/main/java/com/hermes/backend/MuscleTrainingMetricsService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/MuscleTrainingPreferenceRepository.java", "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/MuscleTrainingControllerTests.java", "backend/src/test/java/com/hermes/backend/MuscleTrainingMetricsServiceTest.java", "backend/src/test/java/com/hermes/backend/ExerciseLibraryEncodingTest.java"]
+      },
+      "verify": ["node frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js", "cd backend && ./mvnw -q -Dtest=MuscleTrainingControllerTests,MuscleTrainingMetricsServiceTest,ExerciseLibraryEncodingTest test"]
+    },
+    {
+      "id": "rewards-cosmetics",
+      "label": "Rewards, milestones, and digital cosmetics",
+      "routingNotes": "Use rewards for post-activity reward calculation and inventory; activity retrieval and deletion remain with activities-runs.",
+      "aliases": ["rewards", "badges", "milestones", "digital cosmetics", "active theme"],
+      "routes": ["/rewards"],
+      "apiPrefixes": ["/api/cosmetics/**", "/api/activities"],
+      "contracts": ["reward calculation", "earned inventory", "active cosmetic theme", "activity ingestion drops"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Rewards.jsx"],
+        "supporting": ["frontend/src/utils/rewardCatalog.js", "frontend/src/utils/rewardBadges.jsx", "frontend/src/components/RewardsAccessCard.jsx"],
+        "styles": ["frontend/src/styles/_split/rewards.css", "frontend/src/styles/rewards-profile-alignment.css"],
+        "tests": ["frontend/src/pages/rewardsMilestoneLedger.smoke.test.js", "frontend/src/utils/rewardCatalog.test.js", "frontend/src/utils/rewardCatalogIntegration.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/rewards/DigitalCosmeticsController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/rewards/DigitalCosmeticsService.java", "backend/src/main/java/com/hermes/backend/ActivityIngestedEventListenerComponent.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/rewards/DigitalCosmeticDropRepository.java", "backend/src/main/java/com/hermes/backend/ActivityRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/DigitalCosmeticsControllerTests.java", "backend/src/test/java/com/hermes/backend/ActivityControllerTests.java"]
+      },
+      "verify": ["node frontend/src/utils/rewardCatalogIntegration.smoke.test.js", "cd backend && ./mvnw -q -Dtest=DigitalCosmeticsControllerTests,ActivityControllerTests test"]
+    },
+    {
+      "id": "settings-account",
+      "label": "Settings, identity, preferences, and avatar",
+      "routingNotes": "Use settings for generic account preferences and avatar; provider linking or sync routes to integrations-sync.",
+      "aliases": ["settings", "account name", "avatar", "units", "language", "theme preference"],
+      "routes": ["/settings"],
+      "apiPrefixes": ["/api/profile/me/**", "/api/profile/preferences"],
+      "contracts": ["profile name and avatar", "runner preferences", "client theme, unit, and locale contexts"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Settings.jsx"],
+        "supporting": ["frontend/src/components/SettingsAtlasLayout.jsx", "frontend/src/contexts/I18nContext.jsx", "frontend/src/contexts/ThemeContext.jsx", "frontend/src/contexts/UnitContext.jsx"],
+        "styles": ["frontend/src/styles/_split/settings.css", "frontend/src/styles/settings-fullwidth.css"],
+        "tests": ["frontend/src/pages/settingsWorkbenchLayout.smoke.test.js", "frontend/src/pages/profileIdentityEditing.smoke.test.js", "frontend/src/components/settingsAtlasConnectButton.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ProfileController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/AuthService.java", "backend/src/main/java/com/hermes/backend/SafeTempFileGuard.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/Runner.java", "backend/src/main/java/com/hermes/backend/RunnerRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ProfileControllerTests.java", "backend/src/test/java/com/hermes/backend/SecurityHardeningTests.java"]
+      },
+      "verify": ["node frontend/src/pages/profileIdentityEditing.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ProfileControllerTests,SecurityHardeningTests test"]
+    },
+    {
+      "id": "activity-import",
+      "label": "Activity file import and normalization",
+      "routingNotes": "Use import for upload, parser, and normalization even when entered from runs or analysis routes; existing activity lifecycle stays with activities-runs.",
+      "aliases": ["import data", "FIT import", "GPX import", "TCX import", "batch import"],
+      "routes": ["/settings/import-data", "/runs", "/analysis"],
+      "apiPrefixes": ["/api/import/files", "/api/import/batch"],
+      "contracts": ["multipart upload", "file parser selection", "activity normalization", "post-import derived data"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/ImportDataSettings.jsx", "frontend/src/pages/Runs.jsx", "frontend/src/pages/Analysis.jsx"],
+        "supporting": ["frontend/src/components/ImportDataGuide.jsx", "frontend/src/api.ts"],
+        "styles": ["frontend/src/styles/_split/integrations.css"],
+        "tests": ["frontend/src/pages/garminImportRoute.smoke.test.js", "frontend/src/pages/profileImportModalDesign.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/ImportController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/ActivityImportService.java", "backend/src/main/java/com/hermes/backend/ActivityNormalizationService.java", "backend/src/main/java/com/hermes/backend/FitActivityFileParser.java", "backend/src/main/java/com/hermes/backend/GpxActivityFileParser.java", "backend/src/main/java/com/hermes/backend/TcxActivityFileParser.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/ActivityRepository.java", "backend/src/main/java/com/hermes/backend/ActivityPointRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/ImportControllerTests.java", "backend/src/test/java/com/hermes/backend/GpxActivityFileParserTests.java", "backend/src/test/java/com/hermes/backend/ActivityFileParserDeviceTelemetryTests.java"]
+      },
+      "verify": ["node frontend/src/pages/profileImportModalDesign.smoke.test.js", "cd backend && ./mvnw -q -Dtest=ImportControllerTests,GpxActivityFileParserTests,ActivityFileParserDeviceTelemetryTests test"]
+    },
+    {
+      "id": "integrations-sync",
+      "label": "Strava, Garmin, and wellness integrations",
+      "routingNotes": "Use integrations for provider credentials, linking, and sync; generic account settings remain with settings-account.",
+      "aliases": ["Strava sync", "Garmin import", "Apple Health", "Google Health", "wellness sources", "webhook"],
+      "routes": ["/settings", "/settings/garmin-import"],
+      "apiPrefixes": ["/api/auth/strava/**", "/api/strava/**", "/api/garmin/connect/**", "/api/wellness/**"],
+      "contracts": ["OAuth linking", "sync status", "provider credentials", "wellness source preference", "webhook idempotency"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Settings.jsx", "frontend/src/pages/GarminImportSettings.jsx", "frontend/src/contexts/AuthContext.jsx"],
+        "supporting": ["frontend/src/utils/stravaLinking.js", "frontend/src/utils/stravaAutoSync.js"],
+        "styles": ["frontend/src/styles/_split/integrations.css", "frontend/src/styles/_split/settings.css"],
+        "tests": ["frontend/src/pages/garminImportRoute.smoke.test.js", "frontend/src/pages/settingsWellnessHub.smoke.test.js", "frontend/src/utils/stravaLinking.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/OAuthController.java", "backend/src/main/java/com/hermes/backend/GarminConnectController.java", "backend/src/main/java/com/hermes/backend/WellnessController.java", "backend/src/main/java/com/hermes/backend/StravaWebhookController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/StravaSyncService.java", "backend/src/main/java/com/hermes/backend/StravaTokenService.java", "backend/src/main/java/com/hermes/backend/GarminConnectImportService.java", "backend/src/main/java/com/hermes/backend/GarminWellnessImportService.java", "backend/src/main/java/com/hermes/backend/AppleHealthImportService.java", "backend/src/main/java/com/hermes/backend/GoogleHealthImportService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/RunnerRepository.java", "backend/src/main/java/com/hermes/backend/DailyWellnessSummaryRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/OAuthControllerTests.java", "backend/src/test/java/com/hermes/backend/GarminConnectControllerTests.java", "backend/src/test/java/com/hermes/backend/WellnessControllerTests.java", "backend/src/test/java/com/hermes/backend/StravaWebhookControllerTests.java"]
+      },
+      "verify": ["node frontend/src/utils/stravaLinking.test.js", "cd backend && ./mvnw -q -Dtest=OAuthControllerTests,GarminConnectControllerTests,WellnessControllerTests,StravaWebhookControllerTests test"]
+    },
+    {
+      "id": "billing-subscriptions",
+      "label": "Billing, subscription tier, and AI quota",
+      "routingNotes": "Use billing for checkout, subscription state, and quota; profile presentation without billing mutation remains with runner-profile.",
+      "aliases": ["billing", "Stripe", "subscription", "Pro tier", "checkout", "scan quota"],
+      "routes": ["/profile", "/dashboard/users"],
+      "apiPrefixes": ["/api/billing/**", "/api/profile/quota", "/api/admin/users/**"],
+      "contracts": ["public billing config", "checkout session", "webhook idempotency", "subscription expiry", "AI usage quota"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/ProfileDashboard.jsx", "frontend/src/pages/Dashboard.jsx"],
+        "supporting": ["frontend/src/utils/stravaLinking.js", "frontend/src/api.ts"],
+        "styles": ["frontend/src/styles/_split/subscription.css", "frontend/src/styles/_split/profile.css"],
+        "tests": ["frontend/src/pages/profileDashboardCacheQuota.smoke.test.js", "frontend/src/utils/stravaLinking.test.js", "frontend/src/pages/dashboardUsersCommandCenter.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/billing/BillingController.java", "backend/src/main/java/com/hermes/backend/ProfileController.java", "backend/src/main/java/com/hermes/backend/AdminUserPortalController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/QuotaService.java", "backend/src/main/java/com/hermes/backend/AiUsageService.java", "backend/src/main/java/com/hermes/backend/SystemConfigService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/billing/ProcessedStripeEventRepository.java", "backend/src/main/java/com/hermes/backend/RunnerRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/BillingControllerTests.java", "backend/src/test/java/com/hermes/backend/AiUsageServiceTests.java", "backend/src/test/java/com/hermes/backend/ProfileControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/profileDashboardCacheQuota.smoke.test.js", "cd backend && ./mvnw -q -Dtest=BillingControllerTests,AiUsageServiceTests,ProfileControllerTests test"]
+    },
+    {
+      "id": "admin-operations",
+      "label": "Admin dashboard, users, jobs, shoes, and race maps",
+      "routingNotes": "Use admin-operations for privileged management and publishing actions, regardless of the public surface displaying the result.",
+      "aliases": ["admin dashboard", "admin users", "admin jobs", "admin audit", "admin shoes", "admin race maps"],
+      "routes": ["/dashboard/*"],
+      "apiPrefixes": ["/api/admin/**", "/api/shoe-catalog/admin/**", "/api/shoes/admin/**"],
+      "contracts": ["admin role gate", "paged tables", "background jobs", "audit log", "bulk actions", "publish workflow"],
+      "frontend": {
+        "entrypoints": ["frontend/src/pages/Dashboard.jsx"],
+        "supporting": ["frontend/src/components/AdminCourseMapPreview.jsx", "frontend/src/components/ui/DataTable.jsx", "frontend/src/utils/dashboardTopbarNav.js"],
+        "styles": ["frontend/src/styles/_split/admin.css", "frontend/src/styles/admin-monitoring-dashboard.css"],
+        "tests": ["frontend/src/pages/dashboardRouteSections.smoke.test.js", "frontend/src/pages/dashboardJobsInspector.smoke.test.js", "frontend/src/pages/dashboardUsersCommandCenter.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/AdminPortalController.java", "backend/src/main/java/com/hermes/backend/AdminUserPortalController.java", "backend/src/main/java/com/hermes/backend/AdminAuditPortalController.java", "backend/src/main/java/com/hermes/backend/AdminShoePortalController.java", "backend/src/main/java/com/hermes/backend/AdminRacePortalController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/AdminPortalService.java", "backend/src/main/java/com/hermes/backend/AdminBackgroundJobService.java", "backend/src/main/java/com/hermes/backend/AdminAuditService.java", "backend/src/main/java/com/hermes/backend/ShoeAdminAggregateService.java", "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java"],
+        "persistence": ["backend/src/main/java/com/hermes/backend/AdminBackgroundJobRepository.java", "backend/src/main/java/com/hermes/backend/AdminAuditLogRepository.java", "backend/src/main/java/com/hermes/backend/AdminSavedFilterRepository.java"],
+        "tests": ["backend/src/test/java/com/hermes/backend/AdminPortalControllerTests.java", "backend/src/test/java/com/hermes/backend/AdminControllerTests.java", "backend/src/test/java/com/hermes/backend/AdminRacePortalControllerTests.java"]
+      },
+      "verify": ["node frontend/src/pages/dashboardRouteSections.smoke.test.js", "cd backend && ./mvnw -q -Dtest=AdminPortalControllerTests,AdminControllerTests,AdminRacePortalControllerTests test"]
+    },
+    {
+      "id": "platform-api-runtime",
+      "label": "Shared API client, routing, security, and static runtime",
+      "routingNotes": "Use platform for cross-cutting API, route guard, security, and publication behavior after excluding a more specific product branch.",
+      "aliases": ["API client", "401 handling", "route guard", "CORS", "Spring Security", "SPA fallback", "static bundle"],
+      "routes": ["all frontend routes", "all /api routes"],
+      "apiPrefixes": ["/api/**", "/** SPA fallback"],
+      "contracts": ["base URL", "JWT and language headers", "JSON error behavior", "route authorization", "static asset delivery"],
+      "frontend": {
+        "entrypoints": ["frontend/src/main.jsx", "frontend/src/App.jsx", "frontend/src/api.ts"],
+        "supporting": ["frontend/src/components/ErrorBoundary.jsx", "frontend/scripts/run-vite-build.mjs", "frontend/vite.config.js"],
+        "styles": ["frontend/src/index.css", "frontend/src/styles/_split/shared.css"],
+        "tests": ["frontend/src/apiTypeContracts.smoke.test.js", "frontend/src/testToolchain.smoke.test.js", "frontend/vite.config.smoke.test.js"]
+      },
+      "backend": {
+        "entrypoints": ["backend/src/main/java/com/hermes/backend/BackendApplication.java", "backend/src/main/java/com/hermes/backend/SecurityConfig.java", "backend/src/main/java/com/hermes/backend/SpaForwardingController.java"],
+        "services": ["backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java", "backend/src/main/java/com/hermes/backend/ApiExceptionLoggingAdvice.java", "backend/src/main/java/com/hermes/backend/StaticAssetCacheConfig.java"],
+        "persistence": ["backend/src/main/resources/application.properties", "backend/src/main/resources/application-production.properties"],
+        "tests": ["backend/src/test/java/com/hermes/backend/BackendApplicationTests.java", "backend/src/test/java/com/hermes/backend/SpaForwardingControllerTests.java", "backend/src/test/java/com/hermes/backend/SecurityHardeningTests.java"]
+      },
+      "verify": ["node frontend/src/apiTypeContracts.smoke.test.js", "cd frontend && npm run lint && npm run build", "cd backend && ./mvnw -q -Dtest=BackendApplicationTests,SpaForwardingControllerTests,SecurityHardeningTests test"]
+    }
+  ],
+  "sharedConcerns": [
+    {
+      "id": "api-contracts",
+      "label": "Frontend/backend API contract mismatch",
+      "aliases": ["payload mismatch", "endpoint mismatch", "serialization", "request headers"],
+      "readFirst": ["frontend/src/api.ts", "frontend/src/api/activityApi.ts", "frontend/src/contracts/activity.ts"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/JacksonConfig.java", "backend/src/main/java/com/hermes/backend/ApiExceptionLoggingAdvice.java"],
+      "verify": ["node frontend/src/apiTypeContracts.smoke.test.js", "cd frontend && npm run typecheck"]
+    },
+    {
+      "id": "localization-copy",
+      "label": "Localization and user-visible copy",
+      "aliases": ["translation", "Chinese copy", "English copy", "missing locale key"],
+      "readFirst": ["frontend/src/i18n/localeRegistry.js", "frontend/src/i18n/translationRuntime.js", "frontend/src/i18n/locales/en.js", "frontend/src/i18n/locales/zh-CN.js"],
+      "thenCheck": ["frontend/src/i18n/locales/en/pages.js", "frontend/src/i18n/locales/zh-CN/pages.js", "frontend/src/i18n/locales/en/components.js", "frontend/src/i18n/locales/zh-CN/components.js"],
+      "verify": ["node .tools/check-translations.mjs --full", "node frontend/src/i18n/translationCheckerRegistry.smoke.test.js"]
+    },
+    {
+      "id": "styles-themes-responsive",
+      "label": "Styles, themes, and responsive behavior",
+      "aliases": ["CSS", "dark mode", "light mode", "responsive layout", "visual regression"],
+      "readFirst": ["design.md", "frontend/src/index.css", "frontend/src/styles/_split/tokens.css", "frontend/src/styles/_split/shared.css"],
+      "thenCheck": ["frontend/src/styles/_split/light-theme-overrides.css", "frontend/src/styles/dark-mode-cohesion.css", "frontend/src/styles/styleSourceAuthority.smoke.test.js"],
+      "verify": ["node frontend/src/styles/styleSourceAuthority.smoke.test.js", "cd frontend && npm run lint && npm run build"]
+    },
+    {
+      "id": "security-authorization",
+      "label": "Authentication, authorization, and request hardening",
+      "aliases": ["authorization", "role access", "rate limit", "security headers", "input validation"],
+      "readFirst": ["frontend/src/contexts/AuthContext.jsx", "frontend/src/App.jsx", "backend/src/main/java/com/hermes/backend/SecurityConfig.java", "backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/ApiRateLimitFilter.java", "backend/src/main/java/com/hermes/backend/SecurityHeadersFilter.java", "backend/src/main/java/com/hermes/backend/RequestBodyValidator.java", "backend/src/main/java/com/hermes/backend/InputSanitizer.java"],
+      "verify": ["cd backend && ./mvnw -q -Dtest=SecurityHardeningTests,SecurityHeadersFilterTests,ApiRateLimiterTests test"]
+    },
+    {
+      "id": "database-persistence",
+      "label": "Database entities, repositories, and H2/PostgreSQL behavior",
+      "aliases": ["database", "JPA", "repository", "H2", "PostgreSQL", "migration"],
+      "readFirst": ["backend/src/main/resources/application.properties", "backend/src/main/resources/application-production.properties", "backend/pom.xml"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/Runner.java", "backend/src/main/java/com/hermes/backend/Activity.java", "backend/src/main/java/com/hermes/backend/ActivityRepository.java"],
+      "verify": ["cd backend && ./mvnw -q test"]
+    },
+    {
+      "id": "background-jobs-webhooks",
+      "label": "Schedulers, background jobs, and webhooks",
+      "aliases": ["scheduler", "background job", "async import", "Strava webhook", "idempotency"],
+      "readFirst": ["backend/src/main/java/com/hermes/backend/StravaWebhookController.java", "backend/src/main/java/com/hermes/backend/StravaAutoSyncScheduler.java", "backend/src/main/java/com/hermes/backend/GarminWellnessSyncScheduler.java"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/AdminBackgroundJobService.java", "backend/src/main/java/com/hermes/backend/ActivityIngestedEventListenerComponent.java", "backend/src/main/java/com/hermes/backend/billing/ProcessedStripeEventRepository.java"],
+      "verify": ["cd backend && ./mvnw -q -Dtest=StravaWebhookControllerTests,StravaAutoSyncSchedulerTests,AdminBackgroundJobServiceTests test"]
+    },
+    {
+      "id": "runtime-publication",
+      "label": "Frontend build publication and live runtime drift",
+      "aliases": ["build output", "runtime sync", "stale asset", "backend static", "website not updated"],
+      "readFirst": ["frontend/scripts/run-vite-build.mjs", "frontend/vite.config.js", "backend/src/main/java/com/hermes/backend/SpaForwardingController.java"],
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/StaticAssetCacheConfig.java", "frontend/scripts/run-vite-build.mjs", "AGENTS.md"],
+      "verify": ["cd frontend && node scripts/run-vite-build.mjs"]
+    }
+  ]
+}

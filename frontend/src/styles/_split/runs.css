@@ -2470,6 +2470,13 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   background: transparent;
 }
 
+/* The shared atlas canvas is useful on other dashboard pages, but its rounded
+   pseudo-surface sits in the Runs gutter instead of belonging to a grid. */
+.runs-dashboard-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+}
+
 .runs-dashboard-page .runs-profile-history {
   display: grid;
   gap: clamp(16px, 2vw, 24px);
@@ -2520,6 +2527,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   color: var(--runs-profile-ink);
   font-family: "Manrope", var(--font-display);
   font-size: clamp(2.8rem, 6.2vw, 5.8rem);
+  font-style: normal;
   font-weight: 900;
   letter-spacing: -0.09em;
   line-height: 0.9;
@@ -2572,7 +2580,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 
 .runs-dashboard-page .runs-profile-secondary-action {
   border-color: rgba(69, 54, 38, 0.14);
-  background: rgba(255, 252, 246, 0.74);
+  background: #fff;
   color: var(--runs-profile-ink);
 }
 
@@ -2592,14 +2600,16 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   padding: 16px;
   border: 1px solid var(--runs-profile-line);
   border-radius: 22px;
-  background: #191512;
-  color: #fff7ee;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  background: var(--runs-profile-card-strong);
+  color: var(--runs-profile-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 18px 36px rgba(58, 43, 28, 0.08);
 }
 
 .runs-dashboard-page .runs-profile-signal--count {
-  background: #191512;
-  color: #fff7ee;
+  background: var(--runs-profile-card-strong);
+  color: var(--runs-profile-ink);
 }
 
 .runs-dashboard-page .runs-profile-signal--status {
@@ -2609,12 +2619,14 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 
 .runs-dashboard-page .runs-profile-signal--status.is-live {
   border-color: var(--runs-profile-line);
-  background: #191512;
+  background: var(--runs-profile-card-strong);
+  color: var(--runs-profile-ink);
 }
 
 .runs-dashboard-page .runs-profile-signal--status.is-muted {
   border-color: var(--runs-profile-line);
-  background: #191512;
+  background: var(--runs-profile-card-strong);
+  color: var(--runs-profile-ink);
 }
 
 .runs-dashboard-page .runs-profile-signal span {
@@ -2645,7 +2657,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 }
 
 .runs-dashboard-page .runs-profile-signal :is(span, strong, p) {
-  color: #ffffff !important;
+  color: currentColor !important;
   opacity: 1;
 }
 
@@ -2665,14 +2677,37 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 
 .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
   min-height: 52px;
-  border-color: rgba(69, 54, 38, 0.12);
+  border-color: var(--runs-profile-line);
   border-radius: 18px;
-  background: rgba(255, 252, 246, 0.92);
+  background: #ffffff;
+  color: var(--runs-profile-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 14px 28px rgba(58, 43, 28, 0.1);
 }
 
 .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input {
+  background: transparent !important;
   color: var(--runs-profile-ink);
+  caret-color: var(--runs-profile-ink);
   font-weight: 650;
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input::placeholder {
+  color: var(--runs-profile-muted);
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-icon {
+  color: var(--runs-profile-muted);
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-clear {
+  color: var(--runs-profile-muted);
+}
+
+.runs-dashboard-page .runs-profile-workbench .recent-runs-search-clear:hover {
+  background: rgba(69, 54, 38, 0.08);
+  color: var(--runs-profile-ink);
 }
 
 .runs-dashboard-page .runs-profile-workbench .recent-runs-chip {
@@ -2708,6 +2743,7 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 .runs-dashboard-page .runs-profile-history .recent-runs-month-group {
   border: 1px solid var(--runs-profile-line);
   border-radius: 24px;
+  overflow: hidden;
   background: var(--runs-profile-card-strong);
   box-shadow: 0 18px 42px rgba(58, 43, 28, 0.08);
 }
@@ -2887,7 +2923,25 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   color: #fff7ee !important;
 }
 
-body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap,
+body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
+  border-color: rgba(255, 248, 242, 0.28);
+  background: var(--brand-accent-gradient, linear-gradient(135deg, #a0392a, #fc7e69));
+  color: #fff8f2;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 14px 28px rgba(160, 57, 42, 0.2);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input {
+  background: transparent !important;
+  color: #fff8f2 !important;
+  caret-color: #fff8f2;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input::placeholder {
+  color: rgba(255, 248, 242, 0.78);
+}
+
 body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-workbench .recent-runs-chip {
   background: rgba(255, 246, 235, 0.07);
   color: rgba(255, 246, 235, 0.78);
@@ -3571,6 +3625,11 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   min-width: 0;
 }
 
+#root .runs-dashboard-page.runs-ledger-page::before {
+  content: none !important;
+  display: none !important;
+}
+
 .runs-ledger-awaiting .integration-alert-background {
   display: none;
 }
@@ -4224,14 +4283,14 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 }
 
 .run-detail-page .run-detail-bottom-grid,
-.hermes-site-frame[data-route-path^="/run/"] .run-detail-bottom-grid {
+.hermes-site-frame[data-route-path^="/runs/"] .run-detail-bottom-grid {
   grid-template-columns: minmax(0, 1fr) !important;
   width: 100% !important;
   max-width: none !important;
 }
 
 .run-detail-page .run-detail-bottom-grid > .run-detail-panel,
-.hermes-site-frame[data-route-path^="/run/"] .run-detail-bottom-grid > .run-detail-panel {
+.hermes-site-frame[data-route-path^="/runs/"] .run-detail-bottom-grid > .run-detail-panel {
   grid-column: 1 / -1 !important;
   width: 100% !important;
   max-width: none !important;

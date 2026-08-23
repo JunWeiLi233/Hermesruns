@@ -37,7 +37,7 @@ assert.match(
 
 assert.match(
   graphSource,
-  /distance:\s*formatDistance\(day\.distanceKm,\s*1,\s*lang\)/,
+  /formatDistance\(tooltip\.day\.distanceKm,\s*1,\s*lang(?:,\s*unit)?\)/,
   'Hovering a contribution cell should include that day\'s formatted run distance.',
 );
 

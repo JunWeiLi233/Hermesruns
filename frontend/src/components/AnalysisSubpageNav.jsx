@@ -6,7 +6,7 @@ const INSIGHT_ITEMS = [
   { key: 'load-balance', route: '/analysis/load-balance', labelKey: 'analysis.load_detail_title', icon: 'show_chart' },
   { key: 'intensity', route: '/analysis/intensity', labelKey: 'analysis.intensity_detail_title', icon: 'speed' },
   { key: 'injury-risk', route: '/analysis/injury-risk', labelKey: 'analysis.stitch_injury_title', icon: 'error' },
-  { key: 'coach-insight', route: '/analysis/coach-insight', labelKey: 'analysis.coach_detail_title', icon: 'psychology' },
+  { key: 'coach-insight', route: '/analysis/coach-insight', labelKey: 'analysis.coach_detail_title', icon: 'coach' },
 ];
 
 const PREDICTION_ITEMS = [

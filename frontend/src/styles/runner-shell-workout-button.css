@@ -59,17 +59,48 @@
 }
 
 #root .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer > .runner-shell-workout-btn {
-  width: 52px !important;
-  min-width: 52px !important;
-  max-width: 52px !important;
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
   height: 60px !important;
   min-height: 60px !important;
   padding: 0 !important;
   gap: 0;
 }
 
+#root .runner-dashboard-page.is-sidebar-collapsed > .runner-shell-sidebar {
+  overflow: visible;
+}
+
+#root .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer {
+  overflow: visible;
+}
+
+@media (min-width: 1100px) {
+  #root .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-sidebar-footer > .runner-shell-workout-btn,
+  #root .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-sidebar-footer > .runner-shell-workout-btn {
+    width: 132px !important;
+    min-width: 132px !important;
+    max-width: 132px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    padding: 0 !important;
+  }
+}
+
 #root .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
   display: none;
+}
+
+@media (min-width: 1100px) {
+  #root .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label,
+  #root .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
+    display: inline;
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

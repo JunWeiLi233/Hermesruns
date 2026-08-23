@@ -16,13 +16,13 @@ assert.match(
 
 assert.match(
   styleSource,
-  /body\.theme-light\s+\.runner-shell-notification-head strong[\s\S]*body\.theme-light\s+\.runner-shell-notification-card strong/,
+  /body\.theme-light\s+\.runner-shell-notification-head strong,[\s\S]*\.runner-shell-notification-card strong/,
   'The light-theme notification popover should set readable heading colors for both the shell header and notification cards.'
 );
 
 assert.match(
   styleSource,
-  /body\.theme-light\s+\.runner-shell-notification-head p[\s\S]*body\.theme-light\s+\.runner-shell-notification-card p/,
+  /body\.theme-light\s+\.runner-shell-notification-head p,[\s\S]*\.runner-shell-notification-card p/,
   'The light-theme notification popover should set readable body-copy colors for both the shell header and notification cards.'
 );
 
@@ -64,7 +64,7 @@ assert.match(
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px;[\s\S]*border-radius:\s*16px;[\s\S]*box-shadow:\s*none !important;/,
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px;[\s\S]*border-radius:\s*0;[\s\S]*box-shadow:\s*none !important;/,
   'Training messages should use compact Profile-style list rows instead of oversized nested cards.'
 );
 

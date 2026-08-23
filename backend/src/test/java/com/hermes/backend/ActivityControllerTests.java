@@ -15,10 +15,12 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -104,47 +106,39 @@ class ActivityControllerTests {
         );
     }
 
-    @Test
-    void getUserRunsReturnsDtoFeedItemsWithNormalizedMetricsAndShoeMetadata() {
-        AuthService authService = mock(AuthService.class);
-        ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
-        RunnerRepository runnerRepository = mock(RunnerRepository.class);
-        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
-        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
-        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
-        ReadinessService readinessService = mock(ReadinessService.class);
-        RestTemplate restTemplate = mock(RestTemplate.class);
-
-        ActivityController controller = newController(
-                authService,
-                activityRepository,
-                activityPointRepository,
+    private static ActivityController newController(
+            AuthService authService,
+            ActivityRepository activityRepository,
+            ActivityPointRepository activityPointRepository,
+            RunnerRepository runnerRepository,
+            SecretEncryptionService secretEncryptionService,
+            ElevationCorrectionService elevationCorrectionService,
+            AcclimatizationService acclimatizationService,
+            ReadinessService readinessService,
+            RestTemplate restTemplate,
+            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
+            TtlCacheStore cacheStore
+    ) {
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository, jdbcTemplate);
+        ActivityStravaStreamService stravaStreamService = new ActivityStravaStreamService(
+                activityDataAccess,
                 runnerRepository,
                 secretEncryptionService,
+                restTemplate
+        );
+        return new ActivityController(
+                authService,
+                activityDataAccess,
+                stravaStreamService,
                 elevationCorrectionService,
                 acclimatizationService,
                 readinessService,
-                restTemplate
+                cacheStore
         );
-
-        Runner runner = new Runner();
-        runner.setId(77L);
-        runner.setEmail("runner@hermes.test");
-
-        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of());
-
-        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token");
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertInstanceOf(List.class, response.getBody());
-        List<?> body = (List<?>) response.getBody();
-        assertEquals(0, body.size());
     }
 
     @Test
-    void getUserRunsBuildsAndCachesRoutePreviewFromStoredPoints() {
+    void getUserRunsReturnsDtoFeedItemsWithNormalizedMetricsAndShoeMetadata() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
@@ -179,14 +173,14 @@ class ActivityControllerTests {
         activity.setDistanceKm(12.4);
         activity.setMovingTimeSeconds(3200);
         activity.setStartDate("2026-04-20");
+        activity.setRoutePreviewPath("M 12.00 88.00 L 88.00 12.00");
+        activity.setRoutePreviewStartX(12.0);
+        activity.setRoutePreviewStartY(88.0);
+        activity.setRoutePreviewFinishX(88.0);
+        activity.setRoutePreviewFinishY(12.0);
 
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
-        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(19L), 40)).thenReturn(List.of(
-                new Object[]{19L, 40.7128, -74.0060, 0},
-                new Object[]{19L, 40.7141, -74.0027, 1},
-                new Object[]{19L, 40.7162, -73.9988, 2}
-        ));
 
         ResponseEntity<?> response = controller.getUserRuns("Bearer session-token");
 
@@ -194,7 +188,6 @@ class ActivityControllerTests {
         assertInstanceOf(List.class, response.getBody());
         List<?> body = (List<?>) response.getBody();
         assertEquals(1, body.size());
-        assertInstanceOf(Map.class, body.get(0));
 
         @SuppressWarnings("unchecked")
         Map<String, Object> run = (Map<String, Object>) body.get(0);
@@ -204,15 +197,14 @@ class ActivityControllerTests {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> routePreview = (Map<String, Object>) run.get("routePreview");
-        assertTrue(String.valueOf(routePreview.get("path")).startsWith("M "));
-        assertNotNull(routePreview.get("startX"));
-        assertNotNull(routePreview.get("finishY"));
-
-        verify(activityRepository).saveAll(anyList());
+        assertEquals("M 12.00 88.00 L 88.00 12.00", routePreview.get("path"));
+        assertEquals(12.0, routePreview.get("startX"));
+        assertEquals(12.0, routePreview.get("finishY"));
+        verifyNoInteractions(activityPointRepository);
     }
 
     @Test
-    void getUserRunsCapsRoutePreviewPathToDatabaseSafeLength() {
+    void getUserRunsDoesNotHydrateOrPersistRoutePreviews() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
@@ -240,38 +232,34 @@ class ActivityControllerTests {
         runner.setEmail("runner@hermes.test");
 
         Activity activity = new Activity();
-        activity.setId(21L);
+        activity.setId(19L);
         activity.setRunner(runner);
         activity.setActivityType(ActivityType.RUN);
-        activity.setName("Long preview run");
-
-        List<Object[]> previewSamples = new java.util.ArrayList<>();
-        for (int index = 0; index < 80; index += 1) {
-            previewSamples.add(new Object[]{
-                    21L,
-                    40.7000 + (index * 0.0005),
-                    -74.0100 + (index * 0.0004),
-                    index
-            });
-        }
+        activity.setName("Hudson Tempo");
+        activity.setStravaId("strava-19");
+        activity.setDistanceKm(12.4);
+        activity.setMovingTimeSeconds(3200);
+        activity.setStartDate("2026-04-20");
 
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
-        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(21L), 40)).thenReturn(previewSamples);
 
         ResponseEntity<?> response = controller.getUserRuns("Bearer session-token");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertInstanceOf(List.class, response.getBody());
+        List<?> body = (List<?>) response.getBody();
+        assertEquals(1, body.size());
+        assertInstanceOf(Map.class, body.get(0));
 
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> body = (List<Map<String, Object>>) response.getBody();
-        @SuppressWarnings("unchecked")
-        Map<String, Object> routePreview = (Map<String, Object>) body.get(0).get("routePreview");
-
-        assertNotNull(routePreview);
-        assertTrue(String.valueOf(routePreview.get("path")).length() <= 255);
-        verify(activityRepository).saveAll(anyList());
+        Map<String, Object> run = (Map<String, Object>) body.get(0);
+        assertEquals("Hudson Tempo", run.get("name"));
+        assertNull(run.get("routePreview"));
+        verifyNoInteractions(activityPointRepository);
+        verify(activityRepository, never()).save(any(Activity.class));
+        verify(activityRepository, never()).saveAll(anyList());
+        verifyNoInteractions(restTemplate);
     }
 
     @Test
@@ -374,6 +362,169 @@ class ActivityControllerTests {
         assertEquals(40.7128, body.get(0).bbox().minLat());
         assertEquals(-74.0027, body.get(0).bbox().maxLng());
         assertEquals(1644L, body.get(0).pointCount());
+        assertEquals(ActivityRoutePreviewHelper.RoutePreviewAvailability.READY, body.get(0).availability());
+    }
+
+    @Test
+    void getRoutePreviewBatchDoesNotFetchMissingStravaStreams() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        ActivityController controller = newController(
+                authService,
+                activityRepository,
+                activityPointRepository,
+                runnerRepository,
+                secretEncryptionService,
+                mock(ElevationCorrectionService.class),
+                mock(AcclimatizationService.class),
+                mock(ReadinessService.class),
+                restTemplate,
+                jdbcTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        runner.setEmail("runner@hermes.test");
+        runner.setStravaAccessToken("stored-token");
+
+        Activity stravaActivity = new Activity();
+        stravaActivity.setId(23L);
+        stravaActivity.setRunner(runner);
+        stravaActivity.setActivityType(ActivityType.RUN);
+        stravaActivity.setStravaId("strava-23");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(secretEncryptionService.decrypt("stored-token")).thenReturn("access-token");
+        when(activityRepository.findByIdInAndRunner(List.of(23L), runner)).thenReturn(List.of(stravaActivity));
+        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(23L), 240)).thenReturn(List.of());
+        when(activityPointRepository.findRoutePreviewBboxesByActivityIds(List.of(23L))).thenReturn(List.of());
+
+        ResponseEntity<?> response = controller.getRoutePreviewBatch("Bearer session-token", "23");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<ActivityRoutePreviewHelper.RoutePreviewBatchItem> body =
+                (List<ActivityRoutePreviewHelper.RoutePreviewBatchItem>) response.getBody();
+        assertEquals(1, body.size());
+        assertEquals(ActivityRoutePreviewHelper.RoutePreviewAvailability.DEFERRED, body.get(0).availability());
+        verifyNoInteractions(restTemplate);
+        verify(activityPointRepository, never()).saveAll(anyList());
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), anyList(), anyInt(), any());
+    }
+
+    @Test
+    void getRoutePreviewBatchMarksImportedActivityWithoutGpsAsNoRoute() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = new Runner();
+        runner.setId(77L);
+
+        Activity importedActivity = new Activity();
+        importedActivity.setId(24L);
+        importedActivity.setRunner(runner);
+        importedActivity.setActivityType(ActivityType.RUN);
+        importedActivity.setSourceFileName("morning.fit");
+
+        ActivityController controller = newController(
+                authService,
+                activityRepository,
+                activityPointRepository,
+                mock(RunnerRepository.class),
+                mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class),
+                mock(AcclimatizationService.class),
+                mock(ReadinessService.class),
+                mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdInAndRunner(List.of(24L), runner)).thenReturn(List.of(importedActivity));
+        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(24L), 240)).thenReturn(List.of());
+        when(activityPointRepository.findRoutePreviewBboxesByActivityIds(List.of(24L))).thenReturn(List.of());
+
+        ResponseEntity<?> response = controller.getRoutePreviewBatch("Bearer session-token", "24");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<ActivityRoutePreviewHelper.RoutePreviewBatchItem> body =
+                (List<ActivityRoutePreviewHelper.RoutePreviewBatchItem>) response.getBody();
+        assertEquals(1, body.size());
+        assertEquals(ActivityRoutePreviewHelper.RoutePreviewAvailability.NO_ROUTE, body.get(0).availability());
+    }
+
+    @Test
+    void getRoutePreviewBatchFiltersMalformedCoordinatesBeforeReturningOrMarkingReady() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = new Runner();
+        runner.setId(77L);
+
+        Activity importedActivity = new Activity();
+        importedActivity.setId(25L);
+        importedActivity.setRunner(runner);
+        importedActivity.setActivityType(ActivityType.RUN);
+
+        Activity stravaActivity = new Activity();
+        stravaActivity.setId(26L);
+        stravaActivity.setRunner(runner);
+        stravaActivity.setActivityType(ActivityType.RUN);
+        stravaActivity.setStravaId("strava-26");
+
+        ActivityController controller = newController(
+                authService,
+                activityRepository,
+                activityPointRepository,
+                mock(RunnerRepository.class),
+                mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class),
+                mock(AcclimatizationService.class),
+                mock(ReadinessService.class),
+                mock(RestTemplate.class)
+        );
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdInAndRunner(List.of(25L, 26L), runner))
+                .thenReturn(List.of(importedActivity, stravaActivity));
+        when(activityPointRepository.findRoutePreviewSamplesByActivityIds(List.of(25L, 26L), 240)).thenReturn(List.of(
+                new Object[]{25L, Double.NaN, -73.0, 0},
+                new Object[]{25L, 91.0, -73.0, 1},
+                new Object[]{25L, 40.0, -181.0, 2},
+                new Object[]{26L, 40.0, Double.POSITIVE_INFINITY, 0},
+                new Object[]{26L, -91.0, -73.0, 1}
+        ));
+        when(activityPointRepository.findRoutePreviewBboxesByActivityIds(List.of(25L, 26L))).thenReturn(List.of(
+                new Object[]{25L, 40.0, Double.NaN, -74.0, -73.0, 12L},
+                new Object[]{25L, 40.0, 39.0, -73.0, -74.0, 12L},
+                new Object[]{26L, -91.0, 91.0, -181.0, 181.0, 12L}
+        ));
+
+        ResponseEntity<?> response = controller.getRoutePreviewBatch("Bearer session-token", "25,26");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        @SuppressWarnings("unchecked")
+        List<ActivityRoutePreviewHelper.RoutePreviewBatchItem> body =
+                (List<ActivityRoutePreviewHelper.RoutePreviewBatchItem>) response.getBody();
+        assertEquals(2, body.size());
+
+        ActivityRoutePreviewHelper.RoutePreviewBatchItem importedItem = body.get(0);
+        assertTrue(importedItem.points().isEmpty());
+        assertNull(importedItem.bbox(), "reversed bbox must be discarded");
+        assertEquals(0L, importedItem.pointCount());
+        assertEquals(ActivityRoutePreviewHelper.RoutePreviewAvailability.NO_ROUTE, importedItem.availability());
+
+        ActivityRoutePreviewHelper.RoutePreviewBatchItem stravaItem = body.get(1);
+        assertTrue(stravaItem.points().isEmpty());
+        assertNull(stravaItem.bbox());
+        assertEquals(0L, stravaItem.pointCount());
+        assertEquals(ActivityRoutePreviewHelper.RoutePreviewAvailability.DEFERRED, stravaItem.availability());
     }
 
     @Test
@@ -741,5 +892,31 @@ class ActivityControllerTests {
         assertEquals(Boolean.TRUE, body.get("deleted"));
         assertEquals(101L, body.get("id"));
     }
-}
 
+    @Test
+    void deleteActivityEvictsRunnerHeatmapCacheWhenOwned() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        org.springframework.jdbc.core.JdbcTemplate jdbcTemplate = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        TtlCacheStore cacheStore = mock(TtlCacheStore.class);
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class), jdbcTemplate, cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(42L);
+        Activity owned = new Activity();
+        owned.setId(101L);
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(101L, runner)).thenReturn(Optional.of(owned));
+
+        ResponseEntity<?> response = controller.deleteActivity(101L, "Bearer session-token");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(cacheStore).evict("profile-heatmap", "all-points-paged-v4:42");
+    }
+}

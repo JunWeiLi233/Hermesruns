@@ -86,7 +86,7 @@ function RouteLoading() {
   else if (pathname === '/workflows') variant = 'admin';
   else if (pathname === '/profile') variant = 'profile';
   else if (pathname === '/runs') variant = 'runs';
-  else if (pathname === '/run' || pathname.startsWith('/run/')) variant = 'run-detail';
+  else if (pathname.startsWith('/runs/')) variant = 'run-detail';
   else if (pathname === '/analysis') variant = 'analysis';
   else if (pathname === '/analysis/vo2max') variant = 'analysis';
   else if (pathname.startsWith('/analysis/')) variant = 'analysis-insight';
@@ -153,8 +153,7 @@ function App() {
                   <Route path="/workflows" element={<Navigate to="/dashboard/workflows" replace />} />
                   <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
                   <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
-                  <Route path="/run/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
-                  <Route path="/run" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                  <Route path="/runs/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
                   <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
                   <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
                   <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />

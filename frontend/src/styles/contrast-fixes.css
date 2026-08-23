@@ -112,11 +112,23 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(
   color: var(--text-strong, #2c2f30) !important;
 }
 
-/* All cockpit signal cards sit on the near-black #191512 surface, not just the
-   count card, so every label, value, and note stays white there. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal :is(span, strong, p) {
-  color: #ffffff !important;
+/* Keep signal-card labels grey while values and notes stay black over white cards. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal span {
+  color: var(--runs-profile-muted) !important;
   opacity: 1 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-signal :is(strong, p) {
+  color: var(--runs-profile-ink) !important;
+  opacity: 1 !important;
+}
+
+/* Keep the selected Runs filter visibly red on the light profile surface. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-workbench .recent-runs-chip.is-active {
+  border-color: transparent !important;
+  background: #f7d8d2 !important;
+  color: #8f2f25 !important;
+  box-shadow: none !important;
 }
 
 /* Restore cream on the dark cinematic command cards that legitimately want

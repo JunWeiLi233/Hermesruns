@@ -67,7 +67,7 @@ export function formatStravaSyncLabel(status, t) {
   if (syncStatus.active) return t('profile.strava_sync_processing');
   if (syncStatus.status === 'FAILED') {
     if (/application.*inactive|inactive.*application|api app/i.test(syncStatus.error || '')) {
-      return t('profile.strava_sync_app_inactive');
+      return t('settings.stitch_strava_active');
     }
     return /relink|authorization expired|invalid/i.test(syncStatus.error || '')
       ? t('profile.strava_sync_relink_required')

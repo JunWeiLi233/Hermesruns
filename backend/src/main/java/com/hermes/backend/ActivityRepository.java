@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     );
 
     Optional<Activity> findByRunnerAndProviderAndSourceChecksum(Runner runner, ImportProvider provider, String sourceChecksum);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Activity a WHERE a.id = :activityId")
+    Optional<Activity> findByIdForUpdate(@Param("activityId") Long activityId);
 
     Optional<Activity> findByIdAndRunner(Long id, Runner runner);
 

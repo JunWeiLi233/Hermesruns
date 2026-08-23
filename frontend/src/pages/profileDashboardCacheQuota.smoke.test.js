@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(path.join(here, './ProfileDashboard.jsx'), 'utf8');
+const runsCacheSource = readFileSync(path.join(here, './runsCache.ts'), 'utf8');
 
 // The profile dashboard cache must store slim run projections: full activity
 // objects (route maps/telemetry) blow past the 5 MB localStorage quota and
@@ -28,22 +29,31 @@ assert.match(
   'writeJsonStorage should clear the stale key and retry on quota errors.',
 );
 
-// Follow-up: the origin quota can be hogged by OTHER cache keys (the runs
-// cache stored full uncapped activity objects). The fallback must evict the
-// sibling dashboard/runs caches, and Runs.jsx must slim its own cache.
+// Follow-up: the origin quota can be hogged by OTHER cache keys. The fallback
+// must evict the sibling dashboard/runs caches, while the Runs cache keeps a
+// complete, slim v2 snapshot with legacy-key invalidation.
 assert.match(
   source,
   /evictPrefixes = \['hermes_profile_dashboard_', 'hermes_runs_v1_'\]/,
   'Quota fallback should evict sibling dashboard and runs caches.',
 );
-const runsSource = readFileSync(path.join(here, './Runs.jsx'), 'utf8');
 assert.match(
-  runsSource,
-  /RUNS_CACHE_RUN_LIMIT[\s\S]*?slice\(0, RUNS_CACHE_RUN_LIMIT\)\.map\(slimRunForRunsCache\)/,
-  'Runs cache should cap and slim cached runs.',
+  runsCacheSource,
+  /RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v2_';[\s\S]*?runs\.map\(slimRunForRunsCache\)[\s\S]*?sourceCount: runs\.length,[\s\S]*?complete: true,/,
+  'Runs cache should write every slim run as a complete v2 snapshot with its source count.',
 );
 assert.match(
-  runsSource,
+  runsCacheSource,
+  /parsed\.complete !== true[\s\S]*?parsed\.runs\.length !== parsed\.sourceCount/,
+  'Runs cache reads should reject incomplete or source-count-mismatched snapshots.',
+);
+assert.match(
+  runsCacheSource,
+  /RUNS_CACHE_LEGACY_KEY_PREFIX = 'hermes_runs_v1_';[\s\S]*?for \(const prefix of \[RUNS_CACHE_KEY_PREFIX, RUNS_CACHE_LEGACY_KEY_PREFIX\]/,
+  'Runs cache writes and invalidation should remove stale v1 entries.',
+);
+assert.match(
+  runsCacheSource,
   /provider: run\?\.provider,/,
   'Runs cache slimming should keep the provider field cards render.',
 );
