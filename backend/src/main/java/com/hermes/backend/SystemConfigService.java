@@ -99,6 +99,18 @@ public class SystemConfigService {
         return isPresent(effectiveStravaClientId()) && isPresent(effectiveStravaClientSecret()) && secretEncryptionService.isConfigured();
     }
 
+    /**
+     * Public OAuth readiness flags used by the login surface. This is the
+     * single backend-owned gate for deciding whether a provider may be shown;
+     * it intentionally exposes readiness only, never credentials or secrets.
+     */
+    public Map<String, Object> getOAuthProviderStatus() {
+        Map<String, Object> providers = new LinkedHashMap<>();
+        providers.put("googleConfigured", isGoogleConfigured());
+        providers.put("stravaConfigured", isStravaConfigured());
+        return providers;
+    }
+
     public Map<String, Object> getStravaStatus() {
         boolean clientIdPresent = isPresent(effectiveStravaClientId());
         boolean clientSecretPresent = isPresent(effectiveStravaClientSecret());

@@ -2910,7 +2910,7 @@ export default function MuscleTraining() {
   const [notice, setNotice] = useState('');
   const [checkInNotice, setCheckInNotice] = useState('');
   const previousIsMileRef = useRef(isMile);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [shellProfile, setShellProfile] = useState(null);
   const [activeTarget, setActiveTarget] = useState('all');
   const [selectedExerciseKey, setSelectedExerciseKey] = useState('');

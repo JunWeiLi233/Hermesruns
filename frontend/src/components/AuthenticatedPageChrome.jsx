@@ -27,7 +27,7 @@ export default function AuthenticatedPageChrome({
   const navigate = useNavigate();
   const location = useLocation();
   const [loadedProfile, setLoadedProfile] = useState(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   useEffect(() => {
     if (profile) return undefined;

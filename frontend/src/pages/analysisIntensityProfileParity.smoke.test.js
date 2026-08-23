@@ -10,6 +10,17 @@ const read = (relativePath) => readFileSync(path.join(srcRoot, relativePath), 'u
 const pageSource = read('pages/AnalysisInsightDetail.jsx');
 const indexSource = read('index.css');
 const styleSource = read('styles/analysis-intensity-profile-alignment.css');
+const profileStyleSource = read('styles/analysis-profile-visual-alignment.css');
+const intensityStart = pageSource.indexOf("insightKey === 'intensity' && intensityDashboard ? (");
+const intensityEnd = pageSource.indexOf(') : (', intensityStart);
+assert.ok(intensityStart >= 0 && intensityEnd > intensityStart, 'The intensity detail branch should remain identifiable.');
+const intensityBranch = pageSource.slice(intensityStart, intensityEnd);
+
+assert.doesNotMatch(
+  intensityBranch,
+  /analysis-vo2-page-back|navigate\('\/analysis'\)/,
+  'The intensity detail hero should not render the removed back-to-analysis control or handler.',
+);
 
 assert.match(
   pageSource,
@@ -39,6 +50,29 @@ assert.match(
 assert.match(styleSource, /body:is\([^)]*\.theme-midnight[^)]*\)[\s\S]*\.analysis-intensity-profile-content/);
 assert.match(styleSource, /@media \(max-width:\s*960px\)/);
 assert.match(styleSource, /@media \(prefers-reduced-motion:\s*reduce\)/);
+
+const injuryMediumInsetStart = profileStyleSource.indexOf('@media (max-width: 960px)');
+const injurySmallInsetStart = profileStyleSource.indexOf('@media (max-width: 760px)', injuryMediumInsetStart);
+const injuryCanvasRule = profileStyleSource.match(
+  /body #root \.analysis-insight-detail-page\.is-injury-risk \.runner-shell-canvas\.analysis-insight-detail-canvas\s*\{[^}]*\}/s,
+);
+assert.ok(injuryCanvasRule, 'The Injury Risk canvas parity rule should remain identifiable.');
+assert.match(injuryCanvasRule[0], /width:\s*100%\s*!important/);
+assert.match(injuryCanvasRule[0], /max-width:\s*none\s*!important/);
+assert.ok(
+  injuryMediumInsetStart >= 0 && injurySmallInsetStart > injuryMediumInsetStart,
+  'The Injury Risk responsive alignment rules should remain grouped by breakpoint.',
+);
+assert.match(
+  profileStyleSource.slice(injuryMediumInsetStart, injurySmallInsetStart),
+  /body #root \.analysis-insight-detail-page\.is-injury-risk \.runner-shell-canvas\.analysis-insight-detail-canvas\s*\{[\s\S]*padding-inline:\s*16px\s*!important;/,
+  'Injury Risk should use the same 16px left inset as Intensity through the medium breakpoint.',
+);
+assert.match(
+  profileStyleSource.slice(injurySmallInsetStart),
+  /body #root \.analysis-insight-detail-page\.is-injury-risk \.runner-shell-canvas\.analysis-insight-detail-canvas\s*\{[\s\S]*padding-inline:\s*16px\s*!important;/,
+  'Injury Risk should retain the same 16px left inset as Intensity on small screens.',
+);
 assert.match(
   styleSource,
   /#root\s+\.analysis-insight-detail-page\.is-intensity\s+\.runner-shell-side-link\.is-active\s*\{[\s\S]*border-color:\s*transparent\s*!important;[\s\S]*background:\s*transparent\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/,

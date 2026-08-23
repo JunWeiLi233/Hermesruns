@@ -17,13 +17,19 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function resolveBackendBaseUrl(
+  _location: Pick<Location, 'hostname' | 'port'>,
+  _isDev: boolean,
+): string {
+  // Development requests must stay on the frontend origin so Vite's /api
+  // proxy can forward them without requiring backend CORS configuration.
+  // Production is served by the same backend origin, so relative URLs work
+  // there as well.
+  return '';
+}
+
 export function getBackendBaseUrl(): string {
-  const { hostname, port } = window.location;
-  const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isDev = Boolean(import.meta.env && import.meta.env.DEV);
-  if (!isDev) return '';
-  if (!isLocalHost || port === '8080') return '';
-  return 'http://localhost:8080';
+  return resolveBackendBaseUrl(window.location, Boolean(import.meta.env && import.meta.env.DEV));
 }
 
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {

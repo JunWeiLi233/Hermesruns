@@ -60,7 +60,7 @@ export default function ShoeCatalog() {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedModel, setSelectedModel] = useState('');
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);

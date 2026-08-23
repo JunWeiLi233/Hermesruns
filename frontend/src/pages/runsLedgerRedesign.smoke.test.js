@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8');
 const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
+const lateGridStyle = readFileSync(path.join(here, '../styles/grid-cards-white.css'), 'utf8');
 const lateCascadeStyle = readFileSync(path.join(here, '../styles/analysis-detail-redesigns.css'), 'utf8');
 
 function between(source, start, end, label) {
@@ -59,10 +60,52 @@ assert.match(
   'Delete failures should use the existing alert tone class.',
 );
 
+assert.doesNotMatch(
+  runsSource,
+  /strava_sync_app_inactive/,
+  'Runs should not render the removed inactive-Strava warning copy.',
+);
+
+assert.match(
+  runsSource,
+  /awaiting_error_code_linked/,
+  'Runs should keep the connected-Strava status kicker above the card title.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /<p>\{awaitingStatus\}<\/p>/,
+  'Runs should remove the connected-state status paragraph while keeping the card title and kicker.',
+);
+
 assert.match(
   ledgerBlock,
   /#root\s+\.runs-dashboard-page\.runs-ledger-page\s*\{/,
   'Runs ledger CSS should be scoped to the page marker.',
+);
+
+assert.match(
+  ledgerBlock,
+  /#root\s+\.runs-dashboard-page\.runs-ledger-page::before\s*\{[\s\S]*content:\s*none\s*!important;[\s\S]*display:\s*none\s*!important;/,
+  'Runs ledger should remove the shared fixed background grid behind the recent-run cards.',
+);
+
+assert.match(
+  lateGridStyle,
+  /#root\s+\.runs-dashboard-page\.runs-ledger-page::before,\s*\n\s*#root\s+\.runs-dashboard-page\.runs-ledger-page\s+\.runner-shell-canvas::before\s*\{[\s\S]*content:\s*none\s*!important;[\s\S]*display:\s*none\s*!important;[\s\S]*visibility:\s*hidden\s*!important;[\s\S]*opacity:\s*0\s*!important;[\s\S]*background:\s*none\s*!important;/,
+  'The final light-theme cascade should keep both Runs background-grid layers disabled.',
+);
+
+assert.match(
+  lateGridStyle,
+  /#root\s+\.runs-dashboard-page\.runs-ledger-page\s+\.runner-shell-canvas,\s*\n\s*#root\s+\.runs-dashboard-page\.runs-ledger-page\s+\.runs-profile-history,\s*\n\s*#root\s+\.runs-dashboard-page\.runs-ledger-page\s+\.recent-runs-card-list\s*\{[\s\S]*background-image:\s*none\s*!important;/,
+  'The Runs canvas and card list should not reintroduce a grid background through a later theme or loading state.',
+);
+
+assert.match(
+  lateGridStyle,
+  /#root\s+\.runs-dashboard-page::before,\s*\n\s*#root\s+\.runs-dashboard-page\s+\.runner-shell-canvas::before\s*\{[\s\S]*content:\s*none\s*!important;[\s\S]*display:\s*none\s*!important;/,
+  'The final grid guard should also cover older Runs renders that do not expose the ledger marker class.',
 );
 
 assert.match(

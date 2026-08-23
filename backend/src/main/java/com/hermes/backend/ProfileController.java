@@ -37,7 +37,6 @@ import java.util.function.Supplier;
 @RequestMapping("/api")
 public class ProfileController {
     private static final Duration HEATMAP_CACHE_TTL = Duration.ofMinutes(5);
-    private static final String HEATMAP_CACHE_VERSION = "all-points-paged-v4";
     private static final int DEFAULT_HEATMAP_PAGE_LIMIT = 50000;
     private static final int DEFAULT_HEATMAP_COVERAGE_LIMIT = 60000;
     private static final int MAX_HEATMAP_PAGE_LIMIT = 100000;
@@ -324,12 +323,12 @@ public class ProfileController {
             activityNormalizationService.backfillActivityTypes(runner);
         }
 
-        String heatmapCacheKey = HEATMAP_CACHE_VERSION + ":" + runner.getId();
+        String heatmapCacheKey = HeatmapCacheKey.forRunner(runner.getId());
 
         long activityCount = activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN);
         if (activityCount <= 0) {
             HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, 0, null, new HeatmapDiagnostics(0, 0, 0, true), null);
-            cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+            cacheStore.put(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, response, HEATMAP_CACHE_TTL);
             return ResponseEntity.ok(response);
         }
 
@@ -339,7 +338,7 @@ public class ProfileController {
         );
         if (sourcePointCount <= 0) {
             HeatmapResponse response = new HeatmapResponse(List.of(), 0, 0, activityCount, null, new HeatmapDiagnostics(0, 0, 0, true), null);
-            cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+            cacheStore.put(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, response, HEATMAP_CACHE_TTL);
             return ResponseEntity.ok(response);
         }
 
@@ -394,12 +393,12 @@ public class ProfileController {
             return ResponseEntity.ok(response);
         }
 
-        HeatmapResponse cached = cacheStore.get("profile-heatmap", heatmapCacheKey, HeatmapResponse.class).orElse(null);
+        HeatmapResponse cached = cacheStore.get(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, HeatmapResponse.class).orElse(null);
         if (isCompleteHeatmapResponse(cached, sourcePointCount)) {
             return ResponseEntity.ok(cached);
         }
         if (cached != null) {
-            cacheStore.evict("profile-heatmap", heatmapCacheKey);
+            cacheStore.evict(HeatmapCacheKey.NAMESPACE, heatmapCacheKey);
         }
 
         List<Object[]> activityPoints = activityPointRepository.findAllHeatmapPointsByRunnerAndType(
@@ -419,9 +418,9 @@ public class ProfileController {
                 null
         );
         if (isCompleteHeatmapResponse(response, sourcePointCount)) {
-            cacheStore.put("profile-heatmap", heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+            cacheStore.put(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, response, HEATMAP_CACHE_TTL);
         } else {
-            cacheStore.evict("profile-heatmap", heatmapCacheKey);
+            cacheStore.evict(HeatmapCacheKey.NAMESPACE, heatmapCacheKey);
         }
         return ResponseEntity.ok(response);
     }

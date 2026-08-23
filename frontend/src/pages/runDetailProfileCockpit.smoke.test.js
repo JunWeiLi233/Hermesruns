@@ -38,6 +38,18 @@ assert(
   'Loaded Run Detail should opt into a dedicated Profile-minimal layer imported after shared page treatments.',
 );
 
+const splitsSectionStart = runDetailSource.indexOf('<section id="run-detail-splits"');
+const splitsPanelStart = runDetailSource.indexOf('<div className="run-detail-panel run-detail-table-panel">', splitsSectionStart);
+const splitsHeadingStart = runDetailSource.indexOf('<div className="run-detail-section-head">', splitsSectionStart);
+const splitsTableStart = runDetailSource.indexOf('<table className="run-detail-splits-table">', splitsSectionStart);
+assert(
+  splitsPanelStart >= 0
+    && splitsHeadingStart > splitsPanelStart
+    && splitsTableStart > splitsHeadingStart
+    && /\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-splits-section\s*>\s*\.run-detail-table-panel\s*>\s*\.run-detail-section-head\s*\{[^}]*margin:\s*0;[^}]*padding:\s*20px\s+22px\s+14px;/.test(minimalStyleSource),
+  'Run Detail splits should connect its 分圈 heading and action row to the table inside one shared panel.',
+);
+
 assert(
   overviewStart >= 0
     && overviewEnd > overviewStart
@@ -82,14 +94,14 @@ assert(
 );
 
 assert(
-  runDetailSource.includes("${points.length > 0 ? ' has-route-map-background' : ''}")
+  runDetailSource.includes("${points.length > 0 ? ' has-route-map-page-background' : ''}")
     && runDetailSource.includes('className="run-detail-map-background"')
-    && /\{routeMapBackground\}\s*<div className="run-detail-shell">/.test(runDetailSource)
+    && /<main className="runner-shell-main">\s*\{points\.length > 0 && \(\s*<div className="run-detail-map-background">/.test(runDetailSource)
     && !runDetailSource.includes('mapBackground = null')
     && !runDetailSource.includes('{mapBackground}')
     && !runDetailSource.includes('{isCompactMapLayout && routeMapBackground}')
     && runDetailSource.includes('points.length === 0 && ('),
-  'Loaded routes should mount one in-flow Leaflet map before Overview while retaining the no-route fallback.',
+  'Loaded routes should mount one OpenStreetMap layer at the authenticated shell level while retaining the no-route fallback.',
 );
 
 assert(
@@ -104,10 +116,11 @@ assert(
 );
 
 assert(
-  /\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background\s*\{[\s\S]*position:\s*relative;[\s\S]*width:\s*100%;/.test(minimalStyleSource)
-    && /@media\s*\(min-width:\s*861px\)\s*\{[\s\S]*\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background\s*\{[\s\S]*height:\s*clamp\(360px,\s*50svh,\s*620px\);/.test(minimalStyleSource)
+  /\.runner-shell-page\.run-detail-runner-page\.has-route-map-page-background\s+\.run-detail-map-background\s*\{[\s\S]*position:\s*absolute;[\s\S]*inset:\s*0;[\s\S]*z-index:\s*0;/.test(minimalStyleSource)
+    && /\.runner-shell-page\.run-detail-runner-page\.has-route-map-page-background\s+\.runner-shell-canvas\s*\{[\s\S]*position:\s*relative;[\s\S]*z-index:\s*1;/.test(minimalStyleSource)
+    && !/\.runner-shell-page\.run-detail-runner-page\.has-route-map-page-background\s+\.run-detail-map-background\s*\{[^}]*height:\s*clamp\(/.test(minimalStyleSource)
     && /\.run-detail-map-background\s+\.leaflet-top\s*\{[\s\S]*top:\s*12px;/.test(minimalStyleSource),
-  'Desktop route maps should occupy the upper half of the initial viewport as an in-flow map stage.',
+  'Route maps should remain an absolute full-page OpenStreetMap backdrop behind the content canvas.',
 );
 
 assert(
@@ -124,10 +137,10 @@ assert(
 );
 
 assert(
-  /@media\s*\(max-width:\s*860px\)\s*\{[\s\S]*\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-map-background[\s\S]*position:\s*relative;[\s\S]*height:\s*clamp\(300px,\s*82vw,\s*430px\);/.test(minimalStyleSource)
+  /@media\s*\(max-width:\s*860px\)\s*\{[\s\S]*\.run-detail-runner-page\s+\.run-detail-page\.run-detail-profile-cockpit\.run-detail-profile-minimal\.has-route-map-background\s+\.run-detail-shell\s*\{[\s\S]*padding-top:\s*clamp\(344px,\s*calc\(82vw \+ 24px\),\s*484px\)\s*!important;/.test(minimalStyleSource)
     && runDetailSource.includes("window.matchMedia('(max-width: 860px)')")
     && runDetailSource.includes('map.invalidateSize({ pan: false })'),
-  'Mobile should restore a contained map and Leaflet should invalidate its size after shell geometry changes.',
+  'Mobile should keep the route-map stage ahead of Overview and Leaflet should invalidate its size after shell geometry changes.',
 );
 
 assert(
@@ -243,6 +256,11 @@ assert(
 );
 
 assert(
+  /\.run-detail-profile-minimal\s+\.run-detail-warning-action,\s*\.run-detail-profile-minimal\s+\.run-detail-splits-section\s+\.run-detail-section-head\s*>\s*\.run-detail-link-btn\s*\{[^}]*min-height:\s*42px;[^}]*padding:\s*10px\s+17px;[^}]*min-width:\s*104px;[^}]*background:\s*var\(--run-detail-dark\)\s*!important;/.test(minimalStyleSource),
+  'Run Detail 查看全部 should share the rounded 重新校准 button treatment.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-panel\s*\{[\s\S]*padding:\s*clamp\(18px,\s*1\.7vw,\s*24px\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-row\s*\{[\s\S]*grid-template-columns:\s*56px\s+minmax\(0,\s*1fr\);[\s\S]*gap:\s*12px;[\s\S]*max-width:\s*280px;/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-gear-art\s*\{[\s\S]*width:\s*56px;[\s\S]*height:\s*56px;/.test(styleSource)
@@ -290,6 +308,21 @@ assert(
 assert(
   runDetailSource.indexOf('run-detail-telemetry-section') > overviewEnd,
   'Run Detail telemetry should follow the consolidated Overview card so the telemetry cockpit can span the full page width.',
+);
+
+const telemetryPanelStart = runDetailSource.indexOf('<div className="run-detail-panel run-detail-telemetry-panel">');
+const telemetryHeadingStart = runDetailSource.indexOf('<div className="run-detail-section-head run-detail-telemetry-heading">');
+const telemetryTabsStart = runDetailSource.indexOf('<div className="run-detail-telemetry-tabs"');
+assert(
+  telemetryPanelStart >= 0
+    && telemetryHeadingStart > telemetryPanelStart
+    && telemetryTabsStart > telemetryHeadingStart,
+  'Run Detail telemetry should connect its 运动数据 heading to the metric grid inside one shared panel.',
+);
+
+assert(
+  /\.run-detail-profile-minimal\.has-route-map-background\s+\.run-detail-telemetry-heading\s+h2\s*\{[^}]*padding:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/.test(minimalStyleSource),
+  'Run Detail telemetry should keep the connected 运动数据 heading free of a background strip.',
 );
 
 assert(
@@ -346,14 +379,24 @@ assert(
 );
 
 assert(
+  /\.run-detail-runner-page\s+\.run-detail-profile-minimal\s+\.run-detail-debrief-panel\s*\{[^}]*background:\s*#000\s*!important;[^}]*color:\s*#fff\s*!important;/.test(minimalStyleSource)
+    && /\.run-detail-profile-minimal\s+\.run-detail-debrief-readiness\s+strong\s*\{[\s\S]*color:\s*#fff\s*!important;[\s\S]*-webkit-text-fill-color:\s*#fff\s*!important;/.test(minimalStyleSource),
+  'Run Detail coach debrief should use a pure-black panel with a pure-white readiness score.',
+);
+
+assert(
   /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*grid-template-columns:\s*minmax\(180px,\s*0\.34fr\)\s+minmax\(0,\s*1fr\);/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*background:\s*var\(--runner-profile-ink\)\s*!important;[\s\S]*color:\s*#fff8ee\s*!important;/.test(styleSource)
     && !/\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-debrief-panel\s*\{[\s\S]*radial-gradient\(circle at 86% 8%/.test(styleSource)
     && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*calc\(\(clamp\(1\.25rem,\s*1\.55vw,\s*1\.65rem\)\s*\*\s*1\.1\)\s*\+\s*14px\);/.test(styleSource)
     && /@media\s*\(max-width:\s*1180px\)\s*\{[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-main-grid:has\(\.run-detail-debrief-section\)\s+\.run-detail-gear-panel\s*\{[\s\S]*margin-top:\s*0;/.test(styleSource)
-    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-comparison-section,[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-section\s*\{[\s\S]*margin-top:\s*clamp\(18px,\s*2\.4vw,\s*34px\);/.test(styleSource)
-    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-table tbody tr:nth-child\(2n\)\s*\{[\s\S]*rgba\(247,\s*240,\s*231,\s*0\.58\)/.test(styleSource),
+    && /\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-comparison-section,[\s\S]*\.run-detail-page\.run-detail-profile-cockpit\s+\.run-detail-splits-section\s*\{[\s\S]*margin-top:\s*clamp\(18px,\s*2\.4vw,\s*34px\);/.test(styleSource),
   'Run Detail should keep elite-runner evidence sections readable, align debrief and gear panels, and render debrief as a full-dark panel.',
+);
+
+assert(
+  /body:not\(\.theme-midnight\):not\(\.theme-high-contrast\)[\s\S]*?\.run-detail-splits-table tbody tr:nth-child\(2n\) td\s*\{[\s\S]*?background:\s*var\(--run-detail-card\)\s*!important;/.test(minimalStyleSource),
+  'Run Detail split rows should keep one uniform light-white card surface instead of alternating beige bands.',
 );
 
 assert(

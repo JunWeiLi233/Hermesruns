@@ -95,6 +95,19 @@
   display: none;
 }
 
+/* The default run-detail rail is icon-only. Keep the copy mounted for the
+ * expanded rail and expose the same labels through each control's name. */
+.run-detail-runner-page.is-sidebar-collapsed .runs-subnav-link-copy {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .run-detail-runner-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runs-subnav-link-copy,
+  .run-detail-runner-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runs-subnav-link-copy {
+    display: inline;
+  }
+}
+
 #run-detail-overview,
 #run-detail-coach,
 #run-detail-comparison,

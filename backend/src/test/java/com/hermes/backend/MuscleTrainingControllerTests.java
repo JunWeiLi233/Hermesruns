@@ -192,12 +192,20 @@ class MuscleTrainingControllerTests {
         JsonNode root = objectMapper.readTree(response);
         JsonNode days = root.path("days");
 
-        assertThat(days.get(1).path("run").path("workoutType").asText()).isEqualTo("THRESHOLD");
-        assertThat(days.get(1).path("strength").isNull()).isTrue();
-        assertThat(days.get(5).path("run").path("workoutType").asText()).isEqualTo("LONG_RUN");
-        assertThat(days.get(5).path("strength").isNull()).isTrue();
-        assertThat(days.get(0).path("strength").isNull()).isTrue();
-        assertThat(days.get(4).path("strength").isNull()).isTrue();
+        int qualityIndex = -1;
+        int longRunIndex = -1;
+        for (int index = 0; index < days.size(); index++) {
+            String workoutType = days.get(index).path("run").path("workoutType").asText();
+            if (List.of("TEMPO", "THRESHOLD", "INTERVALS").contains(workoutType)) qualityIndex = index;
+            if ("LONG_RUN".equals(workoutType)) longRunIndex = index;
+        }
+        assertThat(qualityIndex).isGreaterThanOrEqualTo(0);
+        assertThat(longRunIndex).isGreaterThanOrEqualTo(0);
+        for (int protectedIndex : List.of(qualityIndex, longRunIndex)) {
+            assertThat(hasNoStrength(days.get(protectedIndex))).isTrue();
+            if (protectedIndex > 0) assertThat(hasNoStrength(days.get(protectedIndex - 1))).isTrue();
+            if (protectedIndex + 1 < days.size()) assertThat(hasNoStrength(days.get(protectedIndex + 1))).isTrue();
+        }
 
         long strengthDays = 0;
         for (JsonNode day : days) {
@@ -401,6 +409,7 @@ class MuscleTrainingControllerTests {
     void manualTodayCheckInStillAvoidsLongRunTomorrow() throws Exception {
         Runner runner = createRunner("muscle-checkin-adjacency@test.local");
         seedRecentRuns(runner, 8, 8.0, 50);
+        seedRunsOnTomorrowWeekday(runner, 4, 8.0, 50);
         seedSchedule(runner, List.of(
                 CoachWorkoutType.REST,
                 CoachWorkoutType.LONG_RUN,
@@ -468,6 +477,25 @@ class MuscleTrainingControllerTests {
             activity.setAverageHeartRate(148.0);
             activityRepository.save(activity);
         }
+    }
+
+    private void seedRunsOnTomorrowWeekday(Runner runner, int count, double distanceKm, int minutes) {
+        LocalDate firstMatchingDate = LocalDate.now().plusDays(1).minusWeeks(1);
+        for (int i = 0; i < count; i++) {
+            Activity activity = new Activity();
+            activity.setRunner(runner);
+            activity.setActivityType(ActivityType.RUN);
+            activity.setDistanceKm(distanceKm);
+            activity.setMovingTimeSeconds(minutes * 60);
+            activity.setStartTime(firstMatchingDate.minusWeeks(i).atTime(7, 0));
+            activity.setAverageHeartRate(148.0);
+            activityRepository.save(activity);
+        }
+    }
+
+    private boolean hasNoStrength(JsonNode day) {
+        JsonNode strength = day.path("strength");
+        return strength.isMissingNode() || strength.isNull();
     }
 
     private void seedSchedule(Runner runner, List<CoachWorkoutType> workoutTypes) {

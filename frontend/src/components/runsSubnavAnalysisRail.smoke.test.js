@@ -21,7 +21,7 @@ assert.match(
 
 assert.match(
   componentSource,
-  /aria-controls="runs-subnav-recent-list"[\s\S]*aria-expanded=\{recentRunsOpen\}/,
+  /aria-controls=\{recentRunsOpen \? ['"]runs-subnav-recent-list['"] : undefined\}[\s\S]*aria-expanded=\{recentRunsOpen\}/,
   'Recent runs should stay available through a compact disclosure instead of permanently filling the rail.',
 );
 

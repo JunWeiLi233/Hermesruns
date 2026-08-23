@@ -6,12 +6,13 @@ Use this file as the short entrypoint for work in this repository.
 
 1. `AGENTS.md`
 2. `docs/PROJECT_MAP.md`
-3. `docs/auto-hermes/index.md`
-4. `docs/repo-rules/index.md`
-5. `.ai-codex/optimized-codex.md`
-6. `.ai-sync/CONTEXT_LEDGER.md`
-7. `.ai-sync/AGENT_SYNC.md`
-8. Read deeper owners only when needed.
+3. `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md` when the request names a broken behavior but not its owner
+4. `docs/auto-hermes/index.md`
+5. `docs/repo-rules/index.md`
+6. `.ai-codex/optimized-codex.md`
+7. `.ai-sync/CONTEXT_LEDGER.md`
+8. `.ai-sync/AGENT_SYNC.md`
+9. Read deeper owners only when needed.
 
 ## Core Policy
 
@@ -20,6 +21,14 @@ Use this file as the short entrypoint for work in this repository.
 - Treat `/auto-hermes-max` as the repo-local parallel extension for one bounded parent round with a merge gate.
 - Older `hermes-auto:` or `/hermes-auto` wording is deprecated; prefer `/auto-hermes`.
 - `AGENTS.md` owns policy. `docs/PROJECT_MAP.md` owns the durable project architecture map. `docs/` and workflow files own deeper durable detail.
+
+## Functionality Direction Tree
+
+This working tree includes a maintained routing tree for behavior-led tasks:
+
+- Read `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md` before searching broadly when a request describes a broken feature or unclear owner.
+- Use `docs/ai/functionality-direction-tree.json` when a machine-readable list of frontend/backend owners, API seams, tests, or verification commands is useful.
+- Treat these files as part of the agent navigation surface. If a route, controller, service, or test moves, update the tree in the same change.
 
 ## Skill And Runtime Map
 

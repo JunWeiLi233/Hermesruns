@@ -199,6 +199,35 @@ body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis
   display: none;
 }
 
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-visual {
+  position: absolute !important;
+  inset: 0 0 0 auto;
+  z-index: 0 !important;
+  width: min(52%, 620px);
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-visual::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.64) 0%, rgba(0, 0, 0, 0.5) 26%, rgba(0, 0, 0, 0.2) 66%, rgba(0, 0, 0, 0.3) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.3));
+  content: "";
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 58%;
+  filter: saturate(0.92) contrast(1.08) brightness(0.72);
+  transform: scale(1.06);
+}
+
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision-copy,
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-window {
   position: relative;
@@ -218,7 +247,7 @@ body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis
   h2,
   .analysis-load-profile-window strong
 ) {
-  color: var(--load-profile-ink) !important;
+  color: #fff8f1 !important;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision :is(
@@ -309,7 +338,7 @@ body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision .coach-identity-copy strong {
-  color: #1c1917 !important;
+  color: #fff8f1 !important;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-evidence {
@@ -323,8 +352,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   .analysis-load-profile-chart-card,
   .analysis-load-profile-ratio-card,
   .analysis-load-command-metric-card,
-  .analysis-load-profile-ledger,
-  .analysis-load-command-methodology-card
+  .analysis-load-profile-ledger
 ) {
   border: 0 !important;
   background: var(--load-profile-card) !important;
@@ -337,6 +365,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   min-height: 340px;
   padding: 22px 24px;
   border-radius: 16px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-profile-chart-card .analysis-load-command-panel-head {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-panel-head h2,
@@ -355,8 +388,12 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   text-transform: none;
 }
 
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-legend i.is-acute {
+  background: #f07561;
+}
+
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-legend i.is-chronic {
-  background: #8db9e7;
+  background: #78b4ff;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-wrap {
@@ -376,22 +413,91 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   fill: rgba(33, 31, 28, 0.5);
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-badge {
-  top: 4px;
-  right: 4px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, var(--load-profile-accent), var(--load-profile-coral));
-  box-shadow: 0 12px 24px rgba(160, 57, 42, 0.2);
-  color: #fff;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-badge :is(strong, span) {
-  color: #fff;
-}
-
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip {
-  border: 0;
-  background: rgba(31, 26, 22, 0.92);
+  z-index: 4;
+  min-width: 168px;
+  align-items: stretch;
+  gap: 10px;
+  padding: 12px 14px 13px;
+  border: 1px solid rgba(33, 31, 28, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 36px rgba(67, 47, 33, 0.14), inset 0 1px rgba(255, 255, 255, 0.9);
+  color: var(--load-profile-ink);
+  backdrop-filter: blur(16px);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(33, 31, 28, 0.1);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-head > span {
+  color: var(--load-profile-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-head > i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #f07561;
+  box-shadow: 0 0 0 4px rgba(240, 117, 97, 0.14);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metrics {
+  display: grid;
+  gap: 7px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric.is-acute > i {
+  background: #f07561;
+  box-shadow: 0 0 0 3px rgba(240, 117, 97, 0.14);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric.is-chronic > i {
+  background: #78b4ff;
+  box-shadow: 0 0 0 3px rgba(120, 180, 255, 0.14);
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric > span {
+  color: var(--load-profile-muted);
+  font-size: 0.66rem;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip-metric > strong {
+  color: var(--load-profile-ink);
+  font-family: "Manrope", var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .analysis-insight-detail-page.is-load-balance .analysis-load-command-chart-tooltip {
+    min-width: 152px;
+    padding: 10px 12px 11px;
+  }
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card {
@@ -416,7 +522,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-value strong {
   color: var(--load-profile-ink);
   font-size: clamp(3.2rem, 6vw, 4.7rem);
-  font-style: italic;
+  font-style: normal;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-value .analysis-load-command-ratio-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  margin-left: 6px;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-ratio-track {
@@ -439,16 +552,35 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-metric-card {
-  min-height: 118px;
+  min-height: 148px;
   padding: 18px 20px;
   border-radius: 14px;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card > span {
+body #root .analysis-insight-detail-page.is-load-balance .analysis-profile-v2--load .analysis-load-command-metric-card {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  align-content: start;
+  gap: 0;
+  border-radius: 14px !important;
+  min-height: 148px !important;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card-label {
+  display: block;
   color: var(--load-profile-faint);
   font-size: 0.63rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+}
+
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card-definition {
+  display: block;
+  margin-top: 8px;
+  color: var(--load-profile-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card strong {
@@ -458,7 +590,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   font-weight: 850;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card small {
+.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card-detail {
   display: block;
   margin-top: 8px;
   color: var(--load-profile-muted);
@@ -466,12 +598,12 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   line-height: 1.35;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card.is-risk strong {
-  color: #c34231;
+body #root .analysis-insight-detail-page.is-load-balance .analysis-profile-v2--load .analysis-load-command-metric-card.is-risk strong {
+  color: #c34231 !important;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-metric-card.is-watch strong {
-  color: #aa741a;
+body #root .analysis-insight-detail-page.is-load-balance .analysis-profile-v2--load .analysis-load-command-metric-card.is-watch strong {
+  color: #aa741a !important;
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger {
@@ -548,56 +680,6 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
   cursor: pointer;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile-methodology {
-  animation: analysis-load-profile-rise 440ms 260ms ease-out both;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-methodology-card {
-  padding: 22px 24px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.42) !important;
-  box-shadow: none !important;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-content {
-  display: grid;
-  grid-template-columns: minmax(190px, 0.35fr) minmax(0, 1fr);
-  gap: 30px;
-  align-items: center;
-  margin-top: 18px;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-formula {
-  margin: 0;
-  justify-content: flex-start;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-formula-box {
-  color: var(--load-profile-ink);
-  font-size: 0.88rem;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-formula-fraction hr {
-  border-top-color: var(--load-profile-ink);
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-grid {
-  gap: 20px;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-method-item h3 {
-  margin-bottom: 7px;
-  color: var(--load-profile-ink);
-  font-size: 0.78rem;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-method-item p {
-  margin: 0;
-  color: var(--load-profile-muted);
-  font-size: 0.72rem;
-  line-height: 1.5;
-}
-
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(button, [tabindex]):focus-visible {
   outline: 2px solid var(--load-profile-coral);
   outline-offset: 3px;
@@ -649,12 +731,17 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
   pointer-events: none;
 }
 
+body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile-visual::after {
+  background:
+    linear-gradient(90deg, rgba(37, 33, 28, 0.98) 0%, rgba(37, 33, 28, 0.82) 28%, rgba(25, 21, 18, 0.44) 66%, rgba(13, 10, 8, 0.58) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.3));
+}
+
 body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(
   .analysis-load-profile-chart-card,
   .analysis-load-profile-ratio-card,
   .analysis-load-command-metric-card,
-  .analysis-load-profile-ledger,
-  .analysis-load-command-methodology-card
+  .analysis-load-profile-ledger
 ) {
   border: 0 !important;
   background: var(--load-profile-card) !important;
@@ -751,6 +838,11 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
     border-radius: 18px;
   }
 
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-visual {
+    width: 100%;
+    opacity: 0.34;
+  }
+
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile-window {
     padding: 20px 0 0;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -759,8 +851,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile-chart-card,
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ratio-card,
-  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger,
-  .analysis-insight-detail-page.is-load-balance .analysis-load-profile .analysis-load-command-methodology-card {
+  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-ledger {
     padding: 18px;
   }
 
@@ -798,10 +889,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
     justify-content: space-between;
   }
 
-  .analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-content,
-  .analysis-insight-detail-page.is-load-balance .analysis-load-command-methodology-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -810,8 +897,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
     .analysis-load-profile-decision,
     .analysis-load-profile-evidence,
     .analysis-load-profile-metrics,
-    .analysis-load-profile-ledger,
-    .analysis-load-profile-methodology
+    .analysis-load-profile-ledger
   ) {
     animation: none;
   }
@@ -819,4 +905,9 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(button, .analysis-load-command-sample-row) {
     transition: none;
   }
+}
+
+/* Keep the dark Load Balance decision title above shared Profile heading rules. */
+body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision h2 {
+  color: #fff8f1 !important;
 }

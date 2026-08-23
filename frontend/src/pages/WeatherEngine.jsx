@@ -34,7 +34,6 @@ const WEATHER_PAGE_COPY = {
     current_temp: '当前温度',
     humidity: '湿度',
     wind: '风速',
-    forecast_title: 'Forecast Pipeline // 12H',
     no_weather: '天气数据暂时不可用',
     weather_unavailable_copy: '当前拿不到实时天气，但页面结构会继续保留热适应判断入口。',
     adaptation_unavailable: '热适应基线暂时不可用',
@@ -96,7 +95,6 @@ const WEATHER_PAGE_COPY = {
     current_temp: 'Current temperature',
     humidity: 'Humidity',
     wind: 'Wind speed',
-    forecast_title: 'Forecast Pipeline // 12H',
     no_weather: 'Weather data unavailable',
     weather_unavailable_copy: 'Live weather is missing right now, but the page still holds the adaptation and planning structure.',
     adaptation_unavailable: 'Heat-adaptation baseline unavailable',
@@ -368,7 +366,7 @@ export default function WeatherEngine() {
   const navigate = useNavigate();
   const wt = (key) => pageText(lang, key);
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [weatherContext, setWeatherContext] = useState(null);
   const [liveWeather, setLiveWeather] = useState(null);
@@ -677,7 +675,6 @@ export default function WeatherEngine() {
           <section className="weather-engine-forecast-panel">
             <div className="weather-engine-panel-head">
               <div>
-                <span className="weather-engine-card-kicker">{wt('forecast_title')}</span>
                 <h2>{wt('page_name')}</h2>
               </div>
             </div>
@@ -705,11 +702,10 @@ export default function WeatherEngine() {
             <article className="weather-engine-card weather-engine-card--engine">
               <div className="weather-engine-card-head">
                 <div>
-                  <span className="weather-engine-card-kicker">{wt('heat_engine_title')}</span>
                   <h2>{wt('heat_engine_title')}</h2>
                 </div>
                 <div className="weather-engine-engine-icon">
-                  <AppIcon name="thermostat" />
+                  <AppIcon name="heat_adaptation" />
                 </div>
               </div>
               <p className="weather-engine-engine-copy">{wt('heat_engine_copy')}</p>
@@ -764,7 +760,6 @@ export default function WeatherEngine() {
             <aside className="weather-engine-card weather-engine-card--judgment">
               <div className="weather-engine-card-head weather-engine-card-head--judgment">
                 <div>
-                  <span className="weather-engine-card-kicker">{wt('coach_title')}</span>
                   <h2>{wt('coach_title')}</h2>
                 </div>
                 <div className="weather-engine-judge-mark">

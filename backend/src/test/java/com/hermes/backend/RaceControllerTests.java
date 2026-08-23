@@ -147,6 +147,7 @@ class RaceControllerTests {
         AuthService authService = mock(AuthService.class);
         RaceEventRepository raceEventRepository = mock(RaceEventRepository.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
+        AutomatedCoachService automatedCoachService = mock(AutomatedCoachService.class);
         Runner runner = runner();
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
         when(raceEventRepository.save(any(RaceEvent.class))).thenAnswer(invocation -> {
@@ -161,7 +162,8 @@ class RaceControllerTests {
                 activityRepository,
                 mock(RaceOfficialImageService.class),
                 mock(RaceElevationProfileService.class),
-                mock(RaceCourseMapService.class)
+                mock(RaceCourseMapService.class),
+                automatedCoachService
         );
 
         ResponseEntity<?> response = controller.create(
@@ -182,6 +184,7 @@ class RaceControllerTests {
         assertThat(payload.notes()).isEqualTo("Goal race");
         assertThat(payload.completed()).isFalse();
         verify(raceEventRepository).save(any(RaceEvent.class));
+        verify(automatedCoachService).replanFutureSchedule(runner);
     }
 
     @Test
