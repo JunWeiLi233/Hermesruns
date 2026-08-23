@@ -341,8 +341,8 @@
 }
 
 .heatmap-page-filter-pill.is-active {
-  background: linear-gradient(135deg, rgba(255, 109, 86, 0.94), rgba(255, 54, 95, 0.94));
-  color: #1a0d10;
+  background: rgba(255, 142, 126, 0.22);
+  color: #9b3f33;
 }
 
 .heatmap-page-primary-btn,

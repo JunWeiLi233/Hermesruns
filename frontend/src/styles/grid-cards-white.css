@@ -3,20 +3,94 @@
  *
  * Extends the Profile white-card decision to the other runner grids: the
  * Analysis insight cards, the Runs ledger insight strip, the Shoes
- * inventory grid, and the Settings connected-services grid keep warm cream
- * paper from the liquid-glass/ledger layers. This file is imported last,
+ * inventory grid, the Runs loading surface, and the Settings connected-services
+ * grid keep warm cream paper from the liquid-glass/ledger layers. This file is
+ * imported last,
  * so these light-theme-only guards win the final cascade without touching
  * midnight/high-contrast surfaces.
  */
+
+#root .runs-dashboard-page.runs-ledger-page::before,
+#root .runs-dashboard-page.runs-ledger-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  background: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runner-shell-canvas,
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history,
+#root .runs-dashboard-page.runs-ledger-page .recent-runs-card-list {
+  background-image: none !important;
+}
+
+/* Keep the same guarantee for legacy Runs markup that predates the ledger
+   marker class but still renders the shared runner-shell background layers. */
+#root .runs-dashboard-page::before,
+#root .runs-dashboard-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  background: none !important;
+}
+
+#root .runs-dashboard-page .runner-shell-canvas,
+#root .runs-dashboard-page .runs-profile-history,
+#root .runs-dashboard-page .recent-runs-card-list {
+  background-image: none !important;
+}
 
 body.theme-light #root .analysis-page-shell .analysis-overview-card--vdot-insight {
   background: #ffffff !important;
   background-image: none !important;
 }
 
-body.theme-light #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card {
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card {
   background: #ffffff !important;
   background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history :is(
+  button.recent-runs-card,
+  .recent-runs-month-group,
+  .recent-runs-month-header,
+  .recent-runs-card-metric,
+  .recent-runs-card-metric--accent
+) {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runner-shell-canvas {
+  background: transparent !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runner-shell-canvas::before {
+  opacity: 0 !important;
+  background: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-card-list {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-status--loading {
+  background: #ffffff !important;
+  background-image: none !important;
+  border-top-color: transparent !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-status--loading {
+  color: var(--runs-profile-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-status--loading::after {
+  content: none !important;
+  background: none !important;
+  animation: none !important;
 }
 
 body.theme-light #root .shoes-dashboard-page .shoe-inventory-card {
@@ -24,6 +98,32 @@ body.theme-light #root .shoes-dashboard-page .shoe-inventory-card {
   background-image: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-stage {
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-workspace-copy > .shoe-inventory-panel-kicker {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search input:focus-visible {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 body.theme-light #root .shoes-dashboard-page .shoe-inventory-summary-tile:not(.is-active):not(.is-warning) {

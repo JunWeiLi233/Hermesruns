@@ -58,14 +58,14 @@ assert.match(
 
 assert.match(
   loginSource,
-  /apiFetch\('\/api\/auth\/strava\/status'\)[\s\S]*?if \(!response\.ok\) \{[\s\S]*?return null;/,
-  'Login should load optional Strava status without apiJson, because apiJson redirects on 401 and can trap users on /login.',
+  /apiJson\('\/api\/auth\/providers'\)/,
+  'Login should load provider readiness from the public backend provider endpoint.',
 );
 
 assert.doesNotMatch(
   loginSource,
-  /apiJson\('\/api\/auth\/strava\/status'\)/,
-  'Login must not use apiJson for optional Strava status because unauthenticated 401 responses should not reload /login.',
+  /apiFetch\('\/api\/auth\/strava\/status'\)/,
+  'Login should not use a separate Strava status request as the provider visibility gate.',
 );
 
 assert.match(

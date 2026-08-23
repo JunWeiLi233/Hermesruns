@@ -16,12 +16,14 @@ function getRunDate(run, lang, fallback) {
   return formatted && formatted !== '--' ? formatted : fallback;
 }
 
-function RunSectionLink({ active, icon, label, sectionId }) {
+function RunSectionLink({ active, icon, label, onActivate, sectionId }) {
   return (
     <a
       className={`runner-shell-side-link runs-subnav-link${active ? ' is-active' : ''}`}
       href={`#${sectionId}`}
       aria-current={active ? 'location' : undefined}
+      aria-label={label}
+      onClick={() => onActivate(sectionId)}
       title={label}
     >
       <AppIcon name={icon} className="runner-dashboard-side-link-icon" aria-hidden="true" />
@@ -70,25 +72,36 @@ export default function RunsSubpageNav({
   const visibleRecentRuns = Array.isArray(recentRuns) ? recentRuns.slice(0, 4) : [];
   const runName = run?.name || t('run_detail.detail_title');
   const runDate = getRunDate(run, lang, t('run_detail.waiting_date'));
+  const recentRunsActive = activeSection === 'runs-subnav-recent-toggle';
 
   useEffect(() => {
     setActiveSection('run-detail-overview');
-    if (!showSections || typeof IntersectionObserver === 'undefined') return undefined;
+    if (!showSections) return undefined;
 
     const targets = sectionItems
       .map((item) => document.getElementById(item.id))
       .filter(Boolean);
     if (!targets.length) return undefined;
 
-    const observer = new IntersectionObserver((entries) => {
-      const visibleEntry = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top))[0];
-      if (visibleEntry) setActiveSection(visibleEntry.target.id);
+    const updateActiveSection = () => {
+      const activeMarker = Math.max(96, Math.min(window.innerHeight * 0.24, 160));
+      const visibleTargets = targets.filter((target) => target.getBoundingClientRect().top <= activeMarker);
+      const isAtPageEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      const nextTarget = isAtPageEnd ? targets[targets.length - 1] : visibleTargets[visibleTargets.length - 1] || targets[0];
+      if (nextTarget) setActiveSection(nextTarget.id);
+    };
+
+    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(() => {
+      updateActiveSection();
     }, { rootMargin: '-18% 0px -66% 0px', threshold: [0, 0.15, 0.45] });
 
-    targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
+    targets.forEach((target) => observer?.observe(target));
+    window.addEventListener('scroll', updateActiveSection, { passive: true });
+    updateActiveSection();
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('scroll', updateActiveSection);
+    };
   }, [run?.id, sectionItems, showSections]);
 
   return (
@@ -119,7 +132,13 @@ export default function RunsSubpageNav({
       </div>
 
       <nav className="runner-shell-side-nav runs-subnav-nav" aria-label={t('run_detail.subnav_aria_label')}>
-        <button type="button" className="runner-shell-side-link runs-subnav-overview-link" onClick={() => navigate('/runs')}>
+        <button
+          type="button"
+          className="runner-shell-side-link runs-subnav-overview-link"
+          onClick={() => navigate('/runs')}
+          aria-label={t('profile.dashboard_nav_activities')}
+          title={t('profile.dashboard_nav_activities')}
+        >
           <AppIcon name="history" className="runner-dashboard-side-link-icon" aria-hidden="true" />
           <span className="runs-subnav-link-copy">{t('profile.dashboard_nav_activities')}</span>
         </button>
@@ -132,6 +151,7 @@ export default function RunsSubpageNav({
                 active={item.id === activeSection}
                 icon={item.icon}
                 label={t(item.labelKey)}
+                onActivate={setActiveSection}
                 sectionId={item.id}
               />
             ))}
@@ -141,10 +161,16 @@ export default function RunsSubpageNav({
         <div className="runs-subnav-group runs-subnav-recent-group">
             <button
               type="button"
-              className="runner-shell-side-link runs-subnav-link runs-subnav-recent-toggle"
-              aria-controls="runs-subnav-recent-list"
+              className={`runner-shell-side-link runs-subnav-link runs-subnav-recent-toggle${recentRunsActive ? ' is-active' : ''}`}
+              aria-current={recentRunsActive ? 'location' : undefined}
+              aria-controls={recentRunsOpen ? 'runs-subnav-recent-list' : undefined}
               aria-expanded={recentRunsOpen}
-              onClick={() => setRecentRunsOpen((current) => !current)}
+              aria-label={t('run_detail.subnav_recent')}
+              title={t('run_detail.subnav_recent')}
+              onClick={() => {
+                setActiveSection('runs-subnav-recent-toggle');
+                setRecentRunsOpen((current) => !current);
+              }}
             >
               <AppIcon name="history" className="runner-dashboard-side-link-icon" aria-hidden="true" />
               <span className="runs-subnav-link-copy">{t('run_detail.subnav_recent')}</span>
@@ -167,6 +193,8 @@ export default function RunsSubpageNav({
                 <button
                   type="button"
                   className="runner-shell-side-link runs-subnav-import-secondary"
+                  aria-label={t('run_detail.subnav_import')}
+                  title={t('run_detail.subnav_import')}
                   onClick={() => navigate('/settings/import-data')}
                 >
                   <AppIcon name="upload_file" className="runner-dashboard-side-link-icon" aria-hidden="true" />

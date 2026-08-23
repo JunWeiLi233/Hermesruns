@@ -3,6 +3,7 @@ package com.hermes.backend;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ public class RaceController {
     private final RaceOfficialImageService raceOfficialImageService;
     private final RaceElevationProfileService raceElevationProfileService;
     private final RaceCourseMapService raceCourseMapService;
+    private final AutomatedCoachService automatedCoachService;
 
     public RaceController(
             AuthService authService,
@@ -32,12 +34,27 @@ public class RaceController {
             RaceElevationProfileService raceElevationProfileService,
             RaceCourseMapService raceCourseMapService
     ) {
+        this(authService, raceEventRepository, activityRepository, raceOfficialImageService,
+                raceElevationProfileService, raceCourseMapService, null);
+    }
+
+    @Autowired
+    public RaceController(
+            AuthService authService,
+            RaceEventRepository raceEventRepository,
+            ActivityRepository activityRepository,
+            RaceOfficialImageService raceOfficialImageService,
+            RaceElevationProfileService raceElevationProfileService,
+            RaceCourseMapService raceCourseMapService,
+            AutomatedCoachService automatedCoachService
+    ) {
         this.authService = authService;
         this.raceEventRepository = raceEventRepository;
         this.activityRepository = activityRepository;
         this.raceOfficialImageService = raceOfficialImageService;
         this.raceElevationProfileService = raceElevationProfileService;
         this.raceCourseMapService = raceCourseMapService;
+        this.automatedCoachService = automatedCoachService;
     }
 
     @GetMapping
@@ -113,6 +130,7 @@ public class RaceController {
         applyRequest(raceEvent, request);
         raceEvent.setRunner(runnerOptional.get());
         RaceEvent saved = raceEventRepository.save(raceEvent);
+        if (automatedCoachService != null) automatedCoachService.replanFutureSchedule(runnerOptional.get());
         List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runnerOptional.get(), ActivityType.RUN);
         return ResponseEntity.ok(toResponse(saved, runActivities));
     }
@@ -149,6 +167,7 @@ public class RaceController {
         RaceEvent raceEvent = raceOptional.get();
         applyRequest(raceEvent, request);
         RaceEvent saved = raceEventRepository.save(raceEvent);
+        if (automatedCoachService != null) automatedCoachService.replanFutureSchedule(runnerOptional.get());
         List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runnerOptional.get(), ActivityType.RUN);
         return ResponseEntity.ok(toResponse(saved, runActivities));
     }
@@ -169,6 +188,7 @@ public class RaceController {
         }
 
         raceEventRepository.delete(raceOptional.get());
+        if (automatedCoachService != null) automatedCoachService.replanFutureSchedule(runnerOptional.get());
         return ResponseEntity.noContent().build();
     }
 

@@ -61,6 +61,27 @@ assert.ok(
   'body:is(.theme-midnight, .theme-high-contrast) #root .shoes-atelier-redesign',
 ].forEach((snippet) => assertIncludes(atelierCss, snippet, 'Shoes atelier CSS'));
 
+assert.match(
+  atelierCss,
+  /#root \.shoes-atelier-redesign \.shoe-inventory-search\s*\{[\s\S]*background:\s*#f1f2f2;[\s\S]*box-shadow:\s*none;/,
+  'Shoes search bar should use the shared light-grey surface without an inset strip',
+);
+assert.match(
+  atelierCss,
+  /#root \.shoes-atelier-redesign \.shoe-inventory-search input\s*\{[\s\S]*background:\s*transparent\s*!important;/,
+  'Shoes search input should stay transparent so no white strip appears behind the text',
+);
+assert.match(
+  atelierCss,
+  /#root \.shoes-atelier-redesign \.shoe-inventory-card-image\s*\{[\s\S]*display:\s*grid;[\s\S]*place-items:\s*center;[\s\S]*height:\s*144px;/,
+  'Shoe card image frame should have a definite centered desktop slot',
+);
+assert.match(
+  atelierCss,
+  /#root \.shoes-atelier-redesign \.shoe-inventory-card-image \.shoe-img\s*\{[\s\S]*object-fit:\s*contain;[\s\S]*object-position:\s*center;/,
+  'Shoe card image should center the processed image inside its frame',
+);
+
 [
   'shellClassName="shoe-edit-modal-shell"',
   'cardClassName="shoe-edit-modal-card"',

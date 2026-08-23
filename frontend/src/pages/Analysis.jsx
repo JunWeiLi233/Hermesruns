@@ -116,7 +116,7 @@ export default function Analysis() {
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [, setProfileState] = useState('loading');
@@ -281,8 +281,6 @@ export default function Analysis() {
     return () => { cancelled = true; };
   }, [isAuthenticated]);
 
-  const injuryKicker = t('analysis.stitch_injury_signal');
-  const injuryTitle = t('analysis.stitch_injury_title');
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
   const injuryCopy = t('analysis.stitch_injury_copy');
   const latestSorenessLevel = String(
@@ -701,8 +699,7 @@ export default function Analysis() {
                   onClick={() => navigate('/analysis/injury-risk')}
                 >
                   <div className="analysis-overview-card-title-block">
-                    <span className="analysis-overview-card-kicker">{injuryKicker}</span>
-                    <h3 className="analysis-overview-metric-title">{injuryTitle}</h3>
+                    <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_title')}</span>
                   </div>
                   <strong className={cx('analysis-overview-risk-level', `is-${injury.level}`)}>{injuryLevelLabel}</strong>
                   <div className="analysis-overview-risk-labels">
@@ -715,7 +712,6 @@ export default function Analysis() {
                     <span className={injury.level === 'moderate' ? 'is-on is-warn' : ''} />
                     <span className={injury.level === 'high' ? 'is-on is-danger' : ''} />
                   </div>
-                  <p>{injuryCopy}</p>
                 </button>
 
                 <button
@@ -842,7 +838,6 @@ export default function Analysis() {
                       className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
                       onClick={() => navigate('/analysis/injury-risk')}
                     >
-                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_risk_kicker')}</span>
                       <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_risk_title')}</h3>
                       <div className="analysis-injury-prevention-risk-ring-wrap">
                         <RiskRing score={injuryStatus?.combinedRiskScore} color={(Number(injuryStatus?.combinedRiskScore) || 0) < 30 ? '#38a35e' : (Number(injuryStatus?.combinedRiskScore) || 0) < 60 ? '#d98c3a' : '#d94a3a'} />
@@ -863,7 +858,6 @@ export default function Analysis() {
                       className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
                       onClick={() => navigate('/analysis/load-balance')}
                     >
-                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_acwr_kicker')}</span>
                       <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_acwr_title')}</h3>
                       <div className="analysis-injury-prevention-acwr-body">
                         <Gauge value={injuryStatus?.acwr || 0} color={(Number(injuryStatus?.acwr) || 0) < 1.0 ? '#38a35e' : (Number(injuryStatus?.acwr) || 0) <= 1.2 ? '#d98c3a' : '#d94a3a'} />
@@ -884,7 +878,6 @@ export default function Analysis() {
 
                     {/* Card 3: Daily Soreness Check-in + Coach Advice */}
                     <div className="analysis-overview-card analysis-overview-card--metric">
-                      <span className="analysis-overview-card-kicker">{t('analysis.stitch_injury_prevention_soreness_kicker')}</span>
                       <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_soreness_title')}</h3>
                       <div className="analysis-injury-prevention-soreness-actions">
                         <button
@@ -927,7 +920,6 @@ export default function Analysis() {
                           {t('analysis.stitch_injury_prevention_coach_empty')}
                         </div>
                       )}
-                      <span className="analysis-overview-card-kicker" style={{ marginTop: '14px' }}>{t('analysis.stitch_injury_prevention_coach_kicker')}</span>
                       {injuryStatus?.coachAdvice ? (
                         <div className="analysis-injury-prevention-coach-advice">
                           {injuryStatus.coachAdvice}
@@ -966,6 +958,7 @@ export default function Analysis() {
         isOpen={importModalOpen}
         onClose={closeImportModal}
         title={t('profile.import_modal_title')}
+        icon={<AppIcon name="upload_file" className="profile-import-modal-icon" />}
         shellClassName="profile-import-modal-shell"
         cardClassName="profile-import-modal-card"
       >

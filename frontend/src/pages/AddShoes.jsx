@@ -153,7 +153,7 @@ export default function AddShoes() {
   const [formNickname, setFormNickname] = useState('');
   const [formMaxDist, setFormMaxDist] = useState('500');
   const [formPrimary, setFormPrimary] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [showExtraBrands, setShowExtraBrands] = useState(false);
   const avatarMenuRef = useRef(null);

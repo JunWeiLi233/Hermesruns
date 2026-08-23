@@ -16,7 +16,7 @@ const routeVariants = {
   '/privacy': 'legal',
   '/profile': 'profile',
   '/runs': 'runs',
-  '/run/:id': 'run-detail',
+  '/runs/:id': 'run-detail',
   '/analysis': 'analysis',
   '/analysis/:insight': 'analysis-insight',
   '/prediction/:id': 'prediction',

@@ -69,7 +69,7 @@ export default function Settings() {
   const { unit, setUnit } = useUnit();
   const navigate = useNavigate();
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
   const [displayName, setDisplayName] = useState('');
   const [mantra, setMantra] = useState('');

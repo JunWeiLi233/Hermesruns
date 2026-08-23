@@ -74,7 +74,6 @@ public class ActivityController {
         }
 
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get());
-        ActivityRoutePreviewHelper.hydrateMissingRoutePreviews(runs, activityDataAccess);
         return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
     }
 
@@ -107,7 +106,6 @@ public class ActivityController {
         Map<Long, Activity> activityById = new HashMap<>();
         for (Activity activity : ownedActivities) {
             if (activity == null || activity.getId() == null) continue;
-            stravaStreamService.hydrateActivityPointsIfMissing(activity, runner);
             activityById.put(activity.getId(), activity);
         }
 
@@ -125,7 +123,8 @@ public class ActivityController {
             }
             double latitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
             double longitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
-            if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) {
+            if (!Double.isFinite(latitude) || latitude < -90.0 || latitude > 90.0
+                    || !Double.isFinite(longitude) || longitude < -180.0 || longitude > 180.0) {
                 continue;
             }
             long activityId = activityIdNumber.longValue();
@@ -145,7 +144,13 @@ public class ActivityController {
             double maxLongitude = row[4] instanceof Number number ? number.doubleValue() : Double.NaN;
             long pointCount = row[5] instanceof Number number ? number.longValue() : 0L;
             if (!Double.isFinite(minLatitude) || !Double.isFinite(maxLatitude)
-                    || !Double.isFinite(minLongitude) || !Double.isFinite(maxLongitude)) {
+                    || minLatitude < -90.0 || minLatitude > 90.0
+                    || maxLatitude < -90.0 || maxLatitude > 90.0
+                    || !Double.isFinite(minLongitude) || !Double.isFinite(maxLongitude)
+                    || minLongitude < -180.0 || minLongitude > 180.0
+                    || maxLongitude < -180.0 || maxLongitude > 180.0
+                    || minLatitude > maxLatitude
+                    || minLongitude > maxLongitude) {
                 continue;
             }
             long activityId = activityIdNumber.longValue();
@@ -157,12 +162,25 @@ public class ActivityController {
         }
 
         List<ActivityRoutePreviewHelper.RoutePreviewBatchItem> response = ownedIds.stream()
-                .map(activityId -> new ActivityRoutePreviewHelper.RoutePreviewBatchItem(
-                        activityId,
-                        pointsByActivityId.getOrDefault(activityId, List.of()),
-                        bboxByActivityId.get(activityId),
-                        pointCountByActivityId.getOrDefault(activityId, 0L)
-                ))
+                .map(activityId -> {
+                    List<ActivityRoutePreviewHelper.LatLngPoint> points =
+                            pointsByActivityId.getOrDefault(activityId, List.of());
+                    long pointCount = pointCountByActivityId.getOrDefault(activityId, 0L);
+                    Activity activity = activityById.get(activityId);
+                    ActivityRoutePreviewHelper.RoutePreviewAvailability availability =
+                            points.size() >= 2 && pointCount >= 2
+                                    ? ActivityRoutePreviewHelper.RoutePreviewAvailability.READY
+                                    : activity.getStravaId() != null && !activity.getStravaId().isBlank()
+                                    ? ActivityRoutePreviewHelper.RoutePreviewAvailability.DEFERRED
+                                    : ActivityRoutePreviewHelper.RoutePreviewAvailability.NO_ROUTE;
+                    return new ActivityRoutePreviewHelper.RoutePreviewBatchItem(
+                            activityId,
+                            points,
+                            bboxByActivityId.get(activityId),
+                            pointCount,
+                            availability
+                    );
+                })
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -629,6 +647,7 @@ public class ActivityController {
         if (!deleted) {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
+        cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(activeUser.get().getId()));
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 

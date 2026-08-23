@@ -62,7 +62,7 @@ const t = (key) => key;
 
 assert.equal(formatStravaSyncLabel({ linked: false }, t), 'settings.strava_not_connected');
 assert.equal(formatStravaSyncLabel({ linked: true, syncStatus: { active: true } }, t), 'profile.strava_sync_processing');
-assert.equal(formatStravaSyncLabel({ linked: true, syncStatus: { status: 'FAILED', active: false, error: 'Strava application is inactive.' } }, t), 'profile.strava_sync_app_inactive');
+assert.equal(formatStravaSyncLabel({ linked: true, syncStatus: { status: 'FAILED', active: false, error: 'Strava application is inactive.' } }, t), 'settings.stitch_strava_active');
 assert.equal(stravaSyncTone({ linked: true, syncStatus: { status: 'FAILED', active: false } }), 'alert');
 assert.equal(stravaSyncTone({ linked: true, syncStatus: { status: 'COMPLETED', active: false } }), 'live');
 

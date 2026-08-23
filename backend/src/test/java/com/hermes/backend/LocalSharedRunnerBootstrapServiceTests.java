@@ -84,6 +84,39 @@ class LocalSharedRunnerBootstrapServiceTests {
     }
 
     @Test
+    void bootstrapFillsOnlyMissingMockDataWhenExistingSeedIsPartial() {
+        Runner existing = new Runner();
+        existing.setId(9L);
+        existing.setEmail("strava+140971747@hermes.local");
+        when(authService.normalizeEmail("strava+140971747@hermes.local")).thenReturn("strava+140971747@hermes.local");
+        when(runnerRepository.findByEmailIgnoreCase("strava+140971747@hermes.local")).thenReturn(Optional.of(existing));
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(activityRepository.countByRunner(existing)).thenReturn(4L);
+        when(activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                existing,
+                ImportProvider.STRAVA,
+                "local-shared-runner-loop-v14-1"
+        )).thenReturn(false);
+        when(activityRepository.existsByRunnerAndProviderAndSourceChecksum(
+                existing,
+                ImportProvider.STRAVA,
+                "local-shared-runner-loop-v14-4"
+        )).thenReturn(true);
+        when(shoeRepository.findByRunnerOrderByCreatedAtDesc(existing)).thenReturn(List.of(new Shoe()));
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        LocalSharedRunnerBootstrapService.BootstrapResult result = newService().bootstrap(
+                LocalSharedRunnerBootstrapService.BootstrapConfig.localDefault("local-test-password")
+        );
+
+        assertThat(result.seededActivities()).isEqualTo(20);
+        ArgumentCaptor<Activity> activityCaptor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityRepository, times(20)).save(activityCaptor.capture());
+        assertThat(activityCaptor.getAllValues())
+                .noneMatch(activity -> "local-shared-runner-loop-v14-4".equals(activity.getSourceChecksum()));
+    }
+
+    @Test
     void bootstrapSeedsSharedRunnerRouteSamples() {
         when(authService.normalizeEmail("strava+140971747@hermes.local")).thenReturn("strava+140971747@hermes.local");
         when(runnerRepository.findByEmailIgnoreCase("strava+140971747@hermes.local")).thenReturn(Optional.empty());

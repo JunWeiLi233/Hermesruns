@@ -381,12 +381,24 @@
 }
 
 .runner-shell-notification-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 30px;
   height: 30px;
+  padding: 0;
+  box-sizing: border-box;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(241, 235, 229, 0.66);
   flex: 0 0 auto;
+}
+
+.runner-shell-notification-close .runner-dashboard-side-link-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
 }
 
 .runner-shell-notification-list {
@@ -417,9 +429,13 @@
   min-width: 0;
 }
 
-.runner-shell-notification-card span {
-  display: inline-flex;
+.runner-shell-notification-eyebrow {
+  display: block;
+  padding: 0;
   margin-bottom: 8px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   color: rgba(240, 117, 97, 0.92);
   font-size: 0.58rem;
   font-weight: 800;
@@ -523,7 +539,7 @@
   line-height: 1.65;
 }
 
-.runner-shell-notification-popover.is-zh .runner-shell-notification-card span,
+.runner-shell-notification-popover.is-zh .runner-shell-notification-eyebrow,
 .runner-shell-notification-popover.is-zh .runner-shell-notification-link {
   letter-spacing: 0.06em;
   text-transform: none;

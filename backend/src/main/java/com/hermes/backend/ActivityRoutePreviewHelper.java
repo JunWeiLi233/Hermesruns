@@ -13,53 +13,6 @@ final class ActivityRoutePreviewHelper {
     private ActivityRoutePreviewHelper() {
     }
 
-    static void hydrateMissingRoutePreviews(List<Activity> runs, ActivityDataAccess activityDataAccess) {
-        if (runs == null || runs.isEmpty()) {
-            return;
-        }
-
-        List<Long> missingIds = runs.stream()
-                .filter(activity -> activity != null && activity.getId() != null && !hasRoutePreview(activity))
-                .map(Activity::getId)
-                .toList();
-        if (missingIds.isEmpty()) {
-            return;
-        }
-
-        Map<Long, List<PreviewSample>> samplesByActivityId = new LinkedHashMap<>();
-        for (Object[] row : activityDataAccess.findRoutePreviewSamplesByActivityIds(missingIds, ROUTE_PREVIEW_POINT_LIMIT)) {
-            if (row == null || row.length < 4 || !(row[0] instanceof Number activityIdNumber)) {
-                continue;
-            }
-            double latitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
-            double longitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
-            int sequenceIndex = row[3] instanceof Number number ? number.intValue() : 0;
-            if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) {
-                continue;
-            }
-            long activityId = activityIdNumber.longValue();
-            samplesByActivityId.computeIfAbsent(activityId, ignored -> new ArrayList<>())
-                    .add(new PreviewSample(latitude, longitude, sequenceIndex));
-        }
-
-        List<Activity> dirtyActivities = new ArrayList<>();
-        for (Activity activity : runs) {
-            if (activity == null || activity.getId() == null || hasRoutePreview(activity)) {
-                continue;
-            }
-            RoutePreview routePreview = buildRoutePreview(samplesByActivityId.get(activity.getId()));
-            if (routePreview == null) {
-                continue;
-            }
-            applyRoutePreview(activity, routePreview);
-            dirtyActivities.add(activity);
-        }
-
-        if (!dirtyActivities.isEmpty()) {
-            activityDataAccess.saveAll(dirtyActivities);
-        }
-    }
-
     static Map<String, Object> toRunFeedItem(Activity activity) {
         Map<String, Object> body = new LinkedHashMap<>();
         ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
@@ -266,7 +219,14 @@ final class ActivityRoutePreviewHelper {
 
     public record LatLngPoint(double latitude, double longitude) {}
     public record GeoBbox(double minLat, double maxLat, double minLng, double maxLng) {}
-    public record RoutePreviewBatchItem(Long activityId, List<LatLngPoint> points, GeoBbox bbox, long pointCount) {}
+    public enum RoutePreviewAvailability { READY, NO_ROUTE, DEFERRED }
+    public record RoutePreviewBatchItem(
+            Long activityId,
+            List<LatLngPoint> points,
+            GeoBbox bbox,
+            long pointCount,
+            RoutePreviewAvailability availability
+    ) {}
     private record PreviewSample(double latitude, double longitude, int sequenceIndex) {}
     private record PreviewPoint(double x, double y) {}
     private record RoutePreview(String path, double startX, double startY, double finishX, double finishY) {}

@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { buildRunActivityCalendar } from '../utils/runActivityContribution';
 import { formatDistance } from '../utils/format';
+import { useUnit } from '../contexts/UnitContext';
 
 function formatWeekday(date, lang) {
   return date.toLocaleDateString(lang, { weekday: 'short' });
@@ -11,6 +12,7 @@ function formatMonth(date, lang) {
 }
 
 export default function RunActivityContributionGraph({ runs, status = 'ready', lang, t }) {
+  const { unit } = useUnit();
   const calendar = useMemo(() => buildRunActivityCalendar(runs), [runs]);
   const weekdayLabels = calendar.weeks[0]?.days.map((day) => formatWeekday(day.date, lang)) || [];
   const isLoading = status === 'loading';
@@ -23,6 +25,22 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
         ? t('settings.stitch_activity_summary', { count: calendar.totalRuns })
         : t('settings.stitch_activity_empty');
 
+  const [tooltip, setTooltip] = useState(null);
+  const gridRef = useRef(null);
+
+  const handleCellEnter = useCallback((day, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltip({
+      day,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 6,
+    });
+  }, []);
+
+  const handleCellLeave = useCallback(() => {
+    setTooltip(null);
+  }, []);
+
   return (
     <section className="st-activity-graph" aria-labelledby="st-run-activity-title">
       <div className="st-activity-graph-head">
@@ -34,7 +52,7 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
       </div>
 
       <div className="st-activity-grid-frame">
-        <div className="st-activity-grid-inner">
+        <div className="st-activity-grid-inner" ref={gridRef}>
           <div
             className="st-activity-calendar"
             style={{ '--st-activity-week-count': calendar.weeks.length }}
@@ -60,11 +78,8 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
                         key={day.key}
                         className={`st-activity-cell${day.isFuture ? ' is-future' : ''}`}
                         data-level={isLoading ? 0 : day.level}
-                        title={t('settings.stitch_activity_day_label', {
-                          date: day.date.toLocaleDateString(lang),
-                          count: day.count,
-                          distance: formatDistance(day.distanceKm, 1, lang),
-                        })}
+                        onMouseEnter={(e) => handleCellEnter(day, e)}
+                        onMouseLeave={handleCellLeave}
                       />
                     ))}
                   </div>
@@ -74,6 +89,17 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
           </div>
         </div>
       </div>
+
+      {tooltip && tooltip.day.count > 0 && (
+        <div
+          className="st-activity-tooltip"
+          role="tooltip"
+          style={{ position: 'fixed', left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
+        >
+          <span className="st-activity-tooltip-date">{tooltip.day.date.toLocaleDateString(lang, { month: 'short', day: 'numeric' })}</span>
+          <span className="st-activity-tooltip-distance">{formatDistance(tooltip.day.distanceKm, 1, lang, unit)}</span>
+        </div>
+      )}
 
       <div className="st-activity-legend" aria-hidden="true">
         <span>{t('settings.stitch_activity_less')}</span>

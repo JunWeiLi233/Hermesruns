@@ -1,6 +1,6 @@
 # Hermes Project Map
 
-Purpose: durable architecture map for Hermes maintainers and coding agents. Current work queue remains in `TASKS.md`; cross-agent state remains in `.ai-sync/AGENT_SYNC.md`.
+Purpose: durable architecture map for Hermes maintainers and coding agents. Current work queue remains in `TASKS.md`; cross-agent state remains in `.ai-sync/AGENT_SYNC.md`. For symptom-to-file routing across a specific frontend/backend feature, use `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md` and its machine-readable JSON manifest.
 
 ## 1. Product purpose
 
@@ -33,6 +33,8 @@ Note: if `backend/pom.xml` and docs disagree on dependency versions, `pom.xml` w
 - `design.md`: default visual authority for meaningful UI work.
 - `DESIGN_VERSIONS.md`: design-change log.
 - `docs/repo-rules/`: durable repo rules split by concern.
+- `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md`: behavior-led decision tree from product symptoms to frontend/backend owners, tests, and verification.
+- `docs/ai/functionality-direction-tree.json`: validated machine-readable source for the functionality direction tree.
 - `.ai-codex/`: optimized Codex context and checkpoints.
 - `.ai-sync/`: cross-agent claims, human loop, and short-term coordination state.
 - `.tools/`: build, sync, verification, workflow, and maintenance scripts.
@@ -118,7 +120,7 @@ Do not change VDOT, ACWR, recovery, or prediction methodology as part of a visua
 
 ### Today Run
 
-`TodayRun.jsx` -> `/api/today/dashboard`, `/api/coach/today` -> `ProfileController.java`, `CoachController.java` -> `AutomatedCoachService.java`, coach state, injury risk, weather context -> session type, pace, recovery and shoe guidance.
+`TodayRun.jsx`, `ProfileDashboard.jsx`, `Schedule.jsx`, and `AnalysisInsightDetail.jsx` -> `/api/today/dashboard`, `/api/coach/today`, `/api/coach/schedule` -> `ProfileController.java`, `CoachController.java` -> `AutomatedCoachService.java`, `PersonalizedRunningPlanner.java`, coach state, injury risk, race goals, weather context -> one shared session type, distance/duration, pace range, rationale, recovery and shoe guidance.
 
 ### Shoes and AI scan
 
@@ -233,7 +235,7 @@ Unknowns to verify before related work:
 
 1. Read `PRODUCT.md` and the relevant `TASKS.md` block.
 2. Check `git status` and `.ai-sync/AGENT_SYNC.md`.
-3. Locate the target route/page/controller/service/repository and related tests.
+3. Match the symptom in `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md`, then open the listed frontend entrypoint, API seam, backend entrypoint, and related tests.
 4. Restate current implementation, call chain, impact surface, and risks.
 5. Propose the smallest safe plan.
 6. Modify only after approval when the user asked for plan mode.
