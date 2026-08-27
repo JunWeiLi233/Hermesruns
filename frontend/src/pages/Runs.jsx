@@ -23,7 +23,7 @@ import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stra
 import { createRoutePreviewRequestCoordinator } from './runsRequestCoordinator';
 import { canonicalizeRunsCacheEmail, createRunsLoadGeneration, invalidateRunsCache, readRunsCache, writeRunsCache } from './runsCache';
 import { invalidateHeatmapCache } from './heatmapCache';
-import { budgetMonthGroupsByRunCount, captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
+import { captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
 
 const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
@@ -954,19 +954,22 @@ const Runs = memo(function Runs() {
   }, null);
   const latestSource = latestRun?.provider || t('runs.no_data');
 
+  const visibleRuns = useMemo(
+    () => filteredRuns.slice(0, visibleRunsCount),
+    [filteredRuns, visibleRunsCount],
+  );
   const routePreviewRuns = useMemo(
     () => filteredRuns.slice(0, Math.min(filteredRuns.length, visibleRunsCount + ROUTE_PREVIEW_PREFETCH_LOOKAHEAD)),
     [filteredRuns, visibleRunsCount],
   );
   const hasMoreRuns = visibleRunsCount < filteredRuns.length;
 
-  // Group the FULL filtered history by YYYY-MM so each month header always
-  // shows the month's true run count and distance — never the partial
-  // numbers of whatever slice happens to be rendered. The rendered cards are
-  // budgeted separately (visibleMonthGroups), so headers stay truthful while
-  // the grid streams in. filteredRuns is already sorted most-recent-first, so
-  // a single pass preserves the chronological group order without an extra
-  // sort.
+  // Group the visible runs by YYYY-MM so the page-list renders each month as
+  // its own header + responsive run-card grid. visibleRuns is already sorted
+  // most-recent-first, so a single pass preserves the chronological group
+  // order without an extra sort. Each group also carries an aggregate run
+  // count and total distance so the header copy can summarize the month at
+  // a glance.
   const runsByMonth = useMemo(() => {
     const groups = [];
     const groupByKey = new Map();
@@ -977,7 +980,7 @@ const Runs = memo(function Runs() {
         return null;
       }
     })();
-    filteredRuns.forEach((run) => {
+    visibleRuns.forEach((run) => {
       const started = runDate(run);
       if (Number.isNaN(started.getTime())) return;
       const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
@@ -989,27 +992,17 @@ const Runs = memo(function Runs() {
             ? monthLabelFormatter.format(started)
             : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
           runs: [],
-          runCount: 0,
           totalKm: 0,
         };
         groupByKey.set(key, group);
         groups.push(group);
       }
       group.runs.push(run);
-      group.runCount += 1;
       group.totalKm += Number(run.distanceKm || 0)
         || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
     });
     return groups;
-  }, [filteredRuns, lang]);
-
-  // Apply the render window on top of the true month groups: headers keep
-  // their full-month aggregates, only the mounted cards are limited, and the
-  // window grows (below) regardless of any card's fold state.
-  const visibleMonthGroups = useMemo(
-    () => budgetMonthGroupsByRunCount(runsByMonth, visibleRunsCount),
-    [runsByMonth, visibleRunsCount],
-  );
+  }, [visibleRuns, lang]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -1596,7 +1589,7 @@ const Runs = memo(function Runs() {
           {loadState === 'ready' && filteredRuns.length > 0 ? (
               <>
                 <div className="recent-runs-page-list">
-                  {visibleMonthGroups.map((group) => {
+                  {runsByMonth.map((group) => {
                     const collapsed = collapsedMonthKeys.has(group.key);
                     const panelId = `recent-runs-month-${group.key}`;
                     return (
@@ -1617,7 +1610,7 @@ const Runs = memo(function Runs() {
                           </span>
                           <h3 className="recent-runs-month-title">{group.label}</h3>
                           <span className="recent-runs-month-meta">
-                            {t('runs.count_label', { count: group.runCount })}
+                            {t('runs.count_label', { count: group.runs.length })}
                             {' · '}
                             {formatDistance(group.totalKm, 1, lang)}
                           </span>
