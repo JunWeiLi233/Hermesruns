@@ -417,16 +417,20 @@ const Shoes = memo(function Shoes() {
   }, [checkScanAvailable, isAuthenticated, loadProfile, loadRuns, loadShoes, navigate]);
 
   useEffect(() => {
+    let cancelled = false;
     if (!scanFiles.length) {
       setScanPreviewUrl('');
       return undefined;
     }
-    const objectUrl = URL.createObjectURL(scanFiles[0]);
-    setScanPreviewUrl(objectUrl);
-    return () => {
-      URL.revokeObjectURL(objectUrl);
-    };
-  }, [scanFiles]);
+    fileToOptimizedDataUrl(scanFiles[0], t)
+      .then(dataUrl => {
+        if (!cancelled) setScanPreviewUrl(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setScanPreviewUrl('');
+      });
+    return () => { cancelled = true; };
+  }, [scanFiles, t]);
 
   const findShoeImage = useCallback(async (shoeId) => {
     try {
@@ -640,24 +644,25 @@ const Shoes = memo(function Shoes() {
       setDeleteBusy(false);
     }
   }
-  function compressImage(file, maxSize = 1024, quality = 0.8) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxSize || height > maxSize) {
-          const scale = maxSize / Math.max(width, height);
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
-      };
-      img.src = URL.createObjectURL(file);
-    });
+  async function compressImage(file, maxSize = 1024, quality = 0.8) {
+    const image = await createImageBitmap(file);
+    try {
+      let { width, height } = image;
+      if (width > maxSize || height > maxSize) {
+        const scale = maxSize / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) return null;
+      context.drawImage(image, 0, 0, width, height);
+      return await new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality));
+    } finally {
+      image.close();
+    }
   }
 
   function onScanFilesSelected(e) {
