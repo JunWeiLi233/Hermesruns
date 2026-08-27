@@ -112,26 +112,27 @@ async function fileToOptimizedDataUrl(file, t) {
 
 /** Shoe image component with auto background removal */
 function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading = 'lazy' }) {
+  const encodedSrc = src ? encodeURI(src) : '';
   const [processed, setProcessed] = useState(null);
 
   useEffect(() => {
-    if (!src) {
+    if (!encodedSrc) {
       setProcessed(null);
       return undefined;
     }
-    if (bgRemovedCache[src]) { setProcessed(bgRemovedCache[src]); return; }
+    if (bgRemovedCache[encodedSrc]) { setProcessed(bgRemovedCache[encodedSrc]); return; }
     let cancelled = false;
-    removeBackground(src).then(result => {
+    removeBackground(encodedSrc).then(result => {
       if (cancelled) return;
-      bgRemovedCache[src] = result;
+      bgRemovedCache[encodedSrc] = result;
       setProcessed(result);
     });
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [encodedSrc]);
 
-  if (!src) {
+  if (!encodedSrc) {
     return fallback || <div className="shoe-img-placeholder"><span>S</span></div>;
   }
   if (!processed) {
@@ -1542,7 +1543,7 @@ const Shoes = memo(function Shoes() {
                       return (
                         <button key={i} type="button" className="shoe-photo-studio-candidate"
                           onClick={() => selectImage(safeUrl)}>
-                          <ProcessedDisplayImage src={safeUrl} alt={`candidate ${i + 1}`}
+                          <ProcessedDisplayImage src={encodeURI(safeUrl)} alt={`candidate ${i + 1}`}
                             className="shoe-photo-studio-candidate-img"
                             fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
                             onError={e => { e.target.parentElement.style.display = 'none'; }} />

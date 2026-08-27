@@ -55,29 +55,30 @@ ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutC
 
 
 function ShoeImage({ src, alt, className, noImageLabel }) {
+  const encodedSrc = src ? encodeURI(src) : '';
   const [processed, setProcessed] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (!src) {
+    if (!encodedSrc) {
       setProcessed(null);
       return undefined;
     }
-    if (bgRemovedCache[src]) {
-      setProcessed(bgRemovedCache[src]);
+    if (bgRemovedCache[encodedSrc]) {
+      setProcessed(bgRemovedCache[encodedSrc]);
       return undefined;
     }
-    removeBackground(src).then(result => {
+    removeBackground(encodedSrc).then(result => {
       if (cancelled) return;
-      bgRemovedCache[src] = result;
+      bgRemovedCache[encodedSrc] = result;
       setProcessed(result);
     }).catch(() => {
-      if (!cancelled) setProcessed(src);
+      if (!cancelled) setProcessed(encodedSrc);
     });
     return () => { cancelled = true; };
-  }, [src]);
+  }, [encodedSrc]);
 
-  if (!src) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
+  if (!encodedSrc) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
   if (!processed) return <div className="admin-shoe-img-loading" />;
   return <img className={className} src={processed} alt={alt} loading="lazy" decoding="async" />;
 }
@@ -5884,7 +5885,7 @@ const Dashboard = memo(function Dashboard() {
                   if (!safeUrl) return null;
                   return (
                     <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(safeUrl, 'scan')}>
-                      <img src={safeUrl} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
+                      <img src={encodeURI(safeUrl)} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
                     </button>
                   );
                 })()
@@ -6076,7 +6077,7 @@ const Dashboard = memo(function Dashboard() {
               <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCatalogBrandLogoUpload} disabled={catalogBrandLogoUploading} />
             </label>
             {getSafeImageUrl(catalogBrandLogoUrl) && (
-              <img className="admin-catalog-brand-logo-preview" src={getSafeImageUrl(catalogBrandLogoUrl)} alt={t('dashboard.catalog_brand_logo_preview')} />
+              <img className="admin-catalog-brand-logo-preview" src={encodeURI(getSafeImageUrl(catalogBrandLogoUrl))} alt={t('dashboard.catalog_brand_logo_preview')} />
             )}
           </div>
           <div className="modal-actions">
