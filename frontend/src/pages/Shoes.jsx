@@ -85,17 +85,10 @@ async function fileToOptimizedDataUrl(file, t) {
     throw new Error(t('shoes.img_err_size'));
   }
 
-  const objectUrl = URL.createObjectURL(file);
+  const image = await createImageBitmap(file);
   try {
-    const image = await new Promise((resolve, reject) => {
-      const nextImage = new Image();
-      nextImage.onload = () => resolve(nextImage);
-      nextImage.onerror = () => reject(new Error('Could not read that image file.'));
-      nextImage.src = objectUrl;
-    });
-
-    const width = image.naturalWidth || image.width;
-    const height = image.naturalHeight || image.height;
+    const width = image.width;
+    const height = image.height;
     const scale = Math.min(1, LOCAL_PHOTO_MAX_DIMENSION / Math.max(width || 1, height || 1));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(width * scale));
@@ -106,7 +99,7 @@ async function fileToOptimizedDataUrl(file, t) {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     return canvas.toDataURL('image/jpeg', 0.86);
   } finally {
-    URL.revokeObjectURL(objectUrl);
+    image.close();
   }
 }
 
