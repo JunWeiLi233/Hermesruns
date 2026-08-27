@@ -20,6 +20,7 @@ import { preloadRoute } from '../utils/routePreload';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
+import { getSafeImageUrl } from '../utils/safeImageUrl.js';
 import PageSkeleton from '../components/PageSkeleton';
 import {
   buildRecentShoeSignal,
@@ -858,17 +859,19 @@ const Shoes = memo(function Shoes() {
 
   async function selectImage(url) {
     if (!imgPickerShoe) return;
+    const safeUrl = getSafeImageUrl(url);
+    if (!safeUrl) return;
     try {
       setImgUploadStatus('');
       await apiFetch(`/api/shoes/${imgPickerShoe.id}/photo`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoUrl: url }),
+        body: JSON.stringify({ photoUrl: safeUrl }),
       });
       // Clear bg-removed cache for old URL
       if (imgPickerShoe.photoUrl) delete bgRemovedCache[imgPickerShoe.photoUrl];
-      setShoes(prev => prev.map(s => s.id === imgPickerShoe.id ? { ...s, photoUrl: url } : s));
-      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: url } : prev);
+      setShoes(prev => prev.map(s => s.id === imgPickerShoe.id ? { ...s, photoUrl: safeUrl } : s));
+      setImgPickerShoe(prev => prev ? { ...prev, photoUrl: safeUrl } : prev);
     } catch { /* ignored */ }
   }
 
@@ -1485,8 +1488,12 @@ const Shoes = memo(function Shoes() {
                       onChange={e => setImgCustomUrl(e.target.value)}
                     />
                     <button type="button" className="shoe-photo-studio-primary-btn"
-                      disabled={!imgCustomUrl.trim()}
-                      onClick={() => { selectImage(imgCustomUrl.trim()); setImgCustomUrl(''); }}>
+                      disabled={!getSafeImageUrl(imgCustomUrl)}
+                      onClick={() => {
+                        const safeUrl = getSafeImageUrl(imgCustomUrl);
+                        if (safeUrl) selectImage(safeUrl);
+                        setImgCustomUrl('');
+                      }}>
                       {t('shoes.img_apply')}
                     </button>
                   </div>
@@ -1529,15 +1536,19 @@ const Shoes = memo(function Shoes() {
                         <span>{t('shoes.img_empty_copy')}</span>
                       </div>
                     )}
-                    {imgCandidates.map((url, i) => (
-                      <button key={i} type="button" className="shoe-photo-studio-candidate"
-                        onClick={() => selectImage(url)}>
-                        <ProcessedDisplayImage src={url} alt={`candidate ${i + 1}`}
-                          className="shoe-photo-studio-candidate-img"
-                          fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
-                          onError={e => { e.target.parentElement.style.display = 'none'; }} />
-                      </button>
-                    ))}
+                    {imgCandidates.map((url, i) => {
+                      const safeUrl = getSafeImageUrl(url);
+                      if (!safeUrl) return null;
+                      return (
+                        <button key={i} type="button" className="shoe-photo-studio-candidate"
+                          onClick={() => selectImage(safeUrl)}>
+                          <ProcessedDisplayImage src={safeUrl} alt={`candidate ${i + 1}`}
+                            className="shoe-photo-studio-candidate-img"
+                            fallback={<div className="shoe-img-placeholder shoe-img-loading" />}
+                            onError={e => { e.target.parentElement.style.display = 'none'; }} />
+                        </button>
+                      );
+                    })}
                   </div>
               </section>
             </div>

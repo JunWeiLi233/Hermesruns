@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readFileSync(path.join(here, './Dashboard.jsx'), 'utf8');
 const modalSource = readFileSync(path.join(here, '../components/Modal.jsx'), 'utf8');
 const monitoringCss = readFileSync(path.join(here, '../styles/admin-monitoring-dashboard.css'), 'utf8');
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 for (const stateName of [
   'clearJobsModalOpen',
@@ -21,7 +22,7 @@ for (const stateName of [
 ]) {
   assert.match(
     dashboardSource,
-    new RegExp(`<Modal\\s+[\\s\\S]*?isOpen=\\{${stateName.replace(/[()]/g, '\\$&')}\\}[\\s\\S]*?adminDashboard`),
+    new RegExp(`<Modal\\s+[\\s\\S]*?isOpen=\\{${escapeRegExp(stateName)}\\}[\\s\\S]*?adminDashboard`),
     `Admin modal ${stateName} should use the shared admin dashboard treatment.`,
   );
 }

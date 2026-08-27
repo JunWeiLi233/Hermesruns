@@ -24,6 +24,7 @@ import {
 } from '../utils/adminShoeCatalogStatus.js';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
+import { getSafeImageUrl } from '../utils/safeImageUrl.js';
 import {
   buildCourseMapAdminDetailFallback,
   buildCourseMapWorkspaceSource,
@@ -2099,7 +2100,7 @@ const Dashboard = memo(function Dashboard() {
     event.preventDefault();
     const brand = catalogBrandName.trim();
     const brandZh = catalogBrandZh.trim();
-    const logoUrl = catalogBrandLogoUrl.trim();
+    const logoUrl = getSafeImageUrl(catalogBrandLogoUrl);
     if (!brand || !logoUrl || catalogBrandSaving || catalogBrandLogoUploading) return;
 
     setCatalogBrandSaving(true);
@@ -2118,6 +2119,13 @@ const Dashboard = memo(function Dashboard() {
       setMessage(t('dashboard.catalog_delete_failed'));
       setCatalogBrandSaving(false);
     }
+  }
+
+  function applyCustomShoeImageUrl() {
+    const safeUrl = getSafeImageUrl(imgCustomUrl);
+    if (!safeUrl) return;
+    setShoePendingPhoto(safeUrl);
+    setImgCustomUrl('');
   }
 
   const deleteCatalogModel = useCallback((item) => {
@@ -5859,7 +5867,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
             <div className="img-picker-url-row">
               <input type="text" className="img-picker-url-input" placeholder={t('dashboard.img_paste_url')} value={imgCustomUrl} onChange={e => setImgCustomUrl(e.target.value)} />
-              <button type="button" className="btn-primary img-picker-url-btn" disabled={!imgCustomUrl.trim() || shoeImageAction.shoeId === imgPickerShoe.id} onClick={() => setShoePendingPhoto(imgCustomUrl.trim())}>{t('dashboard.review_set_pending')}</button>
+              <button type="button" className="btn-primary img-picker-url-btn" disabled={!getSafeImageUrl(imgCustomUrl) || shoeImageAction.shoeId === imgPickerShoe.id} onClick={applyCustomShoeImageUrl}>{t('dashboard.review_set_pending')}</button>
               <label className="btn-secondary img-picker-url-btn admin-upload-trigger">
                 {t('dashboard.review_upload_pending')}
                 <input type="file" accept="image/*" onChange={handleShoePendingFileUpload} />
@@ -5871,9 +5879,15 @@ const Dashboard = memo(function Dashboard() {
             </div>
             <div className="img-picker-grid">
               {imgCandidates.map((url, index) => (
-                <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(url, 'scan')}>
-                  <img src={url} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
-                </button>
+                (() => {
+                  const safeUrl = getSafeImageUrl(url);
+                  if (!safeUrl) return null;
+                  return (
+                    <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(safeUrl, 'scan')}>
+                      <img src={safeUrl} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
+                    </button>
+                  );
+                })()
               ))}
             </div>
           </div>
@@ -6061,8 +6075,8 @@ const Dashboard = memo(function Dashboard() {
               {catalogBrandLogoUploading ? t('dashboard.catalog_brand_logo_uploading') : t('dashboard.catalog_brand_logo_upload')}
               <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCatalogBrandLogoUpload} disabled={catalogBrandLogoUploading} />
             </label>
-            {catalogBrandLogoUrl && (
-              <img className="admin-catalog-brand-logo-preview" src={catalogBrandLogoUrl} alt={t('dashboard.catalog_brand_logo_preview')} />
+            {getSafeImageUrl(catalogBrandLogoUrl) && (
+              <img className="admin-catalog-brand-logo-preview" src={getSafeImageUrl(catalogBrandLogoUrl)} alt={t('dashboard.catalog_brand_logo_preview')} />
             )}
           </div>
           <div className="modal-actions">
