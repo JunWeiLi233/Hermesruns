@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../api';
+import { invalidateHeatmapCache } from '../pages/heatmapCache';
 import {
   STRAVA_SYNC_FINISHED_EVENT,
   clearStravaOauthPendingFlag,
@@ -183,7 +184,11 @@ export function AuthProvider({ children }) {
         if (finished) {
           clearStravaOauthPendingFlag({});
           setStravaOauthPending(false);
-          window.dispatchEvent(new CustomEvent(STRAVA_SYNC_FINISHED_EVENT, { detail: syncStatus }));
+          function handleStravaSyncFinished() {
+            invalidateHeatmapCache(email);
+            window.dispatchEvent(new CustomEvent(STRAVA_SYNC_FINISHED_EVENT, { detail: syncStatus }));
+          }
+          handleStravaSyncFinished();
           return;
         }
       } catch {
@@ -207,7 +212,7 @@ export function AuthProvider({ children }) {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [authHydrated, stravaOauthPending, token]);
+  }, [authHydrated, email, stravaOauthPending, token]);
 
   const login = useCallback((newToken, newEmail) => {
     // Commit token before callers run navigate(); otherwise route guards still see the old (empty) session.

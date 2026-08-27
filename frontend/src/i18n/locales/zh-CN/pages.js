@@ -249,6 +249,7 @@ export default {
   "divider_alt": "或使用邮箱 / Google",
   "email_label": "电子邮箱",
   "password_label": "密码",
+  "local_mock_password_hint": "本地测试账号密码是 HermesDev2026!，也可以使用 APP_LOCAL_SHARED_RUNNER_PASSWORD 配置的值。",
   "forgot_password": "忘记密码？",
   "password_placeholder": "输入你的密码",
   "submit": "登录",

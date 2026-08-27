@@ -254,6 +254,7 @@ export default function AddShoes() {
   const selectedBrandName = localizeShoeBrand(formBrand || browserBrand?.brand || '', lang);
   const selectedModelName = getCatalogModelLabel(selectedCatalogModel || { model: formModel }, lang) || formModel;
   const browserTitle = browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand');
+  const browserModelCount = Array.isArray(browserBrand?.models) ? browserBrand.models.length : 0;
   const browserSubcopy = loadState === 'error' ? t('shoes.add_page_browser_offline') : t('shoes.add_page_browser_setup_copy');
   const browserModelPlaceholder = browserBrand
     ? t('shoes.add_page_search_models', { brand: localizeShoeBrand(browserBrand.brand, lang) })
@@ -370,18 +371,39 @@ export default function AddShoes() {
         </header>
 
         <div className="runner-shell-canvas add-shoes-canvas">
-          <section className="add-shoes-workspace-heading">
-            <span className="add-shoes-workspace-icon" aria-hidden="true"><AppIcon name="add" /></span>
-            <div className="add-shoes-workspace-heading-copy">
-              <span className="add-shoes-panel-kicker">{t('shoes.stitch_surface_label')}</span>
-              <h1>{t('shoes.add_page_title')}</h1>
-              <div className="add-shoes-workspace-stats" aria-label={t('shoes.add_page_title')}>
-                <span><strong>{activeShoes.length}</strong>{t('shoes.add_page_status_active_pairs')}</span>
-                <span><strong>{fleetDistanceDisplay}</strong>{t('shoes.add_page_status_fleet_distance')}</span>
-                <span><strong>{avgHealthLabel}</strong>{t('shoes.add_page_status_rotation_health')}</span>
+          <section className="add-shoes-editorial-hero">
+            <div className="add-shoes-editorial-hero-main">
+              <span className="analysis-overview-card-kicker">{t('shoes.stitch_surface_label')}</span>
+              <div className="add-shoes-editorial-headline">
+                <h1>
+                  {t('shoes.add_page_title')}
+                  <span>{selectedBrandName || browserTitle}</span>
+                </h1>
+                <p>{browserSubcopy}</p>
+              </div>
+              <div className="add-shoes-hero-pills">
+                <span className="add-shoes-hero-pill">{selectedBrandName || browserTitle}</span>
+                <span className="add-shoes-hero-pill">{t('shoes.add_page_models_count', { count: browserModelCount })}</span>
+                <span className="add-shoes-hero-pill">{t('shoes.add_page_active_pairs_count', { count: activeShoes.length })}</span>
               </div>
             </div>
-            <p>{browserSubcopy}</p>
+            <div className="add-shoes-editorial-hero-rail">
+              <article className="add-shoes-status-card">
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_active_pairs')}</span>
+                <strong>{activeShoes.length}</strong>
+                <p>{t('shoes.add_page_status_active_pairs_copy')}</p>
+              </article>
+              <article className="add-shoes-status-card">
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_fleet_distance')}</span>
+                <strong>{fleetDistanceDisplay}</strong>
+                <p>{t('shoes.add_page_status_fleet_distance_copy')}</p>
+              </article>
+              <article className="add-shoes-status-card">
+                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_rotation_health')}</span>
+                <strong>{avgHealthLabel}</strong>
+                <p>{t('shoes.add_page_status_rotation_health_copy')}</p>
+              </article>
+            </div>
           </section>
 
           <div className="add-shoes-catalog-workspace">

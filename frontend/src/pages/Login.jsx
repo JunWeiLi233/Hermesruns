@@ -11,6 +11,8 @@ import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 import { createPasskey, getPasskey, isWebAuthnSupported } from '../utils/webauthn';
 
+const LOCAL_SHARED_RUNNER_EMAIL = 'strava+140971747@hermes.local';
+
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
@@ -35,6 +37,7 @@ export default function Login() {
   const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
   const hasConfiguredSocialProvider = stravaConfigured || googleConfigured;
+  const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   useEffect(() => {
     const oauthMfa = searchParams.get('adminMfa');
@@ -421,6 +424,9 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                {isLocalSharedRunnerEmail && (
+                  <p className="auth-flow-field-note" aria-live="polite">{t('index.local_mock_password_hint')}</p>
+                )}
               </div>
 
               <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>

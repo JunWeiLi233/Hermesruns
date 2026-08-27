@@ -305,6 +305,14 @@ public class PersonalizedRunningPlanner {
     private SessionDraft applyTodayProtection(SessionDraft draft, LocalDate date, PlannerInput input, String phase) {
         if (!date.equals(input.today())) return draft;
 
+        // A first-day onboarding plan should leave room to establish a baseline
+        // before asking a new runner to train. Keep the onboarding reason code
+        // so the UI explains the conservative choice without presenting it as
+        // a readiness mutation.
+        if ("onboarding".equals(phase)) {
+            return new SessionDraft(CoachWorkoutType.REST, "rest", "onboarding", false, null, false);
+        }
+
         if ("protect".equals(phase)) {
             CoachWorkoutType protectedType = "REST".equals(input.readinessVerdict()) && !"HIGH".equals(input.injuryRisk())
                     ? CoachWorkoutType.REST

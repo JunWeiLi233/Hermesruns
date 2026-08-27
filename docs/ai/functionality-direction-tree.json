@@ -19,10 +19,10 @@
       "apiPrefixes": ["/api/auth/**"],
       "contracts": ["JWT lifecycle", "role hydration", "provider availability", "password and captcha rules"],
       "frontend": {
-        "entrypoints": ["frontend/src/pages/Login.jsx", "frontend/src/pages/Signup.jsx", "frontend/src/pages/ForgotPassword.jsx", "frontend/src/pages/AdminLogin.jsx", "frontend/src/contexts/AuthContext.jsx"],
+        "entrypoints": ["frontend/src/pages/Login.jsx", "frontend/src/pages/Signup.jsx", "frontend/src/pages/ForgotPassword.jsx", "frontend/src/contexts/AuthContext.jsx"],
         "supporting": ["frontend/src/App.jsx", "frontend/src/api.ts", "frontend/src/utils/passwordRules.js"],
         "styles": ["frontend/src/styles/_split/auth.css"],
-        "tests": ["frontend/src/pages/signupRecaptcha.smoke.test.js", "frontend/src/pages/signupEmailValidation.smoke.test.js", "frontend/src/pages/adminLoginA11yCopy.smoke.test.js"]
+        "tests": ["frontend/src/pages/signupRecaptcha.smoke.test.js", "frontend/src/pages/signupEmailValidation.smoke.test.js"]
       },
       "backend": {
         "entrypoints": ["backend/src/main/java/com/hermes/backend/LoginController.java", "backend/src/main/java/com/hermes/backend/OAuthController.java"],

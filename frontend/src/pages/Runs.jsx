@@ -716,7 +716,7 @@ const Runs = memo(function Runs() {
     // The slim cache only needs the runs payload; profile/strava fall back to
     // the values seeded above (cache/metadata) when their endpoints fail, so
     // a flaky side endpoint no longer blocks cache refreshes.
-    if (isCurrentLoad() && !runsFailed && latestRuns) {
+    if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
       writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
     }
   }, [email, requestRoutePreviews, runsIdentity]);
@@ -1208,8 +1208,9 @@ const Runs = memo(function Runs() {
               ['fit', 'FIT/GPX', fitExportFiles, setFitExportFiles, 'profile.fit_export_source_title', 'profile.fit_export_source_hint', 'profile.fit_export_file_label'],
               ['coros', 'COROS', corosFiles, setCorosFiles, 'profile.coros_source_title', 'profile.coros_source_hint', 'profile.coros_file_label'],
               ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
-            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey]) => (
+            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
               <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
+                <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <div className="import-source-header">
                   <div className="import-source-copy">
                     <span className="import-source-title">{t(titleKey)}</span>

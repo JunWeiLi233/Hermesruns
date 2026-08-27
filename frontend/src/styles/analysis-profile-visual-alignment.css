@@ -1278,15 +1278,88 @@ body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile-
   border-radius: 50% !important;
 }
 
-/* The Coach Insight header no longer carries a readiness status panel. Keep
-   stale cached chunks from restoring it and collapse the space it occupied. */
-body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-profile-v2-header {
-  min-height: 0;
-  justify-content: flex-start;
+/* Coach Insight readiness ring: use a square SVG geometry so the score cannot
+   inherit the old 68px flex basis while keeping the taller 156px dial. */
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring {
+  --coach-readiness-ring-size: clamp(112px, 10vw, 144px);
+  position: relative;
+  display: grid;
+  width: var(--coach-readiness-ring-size);
+  height: var(--coach-readiness-ring-size);
+  min-width: var(--coach-readiness-ring-size);
+  min-height: var(--coach-readiness-ring-size);
+  flex: 0 0 var(--coach-readiness-ring-size);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  border-radius: 50%;
+  background: #fffdf9;
+  box-shadow: 0 12px 28px rgba(28, 25, 23, 0.08), inset 0 0 0 7px rgba(240, 117, 97, 0.045);
+  isolation: isolate;
 }
 
-body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-profile-v2-status {
-  display: none !important;
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring::after {
+  position: absolute;
+  inset: 16%;
+  border: 1px solid rgba(160, 57, 42, 0.1);
+  border-radius: 50%;
+  content: '';
+  pointer-events: none;
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__track,
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__progress {
+  fill: none;
+  stroke-width: 9;
+  vector-effect: non-scaling-stroke;
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__track {
+  stroke: rgba(28, 25, 23, 0.1);
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__progress {
+  stroke: var(--analysis-v2-coral);
+  stroke-linecap: round;
+  filter: drop-shadow(0 3px 5px rgba(240, 117, 97, 0.22));
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__value {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__value strong {
+  color: var(--analysis-v2-ink);
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  font-weight: 850;
+  letter-spacing: -0.08em;
+}
+
+body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring__value small {
+  margin-top: 6px;
+  color: var(--analysis-v2-faint);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 760px) {
+  body #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-readiness-ring {
+    --coach-readiness-ring-size: 112px;
+  }
 }
 
 /* Keep Load Balance evidence cards on one shared grid row. */

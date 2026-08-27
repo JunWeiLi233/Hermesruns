@@ -35,8 +35,8 @@ const PredictionDetail = React.lazy(routeParamPreloaders['/prediction/:distKey']
 const MuscleTraining = React.lazy(routePreloaders['/muscle-training']);
 const Rewards = React.lazy(routePreloaders['/rewards']);
 const Settings = React.lazy(routePreloaders['/settings']);
-const GarminImportSettings = React.lazy(routePreloaders['/settings/garmin-import']);
-const ImportDataSettings = React.lazy(routePreloaders['/settings/import-data']);
+const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettings'));
+const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
 
 const SKELETON_PREVIEW_VARIANTS = new Set([

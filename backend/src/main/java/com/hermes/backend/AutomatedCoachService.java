@@ -141,6 +141,24 @@ public class AutomatedCoachService {
         return toStateDto(runner, state, todayWorkout);
     }
 
+    /**
+     * Reads the current coach state without changing a runner's future
+     * schedule. Manual run check-ins use this path so their explicit plan is
+     * not replaced as a side effect of opening the strength planner.
+     */
+    @Transactional
+    public CoachStateDto getCoachStatePreservingSchedule(Runner runner) {
+        CoachRunnerState state = getOrCreateState(runner);
+        if (state.getLastAggregatedAt() == null) {
+            aggregateState(runner);
+            state = coachRunnerStateRepository.findByRunner(runner).orElse(state);
+        }
+        CoachScheduledWorkout todayWorkout = coachScheduledWorkoutRepository
+                .findByRunnerAndScheduledDate(runner, LocalDate.now())
+                .orElse(null);
+        return toStateDto(runner, state, todayWorkout);
+    }
+
     @Transactional
     public List<CoachScheduledWorkoutDto> getSchedule(Runner runner, int days) {
         int d = Math.min(28, Math.max(1, days));
@@ -153,6 +171,23 @@ public class AutomatedCoachService {
         return rows.stream()
                 .map(row -> toScheduledDto(row, sessionsByDate.get(row.getScheduledDate())))
                 .toList();
+    }
+
+    /**
+     * Returns the persisted schedule as-is for callers that are presenting a
+     * user-authored check-in. If no schedule exists yet, the normal planner
+     * path initializes it before returning the rows.
+     */
+    @Transactional
+    public List<CoachScheduledWorkoutDto> getSchedulePreservingSchedule(Runner runner, int days) {
+        int d = Math.min(28, Math.max(1, days));
+        LocalDate today = LocalDate.now();
+        List<CoachScheduledWorkout> rows = coachScheduledWorkoutRepository
+                .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, today.plusDays(d - 1L));
+        if (rows == null || rows.isEmpty()) {
+            return getSchedule(runner, d);
+        }
+        return rows.stream().map(AutomatedCoachService::toScheduledDto).toList();
     }
 
     @Transactional
@@ -530,6 +565,12 @@ public class AutomatedCoachService {
             for (PersonalizedRunningPlanner.PlannedSession session : plan.sessions()) {
                 CoachScheduledWorkout workout = existingByDate.get(session.date());
                 if (workout != null && completedRunDates.contains(session.date())) {
+                    continue;
+                }
+                // A persisted rest day is an explicit schedule choice. The
+                // personalized planner may replan future load, but should not
+                // silently turn an existing rest day into a run.
+                if (workout != null && workout.getWorkoutType() == CoachWorkoutType.REST) {
                     continue;
                 }
                 if (workout == null) {

@@ -991,6 +991,7 @@ export default function Analysis() {
           </header>
           <div className="import-source-grid">
             <section className={`import-source-card${fitExportFiles?.length ? ' is-selected' : ''}`}>
+              <span className="import-source-index" aria-hidden="true">01</span>
               <div className="import-source-header">
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
@@ -1017,6 +1018,7 @@ export default function Analysis() {
               </p>
             </section>
             <section className={`import-source-card${corosFiles?.length ? ' is-selected' : ''}`}>
+              <span className="import-source-index" aria-hidden="true">02</span>
               <div className="import-source-header">
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.coros_source_title')}</span>
@@ -1043,6 +1045,7 @@ export default function Analysis() {
               </p>
             </section>
             <section className={`import-source-card${huaweiFiles?.length ? ' is-selected' : ''}`}>
+              <span className="import-source-index" aria-hidden="true">03</span>
               <div className="import-source-header">
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.huawei_source_title')}</span>
