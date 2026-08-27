@@ -69,6 +69,18 @@ assert.match(
 
 assert.match(
   dashboardSource,
+  /admin-coursemap-scan-timeline__heading[\s\S]*course_maps_timeline_label[\s\S]*course_maps_scan_timeline_title/,
+  'Dashboard should keep the scan timeline label and Qwen title in one aligned heading group.'
+);
+
+assert.match(
+  stylesheetSource,
+  /\.admin-coursemap-scan-timeline__heading\s*\{[\s\S]*display:\s*grid;[\s\S]*gap:\s*4px;/,
+  'The scan timeline heading should use an in-bounds stacked layout instead of distributing its labels to the edges.'
+);
+
+assert.match(
+  dashboardSource,
   /course_maps_timeline_no_steps/,
   'Dashboard should show an empty state when no scan steps exist.'
 );

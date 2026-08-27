@@ -63,8 +63,26 @@ public class AuthService {
     }
 
     private static final int SESSION_DAYS = 30;
+    private static final int ADMIN_MFA_HOURS = 8;
 
     public String issueSessionToken(Runner runner) {
+        clearAdminMfaProof(runner);
+        return issueSessionTokenInternal(runner);
+    }
+
+    public String issueMfaVerifiedAdminSessionToken(Runner runner, String method) {
+        if (!isAdmin(runner)) {
+            throw new IllegalArgumentException("Only administrators may receive an MFA-backed admin session.");
+        }
+        if (method == null || method.isBlank()) {
+            throw new IllegalArgumentException("An MFA method is required.");
+        }
+        runner.setAdminMfaVerifiedAt(LocalDateTime.now());
+        runner.setAdminMfaMethod(method.trim().toUpperCase());
+        return issueSessionTokenInternal(runner);
+    }
+
+    private String issueSessionTokenInternal(Runner runner) {
         // Invalidate any existing session before issuing a new one.
         // Clearing these fields first ensures no prior token remains valid
         // even if a flush occurs mid-transaction before the new values are set.
@@ -81,7 +99,26 @@ public class AuthService {
     public void invalidateSession(Runner runner) {
         runner.setSessionToken(null);
         runner.setTokenIssuedAt(null);
+        clearAdminMfaProof(runner);
         runnerRepository.save(runner);
+    }
+
+    public boolean hasFreshAdminMfa(Runner runner) {
+        if (!isAdmin(runner)
+                || runner.getAdminMfaVerifiedAt() == null
+                || runner.getAdminMfaMethod() == null
+                || runner.getAdminMfaMethod().isBlank()) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime verifiedAt = runner.getAdminMfaVerifiedAt();
+        return verifiedAt.isAfter(now.minusHours(ADMIN_MFA_HOURS))
+                && !verifiedAt.isAfter(now.plusMinutes(5));
+    }
+
+    private void clearAdminMfaProof(Runner runner) {
+        runner.setAdminMfaVerifiedAt(null);
+        runner.setAdminMfaMethod(null);
     }
 
     public Optional<Runner> findByAuthorizationHeader(String authorizationHeader) {

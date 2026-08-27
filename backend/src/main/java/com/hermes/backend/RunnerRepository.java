@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +30,15 @@ public interface RunnerRepository extends JpaRepository<Runner, Long>, JpaSpecif
     Optional<Runner> findByPasswordResetTokenHash(String passwordResetTokenHash);
 
     long countByDeletedFalse();
+
+    @Query("""
+        select count(r)
+        from Runner r
+        where r.deleted = false
+          and r.createdAt >= :start
+          and r.createdAt < :end
+    """)
+    long countActiveByCreatedAtWindow(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     @Query("""
         select coalesce(sum(r.aiDailyScansUsed), 0)

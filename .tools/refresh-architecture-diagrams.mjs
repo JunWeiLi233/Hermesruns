@@ -143,19 +143,36 @@ function escapeXml(value) {
     .replace(/'/g, "&apos;");
 }
 
+function hardWrapToken(token, maxLength) {
+  if (token.length <= maxLength) return [token];
+  const chunks = [];
+  let rest = token;
+  while (rest.length > maxLength) {
+    let cut = Math.max(rest.lastIndexOf("/", maxLength), rest.lastIndexOf("-", maxLength));
+    if (cut < maxLength / 2) cut = maxLength;
+    chunks.push(rest.slice(0, cut + 1));
+    rest = rest.slice(cut + 1);
+  }
+  if (rest) chunks.push(rest);
+  return chunks;
+}
+
 function wrapTextLines(input, maxLength = 26) {
   const words = String(input || "").split(/\s+/).filter(Boolean);
   if (!words.length) return [];
   const lines = [];
-  let current = words.shift();
+  let current = "";
   for (const word of words) {
-    if ((`${current} ${word}`).length <= maxLength) current = `${current} ${word}`;
-    else {
-      lines.push(current);
-      current = word;
+    for (const chunk of hardWrapToken(word, maxLength)) {
+      if (!current) current = chunk;
+      else if ((`${current} ${chunk}`).length <= maxLength) current = `${current} ${chunk}`;
+      else {
+        lines.push(current);
+        current = chunk;
+      }
     }
   }
-  lines.push(current);
+  if (current) lines.push(current);
   return lines;
 }
 
@@ -271,8 +288,37 @@ function routeForBox(x, y, width, height) {
   return { x, y, width, height, centerX: x + (width / 2), centerY: y + (height / 2) };
 }
 
+const BODY_FONT_SIZE = 9;
+const MONOSPACE_CHAR_RATIO = 0.6;
+
+function bodyLineCharBudget(boxWidth) {
+  return Math.max(12, Math.floor((boxWidth - 22) / (BODY_FONT_SIZE * MONOSPACE_CHAR_RATIO)));
+}
+
 function lineArrow(x1, y1, x2, y2, label = "", options = {}) {
-  return { x1, y1, x2, y2, label, dashed: Boolean(options.dashed), color: options.color || PALETTE.muted };
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+    label,
+    dashed: Boolean(options.dashed),
+    color: options.color || PALETTE.muted,
+    labelDx: options.labelDx || 0,
+    labelDy: options.labelDy || 0,
+    labelAnchor: options.labelAnchor,
+  };
+}
+
+function pathArrow(points, label = "", options = {}) {
+  return {
+    points,
+    label,
+    dashed: Boolean(options.dashed),
+    color: options.color || PALETTE.muted,
+    labelAt: options.labelAt,
+    labelAnchor: options.labelAnchor,
+  };
 }
 
 function createBox(box) {
@@ -281,7 +327,9 @@ function createBox(box) {
   const stroke = PALETTE[`${paletteKey}Stroke`] || PALETTE.externalStroke;
   const lines = box.lines || [];
   const titleLines = wrapTextLines(box.title, 24);
-  const allLines = [...titleLines, ...lines];
+  const budget = bodyLineCharBudget(box.width);
+  const wrappedLines = lines.flatMap((line) => wrapTextLines(line, budget));
+  const allLines = [...titleLines, ...wrappedLines];
   const titleCount = titleLines.length;
   const textY = box.y + 22;
   const text = allLines.map((line, index) => {
@@ -312,7 +360,7 @@ function createGroup(group) {
 function createArrow(arrow) {
   const dash = arrow.dashed ? `stroke-dasharray="6,4"` : "";
   const label = arrow.label
-    ? `<text x="${((arrow.x1 + arrow.x2) / 2)}" y="${((arrow.y1 + arrow.y2) / 2) - 6}" text-anchor="middle" fill="${arrow.color}" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">${escapeXml(arrow.label)}</text>`
+    ? `<text x="${((arrow.x1 + arrow.x2) / 2) + (arrow.labelDx || 0)}" y="${((arrow.y1 + arrow.y2) / 2) - 6 + (arrow.labelDy || 0)}"${arrow.labelAnchor ? ` text-anchor="${arrow.labelAnchor}"` : ""} fill="${arrow.color}" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">${escapeXml(arrow.label)}</text>`
     : "";
   return `
     <g>
@@ -322,8 +370,23 @@ function createArrow(arrow) {
   `;
 }
 
+function createPathArrow(arrow) {
+  const dash = arrow.dashed ? `stroke-dasharray="6,4"` : "";
+  const d = arrow.points.map((point, index) => `${index === 0 ? "M" : "L"}${point[0]} ${point[1]}`).join(" ");
+  const [labelX, labelY] = arrow.labelAt || [0, 0];
+  const label = arrow.label
+    ? `<text x="${labelX}" y="${labelY}"${arrow.labelAnchor ? ` text-anchor="${arrow.labelAnchor}"` : ""} fill="${arrow.color}" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">${escapeXml(arrow.label)}</text>`
+    : "";
+  return `
+    <g>
+      <path d="${d}" fill="none" stroke="${arrow.color}" stroke-width="1.4" marker-end="url(#arrowhead)" ${dash}></path>
+      ${label}
+    </g>
+  `;
+}
+
 function createLegend(items, x, y) {
-  const rowHeight = 18;
+  const rowHeight = 16;
   const width = 248;
   const height = 18 + (items.length * rowHeight);
   const entries = items.map((item, index) => {
@@ -360,9 +423,9 @@ function buildGrid(width, height) {
 
 function renderSvgDocument(spec) {
   const groups = (spec.groups || []).map(createGroup).join("\n");
-  const arrows = (spec.arrows || []).map(createArrow).join("\n");
+  const arrows = (spec.arrows || []).map((arrow) => (arrow.points ? createPathArrow(arrow) : createArrow(arrow))).join("\n");
   const boxes = (spec.boxes || []).map(createBox).join("\n");
-  const legend = createLegend(spec.legend || [], spec.legendX || (spec.width - 220), spec.legendY || (spec.height - 160));
+  const legend = createLegend(spec.legend || [], spec.legendX ?? (spec.width - 268), spec.legendY ?? (spec.height - 160));
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${spec.width} ${spec.height}" role="img" aria-labelledby="title desc">
@@ -515,9 +578,14 @@ function createAgentWorkflowSpec(agentLanes) {
   const loopOwners = routeForBox(254, 274, 182, 86);
   const supervisor = routeForBox(474, 274, 160, 86);
   const lanes = routeForBox(694, 266, 222, 106);
-  const roundClose = routeForBox(274, 442, 162, 72);
-  const finish = routeForBox(482, 442, 170, 72);
+  const roundClose = routeForBox(274, 442, 162, 86);
+  const finish = routeForBox(482, 442, 170, 86);
   const docs = routeForBox(710, 430, 210, 96);
+
+  // Writeback routes outside the control-plane border (x > 926) and re-enters
+  // through the commit boundary so it never crosses another node or arrow.
+  const writebackChannelX = 952;
+  const writebackLaneY = 546;
 
   const workflowLines = agentLanes.length
     ? [`lanes: ${agentLanes.join(", ")}`, "website-audit fallback", "merge gate on max mode"]
@@ -546,18 +614,37 @@ function createAgentWorkflowSpec(agentLanes) {
       { ...docs, kind: "cloud", title: "Architecture Docs Refresh", lines: ["README.md block refresh", "docs/architecture/*.html", "docs/architecture/*.svg"] },
     ],
     arrows: [
-      lineArrow(user.centerX, user.centerY, commands.x, commands.centerY, "invoke"),
-      lineArrow(commands.centerX, commands.height + commands.y, loopOwners.centerX, loopOwners.y, "dispatch"),
+      lineArrow(user.centerX, user.centerY, commands.x, commands.centerY, "invoke", { labelDx: 38 }),
+      lineArrow(commands.centerX, commands.height + commands.y, loopOwners.centerX, loopOwners.y, "dispatch", { labelDx: 26 }),
       lineArrow(commands.x + commands.width, commands.centerY, controller.x, controller.centerY, "route"),
-      lineArrow(controller.x + controller.width, controller.centerY, stateFiles.x, stateFiles.centerY, "read queue"),
-      lineArrow(controller.centerX, controller.y + controller.height, supervisor.centerX, supervisor.y, "fallback"),
-      lineArrow(loopOwners.x + loopOwners.width, loopOwners.centerY, supervisor.x, supervisor.centerY, "continuity"),
+      lineArrow(controller.x + controller.width, controller.centerY, stateFiles.x, stateFiles.centerY, "reads"),
+      lineArrow(controller.centerX, controller.y + controller.height, supervisor.centerX, supervisor.y, "fallback", { labelDx: -32 }),
+      lineArrow(loopOwners.x + loopOwners.width, loopOwners.centerY, supervisor.x, supervisor.centerY, "handoff"),
       lineArrow(supervisor.x + supervisor.width, supervisor.centerY, lanes.x, lanes.centerY, "launch"),
-      lineArrow(lanes.centerX, lanes.y + lanes.height, docs.centerX, docs.y, "results + proofs", { color: PALETTE.frontendStroke }),
-      lineArrow(loopOwners.centerX, loopOwners.y + loopOwners.height, roundClose.centerX, roundClose.y, "verified round"),
-      lineArrow(roundClose.x + roundClose.width, roundClose.centerY, finish.x, finish.centerY, "true clean stop"),
-      lineArrow(finish.x + finish.width, finish.centerY, docs.x, docs.centerY, "conditional diagram refresh"),
-      lineArrow(stateFiles.centerX, stateFiles.y + stateFiles.height, roundClose.x + 32, roundClose.centerY, "writeback"),
+      lineArrow(lanes.centerX, lanes.y + lanes.height, docs.centerX, docs.y, "results + proofs", {
+        color: PALETTE.frontendStroke,
+        labelAnchor: "start",
+        labelDx: 12,
+        labelDy: 6,
+      }),
+      lineArrow(loopOwners.centerX, loopOwners.y + loopOwners.height, roundClose.centerX, roundClose.y, "verified round", {
+        labelAnchor: "end",
+        labelDx: -6,
+        labelDy: 5,
+      }),
+      lineArrow(roundClose.x + roundClose.width, roundClose.centerY, finish.x, finish.centerY, "true clean stop", { labelDy: -42 }),
+      lineArrow(finish.x + finish.width, finish.centerY, docs.x, docs.centerY, "conditional diagram refresh", { labelDy: -42 }),
+      pathArrow(
+        [
+          [stateFiles.x + stateFiles.width, stateFiles.centerY],
+          [writebackChannelX, stateFiles.centerY],
+          [writebackChannelX, writebackLaneY],
+          [roundClose.centerX, writebackLaneY],
+          [roundClose.centerX, roundClose.y + roundClose.height],
+        ],
+        "writeback",
+        { labelAt: [(writebackChannelX + roundClose.centerX) / 2, writebackLaneY - 6] },
+      ),
     ],
     legend: [
       { kind: "frontend", label: "workflow surfaces / child lanes" },
@@ -567,6 +654,8 @@ function createAgentWorkflowSpec(agentLanes) {
       { kind: "cloud", label: "documentation outputs" },
       { kind: "external", label: "human entrypoint" },
     ],
+    legendX: 254,
+    legendY: 556,
     cards: [
       {
         title: "Execution Flow",
@@ -597,17 +686,26 @@ function createAgentWorkflowSpec(agentLanes) {
   };
 }
 
+// Two horizontal bands keep every primary flow axis-aligned:
+// band A centerY = 180 (publicUi/frontend/backend/database),
+// band B centerY = 360 (runnerUi/auth/services/integrations).
+// Group frames share the same top (y=78) and an 8px gutter, and the two
+// two-row frames share the same bottom so the columns read as one grid.
+const SAAS_BAND_A_CENTER = 180;
+const SAAS_BAND_B_CENTER = 360;
+const SAAS_GROUP_TOP = 78;
+
 function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}) {
-  const users = routeForBox(40, 140, 176, 100);
-  const publicUi = routeForBox(276, 84, 236, 118);
-  const runnerUi = routeForBox(276, 218, 236, 168);
-  const adminUi = routeForBox(276, 404, 236, 92);
-  const frontend = routeForBox(560, 118, 204, 118);
-  const auth = routeForBox(560, 256, 204, 96);
-  const backend = routeForBox(812, 96, 214, 150);
-  const services = routeForBox(812, 268, 214, 156);
-  const database = routeForBox(1072, 108, 188, 108);
-  const integrations = routeForBox(1072, 240, 188, 184);
+  const users = routeForBox(40, 290, 176, 100);
+  const publicUi = routeForBox(276, SAAS_BAND_A_CENTER - 59, 236, 118);
+  const runnerUi = routeForBox(276, SAAS_BAND_B_CENTER - 84, 236, 168);
+  const adminUi = routeForBox(276, 470, 236, 92);
+  const frontend = routeForBox(560, SAAS_BAND_A_CENTER - 59, 204, 118);
+  const auth = routeForBox(560, SAAS_BAND_B_CENTER - 48, 204, 96);
+  const backend = routeForBox(812, SAAS_BAND_A_CENTER - 75, 214, 150);
+  const services = routeForBox(812, SAAS_BAND_B_CENTER - 78, 214, 156);
+  const database = routeForBox(1072, SAAS_BAND_A_CENTER - 54, 188, 108);
+  const integrations = routeForBox(1072, SAAS_BAND_B_CENTER - 92, 188, 184);
 
   const publicLines = routeSummary.public.examples;
   const runnerLines = routeSummary.runner.examples;
@@ -621,11 +719,11 @@ function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}
     title: "Hermes SaaS Application Architecture",
     subtitle: "Public entry, runner shell, admin tooling, JWT API boundary, data stores, and third-party integrations.",
     width: 1320,
-    height: 780,
+    height: 744,
     groups: [
-      { x: 248, y: 58, width: 292, height: 474, label: "React Route Families", kind: "cloud" },
-      { x: 540, y: 86, width: 244, height: 304, label: "Client Runtime + Auth", kind: "security" },
-      { x: 792, y: 70, width: 488, height: 376, label: "Spring Boot Runtime + Integrations", kind: "cloud" },
+      { x: 248, y: SAAS_GROUP_TOP, width: 288, height: 514, label: "React Route Families", kind: "cloud" },
+      { x: 544, y: SAAS_GROUP_TOP, width: 244, height: 400, label: "Client Runtime + Auth", kind: "security" },
+      { x: 796, y: SAAS_GROUP_TOP, width: 480, height: 400, label: "Spring Boot Runtime + Integrations", kind: "cloud" },
     ],
     boxes: [
       { ...users, kind: "external", title: "Users", lines: ["public visitors", "signed-in runners", "admin operators"] },
@@ -687,21 +785,20 @@ function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}
       },
     ],
     arrows: [
-      lineArrow(users.centerX, users.centerY - 18, publicUi.x, publicUi.centerY, "browse"),
-      lineArrow(users.centerX, users.centerY, runnerUi.x, runnerUi.centerY, "train"),
-      lineArrow(users.centerX, users.centerY + 22, adminUi.x, adminUi.centerY, "operate"),
-      lineArrow(publicUi.x + publicUi.width, publicUi.centerY, frontend.x, frontend.centerY - 18, "route"),
-      lineArrow(runnerUi.x + runnerUi.width, runnerUi.centerY, auth.x, auth.centerY - 10, "UserOnlyRoute"),
-      lineArrow(adminUi.x + adminUi.width, adminUi.centerY, auth.x, auth.y + auth.height, "AdminOnlyRoute"),
-      lineArrow(auth.centerX, auth.y, frontend.centerX, frontend.y + frontend.height, "session"),
-      lineArrow(frontend.x + frontend.width, frontend.centerY, backend.x, backend.centerY + 8, "host SPA"),
-      lineArrow(auth.x + auth.width, auth.centerY, backend.x, backend.y + backend.height - 18, "/api + JWT"),
-      lineArrow(backend.centerX, backend.y + backend.height, services.centerX, services.y, "service calls"),
+      lineArrow(users.x + users.width, users.centerY - 28, publicUi.x, publicUi.centerY, "browse", { labelAnchor: "end", labelDx: -6, labelDy: -2 }),
+      lineArrow(users.x + users.width, users.centerY, runnerUi.x, runnerUi.centerY, "train", { labelDx: -6, labelDy: -4 }),
+      lineArrow(users.centerX + 72, users.y + users.height, adminUi.x, adminUi.centerY, "operate", { labelDx: 14, labelDy: 9 }),
+      lineArrow(publicUi.x + publicUi.width, publicUi.centerY, frontend.x, frontend.centerY, "route"),
+      lineArrow(runnerUi.x + runnerUi.width, runnerUi.centerY, auth.x, auth.centerY, "UserOnlyRoute"),
+      lineArrow(adminUi.x + adminUi.width, adminUi.centerY, auth.centerX - 42, auth.y + auth.height, "AdminOnlyRoute", { labelAnchor: "start", labelDx: -16, labelDy: 54 }),
+      lineArrow(auth.centerX, auth.y, frontend.centerX, frontend.y + frontend.height, "session", { labelAnchor: "end", labelDx: -12, labelDy: 5 }),
+      lineArrow(frontend.x + frontend.width, frontend.centerY, backend.x, backend.centerY, "host SPA"),
+      lineArrow(auth.x + auth.width, auth.centerY, backend.x, backend.y + 114, "/api + JWT", { labelAnchor: "end", labelDx: -9, labelDy: -2 }),
+      lineArrow(backend.centerX, backend.y + backend.height, services.centerX, services.y, "service calls", { labelAnchor: "start", labelDx: 12, labelDy: 9 }),
       lineArrow(backend.x + backend.width, backend.centerY, database.x, database.centerY, "persist"),
-      lineArrow(services.x + services.width, services.centerY - 8, database.x, database.y + database.height, "store"),
-      lineArrow(services.x + services.width, services.centerY + 28, integrations.x, integrations.centerY + 8, "sync"),
-      lineArrow(integrations.x, Math.min(integrations.y + 36, backend.y + backend.height + 8), backend.x + backend.width, backend.y + backend.height - 8, "webhooks", { dashed: true, color: PALETTE.securityStroke }),
-      lineArrow(integrations.x, integrations.centerY + 40, services.x + services.width, services.y + services.height - 18, "provider data", { dashed: true, color: PALETTE.securityStroke }),
+      lineArrow(services.x + services.width, services.centerY, integrations.x, integrations.centerY, "sync"),
+      lineArrow(integrations.x, integrations.y + 24, backend.x + backend.width, backend.y + 138, "webhooks", { dashed: true, color: PALETTE.securityStroke, labelAnchor: "end", labelDx: -11, labelDy: 14 }),
+      lineArrow(integrations.x, integrations.centerY + 36, services.x + services.width, services.centerY + 36, "provider data", { dashed: true, color: PALETTE.securityStroke, labelDy: -2 }),
     ],
     legend: [
       { kind: "frontend", label: "client routes and SPA runtime" },
@@ -711,8 +808,8 @@ function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}
       { kind: "cloud", label: "third-party providers and infra edges" },
       { kind: "external", label: "human users / operators" },
     ],
-    legendX: 1040,
-    legendY: 590,
+    legendX: 40,
+    legendY: 614,
     cards: [
       {
         title: "Route Inventory",

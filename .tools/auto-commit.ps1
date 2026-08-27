@@ -189,15 +189,26 @@ function Get-PathPolicy {
         '^design\.md$',
         '^DESIGN_VERSIONS\.md$',
         '^\.github/prompts/auto-hermes-push-main\.prompt\.md$',
+        '^\.opencode/commands/',
+        '^\.railway/',
         '^TICKET\.md$',
+        '^\.dockerignore$',
+        '^Dockerfile$',
+        '^Hermes\.local\.env\.example\.ps1$',
+        '^package(-lock)?\.json$',
         '^frontend/(src|public|package\.json|package-lock\.json|vite\.config.*|eslint\.config.*|scripts/)',
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
-        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-security\.(mjs|test\.mjs)|auto-hermes-push-main\.(mjs|test\.mjs)|auto-hermes-tech-debt\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$',
+        '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-(docker-gate|finish|issues|pull-main|push-main|security|tech-debt)\.(mjs|test\.mjs)|auto-hermes-browser\.mjs|auto-hermes-playwright\.mjs|frontend-source-map-security\.smoke\.test\.mjs|hermes-repository\.mjs|maven-wrapper-windows\.smoke\.test\.mjs|public-seo-files\.smoke\.test\.mjs|railway-deployment-contract\.smoke\.test\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$',
         '^\.tools/audit-marathon-coursemaps\.mjs$',
         '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test)\.mjs$',
+        '^docs/(ADMIN_SECURITY_DEPLOYMENT\.md|PROJECT_MAP\.md)$',
+        '^docs/ai/',
+        '^docs/auto-hermes/',
         '^docs/repo-rules/',
         '^docs/superpowers/plans/',
-        '^start_hermes\.bat$'
+        '^docs/superpowers/specs/',
+        '^start_hermes\.(bat|sh)$',
+        '^stop_hermes\.(bat|ps1|sh)$'
     )
 
     foreach ($pattern in $publishableRegexes) {
@@ -452,9 +463,9 @@ if (-not (Test-SecurityGate -StagedFiles $staged)) {
 }
 
 if ($Push) {
-    $remoteStatus = Get-RemoteStatus -RemoteName 'origin' -ExpectedUrl 'https://github.com/520HXC/run.git'
+    $remoteStatus = Get-RemoteStatus -RemoteName 'origin' -ExpectedUrl 'https://github.com/JunWeiLi233/Hermesruns.git'
     if (-not $remoteStatus.MatchesTarget) {
-        Write-Host "Warning: Publish target URL does not exactly match 'https://github.com/520HXC/run.git'. Found: $($remoteStatus.ActualUrl)" -ForegroundColor Yellow
+        Write-Host "Warning: Publish target URL does not exactly match 'https://github.com/JunWeiLi233/Hermesruns.git'. Found: $($remoteStatus.ActualUrl)" -ForegroundColor Yellow
         # We allow it if it's the same base repo, which Get-RemoteStatus already checked via MatchesTarget
     }
 }
@@ -480,7 +491,7 @@ if ($DryRun) {
     $stagedPolicies | ForEach-Object { Write-Output ('- ' + $_.Path + ': ' + $_.Bucket + ' (' + $_.Reason + ')') }
     Write-Output ('Commit command: git ' + (($identityArgs + @('commit', '-m', $Message)) -join ' '))
     if ($Push) {
-        $remoteStatus = Get-RemoteStatus -RemoteName 'origin' -ExpectedUrl 'https://github.com/520HXC/run.git'
+        $remoteStatus = Get-RemoteStatus -RemoteName 'origin' -ExpectedUrl 'https://github.com/JunWeiLi233/Hermesruns.git'
         Write-Output ('Publish target: ' + $(if ($remoteStatus.ActualUrl) { $remoteStatus.ActualUrl } else { 'missing remote' }))
         Write-Output ('Push command: git push origin ' + $branch)
     }
@@ -496,5 +507,5 @@ $staged | ForEach-Object { Write-Output ('- ' + $_) }
 
 if ($Push) {
     Invoke-Git -Args @('push', 'origin', $branch) | Out-Null
-    Write-Output ('Pushed branch: ' + $branch + ' -> https://github.com/520HXC/run.git')
+    Write-Output ('Pushed branch: ' + $branch + ' -> https://github.com/JunWeiLi233/Hermesruns.git')
 }

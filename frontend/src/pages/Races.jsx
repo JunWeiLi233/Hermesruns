@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
+import { cachedApiJson } from '../api/resourceCache';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
@@ -19,6 +20,7 @@ import {
   getLocalizedRaceLocation,
   getSafeRaceTargetLabel,
 } from '../utils/raceLocalization';
+import { preloadRoute } from '../utils/routePreload';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { standardCityRoadMarathonCatalog, worldRaceCountries } from '../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, rememberLoadedRaceImage } from '../utils/raceImage';
@@ -46,12 +48,12 @@ const DEFAULT_FORM = {
 
 const DISCOVERY_VISUALS = [
   {
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDPz5Wym-f8cRaKgtcHcTIATFRIko6Wi27wga5EAWnaDSLvt8HxCs15fuVB-3XPHhKtAjt-pgWfgP8CfMJzb1_hl996moJ-5HhY5o4pBj2Zs4tL6YmqksnMG-zyLP5j7TdKNZY6BU0Acs25jjnjahTPZnEhoAZWZepDhKCsKJfFXtIBxlYDt6j99V2RaHgj0c2fjshJ5F4dA62bOecgw75rIbPMuwwVl5N2nEyxf_gu0vw9KQUeTIWt4iBzrQ1zZDsjsWEabyTAsYnt',
+    image: '/images/races/boston-marathon-hero.png',
     tag: 'Majors',
     meta: 'Editorial',
   },
   {
-    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBBYC8PUyvSKByRXuFtDaCD0KuHBkgY3C_hl58aIpqCJTUr6-qaA7RYwZYnyhukm2CjnXkxHR_zPd4iyXXUMQJoZr6zxypceaWWvo5BWBXD9TPiXZquKd0BPlvvNKGVqyyMlSw6X9hUk3bPvM_ra9aCKHkFVnu4RlHTc6a2WvSj1cRvTtZBxV6kaYFFU3nTaNbB1t71qTLYNMJETSsACpI7QPxVu9ykUDLEg0TGBI3JD7na6GtBNmAul9tEO-kTRDu7h-yq1RSEXY2Q',
+    image: '/images/races/discovery-offroad.png',
     tag: 'Off-Road',
     meta: 'Deep Dive',
   },
@@ -250,8 +252,8 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
         </span>
         <div className="race-center-featured-body">
           <div className="race-center-featured-meta">
-            <span className="race-center-card-distance">{distanceLabel}</span>
-            <span className="race-center-card-month">{monthLabel}</span>
+            <span className="race-center-featured-distance">{distanceLabel}</span>
+            <span className="race-center-featured-month">{monthLabel}</span>
           </div>
           <h3 className="race-center-featured-name">{raceName}</h3>
           <p className="race-center-featured-location">{raceLocation}</p>
@@ -389,8 +391,8 @@ const Races = memo(function Races() {
   async function loadData() {
     try {
       const [profileData, activities, raceData] = await Promise.all([
-        apiJson('/api/profile/me').catch(() => null),
-        apiJson('/api/activities'),
+        cachedApiJson('/api/profile/me').catch(() => null),
+        cachedApiJson('/api/activities'),
         apiJson('/api/races'),
       ]);
       const runList = Array.isArray(activities) ? activities : [];
@@ -654,12 +656,10 @@ const Races = memo(function Races() {
     return Math.round(((currentDistance - previousDistance) / previousDistance) * 100);
   }, [runs]);
 
-  const heroLabel = nextRace
-    ? `${Math.max(0, Number(nextRace.countdownDays || 0))}`
-    : t('races.stitch_hero_empty_days');
+  const heroLabel = nextRace ? `${Math.max(0, Number(nextRace.countdownDays || 0))}` : null;
   const heroFocus = nextRace
     ? extractRaceFocusLabelSafe({ ...nextRace, location: getLocalizedRaceLocation(nextRace, lang) }, t)
-    : t('races.stitch_hero_empty_focus');
+    : null;
   const heroSummary = buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
@@ -748,6 +748,8 @@ const Races = memo(function Races() {
                 type="button"
                 className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
+                onPointerEnter={() => preloadRoute(item.route)}
+                onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -761,6 +763,8 @@ const Races = memo(function Races() {
               type="button"
               className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
+              onPointerEnter={() => preloadRoute('/today-run')}
+              onFocus={() => preloadRoute('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
               <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -799,9 +803,10 @@ const Races = memo(function Races() {
               <section className="race-center-hero">
                 <img
                   className="race-center-hero-image"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuB78fsh0TuTwYg8E6RO30Lf-s3-wZGlNHFslrkPJEaZ63kAXeJavUv8FTkLm8X4MmNmXvIP8h2ANynDlJSAxFONBGVTf5CApOoTZiOY6Px4FTXMQb-peyv0k5NH4Mn7WrFSsnd3QHb4_lhQ_vTJF1NT9rT2WY0RWHipYpvljdFvLF0quFElRw6AzNMpRNQMAHMEGLxuNiPagbF3sTun3hlWrjHErakRoJblPn33eVPLmDsl4NPltD-tD_DofI-iIDaJ8EYj77OAXA1S"
+                  src="/images/races/race-center-hero.png"
                   alt={t('races.stitch_hero_image_alt')}
-                  loading="lazy"
+                  loading="eager"
+                  fetchPriority="high"
                   decoding="async"
                 />
                 <div className="race-center-hero-overlay" />
@@ -811,12 +816,16 @@ const Races = memo(function Races() {
                     <span>{t('races.stitch_next_major_event')}</span>
                   </div>
 
-                  <h1>
-                    <span>{heroLabel}</span>
-                    <span className="race-center-hero-accent">
-                      {nextRace ? t('races.stitch_days_to') : ''}
-                    </span>
-                    <span>{heroFocus}</span>
+                  <h1 className={nextRace ? undefined : 'race-center-hero-title--empty'}>
+                    {nextRace ? (
+                      <>
+                        <span>{heroLabel}</span>
+                        <span className="race-center-hero-accent">{t('races.stitch_days_to')}</span>
+                        <span>{heroFocus}</span>
+                      </>
+                    ) : (
+                      <span>{t('races.stitch_hero_empty_title')}</span>
+                    )}
                   </h1>
 
                   <p>{heroSummary}</p>
@@ -839,7 +848,6 @@ const Races = memo(function Races() {
                     <h2>{t('races.stitch_discovery_title')}</h2>
                     <p className="race-center-section-subtitle">{t('races.discovery_subtitle')}</p>
                   </div>
-                  <span>{discoverySummary}</span>
                 </div>
 
                 {/* Search bar */}
@@ -1065,8 +1073,15 @@ const Races = memo(function Races() {
         </main>
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingRace ? t('races.edit_title') : t('races.add_title')}>
-        <form onSubmit={handleSaveRace}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingRace ? t('races.edit_title') : t('races.add_title')}
+        icon={<AppIcon name="flag" className="race-center-modal-header-icon" />}
+        shellClassName="race-center-modal-shell"
+        cardClassName="race-center-modal-card"
+      >
+        <form className="race-center-modal-form" onSubmit={handleSaveRace}>
           <label className="modal-label">{t('races.form_name')}</label>
           <input type="text" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
 

@@ -14,6 +14,7 @@ import TopbarUserMenu from '../components/TopbarUserMenu';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
+import { preloadRoute } from '../utils/routePreload';
 import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../utils/vdot';
 import { resolveRaceIntel } from '../utils/raceIntel';
 import worldRaceCatalog from '../data/worldRaceCatalog';
@@ -21,7 +22,7 @@ import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, remembe
 import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
-const DEFAULT_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuAF-j8MVIZBaOa4qq1rYw7hnzMPZGyRTeaO7f5ojhfDSBPjz6qfENN3s8WjkUPksPxWqm5Ou9DlpJo50YGOg2UBflxkDa4KDh242OhPDsAcvArSXG_zW7rNjkFksE1UWJY2ki4AO2WYkbwVzRkboLxOgkaWRa_KhIs_Dc2pFWpFAG2jXxtcQ-1nBEsFwRTbNGOQQ966BWFfSM2WQabYKQuiK1MvWc5Cwq_3GzbEmLfQBtieNgbCMSZtLNIe5hGE1fGulcEWmAha60-4';
+const DEFAULT_HERO_IMAGE = '/images/races/race-detail-default-hero.png';
 const EVENT_DAY_OVERRIDES = {
   'tokyo-marathon': 1,
   'boston-marathon': 20,
@@ -606,7 +607,7 @@ export default function RacesDetail() {
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
     { key: 'weather_engine', icon: 'weather', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
+    { key: 'shoes', icon: 'shoe_outline', label: t('profile.dashboard_nav_shoes'), route: '/shoes' },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races', active: true },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
@@ -720,7 +721,7 @@ export default function RacesDetail() {
     };
   }, [elevationGraph, raceId]);
 
-  const elevationTooltipLabel = 'Elevation';
+  const elevationTooltipLabel = t('races.detail_course_tooltip_elevation');
   function handleElevationPointerMove(event) {
     if (!elevationGraph || !elevationSvgRef.current) return;
     const rect = elevationSvgRef.current.getBoundingClientRect();
@@ -1181,6 +1182,8 @@ export default function RacesDetail() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              onPointerEnter={() => preloadRoute(item.route)}
+              onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1328,7 +1331,7 @@ export default function RacesDetail() {
                           aria-live="polite"
                         >
                           <strong>{`${elevationTooltipLabel}: ${activeElevationPoint.meters}m`}</strong>
-                          <span>{`Course point: ${activeElevationPoint.km.toFixed(1)} km`}</span>
+                          <span>{t('races.detail_course_tooltip_point', { distance: activeElevationPoint.km.toFixed(1) })}</span>
                         </div>
                       ) : null}
                       <svg

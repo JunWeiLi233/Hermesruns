@@ -8,6 +8,7 @@ const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const styleSource = [
   '../styles/style.generated.css',
   '../styles/admin-monitoring-dashboard.css',
+  '../styles/grid-cards-white.css',
 ].map((file) => readFileSync(path.join(here, file), 'utf8')).join('\n');
 const translationsSource = [
   '../i18n/translations.js',
@@ -117,6 +118,24 @@ assert.match(
   styleSource,
   /body\.theme-light \.admin-command-page \.admin-jobs-command-deck__hero\s*\{/,
   'Dashboard jobs should define an explicit light-mode treatment for the command-deck hero.',
+);
+
+assert.match(
+  styleSource,
+  /body\.theme-light \.admin-command-page \.admin-command-route--jobs \.admin-jobs-terminal__actions \.admin-shoe-filter\s*\{[\s\S]*?background:\s*#eef0f1 !important[\s\S]*?box-shadow:\s*none !important/,
+  'Dashboard jobs status and type filters should use the requested light-grey surface.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-command-page \.admin-command-route--jobs \.admin-jobs-command-deck__spotlight-meta span\s*\{[^}]*display:\s*inline-flex[^}]*align-items:\s*center[^}]*justify-content:\s*center[^}]*text-align:\s*center/,
+  'Jobs spotlight metadata pills should center their text within each grid.',
+);
+
+assert.match(
+  styleSource,
+  /#root \.admin-command-page \.admin-command-route--jobs \.admin-jobs-command-deck__workspace\s*\{[^}]*border:\s*0 !important[^}]*background:\s*transparent !important[^}]*box-shadow:\s*none !important[^}]*backdrop-filter:\s*none !important/,
+  'The jobs split-workspace wrapper should stay surface-free while its list and detail cards remain independent.',
 );
 
 assert.match(

@@ -21,5 +21,11 @@ public class StaticAssetCacheConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/assets/")
                 .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
                 .setUseLastModified(true);
+        // /images/** files keep stable (non-hashed) names, so cache publicly but
+        // briefly enough that replacing an image ships without a hard refresh.
+        registry.addResourceHandler("/images/**")
+                .addResourceLocations("classpath:/static/images/")
+                .setCacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic().mustRevalidate())
+                .setUseLastModified(true);
     }
 }

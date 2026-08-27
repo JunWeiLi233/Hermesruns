@@ -71,6 +71,29 @@ class ShoeImageAssetServiceTests {
         assertThat(saved.getRunner()).isSameAs(owner);
     }
 
+    @Test
+    void applyLiveAssetToNewShoeSharesVerifiedImageWithoutChangingItsIdentity() {
+        ShoeImageAssetRepository assetRepository = mock(ShoeImageAssetRepository.class);
+        ShoeRepository shoeRepository = mock(ShoeRepository.class);
+        ShoeImageAssetService service = new ShoeImageAssetService(assetRepository, shoeRepository);
+
+        Shoe shoe = shoe(null, "nike-pegasus-41");
+        shoe.setPhotoUrl(null);
+        ShoeImageAsset asset = new ShoeImageAsset();
+        asset.setIdentityKey("nike-pegasus-41");
+        asset.setBrand("Nike");
+        asset.setModel("Pegasus 41");
+        asset.setLiveImageUrl("https://cdn.example.com/verified.png");
+
+        when(assetRepository.findByIdentityKey("nike-pegasus-41")).thenReturn(Optional.of(asset));
+
+        service.applyLiveAssetToShoe(shoe);
+
+        assertThat(shoe.getPhotoUrl()).isEqualTo("https://cdn.example.com/verified.png");
+        assertThat(shoe.isPhotoVerified()).isTrue();
+        assertThat(shoe.getIdentityKey()).isEqualTo("nike-pegasus-41");
+    }
+
     private Shoe shoe(Long id, String identityKey) {
         Shoe shoe = new Shoe();
         shoe.setId(id);

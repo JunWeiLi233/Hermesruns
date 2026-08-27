@@ -39,10 +39,10 @@ assert.doesNotMatch(
   'Analysis VO2 trend grid should not keep clickable-only classes or CTA rows.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
-  /const loadZoneTone = loadZone\.tone === 'cool' \? 'muted' : loadZone\.tone;/,
-  'Analysis overview should normalize the cool ACWR tone to the muted pill variant.',
+  /analysis-overview-status-pill|const loadZoneTone\s*=/,
+  'Analysis load-balance overview should not render the removed decorative status capsule.',
 );
 
 assert.match(
@@ -368,7 +368,7 @@ assert.match(
 
 assert.match(
   styleSource,
-  /@media\s+\(max-width:\s*760px\)\s*\{[\s\S]*\.analysis-page-shell\s+\.analysis-profile-primary\s+\.analysis-overview-card-head,\s*\.analysis-page-shell\s+\.analysis-profile-reference-grid,\s*\.hermes-site-frame[\s\S]*\.analysis-profile-reference-grid\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\.analysis-page-shell\s+\.analysis-profile-reference-card\.is-load,\s*\.hermes-site-frame[\s\S]*\.analysis-profile-reference-card\.is-load\s*\{[\s\S]*grid-template-areas:[\s\S]*"label"[\s\S]*"gauge"[\s\S]*"value"[\s\S]*"status"[\s\S]*"copy";/,
+  /@media\s+\(max-width:\s*760px\)\s*\{[\s\S]*\.analysis-page-shell\s+\.analysis-profile-primary\s+\.analysis-overview-card-head,\s*\.analysis-page-shell\s+\.analysis-profile-reference-grid,\s*\.hermes-site-frame[\s\S]*\.analysis-profile-reference-grid\s*\{[\s\S]*grid-template-columns:\s*1fr;[\s\S]*\.analysis-page-shell\s+\.analysis-profile-reference-card\.is-load,\s*\.hermes-site-frame[\s\S]*\.analysis-profile-reference-card\.is-load\s*\{[\s\S]*grid-template-areas:[\s\S]*"label"[\s\S]*"gauge"[\s\S]*"value"[\s\S]*"copy";/,
   'Analysis mobile reference cards should collapse in direct mounts, not only under the absent site-frame wrapper.',
 );
 

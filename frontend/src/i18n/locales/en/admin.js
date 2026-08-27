@@ -28,7 +28,7 @@ export default {
       "tab_settings": "Console Settings",
 
       "metric_active_users": "Active Athletes",
-      "metric_shoes_inventory": "Shoes Inventory",
+      "metric_shoes_inventory": "User Shoe Inventory",
       "metric_audit_24h": "24H Audit Events",
       "metric_pending_maps": "Pending Maps",
 

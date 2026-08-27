@@ -202,6 +202,49 @@ check("secret scan skips local artifacts but still scans source files", async ()
   assert.equal(secretFindings.some((finding) => finding.file === "frontend/src/sourceLeak.js"), true);
 });
 
+check("secret scan ignores source URLs and repository paths but catches assigned credentials", async () => {
+  const { runAutoHermesSecurity } = await import(moduleUrl);
+  const fixture = makeFixture();
+  const write = (relPath, content) => {
+    const target = path.join(fixture.dir, relPath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content, "utf8");
+  };
+
+  write(
+    "backend/src/main/java/com/hermes/backend/SecurityConfig.java",
+    `package com.hermes.backend;
+
+// See the stateless token guidance at https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html.
+public class SecurityConfig {
+  private Class<?> filter = UsernamePasswordAuthenticationFilter.class;
+}
+`,
+  );
+  write(
+    "docs/ai/functionality-direction-tree.json",
+    JSON.stringify({
+      provider: "backend/src/main/java/com/hermes/backend/PasswordResetService.java",
+      tests: ["frontend/src/pages/runDetailProfileCockpit.smoke.test.js"],
+    }),
+  );
+  write("frontend/src/sourceSecret.js", `const apiToken = "${"a".repeat(40)}";\n`);
+
+  const { report } = await runAutoHermesSecurity({
+    rootDir: fixture.dir,
+    mode: "audit",
+    commandName: "auto-hermes-security",
+    write: false,
+    outputDir: ".ai-sync/security-reports",
+    tasks: "TASKS.md",
+  });
+
+  const secretFindings = report.findings.filter((finding) => finding.checker === "secret-pii-hunter");
+  assert.equal(secretFindings.some((finding) => finding.file.endsWith("SecurityConfig.java")), false);
+  assert.equal(secretFindings.some((finding) => finding.file.endsWith("functionality-direction-tree.json")), false);
+  assert.equal(secretFindings.some((finding) => finding.file === "frontend/src/sourceSecret.js"), true);
+});
+
 check("auth prober accepts controllers that read Authorization from HttpServletRequest", async () => {
   const { runAutoHermesSecurity } = await import(moduleUrl);
   const fixture = makeFixture();

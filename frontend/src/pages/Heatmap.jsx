@@ -10,16 +10,28 @@ import PageSkeleton from '../components/PageSkeleton';
 import { buildHeatmapRenderPointPool, isValidGpsCoordinate } from './heatmapRenderPointPool';
 import {
   HEATMAP_CACHE_STORE_NAME,
+  HEATMAP_CACHE_MAX_AGE_MS,
   openHeatmapCacheDb,
   getHeatmapCacheKey,
+  getHeatmapCacheFreshnessTier,
+  getHeatmapCacheWriteGeneration,
+  getHeatmapCacheWriteEpoch,
+  isHeatmapCacheWriteEpochCurrent,
+  invalidateHeatmapCache,
 } from './heatmapCache';
+import {
+  HEATMAP_PAGE_FETCH_CONCURRENCY,
+  computeBackgroundPagePlan,
+  fetchHeatmapPagesWithBounds,
+  isCompletePageAssembly,
+} from './heatmapPagePlan';
+import { STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const HEATMAP_REQUEST_TIMEOUT_MS = 120000;
 const HEATMAP_INITIAL_PAGE_SIZE = 5000;
-const HEATMAP_INITIAL_COVERAGE_LIMIT = 60000;
 const HEATMAP_BACKGROUND_PAGE_SIZE = 100000;
 const MAX_HEATMAP_PAGES = 1000;
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
@@ -27,7 +39,6 @@ const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
 const HEATMAP_CANVAS_PADDING = 0.25;
 const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;
-const HEATMAP_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const SPEED_BANDS = [
   { key: 'slow', min: 0, color: '#ff375f' },
   { key: 'mid', min: 0.34, color: '#ff5a47' },
@@ -192,14 +203,33 @@ async function writeCachedHeatmapPayload(cacheKey, payload) {
   }
 }
 
-async function fetchHeatmapPage(offset, limit, signal) {
-  const pagePayload = await apiJson(`/api/profile/heatmap?offset=${offset}&limit=${limit}`, { signal });
-  if (!pagePayload || typeof pagePayload !== 'object') return null;
-  return pagePayload;
+// Structured-cloning a multi-million-point payload is expensive, so defer the
+// cache write until the main thread is idle; failures stay silent. The write
+// generation and the shared write epoch are re-checked inside the idle callback
+// so a write scheduled just before an invalidation (run delete, Strava sync —
+// in THIS tab or in another one) cannot re-insert the invalidated payload
+// afterwards.
+function scheduleHeatmapCacheWrite(cacheKey, payload) {
+  if (!cacheKey || !payload) return;
+  const writeGeneration = getHeatmapCacheWriteGeneration();
+  const writeEpoch = getHeatmapCacheWriteEpoch(cacheKey);
+  const startWrite = () => {
+    if (getHeatmapCacheWriteGeneration() !== writeGeneration) return;
+    // The epoch composite embeds the module generation, so this check subsumes
+    // the one above (kept as a cheap early-out) and also catches invalidations
+    // performed in OTHER tabs, which cannot bump this tab's module counter.
+    if (!isHeatmapCacheWriteEpochCurrent(cacheKey, writeEpoch)) return;
+    writeCachedHeatmapPayload(cacheKey, payload).catch(() => {});
+  };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(startWrite, { timeout: 4000 });
+    return;
+  }
+  window.setTimeout(startWrite, 0);
 }
 
-async function fetchHeatmapCoverage(limit, signal) {
-  const pagePayload = await apiJson(`/api/profile/heatmap?coverage=true&limit=${limit}`, { signal });
+async function fetchHeatmapPage(offset, limit, signal) {
+  const pagePayload = await apiJson(`/api/profile/heatmap?offset=${offset}&limit=${limit}`, { signal });
   if (!pagePayload || typeof pagePayload !== 'object') return null;
   return pagePayload;
 }
@@ -207,7 +237,7 @@ async function fetchHeatmapCoverage(limit, signal) {
 async function fetchCompleteHeatmap(signal, onProgress) {
   const points = [];
   let offset = 0;
-  let nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
+  const nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
 
   const firstPagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
   if (!firstPagePayload) return null;
@@ -223,41 +253,45 @@ async function fetchCompleteHeatmap(signal, onProgress) {
   }
 
   const sourcePointCount = Number(firstPagePayload.pointCount || 0);
-  const coveragePayload = await fetchHeatmapCoverage(HEATMAP_INITIAL_COVERAGE_LIMIT, signal).catch(() => null);
-  if (coveragePayload && typeof onProgress === 'function') {
-    const coveragePoints = Array.isArray(coveragePayload.points) ? coveragePayload.points.map(normalizeHeatPointForRender) : [];
-    const coverageProgress = buildMergedHeatmapPayload(coveragePayload, coveragePoints, 'coveragePreview');
-    if (coverageProgress) onProgress(coverageProgress);
-  }
 
   const firstReturnedPointCount = Number(firstPagePayload.page?.returnedPointCount || firstPagePoints.length);
-  offset = Number(firstPagePayload.page?.offset || 0) + firstReturnedPointCount;
-  nextLimit = HEATMAP_BACKGROUND_PAGE_SIZE;
+  const firstPageOffset = Number(firstPagePayload.page?.offset || 0);
+  const firstPageLimit = Number(firstPagePayload.page?.limit) || HEATMAP_INITIAL_PAGE_SIZE;
+  // returnedPointCount reports VALID points, but a page that filled its
+  // request limit consumed the full offset span server-side: continue at
+  // offset + limit so rows the valid-row filter dropped are not re-fetched
+  // (and duplicated). A short first page means the dataset ended, so the
+  // plan is skipped by the hasMore gate anyway.
+  offset = firstReturnedPointCount >= firstPageLimit
+    ? firstPageOffset + firstPageLimit
+    : firstPageOffset + firstReturnedPointCount;
 
-  for (let pageIndex = 1; pageIndex < MAX_HEATMAP_PAGES; pageIndex += 1) {
-    if (!firstPagePayload.page?.hasMore || offset >= sourcePointCount) {
-      break;
+  if (firstPagePayload.page?.hasMore && offset < sourcePointCount) {
+    const pagePlan = computeBackgroundPagePlan({
+      sourcePointCount,
+      startOffset: offset,
+      pageSize: HEATMAP_BACKGROUND_PAGE_SIZE,
+      maxPages: MAX_HEATMAP_PAGES - 1,
+    });
+
+    if (pagePlan.length > 0) {
+      const pageResults = await fetchHeatmapPagesWithBounds(
+        pagePlan,
+        (pageOffset, pageLimit) => fetchHeatmapPage(pageOffset, pageLimit, signal),
+        HEATMAP_PAGE_FETCH_CONCURRENCY,
+      );
+
+      for (const pagePayload of pageResults) {
+        const pagePoints = Array.isArray(pagePayload?.points) ? pagePayload.points : [];
+        for (const point of pagePoints) {
+          points.push(normalizeHeatPointForRender(point));
+        }
+      }
+
+      if (!isCompletePageAssembly(pagePlan, pageResults)) {
+        return buildMergedHeatmapPayload(firstPagePayload, points, 'partialFull');
+      }
     }
-
-    const pagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
-    if (!pagePayload) return buildMergedHeatmapPayload(firstPagePayload, points, 'partialFull');
-
-    const pagePoints = Array.isArray(pagePayload.points) ? pagePayload.points : [];
-    for (const point of pagePoints) {
-      points.push(normalizeHeatPointForRender(point));
-    }
-
-    const returnedPointCount = Number(pagePayload.page?.returnedPointCount);
-    const step = Number.isFinite(returnedPointCount) && returnedPointCount > 0
-      ? returnedPointCount
-      : pagePoints.length;
-    const pageOffset = Number(pagePayload.page?.offset);
-    const hasMore = Boolean(pagePayload.page?.hasMore);
-    if (!hasMore || step <= 0) {
-      break;
-    }
-
-    offset = (Number.isFinite(pageOffset) ? pageOffset : offset) + step;
   }
 
   return buildMergedHeatmapPayload(firstPagePayload, points);
@@ -291,6 +325,8 @@ export default function Heatmap() {
   const latestPointsRef = useRef([]);
   const latestPreviewRenderPointsRef = useRef([]);
   const latestFullRenderPointsRef = useRef([]);
+  const hasRenderableDataRef = useRef(false);
+  const lastCacheKeyRef = useRef(null);
 
   useEffect(() => {
     if (!authHydrated) {
@@ -328,45 +364,70 @@ export default function Heatmap() {
     const heatmapTimeoutId = window.setTimeout(() => heatmapController.abort(), HEATMAP_REQUEST_TIMEOUT_MS);
     let cancelled = false;
 
-    setHeatmapState('loading');
+    // Silent reloads (Strava-sync refresh) keep the painted map instead of
+    // flashing the skeleton while fresh data is fetched.
+    setHeatmapState((current) => (current === 'ready' ? 'ready' : 'loading'));
     setMapMountFailed(false);
 
     async function loadHeatmap() {
       const cacheKey = getHeatmapCacheKey(authEmail);
-      let servedCachedHeatmap = false;
-      const cachedHeatmapPromise = readCachedHeatmapPayload(cacheKey).catch(() => null);
-      try {
-        const cachedHeatmap = await cachedHeatmapPromise;
-        if (!cancelled && cachedHeatmap) {
-          servedCachedHeatmap = true;
-          setHeatmap(cachedHeatmap);
-          setHeatmapState('ready');
+      if (lastCacheKeyRef.current !== cacheKey) {
+        lastCacheKeyRef.current = cacheKey;
+        hasRenderableDataRef.current = false;
+      }
+
+      const cachedHeatmap = await readCachedHeatmapPayload(cacheKey).catch(() => null);
+      if (cancelled) return;
+
+      if (cachedHeatmap) {
+        hasRenderableDataRef.current = true;
+        setHeatmap(cachedHeatmap);
+        setHeatmapState('ready');
+        if (getHeatmapCacheFreshnessTier(cachedHeatmap.diagnostics?.cacheSavedAt) === 'fresh') {
+          // Warm-cache short-circuit: the cached payload is recent enough to
+          // skip the network refetch entirely.
+          return;
         }
+        // Older-but-valid cache: already painted above, so the refetch below
+        // runs silently in the background and only swaps in a complete result.
+      }
 
-        const heatmapData = await fetchCompleteHeatmap(heatmapController.signal, (partialHeatmap) => {
-          if (cancelled || servedCachedHeatmap) return;
-          setHeatmap(partialHeatmap);
-          setHeatmapState('ready');
-        });
+      const heatmapData = await fetchCompleteHeatmap(heatmapController.signal, (partialHeatmap) => {
+        if (cancelled || hasRenderableDataRef.current) return;
+        setHeatmap(partialHeatmap);
+        setHeatmapState('ready');
+      });
 
-        if (cancelled) return;
-        const completeHeatmap = heatmapData && typeof heatmapData === 'object' ? heatmapData : null;
+      if (cancelled) return;
+      const completeHeatmap = heatmapData && typeof heatmapData === 'object' ? heatmapData : null;
+      const isCompleteResult = Boolean(completeHeatmap) && completeHeatmap.diagnostics?.complete !== false;
+
+      if (!hasRenderableDataRef.current) {
         setHeatmap(completeHeatmap);
         setHeatmapState('ready');
-        if (completeHeatmap && completeHeatmap.diagnostics?.complete !== false) {
-          writeCachedHeatmapPayload(cacheKey, completeHeatmap).catch(() => {});
-        }
-      } catch {
-        if (!cancelled && !servedCachedHeatmap) {
-          setHeatmap(null);
-          setHeatmapState('error');
-        }
-      } finally {
-        window.clearTimeout(heatmapTimeoutId);
+        hasRenderableDataRef.current = Boolean(completeHeatmap);
+      } else if (isCompleteResult) {
+        // Data already on screen (warm cache or prior load) is only replaced
+        // by a fully complete refresh; degraded results never evict it.
+        setHeatmap(completeHeatmap);
+        setHeatmapState('ready');
+      }
+
+      if (isCompleteResult) {
+        scheduleHeatmapCacheWrite(cacheKey, completeHeatmap);
       }
     }
 
-    loadHeatmap();
+    loadHeatmap()
+      .catch(() => {
+        if (!cancelled && !hasRenderableDataRef.current) {
+          setHeatmap(null);
+          setHeatmapState('error');
+        }
+      })
+      .finally(() => {
+        window.clearTimeout(heatmapTimeoutId);
+      });
 
     return () => {
       cancelled = true;
@@ -374,6 +435,24 @@ export default function Heatmap() {
       heatmapController.abort();
     };
   }, [authEmail, authHydrated, isAuthenticated, heatmapReloadToken]);
+
+  useEffect(() => {
+    if (!authHydrated || !isAuthenticated) return undefined;
+
+    function handleStravaSyncFinished() {
+      // A finished sync may have imported activities with fresh GPS tracks.
+      // Drop this account's cache record first so the reload below cannot
+      // short-circuit against the pre-sync payload, then silently reload.
+      invalidateHeatmapCache(authEmail).finally(() => {
+        setHeatmapReloadToken((value) => value + 1);
+      });
+    }
+
+    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    return () => {
+      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
+    };
+  }, [authEmail, authHydrated, isAuthenticated]);
 
   useEffect(() => {
     loadLeafletModules().catch(() => {
@@ -394,8 +473,14 @@ export default function Heatmap() {
 
   useEffect(() => {
     latestPointsRef.current = points;
-    latestPreviewRenderPointsRef.current = buildHeatmapRenderPointPool(points, HEATMAP_PREVIEW_RENDER_POINT_LIMIT);
+    // One full-array scan per update: the preview pool is sampled from the
+    // capped full pool (a <=12000-element pass) instead of re-scanning every
+    // GPS point a second time.
     latestFullRenderPointsRef.current = buildHeatmapRenderPointPool(points, HEATMAP_FULL_RENDER_POINT_LIMIT);
+    latestPreviewRenderPointsRef.current = buildHeatmapRenderPointPool(
+      latestFullRenderPointsRef.current,
+      HEATMAP_PREVIEW_RENDER_POINT_LIMIT,
+    );
     const overlay = dotOverlayRef.current;
     if (!overlay?.syncRouteDots) return undefined;
 
@@ -434,19 +519,27 @@ export default function Heatmap() {
           markerZoomAnimation: false,
           preferCanvas: true,
           dragging: true,
+          maxBounds: [[-85.051129, -180], [85.051129, 180]],
+          maxBoundsViscosity: 1.0,
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
+        // CARTO basemaps now reject anonymous tile requests with an "API KEY
+        // REQUIRED" watermark. Esri's Dark Gray canvas is the keyless dark
+        // basemap that keeps this page's dark design (base + labels overlay).
+        const darkTileOptions = {
           maxZoom: 20,
+          maxNativeZoom: 16,
           updateWhenZooming: false,
           updateWhenIdle: false,
           updateInterval: 250,
           keepBuffer: 2,
+          noWrap: true,
           className: 'heatmap-page-dark-tile-layer',
           errorTileUrl: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22256%22 height=%22256%22 viewBox=%220 0 256 256%22%3E%3Crect width=%22256%22 height=%22256%22 fill=%22%2305070a%22/%3E%3C/svg%3E',
-          attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        }).addTo(map);
+          attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS',
+        };
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', darkTileOptions).addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', darkTileOptions).addTo(map);
 
         const dotCanvas = L.DomUtil.create('canvas', 'heatmap-page-dot-canvas leaflet-zoom-animated');
         dotCanvas.setAttribute('aria-hidden', 'true');
@@ -477,6 +570,7 @@ export default function Heatmap() {
         let drawFrameId = null;
         let fullDrawFrameId = null;
         let cancelFullDrawFrame = null;
+        let fullDrawWatchdogId = null;
         let activeFullDrawToken = 0;
         let isZoomingMap = false;
         let skipNextMovePreview = false;
@@ -493,24 +587,40 @@ export default function Heatmap() {
           }
           fullDrawFrameId = null;
           cancelFullDrawFrame = null;
+          if (fullDrawWatchdogId !== null) {
+            window.clearTimeout(fullDrawWatchdogId);
+            fullDrawWatchdogId = null;
+          }
         };
 
         const scheduleFullDrawChunk = (callback) => {
           if (typeof window.requestIdleCallback === 'function') {
             cancelFullDrawFrame = window.cancelIdleCallback.bind(window);
             fullDrawFrameId = window.requestIdleCallback(callback, { timeout: 420 });
+            // Watchdog: Chrome pauses idle callbacks entirely in hidden tabs —
+            // even past their timeout — which froze the chunked repaint
+            // mid-flight and left the dot canvas wearing a stale zoom-animation
+            // transform (dots rendered in the wrong places). A plain timeout
+            // still fires when hidden, so switch to it if idle starves.
+            fullDrawWatchdogId = window.setTimeout(() => {
+              fullDrawWatchdogId = null;
+              if (fullDrawFrameId === null || !cancelFullDrawFrame) return;
+              cancelFullDrawFrame(fullDrawFrameId);
+              fullDrawFrameId = null;
+              cancelFullDrawFrame = window.clearTimeout.bind(window);
+              fullDrawFrameId = window.setTimeout(() => callback({ timeRemaining: () => 4, didTimeout: true }), 0);
+            }, 600);
             return;
           }
           cancelFullDrawFrame = window.clearTimeout.bind(window);
           fullDrawFrameId = window.setTimeout(() => callback({ timeRemaining: () => 4, didTimeout: true }), 24);
         };
 
-        const drawRoutePoint = (context, point, zoom, renderMode, canvasLayerOrigin, radiusScale = 1) => {
-          const projected = map.latLngToLayerPoint([point.latitude, point.longitude]).subtract(canvasLayerOrigin);
-          const style = getGpsDotStyle(point.visualSpeedRatio, zoom);
+        const drawProjectedPoint = (context, projectedPoint, renderMode, radiusScale = 1) => {
+          const style = projectedPoint.style;
           const scaledRadius = style.radius * radiusScale;
           context.beginPath();
-          context.arc(projected.x, projected.y, scaledRadius, 0, Math.PI * 2);
+          context.arc(projectedPoint.x, projectedPoint.y, scaledRadius, 0, Math.PI * 2);
           context.fillStyle = style.fillColor;
           context.globalAlpha = style.fillOpacity;
           context.fill();
@@ -568,20 +678,40 @@ export default function Heatmap() {
             : latestFullRenderPointsRef.current;
 
           cancelFullDraw();
-          if (renderMode !== 'full' || renderPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
+          // Project every point NOW, before any drawing. The chunked full draw
+          // spans multiple idle callbacks; if the view changes mid-render (zoom
+          // snap, pan) a live latLngToLayerPoint call would mix two view states
+          // into one frame and smear dots away from their true positions.
+          const projectedPoints = [];
+          for (const point of renderPoints) {
+            if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
+            if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
+            const projected = map.latLngToLayerPoint([point.latitude, point.longitude]).subtract(canvasLayerOrigin);
+            projectedPoints.push({ x: projected.x, y: projected.y, style: getGpsDotStyle(point.visualSpeedRatio) });
+          }
+          if (renderMode !== 'full' || projectedPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
             commitCanvasLayout();
             dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
             dotContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
-            for (const point of renderPoints) {
-              if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
-              if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
-              drawRoutePoint(dotContext, point, zoom, renderMode, canvasLayerOrigin);
+            for (const projectedPoint of projectedPoints) {
+              drawProjectedPoint(dotContext, projectedPoint, renderMode);
             }
             onPaintComplete?.();
             return;
           }
 
           const drawToken = activeFullDrawToken;
+          // Commit a correct sparse frame synchronously before the chunked full
+          // render fills in the background. Without this, a cancelled or starved
+          // chunk draw left the previous frame on screen wearing a stale
+          // zoom-animation CSS transform, which draws dots in the wrong places.
+          commitCanvasLayout();
+          dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+          dotContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
+          const previewStride = Math.max(1, Math.ceil(projectedPoints.length / HEATMAP_PREVIEW_RENDER_POINT_LIMIT));
+          for (let previewIndex = 0; previewIndex < projectedPoints.length; previewIndex += previewStride) {
+            drawProjectedPoint(dotContext, projectedPoints[previewIndex], 'preview');
+          }
           const visibleStyleWidth = dotCanvas.style.width;
           const visibleStyleHeight = dotCanvas.style.height;
           bufferCanvas.style.width = visibleStyleWidth;
@@ -594,6 +724,10 @@ export default function Heatmap() {
             if (disposed || drawToken !== activeFullDrawToken) return;
             fullDrawFrameId = null;
             cancelFullDrawFrame = null;
+            if (fullDrawWatchdogId !== null) {
+              window.clearTimeout(fullDrawWatchdogId);
+              fullDrawWatchdogId = null;
+            }
 
             const startedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
               ? performance.now()
@@ -605,15 +739,12 @@ export default function Heatmap() {
                 : Date.now();
               return now - startedAt < 5;
             };
-            const endIndex = Math.min(pointIndex + HEATMAP_FULL_DRAW_CHUNK_SIZE, renderPoints.length);
+            const endIndex = Math.min(pointIndex + HEATMAP_FULL_DRAW_CHUNK_SIZE, projectedPoints.length);
             for (; pointIndex < endIndex && hasIdleTime(); pointIndex += 1) {
-              const point = renderPoints[pointIndex];
-              if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
-              if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
-              drawRoutePoint(bufferContext, point, zoom, 'full', canvasLayerOrigin);
+              drawProjectedPoint(bufferContext, projectedPoints[pointIndex], 'full');
             }
 
-            if (pointIndex < renderPoints.length) {
+            if (pointIndex < projectedPoints.length) {
               scheduleFullDrawChunk(drawFullChunk);
               return;
             }

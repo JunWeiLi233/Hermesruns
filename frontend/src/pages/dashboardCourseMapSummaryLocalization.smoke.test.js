@@ -28,6 +28,11 @@ assert.match(
   /"course_maps_summary_tokyo_official_2026": "Hermes rendered this course from the official Tokyo Marathon 2026 passing-time landmarks/,
   'English locale should preserve the canonical Tokyo course-map summary.',
 );
+assert.match(
+  dashboardSource,
+  /course_maps_summary_extraction_fallback/,
+  'Course-map summaries should translate the extraction-pipeline fallback message.',
+);
 
 const localizedSummaryRules = [
   'amsterdam-marathon',
@@ -63,6 +68,7 @@ for (const key of [
   'course_maps_summary_new_york_city_official',
   'course_maps_summary_checked_local_geometry',
   'course_maps_summary_landmark_corridor',
+  'course_maps_summary_extraction_fallback',
 ]) {
   assert.match(zhSource, new RegExp(`"${key}":`), `Chinese locale should include ${key}.`);
   assert.match(enSource, new RegExp(`"${key}":`), `English locale should include ${key}.`);

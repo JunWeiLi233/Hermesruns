@@ -47,6 +47,19 @@ body.theme-light #root .analysis-page-shell .analysis-overview-card--vdot-insigh
   background-image: none !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .race-center-card {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .race-center-card-cta {
+  background: #f1f2f2 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .race-center-card-cta:hover {
+  background: rgba(160, 57, 42, 0.18) !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card {
   background: #ffffff !important;
   background-image: none !important;
@@ -75,6 +88,35 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-card-list {
   background: transparent !important;
   background-image: none !important;
+}
+
+/* DV-2026-08-23-189 — Month groups are independent cards. Clear the history
+ * and month-list shells so their background, border, shadow, and overflow do
+ * not visually join all month sections into one shared card. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history :is(
+  .recent-runs-card-list,
+  .recent-runs-page-list
+) {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-page-list {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-month-group {
+  border: 1px solid var(--runs-profile-line) !important;
+  border-radius: 24px !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: 0 18px 42px rgba(58, 43, 28, 0.08) !important;
+  overflow: hidden !important;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-status--loading {
@@ -106,6 +148,89 @@ body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.sh
   box-shadow: none !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-filterbar {
+  background: #fff !important;
+  background-image: none !important;
+  border-color: rgba(44, 47, 48, 0.12) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-filterbar-head > .shoe-inventory-panel-kicker {
+  color: #2c2f30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-manage-group {
+  background: #e5e7e7 !important;
+  background-image: none !important;
+  color: #2c2f30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-manage-group > .shoe-inventory-panel-kicker {
+  color: rgba(44, 47, 48, 0.72) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-manage-group .shoe-inventory-brand-pill:not(.active) {
+  background: rgba(44, 47, 48, 0.06) !important;
+  color: #2c2f30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-hero {
+  background: #fff !important;
+  background-image: none !important;
+  color: var(--runner-profile-ink, #2c2f30) !important;
+}
+
+/* The image-picker hero is a plain white grid surface. Its legacy pseudo
+   element is a decorative circle that should not survive the white treatment. */
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-hero::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  background: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-upload {
+  background: #eef0f1 !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-input {
+  background: #eef0f1 !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-label {
+  color: rgba(44, 47, 48, 0.66) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-title h3 {
+  color: var(--runner-profile-ink, #2c2f30) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-title p {
+  color: rgba(104, 99, 93, 0.84) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-pill {
+  background: rgba(44, 47, 48, 0.06) !important;
+  color: var(--runner-profile-ink, #2c2f30) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-photo-modal-card .shoe-photo-studio-mode.is-manual {
+  background: rgba(160, 57, 42, 0.1) !important;
+  color: #7c2d22 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoe-edit-modal-card {
+  background: #fff !important;
+  background-image: none !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-workspace-copy > .shoe-inventory-panel-kicker {
   background: transparent !important;
   background-image: none !important;
@@ -118,6 +243,13 @@ body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.sh
 body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search {
   border: 0 !important;
   box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search input {
+  border: 0 !important;
+  box-shadow: none !important;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search input:focus-visible {
@@ -138,6 +270,99 @@ body.theme-light #root .shoes-dashboard-page .shoe-inventory-summary-tile:not(.i
 body.theme-light #root .settings-control-page .st-service-card {
   background: #ffffff !important;
   background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Keep the three import-data source grids on the same plain-white card
+   surface as the surrounding light-theme settings UI. The selected card's
+   border remains owned by the import-data styles. */
+body:is(.theme-light, .theme-high-contrast-light) #root .import-data-page .import-data-source-card {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* The command row is a control area, not a second card. Remove its panel
+   surface so the action buttons sit directly on the page background. */
+body:is(.theme-light, .theme-high-contrast-light) #root .import-data-page .import-data-command-lane {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* The page title should read as a clean heading; keep the section kickers
+   inside the import workflow unchanged. */
+#root .import-data-page .import-data-page-heading .import-data-page-kicker-line {
+  display: none !important;
+}
+
+/* Keep the Muscle Training check-in and profile grids on the same plain-white
+   surface as the rest of the light-theme workspace. The coral action states,
+   field borders, and controls retain their route-specific styling. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme] #muscle-controls,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme] #muscle-controls :is(
+  .muscle-control-card,
+  .muscle-pref-field,
+  .muscle-profile-summary-card,
+  .muscle-profile-control,
+  .muscle-profile-impact-strip
+) {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* The shoes stage is a layout wrapper; its feature cards and repository own
+   the visible surfaces inside it. */
+#root .admin-command-page .admin-command-route--shoes .admin-shoe-stitch-stage {
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The catalog search and type selector are independent filter grids. Give
+   them a clear light-grey surface without repainting other admin filters. */
+#root .admin-command-page .admin-command-route--shoes .admin-shoe-rework__card--catalog .admin-shoe-filter {
+  background: #eef0f1 !important;
+  background-image: none !important;
+}
+
+#root .admin-command-page .admin-command-route--shoes .admin-shoe-rework__card--catalog > .action-bar > input.admin-shoe-filter {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Match the Jobs hero CTA to the fully rounded, lightly outlined status pill. */
+#root .admin-command-page .admin-command-route--jobs .admin-jobs-command-deck__hero-cta {
+  clip-path: none !important;
+  border: 1px solid rgba(171, 173, 174, 0.14) !important;
+  border-radius: 999px !important;
+}
+
+/* The Jobs workspace only positions the task list and selected-task detail.
+   Those two children own their card surfaces, so the wrapper must not paint a
+   third card that visually joins them. */
+#root .admin-command-page .admin-command-route--jobs .admin-jobs-command-deck__workspace {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The Settings panels are independent cards; the three-column grid only
+   positions them and should not paint a fourth card behind them. */
+#root .admin-command-page .admin-command-route--settings .admin-settings-studio__grid {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }

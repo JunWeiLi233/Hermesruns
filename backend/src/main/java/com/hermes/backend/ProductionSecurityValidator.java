@@ -39,6 +39,30 @@ public class ProductionSecurityValidator {
     @Value("${recaptcha.site-key:}")
     private String recaptchaSiteKey;
 
+    @Value("${app.security.admin-mfa.enabled:true}")
+    private boolean adminMfaEnabled;
+
+    @Value("${app.security.admin-mfa.rp-id:localhost}")
+    private String adminMfaRpId;
+
+    @Value("${app.security.admin-mfa.allowed-origins:http://localhost:8080}")
+    private String adminMfaAllowedOrigins;
+
+    @Value("${app.security.admin-mfa.bootstrap-token:}")
+    private String adminMfaBootstrapToken;
+
+    @Value("${app.security.admin-access.enabled:false}")
+    private boolean adminAccessEnabled;
+
+    @Value("${app.security.admin-access.team-domain:}")
+    private String adminAccessTeamDomain;
+
+    @Value("${app.security.admin-access.audience:}")
+    private String adminAccessAudience;
+
+    @Value("${app.security.admin-access.allowed-emails:}")
+    private String adminAccessAllowedEmails;
+
     @PostConstruct
     void validate() {
         if (!isProduction()) {
@@ -49,7 +73,54 @@ public class ProductionSecurityValidator {
         validateCorsOrigins();
         validatePublicBaseUrl();
         validateStravaWebhookToken();
+        validateAdminSecurity();
         validateRecaptchaKeys();
+    }
+
+    private void validateAdminSecurity() {
+        if (!adminMfaEnabled) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_MFA_ENABLED must be true.");
+        }
+        String rpId = normalize(adminMfaRpId);
+        if (rpId.isBlank() || "localhost".equals(rpId) || rpId.contains("*") || rpId.contains("://")) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_WEBAUTHN_RP_ID must be a non-loopback DNS domain.");
+        }
+        String[] origins = normalize(adminMfaAllowedOrigins).split(",");
+        if (origins.length == 0) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_WEBAUTHN_ALLOWED_ORIGINS is required.");
+        }
+        for (String originValue : origins) {
+            String origin = normalize(originValue);
+            if (origin.isBlank() || !origin.startsWith("https://") || origin.contains("*")
+                    || origin.contains("localhost") || origin.contains("127.0.0.1")) {
+                throw new IllegalStateException(
+                        "HERMES_ENV=production: HERMES_WEBAUTHN_ALLOWED_ORIGINS must contain exact HTTPS origins only.");
+            }
+        }
+        if (!value(adminMfaBootstrapToken).isBlank() && value(adminMfaBootstrapToken).length() < 32) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN must be at least 32 characters when set.");
+        }
+        if (!adminAccessEnabled) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_ACCESS_ENABLED must be true.");
+        }
+        String teamDomain = normalize(adminAccessTeamDomain);
+        if (!teamDomain.startsWith("https://") || !teamDomain.endsWith(".cloudflareaccess.com")) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_ACCESS_TEAM_DOMAIN must be the HTTPS Cloudflare Access team domain.");
+        }
+        if (normalize(adminAccessAudience).isBlank()) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_ACCESS_AUDIENCE is required.");
+        }
+        if (normalize(adminAccessAllowedEmails).isBlank()) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_ADMIN_ACCESS_ALLOWED_EMAILS is required.");
+        }
     }
 
     private void validateRecaptchaKeys() {
@@ -128,6 +199,10 @@ public class ProductionSecurityValidator {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private String value(String value) {
+        return value == null ? "" : value;
     }
 
     private boolean isProduction() {

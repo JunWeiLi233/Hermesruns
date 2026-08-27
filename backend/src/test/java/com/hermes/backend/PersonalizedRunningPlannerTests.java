@@ -75,6 +75,22 @@ class PersonalizedRunningPlannerTests {
     }
 
     @Test
+    void weeklyGrowthCapNeverPullsTargetBelowThePhaseFloor() {
+        PersonalizedRunningPlanner.PersonalizedPlan plan = planner.plan(input(
+                LocalDate.of(2026, 8, 24),
+                history(24, 1, 0, 4.0, 4.0, 4.0, 345, 0.05, 500, 21, Map.of(DayOfWeek.TUESDAY, 1)),
+                78,
+                "EASY",
+                true,
+                "LOW",
+                null
+        ));
+
+        assertThat(plan.phase()).isEqualTo("comeback");
+        assertThat(plan.targetWeeklyKm()).isGreaterThanOrEqualTo(9.0);
+    }
+
+    @Test
     void upcomingRaceCreatesTaperAndRaceDayPrescription() {
         LocalDate today = LocalDate.of(2026, 8, 24);
         PersonalizedRunningPlanner.Goal goal = new PersonalizedRunningPlanner.Goal(
@@ -131,6 +147,32 @@ class PersonalizedRunningPlannerTests {
         assertThat(plan.preferredRunDays()).contains(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SUNDAY);
         assertThat(plan.sessions().stream().limit(7).filter(session -> session.workoutType() != CoachWorkoutType.REST).count())
                 .isEqualTo(4);
+    }
+
+    @Test
+    void preservesAWeekendLongRunSlotWhenObservedHistoryFavorsWeekdays() {
+        LocalDate today = LocalDate.of(2026, 8, 27);
+        PersonalizedRunningPlanner.PersonalizedPlan plan = planner.plan(input(
+                today,
+                history(12, 12, 24, 96, 8, 16, 330, 0.10, 72, 1,
+                        Map.of(DayOfWeek.FRIDAY, 5, DayOfWeek.WEDNESDAY, 2, DayOfWeek.THURSDAY, 1)),
+                90,
+                "GO",
+                true,
+                "LOW",
+                null
+        ));
+
+        assertThat(plan.preferredRunDays()).contains(DayOfWeek.SUNDAY);
+        assertThat(plan.sessions())
+                .filteredOn(session -> session.date().equals(today.plusDays(1)))
+                .singleElement()
+                .satisfies(session -> assertThat(session.workoutType()).isIn(CoachWorkoutType.TEMPO, CoachWorkoutType.THRESHOLD));
+        assertThat(plan.sessions())
+                .filteredOn(session -> session.date().equals(today.plusDays(3)))
+                .singleElement()
+                .extracting(PersonalizedRunningPlanner.PlannedSession::workoutType)
+                .isEqualTo(CoachWorkoutType.LONG_RUN);
     }
 
     @Test

@@ -11,10 +11,20 @@ import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
+import ShoeBrandLogo from '../components/ShoeBrandLogo';
+import CatalogLongPressCard from '../components/CatalogLongPressCard.jsx';
 import SectionCard from '../components/ui/SectionCard';
 import ActionBar from '../components/ui/ActionBar';
 import DataTable from '../components/ui/DataTable';
+import shoeCatalog from '../data/shoeCatalog';
+import { mergeShoeCatalog } from '../utils/addShoeCatalog.js';
+import {
+  getAdminShoeCatalogImageState,
+  summarizeAdminShoeCatalogStatus,
+} from '../utils/adminShoeCatalogStatus.js';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
+import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
+import { getSafeImageUrl } from '../utils/safeImageUrl.js';
 import {
   buildCourseMapAdminDetailFallback,
   buildCourseMapWorkspaceSource,
@@ -43,30 +53,32 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutController, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
+
 function ShoeImage({ src, alt, className, noImageLabel }) {
+  const encodedSrc = src ? encodeURI(src) : '';
   const [processed, setProcessed] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (!src) {
+    if (!encodedSrc) {
       setProcessed(null);
       return undefined;
     }
-    if (bgRemovedCache[src]) {
-      setProcessed(bgRemovedCache[src]);
+    if (bgRemovedCache[encodedSrc]) {
+      setProcessed(bgRemovedCache[encodedSrc]);
       return undefined;
     }
-    removeBackground(src).then(result => {
+    removeBackground(encodedSrc).then(result => {
       if (cancelled) return;
-      bgRemovedCache[src] = result;
+      bgRemovedCache[encodedSrc] = result;
       setProcessed(result);
     }).catch(() => {
-      if (!cancelled) setProcessed(src);
+      if (!cancelled) setProcessed(encodedSrc);
     });
     return () => { cancelled = true; };
-  }, [src]);
+  }, [encodedSrc]);
 
-  if (!src) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
+  if (!encodedSrc) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
   if (!processed) return <div className="admin-shoe-img-loading" />;
   return <img className={className} src={processed} alt={alt} loading="lazy" decoding="async" />;
 }
@@ -91,6 +103,12 @@ const TAB_ICONS = {
   jobs: 'sync',
   audit: 'history',
   settings: 'settings',
+};
+
+const USER_BULK_ACTION_LABEL_KEYS = {
+  grant_pro: 'dashboard.btn_grant_pro',
+  revoke_pro: 'dashboard.btn_revoke_pro',
+  soft_delete: 'dashboard.btn_soft_delete',
 };
 
 const TAB_ROUTE_MAP = {
@@ -166,6 +184,70 @@ function getShoeDisplayName(shoe, fallback) {
   return [shoe?.brand, shoe?.model].filter(Boolean).join(' ') || shoe?.nickname || fallback;
 }
 
+function normalizeShoeCatalogName(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase();
+}
+
+function getShoeCatalogIdentityKey(brand, model) {
+  return [normalizeShoeCatalogName(brand), normalizeShoeCatalogName(model)].join('::');
+}
+
+const ADMIN_HIDDEN_CATALOG_SERIES_STORAGE_KEY = 'hermes.admin.catalog.hidden-series.v1';
+const ADMIN_HIDDEN_CATALOG_BRANDS_STORAGE_KEY = 'hermes.admin.catalog.hidden-brands.v1';
+
+function readHiddenCatalogSeriesKeys() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_HIDDEN_CATALOG_SERIES_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeHiddenCatalogSeriesKeys(keys) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(ADMIN_HIDDEN_CATALOG_SERIES_STORAGE_KEY, JSON.stringify([...keys]));
+  } catch {
+    // Local persistence is a convenience for fallback-only catalog rows.
+  }
+}
+
+function readHiddenCatalogBrandKeys() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_HIDDEN_CATALOG_BRANDS_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeHiddenCatalogBrandKeys(keys) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(ADMIN_HIDDEN_CATALOG_BRANDS_STORAGE_KEY, JSON.stringify([...keys]));
+  } catch {
+    // Local persistence is a convenience for fallback-only catalog rows.
+  }
+}
+
+function getAdminCatalogModelLabel(model, lang) {
+  if (lang === 'zh-CN' && model?.modelZh) return model.modelZh;
+  if (lang !== 'zh-CN' && model?.modelEn) return model.modelEn;
+  return localizeShoeModel(model?.model, lang);
+}
+
+function getAdminCatalogBrandLabel(brand, lang) {
+  if (lang === 'zh-CN' && brand?.brandZh) return brand.brandZh;
+  return localizeShoeBrand(brand?.brand, lang);
+}
+
 function getShoeLivePhotoUrl(shoe) {
   return shoe?.livePhotoUrl
     || shoe?.liveImageUrl
@@ -189,6 +271,10 @@ function getShoeReviewState(shoe) {
   if (getShoePendingPhotoUrl(shoe)) return 'pending';
   if (getShoeLivePhotoUrl(shoe)) return 'live';
   return 'missing';
+}
+
+function getCatalogImageUrl(item) {
+  return item?.pendingImageUrl || item?.liveImageUrl || item?.imageUrl || '';
 }
 
 function getShoeUsageRatio(shoe) {
@@ -329,6 +415,10 @@ function getLocalizedCourseMapSummary(preview, raceId, lang, t) {
 
   if (/^Hermes rendered this course from the official course landmark corridor\./i.test(summary)) {
     return t('dashboard.course_maps_summary_landmark_corridor');
+  }
+
+  if (/^Hermes aligned this upload through the extraction pipeline fallback after the direct AI scan could not produce a trustworthy route preview\.$/i.test(summary)) {
+    return t('dashboard.course_maps_summary_extraction_fallback');
   }
 
   return summary;
@@ -873,14 +963,40 @@ function ShoeRepositoryRowComponent({ ariaAttributes, index, style, items, selec
   );
 }
 
-function CatalogRowComponent({ ariaAttributes, index, style, items, onEdit, t }) {
+const CATALOG_ROW_HEIGHT = 300;
+
+function CatalogRowComponent({ ariaAttributes, index, style, items, onOpenImage, onDelete, t }) {
   const item = items[index];
   if (!item) return null;
+  const imageState = getAdminShoeCatalogImageState(item);
   return (
     <div style={style} {...ariaAttributes}>
-      <div className="admin-shoe-card">
+      <div className="admin-shoe-card" tabIndex={0} role="group" aria-label={`${item.brand || ''} ${item.model || ''}`.trim()}>
+        <div className="admin-shoe-card-actions" aria-label={`${item.brand || ''} ${item.model || ''}`}>
+          <button
+            type="button"
+            className="admin-shoe-card-action"
+            onClick={() => onOpenImage(item)}
+            aria-label={t('dashboard.catalog_card_edit')}
+          >
+            {t('dashboard.catalog_card_edit')}
+          </button>
+          <button
+            type="button"
+            className="admin-shoe-card-action admin-shoe-card-action--danger"
+            onClick={() => onDelete(item)}
+            aria-label={t('dashboard.catalog_card_delete')}
+          >
+            {t('dashboard.catalog_card_delete')}
+          </button>
+        </div>
         <div className="admin-shoe-img-wrap">
-          <div className="admin-shoe-img-empty">{item.brand?.slice(0, 1) || '?'}</div>
+          <ShoeImage
+            src={getCatalogImageUrl(item)}
+            alt={`${item.brand || ''} ${item.model || ''}`.trim()}
+            className="admin-shoe-img"
+            noImageLabel={item.brand?.slice(0, 1) || '?'}
+          />
         </div>
         <div className="admin-shoe-info">
           <span className="admin-shoe-name">{item.model}</span>
@@ -893,10 +1009,10 @@ function CatalogRowComponent({ ariaAttributes, index, style, items, onEdit, t })
           )}
           <div className="admin-shoe-badges">
             <span className="admin-shoe-status-badge admin-shoe-verified">{t(`dashboard.type_${item.type}`)}</span>
+            <span className={`admin-shoe-status-badge admin-shoe-image-state admin-shoe-image-state--${imageState}`}>
+              {t(`dashboard.catalog_image_state_${imageState}`)}
+            </span>
           </div>
-          <button type="button" className="btn-secondary btn-inline-sm" onClick={() => onEdit(item)}>
-            {t('dashboard.btn_edit_catalog')}
-          </button>
         </div>
       </div>
     </div>
@@ -995,14 +1111,24 @@ const METRIC_TREND_ENDPOINTS = {
 };
 
 async function fetchMetricTrendItems(endpoint) {
-  const items = [];
-  for (let page = 0; page < METRIC_TREND_MAX_PAGES; page += 1) {
+  const fetchPage = (page) => {
     const params = new URLSearchParams({ page: String(page), size: String(METRIC_TREND_PAGE_SIZE) });
-    const data = await apiJson(`${endpoint}?${params.toString()}`);
+    return apiJson(`${endpoint}?${params.toString()}`);
+  };
+  // Page 0 carries the total page count, so the remaining (capped) pages can
+  // be requested concurrently instead of one round-trip per page.
+  const firstPage = await fetchPage(0);
+  const totalPages = Math.min(Number(firstPage?.totalPages) || 1, METRIC_TREND_MAX_PAGES);
+  const laterPages = await Promise.all(
+    Array.from({ length: Math.max(totalPages - 1, 0) }, (_, index) => fetchPage(index + 1)),
+  );
+  // Assemble in page order and stop at the first empty page, mirroring the
+  // early-exit semantics of the previous sequential loop.
+  const items = [];
+  for (const data of [firstPage, ...laterPages]) {
     const pageItems = Array.isArray(data?.items) ? data.items : [];
+    if (pageItems.length === 0) break;
     items.push(...pageItems);
-    const totalPages = Number(data?.totalPages) || 1;
-    if (page + 1 >= totalPages || pageItems.length === 0) break;
   }
   return items;
 }
@@ -1033,7 +1159,8 @@ function buildDailyCountSeries(items, field = 'createdAt', limitDays = 14) {
     if (!item?.[field]) continue;
     const day = String(item[field]).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}/.test(day)) continue;
-    perDay.set(day, (perDay.get(day) || 0) + 1);
+    const persistedCount = Number(item.count ?? 1);
+    perDay.set(day, (perDay.get(day) || 0) + (Number.isFinite(persistedCount) ? persistedCount : 1));
   }
   const days = [...perDay.keys()].sort().slice(-limitDays);
   return { labels: days, values: days.map(day => perDay.get(day) || 0) };
@@ -1048,6 +1175,12 @@ const Dashboard = memo(function Dashboard() {
   const [loadState, setLoadState] = useState('loading');
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    if (!message) return undefined;
+    const timeoutId = window.setTimeout(() => setMessage(''), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [message]);
+
   const [overview, setOverview] = useState(null);
   const [queues, setQueues] = useState(null);
   const [usersPage, setUsersPage] = useState({ items: [], page: 0, totalPages: 0, totalItems: 0 });
@@ -1060,8 +1193,30 @@ const Dashboard = memo(function Dashboard() {
   const [overviewCharts, setOverviewCharts] = useState({ users: { status: 'loading', series: null }, audit: { status: 'loading', series: null } });
   const [savedFilters, setSavedFilters] = useState([]);
   const [catalogInventory, setCatalogInventory] = useState([]);
+  const [catalogHiddenSeriesKeys, setCatalogHiddenSeriesKeys] = useState(() => new Set(readHiddenCatalogSeriesKeys()));
+  const [catalogHiddenBrandKeys, setCatalogHiddenBrandKeys] = useState(() => new Set(readHiddenCatalogBrandKeys()));
   const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogTypeFilter, setCatalogTypeFilter] = useState('');
+  const [catalogBrowserBrand, setCatalogBrowserBrand] = useState('');
+  const [catalogBrandDeleteMode, setCatalogBrandDeleteMode] = useState(false);
+  const [catalogDeleteMode, setCatalogDeleteMode] = useState(false);
+  const [catalogDeleteTarget, setCatalogDeleteTarget] = useState(null);
+  const [catalogDeleteBusy, setCatalogDeleteBusy] = useState(false);
+  const [catalogRefreshing, setCatalogRefreshing] = useState(false);
+  const [catalogBrandFormOpen, setCatalogBrandFormOpen] = useState(false);
+  const [catalogBrandSaving, setCatalogBrandSaving] = useState(false);
+  const [catalogBrandName, setCatalogBrandName] = useState('');
+  const [catalogBrandZh, setCatalogBrandZh] = useState('');
+  const [catalogBrandLogoUrl, setCatalogBrandLogoUrl] = useState('');
+  const [catalogBrandLogoUploading, setCatalogBrandLogoUploading] = useState(false);
+  const [catalogFormOpen, setCatalogFormOpen] = useState(false);
+  const [catalogSpecificMode, setCatalogSpecificMode] = useState(false);
+  const [catalogSaving, setCatalogSaving] = useState(false);
+  const [catalogBrand, setCatalogBrand] = useState('');
+  const [catalogModel, setCatalogModel] = useState('');
+  const [catalogModelZh, setCatalogModelZh] = useState('');
+  const [catalogModelEn, setCatalogModelEn] = useState('');
+  const [catalogType, setCatalogType] = useState('daily');
 
   const [userQuery, setUserQuery] = useState({ search: '', role: '', status: '', queue: '', page: 0 });
   const [courseMapQuery, setCourseMapQuery] = useState({ search: '', status: '', page: 0 });
@@ -1070,11 +1225,21 @@ const Dashboard = memo(function Dashboard() {
   const [auditQuery, setAuditQuery] = useState({ search: '', page: 0 });
 
   const [selectedUserIds, setSelectedUserIds] = useState([]);
+  const userSelectAllRef = useRef(null);
+  const [userBulkModal, setUserBulkModal] = useState(null);
+  const [userBulkBusy, setUserBulkBusy] = useState(false);
   const [selectedShoeIds, setSelectedShoeIds] = useState([]);
   const [selectedShoeWorkbenchId, setSelectedShoeWorkbenchId] = useState(null);
   const [selectedJobId, setSelectedJobId] = useState(null);
   const [selectedJobDetail, setSelectedJobDetail] = useState(null);
   const [selectedJobDetailState, setSelectedJobDetailState] = useState('idle');
+  const [clearingJobs, setClearingJobs] = useState(false);
+  const [clearJobsModalOpen, setClearJobsModalOpen] = useState(false);
+  const [clearingAudit, setClearingAudit] = useState(false);
+  const [auditClearModalOpen, setAuditClearModalOpen] = useState(false);
+  const [catalogDeleteAction, setCatalogDeleteAction] = useState(null);
+  const [deletingAuditId, setDeletingAuditId] = useState(null);
+  const [auditDeleteTarget, setAuditDeleteTarget] = useState(null);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [userNotes, setUserNotes] = useState([]);
@@ -1107,9 +1272,12 @@ const Dashboard = memo(function Dashboard() {
   const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
   const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
   const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
+  const [courseMapStageHeight, setCourseMapStageHeight] = useState(null);
   const courseMapUploadInputId = 'dashboard-course-map-upload-input';
   const courseMapDetailRequestRef = useRef(0);
+  const courseMapStageContentRef = useRef(null);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
+  const catalogOnlyShoeOverview = activeTab === 'shoes';
 
   const courseMapCatalogItems = useMemo(() => getCourseMapCatalogMarathons(), []);
   const courseMapBackendItems = useMemo(
@@ -1230,8 +1398,27 @@ const Dashboard = memo(function Dashboard() {
 
   const loadCatalogInventory = useCallback(async () => {
     const data = await apiJson('/api/shoe-catalog');
-    setCatalogInventory(Array.isArray(data?.brands) ? data.brands : []);
+    const brands = Array.isArray(data) ? data : data?.brands;
+    setCatalogInventory(Array.isArray(brands) ? brands : []);
   }, []);
+
+  const loadCatalogImageAssets = useCallback(async () => {
+    const data = await apiJson('/api/admin/shoe-catalog/images');
+    setCatalogImageAssets(Array.isArray(data) ? data : []);
+  }, []);
+
+  const refreshCatalog = useCallback(async () => {
+    if (catalogRefreshing) return;
+    setCatalogRefreshing(true);
+    try {
+      await Promise.all([loadCatalogInventory(), loadCatalogImageAssets()]);
+      setMessage(t('dashboard.catalog_refresh_complete'));
+    } catch {
+      setMessage(t('dashboard.catalog_refresh_failed'));
+    } finally {
+      setCatalogRefreshing(false);
+    }
+  }, [catalogRefreshing, loadCatalogImageAssets, loadCatalogInventory, t]);
 
   const loadJobs = useCallback(async () => {
     const params = new URLSearchParams({
@@ -1246,10 +1433,10 @@ const Dashboard = memo(function Dashboard() {
     await Promise.all([loadJobs(), loadQueues()]);
   }, [loadJobs, loadQueues]);
 
-  const loadAudit = useCallback(async () => {
+  const loadAudit = useCallback(async (options = {}) => {
     const params = new URLSearchParams({
-      page: String(auditQuery.page || 0),
-      search: auditQuery.search || '',
+      page: String(options.page ?? auditQuery.page ?? 0),
+      search: options.search ?? auditQuery.search ?? '',
     });
     setAuditPage(await apiJson(`/api/admin/audit?${params.toString()}`));
   }, [auditQuery.page, auditQuery.search]);
@@ -1289,7 +1476,19 @@ const Dashboard = memo(function Dashboard() {
     }
   }, [courseMapBackendItems, courseMapQueueItems]);
 
+  // Guards the tab effect against re-fetching what bootstrap() just loaded.
+  // Arming is epoch-aware: every bootstrap() run first disarms and bumps
+  // bootstrapRunIdRef, and only the latest run may arm the guard and flip
+  // loadState to 'ready' — so a superseded run (StrictMode double-invoke, or a
+  // re-run triggered by a mid-flight tab switch / query change) can neither
+  // report readiness nor leave a stale arming for a later genuine tab switch.
+  const bootstrapJustLoadedRef = useRef(false);
+  const bootstrapRunIdRef = useRef(0);
+
   const bootstrap = useCallback(async () => {
+    const runId = bootstrapRunIdRef.current + 1;
+    bootstrapRunIdRef.current = runId;
+    bootstrapJustLoadedRef.current = false;
     setLoadState('loading');
     try {
       const session = await apiJson('/api/auth/protected/ping');
@@ -1297,12 +1496,23 @@ const Dashboard = memo(function Dashboard() {
         navigate('/profile');
         return;
       }
-      await Promise.all([loadOverview(), loadQueues(), loadUsers(), loadCourseMaps(), loadShoes(), loadAudit()]);
+      const bootstrapLoads = activeTab === 'shoes'
+        ? []
+        : [loadOverview(), loadQueues(), loadUsers(), loadCourseMaps(), loadShoes(), loadAudit()];
+      if (activeTab === 'overview') {
+        bootstrapLoads.push(loadCatalogInventory(), loadCatalogImageAssets());
+      }
+      await Promise.all(bootstrapLoads);
+      // Superseded run (a newer bootstrap started while this one was in
+      // flight): let the newer run report readiness instead, so this run
+      // cannot arm a guard that no loadState transition will consume.
+      if (bootstrapRunIdRef.current !== runId) return;
+      if (bootstrapLoads.length > 0) bootstrapJustLoadedRef.current = true;
       setLoadState('ready');
     } catch {
       setLoadState('error');
     }
-  }, [navigate, loadAudit, loadCourseMaps, loadOverview, loadQueues, loadShoes, loadUsers]);
+  }, [activeTab, navigate, loadAudit, loadCatalogImageAssets, loadCatalogInventory, loadCourseMaps, loadOverview, loadQueues, loadShoes, loadUsers]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1320,6 +1530,23 @@ const Dashboard = memo(function Dashboard() {
   useEffect(() => {
     if (!activeTab) return;
     if (loadState === 'loading') return;
+    // bootstrap() just fetched every shared admin surface (overview, queues,
+    // users, course maps, shoes, audit). On the effect run that follows it,
+    // load only what bootstrap does not cover — otherwise the initial overview
+    // render would hit each admin endpoint twice.
+    if (bootstrapJustLoadedRef.current) {
+      bootstrapJustLoadedRef.current = false;
+      if (activeTab === 'users') {
+        loadSavedFilters('users');
+      } else if (activeTab === 'shoes') {
+        setShoesPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
+        loadCatalogInventory();
+        loadCatalogImageAssets();
+      } else if (activeTab === 'jobs') {
+        loadJobs();
+      }
+      return;
+    }
     if (activeTab === 'overview') {
       loadOverview();
       loadQueues();
@@ -1327,6 +1554,8 @@ const Dashboard = memo(function Dashboard() {
       loadCourseMaps();
       loadShoes();
       loadAudit();
+      loadCatalogInventory();
+      loadCatalogImageAssets();
     } else if (activeTab === 'users') {
       loadUsers();
       loadQueues();
@@ -1334,9 +1563,9 @@ const Dashboard = memo(function Dashboard() {
     } else if (activeTab === 'courseMaps') {
       loadCourseMaps();
     } else if (activeTab === 'shoes') {
+      setShoesPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
       loadCatalogInventory();
-      loadShoes();
-      loadSavedFilters('shoes');
+      loadCatalogImageAssets();
     } else if (activeTab === 'jobs') {
       refreshJobsSurface();
     } else if (activeTab === 'audit') {
@@ -1345,6 +1574,7 @@ const Dashboard = memo(function Dashboard() {
   }, [
     activeTab,
     loadAudit,
+    loadCatalogImageAssets,
     loadCatalogInventory,
     loadCourseMaps,
     loadJobs,
@@ -1368,7 +1598,8 @@ const Dashboard = memo(function Dashboard() {
   const overviewChartsFetchedRef = useRef(false);
 
   // Overview charts: cumulative user growth line + audit events per day bars.
-  // Fetched once per session; the shoe-photo doughnut derives from queues.
+  // Fetched once per session; the shoe-photo doughnut derives from the shared
+  // catalog inventory and image assets used by dashboard/shoes.
   useEffect(() => {
     if (activeTab !== 'overview' || loadState !== 'ready') return;
     if (overviewChartsFetchedRef.current) return;
@@ -1380,9 +1611,9 @@ const Dashboard = memo(function Dashboard() {
       .catch(() => {
         setOverviewCharts(prev => ({ ...prev, users: { status: 'error', series: null } }));
       });
-    fetchMetricTrendItems('/api/admin/audit')
+    fetchMetricTrendItems('/api/admin/audit/trend')
       .then(items => {
-        setOverviewCharts(prev => ({ ...prev, audit: { status: 'ready', series: buildDailyCountSeries(items) } }));
+        setOverviewCharts(prev => ({ ...prev, audit: { status: 'ready', series: buildDailyCountSeries(items, 'createdAt', 14) } }));
       })
       .catch(() => {
         setOverviewCharts(prev => ({ ...prev, audit: { status: 'error', series: null } }));
@@ -1439,6 +1670,31 @@ const Dashboard = memo(function Dashboard() {
     if (!nextId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
     loadCourseMapScanTimeline(nextId);
   }, [activeTab, courseMapQueueItems, loadCourseMapScanTimeline, selectedCourseMapId]);
+
+  useEffect(() => {
+    if (activeTab !== 'courseMaps') {
+      setCourseMapStageHeight(null);
+      return undefined;
+    }
+
+    const stage = courseMapStageContentRef.current;
+    if (!stage || typeof ResizeObserver === 'undefined') return undefined;
+
+    const updateStageHeight = () => {
+      const nextHeight = Math.ceil(stage.getBoundingClientRect().height);
+      setCourseMapStageHeight(currentHeight => currentHeight === nextHeight ? currentHeight : nextHeight);
+    };
+
+    updateStageHeight();
+    const observer = new ResizeObserver(updateStageHeight);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [
+    activeTab,
+    courseMapScanTimeline.length,
+    courseMapTimelineLoadState,
+    selectedCourseMapId,
+  ]);
 
   useEffect(() => {
     if (activeTab !== 'jobs' || selectedJobId == null) {
@@ -1535,6 +1791,70 @@ const Dashboard = memo(function Dashboard() {
     navigateToTab('jobs');
   }
 
+  async function clearTerminalJobs() {
+    if (clearingJobs) return;
+    setClearingJobs(true);
+    setClearJobsModalOpen(false);
+    try {
+      const result = await apiJson('/api/admin/jobs', { method: 'DELETE' });
+      setSelectedJobId(null);
+      setSelectedJobDetail(null);
+      setSelectedJobDetailState('idle');
+      setJobQuery((current) => ({ ...current, page: 0 }));
+      setMessage(t('dashboard.jobs_clear_success', { count: Number(result?.deleted || 0) }));
+      await Promise.all([loadOverview(), refreshJobsSurface()]);
+    } catch (error) {
+      setMessage(error?.message || t('dashboard.jobs_clear_failed'));
+    } finally {
+      setClearingJobs(false);
+    }
+  }
+
+  async function clearAuditHistory() {
+    if (clearingAudit) return;
+    setClearingAudit(true);
+    setAuditClearModalOpen(false);
+    try {
+      const result = await apiJson('/api/admin/audit', { method: 'DELETE' });
+      setAuditQuery(current => ({ ...current, page: 0 }));
+      await Promise.all([loadAudit({ page: 0 }), loadOverview()]);
+      setMessage(t('dashboard.audit_clear_success', { count: Number(result?.deleted || 0) }));
+    } catch (error) {
+      setMessage(error?.message || t('dashboard.audit_clear_failed'));
+    } finally {
+      setClearingAudit(false);
+    }
+  }
+
+  function deleteAuditEntry(item) {
+    const id = item?.id;
+    if (id == null || deletingAuditId === id) return;
+    setAuditDeleteTarget(item);
+  }
+
+  async function confirmAuditDelete() {
+    const item = auditDeleteTarget;
+    const id = item?.id;
+    if (id == null || deletingAuditId === id) return;
+    setDeletingAuditId(id);
+    try {
+      await apiJson(`/api/admin/audit/${id}`, { method: 'DELETE' });
+      const shouldMoveBack = auditPage.items?.length === 1 && auditQuery.page > 0;
+      if (shouldMoveBack) {
+        setAuditQuery(current => ({ ...current, page: current.page - 1 }));
+      } else {
+        await loadAudit();
+      }
+      await loadOverview();
+      setMessage(t('dashboard.audit_delete_success'));
+      setAuditDeleteTarget(null);
+    } catch (error) {
+      setMessage(error?.message || t('dashboard.audit_delete_failed'));
+    } finally {
+      setDeletingAuditId(null);
+    }
+  }
+
   async function saveCurrentFilter(scope) {
     const name = window.prompt(t('dashboard.prompt_filter_name', { scope }));
     if (!name) return;
@@ -1563,21 +1883,40 @@ const Dashboard = memo(function Dashboard() {
     await loadSavedFilters(scope);
   }
 
-  async function runUserBulk(action, extra = {}) {
-    if (selectedUserIds.length === 0) return;
-    const preview = await apiJson('/api/admin/users/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selectedUserIds, action, dryRun: true, ...extra }),
-    });
-    if (!window.confirm(t('dashboard.confirm_bulk_users', { count: preview.affected }))) return;
-    await apiJson('/api/admin/users/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ids: selectedUserIds, action, dryRun: false, ...extra }),
-    });
-    setSelectedUserIds([]);
-    await Promise.all([loadUsers(), loadOverview(), loadAudit()]);
+  async function requestUserBulkConfirmation(action, extra = {}) {
+    if (selectedUserIds.length === 0 || !USER_BULK_ACTION_LABEL_KEYS[action]) return;
+    const ids = [...selectedUserIds];
+    try {
+      const preview = await apiJson('/api/admin/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, action, dryRun: true, ...extra }),
+      });
+      setUserBulkModal({ action, extra, ids, affected: Number(preview?.affected ?? ids.length) });
+    } catch (error) {
+      setMessage(error?.message || t('dashboard.user_bulk_preview_failed'));
+    }
+  }
+
+  async function confirmUserBulk() {
+    const request = userBulkModal;
+    if (!request || userBulkBusy) return;
+    setUserBulkBusy(true);
+    try {
+      const result = await apiJson('/api/admin/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: request.ids, action: request.action, dryRun: false, ...request.extra }),
+      });
+      setUserBulkModal(null);
+      setSelectedUserIds([]);
+      setMessage(t('dashboard.user_bulk_apply_success', { count: Number(result?.affected ?? request.affected) }));
+      await Promise.all([loadUsers(), loadOverview(), loadAudit()]);
+    } catch (error) {
+      setMessage(error?.message || t('dashboard.user_bulk_apply_failed'));
+    } finally {
+      setUserBulkBusy(false);
+    }
   }
 
   async function runShoeBulk(action) {
@@ -1684,73 +2023,230 @@ const Dashboard = memo(function Dashboard() {
     }
   }
 
-  const [catalogFormOpen, setCatalogFormOpen] = useState(false);
-  const [catalogBrand, setCatalogBrand] = useState('');
-  const [catalogModel, setCatalogModel] = useState('');
-  const [catalogModelZh, setCatalogModelZh] = useState('');
-  const [catalogModelEn, setCatalogModelEn] = useState('');
-  const [catalogType, setCatalogType] = useState('daily');
-  const [catalogEditOpen, setCatalogEditOpen] = useState(false);
-  const [catalogEditingItem, setCatalogEditingItem] = useState(null);
-  const [catalogEditModel, setCatalogEditModel] = useState('');
-  const [catalogEditModelZh, setCatalogEditModelZh] = useState('');
-  const [catalogEditModelEn, setCatalogEditModelEn] = useState('');
-  const [catalogEditType, setCatalogEditType] = useState('daily');
+  function resetCatalogForm({ brand = '', model = '', specific = false } = {}) {
+    setCatalogSpecificMode(specific);
+    setCatalogBrand(brand);
+    setCatalogModel(model);
+    setCatalogModelZh('');
+    setCatalogModelEn('');
+    setCatalogType('daily');
+    setCatalogSaving(false);
+  }
 
-  async function addToCatalog(e) {
-    e.preventDefault();
-    if (!catalogBrand.trim() || !catalogModel.trim()) return;
+  function resetCatalogBrandForm() {
+    setCatalogBrandName('');
+    setCatalogBrandZh('');
+    setCatalogBrandLogoUrl('');
+    setCatalogBrandLogoUploading(false);
+    setCatalogBrandSaving(false);
+  }
+
+  function openCatalogBrandForm() {
+    resetCatalogBrandForm();
+    setCatalogBrandFormOpen(true);
+  }
+
+  function openCatalogSeries(model = {}, { specific = false } = {}) {
+    resetCatalogForm();
+    setCatalogSpecificMode(specific);
+    setCatalogBrand(model.brand || catalogBrowserBrandEntry?.brand || '');
+    setCatalogModel(model.model || '');
+    setCatalogFormOpen(true);
+  }
+
+  async function addToCatalog(event) {
+    event.preventDefault();
+    const brand = catalogBrand.trim();
+    const model = catalogModel.trim();
+    if (!brand || (catalogSpecificMode && !model) || catalogSaving) return;
+
+    setCatalogSaving(true);
     try {
-      await apiJson('/api/shoe-catalog/admin/models', {
+      const endpoint = model ? '/api/shoe-catalog/admin/models' : '/api/shoe-catalog/admin/brands';
+      const body = model
+        ? { brand, model, modelZh: catalogModelZh.trim(), modelEn: catalogModelEn.trim(), type: catalogType }
+        : { brand };
+      await apiJson(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      setCatalogBrowserBrand(brand);
+      setMessage(t(model ? 'dashboard.catalog_added' : 'dashboard.catalog_brand_added', model ? { brand, model } : { brand }));
+      setCatalogFormOpen(false);
+      resetCatalogForm();
+      await loadCatalogInventory();
+    } catch {
+      setMessage(t('dashboard.catalog_delete_failed'));
+    } finally {
+      setCatalogSaving(false);
+    }
+  }
+
+  async function handleCatalogBrandLogoUpload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setCatalogBrandLogoUploading(true);
+    try {
+      setCatalogBrandLogoUrl(await readFileAsDataUrl(file));
+    } catch {
+      setMessage(t('dashboard.catalog_brand_logo_upload_failed'));
+    } finally {
+      setCatalogBrandLogoUploading(false);
+    }
+  }
+
+  async function createCatalogBrand(event) {
+    event.preventDefault();
+    const brand = catalogBrandName.trim();
+    const brandZh = catalogBrandZh.trim();
+    const logoUrl = getSafeImageUrl(catalogBrandLogoUrl);
+    if (!brand || !logoUrl || catalogBrandSaving || catalogBrandLogoUploading) return;
+
+    setCatalogBrandSaving(true);
+    try {
+      await apiJson('/api/shoe-catalog/admin/brands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand, brandZh, logoUrl }),
+      });
+      setCatalogBrowserBrand(brand);
+      setMessage(t('dashboard.catalog_brand_added', { brand }));
+      setCatalogBrandFormOpen(false);
+      resetCatalogBrandForm();
+      await loadCatalogInventory();
+    } catch {
+      setMessage(t('dashboard.catalog_delete_failed'));
+      setCatalogBrandSaving(false);
+    }
+  }
+
+  function applyCustomShoeImageUrl() {
+    const safeUrl = getSafeImageUrl(imgCustomUrl);
+    if (!safeUrl) return;
+    setShoePendingPhoto(safeUrl);
+    setImgCustomUrl('');
+  }
+
+  const deleteCatalogModel = useCallback((item) => {
+    if (!item?.id) return;
+    setCatalogDeleteAction(null);
+    setCatalogDeleteTarget(item);
+  }, []);
+
+  const requestCatalogDelete = useCallback((target, onDelete) => {
+    if (!target || typeof onDelete !== 'function') return;
+    setCatalogDeleteAction(() => onDelete);
+    setCatalogDeleteTarget(target);
+  }, []);
+
+  const closeCatalogDeleteModal = useCallback(() => {
+    if (catalogDeleteBusy) return;
+    setCatalogDeleteTarget(null);
+    setCatalogDeleteAction(null);
+  }, [catalogDeleteBusy]);
+
+  const confirmCatalogModelDelete = useCallback(async () => {
+    if (!catalogDeleteTarget || catalogDeleteBusy) return;
+    setCatalogDeleteBusy(true);
+    try {
+      if (catalogDeleteAction) {
+        await catalogDeleteAction(catalogDeleteTarget);
+      } else {
+        if (!catalogDeleteTarget.id) return;
+        await apiJson(`/api/shoe-catalog/admin/models/${catalogDeleteTarget.id}`, { method: 'DELETE' });
+        await loadCatalogInventory();
+        setMessage(t('dashboard.catalog_model_deleted', catalogDeleteTarget));
+      }
+      setCatalogDeleteTarget(null);
+      setCatalogDeleteAction(null);
+    } catch {
+      setMessage(t('dashboard.catalog_delete_failed'));
+    } finally {
+      setCatalogDeleteBusy(false);
+    }
+  }, [catalogDeleteAction, catalogDeleteBusy, catalogDeleteTarget, loadCatalogInventory, t]);
+
+  const [catalogImageAssets, setCatalogImageAssets] = useState([]);
+  const [catalogImagePickerOpen, setCatalogImagePickerOpen] = useState(false);
+  const [catalogImageTarget, setCatalogImageTarget] = useState(null);
+  const [catalogImageCandidates, setCatalogImageCandidates] = useState([]);
+  const [catalogImageSearching, setCatalogImageSearching] = useState(false);
+  const [catalogImageQuery, setCatalogImageQuery] = useState('');
+  const [catalogImageAction, setCatalogImageAction] = useState('');
+
+  const getCatalogImageAsset = useCallback((brand, model) => {
+    const identity = getShoeCatalogIdentityKey(brand, model);
+    return catalogImageAssets.find((asset) => getShoeCatalogIdentityKey(asset.brand, asset.model) === identity) || null;
+  }, [catalogImageAssets]);
+
+  const buildCatalogImageTarget = useCallback((model, brandOverride = '') => {
+    const brand = model?.brand || brandOverride || '';
+    const asset = getCatalogImageAsset(brand, model?.model);
+    return {
+      ...model,
+      brand,
+      pendingImageUrl: asset?.pendingImageUrl || '',
+      pendingSource: asset?.pendingSource || '',
+      liveImageUrl: asset?.liveImageUrl || model?.imageUrl || '',
+      liveSource: asset?.liveSource || '',
+    };
+  }, [getCatalogImageAsset]);
+
+  const searchCatalogImages = useCallback(async (target, query = '') => {
+    if (!target?.brand || !target?.model) return;
+    setCatalogImageSearching(true);
+    try {
+      const data = await apiJson('/api/admin/shoe-catalog/images/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand: target.brand, model: target.model, query: query || '' }),
+      });
+      setCatalogImageCandidates(Array.isArray(data?.images) ? data.images : []);
+    } finally {
+      setCatalogImageSearching(false);
+    }
+  }, []);
+
+  const openCatalogImagePicker = useCallback(async (model, brandOverride = '') => {
+    const target = buildCatalogImageTarget(model, brandOverride);
+    if (!target.brand || !target.model) return;
+    setCatalogImageTarget(target);
+    setCatalogImageCandidates([]);
+    setCatalogImageQuery('');
+    setCatalogImagePickerOpen(true);
+    await searchCatalogImages(target);
+  }, [buildCatalogImageTarget, searchCatalogImages, setCatalogImageCandidates, setCatalogImagePickerOpen, setCatalogImageQuery, setCatalogImageTarget]);
+
+  async function setCatalogImagePending(url, source = 'manual') {
+    if (!catalogImageTarget || !url) return;
+    const identity = getShoeCatalogIdentityKey(catalogImageTarget.brand, catalogImageTarget.model);
+    setCatalogImageAction(`${identity}:stage`);
+    try {
+      const asset = await apiJson('/api/admin/shoe-catalog/images/pending', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brand: catalogBrand.trim(),
-          model: catalogModel.trim(),
-          modelZh: catalogModelZh.trim(),
-          modelEn: catalogModelEn.trim(),
-          type: catalogType,
+          brand: catalogImageTarget.brand,
+          model: catalogImageTarget.model,
+          imageUrl: url,
+          source,
         }),
       });
-      setMessage(t('dashboard.catalog_added', { brand: catalogBrand.trim(), model: catalogModel.trim() }));
-      setCatalogBrand('');
-      setCatalogModel('');
-      setCatalogModelZh('');
-      setCatalogModelEn('');
-      setCatalogType('daily');
-      setCatalogFormOpen(false);
-      await loadCatalogInventory();
-    } catch { /* ignored */ }
+      setCatalogImageTarget((current) => current ? { ...current, ...asset } : current);
+      await loadCatalogImageAssets();
+    } finally {
+      setCatalogImageAction('');
+    }
   }
 
-  const openCatalogEditor = useCallback((item) => {
-    setCatalogEditingItem(item);
-    setCatalogEditModel(item.model || '');
-    setCatalogEditModelZh(item.modelZh || '');
-    setCatalogEditModelEn(item.modelEn || '');
-    setCatalogEditType(item.type || 'daily');
-    setCatalogEditOpen(true);
-  }, []);
-
-  async function updateCatalogItem(e) {
-    e.preventDefault();
-    if (!catalogEditingItem || !catalogEditModel.trim()) return;
-    try {
-      await apiJson(`/api/shoe-catalog/admin/models/${catalogEditingItem.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: catalogEditModel.trim(),
-          modelZh: catalogEditModelZh.trim(),
-          modelEn: catalogEditModelEn.trim(),
-          type: catalogEditType,
-        }),
-      });
-      setMessage(t('dashboard.catalog_updated', { brand: catalogEditingItem.brand, model: catalogEditModel.trim() }));
-      setCatalogEditOpen(false);
-      setCatalogEditingItem(null);
-      await loadCatalogInventory();
-    } catch { /* ignored */ }
+  async function handleCatalogImageUpload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    await setCatalogImagePending(dataUrl, 'upload');
   }
 
   async function downloadExport(path, filename) {
@@ -2100,16 +2596,28 @@ const Dashboard = memo(function Dashboard() {
   }, [queues]);
 
   const catalogItems = useMemo(() => (
-    catalogInventory.flatMap(brand => (brand.models || []).map(model => ({
-      key: `${model.id || `${brand.id || brand.brand}-${model.model}`}`,
-      id: model.id,
-      brand: brand.brand,
-      model: model.model,
-      modelZh: model.modelZh || '',
-      modelEn: model.modelEn || '',
-      type: model.type || 'daily',
-    })))
-  ), [catalogInventory]);
+    [...catalogInventory.reduce((uniqueItems, brand) => {
+      (brand.models || []).forEach(model => {
+        const identityKey = getShoeCatalogIdentityKey(brand.brand, model.model);
+        if (uniqueItems.has(identityKey)) return;
+        const imageAsset = getCatalogImageAsset(brand.brand, model.model);
+        uniqueItems.set(identityKey, {
+          key: `${model.id || `${brand.id || brand.brand}-${model.model}`}`,
+          id: model.id,
+          brand: brand.brand,
+          model: model.model,
+          modelZh: model.modelZh || '',
+          modelEn: model.modelEn || '',
+          type: model.type || 'daily',
+          pendingImageUrl: imageAsset?.pendingImageUrl || '',
+          liveImageUrl: imageAsset?.liveImageUrl || model.imageUrl || '',
+          pendingSource: imageAsset?.pendingSource || '',
+          liveSource: imageAsset?.liveSource || '',
+        });
+      });
+      return uniqueItems;
+    }, new Map()).values()]
+  ), [catalogInventory, getCatalogImageAsset]);
 
   const filteredCatalogItems = useMemo(() => {
     const query = catalogQuery.trim().toLowerCase();
@@ -2121,6 +2629,55 @@ const Dashboard = memo(function Dashboard() {
       return matchesQuery && matchesType;
     });
   }, [catalogItems, catalogQuery, catalogTypeFilter]);
+
+  const catalogReviewSummary = useMemo(
+    () => summarizeAdminShoeCatalogStatus(catalogItems),
+    [catalogItems],
+  );
+
+  const catalogBrowser = useMemo(
+    () => mergeShoeCatalog(shoeCatalog, { brands: catalogInventory }),
+    [catalogInventory],
+  );
+  const catalogBrowserBrands = useMemo(
+    () => [...catalogBrowser]
+      .filter((brand) => !catalogHiddenBrandKeys.has(normalizeShoeCatalogName(brand.brand)))
+      .sort((a, b) => {
+        const modelDelta = (b.models?.length || 0) - (a.models?.length || 0);
+        return modelDelta || a.brand.localeCompare(b.brand, 'zh-Hans-CN');
+      }),
+    [catalogBrowser, catalogHiddenBrandKeys],
+  );
+  const catalogBrowserBrandEntry = catalogBrowserBrands.find((brand) => brand.brand === catalogBrowserBrand)
+    || catalogBrowserBrands[0]
+    || null;
+  const catalogBrowserQuery = catalogQuery.trim().toLowerCase();
+  const catalogBrowserModels = (catalogBrowserBrandEntry?.models || []).filter((model) => {
+    const identityKey = getShoeCatalogIdentityKey(catalogBrowserBrandEntry?.brand, model.model);
+    const matchesQuery = !catalogBrowserQuery
+      || model.model?.toLowerCase().includes(catalogBrowserQuery)
+      || model.modelZh?.toLowerCase().includes(catalogBrowserQuery)
+      || model.modelEn?.toLowerCase().includes(catalogBrowserQuery)
+      || catalogBrowserBrandEntry?.brand?.toLowerCase().includes(catalogBrowserQuery)
+      || catalogBrowserBrandEntry?.brandZh?.toLowerCase().includes(catalogBrowserQuery);
+    const matchesType = !catalogTypeFilter || model.type === catalogTypeFilter;
+    return matchesQuery && matchesType && !catalogHiddenSeriesKeys.has(identityKey);
+  });
+
+  useEffect(() => {
+    writeHiddenCatalogSeriesKeys(catalogHiddenSeriesKeys);
+  }, [catalogHiddenSeriesKeys]);
+
+  useEffect(() => {
+    writeHiddenCatalogBrandKeys(catalogHiddenBrandKeys);
+  }, [catalogHiddenBrandKeys]);
+
+  useEffect(() => {
+    if (!catalogBrowserBrands.length) return;
+    if (!catalogBrowserBrands.some((brand) => brand.brand === catalogBrowserBrand)) {
+      setCatalogBrowserBrand(catalogBrowserBrands[0].brand);
+    }
+  }, [catalogBrowserBrand, catalogBrowserBrands]);
 
   const totalQueueCount = useMemo(
     () => queueCards.reduce((sum, card) => sum + Number(card.count || 0), 0),
@@ -2464,6 +3021,9 @@ const Dashboard = memo(function Dashboard() {
   const recentSignupIssuesCount = queues?.recentSignupIssues?.length || 0;
   const billingExceptionCount = queues?.billingExceptions?.length || 0;
   const selectedUsersCount = selectedUserIds.length;
+  const visibleUserIds = visibleUsers.map((user) => user.id);
+  const allVisibleUsersSelected = visibleUserIds.length > 0 && visibleUserIds.every((id) => selectedUserIds.includes(id));
+  const someVisibleUsersSelected = visibleUserIds.some((id) => selectedUserIds.includes(id)) && !allVisibleUsersSelected;
   const activeUserFilterCount = [userQuery.search, userQuery.role, userQuery.queue].filter(Boolean).length;
   const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
   const recentVisibleUsersCount = visibleUsers.filter((user) => {
@@ -2475,6 +3035,20 @@ const Dashboard = memo(function Dashboard() {
     if (!Number.isFinite(createdAt)) return latest;
     return latest == null || createdAt > latest ? createdAt : latest;
   }, null);
+
+  useEffect(() => {
+    if (userSelectAllRef.current) userSelectAllRef.current.indeterminate = someVisibleUsersSelected;
+  }, [someVisibleUsersSelected]);
+
+  function toggleAllVisibleUsers() {
+    if (visibleUserIds.length === 0) return;
+    setSelectedUserIds((previous) => {
+      if (visibleUserIds.every((id) => previous.includes(id))) {
+        return previous.filter((id) => !visibleUserIds.includes(id));
+      }
+      return Array.from(new Set([...previous, ...visibleUserIds]));
+    });
+  }
 
   const selectedShoeWorkbench = useMemo(
     () => shoesPage.items?.find((shoe) => shoe.id === selectedShoeWorkbenchId) || shoesPage.items?.[0] || null,
@@ -2521,9 +3095,10 @@ const Dashboard = memo(function Dashboard() {
 
   const catalogRowProps = useMemo(() => ({
     items: filteredCatalogItems,
-    onEdit: openCatalogEditor,
+    onOpenImage: openCatalogImagePicker,
+    onDelete: deleteCatalogModel,
     t,
-  }), [filteredCatalogItems, openCatalogEditor, t]);
+  }), [deleteCatalogModel, filteredCatalogItems, openCatalogImagePicker, t]);
 
   const courseMapQueueRowProps = useMemo(() => ({
     items: courseMapQueueItems,
@@ -2667,7 +3242,7 @@ const Dashboard = memo(function Dashboard() {
     );
   }
 
-  if (loadState === 'loading') return <PageSkeleton variant="admin" />;
+  if (loadState === 'loading') return <PageSkeleton variant="admin" activeTab={activeTab} />;
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
   return (
@@ -2735,7 +3310,7 @@ const Dashboard = memo(function Dashboard() {
 
           <main className={`dashboard-container admin-portal-container admin-command-shell${activeTab === 'courseMaps' ? ' admin-command-shell--coursemaps' : ''}`}>
         <div className={`admin-command-route admin-command-route--${activeTab || 'overview'}`}>
-        {message && <div className="admin-shoe-status dashboard-message" role="status" aria-live="polite">{message}</div>}
+        {message && <div className="admin-shoe-status dashboard-message dashboard-message--toast" role="status" aria-live="polite">{message}</div>}
 
         {activeTab === 'overview' && overview && (
           <div className="admin-command-route__surface ops-page">
@@ -2963,9 +3538,9 @@ const Dashboard = memo(function Dashboard() {
                       ],
                       datasets: [{
                         data: [
-                          Math.max(0, (shoesPage.totalItems || 0) - (queues?.unverifiedShoePhotos?.length || 0) - (queues?.missingShoeImages?.length || 0)),
-                          queues?.unverifiedShoePhotos?.length || 0,
-                          queues?.missingShoeImages?.length || 0,
+                          catalogReviewSummary.live,
+                          catalogReviewSummary.pending,
+                          catalogReviewSummary.missing,
                         ],
                         backgroundColor: ['#22a06b', '#f07561', '#f5b545'],
                         borderWidth: 0,
@@ -3563,9 +4138,9 @@ const Dashboard = memo(function Dashboard() {
                   <p>{t('dashboard.users_bulk_copy', { count: selectedUsersCount })}</p>
                 </div>
                 <div className="admin-users-command-bulk__actions">
-                  <button type="button" className="btn-secondary btn-inline-md" disabled={selectedUsersCount === 0} onClick={() => runUserBulk('grant_pro', { months: 1 })}>{t('dashboard.btn_grant_pro')}</button>
-                  <button type="button" className="btn-secondary btn-inline-md" disabled={selectedUsersCount === 0} onClick={() => runUserBulk('revoke_pro')}>{t('dashboard.btn_revoke_pro')}</button>
-                  <button type="button" className="delete-btn" disabled={selectedUsersCount === 0} onClick={() => runUserBulk('soft_delete')}>{t('dashboard.btn_soft_delete')}</button>
+                  <button type="button" className="btn-secondary btn-inline-md" disabled={selectedUsersCount === 0} onClick={() => requestUserBulkConfirmation('grant_pro', { months: 1 })}>{t('dashboard.btn_grant_pro')}</button>
+                  <button type="button" className="btn-secondary btn-inline-md" disabled={selectedUsersCount === 0} onClick={() => requestUserBulkConfirmation('revoke_pro')}>{t('dashboard.btn_revoke_pro')}</button>
+                  <button type="button" className="delete-btn" disabled={selectedUsersCount === 0} onClick={() => requestUserBulkConfirmation('soft_delete')}>{t('dashboard.btn_soft_delete')}</button>
                 </div>
               </div>
 
@@ -3584,7 +4159,18 @@ const Dashboard = memo(function Dashboard() {
                   <table className="data-table admin-users-roster-table">
                     <thead>
                       <tr>
-                        <th />
+                        <th>
+                          <input
+                            ref={userSelectAllRef}
+                            type="checkbox"
+                            checked={allVisibleUsersSelected}
+                            disabled={visibleUsers.length === 0}
+                            onChange={toggleAllVisibleUsers}
+                            aria-checked={someVisibleUsersSelected ? 'mixed' : allVisibleUsersSelected ? 'true' : 'false'}
+                            aria-label={t('dashboard.users_select_page')}
+                            title={t('dashboard.users_select_page')}
+                          />
+                        </th>
                         <th>{t('dashboard.th_email')}</th>
                         <th>{t('dashboard.th_role')}</th>
                         <th>{t('dashboard.th_tier')}</th>
@@ -3674,7 +4260,10 @@ const Dashboard = memo(function Dashboard() {
 
             <div className="admin-coursemap-rework__grid">
                 <aside className="admin-coursemap-rework__rail admin-track-hub-sidebar">
-                  <section className={`admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue${courseMapQueueCollapsed ? ' is-collapsed' : ''}`}>
+                  <section
+                    className={`admin-track-hub-sidebar__panel admin-track-hub-sidebar__panel--queue${courseMapQueueCollapsed ? ' is-collapsed' : ''}`}
+                    style={courseMapStageHeight ? { '--course-map-stage-height': `${courseMapStageHeight}px` } : undefined}
+                  >
                   <div className="admin-coursemap-workbench__rail-head">
                     <div>
                       <span className="section-intro-kicker">{t('dashboard.course_maps_kicker')}</span>
@@ -3713,7 +4302,7 @@ const Dashboard = memo(function Dashboard() {
                           rowCount={courseMapQueueItems.length}
                           rowHeight={160}
                           rowProps={courseMapQueueRowProps}
-                          style={{ height: Math.min(courseMapQueueItems.length * 160, 640), overflowX: 'hidden' }}
+                          style={{ height: courseMapQueueItems.length * 160, overflowX: 'hidden' }}
                         />
                       )}
                     </div>
@@ -3734,7 +4323,7 @@ const Dashboard = memo(function Dashboard() {
                     <div className="history-status">{t('dashboard.course_maps_empty_workspace')}</div>
                   )}
                   {selectedCourseMapId && (
-                    <div className="admin-coursemap-rework__stack">
+                      <div ref={courseMapStageContentRef} className="admin-coursemap-rework__stack">
                       <div className="admin-coursemap-rework__card admin-coursemap-rework__card--head">
                         <div>
                           <span className="section-intro-kicker">{t('dashboard.review_workspace_kicker')}</span>
@@ -3987,8 +4576,10 @@ const Dashboard = memo(function Dashboard() {
                             }
                           `}</style>
                           <div className="admin-jobs-detail__section-head">
-                            <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
-                            <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
+                            <div className="admin-coursemap-scan-timeline__heading">
+                              <span className="section-intro-kicker">{t('dashboard.course_maps_timeline_label')}</span>
+                              <strong>{t('dashboard.course_maps_scan_timeline_title')}</strong>
+                            </div>
                             {courseMapTimelineLoadState === 'loading' && <span>{t('dashboard.course_maps_timeline_loading')}</span>}
                             {courseMapTimelineLoadState === 'ready' && courseMapScanTimeline.length > 0 && (
                               <span>{courseMapScanTimeline.length} {t('dashboard.course_maps_timeline_steps')}</span>
@@ -4078,6 +4669,8 @@ const Dashboard = memo(function Dashboard() {
 
         {activeTab === 'shoes' && (
           <div className="admin-command-route__surface ops-page admin-shoe-rework">
+            {!catalogOnlyShoeOverview && (
+              <>
             <section className="admin-shoe-rework__hero">
               <div className="admin-shoe-rework__hero-copy">
                 <span className="section-intro-kicker">{t('dashboard.shoe_stitch_kicker')}</span>
@@ -4111,7 +4704,6 @@ const Dashboard = memo(function Dashboard() {
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => saveCurrentFilter('shoes')}>{t('dashboard.btn_save_filter')}</button>
                 <button type="button" className="btn-secondary btn-inline-md" onClick={() => downloadExport(`/api/admin/shoes/export?search=${encodeURIComponent(shoeQuery.search)}&queue=${encodeURIComponent(shoeQuery.queue)}`, 'admin-shoes.csv')}>{t('dashboard.btn_export_csv')}</button>
                 <button type="button" className="btn-primary btn-inline-md" onClick={openAdminShoeForm}>{t('dashboard.btn_add_shoe')}</button>
-                <button type="button" className="btn-primary btn-inline-md" onClick={() => setCatalogFormOpen(true)}>{t('dashboard.btn_add_catalog')}</button>
               </div>
             </div>
 
@@ -4288,14 +4880,16 @@ const Dashboard = memo(function Dashboard() {
                 </section>
               </div>
             </div>
+              </>
+            )}
             <div className="admin-shoe-rework__card admin-shoe-rework__card--catalog">
               <div className="history-list-header">
                 <h3>{t('dashboard.catalog_title')}</h3>
                 <p>{t('dashboard.catalog_inventory_count', { count: filteredCatalogItems.length })}</p>
               </div>
               <ActionBar>
-                <input className="admin-shoe-filter" placeholder={t('dashboard.search_shoes')} value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} />
-                <select className="admin-shoe-filter" value={catalogTypeFilter} onChange={e => setCatalogTypeFilter(e.target.value)}>
+                <input className="admin-shoe-filter" placeholder={t('dashboard.search_shoes')} aria-label={t('dashboard.search_shoes')} value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)} />
+                <select className="admin-shoe-filter" aria-label={t('dashboard.filter_all_shoes')} value={catalogTypeFilter} onChange={e => setCatalogTypeFilter(e.target.value)}>
                   <option value="">{t('dashboard.filter_all_shoes')}</option>
                   <option value="daily">{t('dashboard.type_daily')}</option>
                   <option value="speed">{t('dashboard.type_speed')}</option>
@@ -4303,22 +4897,231 @@ const Dashboard = memo(function Dashboard() {
                   <option value="trail">{t('dashboard.type_trail')}</option>
                   <option value="stability">{t('dashboard.type_stability')}</option>
                 </select>
-                <button type="button" className="btn-secondary btn-inline-md" onClick={() => loadCatalogInventory()}>{t('dashboard.btn_refresh')}</button>
+                <button type="button" className="btn-secondary btn-inline-md" onClick={refreshCatalog} disabled={catalogRefreshing}>
+                  {catalogRefreshing ? t('dashboard.catalog_refreshing') : t('dashboard.btn_refresh')}
+                </button>
               </ActionBar>
-              <div className="admin-shoe-grid">
-                {filteredCatalogItems.length > 0 && (
-                  <List
-                    rowComponent={CatalogRowComponent}
-                    rowCount={filteredCatalogItems.length}
-                    rowHeight={180}
-                    rowProps={catalogRowProps}
-                    style={{ height: Math.min(filteredCatalogItems.length * 180, 540), overflowX: 'hidden' }}
-                  />
+
+              <section className="admin-shoe-catalog-browser" aria-labelledby="admin-shoe-catalog-browser-title">
+                <div className="admin-shoe-catalog-browser__head">
+                  <div>
+                    <span className="admin-shoe-catalog-browser__kicker">{t('dashboard.catalog_browser_kicker')}</span>
+                    <h4 id="admin-shoe-catalog-browser-title">{t('dashboard.catalog_browser_title')}</h4>
+                    <p>{t('dashboard.catalog_browser_copy')}</p>
+                  </div>
+                  <span className="admin-shoe-catalog-browser__count">
+                    {t('dashboard.catalog_browser_brand_count', { count: catalogBrowserBrands.length })}
+                  </span>
+                </div>
+
+                <div className="admin-shoe-catalog-browser__brand-rail" role="list" aria-label={t('dashboard.catalog_browser_brands_label')}>
+                  {catalogBrowserBrands.map((brand) => {
+                    const isActive = catalogBrowserBrandEntry?.brand === brand.brand;
+                    const brandLabel = getAdminCatalogBrandLabel(brand, lang);
+                    const deleteTarget = { kind: 'brand', id: brand.id || null, brand: brand.brand, count: brand.models?.length || 0 };
+                    return (
+                      <CatalogLongPressCard
+                        key={brand.brand}
+                        target={deleteTarget}
+                        deleteMode={catalogBrandDeleteMode}
+                        deleteLabel={t('dashboard.btn_delete_catalog_brand')}
+                        confirmMessage={t('dashboard.confirm_delete_catalog_brand', { brand: brand.brand, count: brand.models?.length || 0 })}
+                        onRequestDelete={requestCatalogDelete}
+                        onError={() => setMessage(t('dashboard.catalog_delete_failed'))}
+                        onDelete={async (target) => {
+                          if (target.id) {
+                            await apiJson(`/api/shoe-catalog/admin/brands/${target.id}`, { method: 'DELETE' });
+                          } else {
+                            setCatalogHiddenBrandKeys((previous) => {
+                              const next = new Set(previous);
+                              next.add(normalizeShoeCatalogName(target.brand));
+                              return next;
+                            });
+                          }
+                          if (catalogBrowserBrand === target.brand) setCatalogBrowserBrand('');
+                          if (target.id) await loadCatalogInventory();
+                          setMessage(t('dashboard.catalog_brand_deleted', target));
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className={`admin-shoe-catalog-browser__brand${isActive ? ' is-active' : ''}`}
+                          onClick={() => setCatalogBrowserBrand(brand.brand)}
+                          aria-pressed={isActive}
+                        >
+                          <span className="admin-shoe-catalog-browser__brand-logo">
+                            <ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} logoUrl={brand.logoUrl} />
+                          </span>
+                          <span className="admin-shoe-catalog-browser__brand-copy">
+                            <strong>{brandLabel}</strong>
+                            <small>{t('dashboard.catalog_browser_series_count', { count: brand.models?.length || 0 })}</small>
+                          </span>
+                        </button>
+                      </CatalogLongPressCard>
+                    );
+                  })}
+                  <div className="admin-shoe-catalog-browser__card-shell" role="listitem">
+                    <button
+                      type="button"
+                      className="admin-shoe-catalog-browser__brand admin-shoe-catalog-browser__brand--add"
+                      onClick={openCatalogBrandForm}
+                      aria-label={`${t('dashboard.catalog_browser_add')} (${t('dashboard.btn_add_catalog')})`}
+                    >
+                      <span className="admin-shoe-catalog-browser__brand-add-icon" aria-hidden="true">+</span>
+                      <span className="admin-shoe-catalog-browser__brand-copy">
+                        <strong>{t('dashboard.catalog_browser_add')}</strong>
+                        <small>{t('dashboard.catalog_browser_brands_label')}</small>
+                      </span>
+                    </button>
+                  </div>
+                  <div className="admin-shoe-catalog-browser__card-shell" role="listitem">
+                    <button
+                      type="button"
+                      className={`admin-shoe-catalog-browser__brand admin-shoe-catalog-browser__brand--delete-mode${catalogBrandDeleteMode ? ' is-active' : ''}`}
+                      onClick={() => setCatalogBrandDeleteMode(value => !value)}
+                      aria-pressed={catalogBrandDeleteMode}
+                      aria-label={t(catalogBrandDeleteMode ? 'dashboard.catalog_browser_brand_delete_mode_active' : 'dashboard.catalog_browser_brand_delete_mode')}
+                    >
+                      <span className="admin-shoe-catalog-browser__brand-delete-icon" aria-hidden="true">−</span>
+                      <span className="admin-shoe-catalog-browser__brand-copy">
+                        <strong>{t(catalogBrandDeleteMode ? 'dashboard.catalog_browser_brand_delete_mode_active' : 'dashboard.catalog_browser_brand_delete_mode')}</strong>
+                        <small>{t('dashboard.catalog_browser_brand_delete_mode_hint')}</small>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {catalogBrowserBrandEntry ? (
+                  <div className="admin-shoe-catalog-browser__series">
+                    <div className="admin-shoe-catalog-browser__series-head">
+                      <div>
+                        <span className="admin-shoe-catalog-browser__kicker">{t('dashboard.catalog_browser_series_kicker')}</span>
+                        <h4>{getAdminCatalogBrandLabel(catalogBrowserBrandEntry, lang)}</h4>
+                        <p>{t('dashboard.catalog_browser_series_copy')}</p>
+                      </div>
+                      <span className="admin-shoe-catalog-browser__count">
+                        {t('dashboard.catalog_browser_visible_count', { count: catalogBrowserModels.length })}
+                      </span>
+                    </div>
+
+                    <div className="admin-shoe-catalog-browser__series-grid">
+                      {catalogBrowserModels.map((model) => {
+                        const modelLabel = getAdminCatalogModelLabel(model, lang) || model.model;
+                        const deleteTarget = { kind: 'model', id: model.id || null, brand: catalogBrowserBrandEntry.brand, model: model.model };
+                        return (
+                          <CatalogLongPressCard
+                            key={`${catalogBrowserBrandEntry.brand}:${model.model}`}
+                            target={deleteTarget}
+                            deleteMode={catalogDeleteMode}
+                            deleteLabel={t('dashboard.btn_delete_catalog_model')}
+                            confirmMessage={t('dashboard.confirm_delete_catalog_model', { brand: catalogBrowserBrandEntry.brand, model: model.model })}
+                            onRequestDelete={requestCatalogDelete}
+                            onError={() => setMessage(t('dashboard.catalog_delete_failed'))}
+                            onDelete={async (target) => {
+                              if (target.id) {
+                                await apiJson(`/api/shoe-catalog/admin/models/${target.id}`, { method: 'DELETE' });
+                                await loadCatalogInventory();
+                              } else {
+                                const identityKey = getShoeCatalogIdentityKey(target.brand, target.model);
+                                setCatalogHiddenSeriesKeys((previous) => {
+                                  const next = new Set(previous);
+                                  next.add(identityKey);
+                                  return next;
+                                });
+                              }
+                              setMessage(t('dashboard.catalog_model_deleted', target));
+                            }}
+                            footerAction={(
+                              <button
+                                type="button"
+                                className="admin-shoe-catalog-browser__specific-action"
+                                data-catalog-card-action="true"
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  openCatalogSeries({ brand: catalogBrowserBrandEntry.brand }, { specific: true });
+                                }}
+                                aria-label={`${modelLabel} ${t('dashboard.catalog_browser_add_specific')}`}
+                              >
+                                {t('dashboard.catalog_browser_add_specific')}
+                              </button>
+                            )}
+                          >
+                            <button
+                              type="button"
+                              className="admin-shoe-catalog-browser__series-card is-published"
+                              aria-label={`${getAdminCatalogBrandLabel(catalogBrowserBrandEntry, lang)} ${modelLabel}`}
+                            >
+                              <span className="admin-shoe-catalog-browser__series-art">
+                                <ShoeBrandLogo brand={catalogBrowserBrandEntry.brand} fallbackEmoji={catalogBrowserBrandEntry.logo} logoUrl={catalogBrowserBrandEntry.logoUrl} />
+                              </span>
+                              <span className="admin-shoe-catalog-browser__series-name">{modelLabel}</span>
+                              <span className="admin-shoe-catalog-browser__series-type">{t(`dashboard.type_${model.type || 'daily'}`)}</span>
+                            </button>
+                          </CatalogLongPressCard>
+                        );
+                      })}
+                      <div className="admin-shoe-catalog-browser__card-shell" role="listitem">
+                        <button
+                          type="button"
+                          className="admin-shoe-catalog-browser__series-card admin-shoe-catalog-browser__series-card--add"
+                          onClick={() => openCatalogSeries({ brand: catalogBrowserBrandEntry.brand })}
+                          aria-label={`${getAdminCatalogBrandLabel(catalogBrowserBrandEntry, lang)} ${t('dashboard.catalog_browser_add')}`}
+                        >
+                          <span className="admin-shoe-catalog-browser__series-add-icon" aria-hidden="true">+</span>
+                          <span className="admin-shoe-catalog-browser__series-name">{t('dashboard.catalog_browser_add')}</span>
+                          <span className="admin-shoe-catalog-browser__series-type">{getAdminCatalogBrandLabel(catalogBrowserBrandEntry, lang)}</span>
+                          <span className="admin-shoe-catalog-browser__series-action">{t('dashboard.catalog_browser_add')}</span>
+                        </button>
+                      </div>
+                      <div className="admin-shoe-catalog-browser__card-shell" role="listitem">
+                        <button
+                          type="button"
+                          className={`admin-shoe-catalog-browser__series-card admin-shoe-catalog-browser__series-card--delete-mode${catalogDeleteMode ? ' is-active' : ''}`}
+                          onClick={() => setCatalogDeleteMode(value => !value)}
+                          aria-pressed={catalogDeleteMode}
+                          aria-label={t(catalogDeleteMode ? 'dashboard.catalog_browser_delete_mode_active' : 'dashboard.catalog_browser_delete_mode')}
+                        >
+                          <span className="admin-shoe-catalog-browser__series-delete-icon" aria-hidden="true">−</span>
+                          <span className="admin-shoe-catalog-browser__series-name">
+                            {t(catalogDeleteMode ? 'dashboard.catalog_browser_delete_mode_active' : 'dashboard.catalog_browser_delete_mode')}
+                          </span>
+                          <span className="admin-shoe-catalog-browser__series-type">{t('dashboard.catalog_browser_delete_mode_hint')}</span>
+                        </button>
+                      </div>
+                      {catalogBrowserModels.length === 0 && (
+                        <div className="admin-shoe-catalog-browser__empty">{t('dashboard.catalog_browser_empty')}</div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="admin-shoe-catalog-browser__empty">{t('dashboard.catalog_browser_empty')}</div>
                 )}
-              </div>
-              {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
+              </section>
+
+              <section className="admin-shoe-catalog-published" aria-labelledby="admin-shoe-catalog-published-title">
+                <div className="admin-shoe-catalog-published__head">
+                  <div>
+                    <span className="admin-shoe-catalog-browser__kicker">{t('dashboard.catalog_published_kicker')}</span>
+                    <h4 id="admin-shoe-catalog-published-title">{t('dashboard.catalog_published_title')}</h4>
+                  </div>
+                  <span className="admin-shoe-catalog-browser__count">{t('dashboard.catalog_inventory_count', { count: filteredCatalogItems.length })}</span>
+                </div>
+                <div className="admin-shoe-grid">
+                  {filteredCatalogItems.length > 0 && (
+                    <List
+                      rowComponent={CatalogRowComponent}
+                      rowCount={filteredCatalogItems.length}
+                      rowHeight={CATALOG_ROW_HEIGHT}
+                      rowProps={catalogRowProps}
+                      style={{ height: Math.min(filteredCatalogItems.length * CATALOG_ROW_HEIGHT, CATALOG_ROW_HEIGHT * 3), overflowX: 'hidden' }}
+                    />
+                  )}
+                </div>
+                {filteredCatalogItems.length === 0 && <div className="history-status">{t('dashboard.catalog_inventory_empty')}</div>}
+              </section>
             </div>
-            {savedFilters.length > 0 && (
+            {!catalogOnlyShoeOverview && savedFilters.length > 0 && (
               <div className="admin-shoe-rework__card admin-shoe-rework__card--saved">
                 <h3 className="section-title-sm">{t('dashboard.saved_filters')}</h3>
                 <div className="saved-filter-list">
@@ -4449,6 +5252,9 @@ const Dashboard = memo(function Dashboard() {
                         {t('dashboard.jobs_filter_clear')}
                       </button>
                     )}
+                    <button type="button" className="btn-secondary btn-inline-md" onClick={() => setClearJobsModalOpen(true)} disabled={clearingJobs}>
+                      {clearingJobs ? t('dashboard.jobs_clear_in_progress') : t('dashboard.jobs_clear')}
+                    </button>
                     <button type="button" className="btn-secondary btn-inline-md" onClick={() => refreshJobsSurface()}>{t('dashboard.btn_refresh')}</button>
                   </div>
                 </div>
@@ -4708,6 +5514,14 @@ const Dashboard = memo(function Dashboard() {
                       onChange={e => setAuditQuery(prev => ({ ...prev, search: e.target.value, page: 0 }))}
                     />
                   </div>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-inline-md admin-audit-terminal__clear"
+                    onClick={() => setAuditClearModalOpen(true)}
+                    disabled={clearingAudit}
+                  >
+                    {t('dashboard.audit_clear_button')}
+                  </button>
                   <button type="button" className="admin-audit-terminal__download" aria-label={t('dashboard.audit_terminal_download')}>
                     <AppIcon name="download" className="material-symbols-outlined" />
                   </button>
@@ -4747,7 +5561,16 @@ const Dashboard = memo(function Dashboard() {
                             <small>{item.actorEmail}</small>
                           </td>
                           <td className="admin-audit-terminal__ops">
-                            <AppIcon name="terminal" className="material-symbols-outlined" />
+                            <button
+                              type="button"
+                              className="admin-audit-terminal__delete"
+                              aria-label={t('dashboard.audit_terminal_delete')}
+                              title={t('dashboard.audit_terminal_delete')}
+                              disabled={deletingAuditId === item.id}
+                              onClick={() => deleteAuditEntry(item)}
+                            >
+                              <AppIcon name="delete" className="material-symbols-outlined" />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -4890,7 +5713,111 @@ const Dashboard = memo(function Dashboard() {
         </div>
       </div>
 
-      <Modal isOpen={Boolean(selectedUser)} onClose={() => setSelectedUser(null)} title={selectedUser ? t('dashboard.modal_runner_notes', { email: selectedUser.email }) : t('dashboard.modal_runner_notes_default')}>
+      <Modal
+        isOpen={clearJobsModalOpen}
+        onClose={() => {
+          if (!clearingJobs) setClearJobsModalOpen(false);
+        }}
+        title={t('dashboard.jobs_clear_modal_title')}
+        icon={<AppIcon name="delete_sweep" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-jobs-clear-modal-card"
+      >
+        <div className="admin-jobs-clear-modal">
+          <p className="modal-help">{t('dashboard.confirm_clear_jobs')}</p>
+          <div className="admin-jobs-clear-modal__warning">
+            <AppIcon name="warning" className="admin-jobs-clear-modal__warning-icon" />
+            <strong>{t('dashboard.jobs_clear_modal_warning')}</strong>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setClearJobsModalOpen(false)} disabled={clearingJobs}>
+              {t('dashboard.btn_cancel')}
+            </button>
+            <button type="button" className="btn-primary modal-button admin-jobs-clear-modal__confirm" onClick={clearTerminalJobs} disabled={clearingJobs}>
+              {clearingJobs ? t('dashboard.jobs_clear_in_progress') : t('dashboard.jobs_clear_modal_confirm')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={auditClearModalOpen}
+        onClose={() => {
+          if (!clearingAudit) setAuditClearModalOpen(false);
+        }}
+        title={t('dashboard.audit_clear_modal_title')}
+        icon={<AppIcon name="delete_sweep" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-audit-clear-modal-card"
+      >
+        <div className="admin-audit-clear-modal">
+          <p className="modal-help">{t('dashboard.audit_clear_modal_copy')}</p>
+          <div className="admin-audit-clear-modal__warning">
+            <AppIcon name="warning" className="admin-audit-clear-modal__warning-icon" />
+            <strong>{t('dashboard.audit_clear_modal_warning')}</strong>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setAuditClearModalOpen(false)} disabled={clearingAudit}>
+              {t('dashboard.audit_clear_modal_cancel')}
+            </button>
+            <button type="button" className="btn-primary modal-button admin-audit-clear-modal__confirm" onClick={clearAuditHistory} disabled={clearingAudit}>
+              {clearingAudit ? t('dashboard.audit_clear_modal_clearing') : t('dashboard.audit_clear_modal_confirm')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(userBulkModal)}
+        onClose={() => {
+          if (!userBulkBusy) setUserBulkModal(null);
+        }}
+        title={t('dashboard.user_bulk_modal_title')}
+        icon={<AppIcon name="groups" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-user-bulk-modal-card"
+      >
+        {userBulkModal && (
+          <div className="admin-user-bulk-modal">
+            <p className="modal-help">
+              {t('dashboard.user_bulk_modal_copy', {
+                action: t(USER_BULK_ACTION_LABEL_KEYS[userBulkModal.action]),
+                count: userBulkModal.affected,
+              })}
+            </p>
+            <div className="admin-user-bulk-modal__target">
+              <span>{t('dashboard.user_bulk_modal_action')}</span>
+              <strong>{t(USER_BULK_ACTION_LABEL_KEYS[userBulkModal.action])}</strong>
+            </div>
+            <div className="admin-user-bulk-modal__warning">
+              <AppIcon name="warning" className="admin-user-bulk-modal__warning-icon" />
+              <strong>{t('dashboard.user_bulk_modal_warning')}</strong>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary modal-button" onClick={() => setUserBulkModal(null)} disabled={userBulkBusy}>
+                {t('dashboard.btn_cancel')}
+              </button>
+              <button type="button" className="btn-primary modal-button admin-user-bulk-modal__confirm" onClick={confirmUserBulk} disabled={userBulkBusy}>
+                {userBulkBusy ? t('dashboard.user_bulk_modal_processing') : t('dashboard.user_bulk_modal_confirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(selectedUser)}
+        onClose={() => setSelectedUser(null)}
+        title={selectedUser ? t('dashboard.modal_runner_notes', { email: selectedUser.email }) : t('dashboard.modal_runner_notes_default')}
+        icon={<AppIcon name="sticky_note_2" className="admin-dashboard-modal-icon" />}
+        adminDashboard
+      >
         {selectedUser && (
           <div>
             <div className="runner-notes-list">
@@ -4910,7 +5837,15 @@ const Dashboard = memo(function Dashboard() {
         )}
       </Modal>
 
-      <Modal isOpen={imgPickerOpen} onClose={() => setImgPickerOpen(false)} title={imgPickerShoe ? `${imgPickerShoe.brand || ''} ${imgPickerShoe.model || ''}` : t('dashboard.shoe_image_title')}>
+      <Modal
+        isOpen={imgPickerOpen}
+        onClose={() => setImgPickerOpen(false)}
+        title={imgPickerShoe ? `${imgPickerShoe.brand || ''} ${imgPickerShoe.model || ''}` : t('dashboard.shoe_image_title')}
+        icon={<AppIcon name="image" className="admin-dashboard-modal-icon" />}
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-dashboard-modal-card--wide"
+        adminDashboard
+      >
         {imgPickerShoe && (
           <div className="img-picker">
             <div className="img-picker-compare">
@@ -4933,7 +5868,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
             <div className="img-picker-url-row">
               <input type="text" className="img-picker-url-input" placeholder={t('dashboard.img_paste_url')} value={imgCustomUrl} onChange={e => setImgCustomUrl(e.target.value)} />
-              <button type="button" className="btn-primary img-picker-url-btn" disabled={!imgCustomUrl.trim() || shoeImageAction.shoeId === imgPickerShoe.id} onClick={() => setShoePendingPhoto(imgCustomUrl.trim())}>{t('dashboard.review_set_pending')}</button>
+              <button type="button" className="btn-primary img-picker-url-btn" disabled={!getSafeImageUrl(imgCustomUrl) || shoeImageAction.shoeId === imgPickerShoe.id} onClick={applyCustomShoeImageUrl}>{t('dashboard.review_set_pending')}</button>
               <label className="btn-secondary img-picker-url-btn admin-upload-trigger">
                 {t('dashboard.review_upload_pending')}
                 <input type="file" accept="image/*" onChange={handleShoePendingFileUpload} />
@@ -4945,7 +5880,65 @@ const Dashboard = memo(function Dashboard() {
             </div>
             <div className="img-picker-grid">
               {imgCandidates.map((url, index) => (
-                <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(url, 'scan')}>
+                (() => {
+                  const safeUrl = getSafeImageUrl(url);
+                  if (!safeUrl) return null;
+                  return (
+                    <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(safeUrl, 'scan')}>
+                      <img src={encodeURI(safeUrl)} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
+                    </button>
+                  );
+                })()
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={catalogImagePickerOpen}
+        onClose={() => setCatalogImagePickerOpen(false)}
+        title={catalogImageTarget ? `${catalogImageTarget.brand} ${catalogImageTarget.model}` : t('dashboard.catalog_image_title')}
+        icon={<AppIcon name="image" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-dashboard-modal-card--wide"
+      >
+        {catalogImageTarget && (
+          <div className="img-picker catalog-image-picker">
+            <p className="modal-help">{t('dashboard.catalog_image_copy')}</p>
+            <div className="catalog-image-picker__identity">
+              <span>{t('dashboard.catalog_image_target_readonly')}</span>
+              <strong>{catalogImageTarget.brand} · {catalogImageTarget.model}</strong>
+            </div>
+            <div className="img-picker-compare">
+              <div className="img-picker-current">
+                <span className="img-picker-label">{t('dashboard.review_panel_pending')}</span>
+                <div className="img-picker-preview">
+                  <ShoeImage src={catalogImageTarget.pendingImageUrl} alt={t('dashboard.review_panel_pending')} className="img-picker-current-img" noImageLabel={t('dashboard.catalog_image_no_pending')} />
+                </div>
+              </div>
+              <div className="img-picker-current">
+                <span className="img-picker-label">{t('dashboard.review_panel_live')}</span>
+                <div className="img-picker-preview">
+                  <ShoeImage src={catalogImageTarget.liveImageUrl} alt={t('dashboard.review_panel_live')} className="img-picker-current-img" noImageLabel={t('dashboard.catalog_image_no_live')} />
+                </div>
+              </div>
+            </div>
+            <div className="img-picker-url-row">
+              <label className="btn-secondary img-picker-url-btn admin-upload-trigger">
+                {t('dashboard.catalog_image_upload')}
+                <input type="file" accept="image/*" onChange={handleCatalogImageUpload} />
+              </label>
+            </div>
+            <div className="img-picker-search-row">
+              <input type="text" className="img-picker-search-input" placeholder={t('dashboard.catalog_image_search_hint')} value={catalogImageQuery} onChange={e => setCatalogImageQuery(e.target.value)} />
+              <button type="button" className="btn-secondary img-picker-search-btn" disabled={catalogImageSearching || catalogImageAction} onClick={() => searchCatalogImages(catalogImageTarget, catalogImageQuery)}>{catalogImageSearching ? '...' : t('dashboard.catalog_image_search')}</button>
+            </div>
+            <div className="img-picker-grid">
+              {catalogImageCandidates.map((url, index) => (
+                <button key={index} type="button" className="img-picker-candidate" disabled={Boolean(catalogImageAction)} onClick={() => setCatalogImagePending(url, 'scan')}>
                   <img src={url} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
                 </button>
               ))}
@@ -4954,38 +5947,195 @@ const Dashboard = memo(function Dashboard() {
         )}
       </Modal>
 
-      <Modal isOpen={catalogFormOpen} onClose={() => setCatalogFormOpen(false)} title={t('dashboard.catalog_title')}>
+      <Modal
+        isOpen={Boolean(catalogDeleteTarget)}
+        onClose={closeCatalogDeleteModal}
+        title={t(catalogDeleteTarget?.kind === 'brand' ? 'dashboard.catalog_brand_delete_modal_title' : 'dashboard.catalog_delete_modal_title')}
+        icon={<AppIcon name="delete" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-catalog-delete-modal-card"
+      >
+        {catalogDeleteTarget && (
+          <div className="admin-catalog-delete-modal">
+            <p className="modal-help">{t(catalogDeleteTarget.kind === 'brand' ? 'dashboard.catalog_brand_delete_modal_copy' : 'dashboard.catalog_delete_modal_copy')}</p>
+            <div className="admin-catalog-delete-modal__target">
+              <span className="admin-catalog-delete-modal__label">{t(catalogDeleteTarget.kind === 'brand' ? 'dashboard.catalog_brand_delete_modal_label' : 'dashboard.catalog_delete_modal_label')}</span>
+              <strong>
+                {catalogDeleteTarget.kind === 'brand'
+                  ? `${catalogDeleteTarget.brand} · ${t('dashboard.catalog_browser_series_count', { count: catalogDeleteTarget.count || 0 })}`
+                  : `${catalogDeleteTarget.brand} · ${catalogDeleteTarget.model}`}
+              </strong>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary modal-button"
+                onClick={closeCatalogDeleteModal}
+                disabled={catalogDeleteBusy}
+              >
+                {t('dashboard.catalog_delete_modal_cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary modal-button admin-catalog-delete-modal__confirm"
+                onClick={confirmCatalogModelDelete}
+                disabled={catalogDeleteBusy}
+              >
+                {catalogDeleteBusy ? t('dashboard.catalog_delete_modal_deleting') : t('dashboard.catalog_delete_modal_confirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(auditDeleteTarget)}
+        onClose={() => {
+          if (deletingAuditId == null) setAuditDeleteTarget(null);
+        }}
+        title={t('dashboard.audit_delete_modal_title')}
+        icon={<AppIcon name="delete" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-dashboard-modal-shell"
+        cardClassName="admin-audit-delete-modal-card"
+      >
+        {auditDeleteTarget && (
+          <div className="admin-audit-delete-modal">
+            <p className="modal-help">{t('dashboard.audit_delete_modal_copy')}</p>
+            <div className="admin-audit-delete-modal__target">
+              <span className="admin-audit-delete-modal__label">{t('dashboard.audit_delete_modal_label')}</span>
+              <strong>{auditDeleteTarget.action || t('dashboard.audit_terminal_delete')}</strong>
+              <span>{auditDeleteTarget.targetType || 'audit'}:{auditDeleteTarget.targetId || '—'}</span>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary modal-button"
+                onClick={() => setAuditDeleteTarget(null)}
+                disabled={deletingAuditId != null}
+              >
+                {t('dashboard.audit_delete_modal_cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary modal-button admin-audit-delete-modal__confirm"
+                onClick={confirmAuditDelete}
+                disabled={deletingAuditId != null}
+              >
+                {deletingAuditId != null ? t('dashboard.audit_delete_modal_deleting') : t('dashboard.audit_delete_modal_confirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={catalogBrandFormOpen}
+        onClose={() => setCatalogBrandFormOpen(false)}
+        title={t('dashboard.catalog_brand_create_title')}
+        icon={<AppIcon name="storefront" className="admin-dashboard-modal-icon" />}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-catalog-modal-shell"
+        cardClassName="admin-catalog-modal-card"
+      >
+        <form onSubmit={createCatalogBrand}>
+          <p className="modal-help">{t('dashboard.catalog_brand_create_help')}</p>
+          <label className="modal-label" htmlFor="catalog-brand-name">{t('dashboard.catalog_brand_name')}</label>
+          <input
+            id="catalog-brand-name"
+            type="text"
+            value={catalogBrandName}
+            onChange={event => setCatalogBrandName(event.target.value)}
+            placeholder={t('dashboard.catalog_brand_name_placeholder')}
+            required
+            autoFocus
+          />
+          <label className="modal-label" htmlFor="catalog-brand-name-zh">{t('dashboard.catalog_brand_name_zh')}</label>
+          <input
+            id="catalog-brand-name-zh"
+            type="text"
+            value={catalogBrandZh}
+            onChange={event => setCatalogBrandZh(event.target.value)}
+            placeholder={t('dashboard.catalog_brand_name_zh_placeholder')}
+          />
+          <label className="modal-label" htmlFor="catalog-brand-logo">{t('dashboard.catalog_brand_logo')}</label>
+          <input
+            id="catalog-brand-logo"
+            type="text"
+            value={catalogBrandLogoUrl}
+            onChange={event => setCatalogBrandLogoUrl(event.target.value)}
+            placeholder={t('dashboard.catalog_brand_logo_placeholder')}
+            required
+          />
+          <div className="admin-catalog-brand-logo-tools">
+            <label className="btn-secondary admin-upload-trigger">
+              {catalogBrandLogoUploading ? t('dashboard.catalog_brand_logo_uploading') : t('dashboard.catalog_brand_logo_upload')}
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCatalogBrandLogoUpload} disabled={catalogBrandLogoUploading} />
+            </label>
+            {getSafeImageUrl(catalogBrandLogoUrl) && (
+              <img className="admin-catalog-brand-logo-preview" src={encodeURI(getSafeImageUrl(catalogBrandLogoUrl))} alt={t('dashboard.catalog_brand_logo_preview')} />
+            )}
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogBrandFormOpen(false)} disabled={catalogBrandSaving || catalogBrandLogoUploading}>{t('dashboard.btn_cancel')}</button>
+            <button type="submit" className="btn-primary modal-button" disabled={catalogBrandSaving || catalogBrandLogoUploading}>{catalogBrandSaving ? '...' : t('dashboard.catalog_brand_create')}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={catalogFormOpen}
+        onClose={() => setCatalogFormOpen(false)}
+        title={t('dashboard.catalog_title')}
+        portalToBody
+        adminDashboard
+        shellClassName="admin-catalog-modal-shell"
+        cardClassName="admin-catalog-modal-card"
+      >
         <form onSubmit={addToCatalog}>
-          <p className="modal-help">{t('dashboard.catalog_help')}</p>
+          <p className="modal-help">
+            {t(catalogSpecificMode ? 'dashboard.catalog_specific_shoe_help' : 'dashboard.catalog_brand_only_help')}
+          </p>
           <label className="modal-label">{t('dashboard.catalog_brand')}</label>
-          <input type="text" value={catalogBrand} onChange={e => setCatalogBrand(e.target.value)} placeholder="Nike, ASICS, Li-Ning..." required />
-
-          <label className="modal-label">{t('dashboard.catalog_model')}</label>
-          <input type="text" value={catalogModel} onChange={e => setCatalogModel(e.target.value)} placeholder="Pegasus 41, Gel-Nimbus 26..." required />
-
-          <label className="modal-label">{t('dashboard.catalog_model_zh')}</label>
-          <input type="text" value={catalogModelZh} onChange={e => setCatalogModelZh(e.target.value)} placeholder="飞马 41、赤兔..." />
-
-          <label className="modal-label">{t('dashboard.catalog_model_en')}</label>
-          <input type="text" value={catalogModelEn} onChange={e => setCatalogModelEn(e.target.value)} placeholder="Pegasus 41, Chitu..." />
-
+          <input type="text" value={catalogBrand} onChange={event => setCatalogBrand(event.target.value)} placeholder="Nike, ASICS, Li-Ning..." required />
+          {catalogSpecificMode && (
+            <>
+              <label className="modal-label">{t('dashboard.catalog_specific_shoe')}</label>
+              <input
+                type="text"
+                value={catalogModel}
+                onChange={event => setCatalogModel(event.target.value)}
+                placeholder={t('dashboard.catalog_specific_shoe_placeholder')}
+                required
+              />
+            </>
+          )}
           <label className="modal-label">{t('dashboard.catalog_type')}</label>
-          <select value={catalogType} onChange={e => setCatalogType(e.target.value)}>
+          <select value={catalogType} onChange={event => setCatalogType(event.target.value)}>
             <option value="daily">{t('dashboard.type_daily')}</option>
             <option value="speed">{t('dashboard.type_speed')}</option>
             <option value="race">{t('dashboard.type_race')}</option>
             <option value="trail">{t('dashboard.type_trail')}</option>
             <option value="stability">{t('dashboard.type_stability')}</option>
           </select>
-
           <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogFormOpen(false)}>{t('dashboard.btn_cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_add_to_catalog')}</button>
+            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogFormOpen(false)} disabled={catalogSaving}>{t('dashboard.btn_cancel')}</button>
+            <button type="submit" className="btn-primary modal-button" disabled={catalogSaving}>{catalogSaving ? '...' : t('dashboard.btn_add_to_catalog')}</button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={adminShoeFormOpen} onClose={closeAdminShoeForm} title={t('dashboard.admin_shoe_modal_title')}>
+      <Modal
+        isOpen={adminShoeFormOpen}
+        onClose={closeAdminShoeForm}
+        title={t('dashboard.admin_shoe_modal_title')}
+        icon={<AppIcon name="directions_run" className="admin-dashboard-modal-icon" />}
+        adminDashboard
+      >
         <form onSubmit={createAdminShoe}>
           <p className="modal-help">{t('dashboard.admin_shoe_help')}</p>
 
@@ -5078,39 +6228,6 @@ const Dashboard = memo(function Dashboard() {
         </form>
       </Modal>
 
-      <Modal isOpen={catalogEditOpen} onClose={() => setCatalogEditOpen(false)} title={t('dashboard.catalog_edit_title')}>
-        <form onSubmit={updateCatalogItem}>
-          <p className="modal-help">
-            {catalogEditingItem ? t('dashboard.catalog_edit_help', { brand: catalogEditingItem.brand }) : ''}
-          </p>
-
-          <label className="modal-label">{t('dashboard.catalog_brand')}</label>
-          <input type="text" value={catalogEditingItem?.brand || ''} disabled />
-
-          <label className="modal-label">{t('dashboard.catalog_model')}</label>
-          <input type="text" value={catalogEditModel} onChange={e => setCatalogEditModel(e.target.value)} required />
-
-          <label className="modal-label">{t('dashboard.catalog_model_zh')}</label>
-          <input type="text" value={catalogEditModelZh} onChange={e => setCatalogEditModelZh(e.target.value)} />
-
-          <label className="modal-label">{t('dashboard.catalog_model_en')}</label>
-          <input type="text" value={catalogEditModelEn} onChange={e => setCatalogEditModelEn(e.target.value)} />
-
-          <label className="modal-label">{t('dashboard.catalog_type')}</label>
-          <select value={catalogEditType} onChange={e => setCatalogEditType(e.target.value)}>
-            <option value="daily">{t('dashboard.type_daily')}</option>
-            <option value="speed">{t('dashboard.type_speed')}</option>
-            <option value="race">{t('dashboard.type_race')}</option>
-            <option value="trail">{t('dashboard.type_trail')}</option>
-            <option value="stability">{t('dashboard.type_stability')}</option>
-          </select>
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setCatalogEditOpen(false)}>{t('dashboard.btn_cancel')}</button>
-            <button type="submit" className="btn-primary modal-button">{t('dashboard.btn_save_catalog')}</button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 });

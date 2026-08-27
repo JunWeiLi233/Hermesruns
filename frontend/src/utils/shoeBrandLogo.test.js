@@ -70,6 +70,28 @@ assert.deepEqual(
   'Alias normalization should preserve fallback badge behavior for Under Armour.',
 );
 
+assert.deepEqual(
+  getShoeBrandFallbackSpec('音速猫'),
+  {
+    bg: '#111827',
+    fg: '#ffffff',
+    text: '音速猫',
+    fontSize: 12,
+  },
+  'Newly researched Chinese brands should resolve to a brand-specific mark when no local image asset is verified.',
+);
+
+for (const researchedBrand of [
+  '海尔斯', '辛逸', '弹射者', '威量', '音速猫', '星火力', '领跑梦想',
+  '燃动力', '天赐之翼', '双星', '双星八特', 'ONEMIX', 'FREETIE',
+  '派燃烧', '强风跑霸', '申亚', '轻跑者', '喜得龙', 'R2 REALRUN',
+]) {
+  assert.ok(
+    getShoeBrandFallbackSpec(researchedBrand),
+    `${researchedBrand} should have a deterministic brand mark when no bundled image asset is available.`,
+  );
+}
+
 assert.equal(
   getShoeBrandFallbackSpec('Mystery Brand'),
   null,

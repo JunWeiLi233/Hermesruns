@@ -20,10 +20,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { HERMES_REPOSITORY_URL } from "./hermes-repository.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
-const EXPECTED_REMOTE_URL = "https://github.com/520HXC/run.git";
+const EXPECTED_REMOTE_URL = HERMES_REPOSITORY_URL;
 
 function parseArgs(argv) {
   const args = {

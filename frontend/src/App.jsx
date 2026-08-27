@@ -7,41 +7,58 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
+import { routeParamPreloaders, routePreloaders } from './utils/routePreload';
 
-const Landing = React.lazy(() => import('./pages/Landing'));
-const Login = React.lazy(() => import('./pages/Login'));
-const Signup = React.lazy(() => import('./pages/Signup'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const AdminLogin = React.lazy(() => import('./pages/AdminLogin'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Profile = React.lazy(() => import('./pages/Profile'));
-const Runs = React.lazy(() => import('./pages/Runs'));
-const RunDetail = React.lazy(() => import('./pages/RunDetail'));
-const Analysis = React.lazy(() => import('./pages/Analysis'));
-const Heatmap = React.lazy(() => import('./pages/Heatmap'));
-const WeatherEngine = React.lazy(() => import('./pages/WeatherEngine'));
-const AnalysisInsightDetail = React.lazy(() => import('./pages/AnalysisInsightDetail'));
-const AddShoes = React.lazy(() => import('./pages/AddShoes'));
-const Shoes = React.lazy(() => import('./pages/Shoes'));
-const ShoeCatalog = React.lazy(() => import('./pages/ShoeCatalog'));
-const Races = React.lazy(() => import('./pages/Races'));
-const RacesDetail = React.lazy(() => import('./pages/RacesDetail'));
-const Schedule = React.lazy(() => import('./pages/Schedule'));
-const TodayRun = React.lazy(() => import('./pages/TodayRun'));
-const PredictionDetail = React.lazy(() => import('./pages/PredictionDetail'));
-const MuscleTraining = React.lazy(() => import('./pages/MuscleTraining'));
-const Rewards = React.lazy(() => import('./pages/Rewards'));
-const Settings = React.lazy(() => import('./pages/Settings'));
+// Route chunks are loaded through the shared routePreloaders map so
+// hover/focus prefetching (utils/routePreload.js) triggers the exact same
+// import functions React.lazy uses here.
+const Landing = React.lazy(routePreloaders['/']);
+const Login = React.lazy(routePreloaders['/login']);
+const Signup = React.lazy(routePreloaders['/signup']);
+const ForgotPassword = React.lazy(routePreloaders['/forgot-password']);
+const Dashboard = React.lazy(routePreloaders['/dashboard']);
+const Profile = React.lazy(routePreloaders['/profile']);
+const Runs = React.lazy(routePreloaders['/runs']);
+const RunDetail = React.lazy(routeParamPreloaders['/runs/:id']);
+const Analysis = React.lazy(routePreloaders['/analysis']);
+const Heatmap = React.lazy(routePreloaders['/heatmap']);
+const WeatherEngine = React.lazy(routePreloaders['/weather']);
+const AnalysisInsightDetail = React.lazy(routeParamPreloaders['/analysis/:insightKey']);
+const AddShoes = React.lazy(routePreloaders['/shoes/add']);
+const Shoes = React.lazy(routePreloaders['/shoes']);
+const ShoeCatalog = React.lazy(routePreloaders['/shoe-catalog']);
+const Races = React.lazy(routePreloaders['/races']);
+const RacesDetail = React.lazy(routeParamPreloaders['/races/details/:raceId']);
+const Schedule = React.lazy(routePreloaders['/schedule']);
+const TodayRun = React.lazy(routePreloaders['/today-run']);
+const PredictionDetail = React.lazy(routeParamPreloaders['/prediction/:distKey']);
+const MuscleTraining = React.lazy(routePreloaders['/muscle-training']);
+const Rewards = React.lazy(routePreloaders['/rewards']);
+const Settings = React.lazy(routePreloaders['/settings']);
 const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettings'));
 const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
-const LegalPage = React.lazy(() => import('./pages/LegalPage'));
+const LegalPage = React.lazy(routePreloaders['/terms']);
 
 const SKELETON_PREVIEW_VARIANTS = new Set([
   'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
   'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data',
   'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule',
-  'muscle-training', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'admin-login', 'legal',
+  'muscle-training', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'legal',
 ]);
+
+const ADMIN_SKELETON_ROUTE_TABS = {
+  '/dashboard': 'overview',
+  '/dashboard/users': 'users',
+  '/dashboard/course-maps': 'courseMaps',
+  '/dashboard/shoes': 'shoes',
+  '/dashboard/jobs': 'jobs',
+  '/dashboard/audit': 'audit',
+  '/dashboard/settings': 'settings',
+};
+
+function getAdminSkeletonTab(pathname) {
+  return ADMIN_SKELETON_ROUTE_TABS[String(pathname || '').replace(/\/+$/, '')] || 'overview';
+}
 
 function getSkeletonPreviewVariant() {
   if (typeof window === 'undefined') return null;
@@ -80,7 +97,7 @@ function RouteLoading() {
   else if (pathname === '/login') variant = 'auth';
   else if (pathname === '/signup') variant = 'signup';
   else if (pathname === '/forgot-password') variant = 'forgot-password';
-  else if (pathname === '/admin') variant = 'admin-login';
+  else if (pathname === '/admin') variant = 'admin';
   else if (pathname === '/terms' || pathname === '/privacy') variant = 'legal';
   else if (pathname.startsWith('/dashboard')) variant = 'admin';
   else if (pathname === '/workflows') variant = 'admin';
@@ -89,6 +106,10 @@ function RouteLoading() {
   else if (pathname.startsWith('/runs/')) variant = 'run-detail';
   else if (pathname === '/analysis') variant = 'analysis';
   else if (pathname === '/analysis/vo2max') variant = 'analysis';
+  else if (pathname === '/analysis/load-balance') variant = 'analysis-load';
+  else if (pathname === '/analysis/intensity') variant = 'analysis-intensity';
+  else if (pathname === '/analysis/injury-risk') variant = 'analysis-injury';
+  else if (pathname === '/analysis/coach-insight') variant = 'analysis-coach';
   else if (pathname.startsWith('/analysis/')) variant = 'analysis-insight';
   else if (pathname.startsWith('/prediction/')) variant = 'prediction';
   else if (pathname === '/heatmap') variant = 'heatmap';
@@ -106,13 +127,14 @@ function RouteLoading() {
   else if (pathname === '/schedule') variant = 'schedule';
   else if (pathname === '/muscle-training') variant = 'muscle-training';
 
-  return <PageSkeleton variant={variant} />;
+  const activeTab = variant === 'admin' ? getAdminSkeletonTab(pathname) : 'overview';
+  return <PageSkeleton variant={variant} activeTab={activeTab} />;
 }
 
 function AdminOnlyRoute({ children }) {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
 
-  if (!isAuthenticated) return <Navigate to="/admin" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!authHydrated) return <RouteLoading />;
   if (!isAdmin) return <Navigate to="/profile" replace />;
   return children;
@@ -130,7 +152,10 @@ function UserOnlyRoute({ children }) {
 function App() {
   const skeletonPreviewVariant = getSkeletonPreviewVariant();
   if (skeletonPreviewVariant) {
-    return <PageSkeleton variant={skeletonPreviewVariant} />;
+    const activeTab = skeletonPreviewVariant === 'admin' && typeof window !== 'undefined'
+      ? getAdminSkeletonTab(window.location.pathname)
+      : 'overview';
+    return <PageSkeleton variant={skeletonPreviewVariant} activeTab={activeTab} />;
   }
 
   return (
@@ -148,7 +173,7 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/terms" element={<LegalPage variant="terms" />} />
                   <Route path="/privacy" element={<LegalPage variant="privacy" />} />
-                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
                   <Route path="/workflows" element={<Navigate to="/dashboard/workflows" replace />} />
                   <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />

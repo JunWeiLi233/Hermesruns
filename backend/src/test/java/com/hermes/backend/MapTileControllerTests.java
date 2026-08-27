@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class MapTileControllerTests {
@@ -180,5 +181,77 @@ class MapTileControllerTests {
                 && "http://localhost:8080".equals(entity.getHeaders().getFirst(HttpHeaders.ORIGIN))),
                 eq(byte[].class)
         );
+    }
+
+    @Test
+    void cartoTileAppendsServerSideApiKeyToUpstreamUrlOnly() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tile = new byte[] { 11, 22, 33 };
+        when(restTemplate.exchange(
+                eq("https://basemaps.cartocdn.com/rastertiles/dark_all/10/20/30.png?key=test-carto-key"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
+
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080", "test-carto-key");
+
+        ResponseEntity<byte[]> response = controller.cartoTile("dark_all", 10, 20, 30, "");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).containsExactly(tile);
+        // Repeat requests must be served from the proxy cache without a second
+        // upstream hit — important for the 5M tiles/month free-tier quota.
+        ResponseEntity<byte[]> cached = controller.cartoTile("dark_all", 10, 20, 30, "");
+        assertThat(cached.getBody()).containsExactly(tile);
+        verify(restTemplate, times(1)).exchange(
+                eq("https://basemaps.cartocdn.com/rastertiles/dark_all/10/20/30.png?key=test-carto-key"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        );
+    }
+
+    @Test
+    void cartoTileSupportsRetinaSuffix() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tile = new byte[] { 44 };
+        when(restTemplate.exchange(
+                eq("https://basemaps.cartocdn.com/rastertiles/voyager/10/20/30@2x.png?key=test-carto-key"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
+
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080", "test-carto-key");
+
+        ResponseEntity<byte[]> response = controller.cartoTile("voyager", 10, 20, 30, "@2x");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).containsExactly(tile);
+    }
+
+    @Test
+    void cartoTileReturnsNoContentWhenApiKeyIsBlank() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080");
+
+        ResponseEntity<byte[]> response = controller.cartoTile("dark_all", 10, 20, 30, "");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getBody()).isNull();
+        verifyNoInteractions(restTemplate);
+    }
+
+    @Test
+    void cartoTileReturnsNoContentForStyleOutsideWhitelist() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080", "test-carto-key");
+
+        ResponseEntity<byte[]> response = controller.cartoTile("../../evil", 10, 20, 30, "");
+
+        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getBody()).isNull();
+        verifyNoInteractions(restTemplate);
     }
 }

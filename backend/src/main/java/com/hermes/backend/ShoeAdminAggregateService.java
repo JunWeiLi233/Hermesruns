@@ -42,6 +42,10 @@ public class ShoeAdminAggregateService {
         return shoeImageAssetService.clearPendingForShoe(shoe);
     }
 
+    public void applyLiveAssetToShoe(Shoe shoe) {
+        shoeImageAssetService.applyLiveAssetToShoe(shoe);
+    }
+
     public Map<String, ShoeImageAsset> loadAssetsForShoes(List<Shoe> shoes) {
         return shoeImageAssetService.loadAssetsForShoes(shoes);
     }

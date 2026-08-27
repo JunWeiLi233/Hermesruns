@@ -1,6 +1,6 @@
 ---
 agent: 'agent'
-description: 'Guarded publish workflow: refresh README diagrams, scan for personal/API leaks, push the current branch, and open a PR into main on 520HXC/run'
+description: 'Guarded publish workflow: refresh README diagrams, scan for personal/API leaks, push the current branch, and open a PR into main on JunWeiLi233/Hermesruns'
 ---
 
 Use the Hermes `/auto-hermes-push-main` workflow for this repository.
@@ -26,7 +26,7 @@ If the dry-run plan is correct and the user explicitly wants publication, execut
 Rules:
 
 - This is the **only supported** way to submit a PR into the Hermes main repo. Do not push directly, do not `gh pr create` manually, do not cherry-pick, rebase, merge, reset, or rewrite history as part of this workflow.
-- Publish only to `origin = https://github.com/520HXC/run.git`. Do not push to any other remote.
+- Publish only to `origin = https://github.com/JunWeiLi233/Hermesruns.git`. Do not push to any other remote.
 - Create a pull request into `main`; never push directly to `main`.
 - Push only the current source branch to `origin` before opening the PR.
 - Always refresh README architecture docs with `/auto-hermes`, SaaS, and AI agents diagrams.
