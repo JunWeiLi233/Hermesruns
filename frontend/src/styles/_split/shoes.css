@@ -679,7 +679,11 @@
 .shoe-scan-modal-primary:disabled,
 .shoe-scan-modal-secondary:disabled {
   opacity: 0.58;
-  cursor: default;
+  cursor: not-allowed;
+}
+
+.shoe-scan-modal-primary:disabled {
+  filter: grayscale(0.55);
 }
 
 .shoe-scan-results-cards {
@@ -5673,12 +5677,15 @@ body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-metrics 
 }
 
 /* Minimal shoe scan preview */
-.shoe-scan-modal-kicker-row {
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-kicker-row {
   gap: 8px;
   min-height: auto;
   padding: 0;
   border-radius: 0;
   background: transparent;
+  background-image: none;
+  border: 0;
+  box-shadow: none;
 }
 
 .modal-card.shoe-scan-modal-card .shoe-scan-modal-kicker-line {
@@ -6018,6 +6025,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-mod
   right: 8px;
   bottom: -15px;
   z-index: 1;
+  pointer-events: none;
   max-width: 190px;
   padding: 3px 8px;
   background: var(--runner-profile-card-strong, #fffdf7);
@@ -6185,7 +6193,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-mod
 
 .shoes-profile-workspace .shoe-inventory-card-metric {
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 7px;
   min-width: 0;
   padding: 14px 0;

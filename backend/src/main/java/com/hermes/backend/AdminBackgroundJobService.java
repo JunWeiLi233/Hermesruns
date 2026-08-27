@@ -40,6 +40,8 @@ public class AdminBackgroundJobService {
             "Course-map scan stopped before recording a terminal status. Re-analyze the pending upload to queue a fresh scan.";
     private static final String WAITING_COURSE_MAP_SUMMARY =
             "Course-map scan stopped while waiting for the FIFO lane. Re-analyze the pending upload to queue a fresh scan.";
+    private static final String ORPHANED_BACKGROUND_JOB_SUMMARY =
+            "Previous background job was interrupted by a Hermes restart. Run it again if the work is still needed.";
     private static final ReentrantLock COURSE_MAP_SCAN_LOCK = new ReentrantLock(true);
     private static final Set<Long> COURSE_MAP_OWNED_JOB_IDS = ConcurrentHashMap.newKeySet();
     private static final Set<Long> COURSE_MAP_ACTIVE_JOB_IDS = ConcurrentHashMap.newKeySet();
@@ -54,6 +56,26 @@ public class AdminBackgroundJobService {
     }
 
     @PostConstruct
+    void recoverOrphanedBackgroundJobsAtStartup() {
+        recoverOrphanedBackgroundJobs();
+        recoverOrphanedCourseMapScanJobs();
+    }
+
+    void recoverOrphanedBackgroundJobs() {
+        List<AdminBackgroundJob> orphanedJobs = adminBackgroundJobRepository.findByStatusIn(List.of(
+                AdminBackgroundJob.STATUS_RUNNING,
+                AdminBackgroundJob.STATUS_PENDING));
+        if (orphanedJobs == null || orphanedJobs.isEmpty()) {
+            return;
+        }
+        for (AdminBackgroundJob job : orphanedJobs) {
+            if (COURSE_MAP_SCAN_JOB_TYPES.contains(job.getJobType())) {
+                continue;
+            }
+            failActiveJobIfStillActive(job, job.getTotalCount(), ORPHANED_BACKGROUND_JOB_SUMMARY);
+        }
+    }
+
     void recoverOrphanedCourseMapScanJobs() {
         failCourseMapJobsByStatus(AdminBackgroundJob.STATUS_RUNNING, ORPHANED_COURSE_MAP_SUMMARY);
         failCourseMapJobsByStatus(AdminBackgroundJob.STATUS_PENDING, ORPHANED_PENDING_COURSE_MAP_SUMMARY);
@@ -278,6 +300,10 @@ public class AdminBackgroundJobService {
     }
 
     private void failCourseMapScanIfStillActive(AdminBackgroundJob job, int totalCount, String summary) {
+        failActiveJobIfStillActive(job, totalCount, summary);
+    }
+
+    private void failActiveJobIfStillActive(AdminBackgroundJob job, int totalCount, String summary) {
         if (isTerminalStatus(job.getStatus())) {
             return;
         }

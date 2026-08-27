@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
+import { cachedApiJson, invalidateResourceCache } from '../api/resourceCache';
 import Modal from '../components/Modal';
 import ImportDataGuide from '../components/ImportDataGuide';
 import AppIcon from '../components/AppIcon';
@@ -15,6 +16,7 @@ import TopbarNotifications from '../components/TopbarNotifications';
 import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { formatDuration } from '../utils/format';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
+import { preloadRoute } from '../utils/routePreload';
 import { computeVdotTrend } from '../utils/vdot';
 import { buildAnalysisSnapshot, normalizeAnalysisList } from '../utils/analysisInsights';
 import PageSkeleton from '../components/PageSkeleton';
@@ -127,6 +129,7 @@ export default function Analysis() {
   const [injuryStatusLoading, setInjuryStatusLoading] = useState(false);
   const [injuryStatusError, setInjuryStatusError] = useState(false);
   const [sorenessSubmitting, setSorenessSubmitting] = useState(false);
+  const [sorenessLevelOverride, setSorenessLevelOverride] = useState(null);
   const [sorenessError, setSorenessError] = useState(null);
   const [hoveredVo2BarKey, setHoveredVo2BarKey] = useState(null);
   const vo2BarsContainerRef = useRef(null);
@@ -200,23 +203,23 @@ export default function Analysis() {
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+  // Bumping this counter invalidates results from superseded loads so a
+  // retry never clobbers a newer fetch (same guard style as ProfileDashboard).
+  const analysisLoadGenerationRef = useRef(0);
 
-    let cancelled = false;
+  const loadAnalysisData = useCallback(() => {
+    const loadToken = ++analysisLoadGenerationRef.current;
+    const isCurrentLoad = () => analysisLoadGenerationRef.current === loadToken;
 
     async function loadProfile() {
       setProfileState('loading');
       try {
-        const profileData = await apiJson('/api/profile/me');
-        if (cancelled) return;
+        const profileData = await cachedApiJson('/api/profile/me');
+        if (!isCurrentLoad()) return;
         setProfile(profileData);
         setProfileState('ready');
       } catch {
-        if (!cancelled) setProfileState('error');
+        if (isCurrentLoad()) setProfileState('error');
       }
     }
 
@@ -224,30 +227,37 @@ export default function Analysis() {
       setRunsState('loading');
       try {
         const activitiesData = await apiJson('/api/activities/analysis');
-        if (cancelled) return;
+        if (!isCurrentLoad()) return;
         startTransition(() => {
           setRuns(Array.isArray(activitiesData) ? activitiesData : []);
         });
         setRunsState('ready');
       } catch {
-        if (!cancelled) setRunsState('error');
+        if (isCurrentLoad()) setRunsState('error');
       }
     }
 
     loadProfile();
     loadRuns();
+  }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    loadAnalysisData();
     return () => {
-      cancelled = true;
+      analysisLoadGenerationRef.current += 1;
     };
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, loadAnalysisData]);
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
   const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
   const trainingLoad = snapshot.trainingLoad;
   const loadZone = snapshot.loadZone;
-  const loadZoneTone = loadZone.tone === 'cool' ? 'muted' : loadZone.tone;
   const analysisLoadTheme = loadZone.tone === 'danger' ? 'red' : loadZone.tone === 'warn' ? 'yellow' : 'green';
   const polarized = snapshot.polarized;
   const injury = snapshot.injury;
@@ -282,9 +292,8 @@ export default function Analysis() {
   }, [isAuthenticated]);
 
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
-  const injuryCopy = t('analysis.stitch_injury_copy');
   const latestSorenessLevel = String(
-    injuryStatus?.recentLogs?.[0]?.level ?? injuryStatus?.sorenessLevel ?? ''
+    sorenessLevelOverride ?? injuryStatus?.recentLogs?.[0]?.level ?? injuryStatus?.sorenessLevel ?? ''
   ).toLowerCase();
   const hasSorenessLog = ['low', 'medium', 'high'].includes(latestSorenessLevel);
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
@@ -348,6 +357,7 @@ export default function Analysis() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: displayNameInput }),
       });
+      invalidateResourceCache('/api/profile/me');
       setProfile((current) => ({ ...current, displayName: displayNameInput }));
       setNameModalOpen(false);
     } catch {
@@ -356,7 +366,9 @@ export default function Analysis() {
   }
 
   async function handleSorenessLog(level) {
+    const previousSorenessLevel = latestSorenessLevel;
     setSorenessSubmitting(true);
+    setSorenessLevelOverride(level);
     setSorenessError(null);
     try {
       await apiJson('/api/injury-risk/log', {
@@ -364,15 +376,24 @@ export default function Analysis() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ level }),
       });
-      setInjuryStatusLoading(true);
-      const data = await apiJson('/api/injury-risk/status');
-      setInjuryStatus(data);
-      setInjuryStatusError(false);
+
+      // The write is complete, so keep the selected state visible while the
+      // heavier assessment refresh runs in the background. A slow refresh must
+      // not make a successful check-in look like a dead button.
+      void apiJson('/api/injury-risk/status')
+        .then((data) => {
+          setInjuryStatus(data);
+          setInjuryStatusError(false);
+        })
+        .catch(() => {
+          // The optimistic selection remains authoritative for this mounted
+          // card; the next page load will reconcile with the server status.
+        });
     } catch {
+      setSorenessLevelOverride(previousSorenessLevel || null);
       setSorenessError(t('analysis.stitch_injury_prevention_log_error'));
     } finally {
       setSorenessSubmitting(false);
-      setInjuryStatusLoading(false);
     }
   }
 
@@ -403,7 +424,7 @@ export default function Analysis() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
@@ -414,6 +435,8 @@ export default function Analysis() {
             type="button"
             className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
+            onPointerEnter={() => preloadRoute('/today-run')}
+            onFocus={() => preloadRoute('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -472,7 +495,7 @@ export default function Analysis() {
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
                 <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
                 <div className="analysis-overview-empty-actions">
-                  <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={() => window.location.reload()}>
+                  <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={loadAnalysisData}>
                     {t('profile.retry_strava')}
                   </button>
                 </div>
@@ -603,9 +626,6 @@ export default function Analysis() {
                     <span className="analysis-overview-card-kicker">{t('analysis.stitch_acwr_title')}</span>
                     <Gauge value={trainingLoad?.lastAcwr || 0} color={loadZone.color} />
                     <div className="analysis-overview-gauge-value">{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</div>
-                    <span className={cx('analysis-overview-status-pill', `is-${loadZoneTone}`)}>
-                      {t(loadZone.key === 'optimal' ? 'analysis.stitch_optimal_zone' : `analysis.stitch_acwr_${loadZone.key}`)}
-                    </span>
                     <p>{t('analysis.stitch_acwr_copy')}</p>
                   </button>
 
@@ -972,7 +992,6 @@ export default function Analysis() {
           <div className="import-source-grid">
             <section className={`import-source-card${fitExportFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">01</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
                   <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
@@ -999,7 +1018,6 @@ export default function Analysis() {
             </section>
             <section className={`import-source-card${corosFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">02</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.coros_source_title')}</span>
                   <span className="import-source-hint">{t('profile.coros_source_hint')}</span>
@@ -1026,7 +1044,6 @@ export default function Analysis() {
             </section>
             <section className={`import-source-card${huaweiFiles?.length ? ' is-selected' : ''}`}>
               <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">03</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.huawei_source_title')}</span>
                   <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>

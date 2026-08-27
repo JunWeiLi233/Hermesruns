@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /workflows
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /profile
+Disallow: /runs
+Disallow: /heatmap
+Disallow: /analysis
+Disallow: /prediction
+Disallow: /today-run
+Disallow: /rewards
+Disallow: /settings
+Disallow: /shoes
+Disallow: /shoe-catalog
+Disallow: /races
+Disallow: /schedule
+Disallow: /muscle-training
+Disallow: /weather
+
+Sitemap: https://hermesruns.com/sitemap.xml

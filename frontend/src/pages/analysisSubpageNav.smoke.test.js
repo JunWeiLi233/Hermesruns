@@ -13,6 +13,7 @@ const predictionSource = read('pages/PredictionDetail.jsx');
 const profileSource = read('pages/ProfileDashboard.jsx');
 const indexSource = read('index.css');
 const loadBalanceCss = read('styles/analysis-load-balance-profile-alignment.css');
+const profileVisualAlignmentCss = read('styles/analysis-profile-visual-alignment.css');
 const analysisRoutes = [
   '/analysis',
   '/analysis/load-balance',
@@ -96,6 +97,11 @@ assert.match(insightSource, /onPointerLeave=\{handleLoadPointerLeave\}/);
 assert.match(insightSource, /navigate\('\/today-run'\)/);
 assert.match(insightSource, /navigate\(buildRunDetailPath\(row\.id\)\)/);
 assert.match(indexSource, /analysis-load-balance-profile-alignment\.css/);
+assert.match(
+  profileVisualAlignmentCss,
+  /body #root \.analysis-insight-detail-page\.is-coach-insight \.runner-shell-side-link\.is-active\s*\{[\s\S]*?border-color:\s*transparent\s*!important;[\s\S]*?background:\s*transparent\s*!important;[\s\S]*?box-shadow:\s*none\s*!important;/,
+  'Coach Insight should keep its active rail label text-first without a panel strip.',
+);
 assert.match(loadBalanceCss, /prefers-reduced-motion/);
 assert.match(loadBalanceCss, /theme-midnight/);
 const loadDecisionIndex = loadBalanceCss.indexOf('.analysis-insight-detail-page.is-load-balance .analysis-load-profile-decision {');

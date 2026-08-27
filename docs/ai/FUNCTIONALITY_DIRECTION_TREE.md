@@ -53,7 +53,7 @@ Rules:
 
 Use for login, signup, password reset, email verification, provider login, or admin access.
 
-- Frontend first: `pages/Login.jsx`, `pages/Signup.jsx`, `pages/ForgotPassword.jsx`, `pages/AdminLogin.jsx`, then `contexts/AuthContext.jsx` and `api.ts`.
+- Frontend first: `pages/Login.jsx`, `pages/Signup.jsx`, `pages/ForgotPassword.jsx`, then `utils/webauthn.ts`, `contexts/AuthContext.jsx`, and `api.ts`. Admin primary authentication and passkey/recovery verification share `Login.jsx`; no public admin-login page exists.
 - API seam: `/api/auth/**`.
 - Backend first: `LoginController.java` for password/admin flows; `OAuthController.java` for Google/Strava; then `AuthService.java`, verification/reset services, and `RunnerRepository.java`.
 - Risk gate: preserve role hydration, enumeration resistance, captcha rules, rate limits, and JWT behavior.

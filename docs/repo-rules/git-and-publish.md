@@ -7,7 +7,7 @@ This file owns commit, push, privacy, and pre-publish rules.
 - Prefer a local commit as the normal finish state.
 - Do not push by default.
 - Push only when the user explicitly wants publication or there is a real agreed publish need.
-- The only approved auto-push target is `origin = https://github.com/520HXC/run.git`.
+- The only approved auto-push target is `origin = https://github.com/JunWeiLi233/Hermesruns.git`.
 - **The only supported path to open a PR into `main` is `/auto-hermes-push-main`** (driver: `.tools/auto-hermes-push-main.mjs`). Direct `git push origin main`, manual `gh pr create`, cherry-picks, rebases onto main, force-pushes, and history rewrites are forbidden. The helper enforces every required gate (security scan, lint, compile, Docker, identity) and writes an auditable artifact at `.ai-sync/AUTO_HERMES_PUSH_MAIN.{md,json}`. See the full spec and citation rules in [`.codex/commands/auto-hermes-push-main.md`](../../.codex/commands/auto-hermes-push-main.md).
 
 ## Never Push When

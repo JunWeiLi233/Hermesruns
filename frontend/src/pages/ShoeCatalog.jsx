@@ -8,6 +8,8 @@ import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import shoeCatalog from '../data/shoeCatalog';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { mergeShoeCatalog } from '../utils/addShoeCatalog.js';
+import { preloadRoute } from '../utils/routePreload';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import PageSkeleton from '../components/PageSkeleton';
 
@@ -107,50 +109,7 @@ export default function ShoeCatalog() {
     setIsLoading(true);
     try {
       const data = await apiJson('/api/shoe-catalog');
-      const dynamicBrands = Array.isArray(data?.brands) ? data.brands : [];
-      if (dynamicBrands.length === 0) {
-        setCatalog(shoeCatalog);
-        return;
-      }
-      const byBrand = new Map();
-      for (const entry of shoeCatalog) {
-        byBrand.set((entry.brand || '').toLowerCase(), {
-          brand: entry.brand,
-          logo: entry.logo,
-          models: Array.isArray(entry.models) ? [...entry.models] : [],
-        });
-      }
-      for (const entry of dynamicBrands) {
-        const key = (entry.brand || '').toLowerCase();
-        if (!key) continue;
-        const existing = byBrand.get(key);
-        const nextModels = Array.isArray(entry.models)
-          ? entry.models.map((item) => ({
-              id: item.id,
-              model: item.model,
-              modelZh: item.modelZh || '',
-              modelEn: item.modelEn || '',
-              type: item.type || 'daily',
-              category: item.category || item.type || '',
-            }))
-          : [];
-        if (!existing) {
-          byBrand.set(key, {
-            brand: entry.brand,
-            logo: entry.logo || 'S',
-            models: nextModels,
-          });
-          continue;
-        }
-        const modelNames = new Set(existing.models.map((item) => `${(item.model || '').toLowerCase()}::${item.category || ''}`));
-        for (const item of nextModels) {
-          const modelKey = `${(item.model || '').toLowerCase()}::${item.category || ''}`;
-          if (!item.model || modelNames.has(modelKey)) continue;
-          existing.models.push(item);
-          modelNames.add(modelKey);
-        }
-      }
-      setCatalog(Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN')));
+      setCatalog(mergeShoeCatalog(shoeCatalog, data));
     } catch {
       setCatalog(shoeCatalog);
     } finally {
@@ -163,7 +122,7 @@ export default function ShoeCatalog() {
     { key: 'analysis', icon: 'insights', label: t('profile.dashboard_nav_analysis'), route: '/analysis' },
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
+    { key: 'shoes', icon: 'shoe_outline', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
@@ -275,6 +234,8 @@ export default function ShoeCatalog() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              onPointerEnter={() => preloadRoute(item.route)}
+              onFocus={() => preloadRoute(item.route)}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -283,7 +244,7 @@ export default function ShoeCatalog() {
         </nav>
 
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} onPointerEnter={() => preloadRoute('/today-run')} onFocus={() => preloadRoute('/today-run')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>

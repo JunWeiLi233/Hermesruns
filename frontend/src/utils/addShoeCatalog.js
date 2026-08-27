@@ -2,6 +2,10 @@ function trimModelName(modelName) {
   return (modelName || '').toString().trim();
 }
 
+function normalizeCatalogKey(value) {
+  return trimModelName(value).toLowerCase().replace(/[\s!.,'"-]+/g, '');
+}
+
 function getCanonicalSeriesName(modelName) {
   const trimmed = trimModelName(modelName);
   if (!trimmed) return '';
@@ -31,6 +35,82 @@ function filterBrandToSeriesModels(entry) {
 export function buildSeriesCatalog(catalog) {
   if (!Array.isArray(catalog)) return [];
   return catalog.map((entry) => filterBrandToSeriesModels(entry));
+}
+
+/**
+ * Merge the built-in catalog used by the runner's /shoes/add browser with
+ * persisted admin catalog rows. Persisted rows enrich matching built-in
+ * series with their database id, while new admin rows are appended to the
+ * same brand. Keeping this merge in one place prevents the admin browser and
+ * runner picker from drifting apart.
+ */
+export function mergeShoeCatalog(baseCatalog, dynamicCatalog) {
+  const dynamicBrands = Array.isArray(dynamicCatalog?.brands)
+    ? dynamicCatalog.brands
+    : Array.isArray(dynamicCatalog)
+      ? dynamicCatalog
+      : [];
+  const byBrand = new Map();
+
+  for (const entry of Array.isArray(baseCatalog) ? baseCatalog : []) {
+    const brand = trimModelName(entry?.brand);
+    if (!brand) continue;
+    byBrand.set(normalizeCatalogKey(brand), {
+      ...entry,
+      brand,
+      models: Array.isArray(entry.models) ? entry.models.map((model) => ({ ...model, brand })) : [],
+    });
+  }
+
+  for (const entry of dynamicBrands) {
+    const brand = trimModelName(entry?.brand);
+    if (!brand) continue;
+    const brandKey = normalizeCatalogKey(brand);
+    const existing = byBrand.get(brandKey);
+    const nextModels = Array.isArray(entry.models)
+      ? entry.models
+        .map((item) => ({
+          ...item,
+          brand,
+          model: trimModelName(item?.model),
+          modelZh: item?.modelZh || '',
+          modelEn: item?.modelEn || '',
+          type: item?.type || 'daily',
+          category: item?.category || '',
+        }))
+        .filter((item) => item.model)
+      : [];
+
+    if (!existing) {
+      byBrand.set(brandKey, {
+        ...entry,
+        brand,
+        logo: entry.logo || '👟',
+        logoUrl: entry.logoUrl || '',
+        brandZh: entry.brandZh || '',
+        models: nextModels,
+      });
+      continue;
+    }
+
+    const modelByKey = new Map(existing.models.map((model) => [normalizeCatalogKey(model.model), model]));
+    for (const model of nextModels) {
+      const modelKey = normalizeCatalogKey(model.model);
+      const current = modelByKey.get(modelKey);
+      if (current) {
+        Object.assign(current, model, { brand, category: model.category || current.category || model.type });
+      } else {
+        model.category = model.category || model.type;
+        existing.models.push(model);
+        modelByKey.set(modelKey, model);
+      }
+    }
+    if (!existing.id && entry.id) existing.id = entry.id;
+    if (entry.logoUrl) existing.logoUrl = entry.logoUrl;
+    if (entry.brandZh) existing.brandZh = entry.brandZh;
+  }
+
+  return Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN'));
 }
 
 export const LOCAL_SERIES_CATALOG_STORAGE_KEY = 'hermes.addShoes.seriesCatalog.v1';
@@ -66,4 +146,4 @@ export function writeLocalSeriesCatalog(catalog, storage) {
   return seriesCatalog;
 }
 
-export { getCanonicalSeriesName };
+export { getCanonicalSeriesName, normalizeCatalogKey };

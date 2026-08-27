@@ -63,5 +63,41 @@ export function getShoeBrandFallbackSpec(brand) {
   if (key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: 'WAR' });
   if (key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: 'DS' });
 
+  // These catalog brands do not yet have a verified local image asset. Keep a
+  // brand-specific text mark in the shared resolver so catalog entries never
+  // regress to a raw emoji while avoiding unverified marketplace image reuse.
+  const catalogBrandMark = {
+    伯希和: { bg: '#0f766e', fg: '#ffffff', text: '伯希和' },
+    思凯乐: { bg: '#2563eb', fg: '#ffffff', text: '思凯乐' },
+    uprun: { bg: '#4f46e5', fg: '#ffffff', text: 'UP' },
+    海尔斯: { bg: '#1d4ed8', fg: '#ffffff', text: 'HEALTH' },
+    辛逸: { bg: '#0891b2', fg: '#ffffff', text: '辛逸' },
+    弹射者: { bg: '#ea580c', fg: '#ffffff', text: '弹射者' },
+    威量: { bg: '#7c3aed', fg: '#ffffff', text: '威量' },
+    音速猫: { bg: '#111827', fg: '#ffffff', text: '音速猫' },
+    星火力: { bg: '#dc2626', fg: '#ffffff', text: 'MAX' },
+    领跑梦想: { bg: '#ca8a04', fg: '#ffffff', text: 'LPMX' },
+    燃动力: { bg: '#c2410c', fg: '#ffffff', text: '燃动力' },
+    天赐之翼: { bg: '#0f766e', fg: '#ffffff', text: 'WING' },
+    双星: { bg: '#475569', fg: '#ffffff', text: '双星' },
+    双星八特: { bg: '#334155', fg: '#ffffff', text: '八特' },
+    onemix: { bg: '#059669', fg: '#ffffff', text: 'ONEMIX' },
+    freetie: { bg: '#0284c7', fg: '#ffffff', text: 'FREETIE' },
+    派燃烧: { bg: '#be123c', fg: '#ffffff', text: '派燃烧' },
+    强风跑霸: { bg: '#92400e', fg: '#ffffff', text: 'SUPWIND' },
+    申亚: { bg: '#047857', fg: '#ffffff', text: '申亚' },
+    轻跑者: { bg: '#7e22ce', fg: '#ffffff', text: '轻跑者' },
+    喜得龙: { bg: '#0369a1', fg: '#ffffff', text: 'XDLONG' },
+    r2realrun: { bg: '#111827', fg: '#ffffff', text: 'R2' },
+    rad: { bg: '#334155', fg: '#ffffff', text: 'R.A.D' },
+    nnormal: { bg: '#18181b', fg: '#ffffff', text: 'NN' },
+    vj: { bg: '#0f766e', fg: '#ffffff', text: 'VJ' },
+    kailas: { bg: '#0369a1', fg: '#ffffff', text: 'KAILAS' },
+    mounttocoast: { bg: '#155e75', fg: '#ffffff', text: 'MTC' },
+    thenorthface: { bg: '#b91c1c', fg: '#ffffff', text: 'TNF' },
+    tracksmith: { bg: '#1e293b', fg: '#ffffff', text: 'TS' },
+  }[key];
+  if (catalogBrandMark) return make(catalogBrandMark);
+
   return null;
 }

@@ -3,7 +3,7 @@
 
 ---
 name: auto-hermes-push-main
-description: Guarded publish workflow — runs all gates, pushes the current branch, and opens a PR into main on https://github.com/520HXC/run.
+description: Guarded publish workflow — runs all gates, pushes the current branch, and opens a PR into main on https://github.com/JunWeiLi233/Hermesruns.
 ---
 
 # Auto-Hermes Push Main
@@ -12,15 +12,15 @@ Codex command for the guarded Hermes publish workflow. Creates a **pull request*
 
 ## Purpose
 
-Use `/auto-hermes-push-main` when the current branch is ready for review and merge into `main` at `https://github.com/520HXC/run`.
+Use `/auto-hermes-push-main` when the current branch is ready for review and merge into `main` at `https://github.com/JunWeiLi233/Hermesruns`.
 
 The workflow:
-- Always verifies `origin` is `https://github.com/520HXC/run.git`
+- Always verifies `origin` is `https://github.com/JunWeiLi233/Hermesruns.git`
 - Verifies git identity when `AUTO_HERMES_EXPECTED_USER_NAME` or `AUTO_HERMES_EXPECTED_USER_EMAIL` is configured
 - Always refreshes `README.md` and architecture diagrams before publishing
 - Always scans for secrets, PII, API keys, config leaks, and sensitive endpoint leaks
 - Pushes the current branch to remote
-- Opens a PR from the current branch into `main` via `gh pr create`
+- Opens a PR from the current branch into `main` via `gh pr create --repo JunWeiLi233/Hermesruns`
 - **Never** pushes directly to `main`, **never** cherry-picks, **never** rewrites history
 
 ## Execution

@@ -21,13 +21,13 @@ assert.match(
 );
 assert.match(
   dashboardSource,
-  /buildDailyCountSeries\(items\)/,
-  'Audit chart should bucket events per day.'
+  /buildDailyCountSeries\(items, 'createdAt', 14\)/,
+  'Audit chart should bucket durable trend events per day.'
 );
 assert.match(
   dashboardSource,
-  /fetchMetricTrendItems\('\/api\/admin\/audit'\)/,
-  'Audit chart should page the audit API for dated events.'
+  /fetchMetricTrendItems\('\/api\/admin\/audit\/trend'\)/,
+  'Audit chart should use the durable historical audit trend API.'
 );
 assert.doesNotMatch(
   dashboardSource,

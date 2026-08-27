@@ -92,3 +92,12 @@ if ($killed -eq 0) {
 } else {
   Write-Host "[Hermes] Stopped $killed background process(es)."
 }
+
+# --- 5. Runtime origin marker (cross-tree start guard) ---
+# A stale marker after this stop would block the next cross-tree start
+# (start_hermes.bat guard). This was a clean stop, so clear it.
+$runtimeMarker = Join-Path $env:USERPROFILE '.hermes\runtime.json'
+if (Test-Path $runtimeMarker) {
+  Remove-Item $runtimeMarker -Force -ErrorAction SilentlyContinue
+  Write-Host "[Hermes] Removed runtime origin marker ($runtimeMarker)."
+}

@@ -90,15 +90,16 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page {
   z-index: 30;
 }
 
-/* Course-map queues are catalog-sized, so keep the rail's scroll surface
- * bounded and only mount the rows that can be seen. Interactive Leaflet maps
- * remain reserved for the selected workspace; rail cards use a static route
- * thumbnail to avoid starting dozens of tile requests on page load. */
+/* Course-map queues are catalog-sized. Desktop and narrow layouts use a
+ * bounded native scroll surface, while the surrounding page remains in normal
+ * flow. Interactive Leaflet maps remain reserved for the selected workspace;
+ * rail cards use a static route thumbnail to avoid starting dozens of tile
+ * requests on load. */
 .admin-command-page .admin-coursemap-rail__virtual-list {
   min-height: 0;
-  max-height: 640px;
-  overflow: hidden;
-  overscroll-behavior: contain;
+  max-height: none;
+  overflow: visible;
+  overscroll-behavior: auto;
 }
 
 .admin-command-page .admin-coursemap-rail__virtual-list > div {
@@ -107,7 +108,15 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page {
 
 .admin-command-page .admin-coursemap-rail__row {
   box-sizing: border-box;
+  width: 100%;
   padding-bottom: 16px;
+}
+
+.admin-command-page .admin-coursemap-rail__row > .admin-coursemap-rail__item {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-command-page .admin-coursemap-rail__row:last-child {
@@ -1658,6 +1667,9 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page .admin-comman
 }
 
 .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__item {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 1px solid var(--course-map-line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.54);
@@ -1667,7 +1679,7 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page .admin-comman
 .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__item:hover,
 .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__item.is-active {
   transform: translateY(-1px);
-  border-color: rgba(160, 57, 42, 0.24);
+  border-color: var(--course-map-line);
   background: rgba(255, 251, 242, 0.92);
   box-shadow: var(--admin-profile-shadow-soft);
 }
@@ -1706,6 +1718,18 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page .admin-comman
   border: 1px solid var(--course-map-line);
   background: rgba(255, 255, 255, 0.48);
   box-shadow: none;
+}
+
+/* Keep the verdict and publish CTA together on one distinct light sub-card. */
+body:is(.theme-light, .theme-high-contrast-light) .admin-command-page .admin-command-route--courseMaps .admin-coursemap-publish-canvas__decision-dock {
+  padding: 12px 14px;
+  border: 1px solid var(--course-map-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 247, 248, 0.93));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 12px 24px rgba(44, 47, 48, 0.06);
 }
 
 .admin-command-page .admin-command-route--courseMaps .admin-track-hub-metric-card,
@@ -1848,6 +1872,14 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page .admin-comman
 .admin-command-page .admin-command-route--courseMaps .admin-track-hub-map-panel__badge.is-missing {
   background: rgba(112, 61, 46, 0.08);
   color: var(--course-map-muted);
+}
+
+.admin-command-page .admin-command-route--courseMaps .admin-track-hub-map-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
 }
 
 .admin-command-page .admin-command-route--courseMaps .admin-track-hub-map-panel__frame {
@@ -2318,6 +2350,81 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page .admin-comman
   }
 }
 
+/* Keep the marathon queue independently wheel-scrollable on narrow admin
+ * layouts too. The page keeps its normal flow, while the card grid gets a
+ * bounded native list surface with no visible scrollbar. */
+@media (max-width: 1180px) {
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list {
+    display: block;
+    height: clamp(280px, 58vh, 560px);
+    min-height: 0;
+    max-height: 560px;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list > div {
+    width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list > div::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
+/* Keep the queue card's bottom edge aligned with the final workbench block,
+ * the scan timeline, instead of letting the loaded catalog make the left rail
+ * taller than the selected-race stage. The virtualized List remains the only
+ * scroll owner inside the rail. */
+@media (min-width: 1181px) {
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rework__grid {
+    align-items: stretch;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rework__rail {
+    min-height: 0;
+    align-self: stretch;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-track-hub-sidebar__panel--queue {
+    height: var(--course-map-stage-height, 100%);
+    min-height: 0;
+    box-sizing: border-box;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-track-hub-sidebar__queue-body {
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list {
+    display: block;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    align-self: stretch;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list > div {
+    width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rail__virtual-list > div::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
 @media (max-width: 1320px) {
   .admin-command-page .admin-command-route--shoes .admin-shoe-stitch-feature-card__media {
     align-self: start;
@@ -2506,6 +2613,13 @@ body.theme-light .admin-command-page {
   color: var(--admin-profile-muted);
 }
 
+.admin-command-page .admin-command-route--jobs .admin-jobs-command-deck__spotlight-meta span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .admin-command-page .admin-command-route--jobs .admin-jobs-command-deck__hero-actions {
   justify-items: end;
 }
@@ -2553,6 +2667,11 @@ body.theme-light .admin-command-page {
   border-color: var(--admin-profile-line);
   background: rgba(255, 255, 255, 0.28);
   color: var(--admin-profile-ink);
+}
+
+body.theme-light .admin-command-page .admin-command-route--jobs .admin-jobs-terminal__actions .admin-shoe-filter {
+  background: #eef0f1 !important;
+  box-shadow: none !important;
 }
 
 .admin-command-page .admin-command-route--jobs .admin-jobs-terminal__row:hover,
@@ -2618,6 +2737,24 @@ body.theme-light .admin-command-page {
 
 .admin-command-page .admin-command-route--audit .admin-audit-terminal__row:hover {
   background: rgba(185, 71, 53, 0.07);
+}
+
+.admin-command-page .admin-command-route--audit .admin-audit-terminal__clear {
+  min-height: 42px;
+  margin-top: 0;
+  padding: 0 16px;
+  border: 1px solid var(--admin-profile-line) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.42) !important;
+  color: var(--admin-profile-ink) !important;
+  box-shadow: none !important;
+}
+
+.admin-command-page .admin-command-route--audit .admin-audit-terminal__clear:hover,
+.admin-command-page .admin-command-route--audit .admin-audit-terminal__clear:focus-visible {
+  border-color: rgba(191, 91, 73, 0.34) !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+  color: var(--admin-profile-flame) !important;
 }
 
 .admin-command-page .admin-command-route--audit .admin-audit-terminal__cta-icon {
@@ -2742,5 +2879,1179 @@ body:is(.theme-midnight, .theme-high-contrast) .admin-command-page :is(
   ) {
     padding: 20px;
     border-radius: 22px;
+  }
+}
+
+/* Course-map cards use a clean white paper surface in the light admin theme.
+ * Keep map frames independent so their route imagery is not flattened. */
+body.theme-light .admin-command-page .admin-command-route--courseMaps :is(
+  .admin-coursemap-rework__hero,
+  .admin-coursemap-rework__card,
+  .admin-track-hub-sidebar__panel,
+  .admin-coursemap-rail__item,
+  .admin-track-hub-stage__header,
+  .admin-track-hub-map-stage,
+  .admin-track-hub-map-stage__scan,
+  .admin-track-hub-map-panel,
+  .admin-track-hub-map-panel__meta article,
+  .admin-track-hub-map-stage__footer,
+  .admin-track-hub-metric-card,
+  .admin-track-hub-density-card,
+  .admin-track-hub-review-shell,
+  .admin-coursemap-publish-canvas,
+  .admin-coursemap-evidence-card,
+  .admin-coursemap-action-group,
+  .admin-coursemap-ops-band,
+  .admin-coursemap-scan-timeline,
+  .admin-jobs-detail__timeline-shell,
+  .admin-track-hub-footer-signal-card,
+  .admin-track-hub-footer-output-card,
+  .admin-coursemap-publish-canvas__decision-dock
+) {
+  background: #ffffff;
+}
+
+/* Keep the queue controls readable against the white course-map workspace. */
+body.theme-light .admin-command-page .admin-command-route--courseMaps .admin-track-hub-sidebar__search :is(input, select) {
+  background: #eef0f1 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* The map comparison contains its own map panels and footer card. Remove the
+ * outer shell so those grids no longer read as one connected background card. */
+body:is(.theme-light, .theme-high-contrast-light) .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rework__card--compare {
+  display: grid;
+  gap: 14px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  overflow: visible !important;
+}
+
+/* Keep the decision dock visually separate from the output grids below it. */
+body:is(.theme-light, .theme-high-contrast-light) .admin-command-page .admin-command-route--courseMaps .admin-coursemap-rework__card--decision > .admin-track-hub-footer-output-grid {
+  margin-top: 14px;
+}
+
+/* The shared head-label rule otherwise wins on specificity and leaves the
+ * percentage badge as a block span instead of centering its contents. */
+body:is(.theme-light, .theme-high-contrast-light) .admin-command-page .admin-command-route--courseMaps .admin-track-hub-map-panel__head .admin-track-hub-map-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+}
+
+/* Users command-center cards use a clean white paper surface in light themes;
+ * keep their existing borders, accents, and hierarchy intact. */
+body:is(.theme-light, .theme-high-contrast-light) .admin-command-page .admin-command-route--users :is(
+  .admin-users-command-hero,
+  .admin-users-command-hero__story-card,
+  .admin-users-command-kpi,
+  .admin-users-command-console,
+  .admin-users-command-bulk,
+  .admin-users-roster-board,
+  .admin-users-roster-board__table-wrap.data-table-wrap
+) {
+  background: #ffffff;
+}
+
+/* The catalog form can be taller than a short admin viewport. Keep its dialog
+ * anchored inside the overlay instead of centering the overflowing card past
+ * the bottom edge, and let the form body absorb the excess height. */
+.admin-catalog-modal-shell {
+  align-items: flex-start;
+  padding: 16px clamp(16px, 3vw, 40px);
+}
+
+.admin-catalog-modal-card {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(calc(100vh - 32px), 920px);
+  max-height: min(calc(100dvh - 32px), 920px);
+  overflow: hidden;
+}
+
+.admin-catalog-modal-card .modal-form,
+.admin-dashboard-modal-card--wide .modal-form {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-catalog-modal-card .modal-form::-webkit-scrollbar,
+.admin-dashboard-modal-card--wide .modal-form::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-catalog-brand-logo-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  margin-top: 10px;
+}
+
+.admin-catalog-brand-logo-tools .admin-upload-trigger {
+  flex: 0 0 auto;
+}
+
+.admin-catalog-brand-logo-preview {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  object-fit: contain;
+  padding: 7px;
+  border: 1px solid var(--admin-profile-line);
+  border-radius: 14px;
+  background: var(--admin-profile-card-strong);
+}
+
+@media (max-width: 560px) {
+  .admin-catalog-modal-shell {
+    padding: 10px;
+  }
+
+  .admin-catalog-modal-card {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+}
+
+/* Shared admin confirmation language. Keep every dashboard dialog on the
+ * same calm white sheet as the reference delete confirmation: graphite copy,
+ * coral intent, a quiet scrim, and two deliberate actions. The catalog modal
+ * is portaled to body, so these rules intentionally do not depend on #root. */
+.admin-dashboard-modal-shell {
+  background: rgba(64, 64, 64, 0.56);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.admin-dashboard-modal-card {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(calc(100dvh - 32px), 860px);
+  padding: 28px 30px;
+  border: 0 !important;
+  border-radius: 28px !important;
+  background: #ffffff !important;
+  color: #2c3032 !important;
+  box-shadow: 0 24px 58px rgba(28, 30, 31, 0.2);
+  color-scheme: light;
+}
+
+.admin-dashboard-modal-card--wide {
+  width: min(860px, calc(100vw - 32px));
+}
+
+.admin-dashboard-modal-card .modal-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 32px;
+  grid-template-areas:
+    "icon . close"
+    "title title title";
+  align-items: start;
+  justify-content: initial;
+  gap: 20px 0;
+  padding: 0 0 16px;
+  background: transparent;
+}
+
+.admin-dashboard-modal-card .modal-header-icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fff0ec;
+  color: #f26956;
+}
+
+.admin-dashboard-modal-card .admin-dashboard-modal-icon {
+  width: 24px;
+  height: 24px;
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.admin-dashboard-modal-card .modal-header h3 {
+  grid-area: title;
+  margin: 0;
+  color: #2c3032 !important;
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.8rem, 4vw, 2.25rem);
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+  transform: none;
+}
+
+.admin-dashboard-modal-card .modal-close {
+  grid-area: close;
+  align-self: start;
+  justify-self: end;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  color: #252627 !important;
+  font-size: 1.7rem;
+  font-weight: 400;
+  line-height: 1;
+  box-shadow: none !important;
+  transform: none;
+}
+
+.admin-dashboard-modal-card .modal-close:hover,
+.admin-dashboard-modal-card .modal-close:focus-visible {
+  background: transparent !important;
+  color: #f26956 !important;
+  transform: none;
+}
+
+.admin-dashboard-modal-card .modal-form {
+  padding-right: 0;
+  color: #626769;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.admin-dashboard-modal-card .modal-help {
+  margin: 0 0 18px;
+  color: #626769 !important;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.admin-dashboard-modal-card .modal-label {
+  margin: 14px 0 6px;
+  color: #44494b !important;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.admin-dashboard-modal-card :is(input[type="email"], input[type="number"], input[type="text"], input[type="file"], select, textarea) {
+  min-height: 46px;
+  border: 1px solid #e1e3e3 !important;
+  border-radius: 10px !important;
+  background: #f5f6f6 !important;
+  color: #2c3032 !important;
+  box-shadow: none !important;
+}
+
+.admin-dashboard-modal-card :is(input[type="email"], input[type="number"], input[type="text"], input[type="file"], select, textarea):focus {
+  border-color: #f26956 !important;
+  box-shadow: 0 0 0 3px rgba(242, 105, 86, 0.14) !important;
+  outline: none;
+}
+
+.admin-dashboard-modal-card .modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.admin-dashboard-modal-card .modal-actions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.admin-dashboard-modal-card .modal-actions .modal-button {
+  width: 100%;
+  min-height: 46px;
+  margin: 0;
+  border-radius: 6px !important;
+  clip-path: none !important;
+  font-size: 0.92rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: none !important;
+  transform: none;
+}
+
+.admin-dashboard-modal-card .modal-actions .btn-secondary {
+  border: 1px solid #e1e3e3 !important;
+  background: #ffffff !important;
+  color: #222526 !important;
+}
+
+.admin-dashboard-modal-card .modal-actions .btn-primary {
+  border: 1px solid #f26956 !important;
+  background: #f26956 !important;
+  color: #ffffff !important;
+}
+
+.admin-dashboard-modal-card .modal-actions .modal-button:hover,
+.admin-dashboard-modal-card .modal-actions .modal-button:focus-visible {
+  transform: translateY(-1px);
+}
+
+.admin-dashboard-modal-card .modal-actions .btn-secondary:hover,
+.admin-dashboard-modal-card .modal-actions .btn-secondary:focus-visible {
+  border-color: #cdd1d1 !important;
+  background: #f5f6f6 !important;
+}
+
+.admin-dashboard-modal-card .modal-actions .btn-primary:hover,
+.admin-dashboard-modal-card .modal-actions .btn-primary:focus-visible {
+  border-color: #e75d4b !important;
+  background: #e75d4b !important;
+}
+
+/* The catalog image preview is review-only; keep publish/clear actions out of
+ * the preview surface even if an older JSX bundle still contains the row. */
+.admin-dashboard-modal-card .catalog-image-picker .img-picker-current-actions {
+  display: none !important;
+}
+
+/* Keep catalog image search aligned with the adjacent upload control. This
+ * modal is portaled to body, so the rule is intentionally scoped to the
+ * modal card rather than relying on the dashboard page cascade. */
+.admin-dashboard-modal-card .catalog-image-picker .img-picker-search-btn {
+  min-height: 46px;
+  margin-top: 0;
+  border: 1px solid #e1e3e3 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  color: #222526 !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  font-style: normal;
+  letter-spacing: normal;
+  transform: none;
+}
+
+.admin-dashboard-modal-card .catalog-image-picker .img-picker-search-btn:hover,
+.admin-dashboard-modal-card .catalog-image-picker .img-picker-search-btn:focus-visible {
+  border-color: #cdd1d1 !important;
+  background: #f5f6f6 !important;
+}
+
+.admin-jobs-clear-modal {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-jobs-clear-modal .modal-help {
+  margin: 0;
+  max-width: 52ch;
+}
+
+.admin-jobs-clear-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(242, 105, 86, 0.24);
+  border-radius: 14px;
+  background: #fff4f1;
+  color: #a0392a;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.admin-jobs-clear-modal__warning-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  font-size: 20px;
+}
+
+.admin-dashboard-modal-card .admin-jobs-clear-modal__confirm {
+  border-color: #a0392a !important;
+  background: #a0392a !important;
+}
+
+.admin-dashboard-modal-card .admin-jobs-clear-modal__confirm:hover,
+.admin-dashboard-modal-card .admin-jobs-clear-modal__confirm:focus-visible {
+  border-color: #8f3024 !important;
+  background: #8f3024 !important;
+}
+
+.admin-user-bulk-modal {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-user-bulk-modal .modal-help {
+  margin: 0;
+  max-width: 52ch;
+}
+
+.admin-user-bulk-modal__target {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #e1e3e3;
+  border-radius: 14px;
+  background: #f5f6f6;
+}
+
+.admin-user-bulk-modal__target span {
+  color: #777d7f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-user-bulk-modal__target strong {
+  color: #2c3032;
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.admin-user-bulk-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(242, 105, 86, 0.24);
+  border-radius: 14px;
+  background: #fff4f1;
+  color: #a0392a;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.admin-user-bulk-modal__warning-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  font-size: 20px;
+}
+
+@media (max-width: 560px) {
+  .admin-dashboard-modal-card,
+  .admin-dashboard-modal-card--wide {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+    padding: 24px 20px;
+    border-radius: 24px !important;
+  }
+
+  .admin-dashboard-modal-card .modal-header h3 {
+    font-size: 1.8rem;
+  }
+}
+
+/* The admin catalog mirrors the runner /shoes/add flow: brand rail first,
+ * series cards second, then the persisted catalog rows for maintenance. */
+.admin-command-page .admin-command-route--shoes .admin-shoe-rework__card--catalog > .action-bar > .btn-secondary.btn-inline-md + .btn-primary.btn-inline-md {
+  margin-inline-start: 8px;
+}
+
+.admin-command-page .admin-command-route--shoes .admin-shoe-rework__card--catalog > .admin-shoe-catalog-browser {
+  margin-bottom: 24px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser,
+.admin-command-page .admin-shoe-catalog-published {
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 2vw, 26px);
+  border-radius: 24px;
+  background: var(--admin-profile-card);
+  box-shadow: var(--admin-profile-shadow-soft);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__head,
+.admin-command-page .admin-shoe-catalog-browser__series-head,
+.admin-command-page .admin-shoe-catalog-published__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--admin-profile-flame);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.admin-command-page .admin-shoe-catalog-browser h4,
+.admin-command-page .admin-shoe-catalog-published h4 {
+  margin: 0;
+  color: var(--admin-profile-ink);
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+  letter-spacing: -0.035em;
+}
+
+.admin-command-page .admin-shoe-catalog-browser p {
+  max-width: 48rem;
+  margin: 6px 0 0;
+  color: var(--admin-profile-muted);
+  line-height: 1.55;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__count {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(160, 57, 42, 0.09);
+  color: var(--admin-profile-flame);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+  grid-auto-rows: 58px;
+  gap: 10px;
+  /* Three complete rows are visible; the remaining brands stay wheel-scrollable. */
+  max-height: 198px;
+  padding: 2px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-rail::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand,
+.admin-command-page .admin-shoe-catalog-browser__series-card {
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__card-shell {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__card-shell > .admin-shoe-catalog-browser__brand,
+.admin-command-page .admin-shoe-catalog-browser__card-shell > .admin-shoe-catalog-browser__series-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__delete-action {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--admin-profile-flame);
+  color: #fff8f4;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 850;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.94);
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__card-shell.is-delete-ready .admin-shoe-catalog-browser__delete-action {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__delete-action.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__delete-action:hover:not(:disabled),
+.admin-command-page .admin-shoe-catalog-browser__delete-action:focus-visible {
+  background: var(--admin-profile-ink);
+  outline: none;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__delete-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--admin-profile-line);
+  background: var(--admin-profile-card-strong);
+  color: var(--admin-profile-ink);
+  box-shadow: inset 0 0 0 1px var(--admin-profile-line);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand:hover,
+.admin-command-page .admin-shoe-catalog-browser__brand:focus-visible,
+.admin-command-page .admin-shoe-catalog-browser__series-card:hover,
+.admin-command-page .admin-shoe-catalog-browser__series-card:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
+  box-shadow: var(--admin-profile-shadow-soft);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand:focus-visible,
+.admin-command-page .admin-shoe-catalog-browser__series-card:focus-visible {
+  box-shadow: 0 0 0 3px rgba(160, 57, 42, 0.2), var(--admin-profile-shadow-soft);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand.is-active {
+  background: linear-gradient(135deg, rgba(160, 57, 42, 0.16), rgba(255, 255, 255, 0.32));
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.22), var(--admin-profile-shadow-soft);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--add {
+  border: 1px dashed rgba(160, 57, 42, 0.34);
+  background: rgba(160, 57, 42, 0.035);
+  color: var(--admin-profile-flame);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.08);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--add:hover,
+.admin-command-page .admin-shoe-catalog-browser__brand--add:focus-visible {
+  border-color: rgba(160, 57, 42, 0.62);
+  background: rgba(160, 57, 42, 0.09);
+  box-shadow: 0 14px 28px rgba(83, 48, 37, 0.1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-add-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--admin-profile-flame);
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--delete-mode {
+  border: 1px dashed rgba(160, 57, 42, 0.34);
+  background: rgba(160, 57, 42, 0.035);
+  color: var(--admin-profile-flame);
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.08);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--delete-mode:hover,
+.admin-command-page .admin-shoe-catalog-browser__brand--delete-mode:focus-visible,
+.admin-command-page .admin-shoe-catalog-browser__brand--delete-mode.is-active {
+  border-color: rgba(160, 57, 42, 0.62);
+  background: rgba(160, 57, 42, 0.1);
+  box-shadow: 0 14px 28px rgba(83, 48, 37, 0.1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-delete-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--admin-profile-flame);
+  font-size: 1.55rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--delete-mode .admin-shoe-catalog-browser__brand-copy strong {
+  color: var(--admin-profile-flame);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand--add .admin-shoe-catalog-browser__brand-copy strong {
+  color: var(--admin-profile-flame);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-logo,
+.admin-command-page .admin-shoe-catalog-browser__series-art {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(160, 57, 42, 0.08);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-logo {
+  width: 36px;
+  height: 36px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-logo .shoe-brand-logo-svg,
+.admin-command-page .admin-shoe-catalog-browser__series-art .shoe-brand-logo-svg {
+  width: 26px;
+  height: 26px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-copy strong,
+.admin-command-page .admin-shoe-catalog-browser__brand-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-copy strong {
+  color: var(--admin-profile-ink);
+  font-size: 0.84rem;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__brand-copy small {
+  color: var(--admin-profile-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series {
+  display: grid;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: 12px;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card {
+  display: grid;
+  min-height: 160px;
+  align-content: start;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--admin-profile-card-strong);
+  color: var(--admin-profile-ink);
+  box-shadow: inset 0 0 0 1px var(--admin-profile-line);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card.is-published {
+  position: relative;
+  padding-bottom: 48px;
+  background: linear-gradient(160deg, rgba(122, 168, 130, 0.14), var(--admin-profile-card-strong));
+}
+
+.admin-command-page .admin-shoe-catalog-browser__specific-action {
+  position: absolute;
+  bottom: 12px;
+  left: 14px;
+  z-index: 2;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--admin-profile-flame);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__specific-action:hover,
+.admin-command-page .admin-shoe-catalog-browser__specific-action:focus-visible {
+  color: var(--admin-profile-ink);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card--add {
+  place-items: center;
+  align-content: center;
+  border: 1px dashed rgba(160, 57, 42, 0.34);
+  background: rgba(160, 57, 42, 0.035);
+  color: var(--admin-profile-flame);
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.08);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card--add:hover,
+.admin-command-page .admin-shoe-catalog-browser__series-card--add:focus-visible {
+  border-color: rgba(160, 57, 42, 0.62);
+  background: rgba(160, 57, 42, 0.09);
+  box-shadow: 0 14px 28px rgba(83, 48, 37, 0.1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card--delete-mode {
+  place-items: center;
+  align-content: center;
+  border: 1px dashed rgba(160, 57, 42, 0.34);
+  background: rgba(160, 57, 42, 0.035);
+  color: var(--admin-profile-flame);
+  text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(160, 57, 42, 0.08);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card--delete-mode:hover,
+.admin-command-page .admin-shoe-catalog-browser__series-card--delete-mode:focus-visible,
+.admin-command-page .admin-shoe-catalog-browser__series-card--delete-mode.is-active {
+  border-color: rgba(160, 57, 42, 0.62);
+  background: rgba(160, 57, 42, 0.1);
+  box-shadow: 0 14px 28px rgba(83, 48, 37, 0.1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-add-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--admin-profile-flame);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-delete-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(160, 57, 42, 0.1);
+  color: var(--admin-profile-flame);
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-card--add .admin-shoe-catalog-browser__series-name,
+.admin-command-page .admin-shoe-catalog-browser__series-card--add .admin-shoe-catalog-browser__series-action {
+  color: var(--admin-profile-flame);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-art {
+  width: 52px;
+  height: 52px;
+  margin-bottom: 4px;
+  background: rgba(160, 57, 42, 0.1);
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-name {
+  overflow: hidden;
+  color: var(--admin-profile-ink);
+  font-size: 0.98rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-type {
+  color: var(--admin-profile-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__series-action {
+  align-self: end;
+  margin-top: auto;
+  color: var(--admin-profile-flame);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+}
+
+.admin-command-page .admin-shoe-catalog-browser__empty {
+  grid-column: 1 / -1;
+  padding: 26px 18px;
+  border-radius: 16px;
+  background: rgba(112, 61, 46, 0.05);
+  color: var(--admin-profile-muted);
+  text-align: center;
+}
+
+.admin-command-page .admin-shoe-catalog-published {
+  gap: 14px;
+  padding-top: 20px;
+}
+
+.admin-command-page .admin-shoe-catalog-published .admin-shoe-grid {
+  padding: 0;
+}
+
+.admin-command-page .admin-shoe-card {
+  position: relative;
+}
+
+.admin-command-page .admin-shoe-card-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 0s linear 160ms;
+}
+
+.admin-command-page .admin-shoe-card:hover .admin-shoe-card-actions,
+.admin-command-page .admin-shoe-card:focus-within .admin-shoe-card-actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition-delay: 0s;
+}
+
+.admin-command-page .admin-shoe-card-action {
+  appearance: none;
+  border: 1px solid var(--admin-profile-line);
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: var(--admin-profile-paper, #fff);
+  color: var(--admin-profile-ink);
+  box-shadow: 0 4px 12px rgba(44, 47, 48, 0.12);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-command-page .admin-shoe-card-action:hover,
+.admin-command-page .admin-shoe-card-action:focus-visible {
+  border-color: var(--admin-profile-accent);
+  outline: none;
+}
+
+.admin-command-page .admin-shoe-card-action--danger {
+  border-color: rgba(190, 72, 58, 0.34);
+  color: #a43f32;
+}
+
+.admin-command-page .dashboard-message.dashboard-message--toast {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(28px, 8vh, 72px);
+  z-index: 1200;
+  width: min(720px, calc(100vw - 32px));
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 14px 24px;
+  transform: translateX(-50%);
+  border: 1px solid #b8dfc2;
+  border-radius: 999px;
+  background: #edf8f0;
+  color: #2d7a45;
+  box-shadow: 0 12px 28px rgba(45, 122, 69, 0.16);
+  text-align: center;
+  font-weight: 700;
+}
+
+.admin-catalog-delete-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-catalog-delete-modal .modal-help {
+  margin: 0;
+}
+
+.admin-catalog-delete-modal__target {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid #ece0dc;
+  border-radius: 14px;
+  background: #fff8f5;
+}
+
+.admin-catalog-delete-modal__label {
+  color: #c95140;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-catalog-delete-modal__target strong {
+  color: #2c3032;
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.admin-catalog-delete-modal__confirm {
+  background: #d45a47 !important;
+  border-color: #d45a47 !important;
+}
+
+.admin-catalog-delete-modal__confirm:hover,
+.admin-catalog-delete-modal__confirm:focus-visible {
+  background: #bd4938 !important;
+  border-color: #bd4938 !important;
+}
+
+.admin-audit-delete-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-audit-delete-modal .modal-help {
+  margin: 0;
+}
+
+.admin-audit-delete-modal__target {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid #ece0dc;
+  border-radius: 14px;
+  background: #fff8f5;
+}
+
+.admin-audit-delete-modal__label {
+  color: #c95140;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-audit-delete-modal__target strong {
+  color: #2c3032;
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.admin-audit-delete-modal__target > span:last-child {
+  color: #737a7b;
+  font-size: 0.84rem;
+}
+
+.admin-audit-delete-modal__confirm {
+  background: #d45a47 !important;
+  border-color: #d45a47 !important;
+}
+
+.admin-audit-delete-modal__confirm:hover,
+.admin-audit-delete-modal__confirm:focus-visible {
+  background: #bd4938 !important;
+  border-color: #bd4938 !important;
+}
+
+.admin-audit-clear-modal {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-audit-clear-modal .modal-help {
+  margin: 0;
+}
+
+.admin-audit-clear-modal__warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(242, 105, 86, 0.24);
+  border-radius: 14px;
+  background: #fff4f1;
+  color: #a0392a;
+  font-size: 0.86rem;
+}
+
+.admin-audit-clear-modal__warning-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  font-size: 20px;
+}
+
+.admin-audit-clear-modal__confirm {
+  background: #d45a47 !important;
+  border-color: #d45a47 !important;
+}
+
+.admin-audit-clear-modal__confirm:hover,
+.admin-audit-clear-modal__confirm:focus-visible {
+  background: #bd4938 !important;
+  border-color: #bd4938 !important;
+}
+
+@media (max-width: 720px) {
+  .admin-command-page .admin-shoe-catalog-browser__head,
+  .admin-command-page .admin-shoe-catalog-browser__series-head,
+  .admin-command-page .admin-shoe-catalog-published__head {
+    display: grid;
+  }
+
+  .admin-command-page .admin-shoe-catalog-browser__brand-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 198px;
+  }
+
+  .admin-command-page .admin-shoe-catalog-browser__series-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-command-page .admin-shoe-catalog-browser__brand,
+  .admin-command-page .admin-shoe-catalog-browser__series-card,
+  .admin-command-page .admin-shoe-catalog-browser__delete-action {
+    transition: none;
   }
 }

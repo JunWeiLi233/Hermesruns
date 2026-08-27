@@ -132,7 +132,7 @@ Do not change VDOT, ACWR, recovery, or prediction methodology as part of a visua
 
 ### Admin dashboard
 
-`AdminLogin.jsx` -> `/api/auth/admin-login` -> `LoginController.java` -> admin JWT/role -> `AdminOnlyRoute` -> `Dashboard.jsx` -> `/api/admin/**` controllers and services.
+`Login.jsx` -> password/Google/Strava primary authentication -> passkey or one-time recovery verification -> MFA-backed admin token/cookie -> `AdminOnlyRoute` -> `Dashboard.jsx` -> `/api/admin/**`. The admin hostname and all admin routes are additionally protected by signed Cloudflare Access assertions; there is no public `AdminLogin.jsx` route.
 
 ### Frontend build into backend runtime
 

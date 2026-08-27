@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useUnit } from '../contexts/UnitContext';
@@ -12,12 +12,15 @@ import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import ShoeBrandLogo from '../components/ShoeBrandLogo';
 import TopbarNotifications from '../components/TopbarNotifications';
 import shoeCatalog from '../data/shoeCatalog';
-import { buildSeriesCatalog, readLocalSeriesCatalog, writeLocalSeriesCatalog } from '../utils/addShoeCatalog.js';
+import { buildSeriesCatalog, mergeShoeCatalog, readLocalSeriesCatalog, writeLocalSeriesCatalog } from '../utils/addShoeCatalog.js';
+import { preloadRoute } from '../utils/routePreload';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const FEATURED_DECK_SECONDARY_COUNT = 8;
+
+const mergeCatalog = (dynamicCatalog) => mergeShoeCatalog(shoeCatalog, dynamicCatalog);
 
 function normalizeBrandKey(brand) {
   return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
@@ -76,57 +79,6 @@ function getCatalogModelLabel(item, lang) {
   return localizeShoeModel(item.model, lang);
 }
 
-function mergeCatalog(dynamicCatalog) {
-  const dynamicBrands = Array.isArray(dynamicCatalog?.brands) ? dynamicCatalog.brands : [];
-  if (dynamicBrands.length === 0) {
-    return shoeCatalog;
-  }
-
-  const byBrand = new Map();
-  for (const entry of shoeCatalog) {
-    byBrand.set((entry.brand || '').toLowerCase(), {
-      brand: entry.brand,
-      logo: entry.logo,
-      models: Array.isArray(entry.models) ? [...entry.models] : [],
-    });
-  }
-
-  for (const entry of dynamicBrands) {
-    const key = (entry.brand || '').toLowerCase();
-    if (!key) continue;
-    const existing = byBrand.get(key);
-    const nextModels = Array.isArray(entry.models)
-      ? entry.models.map((item) => ({
-          id: item.id,
-          model: item.model,
-          modelZh: item.modelZh || '',
-          modelEn: item.modelEn || '',
-          type: item.type || 'daily',
-          category: item.category || item.type || '',
-        }))
-      : [];
-
-    if (!existing) {
-      byBrand.set(key, {
-        brand: entry.brand,
-        logo: entry.logo || 'S',
-        models: nextModels,
-      });
-      continue;
-    }
-
-    const seen = new Set(existing.models.map((item) => `${(item.model || '').toLowerCase()}::${item.category || ''}`));
-    for (const item of nextModels) {
-      const modelKey = `${(item.model || '').toLowerCase()}::${item.category || ''}`;
-      if (!item.model || seen.has(modelKey)) continue;
-      existing.models.push(item);
-      seen.add(modelKey);
-    }
-  }
-
-  return Array.from(byBrand.values()).sort((a, b) => a.brand.localeCompare(b.brand, 'zh-Hans-CN'));
-}
-
 const TYPE_LABELS = { daily: 'type_daily', speed: 'type_speed', race: 'type_race', trail: 'type_trail', stability: 'type_stability' };
 
 export default function AddShoes() {
@@ -174,7 +126,7 @@ export default function AddShoes() {
       setLoadState('loading');
       try {
         const [catalogData, shoesData] = await Promise.all([apiJson('/api/shoe-catalog').catch(() => shoeCatalog), apiJson('/api/shoes')]);
-        const mergedCatalog = Array.isArray(catalogData) ? catalogData : mergeCatalog(catalogData);
+        const mergedCatalog = mergeCatalog(Array.isArray(catalogData) ? { brands: catalogData } : catalogData);
         const localSeriesCatalog = readLocalSeriesCatalog();
         const seriesCatalog = writeLocalSeriesCatalog(mergedCatalog);
         setCatalog(seriesCatalog.length ? seriesCatalog : localSeriesCatalog.length ? localSeriesCatalog : buildSeriesCatalog(shoeCatalog));
@@ -195,7 +147,7 @@ export default function AddShoes() {
     { key: 'activities', icon: 'history', label: t('profile.dashboard_nav_activities'), route: '/runs' },
     { key: 'heatmap', icon: 'map', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap' },
     { key: 'weather_engine', icon: 'weather', label: t('profile.dashboard_nav_weather_engine'), route: '/weather' },
-    { key: 'shoes', icon: 'straighten', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
+    { key: 'shoes', icon: 'shoe_outline', label: t('profile.dashboard_nav_shoes'), route: '/shoes', active: true },
     { key: 'races', icon: 'flag', label: t('profile.dashboard_nav_races'), route: '/races' },
     { key: 'schedule', icon: 'calendar_today', label: t('profile.dashboard_nav_schedule'), route: '/schedule' },
     { key: 'muscle', icon: 'fitness_center', label: t('muscle_training.nav_label'), route: '/muscle-training' },
@@ -307,7 +259,6 @@ export default function AddShoes() {
     ? t('shoes.add_page_search_models', { brand: localizeShoeBrand(browserBrand.brand, lang) })
     : t('shoes.add_page_search_models_empty');
   const selectedCategoryLabel = selectedCatalogModel ? getCatalogCategoryLabel(selectedCatalogModel.category || selectedCatalogModel.type, lang) : '';
-  const browserModelCount = browserBrand?.models?.length || 0;
   const featuredBrand = browserBrand || browserBrandsToShow[0] || null;
   const secondaryBrands = browserBrandsToShow.filter((brand) => brand.brand !== featuredBrand?.brand);
   const fleetDistanceDisplay = `${formatDistanceValue(totalMileage, unit, 1)} ${distanceUnitLabel}`;
@@ -368,14 +319,14 @@ export default function AddShoes() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} aria-label={item.label}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)} aria-label={item.label}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
         </nav>
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} aria-label={t('profile.dashboard_start_workout')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} onPointerEnter={() => preloadRoute('/today-run')} onFocus={() => preloadRoute('/today-run')} aria-label={t('profile.dashboard_start_workout')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
@@ -419,66 +370,31 @@ export default function AddShoes() {
         </header>
 
         <div className="runner-shell-canvas add-shoes-canvas">
-          <section className="add-shoes-editorial-hero">
-            <div className="add-shoes-editorial-hero-main">
-              <span className="analysis-overview-card-kicker">{t('shoes.stitch_surface_label')}</span>
-              <div className="add-shoes-editorial-headline">
-                <h1>
-                  {t('shoes.add_page_title')}
-                  <span>{selectedBrandName || browserTitle}</span>
-                </h1>
-                <p>{browserSubcopy}</p>
-              </div>
-              <div className="add-shoes-hero-pills">
-                <span className="add-shoes-hero-pill">{selectedBrandName || browserTitle}</span>
-                <span className="add-shoes-hero-pill">{t('shoes.add_page_models_count', { count: browserModelCount })}</span>
-                <span className="add-shoes-hero-pill">{t('shoes.add_page_active_pairs_count', { count: activeShoes.length })}</span>
+          <section className="add-shoes-workspace-heading">
+            <span className="add-shoes-workspace-icon" aria-hidden="true"><AppIcon name="add" /></span>
+            <div className="add-shoes-workspace-heading-copy">
+              <span className="add-shoes-panel-kicker">{t('shoes.stitch_surface_label')}</span>
+              <h1>{t('shoes.add_page_title')}</h1>
+              <div className="add-shoes-workspace-stats" aria-label={t('shoes.add_page_title')}>
+                <span><strong>{activeShoes.length}</strong>{t('shoes.add_page_status_active_pairs')}</span>
+                <span><strong>{fleetDistanceDisplay}</strong>{t('shoes.add_page_status_fleet_distance')}</span>
+                <span><strong>{avgHealthLabel}</strong>{t('shoes.add_page_status_rotation_health')}</span>
               </div>
             </div>
-            <div className="add-shoes-editorial-hero-rail">
-              <article className="add-shoes-status-card">
-                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_active_pairs')}</span>
-                <strong>{activeShoes.length}</strong>
-                <p>{t('shoes.add_page_status_active_pairs_copy')}</p>
-              </article>
-              <article className="add-shoes-status-card">
-                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_fleet_distance')}</span>
-                <strong>{fleetDistanceDisplay}</strong>
-                <p>{t('shoes.add_page_status_fleet_distance_copy')}</p>
-              </article>
-              <article className="add-shoes-status-card">
-                <span className="analysis-overview-card-kicker">{t('shoes.add_page_status_rotation_health')}</span>
-                <strong>{avgHealthLabel}</strong>
-                <p>{t('shoes.add_page_status_rotation_health_copy')}</p>
-              </article>
-            </div>
+            <p>{browserSubcopy}</p>
           </section>
 
-          <div className="add-shoes-shell">
-            <div className="add-shoes-main-column">
-              <section className="add-shoes-browser-panel add-shoes-stage">
+          <div className="add-shoes-catalog-workspace">
+            <section className="add-shoes-catalog-panel add-shoes-browser-panel add-shoes-stage">
                 <div className="add-shoes-stage-head">
                   <div className="add-shoes-stage-copy">
                     <span className="add-shoes-panel-kicker">{t('shoes.browser_kicker')}</span>
                     <h2>{browserTitle}</h2>
                     <p>{t('shoes.browser_copy')}</p>
                   </div>
-                  <button type="button" className="add-shoes-secondary-btn add-shoes-stage-back" onClick={() => navigate('/shoes')} aria-label={t('shoes.add_page_back')}>
-                    <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
-                    <span>{t('shoes.add_page_back')}</span>
-                  </button>
                 </div>
 
-                <div className="add-shoes-parent-rail">
-                  <span className="add-shoes-panel-kicker">{t('profile.dashboard_nav_shoes')}</span>
-                  <p>{t('shoes.add_page_browser_setup_copy')}</p>
-                  <Link to="/shoes" className="add-shoes-parent-link">
-                    <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
-                    <span>{t('shoes.add_page_back')}</span>
-                  </Link>
-                </div>
-
-                <section className="add-shoes-step add-shoes-step-card">
+                <section className="add-shoes-catalog-step">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>{t('shoes.add_page_step_brand_title')}</h2><p>{t('shoes.add_page_step_brand_copy')}</p></div></div>
                   <div className="add-shoes-brand-deck">
                     {featuredBrand ? (
@@ -502,48 +418,48 @@ export default function AddShoes() {
                         );
                       })}
                     </div>
+                    {extraBrands.length ? (
+                      <div className="add-shoes-brand-expand-shell">
+                        <button
+                          type="button"
+                          className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
+                          onClick={() => setShowExtraBrands((current) => !current)}
+                          aria-expanded={showExtraBrands}
+                        >
+                          <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
+                          <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
+                        </button>
+                        {showExtraBrands ? (
+                          <div className="add-shoes-brand-expand-grid">
+                            {extraBrands.map((brand) => {
+                              const isActive = browserBrand?.brand === brand.brand;
+                              return (
+                                <button
+                                  key={`extra-${brand.brand}`}
+                                  type="button"
+                                  className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
+                                  onClick={() => handleBrandPick(brand)}
+                                  aria-pressed={isActive ? 'true' : 'false'}
+                                  aria-label={localizeShoeBrand(brand.brand, lang)}
+                                >
+                                  <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
+                                  <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
-                  {extraBrands.length ? (
-                    <div className="add-shoes-brand-expand-shell">
-                      <button
-                        type="button"
-                        className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
-                        onClick={() => setShowExtraBrands((current) => !current)}
-                        aria-expanded={showExtraBrands}
-                      >
-                        <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
-                        <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
-                      </button>
-                      {showExtraBrands ? (
-                        <div className="add-shoes-brand-expand-grid">
-                          {extraBrands.map((brand) => {
-                            const isActive = browserBrand?.brand === brand.brand;
-                            return (
-                              <button
-                                key={`extra-${brand.brand}`}
-                                type="button"
-                                className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
-                                onClick={() => handleBrandPick(brand)}
-                                aria-pressed={isActive ? 'true' : 'false'}
-                                aria-label={localizeShoeBrand(brand.brand, lang)}
-                              >
-                                <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
-                                <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </section>
 
-                <section className="add-shoes-step add-shoes-step-card add-shoes-model-board">
+                <section className="add-shoes-catalog-step add-shoes-model-board">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-model-board-top">
                     <div className="add-shoes-filter-row">
                       {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => setBrowserCategory(categoryKey)} aria-label={getCatalogCategoryLabel(categoryKey, lang)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
-                      {browserTypeOptions.slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)} aria-label={typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{typeKey === 'all' ? t('shoes.all_types') : t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
+                      {browserTypeOptions.filter((typeKey) => typeKey !== 'all').slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => setBrowserType(typeKey)} aria-label={t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
                     </div>
                     <div className="add-shoes-search-row">
                       <span className="add-shoes-search-icon" aria-hidden="true"><AppIcon name="search" /></span>
@@ -575,7 +491,10 @@ export default function AddShoes() {
                   </div>
                 </section>
 
-                <section className="add-shoes-step add-shoes-step--form add-shoes-step-card add-shoes-setup-payload">
+            </section>
+
+            <aside className="add-shoes-setup-panel">
+              <section className="add-shoes-step add-shoes-step--form add-shoes-step-card add-shoes-setup-payload">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">3</span><div><h2>{t('shoes.add_page_step_configure_title')}</h2><p>{t('shoes.add_page_step_configure_copy')}</p></div></div>
                   <div className="add-shoes-setup-payload-shell">
                     <div className="add-shoes-selected-summary">
@@ -601,9 +520,8 @@ export default function AddShoes() {
                       </div>
                     </form>
                   </div>
-                </section>
               </section>
-            </div>
+            </aside>
           </div>
 
           <footer className="runner-shell-footer runner-dashboard-footer add-shoes-footer">

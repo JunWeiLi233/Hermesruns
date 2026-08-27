@@ -5,10 +5,11 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runArchitectureDiagramRefresh } from "./refresh-architecture-diagrams.mjs";
 import { runAutoHermesSecurity } from "./auto-hermes-security.mjs";
+import { HERMES_REPOSITORY, HERMES_REPOSITORY_URL } from "./hermes-repository.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
-const EXPECTED_REMOTE_URL = "https://github.com/520HXC/run.git";
+const EXPECTED_REMOTE_URL = HERMES_REPOSITORY_URL;
 const DEFAULT_EXPECTED_USER_NAME = process.env.AUTO_HERMES_EXPECTED_USER_NAME || "";
 const DEFAULT_EXPECTED_USER_EMAIL = process.env.AUTO_HERMES_EXPECTED_USER_EMAIL || "";
 
@@ -27,6 +28,7 @@ function parseArgs(argv) {
     message: "auto-hermes push main",
     prTitle: "",
     prBody: "",
+    draft: false,
     skipChecks: false,
     outputJson: ".ai-sync/AUTO_HERMES_PUSH_MAIN.json",
     outputMd: ".ai-sync/AUTO_HERMES_PUSH_MAIN.md",
@@ -36,6 +38,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--execute") args.execute = true;
+    else if (arg === "--draft") args.draft = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--write") args.write = true;
     else if (arg === "--skip-checks") args.skipChecks = true;
@@ -154,6 +157,7 @@ export function buildAutoHermesPushMainPlan(rawArgs = {}) {
   const autoCommitMessage = String(args.message || "auto-hermes push main").replace(/"/g, '\\"');
   const prTitle = args.prTitle || autoCommitMessage;
   const prBody = args.prBody || "Auto-generated PR from Hermes auto-hermes-push-main workflow.\n\nGates passed: repo identity, diagrams, security audit, frontend lint, backend compile.";
+  const draftFlag = args.draft ? " --draft" : "";
   return {
     targetRemoteUrl: args.targetRemoteUrl,
     targetBranch: args.targetBranch,
@@ -168,10 +172,10 @@ export function buildAutoHermesPushMainPlan(rawArgs = {}) {
       step("frontend", "Run frontend lint before publish.", "cd frontend && npm run lint"),
       step("backend", "Compile backend before publish.", "cd backend && ./mvnw -q -DskipTests compile"),
       step("docker", "Run Docker/main-repository publish gate.", `${node} .tools/auto-hermes-docker-gate.mjs --write`),
-      step("commit", "Create a guarded publish commit for current changes when needed.", `${ps} -File .tools/auto-commit.ps1 -Message "${autoCommitMessage}"`),
+      step("commit", "Create a guarded publish commit for current changes when needed.", `${ps} -NoProfile -ExecutionPolicy Bypass -File .tools/auto-commit.ps1 -Message "${autoCommitMessage}"`),
       step("fetch", "Fetch the current remote main tip.", `${git} fetch ${args.remoteName} ${args.targetBranch}`),
       step("push-branch", "Push the current branch to remote so a PR can be opened.", `${git} push ${args.remoteName} HEAD`),
-      step("create-pr", "Create a pull request from the current branch into main.", `${gh} pr create --base ${args.targetBranch} --head $(git branch --show-current) --title "${prTitle}" --body "${prBody}"`),
+      step("create-pr", "Create a pull request from the current branch into main.", `${gh} pr create --repo ${HERMES_REPOSITORY} --base ${args.targetBranch} --head $(git branch --show-current)${draftFlag} --title "${prTitle}" --body "${prBody}"`),
     ],
   };
 }
@@ -432,7 +436,7 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     if (statusAfterDocs.trim()) {
       const artifactPaths = existingPublishArtifactPaths(args.rootDir, result);
       if (artifactPaths.length) runGit(runCommand, args.rootDir, ["add", "-f", "--", ...artifactPaths]);
-      runCommand("powershell", ["-File", resolveFromRoot(args.rootDir, ".tools/auto-commit.ps1"), "-Message", args.message], { cwd: args.rootDir });
+      runCommand("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", resolveFromRoot(args.rootDir, ".tools/auto-commit.ps1"), "-Message", args.message], { cwd: args.rootDir });
       markStep(result, "commit", "completed");
     } else {
       markStep(result, "commit", "skipped", { note: "No source or README/diagram changes needed a publish commit." });
@@ -457,8 +461,10 @@ export async function runAutoHermesPushMain(rawArgs = process.argv.slice(2)) {
     try {
       const prUrl = runCommand("gh", [
         "pr", "create",
+        "--repo", HERMES_REPOSITORY,
         "--base", args.targetBranch,
         "--head", currentBranch,
+        ...(args.draft ? ["--draft"] : []),
         "--title", args.prTitle || args.message || "auto-hermes push main",
         "--body", args.prBody || "Auto-generated PR from Hermes auto-hermes-push-main workflow.\\n\\nGates passed: repo identity, diagrams, security audit, frontend lint, backend compile.",
       ], { cwd: args.rootDir });

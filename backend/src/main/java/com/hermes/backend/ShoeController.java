@@ -30,6 +30,7 @@ public class ShoeController {
     private final ShoeCatalogModelRepository shoeCatalogModelRepository;
     private final ShoeTrackerService shoeTrackerService;
     private final CoachScheduledWorkoutRepository scheduledWorkoutRepository;
+    private final ShoeImageAssetService shoeImageAssetService;
 
     @Autowired
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
@@ -37,7 +38,8 @@ public class ShoeController {
                           ShoeIdentityService shoeIdentityService,
                           ShoeCatalogModelRepository shoeCatalogModelRepository,
                           ShoeTrackerService shoeTrackerService,
-                          CoachScheduledWorkoutRepository scheduledWorkoutRepository) {
+                          CoachScheduledWorkoutRepository scheduledWorkoutRepository,
+                          ShoeImageAssetService shoeImageAssetService) {
         this.authService = authService;
         this.shoeRepository = shoeRepository;
         this.activityRepository = activityRepository;
@@ -45,13 +47,14 @@ public class ShoeController {
         this.shoeCatalogModelRepository = shoeCatalogModelRepository;
         this.shoeTrackerService = shoeTrackerService;
         this.scheduledWorkoutRepository = scheduledWorkoutRepository;
+        this.shoeImageAssetService = shoeImageAssetService;
     }
 
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
                           ActivityRepository activityRepository,
                           ShoeIdentityService shoeIdentityService,
                           ShoeCatalogModelRepository shoeCatalogModelRepository) {
-        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, null, null);
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, null, null, null);
     }
 
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
@@ -59,13 +62,23 @@ public class ShoeController {
                           ShoeIdentityService shoeIdentityService,
                           ShoeCatalogModelRepository shoeCatalogModelRepository,
                           ShoeTrackerService shoeTrackerService) {
-        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, shoeTrackerService, null);
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository, shoeTrackerService, null, null);
     }
 
     public ShoeController(AuthService authService, ShoeRepository shoeRepository,
                           ActivityRepository activityRepository,
                           ShoeIdentityService shoeIdentityService) {
-        this(authService, shoeRepository, activityRepository, shoeIdentityService, null, null, null);
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, null, null, null, null);
+    }
+
+    public ShoeController(AuthService authService, ShoeRepository shoeRepository,
+                          ActivityRepository activityRepository,
+                          ShoeIdentityService shoeIdentityService,
+                          ShoeCatalogModelRepository shoeCatalogModelRepository,
+                          ShoeTrackerService shoeTrackerService,
+                          CoachScheduledWorkoutRepository scheduledWorkoutRepository) {
+        this(authService, shoeRepository, activityRepository, shoeIdentityService, shoeCatalogModelRepository,
+                shoeTrackerService, scheduledWorkoutRepository, null);
     }
 
     @GetMapping
@@ -390,6 +403,9 @@ public class ShoeController {
         }
 
         shoeIdentityService.applyIdentityKey(shoe);
+        if (shoeImageAssetService != null) {
+            shoeImageAssetService.applyLiveAssetToShoe(shoe);
+        }
         Shoe saved = shoeRepository.save(shoe);
         double initial = saved.getInitialDistanceKm() != null ? saved.getInitialDistanceKm() : 0.0;
         saved.setCurrentDistanceKm(initial);

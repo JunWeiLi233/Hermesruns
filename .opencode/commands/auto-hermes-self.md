@@ -92,7 +92,7 @@ On a true clean stop, use the configured Hermes finish path rather than ad-hoc G
 
 - Run `.tools/auto-hermes-finish.mjs` or the current finish helper emitted by the coordinator.
 - Auto-commit only when the finish helper says product files changed and proof gates passed.
-- Auto-push only when the repo policy allows it: unpublished local commits, current branch, and `origin` still equals `https://github.com/520HXC/run.git`.
+- Auto-push only when the repo policy allows it: unpublished local commits, current branch, and `origin` still equals `https://github.com/JunWeiLi233/Hermesruns.git`.
 - If no product files changed, report `Loop stopped - no product changes to publish.`
 - If publish is blocked by security, compile, auth, or dirty-state gates, report the blocker and stop.
 

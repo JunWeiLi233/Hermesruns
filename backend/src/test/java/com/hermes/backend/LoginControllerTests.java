@@ -1,7 +1,9 @@
 package com.hermes.backend;
 
 import jakarta.servlet.http.HttpServletRequest;
+import com.hermes.backend.auth.mfa.AdminMfaService;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -13,10 +15,62 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class LoginControllerTests {
+
+    @Test
+    void adminLoginRequiresMfaBeforeIssuingAnySessionCredential() {
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        AuthService authService = mock(AuthService.class);
+        LoginRateLimiter rateLimiter = mock(LoginRateLimiter.class);
+        Runner admin = runner("admin@hermes.test", "ADMIN", true);
+        when(authService.authenticate("admin@hermes.test", "Password1!")).thenReturn(Optional.of(admin));
+        when(authService.isAdmin(admin)).thenReturn(true);
+        AdminMfaService adminMfaService = mock(AdminMfaService.class);
+        when(adminMfaService.beginPrimaryAuthenticatedFlow(admin, "PASSWORD"))
+                .thenReturn(new AdminMfaService.BeginResult("ADMIN_MFA_REQUIRED", "challenge-selector"));
+        AdminAccessGateway adminAccessGateway = mock(AdminAccessGateway.class);
+        when(adminAccessGateway.isAllowed(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+        LoginController controller = controller(
+                runnerRepository,
+                authService,
+                rateLimiter,
+                mock(SecretEncryptionService.class),
+                mock(AiUsageService.class),
+                mock(EmailVerificationService.class),
+                mock(EmailValidationService.class),
+                mock(VerificationResendLimiter.class),
+                mock(PasswordResetLimiter.class),
+                mock(PasswordResetService.class),
+                mock(ApiRateLimiter.class),
+                adminMfaService,
+                adminAccessGateway
+        );
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("email", "admin@hermes.test");
+        body.put("password", "Password1!");
+
+        ResponseEntity<?> response = controller.adminLogin(body, request("198.51.100.6"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(response.getHeaders().getFirst(HttpHeaders.SET_COOKIE))
+                .contains("hermes_admin_mfa=challenge-selector")
+                .contains("Path=/api")
+                .contains("Max-Age=300")
+                .contains("HttpOnly")
+                .contains("SameSite=Strict");
+        assertThat(response.getHeaders().getCacheControl()).isEqualTo("no-store");
+        assertThat(response.getBody()).isInstanceOf(Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> payload = (Map<String, Object>) response.getBody();
+        assertThat(payload).containsEntry("code", "ADMIN_MFA_REQUIRED");
+        assertThat(payload).doesNotContainKey("token");
+        verify(authService, never()).issueSessionToken(admin);
+    }
 
     @Test
     void loginReturnsTooManyRequestsWhenIpIsBlocked() {
@@ -304,6 +358,39 @@ class LoginControllerTests {
                 passwordResetService,
                 apiRateLimiter,
                 mock(RecaptchaVerifier.class)
+        );
+    }
+
+    private LoginController controller(
+            RunnerRepository runnerRepository,
+            AuthService authService,
+            LoginRateLimiter rateLimiter,
+            SecretEncryptionService secretEncryptionService,
+            AiUsageService aiUsageService,
+            EmailVerificationService emailVerificationService,
+            EmailValidationService emailValidationService,
+            VerificationResendLimiter verificationResendLimiter,
+            PasswordResetLimiter passwordResetLimiter,
+            PasswordResetService passwordResetService,
+            ApiRateLimiter apiRateLimiter,
+            AdminMfaService adminMfaService,
+            AdminAccessGateway adminAccessGateway
+    ) {
+        return new LoginController(
+                runnerRepository,
+                authService,
+                rateLimiter,
+                secretEncryptionService,
+                aiUsageService,
+                emailVerificationService,
+                emailValidationService,
+                verificationResendLimiter,
+                passwordResetLimiter,
+                passwordResetService,
+                apiRateLimiter,
+                mock(RecaptchaVerifier.class),
+                adminMfaService,
+                adminAccessGateway
         );
     }
 

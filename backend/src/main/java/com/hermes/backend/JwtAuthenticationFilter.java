@@ -37,6 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
+        boolean portalCookieCredential = false;
+        if ((authHeader == null || authHeader.isBlank())
+                && AdminPortalSessionCookie.isAdminPortalPath(request.getRequestURI())) {
+            Optional<String> portalToken = AdminPortalSessionCookie.read(request);
+            if (portalToken.isPresent()) {
+                authHeader = "Bearer " + portalToken.get();
+                portalCookieCredential = true;
+            }
+        }
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
             if (runnerOpt.isPresent()) {
@@ -46,6 +55,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 LocalDateTime issuedAt = runner.getTokenIssuedAt();
                 if (issuedAt == null || issuedAt.isBefore(LocalDateTime.now().minusDays(30))) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+                if (portalCookieCredential
+                        && (!authService.isAdmin(runner) || !AdminPortalSessionCookie.isFresh(runner))) {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                     return;
                 }
                 List<SimpleGrantedAuthority> authorities = authService.isAdmin(runner)

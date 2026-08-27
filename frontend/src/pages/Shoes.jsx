@@ -16,6 +16,7 @@ import TopbarNotifications from '../components/TopbarNotifications';
 import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 import { formatDistanceValue, getDistanceUnitLabel } from '../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../utils/profileIdentity';
+import { preloadRoute } from '../utils/routePreload';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../utils/shoeNames';
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../utils/shoeImagePickerState';
@@ -109,7 +110,7 @@ async function fileToOptimizedDataUrl(file, t) {
 }
 
 /** Shoe image component with auto background removal */
-function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
+function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading = 'lazy' }) {
   const [processed, setProcessed] = useState(null);
 
   useEffect(() => {
@@ -135,11 +136,11 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError }) {
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed} alt={alt} onError={onError} loading="lazy" decoding="async" />;
+  return <img className={className} src={processed} alt={alt} onError={onError} loading={loading} decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
-  return <ProcessedDisplayImage src={src} alt={alt} className="shoe-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />;
+  return <ProcessedDisplayImage src={src} alt={alt} loading="eager" className="shoe-img" fallback={<div className="shoe-img-placeholder shoe-img-loading" />} />;
 }
 
 function PreviewShoeArt({ tone, label }) {
@@ -236,6 +237,8 @@ const Shoes = memo(function Shoes() {
   const [mergeBusy, setMergeBusy] = useState(false);
   const [shoeActionBusyId, setShoeActionBusyId] = useState(null);
   const [shoeActionStatus, setShoeActionStatus] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [inventoryTab, setInventoryTab] = useState('active');
   const [inventorySort, setInventorySort] = useState('recent');
   const [lockerBrandFilter, setLockerBrandFilter] = useState('all');
@@ -305,6 +308,13 @@ const Shoes = memo(function Shoes() {
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
   const aiQuotaLimit = getShoeScanQuotaLimit(aiQuota);
   const aiQuotaRemaining = getShoeScanQuotaRemaining(aiQuota);
+  const scanSubmitHint = scanFiles.length === 0
+    ? t('shoes.scan_submit_pick_first_hint')
+    : aiQuota && !aiQuota.admin && aiQuotaRemaining <= 0
+      ? t('shoes.scan_submit_quota_hint')
+      : scanStatus === 'processing'
+        ? t('shoes.scan_processing')
+        : '';
 
   function applyPendingUploadState(nextState) {
     setImgPendingUploadUrl(nextState.imgPendingUploadUrl);
@@ -371,8 +381,9 @@ const Shoes = memo(function Shoes() {
   const checkScanAvailable = useCallback(async () => {
     try {
       const data = await apiJson('/api/shoes/scan-available');
-      setScanAvailable(!!data.available);
-      if (data.available) {
+      const available = !!data.available;
+      setScanAvailable(available);
+      if (available) {
         setAiQuota({
           tier: data.tier,
           scansRemaining: data.scansRemaining,
@@ -385,8 +396,22 @@ const Shoes = memo(function Shoes() {
           experiencePhase: data.experiencePhase,
         });
       }
-    } catch { /* ignored */ }
+      return available;
+    } catch {
+      // A transient startup/auth failure must not permanently disable the
+      // import action. The toolbar retries this check when the user clicks it.
+      setScanAvailable(false);
+      return false;
+    }
   }, []);
+
+  async function openScanModal() {
+    setScanStatus('');
+    setScannedShoes([]);
+    setScanFiles([]);
+    setScanOpen(true);
+    await checkScanAvailable();
+  }
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -594,14 +619,30 @@ const Shoes = memo(function Shoes() {
     }
   }
 
-  async function handleDelete(shoe) {
-    if (!window.confirm(t('shoes.confirm_delete'))) return;
+  function openDeleteModal(shoe) {
+    if (!shoe) return;
+    setShoeActionStatus('');
+    setDeleteTarget(shoe);
+  }
+
+  function closeDeleteModal() {
+    if (deleteBusy) return;
+    setDeleteTarget(null);
+  }
+
+  async function handleDelete() {
+    const shoe = deleteTarget;
+    if (!shoe || deleteBusy) return;
+    setDeleteBusy(true);
     try {
       setShoeActionStatus('');
       await apiJson(`/api/shoes/${shoe.id}?permanent=true`, { method: 'DELETE' });
       await loadShoes();
+      setDeleteTarget(null);
     } catch {
       setShoeActionStatus(t('shoes.delete_failed'));
+    } finally {
+      setDeleteBusy(false);
     }
   }
   function compressImage(file, maxSize = 1024, quality = 0.8) {
@@ -896,7 +937,7 @@ const Shoes = memo(function Shoes() {
           <div className="shoe-inventory-card-copy">
             <div className="shoe-inventory-card-meta">
               <span className="shoe-inventory-card-meta-brand">
-                <ShoeBrandLogo brand={shoe.brand} fallbackEmoji={shoe.logo} />
+                <ShoeBrandLogo brand={shoe.brand} fallbackEmoji={shoe.logo} loading="eager" />
                 <em>{localizeShoeBrand(shoe.brand, lang)}</em>
               </span>
               <span>{preview ? t('shoes.stitch_preview_label') : t('shoes.uses_count', { count: usage.count })}</span>
@@ -933,12 +974,6 @@ const Shoes = memo(function Shoes() {
           {!shoe.retired && (
             <div className="shoe-inventory-card-metric shoe-inventory-card-metric--lifespan">
               <span className="shoe-inventory-brand-label">{t('shoes.retirement_health')}</span>
-              <div className="shoe-inventory-card-progress">
-                <div
-                  className={`shoe-inventory-card-progress-fill is-${health}`}
-                  style={{ width: `${retirement ? retirement.healthPercent : 100 - lifespanPct}%` }}
-                />
-              </div>
               <span className="shoe-inventory-card-retirement-text">
                 {retirement
                   ? (retirement.remainingKm <= 0
@@ -954,6 +989,12 @@ const Shoes = memo(function Shoes() {
                     ? t('shoes.retirement_km_left', { km: formatDistanceValue(max - current, unit, 0), unit: distanceUnitLabel })
                     : t('shoes.retirement_limit_not_set'))}
               </span>
+              <div className="shoe-inventory-card-progress">
+                <div
+                  className={`shoe-inventory-card-progress-fill is-${health}`}
+                  style={{ width: `${retirement ? retirement.healthPercent : 100 - lifespanPct}%` }}
+                />
+              </div>
             </div>
           )}
           {shoe.retired && (
@@ -996,7 +1037,7 @@ const Shoes = memo(function Shoes() {
               ) : (
                 <button type="button" className="shoe-inventory-card-action" onClick={() => handleRetire(shoe)}>{t('shoes.retire')}</button>
               )}
-              <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => handleDelete(shoe)}>{t('shoes.delete_shoe')}</button>
+              <button type="button" className="shoe-inventory-card-action is-danger" onClick={() => openDeleteModal(shoe)}>{t('shoes.delete_shoe')}</button>
             </>
           )}
         </div>
@@ -1033,6 +1074,8 @@ const Shoes = memo(function Shoes() {
                 type="button"
                 className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
+                onPointerEnter={() => preloadRoute(item.route)}
+                onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1046,6 +1089,8 @@ const Shoes = memo(function Shoes() {
               type="button"
               className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
+              onPointerEnter={() => preloadRoute('/today-run')}
+              onFocus={() => preloadRoute('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
               <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -1124,19 +1169,15 @@ const Shoes = memo(function Shoes() {
                       />
                     </label>
                     <div className="shoe-inventory-scan-action">
-                      <button type="button" className="shoe-inventory-action-btn" onClick={() => { setScanStatus(''); setScannedShoes([]); setScanFiles([]); setScanOpen(true); }}>
+                      <button type="button" className="shoe-inventory-action-btn" onClick={openScanModal}>
                         {t('shoes.scan_image')}
                       </button>
-                      {aiQuota && !aiQuota.admin && (
-                        aiQuota.tier === 'PRO' || aiQuota.unlimited ? (
-                          <span className="shoe-inventory-pro-badge">{t('pro.badge')}</span>
-                        ) : (
-                          <span className="shoe-inventory-quota-badge">
-                            {aiQuotaRemaining > 0
-                              ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
-                              : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
-                          </span>
-                        )
+                      {aiQuota && !aiQuota.admin && !(aiQuota.tier === 'PRO' || aiQuota.unlimited) && (
+                        <span className="shoe-inventory-quota-badge">
+                          {aiQuotaRemaining > 0
+                            ? t('shoes.ai_quota_remaining_badge', { remaining: aiQuotaRemaining, total: aiQuotaLimit })
+                            : t('shoes.ai_quota_exhausted_badge', { total: aiQuotaLimit })}
+                        </span>
                       )}
                     </div>
                     <button type="button" className="shoe-inventory-cta" onClick={openManualAdd}>
@@ -1286,7 +1327,7 @@ const Shoes = memo(function Shoes() {
               <input type="text" value={formNickname} onChange={e => setFormNickname(e.target.value)} placeholder={t('shoes.nickname_placeholder')} />
             </label>
 
-            <label className="shoe-edit-field">
+            <label className="shoe-edit-field shoe-edit-field--max-distance">
               <span className="modal-label">{t('shoes.max_distance')}</span>
               <input type="number" value={formMaxDist} onChange={e => setFormMaxDist(e.target.value)} min="100" max="2000" step="50" />
             </label>
@@ -1303,6 +1344,31 @@ const Shoes = memo(function Shoes() {
             <button type="submit" className="btn-primary modal-button">{t('shoes.save')}</button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete-shoe modal follows the Runs confirmation design. */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={closeDeleteModal}
+        title={t('shoes.delete_confirm_title')}
+        icon={<AppIcon name="delete_sweep" className="runs-delete-modal-icon" />}
+        shellClassName="runs-delete-modal-shell"
+        cardClassName="runs-delete-modal-card"
+      >
+        <p className="runs-delete-modal-copy">
+          {t('shoes.delete_confirm_copy', {
+            shoe: deleteTarget ? formatShoeDisplayName({ brand: deleteTarget.brand, model: deleteTarget.model, nickname: deleteTarget.nickname, lang }) : '',
+          })}
+        </p>
+        <p className="runs-delete-modal-warning">{t('shoes.confirm_delete')}</p>
+        <div className="runs-delete-modal-actions">
+          <button type="button" className="btn-secondary modal-button" onClick={closeDeleteModal} disabled={deleteBusy}>
+            {t('shoes.cancel')}
+          </button>
+          <button type="button" className="btn-primary runs-delete-modal-confirm modal-button" onClick={handleDelete} disabled={deleteBusy}>
+            {deleteBusy ? t('shoes.delete_in_progress') : t('shoes.delete_confirm_yes')}
+          </button>
+        </div>
       </Modal>
 
       {/* Image picker modal */}
@@ -1599,8 +1665,10 @@ const Shoes = memo(function Shoes() {
                     type="submit"
                     className="shoe-scan-modal-primary"
                     disabled={scanFiles.length === 0 || scanStatus === 'processing' || (aiQuota && !aiQuota.admin && aiQuotaRemaining <= 0)}
+                    title={scanSubmitHint || undefined}
+                    aria-label={scanSubmitHint || undefined}
                   >
-                    {t('shoes.scan_image')}
+                    {t('shoes.scan_submit')}
                   </button>
                 </div>
               </form>

@@ -20,8 +20,32 @@ assert.doesNotMatch(
 
 assert.match(
   analysisSource,
-  /const latestSorenessLevel = String\(\s*injuryStatus\?\.recentLogs\?\.\[0\]\?\.level \?\? injuryStatus\?\.sorenessLevel \?\? ''\s*\)\.toLowerCase\(\);/,
-  'The active check-in button should handle both status history and the current soreness value.',
+  /const \[sorenessLevelOverride, setSorenessLevelOverride\] = useState\(null\);/,
+  'The check-in should keep an immediate local selection while the server refresh completes.',
+);
+
+assert.match(
+  analysisSource,
+  /const latestSorenessLevel = String\(\s*sorenessLevelOverride \?\? injuryStatus\?\.recentLogs\?\.\[0\]\?\.level \?\? injuryStatus\?\.sorenessLevel \?\? ''\s*\)\.toLowerCase\(\);/,
+  'The selected check-in should take precedence over stale status data after a click.',
+);
+
+assert.match(
+  analysisSource,
+  /const previousSorenessLevel = latestSorenessLevel;[\s\S]*?setSorenessLevelOverride\(level\);[\s\S]*?apiJson\('\/api\/injury-risk\/log'/,
+  'The check-in should update its local selection and preserve the previous value for failed writes.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /async function handleSorenessLog\([\s\S]*?setInjuryStatusLoading\(true\);/,
+  'A click should not replace the working check-in card with a blocking status-loading state.',
+);
+
+assert.match(
+  analysisSource,
+  /void apiJson\('\/api\/injury-risk\/status'\)\s*\.then\(/,
+  'The assessment refresh should run after the write without blocking the selected state.',
 );
 
 assert.match(

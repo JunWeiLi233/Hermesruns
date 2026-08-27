@@ -7817,7 +7817,6 @@ body.theme-midnight .vdot-badge,
       "label"
       "gauge"
       "value"
-      "status"
       "copy";
     justify-items: start;
   }
@@ -7828,9 +7827,7 @@ body.theme-midnight .vdot-badge,
   }
 
   .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-value,
-  .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-status-pill,
-  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-reference-card.is-load .analysis-overview-gauge-value,
-  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-reference-card.is-load .analysis-overview-status-pill {
+  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-reference-card.is-load .analysis-overview-gauge-value {
     justify-self: start;
   }
 
@@ -8096,7 +8093,7 @@ body.theme-midnight .vdot-badge,
   grid-template-columns: minmax(0, 1fr) minmax(128px, 168px) minmax(0, 0.75fr);
   grid-template-areas:
     "label gauge value"
-    "copy gauge status";
+    "copy gauge .";
   align-items: center;
   column-gap: clamp(12px, 1.5vw, 20px);
   row-gap: 10px;
@@ -8123,11 +8120,6 @@ body.theme-midnight .vdot-badge,
   color: var(--analysis-lab-accent) !important;
   font-size: clamp(2rem, 2.75rem, 3.2rem);
   letter-spacing: 0;
-}
-
-.analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-status-pill {
-  grid-area: status;
-  justify-self: end;
 }
 
 .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-status-pill.is-muted {
@@ -8432,14 +8424,12 @@ body.theme-midnight .vdot-badge,
       "label"
       "gauge"
       "value"
-      "status"
       "copy";
     justify-items: start;
   }
 
   .analysis-page-shell .analysis-profile-reference-card.is-load :is(
-    .analysis-overview-gauge-value,
-    .analysis-overview-status-pill
+    .analysis-overview-gauge-value
   ) {
     justify-self: start;
   }

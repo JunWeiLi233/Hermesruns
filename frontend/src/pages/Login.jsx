@@ -9,14 +9,13 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import HermesMarkSvg from '../components/HermesMarkSvg';
 import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
-
-const LOCAL_SHARED_RUNNER_EMAIL = 'strava+140971747@hermes.local';
+import { createPasskey, getPasskey, isWebAuthnSupported } from '../utils/webauthn';
 
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,10 +26,23 @@ export default function Login() {
   const [resendBusy, setResendBusy] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [authProviders, setAuthProviders] = useState(null);
+  const [adminMfaStage, setAdminMfaStage] = useState(null);
+  const [bootstrapToken, setBootstrapToken] = useState('');
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [pendingAdminSession, setPendingAdminSession] = useState(null);
 
   const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
   const hasConfiguredSocialProvider = stravaConfigured || googleConfigured;
+
+  useEffect(() => {
+    const oauthMfa = searchParams.get('adminMfa');
+    if (oauthMfa === 'required' || oauthMfa === 'setup') {
+      setAdminMfaStage(oauthMfa === 'setup' ? 'setup' : 'verify');
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -129,11 +141,110 @@ export default function Login() {
         return;
       }
 
+      if (res.status === 202 && (data.code === 'ADMIN_MFA_REQUIRED' || data.code === 'ADMIN_MFA_SETUP_REQUIRED')) {
+        setPassword('');
+        setAdminMfaStage(data.code === 'ADMIN_MFA_SETUP_REQUIRED' ? 'setup' : 'verify');
+        return;
+      }
+
       login(data.token, data.email, data.role);
     } catch {
       setError(t('common.connection_failed'));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMfaOptions(path, body) {
+    const res = await apiFetch(path, {
+      method: 'POST',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+    return data.publicKey || data;
+  }
+
+  async function handlePasskeyAuthentication() {
+    setError('');
+    setLoading(true);
+    try {
+      const options = await loadMfaOptions('/api/auth/admin-mfa/authentication/options');
+      const credential = await getPasskey(options);
+      const res = await apiFetch('/api/auth/admin-mfa/authentication/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+      login(data.token, data.email, data.role);
+    } catch (mfaError) {
+      setError(mfaError?.message === 'PASSKEY_UNSUPPORTED'
+        ? t('index.admin_mfa_unsupported')
+        : t('index.admin_mfa_failed'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePasskeyRegistration() {
+    setError('');
+    setLoading(true);
+    try {
+      const options = await loadMfaOptions('/api/auth/admin-mfa/registration/options', { bootstrapToken });
+      const credential = await createPasskey(options);
+      const res = await apiFetch('/api/auth/admin-mfa/registration/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+      setPendingAdminSession(data);
+      setRecoveryCodes(Array.isArray(data.recoveryCodes) ? data.recoveryCodes : []);
+      setAdminMfaStage('recovery-codes');
+      setBootstrapToken('');
+    } catch {
+      setError(isWebAuthnSupported() ? t('index.admin_mfa_failed') : t('index.admin_mfa_unsupported'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRecoveryAuthentication() {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await apiFetch('/api/auth/admin-mfa/recovery/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recoveryCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+      login(data.token, data.email, data.role);
+    } catch {
+      setError(t('index.admin_mfa_failed'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function cancelAdminMfa() {
+    await apiFetch('/api/auth/admin-mfa/challenge', { method: 'DELETE' }).catch(() => {});
+    setAdminMfaStage(null);
+    setBootstrapToken('');
+    setRecoveryCode('');
+    setRecoveryCodes([]);
+    setPendingAdminSession(null);
+    setError('');
+  }
+
+  function continueAfterRecoveryCodes() {
+    if (pendingAdminSession?.token) {
+      login(pendingAdminSession.token, pendingAdminSession.email, pendingAdminSession.role);
     }
   }
 
@@ -147,8 +258,6 @@ export default function Login() {
     const baseUrl = getBackendBaseUrl();
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=login`;
   }
-
-  const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   return (
     <div className="auth-page auth-page--login auth-page--liquid-glass" data-auth-redesign="command-entry">
@@ -214,6 +323,75 @@ export default function Login() {
                 </div>
               )}
 
+              {adminMfaStage ? (
+                <div className="auth-resend-box auth-resend-box--login" aria-live="polite">
+                  <h4>{adminMfaStage === 'setup'
+                    ? t('index.admin_mfa_setup_title')
+                    : adminMfaStage === 'recovery-codes'
+                      ? t('index.admin_mfa_codes_title')
+                      : t('index.admin_mfa_title')}</h4>
+                  <p className="auth-resend-copy">
+                    {adminMfaStage === 'setup'
+                      ? t('index.admin_mfa_setup_copy')
+                      : adminMfaStage === 'recovery-codes'
+                        ? t('index.admin_mfa_codes_copy')
+                        : adminMfaStage === 'recovery'
+                          ? t('index.admin_mfa_recovery_copy')
+                          : t('index.admin_mfa_copy')}
+                  </p>
+
+                  {adminMfaStage === 'verify' && (
+                    <>
+                      <button type="button" className="auth-flow-btn auth-flow-btn--submit" disabled={loading} onClick={handlePasskeyAuthentication}>
+                        {loading ? t('index.admin_mfa_working') : t('index.admin_mfa_use_passkey')}
+                      </button>
+                      <button type="button" className="btn-secondary" onClick={() => setAdminMfaStage('recovery')}>
+                        {t('index.admin_mfa_use_recovery')}
+                      </button>
+                    </>
+                  )}
+
+                  {adminMfaStage === 'setup' && (
+                    <>
+                      <div className="form-group form-group--auth">
+                        <label htmlFor="admin-bootstrap-token">{t('index.admin_mfa_bootstrap_label')}</label>
+                        <input id="admin-bootstrap-token" type="password" autoComplete="off" value={bootstrapToken} onChange={(event) => setBootstrapToken(event.target.value)} />
+                      </div>
+                      <button type="button" className="auth-flow-btn auth-flow-btn--submit" disabled={loading || !bootstrapToken} onClick={handlePasskeyRegistration}>
+                        {loading ? t('index.admin_mfa_working') : t('index.admin_mfa_create_passkey')}
+                      </button>
+                    </>
+                  )}
+
+                  {adminMfaStage === 'recovery' && (
+                    <>
+                      <div className="form-group form-group--auth">
+                        <label htmlFor="admin-recovery-code">{t('index.admin_mfa_recovery_label')}</label>
+                        <input id="admin-recovery-code" type="text" autoComplete="one-time-code" value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} />
+                      </div>
+                      <button type="button" className="auth-flow-btn auth-flow-btn--submit" disabled={loading || !recoveryCode} onClick={handleRecoveryAuthentication}>
+                        {loading ? t('index.admin_mfa_working') : t('index.admin_mfa_verify_recovery')}
+                      </button>
+                    </>
+                  )}
+
+                  {adminMfaStage === 'recovery-codes' && (
+                    <>
+                      <pre className="auth-resend-message">{recoveryCodes.join('\n')}</pre>
+                      <button type="button" className="auth-flow-btn auth-flow-btn--submit" onClick={continueAfterRecoveryCodes}>
+                        {t('index.admin_mfa_codes_continue')}
+                      </button>
+                    </>
+                  )}
+
+                  {adminMfaStage !== 'recovery-codes' && (
+                    <button type="button" className="btn-secondary" onClick={cancelAdminMfa}>
+                      {t('index.admin_mfa_cancel')}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
               <div className="form-group form-group--auth">
                 <label htmlFor="email">{t('index.email_label')}</label>
                 <input
@@ -243,19 +421,16 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                {isLocalSharedRunnerEmail && (
-                  <p className="auth-flow-field-note" aria-live="polite">
-                    {t('index.local_mock_password_hint')}
-                  </p>
-                )}
               </div>
 
               <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
                 {loading ? t('index.submit_loading') : t('index.submit')}
               </button>
+                </>
+              )}
             </form>
 
-            {hasConfiguredSocialProvider && (
+            {!adminMfaStage && hasConfiguredSocialProvider && (
               <div className="auth-flow-social">
                 {stravaConfigured && (
                   <button

@@ -39,6 +39,28 @@ class AdminBackgroundJobServiceTests {
     }
 
     @Test
+    void recoverOrphanedBackgroundJobsFailsNonCourseJobsFromPreviousProcess() {
+        AdminBackgroundJobRepository repository = mock(AdminBackgroundJobRepository.class);
+        AdminBackgroundJob job = new AdminBackgroundJob();
+        job.setJobType("STRAVA_GLOBAL_SYNC");
+        job.setStatus(AdminBackgroundJob.STATUS_RUNNING);
+        job.setStartedAt(LocalDateTime.now().minusHours(3));
+        job.setTotalCount(1);
+        when(repository.findByStatusIn(List.of(
+                AdminBackgroundJob.STATUS_RUNNING,
+                AdminBackgroundJob.STATUS_PENDING))).thenReturn(List.of(job));
+        when(repository.save(any(AdminBackgroundJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        AdminBackgroundJobService service = new AdminBackgroundJobService(repository);
+
+        service.recoverOrphanedBackgroundJobs();
+
+        assertThat(job.getStatus()).isEqualTo(AdminBackgroundJob.STATUS_FAILED);
+        assertThat(job.getFinishedAt()).isNotNull();
+        assertThat(job.getSummary()).contains("interrupted by a Hermes restart");
+        verify(repository).save(job);
+    }
+
+    @Test
     void recoverOrphanedCourseMapScanJobsFailsStaleRunningCourseMapJobs() {
         AdminBackgroundJobRepository repository = mock(AdminBackgroundJobRepository.class);
         AdminBackgroundJob job = new AdminBackgroundJob();

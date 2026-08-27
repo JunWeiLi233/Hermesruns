@@ -12,8 +12,34 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
 @RestController
 public class SpaForwardingController {
+
+    /**
+     * Single source of truth for every frontend (SPA) route that must serve index.html.
+     * Immutable; derived from the {@link GetMapping} annotation below so the route list
+     * can never drift between the controller mapping and SecurityConfig. Most routes are
+     * public SPA entry points; protected admin routes are matched first by SecurityConfig.
+     */
+    public static final List<String> SPA_ROUTES = spaRoutePatterns();
+
+    private static List<String> spaRoutePatterns() {
+        List<String> patterns = Arrays.stream(SpaForwardingController.class.getDeclaredMethods())
+                .map(method -> method.getAnnotation(GetMapping.class))
+                .filter(Objects::nonNull)
+                .flatMap(mapping -> Arrays.stream(mapping.value()))
+                .distinct()
+                .toList();
+        if (patterns.isEmpty()) {
+            throw new IllegalStateException("SpaForwardingController must declare at least one @GetMapping route.");
+        }
+        return patterns;
+    }
+
     /**
      * Serve index.html for all frontend routes so React Router
      * can handle client-side routing.

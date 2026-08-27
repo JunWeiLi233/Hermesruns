@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +25,10 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.hermes.backend.auth.mfa.AdminMfaChallengeCookie;
+import com.hermes.backend.auth.mfa.AdminMfaException;
+import com.hermes.backend.auth.mfa.AdminMfaService;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -85,6 +91,8 @@ public class OAuthController {
     private final RestTemplate restTemplate;
     private final StravaTokenService stravaTokenService;
     private final StravaSyncService stravaSyncService;
+    private final AdminMfaService adminMfaService;
+    private final AdminAccessGateway adminAccessGateway;
 
     @Value("${google.client.id:}")
     private String googleClientId;
@@ -135,6 +143,21 @@ public class OAuthController {
                            SystemConfigService systemConfigService,
                            StravaTokenService stravaTokenService,
                            StravaSyncService stravaSyncService) {
+        this(runnerRepository, authService, activityRepository, secretEncryptionService,
+                aiUsageService, restTemplate, systemConfigService, stravaTokenService,
+                stravaSyncService, null, AdminAccessGateway.disabled());
+    }
+
+    @Autowired
+    public OAuthController(RunnerRepository runnerRepository, AuthService authService,
+                           ActivityRepository activityRepository,
+                           SecretEncryptionService secretEncryptionService, AiUsageService aiUsageService,
+                           RestTemplate restTemplate,
+                           SystemConfigService systemConfigService,
+                           StravaTokenService stravaTokenService,
+                           StravaSyncService stravaSyncService,
+                           AdminMfaService adminMfaService,
+                           AdminAccessGateway adminAccessGateway) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.activityRepository = activityRepository;
@@ -144,6 +167,8 @@ public class OAuthController {
         this.systemConfigService = systemConfigService;
         this.stravaTokenService = stravaTokenService;
         this.stravaSyncService = stravaSyncService;
+        this.adminMfaService = adminMfaService;
+        this.adminAccessGateway = adminAccessGateway;
     }
 
     // ── Auth providers ──────────────────────────────────────────────
@@ -249,7 +274,9 @@ public class OAuthController {
     @GetMapping("/auth/google/callback")
     public RedirectView handleGoogleCallback(
             @RequestParam(required = false) String code,
-            @RequestParam(required = false) String state
+            @RequestParam(required = false) String state,
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
         if (!isGoogleConfigured()) {
             return errorRedirectCode(
@@ -327,8 +354,13 @@ public class OAuthController {
                     });
             runner.setEmailVerified(true);
 
+            if (authService.isAdmin(runner)) {
+                return beginAdminOAuthMfa(runner, "GOOGLE", request, response);
+            }
+
             String token = authService.issueSessionToken(runner);
-            String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
+            String targetPage = "/profile";
+            setAdminPortalCookie(runner, token, request, response);
 
             return new RedirectView(
                     targetPage
@@ -339,6 +371,11 @@ public class OAuthController {
         } catch (Exception exception) {
             return errorRedirectCode("GOOGLE_FAILED", "Google sign-in failed.", originalIntent.isBlank() ? null : originalIntent);
         }
+    }
+
+    // Retained for focused unit tests and non-servlet callers.
+    RedirectView handleGoogleCallback(String code, String state) {
+        return handleGoogleCallback(code, state, null, null);
     }
 
     // ── Strava OAuth ────────────────────────────────────────────────
@@ -380,7 +417,9 @@ public class OAuthController {
     public RedirectView handleStravaCallback(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error,
-            @RequestParam(required = false) String state
+            @RequestParam(required = false) String state,
+            HttpServletRequest request,
+            HttpServletResponse response
     ) {
         if (!stravaTokenService.isStravaConfigured()) {
             logger.warn("[Hermes] Strava OAuth callback hit but Strava is not configured.");
@@ -489,6 +528,7 @@ public class OAuthController {
 
                     String token = authService.issueSessionToken(newRunner);
                     String targetPage = authService.isAdmin(newRunner) ? "/dashboard" : "/profile";
+                    setAdminPortalCookie(newRunner, token, request, response);
 
                     return new RedirectView(
                             targetPage
@@ -532,8 +572,13 @@ public class OAuthController {
 
             stravaSyncService.scheduleStravaSync(runner, accessToken, false, "oauth_link");
 
+            if (authService.isAdmin(runner)) {
+                return beginAdminOAuthMfa(runner, "STRAVA", request, response);
+            }
+
             String token = authService.issueSessionToken(runner);
-            String targetPage = authService.isAdmin(runner) ? "/dashboard" : "/profile";
+            String targetPage = "/profile";
+            setAdminPortalCookie(runner, token, request, response);
 
             return new RedirectView(
                     targetPage
@@ -549,6 +594,55 @@ public class OAuthController {
                     originalIntent.isBlank() ? null : originalIntent
             );
         }
+    }
+
+    // Retained for focused unit tests and non-servlet callers.
+    RedirectView handleStravaCallback(String code, String error, String state) {
+        return handleStravaCallback(code, error, state, null, null);
+    }
+
+    private RedirectView beginAdminOAuthMfa(
+            Runner runner,
+            String primaryMethod,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        if (adminMfaService == null || adminAccessGateway == null
+                || request == null || !adminAccessGateway.isAllowed(request)) {
+            return errorRedirectCode("OAUTH_FAILED", "Sign-in failed.", null);
+        }
+        try {
+            AdminMfaService.BeginResult result =
+                    adminMfaService.beginPrimaryAuthenticatedFlow(runner, primaryMethod);
+            if (response != null) {
+                response.addHeader(HttpHeaders.SET_COOKIE,
+                        AdminMfaChallengeCookie.issue(result.selector(), request));
+                response.addHeader(HttpHeaders.SET_COOKIE, AdminPortalSessionCookie.clear(request));
+                response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+                response.setHeader(HttpHeaders.PRAGMA, "no-cache");
+            }
+            String state = "ADMIN_MFA_SETUP_REQUIRED".equals(result.code()) ? "setup" : "required";
+            return new RedirectView("/login?adminMfa=" + state);
+        } catch (AdminMfaException ex) {
+            return errorRedirectCode("OAUTH_FAILED", "Sign-in failed.", null);
+        }
+    }
+
+    private void setAdminPortalCookie(
+            Runner runner,
+            String token,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        if (response == null) {
+            return;
+        }
+        String cookie = authService.isAdmin(runner)
+                ? AdminPortalSessionCookie.issue(token, request)
+                : AdminPortalSessionCookie.clear(request);
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie);
+        response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store");
+        response.setHeader(HttpHeaders.PRAGMA, "no-cache");
     }
 
     // ── Strava sync endpoints ───────────────────────────────────────

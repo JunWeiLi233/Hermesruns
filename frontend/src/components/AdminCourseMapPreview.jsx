@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { getBackendBaseUrl } from '../api';
+import { buildCourseMapStaticGeometry } from '../utils/courseMapStaticGeometry.js';
 
 const ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM = 19;
 const ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM = 14;
@@ -83,30 +84,6 @@ function normalizeFallbackCenter(rawCenter) {
   };
 }
 
-function buildStaticRoutePath(points) {
-  if (!Array.isArray(points) || points.length < 2) {
-    return 'M 8 72 C 24 18, 36 82, 52 42 S 78 22, 92 68';
-  }
-
-  const lats = points.map(([lat]) => lat);
-  const lngs = points.map(([, lng]) => lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const latRange = Math.max(maxLat - minLat, 0.000001);
-  const lngRange = Math.max(maxLng - minLng, 0.000001);
-
-  return points
-    .filter((_, index) => index % Math.max(1, Math.ceil(points.length / 18)) === 0 || index === points.length - 1)
-    .map(([lat, lng], index) => {
-      const x = 8 + ((lng - minLng) / lngRange) * 84;
-      const y = 86 - ((lat - minLat) / latRange) * 72;
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(' ');
-}
-
 export default function AdminCourseMapPreview({
   preview,
   title,
@@ -145,7 +122,7 @@ export default function AdminCourseMapPreview({
   const previewSummary = useMemo(() => resolvePreviewSummary(preview), [preview]);
   const showPreviewSummary = Boolean(previewSummary) && !hasRenderableAlignment;
   const fallbackLabel = previewSummary || (preview && unalignedLabel ? unalignedLabel : emptyLabel);
-  const staticRoutePath = useMemo(() => buildStaticRoutePath(polylinePoints), [polylinePoints]);
+  const staticRouteGeometry = useMemo(() => buildCourseMapStaticGeometry(polylinePoints), [polylinePoints]);
 
   useEffect(() => {
     setMapReady(false);
@@ -368,10 +345,20 @@ export default function AdminCourseMapPreview({
     return (
       <div className="admin-review-preview admin-review-preview--card admin-review-preview--static-card">
         <svg className="admin-review-preview__static-route" viewBox="0 0 100 100" role="img" aria-label={title}>
-          <path className="admin-review-preview__static-route-shadow" d={staticRoutePath} />
-          <path className="admin-review-preview__static-route-line" d={staticRoutePath} />
-          <circle className="admin-review-preview__static-route-start" cx="8" cy="72" r="3" />
-          <circle className="admin-review-preview__static-route-end" cx="92" cy="68" r="3" />
+          <path className="admin-review-preview__static-route-shadow" d={staticRouteGeometry.path} />
+          <path className="admin-review-preview__static-route-line" d={staticRouteGeometry.path} />
+          <circle
+            className="admin-review-preview__static-route-start"
+            cx={staticRouteGeometry.start.x}
+            cy={staticRouteGeometry.start.y}
+            r="3"
+          />
+          <circle
+            className="admin-review-preview__static-route-end"
+            cx={staticRouteGeometry.end.x}
+            cy={staticRouteGeometry.end.y}
+            r="3"
+          />
         </svg>
         <span className="admin-review-preview__static-label">{emptyLabel}</span>
       </div>

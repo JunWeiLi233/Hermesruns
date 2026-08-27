@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,10 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.hermes.backend.auth.mfa.AdminMfaChallengeCookie;
+import com.hermes.backend.auth.mfa.AdminMfaException;
+import com.hermes.backend.auth.mfa.AdminMfaService;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -43,6 +48,8 @@ public class LoginController {
     private final PasswordResetService passwordResetService;
     private final ApiRateLimiter apiRateLimiter;
     private final RecaptchaVerifier recaptchaVerifier;
+    private final AdminMfaService adminMfaService;
+    private final AdminAccessGateway adminAccessGateway;
 
     @Value("${app.billing.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
@@ -56,6 +63,24 @@ public class LoginController {
                            PasswordResetService passwordResetService,
                            ApiRateLimiter apiRateLimiter,
                            RecaptchaVerifier recaptchaVerifier) {
+        this(runnerRepository, authService, rateLimiter, secretEncryptionService, aiUsageService,
+                emailVerificationService, emailValidationService, verificationResendLimiter,
+                passwordResetLimiter, passwordResetService, apiRateLimiter, recaptchaVerifier,
+                null, AdminAccessGateway.disabled());
+    }
+
+    @Autowired
+    public LoginController(RunnerRepository runnerRepository, AuthService authService, LoginRateLimiter rateLimiter,
+                           SecretEncryptionService secretEncryptionService,
+                           AiUsageService aiUsageService, EmailVerificationService emailVerificationService,
+                           EmailValidationService emailValidationService,
+                           VerificationResendLimiter verificationResendLimiter,
+                           PasswordResetLimiter passwordResetLimiter,
+                           PasswordResetService passwordResetService,
+                           ApiRateLimiter apiRateLimiter,
+                           RecaptchaVerifier recaptchaVerifier,
+                           AdminMfaService adminMfaService,
+                           AdminAccessGateway adminAccessGateway) {
         this.runnerRepository = runnerRepository;
         this.authService = authService;
         this.rateLimiter = rateLimiter;
@@ -68,6 +93,8 @@ public class LoginController {
         this.passwordResetService = passwordResetService;
         this.apiRateLimiter = apiRateLimiter;
         this.recaptchaVerifier = recaptchaVerifier;
+        this.adminMfaService = adminMfaService;
+        this.adminAccessGateway = adminAccessGateway;
     }
 
     // ==========================================
@@ -106,19 +133,36 @@ public class LoginController {
                     "Please verify your email before signing in. Check your inbox or request a new link.",
                     "EMAIL_NOT_VERIFIED");
         }
+        if (authService.isAdmin(runner)) {
+            if (!adminAccessGateway.isAllowed(request)) {
+                return error(HttpStatus.UNAUTHORIZED, "Invalid password/username");
+            }
+            return beginAdminMfa(runner, "PASSWORD", request);
+        }
         String token = authService.issueSessionToken(runner);
         log.info("Auth login success ip={} runnerId={} role={}", ip, runner.getId(), runner.getRole());
-        return ResponseEntity.ok(authResponse("Login successful.", token, runner, false));
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store");
+        // Do not leave a previous administrator's portal session active in a
+        // shared browser after a normal runner signs in.
+        response.header(HttpHeaders.SET_COOKIE, AdminPortalSessionCookie.clear(request));
+        return response.body(authResponse("Login successful.", token, runner, false));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest request
+    ) {
         Optional<Runner> runnerOpt = authService.findByAuthorizationHeader(authHeader);
         if (runnerOpt.isPresent()) {
             authService.invalidateSession(runnerOpt.get());
             log.info("Auth logout success runnerId={}", runnerOpt.get().getId());
         }
-        return ResponseEntity.ok(Map.of("message", "Logged out."));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, AdminPortalSessionCookie.clear(request))
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(Map.of("message", "Logged out."));
     }
 
     // ==========================================
@@ -646,9 +690,32 @@ public class LoginController {
         rateLimiter.recordSuccess(ip);
 
         Runner runner = runnerOptional.get();
-        String token = authService.issueSessionToken(runner);
+        if (!adminAccessGateway.isAllowed(request)) {
+            return error(HttpStatus.UNAUTHORIZED, "Invalid admin credentials.");
+        }
+        return beginAdminMfa(runner, "PASSWORD", request);
+    }
 
-        return ResponseEntity.ok(authResponse("Admin login successful.", token, runner, true));
+    private ResponseEntity<?> beginAdminMfa(Runner runner, String primaryMethod, HttpServletRequest request) {
+        if (adminMfaService == null) {
+            return error(HttpStatus.SERVICE_UNAVAILABLE, "Admin authentication is unavailable.");
+        }
+        try {
+            AdminMfaService.BeginResult result =
+                    adminMfaService.beginPrimaryAuthenticatedFlow(runner, primaryMethod);
+            Map<String, String> payload = new LinkedHashMap<>();
+            payload.put("message", "Additional verification is required.");
+            payload.put("code", result.code());
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .header(HttpHeaders.SET_COOKIE,
+                            AdminMfaChallengeCookie.issue(result.selector(), request),
+                            AdminPortalSessionCookie.clear(request))
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .header(HttpHeaders.PRAGMA, "no-cache")
+                    .body(payload);
+        } catch (AdminMfaException ex) {
+            return error(HttpStatus.UNAUTHORIZED, "Invalid admin credentials.");
+        }
     }
 
     // ==========================================

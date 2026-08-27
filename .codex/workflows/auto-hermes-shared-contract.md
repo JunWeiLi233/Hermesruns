@@ -261,7 +261,7 @@ On a true stop:
 - for `/auto-hermes` and `/auto-hermes-max`, a true clean stop that produces a publishable product commit is the `needed` case for auto-push
 - a true clean stop may also auto-push an already-committed current branch when no new working-tree files remain, the branch still has unpublished local commits, and the normal push gates pass
 - commit when commit gates pass
-- push only when a real publish need exists, push gates pass, and `origin` still points to `https://github.com/520HXC/run.git`
+- push only when a real publish need exists, push gates pass, and `origin` still points to `https://github.com/JunWeiLi233/Hermesruns.git`
 - local commit is the default finish state
 - push/main-repository submission requires a fresh passing Docker gate artifact for the current working tree
 - the Docker gate does not block normal local auto-commit; it blocks only publish paths

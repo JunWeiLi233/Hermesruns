@@ -1,7 +1,7 @@
 # Auto-Hermes Pull Main
 
 Safely sync the local Hermes repo with the latest commits on
-`https://github.com/520HXC/run.git`. Counterpart to `/auto-hermes-push-main`.
+`https://github.com/JunWeiLi233/Hermesruns.git`. Counterpart to `/auto-hermes-push-main`.
 
 ## When to use
 
@@ -12,7 +12,7 @@ edits.
 Refuses to run when:
 - the working directory is not a git repo,
 - HEAD is detached,
-- `origin` does not point at `https://github.com/520HXC/run.git`,
+- `origin` does not point at `https://github.com/JunWeiLi233/Hermesruns.git`,
 - the working tree is dirty AND `--no-stash` is passed.
 
 ## How to invoke

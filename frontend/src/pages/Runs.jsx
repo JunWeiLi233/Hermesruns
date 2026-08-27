@@ -7,6 +7,7 @@ const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
 const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
+import { invalidateResourceCache } from '../api/resourceCache';
 import AppIcon from '../components/AppIcon';
 import PageSkeleton from '../components/PageSkeleton';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -16,12 +17,13 @@ import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { preloadRoute } from '../utils/routePreload';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { createRoutePreviewRequestCoordinator } from './runsRequestCoordinator';
 import { canonicalizeRunsCacheEmail, createRunsLoadGeneration, invalidateRunsCache, readRunsCache, writeRunsCache } from './runsCache';
 import { invalidateHeatmapCache } from './heatmapCache';
-import { captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
+import { budgetMonthGroupsByRunCount, captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
 
 const runDate = (r) => new Date(r.startTime || r.startDate || 0);
 
@@ -145,9 +147,10 @@ function normalizeRoutePreview(preview) {
 const ROUTE_PREVIEW_VIEW_SIZE = 100;
 const ROUTE_PREVIEW_PADDING = 24;
 const ROUTE_PREVIEW_INNER_SIZE = ROUTE_PREVIEW_VIEW_SIZE - (ROUTE_PREVIEW_PADDING * 2);
-const ROUTE_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
 const ROUTE_TILE_MIN_ZOOM = 2;
-const ROUTE_TILE_MAX_ZOOM = 18;
+// Esri World Dark Gray Base stops at LOD 16; CARTO's dark tiles now require
+// a registered API key, so 16 is also the keyless ceiling for thumbnails.
+const ROUTE_TILE_MAX_ZOOM = 16;
 const ROUTE_TILE_MAX_LAYERS = 64;
 const ROUTE_TILE_TARGET_CSS_PX = 128;
 const ROUTE_TILE_MAX_MERCATOR_LAT = 85.05112878;
@@ -165,7 +168,6 @@ function pickRouteTileZoom(latSpan, lngSpan) {
   return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
 }
 
-  // Mirror Heatmap map tiles but use the no-labels variant at thumbnail scale.
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -188,8 +190,9 @@ function buildRouteTileUrl(zoom, x, y) {
   if (![zoom, x, y].every(Number.isFinite)) return null;
   const n = 2 ** zoom;
   if (zoom < ROUTE_TILE_MIN_ZOOM || zoom > ROUTE_TILE_MAX_ZOOM || x < 0 || y < 0 || x >= n || y >= n) return null;
-  const sub = ROUTE_TILE_SUBDOMAINS[(x + y) % ROUTE_TILE_SUBDOMAINS.length];
-  return `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}.png`;
+  // Esri Dark Gray (no labels at thumbnail scale); the MapServer tile path is
+  // /tile/{z}/{y}/{x} with no file extension.
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${zoom}/${y}/${x}`;
 }
 
 function tileRangeForPreviewBounds(viewBounds, zoom) {
@@ -431,6 +434,10 @@ function RoutePreviewThumb({ preview, provider, runName, bbox }) {
 
 const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
 const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
+// The history render window grows on this cadence until every filtered run is
+// mounted, so loading never depends on where the scroll sentinel sits or on
+// month cards being expanded/collapsed. The observer only accelerates it.
+const RUNS_BACKGROUND_LOAD_STEP_MS = 120;
 const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT + (RECENT_RUNS_LOAD_BATCH_SIZE * 2);
 const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE * 3;
 
@@ -706,7 +713,10 @@ const Runs = memo(function Runs() {
       .catch(() => {});
 
     await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
-    if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
+    // The slim cache only needs the runs payload; profile/strava fall back to
+    // the values seeded above (cache/metadata) when their endpoints fail, so
+    // a flaky side endpoint no longer blocks cache refreshes.
+    if (isCurrentLoad() && !runsFailed && latestRuns) {
       writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
     }
   }, [email, requestRoutePreviews, runsIdentity]);
@@ -944,22 +954,19 @@ const Runs = memo(function Runs() {
   }, null);
   const latestSource = latestRun?.provider || t('runs.no_data');
 
-  const visibleRuns = useMemo(
-    () => filteredRuns.slice(0, visibleRunsCount),
-    [filteredRuns, visibleRunsCount],
-  );
   const routePreviewRuns = useMemo(
     () => filteredRuns.slice(0, Math.min(filteredRuns.length, visibleRunsCount + ROUTE_PREVIEW_PREFETCH_LOOKAHEAD)),
     [filteredRuns, visibleRunsCount],
   );
   const hasMoreRuns = visibleRunsCount < filteredRuns.length;
 
-  // Group the visible runs by YYYY-MM so the page-list renders each month as
-  // its own header + responsive run-card grid. visibleRuns is already sorted
-  // most-recent-first, so a single pass preserves the chronological group
-  // order without an extra sort. Each group also carries an aggregate run
-  // count and total distance so the header copy can summarize the month at
-  // a glance.
+  // Group the FULL filtered history by YYYY-MM so each month header always
+  // shows the month's true run count and distance — never the partial
+  // numbers of whatever slice happens to be rendered. The rendered cards are
+  // budgeted separately (visibleMonthGroups), so headers stay truthful while
+  // the grid streams in. filteredRuns is already sorted most-recent-first, so
+  // a single pass preserves the chronological group order without an extra
+  // sort.
   const runsByMonth = useMemo(() => {
     const groups = [];
     const groupByKey = new Map();
@@ -970,7 +977,7 @@ const Runs = memo(function Runs() {
         return null;
       }
     })();
-    visibleRuns.forEach((run) => {
+    filteredRuns.forEach((run) => {
       const started = runDate(run);
       if (Number.isNaN(started.getTime())) return;
       const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
@@ -982,17 +989,27 @@ const Runs = memo(function Runs() {
             ? monthLabelFormatter.format(started)
             : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
           runs: [],
+          runCount: 0,
           totalKm: 0,
         };
         groupByKey.set(key, group);
         groups.push(group);
       }
       group.runs.push(run);
+      group.runCount += 1;
       group.totalKm += Number(run.distanceKm || 0)
         || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
     });
     return groups;
-  }, [visibleRuns, lang]);
+  }, [filteredRuns, lang]);
+
+  // Apply the render window on top of the true month groups: headers keep
+  // their full-month aggregates, only the mounted cards are limited, and the
+  // window grows (below) regardless of any card's fold state.
+  const visibleMonthGroups = useMemo(
+    () => budgetMonthGroupsByRunCount(runsByMonth, visibleRunsCount),
+    [runsByMonth, visibleRunsCount],
+  );
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -1057,6 +1074,7 @@ const Runs = memo(function Runs() {
     try {
       await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
       resetRoutePreviewState();
+      invalidateResourceCache('/api/activities');
       // Optimistically remove from state + clear per-run caches.
       setAllRuns(prev => prev.filter(r => r.id !== run.id));
       setRoutePreviewFallbacks(prev => {
@@ -1083,6 +1101,18 @@ const Runs = memo(function Runs() {
       setDeleting(false);
     }
   }
+
+  // Stream the remaining history in bounded batches on a timer so the list
+  // always finishes loading — whether month cards are expanded, collapsed, or
+  // the scroll sentinel never enters view. Scrolling to the sentinel (below)
+  // still accelerates the same growth; nothing about the fold state gates it.
+  useEffect(() => {
+    if (!hasMoreRuns || loadState !== 'ready') return undefined;
+    const stepTimer = window.setInterval(() => {
+      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+    }, RUNS_BACKGROUND_LOAD_STEP_MS);
+    return () => window.clearInterval(stepTimer);
+  }, [filteredRuns.length, hasMoreRuns, loadState]);
 
   useEffect(() => {
     if (!hasMoreRuns || loadState !== 'ready') return undefined;
@@ -1178,10 +1208,9 @@ const Runs = memo(function Runs() {
               ['fit', 'FIT/GPX', fitExportFiles, setFitExportFiles, 'profile.fit_export_source_title', 'profile.fit_export_source_hint', 'profile.fit_export_file_label'],
               ['coros', 'COROS', corosFiles, setCorosFiles, 'profile.coros_source_title', 'profile.coros_source_hint', 'profile.coros_file_label'],
               ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
-            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
+            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey]) => (
               <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
                 <div className="import-source-header">
-                  <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                   <div className="import-source-copy">
                     <span className="import-source-title">{t(titleKey)}</span>
                     <span className="import-source-hint">{t(hintKey)}</span>
@@ -1247,6 +1276,8 @@ const Runs = memo(function Runs() {
                 type="button"
                 className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
+                onPointerEnter={() => preloadRoute(item.route)}
+                onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1259,6 +1290,8 @@ const Runs = memo(function Runs() {
               type="button"
               className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
+              onPointerEnter={() => preloadRoute('/today-run')}
+              onFocus={() => preloadRoute('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
               <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -1407,6 +1440,8 @@ const Runs = memo(function Runs() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              onPointerEnter={() => preloadRoute(item.route)}
+              onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1419,6 +1454,8 @@ const Runs = memo(function Runs() {
             type="button"
             className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
+            onPointerEnter={() => preloadRoute('/today-run')}
+            onFocus={() => preloadRoute('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -1558,7 +1595,7 @@ const Runs = memo(function Runs() {
           {loadState === 'ready' && filteredRuns.length > 0 ? (
               <>
                 <div className="recent-runs-page-list">
-                  {runsByMonth.map((group) => {
+                  {visibleMonthGroups.map((group) => {
                     const collapsed = collapsedMonthKeys.has(group.key);
                     const panelId = `recent-runs-month-${group.key}`;
                     return (
@@ -1579,7 +1616,7 @@ const Runs = memo(function Runs() {
                           </span>
                           <h3 className="recent-runs-month-title">{group.label}</h3>
                           <span className="recent-runs-month-meta">
-                            {t('runs.count_label', { count: group.runs.length })}
+                            {t('runs.count_label', { count: group.runCount })}
                             {' · '}
                             {formatDistance(group.totalKm, 1, lang)}
                           </span>

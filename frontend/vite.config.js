@@ -19,10 +19,10 @@ export default defineConfig({
     // with an older index.html do not request deleted CSS/JS files.
     emptyOutDir: false,
     // Generate readable-ish bundles when `VITE_MINIFY=false`.
-    // Note: bundles are still output as JS modules; original code lives in `frontend/` or devtools via sourcemaps.
+    // Source maps are debug-only because backend/static is served publicly.
     minify: process.env.VITE_MINIFY === 'false' ? false : 'esbuild',
     cssMinify: process.env.VITE_CSS_MINIFY === 'false' ? false : true,
-    sourcemap: process.env.VITE_SOURCEMAP === 'false' ? false : true,
+    sourcemap: process.env.VITE_SOURCEMAP === 'true',
     rolldownOptions: {
       output: {
         // Keep the app entry focused on bootstrap code. Locale payloads are

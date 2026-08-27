@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 function joinClasses(...values) {
   return values.filter(Boolean).join(' ');
 }
 
-export default function Modal({ isOpen, onClose, title, children, icon = null, shellClassName = '', cardClassName = '' }) {
+export default function Modal({ isOpen, onClose, title, children, icon = null, shellClassName = '', cardClassName = '', portalToBody = false, adminDashboard = false }) {
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -31,9 +32,9 @@ export default function Modal({ isOpen, onClose, title, children, icon = null, s
     }
   }
 
-  return (
-    <div className={joinClasses('modal-shell', shellClassName)} onClick={handleOverlayClick} role="presentation">
-      <div className={joinClasses('modal-card', cardClassName)} role="dialog" aria-modal="true" aria-label={title}>
+  const content = (
+    <div className={joinClasses('modal-shell', adminDashboard && 'admin-dashboard-modal-shell', shellClassName)} onClick={handleOverlayClick} role="presentation">
+      <div className={joinClasses('modal-card', adminDashboard && 'admin-dashboard-modal-card', cardClassName)} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-header">
           {icon ? <div className="modal-header-icon" aria-hidden="true">{icon}</div> : null}
           <h3>{title}</h3>
@@ -47,4 +48,8 @@ export default function Modal({ isOpen, onClose, title, children, icon = null, s
       </div>
     </div>
   );
+
+  return portalToBody && typeof document !== 'undefined'
+    ? createPortal(content, document.body)
+    : content;
 }

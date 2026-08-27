@@ -24,8 +24,6 @@ const cx = (...parts) => parts.filter(Boolean).join(' ');
 const VALID_INSIGHT_KEYS = ['load-balance', 'intensity', 'injury-risk', 'coach-insight'];
 const INJURY_TREND_CHART_WIDTH = 1000;
 const INJURY_TREND_CHART_HEIGHT = 220;
-const COACH_READINESS_RING_RADIUS = 68;
-const COACH_READINESS_RING_CIRCUMFERENCE = 2 * Math.PI * COACH_READINESS_RING_RADIUS;
 
 const RUN_ZONE_LABELS = {
   'zh-CN': {
@@ -1359,8 +1357,7 @@ export default function AnalysisInsightDetail() {
     ? Math.round(recentRows.slice(0, 4).reduce((sum, row) => sum + Number(row.loadScore || 0), 0) / Math.min(4, recentRows.length))
     : null;
   const coachPrimarySession = coachSystem?.sessions?.[0] || null;
-  const coachReadinessScore = clamp(Number(coachSystem?.readinessScore) || 0, 0, 100);
-  const coachReadinessRingOffset = COACH_READINESS_RING_CIRCUMFERENCE * (1 - (coachReadinessScore / 100));
+  const coachReadinessScore = coachSystem?.readinessScore ?? null;
   const [injuryScrubber, setInjuryScrubber] = useState(null);
   const activeInjuryTooltip = injuryScrubber || injuryTrendTooltip;
   const injuryTooltipPosition = getInjuryTooltipPosition(activeInjuryTooltip);
@@ -1398,7 +1395,7 @@ export default function AnalysisInsightDetail() {
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
     { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'weather' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
+    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'shoe_outline' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
@@ -1461,37 +1458,9 @@ export default function AnalysisInsightDetail() {
                   <h1>{coachSystem.title}</h1>
                   <p>{coachSystem.subtitle}</p>
                 </div>
-                <aside className="analysis-profile-v2-status">
-                  <div
-                    className="analysis-coach-readiness-ring"
-                    role="img"
-                    data-readiness-score={coachSystem.readinessScore}
-                    aria-label={`${coachSystem.copy.readinessLabel}: ${coachReadinessScore} / 100`}
-                  >
-                    <svg className="analysis-coach-readiness-ring__svg" viewBox="0 0 160 160" aria-hidden="true" focusable="false">
-                      <circle className="analysis-coach-readiness-ring__track" cx="80" cy="80" r={COACH_READINESS_RING_RADIUS} />
-                      <circle
-                        className="analysis-coach-readiness-ring__progress"
-                        cx="80"
-                        cy="80"
-                        r={COACH_READINESS_RING_RADIUS}
-                        strokeDasharray={COACH_READINESS_RING_CIRCUMFERENCE}
-                        strokeDashoffset={coachReadinessRingOffset}
-                      />
-                    </svg>
-                    <span className="analysis-coach-readiness-ring__value" aria-hidden="true">
-                      <strong>{coachReadinessScore}</strong>
-                      <small>/ 100</small>
-                    </span>
-                  </div>
-                  <div className="analysis-profile-v2-status-copy">
-                    <span>{coachSystem.copy.readinessLabel}</span>
-                    <strong>{coachSystem.readinessDescription}</strong>
-                  </div>
-                </aside>
               </section>
 
-              <section className="analysis-coach-profile-decision analysis-profile-v2-focus" style={{ boxShadow: coachSystem.palette.shadow }}>
+              <section className="analysis-coach-profile-decision analysis-profile-v2-focus" style={{ boxShadow: coachSystem.palette.shadow }} data-readiness-score={coachReadinessScore ?? undefined}>
                 <div className="analysis-coach-command-hero-art" aria-hidden="true" />
                 <div className="analysis-coach-profile-decision-copy">
                   <div className="analysis-coach-profile-coach-stack">
@@ -1618,7 +1587,6 @@ export default function AnalysisInsightDetail() {
                           <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
                             <div className="analysis-load-command-chart-tooltip-head">
                               <span>{coachLoadScrubber.label}</span>
-                              <i aria-hidden="true" />
                             </div>
                             <div className="analysis-load-command-chart-tooltip-metrics">
                               <div className="analysis-load-command-chart-tooltip-metric is-acute">
@@ -2098,10 +2066,9 @@ export default function AnalysisInsightDetail() {
                     )}
                     {loadScrubber ? (
                       <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
-                        <div className="analysis-load-command-chart-tooltip-head">
-                          <span>{loadScrubber.label}</span>
-                          <i aria-hidden="true" />
-                        </div>
+                      <div className="analysis-load-command-chart-tooltip-head">
+                        <span>{loadScrubber.label}</span>
+                      </div>
                         <div className="analysis-load-command-chart-tooltip-metrics">
                           <div className="analysis-load-command-chart-tooltip-metric is-acute">
                             <i aria-hidden="true" />

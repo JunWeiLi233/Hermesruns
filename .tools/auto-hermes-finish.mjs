@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { runAutoHermesDockerGate } from "./auto-hermes-docker-gate.mjs";
 import { runAutoHermesNotify } from "./auto-hermes-notify.mjs";
+import { HERMES_REPOSITORY_URL } from "./hermes-repository.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
@@ -32,7 +33,7 @@ function parseArgs(argv) {
     notifyJson: "",
     notifyMd: "",
     targetRemoteName: "origin",
-    targetRemoteUrl: "https://github.com/520HXC/run.git",
+    targetRemoteUrl: HERMES_REPOSITORY_URL,
   };
 
   for (let i = 0; i < argv.length; i += 1) {

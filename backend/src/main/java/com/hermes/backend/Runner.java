@@ -42,6 +42,13 @@ public class Runner {
 
     private LocalDateTime tokenIssuedAt;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private LocalDateTime adminMfaVerifiedAt;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(length = 32)
+    private String adminMfaMethod;
+
     private String role = "USER";
 
     private String displayName;
@@ -165,6 +172,22 @@ public class Runner {
 
     public void setTokenIssuedAt(LocalDateTime tokenIssuedAt) {
         this.tokenIssuedAt = tokenIssuedAt;
+    }
+
+    public LocalDateTime getAdminMfaVerifiedAt() {
+        return adminMfaVerifiedAt;
+    }
+
+    public void setAdminMfaVerifiedAt(LocalDateTime adminMfaVerifiedAt) {
+        this.adminMfaVerifiedAt = adminMfaVerifiedAt;
+    }
+
+    public String getAdminMfaMethod() {
+        return adminMfaMethod;
+    }
+
+    public void setAdminMfaMethod(String adminMfaMethod) {
+        this.adminMfaMethod = adminMfaMethod;
     }
 
     public String getRole() {

@@ -1466,6 +1466,38 @@
   color: #f07561;
 }
 
+.admin-audit-terminal__delete {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(87, 66, 62, 0.24);
+  border-radius: 999px;
+  background: transparent;
+  color: #f07561;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.admin-audit-terminal__delete .material-symbols-outlined {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-audit-terminal__delete:hover:not(:disabled),
+.admin-audit-terminal__delete:focus-visible {
+  background: rgba(240, 117, 97, 0.14);
+  border-color: rgba(240, 117, 97, 0.48);
+  color: #a0392a;
+}
+
+.admin-audit-terminal__delete:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
 .admin-audit-terminal__table-footer {
   border-top: 1px solid rgba(87, 66, 62, 0.18);
   color: #6b7280;
@@ -3460,6 +3492,20 @@ button.admin-users-command-kpi:hover {
   gap: 12px;
 }
 
+/* Keep the users filter actions distinct from the surrounding white controls. */
+.admin-command-page .admin-command-route--users .admin-users-command-console__filters > .btn-secondary.btn-inline-md {
+  border: 1px solid #d2d6d6 !important;
+  background: #f1f2f2 !important;
+  color: var(--admin-profile-ink) !important;
+  box-shadow: none !important;
+}
+
+.admin-command-page .admin-command-route--users .admin-users-command-console__filters > .btn-secondary.btn-inline-md:hover:not(:disabled),
+.admin-command-page .admin-command-route--users .admin-users-command-console__filters > .btn-secondary.btn-inline-md:focus-visible {
+  border-color: #bec4c4 !important;
+  background: #e7e9e9 !important;
+}
+
 .admin-users-command-console__saved {
   display: grid;
   gap: 12px;
@@ -4854,6 +4900,7 @@ button.admin-users-command-kpi:hover {
 .admin-track-hub-map-panel__badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
@@ -5381,6 +5428,12 @@ button.admin-users-command-kpi:hover {
 
 .admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__section-head {
   align-items: flex-start;
+}
+
+.admin-command-shell--coursemaps .admin-coursemap-scan-timeline__heading {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
 }
 
 .admin-command-shell--coursemaps .admin-coursemap-scan-timeline .admin-jobs-detail__section-head strong,

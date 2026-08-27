@@ -32,12 +32,12 @@ assert.match(
 assert.match(
   styles,
   /body #root \.analysis-insight-detail-page\.is-coach-insight[\s\S]*?\.analysis-load-command-chart-tooltip-head\s*\{[\s\S]*?justify-content:\s*space-between/,
-  'Coach tooltip header should use the reference left-date/right-marker layout.',
+  'Coach tooltip header should keep the date row layout.',
 );
-assert.match(
+assert.doesNotMatch(
   styles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight[\s\S]*?\.analysis-load-command-chart-tooltip-head\s+i\s*\{[\s\S]*?width:\s*6px[\s\S]*?height:\s*6px[\s\S]*?background:\s*#f07561/,
-  'Coach tooltip should keep the coral header marker visible.',
+  /body #root \.analysis-insight-detail-page\.is-coach-insight[\s\S]*?\.analysis-load-command-chart-tooltip-head\s+i\s*\{/,
+  'Coach tooltip should not render a decorative marker beside the date.',
 );
 assert.match(styles, /\.analysis-load-command-chart-tooltip-metrics\s*\{[\s\S]*?display:\s*grid/, 'Coach tooltip metrics should use stacked rows.');
 

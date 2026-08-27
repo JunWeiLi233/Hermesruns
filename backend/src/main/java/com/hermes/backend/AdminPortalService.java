@@ -8,6 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +18,19 @@ import java.util.*;
 
 @Service
 public class AdminPortalService {
+
+    // The dashboard boot calls the overview endpoint and every tab switch
+    // refreshes queues; both payloads run a dozen count/page queries over the
+    // same tables. A short TTL memo collapses those into one build while
+    // staying too brief to mask an operator's own edits for long. Admin
+    // mutations (deletes, bulk actions, notes, shoe/race-map writes) still
+    // invalidate immediately via invalidateDashboardCache().
+    private static final long DASHBOARD_CACHE_TTL_MS = 15_000;
+    private final Object dashboardCacheLock = new Object();
+    private volatile Map<String, Object> cachedQueueSummary;
+    private volatile long cachedQueueSummaryAtMillis;
+    private volatile Map<String, Object> cachedOverview;
+    private volatile long cachedOverviewAtMillis;
 
     private final RunnerRepository runnerRepository;
     private final ShoeRepository shoeRepository;
@@ -80,6 +96,185 @@ public class AdminPortalService {
 
     public Optional<Runner> requireAdmin(String authorizationHeader) {
         return authService.findByAuthorizationHeader(authorizationHeader).filter(authService::isAdmin);
+    }
+
+    /**
+     * Cached body shared by GET /api/admin/queues and the "queues" key of the
+     * overview payload. The returned map (and its nested lists) is
+     * defensively immutable so cached entries can never be mutated by callers.
+     */
+    public Map<String, Object> queueSummary() {
+        Map<String, Object> cached = cachedQueueSummary;
+        if (cached != null && System.currentTimeMillis() - cachedQueueSummaryAtMillis < DASHBOARD_CACHE_TTL_MS) {
+            return cached;
+        }
+        synchronized (dashboardCacheLock) {
+            cached = cachedQueueSummary;
+            if (cached != null && System.currentTimeMillis() - cachedQueueSummaryAtMillis < DASHBOARD_CACHE_TTL_MS) {
+                return cached;
+            }
+            Map<String, Object> body = Collections.unmodifiableMap(buildQueueSummaryBody());
+            cachedQueueSummary = body;
+            cachedQueueSummaryAtMillis = System.currentTimeMillis();
+            return body;
+        }
+    }
+
+    /**
+     * Cached full overview payload (KPIs + trends + embedded queues summary)
+     * for GET /api/admin/overview. Defensively immutable, same as
+     * {@link #queueSummary()}.
+     */
+    public Map<String, Object> overviewBody() {
+        Map<String, Object> cached = cachedOverview;
+        if (cached != null && System.currentTimeMillis() - cachedOverviewAtMillis < DASHBOARD_CACHE_TTL_MS) {
+            return cached;
+        }
+        synchronized (dashboardCacheLock) {
+            cached = cachedOverview;
+            if (cached != null && System.currentTimeMillis() - cachedOverviewAtMillis < DASHBOARD_CACHE_TTL_MS) {
+                return cached;
+            }
+            // Reentrant on dashboardCacheLock: the embedded queues summary may
+            // itself be rebuilt here, which is fine because intrinsic monitors
+            // are per-thread reentrant.
+            Map<String, Object> body = Collections.unmodifiableMap(buildOverviewBody());
+            cachedOverview = body;
+            cachedOverviewAtMillis = System.currentTimeMillis();
+            return body;
+        }
+    }
+
+    /** Clears both dashboard caches so the next read reflects the database immediately. */
+    public void invalidateDashboardCache() {
+        synchronized (dashboardCacheLock) {
+            cachedQueueSummary = null;
+            cachedQueueSummaryAtMillis = 0L;
+            cachedOverview = null;
+            cachedOverviewAtMillis = 0L;
+        }
+    }
+
+    /**
+     * Transaction-aware variant of {@link #invalidateDashboardCache()} for
+     * mutation endpoints annotated with {@code @Transactional}: dropping the
+     * cache while the write is still uncommitted would let a concurrent
+     * rebuild (READ_COMMITTED) snapshot pre-mutation state and then serve it
+     * for up to the full TTL after the commit. Registering the invalidation
+     * for {@code afterCompletion} guarantees the caches are cleared once the
+     * transaction has actually finished (commit or rollback). Callers running
+     * without an active transaction invalidate immediately.
+     */
+    public void invalidateDashboardCacheAfterCommit() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            invalidateDashboardCache();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                invalidateDashboardCache();
+            }
+        });
+    }
+
+    /**
+     * Remove only terminal job history. Active jobs stay visible and keep their
+     * persistence record so background workers can finish safely.
+     */
+    @Transactional
+    public Map<String, Object> clearTerminalJobs() {
+        long preservedActive = adminBackgroundJobRepository.countByStatusIn(List.of(
+                AdminBackgroundJob.STATUS_PENDING,
+                AdminBackgroundJob.STATUS_RUNNING));
+        int deleted = adminBackgroundJobRepository.deleteByStatusIn(List.of(
+                AdminBackgroundJob.STATUS_COMPLETED,
+                AdminBackgroundJob.STATUS_FAILED));
+        invalidateDashboardCacheAfterCommit();
+        return Map.of(
+                "deleted", deleted,
+                "preservedActive", preservedActive
+        );
+    }
+
+    /** Remove one audit record and invalidate cached dashboard totals after commit. */
+    @Transactional
+    public boolean deleteAuditLog(Long id) {
+        Optional<AdminAuditLog> auditOptional = adminAuditLogRepository.findById(id);
+        if (auditOptional.isEmpty() || auditOptional.get().getDeletedAt() != null) return false;
+        auditOptional.get().setDeletedAt(LocalDateTime.now());
+        adminAuditLogRepository.save(auditOptional.get());
+        invalidateDashboardCacheAfterCommit();
+        return true;
+    }
+
+    /** Hide the audit history in one batch while retaining it for trend metrics. */
+    @Transactional
+    public long clearAuditLogs() {
+        long deleted = adminAuditLogRepository.countByDeletedAtIsNull();
+        adminAuditLogRepository.softDeleteActive(LocalDateTime.now());
+        invalidateDashboardCacheAfterCommit();
+        return deleted;
+    }
+
+    /**
+     * Historical audit counts are built from every event row, including rows
+     * hidden from the live audit table by an administrator. Keeping the event
+     * rows lets this trend remain stable after cleanup actions.
+     */
+    public List<Map<String, Object>> auditTrend(int days) {
+        int normalizedDays = Math.max(1, Math.min(days, 90));
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(normalizedDays - 1L);
+        Map<LocalDate, Long> counts = new HashMap<>();
+        adminAuditLogRepository.findByCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAsc(
+                        start.atStartOfDay(),
+                        end.plusDays(1).atStartOfDay())
+                .forEach(log -> {
+                    if (log.getCreatedAt() != null) {
+                        counts.merge(log.getCreatedAt().toLocalDate(), 1L, Long::sum);
+                    }
+                });
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            trend.add(Map.of(
+                    "createdAt", date.toString(),
+                    "count", counts.getOrDefault(date, 0L)
+            ));
+        }
+        return trend;
+    }
+
+    private Map<String, Object> buildOverviewBody() {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("kpis", List.of(
+                kpi("Active users", runnerRepository.countByDeletedFalse(), List.copyOf(dailyUserTrend(7))),
+                kpi("Shoes", shoeRepository.count(), List.copyOf(dailyShoeTrend(7))),
+                kpi("Missing shoe images", shoeRepository.count(shoeFilterSpec("", "missing_photo", false)), List.of()),
+                kpi("Unverified shoe photos", shoeRepository.count(shoeFilterSpec("", "unverified_photo", false)), List.of()),
+                kpi("Recent signup issues", runnerRepository.count(userFilterSpec("", "", "", "recent_signup_issues")), List.of()),
+                kpi("Billing exceptions", runnerRepository.count(userFilterSpec("", "", "", "billing_exceptions")), List.of()),
+                kpi("Failed sync jobs", adminBackgroundJobRepository.countByStatusIn(
+                        List.of(AdminBackgroundJob.STATUS_FAILED)), List.of())
+        ));
+        response.put("queues", queueSummary());
+        response.put("recentJobs", adminBackgroundJobRepository.findTop10ByStatusInOrderByCreatedAtDesc(
+                        List.of(AdminBackgroundJob.STATUS_RUNNING, AdminBackgroundJob.STATUS_FAILED, AdminBackgroundJob.STATUS_COMPLETED))
+                .stream()
+                .map(this::toJobDto)
+                .toList());
+        return response;
+    }
+
+    private Map<String, Object> buildQueueSummaryBody() {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("unverifiedShoePhotos", List.copyOf(shoeRepository.findAll(shoeFilterSpec("", "unverified_photo", false), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(this::toShoeDto).getContent()));
+        body.put("missingShoeImages", List.copyOf(shoeRepository.findAll(shoeFilterSpec("", "missing_photo", false), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(this::toShoeDto).getContent()));
+        body.put("pendingRaceCourseMaps", raceCourseMapService.listRaceCourseMaps().stream().filter(RaceCourseMapAdminRow::hasPendingPreview).limit(8).toList());
+        body.put("recentSignupIssues", List.copyOf(runnerRepository.findAll(userFilterSpec("", "", "", "recent_signup_issues"), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(r -> toUserDto(r, 0)).getContent()));
+        body.put("billingExceptions", List.copyOf(runnerRepository.findAll(userFilterSpec("", "", "", "billing_exceptions"), PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"))).map(r -> toUserDto(r, 0)).getContent()));
+        body.put("failedSyncs", adminBackgroundJobRepository.findTop10ByStatusInOrderByCreatedAtDesc(List.of(AdminBackgroundJob.STATUS_FAILED)).stream().map(this::toJobDto).limit(8).toList());
+        return body;
     }
 
     public Specification<Runner> userFilterSpec(String search, String role, String status, String queue) {
@@ -261,22 +456,22 @@ public class AdminPortalService {
     }
 
     public List<Map<String, Object>> dailyUserTrend(int days) {
-        List<Runner> users = runnerRepository.findAll();
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = days - 1; i >= 0; i--) {
             LocalDate date = LocalDate.now().minusDays(i);
-            long count = users.stream().filter(r -> !r.isDeleted() && r.getCreatedAt() != null && date.equals(r.getCreatedAt().toLocalDate())).count();
+            LocalDateTime dayStart = date.atStartOfDay();
+            long count = runnerRepository.countActiveByCreatedAtWindow(dayStart, dayStart.plusDays(1));
             out.add(Map.of("label", date.toString(), "value", count));
         }
         return out;
     }
 
     public List<Map<String, Object>> dailyShoeTrend(int days) {
-        List<Shoe> shoes = shoeRepository.findAll();
         List<Map<String, Object>> out = new ArrayList<>();
         for (int i = days - 1; i >= 0; i--) {
             LocalDate date = LocalDate.now().minusDays(i);
-            long count = shoes.stream().filter(s -> s.getCreatedAt() != null && date.equals(s.getCreatedAt().toLocalDate())).count();
+            LocalDateTime dayStart = date.atStartOfDay();
+            long count = shoeRepository.countByCreatedAtWindow(dayStart, dayStart.plusDays(1));
             out.add(Map.of("label", date.toString(), "value", count));
         }
         return out;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
@@ -17,6 +17,7 @@ import {
 } from '../utils/progressionAtlas';
 import { getTodayRunRecommendation } from '../utils/todayRun';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../utils/stravaLinking';
+import { preloadRoute } from '../utils/routePreload';
 import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../utils/vdot';
 import { buildRunDetailPath } from '../utils/runRoute';
@@ -25,7 +26,7 @@ import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 import ComebackMessage from '../components/ComebackMessage';
 import PageSkeleton from '../components/PageSkeleton';
 
-const DASHBOARD_HERO_IMAGE = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCduh8I3MMazSPbifhs59F6YdwIOS-ZRvW7t_n3qJKHxcqDJP3fep7cglrfaXiwrYYPwPxFtz_ExFJggZD-Cy5WZbURvgfE6h4Bvc2M_XU19LaXiqyfdCoyiRn0Aoln4WxGCgqJqtK1Kn2Mlp-KiHvYvqqeidejVqd75xj0rXOXokd_ePH6X6P2LEuMuuZNA5N5gVErlHBg3f0Qdi_d5PaePI6Fzw8BoDHmloQLsQl4agd74Hb85CXqnA1DUwAI-P6P3oPHBwKS50k8';
+const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.png';
 const PR_SNAPSHOT_VERSION = 1;
 
 function getPrSnapshotStorageKey(email) {
@@ -665,13 +666,14 @@ export default function ProfileDashboard() {
   const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
   const [useFullDashboardMetrics, setUseFullDashboardMetrics] = useState(false);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
+  // Mirrors the Runs.jsx load-generation guard: each load takes a token, and a
+  // newer load (or unmount) bumps the counter so superseded requests drop
+  // their results instead of clobbering fresh state.
+  const dashboardLoadGenerationRef = useRef(0);
 
-    let cancelled = false;
+  const loadDashboard = useCallback(() => {
+    const loadToken = ++dashboardLoadGenerationRef.current;
+    const isCurrentLoad = () => dashboardLoadGenerationRef.current === loadToken;
 
     // Stale-while-revalidate: paint immediately from the last cached payload
     // for this account, then fetch fresh data in the background. Only the
@@ -704,13 +706,13 @@ export default function ProfileDashboard() {
       setLoadState('ready');
     }
 
-    async function loadDashboard() {
+    async function fetchDashboardData() {
       setUseFullDashboardMetrics(false);
       if (!hasUsableCache) setLoadState('loading');
       try {
         const dashboardData = await loadProfileDashboardData();
 
-        if (cancelled) return;
+        if (!isCurrentLoad()) return;
 
         const profileData = dashboardData.profile;
         const list = dashboardData.runs;
@@ -767,7 +769,7 @@ export default function ProfileDashboard() {
           const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 160));
           scheduleIdle(() => {
             void loadProfileDashboardFullHistoryData().then((fullRuns) => {
-              if (cancelled || fullRuns.length <= list.length) return;
+              if (!isCurrentLoad() || fullRuns.length <= list.length) return;
               setRuns(fullRuns);
               const fullSnapshot = buildDashboardCacheSnapshot({
                 ...dashboardData,
@@ -795,20 +797,20 @@ export default function ProfileDashboard() {
           applyDashboardEnrichment(dashboardData);
           if (dashboardData.deferredEnrichment) {
             void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
-              if (!cancelled) applyDashboardEnrichment(enrichmentData);
+              if (isCurrentLoad()) applyDashboardEnrichment(enrichmentData);
             }).catch(() => {
               // Optional dashboard enrichments should not block the first render.
             });
           }
         } else {
           void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
-            if (!cancelled) applyDashboardEnrichment(enrichmentData);
+            if (isCurrentLoad()) applyDashboardEnrichment(enrichmentData);
           }).catch(() => {
             // Optional dashboard enrichments should not block the first render.
           });
         }
       } catch {
-        if (!cancelled && !hasUsableCache) {
+        if (isCurrentLoad() && !hasUsableCache) {
           // Only show the error card when there's no cached snapshot to fall
           // back on. With cache, we silently keep the stale dashboard visible
           // and let the next mount retry - better than blanking the user.
@@ -817,11 +819,20 @@ export default function ProfileDashboard() {
       }
     }
 
+    fetchDashboardData();
+  }, [authEmail, t]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
     loadDashboard();
     return () => {
-      cancelled = true;
+      dashboardLoadGenerationRef.current += 1;
     };
-  }, [isAuthenticated, navigate, t, authEmail]);
+  }, [isAuthenticated, navigate, loadDashboard]);
 
   useEffect(() => {
     if (loadState !== 'ready' || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) {
@@ -869,14 +880,14 @@ export default function ProfileDashboard() {
     if (!isAuthenticated) return undefined;
 
     function handleStravaSyncFinished() {
-      window.location.reload();
+      loadDashboard();
     }
 
     window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
     return () => {
       window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadDashboard]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -1035,7 +1046,7 @@ export default function ProfileDashboard() {
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
     { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'weather' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
+    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'shoe_outline' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
@@ -1109,6 +1120,8 @@ export default function ProfileDashboard() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              onPointerEnter={() => preloadRoute(item.route)}
+              onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1121,6 +1134,8 @@ export default function ProfileDashboard() {
             type="button"
             className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
+            onPointerEnter={() => preloadRoute('/today-run')}
+            onFocus={() => preloadRoute('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>

@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,7 +28,7 @@ public class AdminAuditPortalController {
     public ResponseEntity<?> queues(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
         if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
-        return ResponseEntity.ok(queueSummaryBody());
+        return ResponseEntity.ok(adminService.queueSummary());
     }
 
     @GetMapping("/jobs")
@@ -61,6 +60,22 @@ public class AdminAuditPortalController {
                 .orElseGet(() -> AdminApiResponses.error(HttpStatus.NOT_FOUND, "Job not found.", "job_not_found"));
     }
 
+    @DeleteMapping("/jobs")
+    public ResponseEntity<?> clearJobs(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        Map<String, Object> result = adminService.clearTerminalJobs();
+        adminService.getAdminAuditService().log(
+                adminOptional.get(),
+                "job.history.cleared",
+                "job",
+                "terminal",
+                "Cleared completed and failed admin jobs",
+                result
+        );
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/jobs/strava-sync")
     public ResponseEntity<?> triggerStravaSync(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
         Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
@@ -81,10 +96,45 @@ public class AdminAuditPortalController {
         if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
         Pageable pageable = adminService.buildPageable(page, size, sortBy, sortDirection, AUDIT_SORT_FIELDS);
         Page<AdminAuditLog> result = (search == null || search.isBlank())
-                ? adminService.getAdminAuditLogRepository().findAll(pageable)
-                : adminService.getAdminAuditLogRepository().findByActionContainingIgnoreCaseOrTargetTypeContainingIgnoreCaseOrActorEmailContainingIgnoreCase(
-                search.trim(), search.trim(), search.trim(), pageable);
+                ? adminService.getAdminAuditLogRepository().findByDeletedAtIsNull(pageable)
+                : adminService.getAdminAuditLogRepository().searchActive(search.trim(), pageable);
         return ResponseEntity.ok(AdminPagedResponse.from(result.map(adminService::toAuditDto), pageable.getSort()));
+    }
+
+    @GetMapping("/audit/trend")
+    public ResponseEntity<?> auditTrend(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+                                        @RequestParam(defaultValue = "14") int days) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        return ResponseEntity.ok(Map.of("items", adminService.auditTrend(days)));
+    }
+
+    @DeleteMapping("/audit")
+    public ResponseEntity<?> clearAudit(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        long deleted = adminService.clearAuditLogs();
+        Map<String, Object> result = Map.of("deleted", deleted);
+        adminService.getAdminAuditService().log(
+                adminOptional.get(),
+                "audit.history.cleared",
+                "audit",
+                "history",
+                "Cleared admin audit history",
+                result
+        );
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/audit/{id}")
+    public ResponseEntity<?> deleteAudit(@PathVariable Long id,
+                                         @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> adminOptional = adminService.requireAdmin(authorizationHeader);
+        if (adminOptional.isEmpty()) return AdminApiResponses.error(HttpStatus.FORBIDDEN, "Admin privileges required.", "admin_required");
+        if (!adminService.deleteAuditLog(id)) {
+            return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Audit record not found.", "audit_not_found");
+        }
+        return ResponseEntity.ok(Map.of("deleted", true));
     }
 
     @GetMapping("/filters")
@@ -134,17 +184,7 @@ public class AdminAuditPortalController {
         }
         adminService.getAdminSavedFilterRepository().delete(filterOptional.get());
         adminService.getAdminAuditService().log(adminOptional.get(), "filter.deleted", "saved_filter", String.valueOf(id), "Deleted admin filter");
+        adminService.invalidateDashboardCache();
         return ResponseEntity.ok(Map.of("deleted", true));
-    }
-
-    private Map<String, Object> queueSummaryBody() {
-        Map<String, Object> body = new java.util.LinkedHashMap<>();
-        body.put("unverifiedShoePhotos", adminService.getShoeRepository().findAll(adminService.shoeFilterSpec("", "unverified_photo", false), org.springframework.data.domain.PageRequest.of(0, 8, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))).map(adminService::toShoeDto).getContent());
-        body.put("missingShoeImages", adminService.getShoeRepository().findAll(adminService.shoeFilterSpec("", "missing_photo", false), org.springframework.data.domain.PageRequest.of(0, 8, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))).map(adminService::toShoeDto).getContent());
-        body.put("pendingRaceCourseMaps", adminService.getRaceCourseMapService().listRaceCourseMaps().stream().filter(RaceCourseMapAdminRow::hasPendingPreview).limit(8).toList());
-        body.put("recentSignupIssues", adminService.getRunnerRepository().findAll(adminService.userFilterSpec("", "", "", "recent_signup_issues"), org.springframework.data.domain.PageRequest.of(0, 8, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))).map(r -> adminService.toUserDto(r, 0)).getContent());
-        body.put("billingExceptions", adminService.getRunnerRepository().findAll(adminService.userFilterSpec("", "", "", "billing_exceptions"), org.springframework.data.domain.PageRequest.of(0, 8, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))).map(r -> adminService.toUserDto(r, 0)).getContent());
-        body.put("failedSyncs", adminService.getAdminBackgroundJobRepository().findTop10ByStatusInOrderByCreatedAtDesc(List.of(AdminBackgroundJob.STATUS_FAILED)).stream().map(adminService::toJobDto).limit(8).toList());
-        return body;
     }
 }

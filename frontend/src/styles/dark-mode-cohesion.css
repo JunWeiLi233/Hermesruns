@@ -569,10 +569,8 @@ body.theme-midnight :is(
   .page-skeleton__heatmap-brand,
   .page-skeleton__heatmap-search,
   .page-skeleton__heatmap-actions > .page-skeleton__block,
-  .page-skeleton__heatmap-recenter,
   .page-skeleton__heatmap-legend,
-  .page-skeleton__heatmap-utility-rail,
-  .page-skeleton__heatmap-sessions
+  .page-skeleton__heatmap-utility-rail
 ) {
   border-color: rgba(255, 248, 238, 0.1) !important;
   background: rgba(33, 30, 25, 0.88) !important;

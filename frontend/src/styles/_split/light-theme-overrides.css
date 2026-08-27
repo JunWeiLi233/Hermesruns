@@ -163,6 +163,7 @@ body.theme-light .admin-command-page .admin-jobs-detail__json-empty,
 body.theme-light .admin-command-page .admin-jobs-terminal__pills span {
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(171, 173, 174, 0.14);
+  color: #475569;
 }
 
 body.theme-light .admin-command-page .admin-jobs-command-deck__hero-badge {
@@ -277,7 +278,8 @@ body.theme-light .admin-command-page .admin-audit-terminal__row:nth-child(even) 
 
 body.theme-light .admin-command-page .admin-audit-terminal__search,
 body.theme-light .admin-command-page .admin-audit-terminal__download,
-body.theme-light .admin-command-page .admin-audit-terminal__cta-icon {
+body.theme-light .admin-command-page .admin-audit-terminal__cta-icon,
+body.theme-light .admin-command-page .admin-audit-terminal__delete {
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(171, 173, 174, 0.14);
   color: #a0392a;
@@ -1063,9 +1065,7 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-coach-card,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-card,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-map-stage,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-readiness-card {
-    background:
-        radial-gradient(circle at top right, rgba(252, 126, 105, 0.1), transparent 34%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 241, 242, 0.98));
+    background: #fff;
     box-shadow: 0 18px 34px rgba(44, 47, 48, 0.06);
 }
 
@@ -1080,9 +1080,7 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-stat-card strong 
 
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-stat-card.is-accent,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-coach-card {
-    background:
-        radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 34%),
-        linear-gradient(180deg, rgba(255, 250, 247, 0.99), rgba(243, 236, 232, 0.98));
+    background: #fff;
     box-shadow: 0 18px 34px rgba(160, 57, 42, 0.08);
 }
 
@@ -4111,16 +4109,12 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-week-grid {
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day {
-  background:
-    radial-gradient(circle at top right, rgba(252, 126, 105, 0.06), transparent 32%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 241, 242, 0.98));
+  background: #f1f2f2;
   box-shadow: 0 14px 28px rgba(44, 47, 48, 0.05);
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day:hover {
-  background:
-    radial-gradient(circle at top right, rgba(252, 126, 105, 0.1), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(239, 241, 242, 1));
+  background: #eceeef;
   box-shadow: 0 18px 32px rgba(44, 47, 48, 0.08);
 }
 
@@ -4141,12 +4135,9 @@ body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-route-target-me
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day.is-today {
-  background:
-    radial-gradient(circle at top right, rgba(252, 126, 105, 0.16), transparent 30%),
-    linear-gradient(180deg, rgba(255, 248, 244, 1), rgba(255, 241, 236, 0.98));
-  box-shadow:
-    inset 0 0 0 1px rgba(160, 57, 42, 0.28),
-    0 20px 34px rgba(160, 57, 42, 0.12);
+  background: #f1f2f2;
+  box-shadow: 0 14px 28px rgba(44, 47, 48, 0.05);
+  transform: none;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .schedule-plan-day-today-badge {
@@ -4325,10 +4316,9 @@ body.theme-high-contrast-light .schedule-plan-day {
 }
 
 body.theme-high-contrast-light .schedule-plan-day.is-today {
-  background: #fff3ee;
-  box-shadow:
-    inset 0 0 0 2px rgba(160, 57, 42, 0.46),
-    0 14px 28px rgba(160, 57, 42, 0.1);
+  background: #f1f2f2;
+  box-shadow: 0 14px 28px rgba(44, 47, 48, 0.05);
+  transform: none;
 }
 
 body.theme-high-contrast-light .schedule-plan-day-today-badge {
@@ -4828,6 +4818,7 @@ body.theme-high-contrast-light .run-detail-dropdown {
 
 body.theme-light .run-detail-dropdown .shoe-run-option,
 body.theme-high-contrast-light .run-detail-dropdown .shoe-run-option {
+  background: #eef0f1;
   color: var(--text-strong);
 }
 
@@ -5502,7 +5493,6 @@ body.theme-light .races-dashboard-page .race-center-hero-chip-dot {
   box-shadow: 0 0 0 6px rgba(252, 126, 105, 0.12);
 }
 
-body.theme-light .races-dashboard-page .race-center-hero h1,
 body.theme-light .races-dashboard-page .race-center-section-head h2,
 body.theme-light .races-dashboard-page .race-center-calendar-head h3,
 body.theme-light .races-dashboard-page .race-center-pb-copy strong,
@@ -5513,7 +5503,11 @@ body.theme-light .races-dashboard-page .race-center-calendar-empty strong {
   color: var(--text-strong);
 }
 
-body.theme-light .races-dashboard-page .race-center-hero-accent,
+body.theme-light .races-dashboard-page .race-center-hero h1,
+body.theme-light .races-dashboard-page .race-center-hero-accent {
+  color: #ffffff;
+}
+
 body.theme-light .races-dashboard-page .race-center-pb-meta,
 body.theme-light .races-dashboard-page .race-center-inline-action,
 body.theme-light .races-dashboard-page .race-center-chevron {
@@ -7052,6 +7046,11 @@ body.theme-light .admin-command-page .admin-users-command-kpi {
   box-shadow: 0 16px 30px rgba(44, 47, 48, 0.06);
 }
 
+body.theme-light .admin-command-page .admin-users-command-console__filters {
+  background: transparent;
+  border-radius: 0;
+}
+
 body.theme-light .admin-command-page .admin-users-command-hero__copy h1,
 body.theme-light .admin-command-page .admin-users-command-hero__story-card strong,
 body.theme-light .admin-command-page .admin-users-command-kpi strong,
@@ -7128,6 +7127,13 @@ body.theme-light .admin-command-page .admin-users-command-bulk {
   box-shadow:
     inset 0 0 0 1px rgba(185, 92, 73, 0.14),
     0 16px 30px rgba(160, 57, 42, 0.08);
+}
+
+body.theme-light .admin-command-page .admin-users-command-bulk__actions > button {
+  background: #eef0f1;
+  border: 1px solid rgba(171, 173, 174, 0.34);
+  color: var(--text-strong);
+  box-shadow: none;
 }
 
 body.theme-light .admin-command-page .admin-users-roster-board__table-wrap.data-table-wrap {

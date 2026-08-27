@@ -149,6 +149,7 @@ public class AdminShoePortalController {
         }
 
         adminService.getShoeAdminAggregateService().applyIdentityKey(shoe);
+        adminService.getShoeAdminAggregateService().applyLiveAssetToShoe(shoe);
         Shoe saved = adminService.getShoeRepository().save(shoe);
         adminService.getAdminAuditService().log(adminOptional.get(), "shoe.created", "shoe", String.valueOf(saved.getId()),
                 "Admin created shoe",
@@ -158,6 +159,7 @@ public class AdminShoePortalController {
                         "brand", saved.getBrand(),
                         "model", saved.getModel()
                 ));
+        adminService.invalidateDashboardCache();
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.toShoeDto(saved));
     }
 
@@ -176,6 +178,7 @@ public class AdminShoePortalController {
             String finalUrl = SafeUrlValidator.validateHttpUrlOrImageDataUrlOrNull(imageUrl, MAX_PHOTO_REFERENCE_LENGTH, "imageUrl");
             ShoeImageAsset asset = adminService.getShoeAdminAggregateService().upsertPendingForShoe(shoeOptional.get(), finalUrl, source, adminOptional.get().getEmail());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.pending_set", "shoe", String.valueOf(id), "Saved pending shoe image", Map.of("identityKey", asset.getIdentityKey()));
+            adminService.invalidateDashboardCache();
             return ResponseEntity.ok(Map.of(
                     "pendingImageUrl", asset.getPendingImageUrl(),
                     "pendingSource", asset.getPendingSource()
@@ -202,6 +205,7 @@ public class AdminShoePortalController {
         try {
             ShoeImageAsset asset = adminService.getShoeAdminAggregateService().acceptPendingForShoe(shoeOptional.get(), adminOptional.get().getEmail());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.published", "shoe", String.valueOf(id), "Published live shoe image", Map.of("identityKey", asset.getIdentityKey()));
+            adminService.invalidateDashboardCache();
             return ResponseEntity.ok(Map.of("published", true, "liveImageUrl", asset.getLiveImageUrl()));
         } catch (IllegalArgumentException ex) {
             return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "invalid_shoe_image");
@@ -224,6 +228,7 @@ public class AdminShoePortalController {
         try {
             adminService.getShoeAdminAggregateService().clearPendingForShoe(shoeOptional.get());
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe_image.pending_cleared", "shoe", String.valueOf(id), "Cleared pending shoe image");
+            adminService.invalidateDashboardCache();
             return ResponseEntity.ok(Map.of("cleared", true));
         } catch (IllegalArgumentException ex) {
             return AdminApiResponses.error(HttpStatus.BAD_REQUEST, ex.getMessage(), "invalid_shoe_image");
@@ -278,6 +283,7 @@ public class AdminShoePortalController {
             adminService.getAdminAuditService().log(adminOptional.get(), "shoe.bulk." + action, "shoe", String.valueOf(shoe.getId()),
                     "Applied bulk action to shoe", Map.of("brand", shoe.getBrand(), "model", shoe.getModel()));
         }
+        adminService.invalidateDashboardCache();
         return ResponseEntity.ok(Map.of("dryRun", false, "action", action, "selected", selection.ids().size(), "affected", affected));
     }
 
@@ -301,6 +307,7 @@ public class AdminShoePortalController {
                         "brand", shoe.getBrand(),
                         "model", shoe.getModel()
                 ));
+        adminService.invalidateDashboardCacheAfterCommit();
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 }

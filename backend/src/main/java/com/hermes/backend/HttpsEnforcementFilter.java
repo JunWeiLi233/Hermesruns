@@ -38,6 +38,22 @@ public class HttpsEnforcementFilter implements Filter {
             return;
         }
 
+        // Railway probes the container over its private HTTP network before
+        // exposing a deployment. The existing service probes `/` with the
+        // dedicated healthcheck host, while newer installs can use the explicit
+        // endpoint. Answer only these data-free GETs locally; a public request
+        // for `/` still follows normal HTTPS enforcement and application routing.
+        boolean explicitHealthEndpoint = "/internal/health".equals(req.getRequestURI());
+        boolean railwayRootProbe = "/".equals(req.getRequestURI())
+                && "healthcheck.railway.app".equalsIgnoreCase(req.getServerName());
+        if ("GET".equalsIgnoreCase(req.getMethod()) && (explicitHealthEndpoint || railwayRootProbe)) {
+            res.setStatus(HttpServletResponse.SC_OK);
+            res.setContentType("application/json");
+            res.setHeader("Cache-Control", "no-store");
+            res.getWriter().write("{\"status\":\"ok\"}");
+            return;
+        }
+
         boolean prod = environment != null && environment.trim().equalsIgnoreCase("production");
         if (!prod || !forceHttps) {
             chain.doFilter(request, response);
@@ -95,4 +111,3 @@ public class HttpsEnforcementFilter implements Filter {
         return serverName + ":" + serverPort;
     }
 }
-
