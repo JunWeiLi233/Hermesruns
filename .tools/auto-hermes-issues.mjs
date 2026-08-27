@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // auto-hermes-issues.mjs
-// Bridge between GitHub issues on 520HXC/run and the Auto-Hermes task queue.
+// Bridge between GitHub issues on JunWeiLi233/Hermesruns and the Auto-Hermes task queue.
 // Used by /auto-hermes and /auto-hermes-self session-start checklists.
 //
 // Subcommands:
@@ -9,14 +9,15 @@
 //   --list --task-format --decompose    Split large issues into bounded sub-tasks
 //   --close <N> --comment "..."         Close issue #N with an optional comment
 //
-// Requires `gh` CLI authenticated against https://github.com/520HXC/run.
+// Requires `gh` CLI authenticated against https://github.com/JunWeiLi233/Hermesruns.
 // Exits 0 with `{ "skipped": true }` when gh is missing so the session checklist
 // keeps moving rather than blocking. Real errors surface non-zero.
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { HERMES_REPOSITORY } from "./hermes-repository.mjs";
 
-const REPO = "520HXC/run";
+const REPO = HERMES_REPOSITORY;
 
 function parseArgs(argv) {
   const args = {

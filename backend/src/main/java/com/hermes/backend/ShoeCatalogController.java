@@ -11,12 +11,17 @@ import org.springframework.web.bind.annotation.*;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/shoe-catalog")
 public class ShoeCatalogController {
     private static final Set<String> ALLOWED_TYPES = Set.of("daily", "speed", "race", "trail", "stability");
-    private static final Set<String> BRAND_FIELDS = Set.of("brand");
+    private static final Set<String> BRAND_FIELDS = Set.of("brand", "brandZh", "logoUrl");
+    private static final int MAX_LOGO_REFERENCE_LENGTH = 2_000_000;
+    private static final Pattern SAFE_LOGO_REFERENCE = Pattern.compile(
+            "(?i)^(?:https?://[^\\s<>\"']+|data:image/(?:png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=]+)$"
+    );
     private static final Set<String> MODEL_FIELDS = Set.of("brand", "model", "modelZh", "modelEn", "type");
     private static final Set<String> IMPORT_FIELDS = Set.of("url", "brand", "modelZh", "modelEn", "type");
     private static final Duration CATALOG_CACHE_TTL = Duration.ofMinutes(30);
@@ -29,6 +34,7 @@ public class ShoeCatalogController {
     private final OfficialShoeCatalogImportService officialShoeCatalogImportService;
     private final AdminAuditService adminAuditService;
     private final TtlCacheStore cacheStore;
+    private final ShoeImageAssetService shoeImageAssetService;
 
     @Autowired
     public ShoeCatalogController(
@@ -37,13 +43,15 @@ public class ShoeCatalogController {
             ShoeCatalogModelRepository modelRepository,
             OfficialShoeCatalogImportService officialShoeCatalogImportService,
             AdminAuditService adminAuditService,
-            TtlCacheStore cacheStore) {
+            TtlCacheStore cacheStore,
+            ShoeImageAssetService shoeImageAssetService) {
         this.authService = authService;
         this.brandRepository = brandRepository;
         this.modelRepository = modelRepository;
         this.officialShoeCatalogImportService = officialShoeCatalogImportService;
         this.adminAuditService = adminAuditService;
         this.cacheStore = cacheStore;
+        this.shoeImageAssetService = shoeImageAssetService;
     }
 
     public ShoeCatalogController(
@@ -53,7 +61,7 @@ public class ShoeCatalogController {
             OfficialShoeCatalogImportService officialShoeCatalogImportService,
             AdminAuditService adminAuditService) {
         this(authService, brandRepository, modelRepository, officialShoeCatalogImportService, adminAuditService,
-                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()), null);
     }
 
     @GetMapping
@@ -73,17 +81,23 @@ public class ShoeCatalogController {
             List<ShoeCatalogModel> models = modelRepository.findByBrandIdOrderByNameAsc(b.getId());
             List<Map<String, Object>> modelRows = new ArrayList<>();
             for (ShoeCatalogModel m : models) {
-                modelRows.add(Map.of(
-                        "id", m.getId(),
-                        "model", m.getName(),
-                        "modelZh", m.getNameZh() == null ? "" : m.getNameZh(),
-                        "modelEn", m.getNameEn() == null ? "" : m.getNameEn(),
-                        "type", m.getType()
-                ));
+                Map<String, Object> modelRow = new LinkedHashMap<>();
+                modelRow.put("id", m.getId());
+                modelRow.put("model", m.getName());
+                modelRow.put("modelZh", m.getNameZh() == null ? "" : m.getNameZh());
+                modelRow.put("modelEn", m.getNameEn() == null ? "" : m.getNameEn());
+                modelRow.put("type", m.getType());
+                if (shoeImageAssetService != null) {
+                    shoeImageAssetService.findLiveImageUrl(b.getName(), m.getName())
+                            .ifPresent(url -> modelRow.put("imageUrl", url));
+                }
+                modelRows.add(modelRow);
             }
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", b.getId());
             row.put("brand", b.getName());
+            row.put("brandZh", b.getNameZh() == null ? "" : b.getNameZh());
+            row.put("logoUrl", b.getLogoUrl() == null ? "" : b.getLogoUrl());
             row.put("logo", "👟");
             row.put("models", modelRows);
             out.add(row);
@@ -106,18 +120,26 @@ public class ShoeCatalogController {
         try {
             RequestBodyValidator.rejectUnexpectedFields(body, BRAND_FIELDS);
             String brand = RequestBodyValidator.requiredSafeText(body, "brand", 100);
+            String brandZh = RequestBodyValidator.optionalSafeText(body, "brandZh", 100);
+            String logoUrl = requireLogoReference(body);
             Optional<ShoeCatalogBrand> existing = brandRepository.findByNameIgnoreCase(brand);
             if (existing.isPresent()) {
-                return ResponseEntity.ok(Map.of("id", existing.get().getId(), "brand", existing.get().getName(), "created", false));
+                return ResponseEntity.ok(toBrandPayload(existing.get(), false));
             }
 
             ShoeCatalogBrand b = new ShoeCatalogBrand();
             b.setName(brand);
+            b.setNameZh(brandZh);
+            b.setLogoUrl(logoUrl);
             ShoeCatalogBrand saved = brandRepository.save(b);
             invalidateCatalogCache();
             adminAuditService.log(admin, "catalog.brand.created", "catalog_brand", String.valueOf(saved.getId()),
-                    "Created shoe catalog brand", Map.of("brand", saved.getName()));
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("id", saved.getId(), "brand", saved.getName(), "created", true));
+                    "Created shoe catalog brand", Map.of(
+                            "brand", saved.getName(),
+                            "brandZh", Optional.ofNullable(saved.getNameZh()).orElse(""),
+                            "logoProvided", Boolean.TRUE
+                    ));
+            return ResponseEntity.status(HttpStatus.CREATED).body(toBrandPayload(saved, true));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
         }
@@ -393,6 +415,27 @@ public class ShoeCatalogController {
     private void invalidateCatalogCache() {
         cacheStore.evict(CATALOG_CACHE_NAMESPACE, CATALOG_CACHE_KEY);
         cacheStore.evict("shoe-catalog-types", "all");
+    }
+
+    private String requireLogoReference(Map<String, Object> body) {
+        String logoUrl = RequestBodyValidator.optionalString(body, "logoUrl", MAX_LOGO_REFERENCE_LENGTH);
+        if (logoUrl == null || logoUrl.isBlank()) {
+            throw new IllegalArgumentException("logoUrl is required.");
+        }
+        if (!SAFE_LOGO_REFERENCE.matcher(logoUrl).matches()) {
+            throw new IllegalArgumentException("logoUrl must be an http(s) image URL or a supported image data URL.");
+        }
+        return logoUrl;
+    }
+
+    private Map<String, Object> toBrandPayload(ShoeCatalogBrand brand, boolean created) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("id", brand.getId());
+        payload.put("brand", brand.getName());
+        payload.put("brandZh", brand.getNameZh() == null ? "" : brand.getNameZh());
+        payload.put("logoUrl", brand.getLogoUrl() == null ? "" : brand.getLogoUrl());
+        payload.put("created", created);
+        return payload;
     }
 
     private record CatalogUpsertResult(boolean created, Long id, String brand, String model, String type, Map<String, Object> payload) {}

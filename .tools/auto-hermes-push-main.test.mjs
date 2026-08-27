@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
+import { HERMES_REPOSITORY, HERMES_REPOSITORY_URL } from "./hermes-repository.mjs";
 
 const moduleUrl = pathToFileURL(path.resolve(".tools/auto-hermes-push-main.mjs")).href;
 const {
@@ -14,7 +15,7 @@ const {
   const plan = buildAutoHermesPushMainPlan({
     sourceRef: "HEAD",
     remoteName: "origin",
-    targetRemoteUrl: "https://github.com/520HXC/run.git",
+    targetRemoteUrl: HERMES_REPOSITORY_URL,
     expectedUserName: "runner-bot",
     expectedUserEmail: "runner-bot@example.invalid",
     targetBranch: "main",
@@ -29,11 +30,17 @@ const {
   assert.match(commandText, /git branch --show-current/);
   assert.match(commandText, /git fetch origin main/);
   assert.match(commandText, /git push origin HEAD/);
-  assert.match(commandText, /gh pr create --base main/);
+  assert.match(commandText, new RegExp(`gh pr create --repo ${HERMES_REPOSITORY} --base main`));
   assert.doesNotMatch(commandText, /git checkout -B save-old-version/);
   assert.doesNotMatch(commandText, /git reset --hard/);
   assert.doesNotMatch(commandText, /git cherry-pick/);
   assert.doesNotMatch(commandText, /git push origin main/);
+}
+
+{
+  const plan = buildAutoHermesPushMainPlan({ draft: true, targetBranch: "main" });
+  const commandText = plan.steps.map((step) => step.command || step.description).join("\n");
+  assert.match(commandText, new RegExp(`gh pr create --repo ${HERMES_REPOSITORY} --base main --head \\$\\(git branch --show-current\\) --draft`));
 }
 
 {
@@ -53,7 +60,9 @@ const {
   assert.doesNotMatch(githubPrompt, /cherry-pick current change/i);
   assert.doesNotMatch(githubPrompt, /save-old-version/i);
   assert.doesNotMatch(githubPrompt, /pushing the new `main`/i);
-  assert.match(fs.readFileSync(path.resolve(".tools/auto-commit.ps1"), "utf8"), /auto-hermes-push-main\\\.\(mjs\|test\\\.mjs\)/);
+  const localCommitPolicy = fs.readFileSync(path.resolve(".tools/auto-commit.ps1"), "utf8");
+  assert.match(localCommitPolicy, /https:\/\/github\.com\/JunWeiLi233\/Hermesruns\.git/);
+  assert.match(localCommitPolicy, /\.railway\//);
   assert.match(fs.readFileSync(path.resolve(".tools/auto-hermes-finish.mjs"), "utf8"), /auto-hermes-push-main\\\.\(mjs\|test\\\.mjs\)/);
 }
 
@@ -98,7 +107,7 @@ const {
     runCommand: (command, args) => {
       commands.push([command, ...args].join(" "));
       if (command === "git" && args.join(" ") === "config --get remote.origin.url") {
-        return "https://github.com/520HXC/run.git";
+        return HERMES_REPOSITORY_URL;
       }
       if (command === "git" && args.join(" ") === "rev-parse --is-inside-work-tree") {
         return "true";
@@ -122,6 +131,30 @@ const {
   assert.equal(result.status, "blocked");
   assert.match(result.reason, /Cannot create a PR from main into itself/i);
   assert.ok(!commands.some((command) => /auto-commit|push origin|gh pr create/.test(command)));
+}
+
+{
+  const commands = [];
+  const { result } = await runAutoHermesPushMain({
+    rootDir: process.cwd(),
+    execute: true,
+    skipChecks: true,
+    runCommand: (command, args) => {
+      const invocation = [command, ...args].join(" ");
+      commands.push(invocation);
+      const key = args.join(" ");
+      if (command === "git" && key === "rev-parse --is-inside-work-tree") return "true";
+      if (command === "git" && key === "config --get remote.origin.url") return HERMES_REPOSITORY_URL;
+      if (command === "git" && key === "branch --show-current") return "feature";
+      if (command === "git" && key === "rev-parse HEAD") return "abc123";
+      if (command === "git" && key === "status --short --untracked-files=all") return "";
+      if (command === "gh" && args[0] === "pr" && args[1] === "create") return "https://github.com/JunWeiLi233/Hermesruns/pull/1";
+      return "";
+    },
+  });
+
+  assert.equal(result.status, "completed");
+  assert.ok(commands.some((command) => command.includes(`gh pr create --repo ${HERMES_REPOSITORY} --base main --head feature`)));
 }
 
 console.log("PASS auto-hermes-push-main");

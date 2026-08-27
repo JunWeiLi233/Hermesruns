@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "admin_audit_log", indexes = {
         @Index(name = "idx_admin_audit_created", columnList = "createdAt"),
+        @Index(name = "idx_admin_audit_deleted_created", columnList = "deletedAt,createdAt"),
         @Index(name = "idx_admin_audit_actor", columnList = "actorRunnerId"),
         @Index(name = "idx_admin_audit_target", columnList = "targetType,targetId")
 })
@@ -23,6 +24,12 @@ public class AdminAuditLog {
     private String targetType;
     private String targetId;
     private String summary;
+
+    /**
+     * Audit rows are hidden from the live operations feed when deleted, but
+     * retained for historical metrics and reporting.
+     */
+    private LocalDateTime deletedAt;
 
     @Column(columnDefinition = "text")
     private String metadataJson;
@@ -51,6 +58,8 @@ public class AdminAuditLog {
     public void setTargetId(String targetId) { this.targetId = targetId; }
     public String getSummary() { return summary; }
     public void setSummary(String summary) { this.summary = summary; }
+    public LocalDateTime getDeletedAt() { return deletedAt; }
+    public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
     public String getMetadataJson() { return metadataJson; }
     public void setMetadataJson(String metadataJson) { this.metadataJson = metadataJson; }
 }

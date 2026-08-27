@@ -62,6 +62,12 @@ assert.match(
 
 assert.match(
   styleSource,
+  /body\.theme-light \.admin-command-page \.admin-command-route--courseMaps :is\([\s\S]*\.admin-coursemap-rework__hero,[\s\S]*background:\s*#ffffff;/,
+  'Admin course-map management grid should use a plain white background in light mode.',
+);
+
+assert.match(
+  styleSource,
   /body\.theme-light \.admin-command-page \.admin-track-hub-footer-verdict\s*\{/,
   'Admin course-map workspace should define a theme-light treatment for the footer verdict bar instead of leaving it in the dark palette.',
 );
@@ -100,6 +106,18 @@ assert.match(
   styleSource,
   /body\.theme-light \.admin-command-page \.admin-users-command-console,/,
   'Admin users command center should define a theme-light treatment for its console and roster surfaces.',
+);
+
+assert.match(
+  styleSource,
+  /body\.theme-light \.admin-command-page \.admin-users-command-console__filters\s*\{[^}]*background:\s*transparent;[^}]*border-radius:\s*0;/,
+  'Admin users filter grid should stay transparent in light mode.',
+);
+
+assert.match(
+  styleSource,
+  /#root \.admin-command-page \.admin-command-route--settings \.admin-settings-studio__grid\s*\{[^}]*background:\s*transparent !important;[^}]*background-image:\s*none !important;[^}]*box-shadow:\s*none !important;[^}]*backdrop-filter:\s*none !important;/,
+  'Admin settings should leave the three independent panels visible without a connecting wrapper card.',
 );
 
 assert.match(

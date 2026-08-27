@@ -1251,6 +1251,14 @@ body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--
   padding: 28px clamp(20px, 3vw, 48px) 60px !important;
 }
 
+/* Coach Insight keeps the active rail label text-first, without the shared
+   runner-nav panel strip behind the icon and title. */
+body #root .analysis-insight-detail-page.is-coach-insight .runner-shell-side-link.is-active {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 760px) {
   body #root .analysis-insight-detail-page.is-injury-risk .analysis-profile-v2--injury,
   body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach {
@@ -1383,6 +1391,8 @@ body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--
 body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-profile-coach-stack {
   display: grid;
   width: fit-content;
+  grid-template-rows: auto auto;
+  align-items: start;
   gap: 4px;
 }
 
@@ -1598,15 +1608,6 @@ body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-}
-
-body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-command-chart-shell.analysis-load-command-chart-wrap .analysis-load-command-chart-tooltip-head i {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: #f07561;
-  box-shadow: 0 0 0 4px rgba(240, 117, 97, 0.14);
 }
 
 body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-command-chart-shell.analysis-load-command-chart-wrap .analysis-load-command-chart-tooltip-metrics {

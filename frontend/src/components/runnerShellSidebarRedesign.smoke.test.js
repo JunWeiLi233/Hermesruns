@@ -154,7 +154,7 @@ assert.match(
 
 assert.match(
   profileStyleSource,
-  /\.runner-dashboard-page\.is-sidebar-collapsed:has\(> \.runner-shell-sidebar:focus-within\)[\s\S]*?\.runner-dashboard-side-link-label[\s\S]*?opacity:\s*1;/,
+  /\.runner-dashboard-page\.is-sidebar-collapsed:has\(> \.runner-shell-sidebar:focus-within\)[\s\S]*?\.runner-dashboard-side-link-label[\s\S]*?display:\s*inline;[\s\S]*?opacity:\s*1;/,
   'Keyboard focus within the compact rail should expose the same readable navigation labels as hover.',
 );
 
@@ -178,8 +178,20 @@ assert.match(
 
 assert.match(
   profileStyleSource,
-  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-side-nav\s*\{[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;[^}]*justify-content:\s*flex-start;[^}]*gap:\s*12px;/,
-  'Collapsed sidebar icons should stay in a compact fixed rhythm instead of stretching across the full rail height.',
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-side-nav\s*\{[^}]*flex:\s*1 1 auto;[^}]*min-height:\s*0;[^}]*justify-content:\s*flex-start;[^}]*gap:\s*7px;/,
+  'Collapsed sidebar icons should use the same vertical gap as the expanded rail.',
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-side-link\s*\{[^}]*min-height:\s*42px;[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*margin-inline:\s*auto;[^}]*padding:\s*9px 10px !important;/,
+  'Collapsed sidebar icons should use the same row height and vertical padding as the expanded rail.',
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-dashboard-side-link-label\s*\{[^}]*display:\s*none;/,
+  'Collapsed sidebar labels should leave the layout so hidden text cannot change icon spacing.',
 );
 
 assert.match(

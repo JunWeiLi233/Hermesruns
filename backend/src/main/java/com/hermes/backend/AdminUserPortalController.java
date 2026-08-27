@@ -197,6 +197,7 @@ public class AdminUserPortalController {
                 }
             }
         }
+        adminService.invalidateDashboardCache();
         return ResponseEntity.ok(Map.of("dryRun", false, "action", action, "selected", selection.ids().size(), "affected", affected));
     }
 }

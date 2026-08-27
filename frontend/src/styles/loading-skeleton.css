@@ -2,6 +2,8 @@
 
 :root {
   --hermes-skeleton-rail-width: clamp(156px, 9.2vw, 178px);
+  --hermes-admin-skeleton-rail-width: 240px;
+  --hermes-admin-skeleton-topbar-height: 80px;
   --hermes-skeleton-base: rgba(116, 102, 91, 0.11);
   --hermes-skeleton-highlight: rgba(255, 255, 255, 0.76);
   --hermes-skeleton-surface: rgba(255, 252, 247, 0.76);
@@ -54,7 +56,8 @@ body.theme-high-contrast {
 }
 
 .page-skeleton--admin {
-  padding: 24px 22px 64px;
+  display: block;
+  padding: 0;
 }
 
 .page-skeleton__rail {
@@ -211,25 +214,27 @@ body.theme-high-contrast {
 }
 
 .page-skeleton__admin-layout {
-  display: grid;
-  grid-template-columns: 304px minmax(0, 1fr);
-  align-items: start;
-  gap: 30px;
-  width: min(1760px, calc(100% - 44px));
-  margin: 0 auto;
+  display: block;
+  width: 100%;
+  min-height: 100dvh;
 }
 
 .page-skeleton__admin-sidebar {
-  position: sticky;
-  top: 24px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 2;
+  box-sizing: border-box;
   display: grid;
-  gap: 22px;
-  min-height: calc(100dvh - 48px);
-  padding: 30px 24px 28px;
-  border: 1px solid var(--hermes-skeleton-line);
-  border-radius: 34px;
-  background: rgba(255, 252, 247, 0.76);
-  box-shadow: var(--hermes-skeleton-shadow);
+  gap: 18px;
+  width: var(--hermes-admin-skeleton-rail-width);
+  min-height: 100dvh;
+  height: 100dvh;
+  padding: 16px 10px 14px;
+  border: 0;
+  border-right: 1px solid var(--hermes-skeleton-line);
+  border-radius: 0;
+  background: rgba(255, 252, 247, 0.58);
+  box-shadow: 18px 0 42px rgba(105, 68, 48, 0.08);
 }
 
 .page-skeleton__admin-brand {
@@ -245,11 +250,11 @@ body.theme-high-contrast {
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr) 20px;
   align-items: center;
-  gap: 14px;
-  min-height: 68px;
-  padding: 14px 16px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 34px 9px 10px;
   border: 1px solid transparent;
-  border-radius: 22px;
+  border-radius: 15px;
   background: rgba(116, 102, 91, 0.035);
 }
 
@@ -259,35 +264,670 @@ body.theme-high-contrast {
 }
 
 .page-skeleton__admin-nav-icon { width: 18px; height: 18px; border-radius: 5px; }
-.page-skeleton__admin-nav-item > div { display: grid; gap: 8px; }
-.page-skeleton__admin-nav-label { width: 84%; height: 10px; border-radius: 999px; }
-.page-skeleton__admin-nav-copy { width: 100%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-nav-label { width: 84%; height: 9px; border-radius: 999px; }
 .page-skeleton__admin-nav-index { width: 20px; height: 8px; border-radius: 999px; }
-.page-skeleton__admin-status { display: grid; gap: 10px; }
-.page-skeleton__admin-status > .page-skeleton__block { min-height: 62px; border-radius: 18px; }
 .page-skeleton__admin-sidebar-action { min-height: 54px; margin-top: auto; border-radius: 999px; }
-.page-skeleton__admin-main { min-width: 0; }
+.page-skeleton__admin-main { min-width: 0; min-height: 100dvh; margin-left: var(--hermes-admin-skeleton-rail-width); }
 
 .page-skeleton__admin-topbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  align-items: start;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 24px;
-  min-height: 112px;
-  margin-bottom: 24px;
-  padding: 18px 24px;
-  border: 1px solid var(--hermes-skeleton-line);
-  border-radius: 30px;
+  min-height: var(--hermes-admin-skeleton-topbar-height);
+  margin: 0;
+  padding: 0 clamp(20px, 2.4vw, 38px);
+  border: 0;
+  border-bottom: 1px solid var(--hermes-skeleton-line);
+  border-radius: 0;
   background: var(--hermes-skeleton-surface);
   box-shadow: var(--hermes-skeleton-shadow);
 }
 
-.page-skeleton__admin-topbar > div:first-child { display: grid; gap: 9px; }
-.page-skeleton__admin-topbar-title { width: min(280px, 70%); height: 24px; border-radius: 8px; }
+.page-skeleton__admin-topbar-title { width: 84px; height: 18px; border-radius: 7px; }
 .page-skeleton__admin-topbar-copy { width: min(420px, 90%); height: 10px; border-radius: 999px; }
 .page-skeleton__admin-topbar-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .page-skeleton__admin-topbar-actions > .page-skeleton__block { width: 74px; height: 32px; border-radius: 999px; }
-.page-skeleton__admin-table { min-height: 360px; margin-top: 16px; }
+.page-skeleton__admin-topbar-actions > .page-skeleton__admin-topbar-wordmark { width: 72px; height: 18px; border-radius: 6px; }
+.page-skeleton__admin-topbar-actions > .page-skeleton__admin-topbar-nav { width: 72px; height: 30px; }
+.page-skeleton__admin-content { display: grid; gap: clamp(18px, 2vw, 26px); width: min(100%, 1560px); margin: 0 auto; padding: clamp(22px, 2.8vw, 42px) clamp(18px, 3vw, 46px) clamp(50px, 5vw, 76px); box-sizing: border-box; }
+.page-skeleton__admin-table { min-height: 360px; }
+
+.page-skeleton__admin-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr); align-items: end; gap: 24px; min-height: 267px; padding: clamp(26px, 3vw, 42px); border-radius: 28px; }
+.page-skeleton__admin-hero-copy { display: grid; align-content: end; gap: 14px; min-width: 0; }
+.page-skeleton__admin-eyebrow { width: 104px; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-title { width: min(410px, 82%); height: clamp(48px, 5vw, 68px); border-radius: 12px; }
+.page-skeleton__admin-intro { width: min(680px, 92%); margin-top: 2px; }
+.page-skeleton__admin-intro > .page-skeleton__block { height: 13px; }
+.page-skeleton__admin-hero-meta, .page-skeleton__admin-spotlight-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 2px; }
+.page-skeleton__admin-hero-meta > .page-skeleton__block, .page-skeleton__admin-spotlight-meta > .page-skeleton__block { width: 90px; height: 34px; border-radius: 999px; }
+.page-skeleton__admin-hero-actions { display: grid; justify-items: end; align-content: end; gap: 18px; }
+.page-skeleton__admin-hero-badge { width: 154px; height: 42px; border-radius: 999px; }
+.page-skeleton__admin-hero-cta { width: 148px; height: 38px; border-radius: 999px; }
+.page-skeleton__admin-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.page-skeleton__admin-metric-card { min-height: 196px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-metric-label { width: 58%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-metric-value { width: 58%; height: 44px; margin-top: 30px; border-radius: 10px; }
+.page-skeleton__admin-metric-copy { width: 88%; height: 11px; margin-top: 20px; border-radius: 999px; }
+.page-skeleton__admin-spotlight { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(280px, .95fr); gap: 24px; min-height: 202px; padding: 30px 32px; border-radius: 28px; }
+.page-skeleton__admin-spotlight-copy { display: grid; align-content: start; gap: 16px; min-width: 0; }
+.page-skeleton__admin-spotlight-title { width: min(360px, 72%); height: 48px; border-radius: 10px; }
+.page-skeleton__admin-spotlight-intro { width: min(620px, 92%); }
+.page-skeleton__admin-spotlight-intro > .page-skeleton__block { height: 12px; }
+.page-skeleton__admin-spotlight-stats { display: grid; gap: 12px; align-content: start; }
+.page-skeleton__admin-spotlight-stat { display: grid; gap: 9px; min-height: 64px; padding: 16px 18px; border-radius: 22px; box-shadow: none; }
+.page-skeleton__admin-spotlight-stat > .page-skeleton__block:first-child { width: 52%; height: 9px; border-radius: 999px; }
+.page-skeleton__admin-spotlight-stat > .page-skeleton__block:last-child { width: 34%; height: 24px; border-radius: 7px; }
+.page-skeleton__admin-workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .9fr); gap: 24px; align-items: start; }
+.page-skeleton__admin-terminal { min-width: 0; min-height: 430px; padding: 0; border-radius: 28px; overflow: hidden; }
+.page-skeleton__admin-terminal-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-bottom: 22px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-terminal-toolbar { padding: 22px 28px; }
+.page-skeleton__admin-table-title { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; min-width: 0; }
+.page-skeleton__admin-terminal-heading { display: grid; gap: 8px; min-width: 0; }
+.page-skeleton__admin-terminal-title { width: 166px; height: 24px; border-radius: 8px; }
+.page-skeleton__admin-terminal-copy { width: min(420px, 72%); height: 10px; border-radius: 999px; }
+.page-skeleton__admin-table-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.page-skeleton__admin-table-pills > .page-skeleton__block { width: 58px; height: 28px; border-radius: 999px; }
+.page-skeleton__admin-terminal-actions { display: flex; gap: 10px; }
+.page-skeleton__admin-terminal-actions > .page-skeleton__block { width: 92px; height: 42px; border-radius: 14px; }
+.page-skeleton__admin-table-search { width: 196px !important; border-radius: 999px !important; }
+.page-skeleton__admin-table-clear { width: 92px !important; border-radius: 999px !important; }
+.page-skeleton__admin-table-download { width: 42px !important; border-radius: 50% !important; }
+.page-skeleton__admin-job-group { display: grid; }
+.page-skeleton__admin-job-group-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 18px 28px 14px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-job-group-head > .page-skeleton__block:first-child { width: 128px; height: 12px; border-radius: 999px; }
+.page-skeleton__admin-job-group-head > .page-skeleton__block:last-child { width: 82px; height: 9px; border-radius: 999px; }
+.page-skeleton__admin-job-list { display: grid; }
+.page-skeleton__admin-job-row { display: grid; grid-template-columns: minmax(90px, .65fr) minmax(120px, .9fr) minmax(110px, .72fr) minmax(0, 1.35fr) minmax(110px, .8fr) 34px; gap: 16px; align-items: center; min-height: 86px; padding: 18px 28px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-job-trace { width: 78%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-job-primary,
+.page-skeleton__admin-job-status,
+.page-skeleton__admin-job-summary,
+.page-skeleton__admin-job-counts { display: grid; gap: 7px; min-width: 0; }
+.page-skeleton__admin-job-primary > .page-skeleton__block:first-child { width: 88%; height: 11px; border-radius: 999px; }
+.page-skeleton__admin-job-primary > .page-skeleton__block:last-child { width: 62%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-job-status > .page-skeleton__block:first-child { width: 68px; height: 26px; border-radius: 999px; }
+.page-skeleton__admin-job-status > .page-skeleton__block:last-child { width: 86%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-job-summary > .page-skeleton__block:first-child { width: 94%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-job-summary > .page-skeleton__block:last-child { width: 62%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-job-counts > .page-skeleton__block:first-child { width: 48%; height: 20px; border-radius: 7px; }
+.page-skeleton__admin-job-counts > .page-skeleton__block:last-child { width: 82%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-job-ops { width: 30px; height: 30px; border-radius: 50%; }
+.page-skeleton__admin-terminal-footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 66px; padding: 16px 28px; }
+.page-skeleton__admin-terminal-footer > .page-skeleton__block:first-child { width: 180px; height: 9px; border-radius: 999px; }
+.page-skeleton__admin-terminal-footer > .page-skeleton__block:last-child { width: 112px; height: 30px; border-radius: 999px; }
+.page-skeleton__admin-detail { display: grid; align-content: start; gap: 22px; min-width: 0; min-height: 430px; padding: 28px; border-radius: 28px; overflow: hidden; }
+.page-skeleton__admin-detail-head { display: grid; gap: 14px; }
+.page-skeleton__admin-detail-title { width: 72%; height: 42px; border-radius: 10px; }
+.page-skeleton__admin-detail-head > .page-skeleton__lines { width: 92%; }
+.page-skeleton__admin-detail-state { width: 120px; height: 24px; border-radius: 999px; }
+.page-skeleton__admin-detail-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.page-skeleton__admin-detail-badges > .page-skeleton__block { width: 92px; height: 28px; border-radius: 999px; }
+.page-skeleton__admin-detail-badges > .page-skeleton__block:last-child { width: 116px; }
+.page-skeleton__admin-detail-progress { display: grid; gap: 8px; }
+.page-skeleton__admin-detail-progress > .page-skeleton__block:first-child { width: 100%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-detail-progress > .page-skeleton__block:last-child { width: 44%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.page-skeleton__admin-detail-stat { display: grid; gap: 8px; min-height: 68px; padding: 14px; border: 1px solid var(--hermes-skeleton-line); border-radius: 16px; }
+.page-skeleton__admin-detail-stat > .page-skeleton__block:first-child { width: 62%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-detail-stat > .page-skeleton__block:last-child { width: 82%; height: 17px; border-radius: 6px; }
+.page-skeleton__admin-detail-shell { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--hermes-skeleton-line); border-radius: 18px; }
+.page-skeleton__admin-detail-shell > .page-skeleton__block { width: 58%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-detail-shell > .page-skeleton__lines > .page-skeleton__block { height: 8px; }
+.page-skeleton__admin-list { min-height: 360px; }
+.page-skeleton__admin-list-rows { display: grid; }
+.page-skeleton__admin-list-row { display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1.4fr) minmax(90px, .7fr) 34px; gap: 16px; align-items: center; min-height: 78px; padding: 16px 28px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-list-row > div { display: grid; gap: 8px; }
+.page-skeleton__admin-list-trace { width: 76%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-list-row > div > .page-skeleton__block:first-child { width: 92%; height: 11px; border-radius: 999px; }
+.page-skeleton__admin-list-row > div > .page-skeleton__block:last-child { width: 62%; height: 8px; border-radius: 999px; }
+.page-skeleton__admin-list-status { width: 68px; height: 26px; border-radius: 999px; }
+.page-skeleton__admin-list-ops { width: 30px; height: 30px; border-radius: 50%; }
+
+/* Route-specific admin previews mirror the live route landmarks instead of using one generic table. */
+.page-skeleton__admin-route { display: grid; gap: 18px; min-width: 0; }
+.page-skeleton__admin-route-heading { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.page-skeleton__admin-route-heading .page-skeleton__lines { width: min(620px, 94%); }
+.page-skeleton__admin-route-title { width: min(430px, 82%); height: clamp(40px, 4.6vw, 64px); border-radius: 11px; }
+.page-skeleton__admin-route .page-skeleton__panel { min-width: 0; }
+.page-skeleton__admin-ops-metrics,
+.page-skeleton__admin-ops-queues,
+.page-skeleton__admin-overview-charts,
+.page-skeleton__admin-overview-actions,
+.page-skeleton__admin-overview-two-col,
+.page-skeleton__admin-overview-users-tracks,
+.page-skeleton__admin-overview-review,
+.page-skeleton__admin-overview-bento,
+.page-skeleton__admin-users-kpis,
+.page-skeleton__admin-users-story-grid,
+.page-skeleton__admin-coursemaps-grid,
+.page-skeleton__admin-coursemap-foot-grid,
+.page-skeleton__admin-shoes-grid,
+.page-skeleton__admin-shoe-summary,
+.page-skeleton__admin-feature-grid,
+.page-skeleton__admin-settings-grid,
+.page-skeleton__admin-settings-stats,
+.page-skeleton__admin-audit-metrics,
+.page-skeleton__admin-audit-ctas { display: grid; gap: 16px; min-width: 0; }
+.page-skeleton__admin-ops-metrics,
+.page-skeleton__admin-ops-queues,
+.page-skeleton__admin-users-kpis,
+.page-skeleton__admin-audit-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-skeleton__admin-ops-metrics .page-skeleton__panel,
+.page-skeleton__admin-ops-queues .page-skeleton__panel,
+.page-skeleton__admin-users-kpis .page-skeleton__panel,
+.page-skeleton__admin-audit-metrics .page-skeleton__panel { min-height: 128px; padding: 22px; border-radius: 22px; }
+.page-skeleton__admin-ops-queues { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.page-skeleton__admin-ops-queues .page-skeleton__panel { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; row-gap: 8px; }
+.page-skeleton__admin-ops-queues .page-skeleton__admin-ops-label { grid-column: 1 / -1; }
+.page-skeleton__admin-ops-value { width: 58%; height: 28px; border-radius: 7px; }
+.page-skeleton__admin-ops-label { width: 74%; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-ops-dot { width: 10px; height: 10px; border-radius: 50%; }
+.page-skeleton__admin-overview-charts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton__admin-overview-chart { min-height: 260px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-chart-canvas { width: 100%; height: 144px; margin-top: 20px; border-radius: 16px; }
+.page-skeleton__admin-overview-actions { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.page-skeleton__admin-overview-actions .page-skeleton__panel { min-height: 124px; padding: 20px; border-radius: 20px; }
+.page-skeleton__admin-action-icon { width: 36px; height: 36px; border-radius: 12px; }
+.page-skeleton__admin-action-title { width: 68%; height: 13px; margin-top: 14px; border-radius: 6px; }
+.page-skeleton__admin-action-copy { width: 92%; height: 9px; margin-top: 9px; border-radius: 999px; }
+.page-skeleton__admin-overview-two-col,
+.page-skeleton__admin-overview-users-tracks,
+.page-skeleton__admin-overview-review { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.page-skeleton__admin-overview-two-col .page-skeleton__panel,
+.page-skeleton__admin-overview-users-tracks .page-skeleton__panel,
+.page-skeleton__admin-overview-review .page-skeleton__panel { min-height: 280px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-overview-hud { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .8fr); gap: 16px; }
+.page-skeleton__admin-overview-hud-hero { min-height: 290px; padding: 28px; border-radius: 26px; }
+.page-skeleton__admin-hud-sparkline { width: 100%; height: 72px; margin-top: 24px; border-radius: 14px; }
+.page-skeleton__admin-hud-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.page-skeleton__admin-hud-actions > .page-skeleton__block { width: 112px; height: 34px; border-radius: 999px; }
+.page-skeleton__admin-overview-sidecars { display: grid; gap: 16px; }
+.page-skeleton__admin-overview-sidecars .page-skeleton__panel { padding: 20px; border-radius: 20px; }
+.page-skeleton__admin-overview-section { min-height: 170px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-track-media { width: 100%; height: 138px; margin: 20px 0; border-radius: 18px; }
+.page-skeleton__admin-overview-bento { grid-template-columns: 1.25fr .85fr .95fr; }
+.page-skeleton__admin-overview-bento .page-skeleton__panel { min-height: 250px; padding: 24px; border-radius: 24px; }
+
+.page-skeleton__admin-users { display: grid; gap: 24px; }
+.page-skeleton__admin-users-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(360px, .9fr); gap: 24px; min-height: 300px; padding: 32px; border-radius: 28px; }
+.page-skeleton__admin-users-story { display: grid; gap: 12px; }
+.page-skeleton__admin-users-story-primary { min-height: 130px; padding: 20px; border-radius: 22px; }
+.page-skeleton__admin-users-story-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton__admin-users-story-grid .page-skeleton__panel { min-height: 130px; padding: 18px; border-radius: 20px; }
+.page-skeleton__admin-users-console { display: grid; gap: 20px; padding: 28px; border-radius: 28px; }
+.page-skeleton__admin-filter-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.page-skeleton__admin-filter-row > .page-skeleton__block { width: 150px; height: 42px; border-radius: 12px; }
+.page-skeleton__admin-bulk-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 20px; border: 1px solid var(--hermes-skeleton-line); border-radius: 18px; }
+.page-skeleton__admin-bulk-row > div:last-child { display: flex; gap: 8px; flex-wrap: wrap; }
+.page-skeleton__admin-bulk-row > div:last-child > .page-skeleton__block { width: 98px; height: 34px; border-radius: 999px; }
+.page-skeleton__admin-roster { min-height: 420px; padding: 22px; border-radius: 22px; }
+
+.page-skeleton__admin-coursemaps,
+.page-skeleton__admin-shoes,
+.page-skeleton__admin-audit,
+.page-skeleton__admin-settings { display: grid; gap: 24px; }
+.page-skeleton__admin-coursemaps-hero,
+.page-skeleton__admin-shoes-hero { display: flex; justify-content: space-between; align-items: end; gap: 24px; min-height: 188px; padding: 30px 34px; border-radius: 28px; }
+.page-skeleton__admin-coursemaps-grid,
+.page-skeleton__admin-shoes-grid { grid-template-columns: minmax(260px, .7fr) minmax(0, 1.65fr); align-items: start; }
+.page-skeleton__admin-coursemaps-rail,
+.page-skeleton__admin-shoes-queue { min-height: 720px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-coursemaps-stage,
+.page-skeleton__admin-shoes-stage { display: grid; gap: 18px; min-width: 0; }
+.page-skeleton__admin-coursemaps-stage > .page-skeleton__panel,
+.page-skeleton__admin-shoes-stage > .page-skeleton__panel { min-height: 142px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-stage-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.page-skeleton__admin-stage-actions > .page-skeleton__block { width: 110px; height: 38px; border-radius: 999px; }
+.page-skeleton__admin-coursemap-compare { min-height: 440px !important; }
+.page-skeleton__admin-compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.page-skeleton__admin-compare-grid .page-skeleton__panel { min-height: 270px; padding: 16px; border-radius: 18px; box-shadow: none; }
+.page-skeleton__admin-map-frame { width: 100%; height: 170px; margin-top: 14px; border-radius: 14px; }
+.page-skeleton__admin-telemetry { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.page-skeleton__admin-telemetry > .page-skeleton__block { height: 30px; border-radius: 8px; }
+.page-skeleton__admin-coursemap-foot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton__admin-coursemap-foot-grid .page-skeleton__panel { min-height: 180px; padding: 20px; border-radius: 20px; }
+
+.page-skeleton__admin-shoes-controls { display: flex; justify-content: space-between; gap: 18px; align-items: end; padding: 22px; border-radius: 22px; }
+.page-skeleton__admin-shoes-controls .page-skeleton__filter-row { flex: 1; }
+.page-skeleton__admin-shoe-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 20px 0; }
+.page-skeleton__admin-shoe-summary .page-skeleton__panel { min-height: 82px; padding: 14px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__admin-shoe-feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.page-skeleton__admin-shoe-media { width: 100%; height: 174px; margin-bottom: 18px; border-radius: 18px; }
+.page-skeleton__admin-shoe-repository { min-height: 210px !important; }
+.page-skeleton__admin-shoes-catalog { min-height: 520px; padding: 24px; border-radius: 26px; }
+.page-skeleton__admin-catalog-header,
+.page-skeleton__admin-catalog-browser-head,
+.page-skeleton__admin-catalog-series-head,
+.page-skeleton__admin-catalog-published-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; min-width: 0; }
+.page-skeleton__admin-catalog-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.page-skeleton__admin-catalog-actions > .page-skeleton__block { width: 150px; height: 42px; border-radius: 12px; }
+.page-skeleton__admin-catalog-browser { display: grid; gap: 18px; min-width: 0; padding: 18px; border: 1px solid var(--hermes-skeleton-line); border-radius: 22px; }
+.page-skeleton__admin-catalog-series { display: grid; gap: 14px; min-width: 0; padding-top: 4px; }
+.page-skeleton__admin-catalog-published { display: grid; gap: 14px; min-width: 0; padding: 20px 18px 18px; border: 1px solid var(--hermes-skeleton-line); border-radius: 22px; }
+.page-skeleton__admin-catalog-published-empty { width: 100%; height: 104px; border-radius: 16px; }
+.page-skeleton__admin-brand-rail { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; margin: 20px 0; }
+.page-skeleton__admin-brand-rail > .page-skeleton__block { height: 54px; border-radius: 14px; }
+.page-skeleton__admin-series-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.page-skeleton__admin-series-grid .page-skeleton__panel { min-height: 148px; padding: 16px; border-radius: 18px; box-shadow: none; }
+.page-skeleton__admin-brand-logo { width: 42px; height: 42px; border-radius: 12px; }
+
+.page-skeleton__admin-coursemap-stack { display: grid; gap: 14px; min-width: 0; }
+.page-skeleton__admin-coursemap-stack > .page-skeleton__panel { min-height: 0; padding: 18px 20px; border-radius: 22px; }
+.page-skeleton__admin-coursemap-footer { box-shadow: none !important; }
+
+.page-skeleton__admin-audit-hero { min-height: 218px; padding: 32px; border-radius: 28px; }
+.page-skeleton__admin-audit-badge { width: 168px; height: 42px; border-radius: 999px; }
+.page-skeleton__admin-audit-table { min-height: 520px; padding: 0; border-radius: 28px; overflow: hidden; }
+.page-skeleton__admin-table-toolbar { display: flex; justify-content: space-between; gap: 16px; padding: 24px 28px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-table-toolbar .page-skeleton__admin-route-heading { flex: 1; }
+.page-skeleton__admin-table-footer { display: flex; justify-content: space-between; gap: 16px; padding: 18px 28px; border-top: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__admin-table-footer > .page-skeleton__block { width: 160px; height: 10px; border-radius: 999px; }
+.page-skeleton__admin-audit-ctas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.page-skeleton__admin-audit-ctas .page-skeleton__panel { display: flex; align-items: center; gap: 16px; min-height: 106px; padding: 20px; border-radius: 22px; }
+
+.page-skeleton__admin-settings-hero { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .9fr); gap: 24px; min-height: 250px; padding: 30px; border-radius: 28px; }
+.page-skeleton__admin-settings-stats { gap: 12px; }
+.page-skeleton__admin-settings-stats .page-skeleton__panel { min-height: 58px; padding: 14px 18px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__admin-settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.page-skeleton__admin-settings-grid .page-skeleton__panel { min-height: 270px; padding: 24px; border-radius: 24px; }
+.page-skeleton__admin-settings-choices { display: grid; gap: 10px; margin-top: auto; }
+.page-skeleton__admin-settings-choices > .page-skeleton__block { width: 100%; height: 52px; border-radius: 14px; }
+
+.page-skeleton--admin .page-skeleton__admin-route .page-skeleton__panel,
+.page-skeleton--admin .page-skeleton__admin-route .page-skeleton__admin-panel { box-shadow: var(--hermes-skeleton-shadow); }
+.page-skeleton--admin .page-skeleton__admin-route .admin-settings-studio__hero,
+.page-skeleton--admin .page-skeleton__admin-route .admin-audit-terminal__hero { background: var(--hermes-skeleton-surface); color: inherit; }
+
+@media (max-width: 980px) {
+  .page-skeleton__admin-overview-charts,
+  .page-skeleton__admin-overview-actions,
+  .page-skeleton__admin-overview-bento,
+  .page-skeleton__admin-settings-grid,
+  .page-skeleton__admin-series-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton__admin-users-hero,
+  .page-skeleton__admin-overview-hud,
+  .page-skeleton__admin-settings-hero { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .page-skeleton__admin-ops-metrics,
+  .page-skeleton__admin-ops-queues,
+  .page-skeleton__admin-users-kpis,
+  .page-skeleton__admin-audit-metrics,
+  .page-skeleton__admin-overview-charts,
+  .page-skeleton__admin-overview-actions,
+  .page-skeleton__admin-overview-two-col,
+  .page-skeleton__admin-overview-users-tracks,
+  .page-skeleton__admin-overview-review,
+  .page-skeleton__admin-overview-bento,
+  .page-skeleton__admin-users-story-grid,
+  .page-skeleton__admin-coursemaps-grid,
+  .page-skeleton__admin-coursemap-foot-grid,
+  .page-skeleton__admin-shoes-grid,
+  .page-skeleton__admin-feature-grid,
+  .page-skeleton__admin-audit-ctas,
+  .page-skeleton__admin-settings-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-coursemaps-hero,
+  .page-skeleton__admin-shoes-hero,
+  .page-skeleton__admin-shoes-controls,
+  .page-skeleton__admin-table-toolbar { flex-direction: column; align-items: stretch; }
+  .page-skeleton__admin-compare-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-brand-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* The authenticated admin shell keeps a 240px rail at the desktop/tablet
+ * handoff. Mirror the route's own 1100px breakpoint so a skeleton rendered at
+ * the same viewport collapses the same cards and preserves the same scroll
+ * landmarks as the loaded page. */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .page-skeleton__admin-hero,
+  .page-skeleton__admin-spotlight,
+  .page-skeleton__admin-workspace { grid-template-columns: 1fr; }
+
+  .page-skeleton__admin-hero {
+    grid-template-rows: 187px 92px;
+    min-height: 360px;
+    padding: 28px;
+  }
+
+  .page-skeleton__admin-hero-actions { justify-items: start; }
+
+  .page-skeleton__admin-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 182px 159px;
+  }
+
+  .page-skeleton__admin-metric-card { min-height: 0; }
+
+  .page-skeleton__admin-spotlight {
+    grid-template-rows: 177px 331px;
+    min-height: 595px;
+  }
+
+  .page-skeleton__admin-workspace {
+    grid-template-rows: 903px 1275px;
+    gap: 14px;
+  }
+
+  .page-skeleton__admin-terminal,
+  .page-skeleton__admin-detail { min-height: 0; }
+
+  .page-skeleton__admin-ops-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 112px);
+    gap: 12px;
+  }
+
+  .page-skeleton__admin-ops-metrics .page-skeleton__panel {
+    min-height: 0;
+    padding: 16px 18px;
+  }
+
+  .page-skeleton__admin-ops-queues {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 102px;
+  }
+
+  .page-skeleton__admin-ops-queues .page-skeleton__panel {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .page-skeleton__admin-overview-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 331.5px);
+  }
+
+  .page-skeleton__admin-overview-chart { min-height: 0; }
+
+  .page-skeleton__admin-overview-two-col {
+    grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+    grid-template-rows: 617px;
+  }
+
+  .page-skeleton__admin-overview-two-col .page-skeleton__panel { min-height: 0; }
+
+  .page-skeleton__admin-overview-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 72px);
+    gap: 10px;
+  }
+
+  .page-skeleton__admin-overview-actions .page-skeleton__panel {
+    min-height: 0;
+    padding: 11px 13px;
+  }
+
+  .page-skeleton__admin-users { gap: 16px; }
+
+  .page-skeleton__admin-users-hero {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 16px;
+    min-height: 530px;
+    padding: 18px;
+  }
+
+  .page-skeleton__admin-users-kpis .page-skeleton__panel { min-height: 172px; }
+
+  .page-skeleton__admin-users-console {
+    gap: 14px;
+    min-height: 1346px;
+    padding: 18px;
+  }
+
+  .page-skeleton__admin-roster { min-height: 973px; }
+
+  .page-skeleton__admin-coursemaps-hero,
+  .page-skeleton__admin-shoes-hero {
+    min-height: 213px;
+    padding: 22px 24px;
+  }
+
+  .page-skeleton__admin-coursemaps-grid,
+  .page-skeleton__admin-shoes-grid { grid-template-columns: 1fr; gap: 16px; }
+
+  .page-skeleton__admin-coursemaps-rail { min-height: 913px; }
+  .page-skeleton__admin-coursemaps-stage { display: block; min-height: 2491px; }
+  .page-skeleton__admin-coursemap-stack { grid-template-rows: 128px 1081px 374px 591px 147px 99px; min-height: 2491px; }
+
+  .page-skeleton__admin-compare-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-compare-grid .page-skeleton__panel { min-height: 480px; }
+  .page-skeleton__admin-coursemap-compare { min-height: 1081px !important; }
+
+  .page-skeleton__admin-shoes-catalog {
+    min-height: 2691px;
+    margin-top: 14px;
+    padding: 18px 20px;
+    grid-template-rows: 101px 42px 2111px 219px;
+  }
+
+  .page-skeleton__admin-catalog-browser { grid-template-rows: 101px 198px 1739px; min-height: 2111px; box-sizing: border-box; }
+  .page-skeleton__admin-catalog-browser-head { min-height: 101px; }
+  .page-skeleton__admin-brand-rail { margin: 0; }
+  .page-skeleton__admin-catalog-series { grid-template-rows: 101px 1620px; min-height: 1739px; }
+
+  .page-skeleton__admin-brand-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 58px;
+    max-height: 198px;
+    overflow: hidden;
+    padding: 2px;
+  }
+
+  .page-skeleton__admin-brand-rail > .page-skeleton__block { height: 58px; }
+
+  .page-skeleton__admin-series-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(9, 169px);
+    gap: 12px;
+  }
+
+  .page-skeleton__admin-series-grid .page-skeleton__panel {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .page-skeleton__admin-audit-hero,
+  .page-skeleton__admin-settings-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .page-skeleton__admin-audit-hero { min-height: 312px; padding: 28px; }
+
+  .page-skeleton__admin-audit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 181.5px);
+  }
+
+  .page-skeleton__admin-audit-metrics .page-skeleton__panel { min-height: 0; }
+  .page-skeleton__admin-audit-table { min-height: 3131px; }
+  .page-skeleton__admin-audit-rows .page-skeleton__row { min-height: 145px; }
+
+  .page-skeleton__admin-audit-ctas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 140px;
+  }
+
+  .page-skeleton__admin-audit-ctas .page-skeleton__panel { min-height: 0; }
+
+  .page-skeleton__admin-settings-hero { min-height: 509px; padding: 28px; }
+
+  .page-skeleton__admin-settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 378px 300px;
+  }
+
+  .page-skeleton__admin-settings-grid .page-skeleton__panel { min-height: 0; }
+}
+
+/* Runner route parity: keep the loading composition aligned with the live
+ * section boundaries at the desktop/tablet breakpoint used by the app. */
+.page-skeleton--runs .page-skeleton__runs-shell { display: grid; gap: 16px; min-height: 1482px; }
+.page-skeleton--runs .page-skeleton__runs-cockpit-shell { min-height: 506px; }
+.page-skeleton--runs .page-skeleton__runs-cockpit { min-height: 506px; }
+.page-skeleton--runs .page-skeleton__runs-glance { display: grid; gap: 16px; min-height: 308px; }
+.page-skeleton--runs .page-skeleton__runs-stats { min-height: 136px; }
+.page-skeleton--runs .page-skeleton__runs-insight-strip { min-height: 156px; }
+.page-skeleton--runs .page-skeleton__runs-workbench-shell { min-height: 202px; }
+.page-skeleton--runs .page-skeleton__runs-workbench { min-height: 202px; }
+.page-skeleton--runs .page-skeleton__runs-card-list { min-height: 300px; }
+.page-skeleton--runs .page-skeleton__runs-history { min-height: 300px; }
+
+.page-skeleton--analysis .page-skeleton__analysis-cockpit { min-height: 966px; }
+.page-skeleton--analysis .page-skeleton__analysis-bento-grid { min-height: 780px; }
+.page-skeleton--analysis .page-skeleton__analysis-table-grid { min-height: 1003px; }
+.page-skeleton--analysis .page-skeleton__analysis-injury { min-height: 759px; }
+.page-skeleton--analysis .page-skeleton__runner-footer { min-height: 116px; }
+
+.page-skeleton--weather .page-skeleton__weather-hero-shell { min-height: 485px; }
+.page-skeleton--weather .page-skeleton__weather-hero { min-height: 485px; }
+.page-skeleton--weather .page-skeleton__weather-forecast-shell { min-height: 280px; }
+.page-skeleton--weather .page-skeleton__weather-forecast { min-height: 280px; }
+.page-skeleton--weather .page-skeleton__weather-lower-grid { min-height: 933px; }
+
+.page-skeleton--today-run .page-skeleton__today-coaching { min-height: 148px; }
+.page-skeleton--today-run .page-skeleton__today-plan-hero { min-height: 1132px; }
+.page-skeleton--today-run .page-skeleton__today-command { min-height: 1132px; }
+.page-skeleton--today-run .page-skeleton__today-plan-grid { min-height: 1225px; }
+.page-skeleton--today-run .page-skeleton__today-plan-left,
+.page-skeleton--today-run .page-skeleton__today-plan-right { min-height: 100%; }
+
+.page-skeleton--rewards .page-skeleton__rewards-intro { min-height: 121px; }
+.page-skeleton--rewards .page-skeleton__rewards-hero { min-height: 319px; }
+.page-skeleton--rewards .page-skeleton__rewards-hero > .page-skeleton__panel { min-height: 319px; }
+.page-skeleton--rewards .page-skeleton__rewards-stats { min-height: 300px; }
+.page-skeleton--rewards .page-skeleton__rewards-section { min-height: 430px; }
+.page-skeleton--rewards .page-skeleton__rewards-section--pipeline { min-height: 375px; }
+.page-skeleton--rewards .page-skeleton__rewards-catalog-section { min-height: 30340px; }
+.page-skeleton--rewards .page-skeleton__rewards-catalog-section .page-skeleton__rewards-catalog-grid { min-height: 30215px; }
+.page-skeleton--rewards .page-skeleton__runner-footer { min-height: 75px; }
+
+.page-skeleton--settings .page-skeleton__settings-identity-hero { min-height: 271px; }
+.page-skeleton--settings .page-skeleton__settings-activity { min-height: 276px; }
+.page-skeleton--settings .page-skeleton__settings-activity-frame { display: block; height: 150px; margin-top: 14px; border-radius: 14px; }
+.page-skeleton--settings .page-skeleton__settings-activity-legend { display: flex; gap: 12px; margin-top: 10px; }
+.page-skeleton--settings .page-skeleton__settings-activity-legend > .page-skeleton__block { width: 74px; height: 8px; border-radius: 999px; }
+.page-skeleton--settings .page-skeleton__settings-content-grid { min-height: 967px; }
+.page-skeleton--settings .page-skeleton__settings-bottom-grid { min-height: 607px; }
+.page-skeleton--settings .page-skeleton__settings-services-grid { min-height: 687px; }
+.page-skeleton--settings .page-skeleton__settings-final-grid { min-height: 420px; }
+.page-skeleton--settings .page-skeleton__runner-footer { min-height: 116px; }
+
+.page-skeleton--garmin .page-skeleton__garmin-shell { min-height: 1591px; }
+.page-skeleton--garmin .page-skeleton__garmin-command { min-height: 360px; }
+.page-skeleton--garmin .page-skeleton__garmin-content-grid { min-height: 760px; }
+.page-skeleton--garmin .page-skeleton__garmin-content-grid > .page-skeleton__panel { min-height: 760px; }
+.page-skeleton--garmin .page-skeleton__garmin-log { min-height: 420px; }
+
+.page-skeleton--import-data .page-skeleton__import-shell { min-height: 2264px; }
+.page-skeleton--import-data .page-skeleton__import-command { min-height: 360px; }
+.page-skeleton--import-data .page-skeleton__import-workbench { min-height: 1060px; }
+.page-skeleton--import-data .page-skeleton__import-history { min-height: 760px; }
+
+.page-skeleton--shoes .page-skeleton__shoes-screen { min-height: 2076px; }
+.page-skeleton--shoes .page-skeleton__shoes-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; min-height: 85px; }
+.page-skeleton--shoes .page-skeleton__shoes-summary > .page-skeleton__block { min-height: 56px; border-radius: 14px; }
+.page-skeleton--shoes .page-skeleton__shoes-stage-shell { min-height: 1840px; }
+.page-skeleton--shoes .page-skeleton__shoes-stage { min-height: 1840px; }
+
+.page-skeleton--shoe-catalog .page-skeleton__catalog-shell { display: grid; grid-template-columns: minmax(0, 1fr) 230px; gap: 16px; min-height: 901px; }
+.page-skeleton--shoe-catalog .page-skeleton__catalog-browser { min-height: 683px; }
+.page-skeleton--shoe-catalog .page-skeleton__catalog-side-rail { min-height: 198px; }
+
+.page-skeleton--races .page-skeleton__races-content { display: grid; gap: 16px; min-height: 3894px; }
+.page-skeleton--races .page-skeleton__races-hero { min-height: 430px; }
+.page-skeleton--races .page-skeleton__races-discovery { min-height: 2170px; }
+.page-skeleton--races .page-skeleton__races-calendar { min-height: 240px; }
+.page-skeleton--races .page-skeleton__races-pb { min-height: 640px; }
+.page-skeleton--race-detail .page-skeleton__race-detail-layout { display: grid; gap: 16px; min-height: 1980px; }
+.page-skeleton--race-detail .page-skeleton__race-detail-command { min-height: 520px; }
+.page-skeleton--race-detail .page-skeleton__race-detail-profile,
+.page-skeleton--race-detail .page-skeleton__map-panel { min-height: 560px; }
+
+.page-skeleton--schedule .page-skeleton__schedule-command { min-height: 125px; }
+.page-skeleton--schedule .page-skeleton__schedule-week-grid { min-height: 1150px; }
+.page-skeleton--schedule .page-skeleton__schedule-bottom-grid { min-height: 879px; }
+
+.page-skeleton--prediction .page-skeleton__prediction-command { min-height: 330px; }
+.page-skeleton--prediction .page-skeleton__prediction-evidence-grid { min-height: 155px; }
+.page-skeleton--prediction .page-skeleton__prediction-command-grid { min-height: 930px; }
+.page-skeleton--prediction .page-skeleton__prediction-profile-trend { min-height: 380px; }
+
+/* Natural child content is intentionally clipped to the same route bands as
+ * the live pages; this prevents generic skeleton internals from stretching a
+ * route after its landmark dimensions have been established. */
+.page-skeleton--runs .page-skeleton__runs-shell { height: 1482px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-cockpit-shell { height: 506px; min-height: 506px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-cockpit { height: 506px; min-height: 506px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-glance { height: 308px; min-height: 308px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-stats { height: 136px; min-height: 136px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-insight-strip { height: 156px; min-height: 156px; overflow: hidden; }
+.page-skeleton--runs .page-skeleton__runs-card-list,
+.page-skeleton--runs .page-skeleton__runs-history { height: 300px; min-height: 300px; overflow: hidden; }
+
+.page-skeleton--analysis .page-skeleton__analysis-cockpit { height: 966px; min-height: 966px; overflow: hidden; }
+.page-skeleton--analysis .page-skeleton__analysis-bento-grid { height: 780px; min-height: 780px; overflow: hidden; }
+.page-skeleton--analysis .page-skeleton__analysis-table-grid { height: 1003px; min-height: 1003px; overflow: hidden; }
+.page-skeleton--analysis .page-skeleton__analysis-injury { height: 759px; min-height: 759px; overflow: hidden; }
+
+.page-skeleton--weather .page-skeleton__weather-forecast-shell { height: 280px; min-height: 280px; overflow: hidden; }
+.page-skeleton--today-run .page-skeleton__today-coaching { height: 148px; min-height: 148px; overflow: hidden; }
+.page-skeleton--today-run .page-skeleton__today-plan-hero { height: 1132px; min-height: 1132px; overflow: hidden; }
+.page-skeleton--today-run .page-skeleton__today-command { height: 1132px; min-height: 1132px; overflow: hidden; }
+.page-skeleton--rewards .page-skeleton__rewards-hero { height: 319px; min-height: 319px; overflow: hidden; }
+.page-skeleton--settings .page-skeleton__settings-activity { height: 276px; min-height: 276px; overflow: hidden; }
+.page-skeleton--settings .page-skeleton__settings-final-grid { height: 420px; min-height: 420px; overflow: hidden; }
+.page-skeleton--garmin .page-skeleton__garmin-shell { height: 1591px; min-height: 1591px; overflow: hidden; }
+.page-skeleton--import-data .page-skeleton__import-shell { height: 2264px; min-height: 2264px; overflow: hidden; }
+.page-skeleton--shoes .page-skeleton__shoes-screen { height: 2076px; min-height: 2076px; overflow: hidden; }
+.page-skeleton--shoe-catalog .page-skeleton__catalog-shell { height: 901px; min-height: 901px; overflow: hidden; }
+.page-skeleton--races .page-skeleton__races-content { height: 3894px; min-height: 3894px; overflow: hidden; }
+.page-skeleton--race-detail .page-skeleton__race-detail-layout { height: 1918px; min-height: 1918px; overflow: hidden; }
+.page-skeleton--run-detail .page-skeleton__run-detail-shell { display: grid; gap: 16px; height: 2456px; min-height: 2456px; overflow: hidden; }
+.page-skeleton--run-detail .page-skeleton__run-detail-overview { height: 745px; min-height: 745px; overflow: hidden; }
+.page-skeleton--run-detail .page-skeleton__run-detail-telemetry-section { height: 887px; min-height: 887px; overflow: hidden; }
+.page-skeleton--run-detail .page-skeleton__run-detail-splits-section { height: 220px; min-height: 220px; overflow: hidden; }
+.page-skeleton--schedule .page-skeleton__schedule-bottom-grid { height: 879px; min-height: 879px; overflow: hidden; }
+.page-skeleton--muscle-training .page-skeleton__muscle-bottom-grid { min-height: 4400px; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-heading { height: 177px; min-height: 177px; overflow: hidden; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; height: 3183px; min-height: 3183px; overflow: hidden; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-catalog { height: 2413px; min-height: 2413px; overflow: hidden; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-setup { height: 752px; min-height: 752px; overflow: hidden; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-step { min-height: 377px; }
+.page-skeleton--add-shoes .page-skeleton__add-shoes-models { min-height: 1859px; }
+
+.page-skeleton--analysis-load .page-skeleton__analysis-load { display: grid; gap: 16px; height: 1719px; min-height: 1719px; overflow: hidden; }
+.page-skeleton--analysis-load .analysis-load-profile-header { height: 96px; min-height: 96px; overflow: hidden; }
+.page-skeleton--analysis-load .analysis-load-profile-decision { height: 339px; min-height: 339px; overflow: hidden; }
+.page-skeleton--analysis-load .analysis-load-profile-evidence { height: 599px; min-height: 599px; overflow: hidden; }
+.page-skeleton--analysis-load .analysis-load-profile-metrics { height: 312px; min-height: 312px; overflow: hidden; }
+.page-skeleton--analysis-load .analysis-load-profile-ledger { height: 214px; min-height: 214px; overflow: hidden; }
+.page-skeleton--analysis-intensity .page-skeleton__analysis-intensity { display: grid; gap: 16px; height: 1442px; min-height: 1442px; overflow: hidden; }
+.page-skeleton--analysis-intensity .analysis-intensity-command-hero { height: 261px; min-height: 261px; overflow: hidden; }
+.page-skeleton--analysis-intensity .analysis-intensity-command-grid { height: 831px; min-height: 831px; overflow: hidden; }
+.page-skeleton--analysis-intensity .analysis-intensity-command-samples { height: 234px; min-height: 234px; overflow: hidden; }
+.page-skeleton--analysis-intensity .page-skeleton__canvas { height: 1504px; min-height: 1504px; overflow: hidden; }
+.page-skeleton--analysis-injury .page-skeleton__analysis-injury-profile { display: grid; gap: 16px; height: 1540px; min-height: 1540px; overflow: hidden; }
+.page-skeleton--analysis-injury .analysis-cinematic-hero { height: 151px; min-height: 151px; overflow: hidden; }
+.page-skeleton--analysis-injury .analysis-cinematic-card { height: 220px; min-height: 220px; overflow: hidden; }
+.page-skeleton--analysis-injury .analysis-cinematic-signal-row { height: 123px; min-height: 123px; overflow: hidden; }
+.page-skeleton--analysis-injury .analysis-cinematic-grid { height: 859px; min-height: 859px; overflow: hidden; }
+.page-skeleton--analysis-coach .page-skeleton__analysis-coach { display: grid; gap: 16px; height: 2275px; min-height: 2275px; overflow: hidden; }
+.page-skeleton--analysis-coach .analysis-profile-v2-header { height: 81px; min-height: 81px; overflow: hidden; }
+.page-skeleton--analysis-coach .analysis-coach-profile-decision { height: 494px; min-height: 494px; overflow: hidden; }
+.page-skeleton--analysis-coach .analysis-coach-profile-workbench { height: 1147px; min-height: 1147px; overflow: hidden; }
+.page-skeleton--analysis-coach .analysis-coach-profile-evidence { height: 399px; min-height: 399px; overflow: hidden; }
+
+@media (min-width: 861px) {
+  .page-skeleton--rewards .page-skeleton__rewards-hero { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton--settings .page-skeleton__settings-content-grid,
+  .page-skeleton--settings .page-skeleton__settings-bottom-grid,
+  .page-skeleton--settings .page-skeleton__settings-services-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 .page-skeleton__hero {
   display: grid;
@@ -631,11 +1271,17 @@ body.theme-high-contrast {
 .muscle-training-loading-skeleton { margin: 22px 0; }
 
 @media (max-width: 900px) {
-  .page-skeleton--admin { padding-inline: 12px; }
-  .page-skeleton__admin-layout { width: 100%; grid-template-columns: 1fr; }
-  .page-skeleton__admin-sidebar { position: static; min-height: auto; }
+  .page-skeleton--admin { padding: 0; }
+  .page-skeleton__admin-layout { width: 100%; }
+  .page-skeleton__admin-sidebar { position: static; width: 100%; height: auto; min-height: auto; border-right: 0; }
+  .page-skeleton__admin-main { margin-left: 0; }
   .page-skeleton__admin-nav { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-  .page-skeleton--admin .page-skeleton__stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton__admin-content { width: 100%; padding: 24px 18px 48px; }
+  .page-skeleton__admin-hero,
+  .page-skeleton__admin-spotlight,
+  .page-skeleton__admin-workspace { grid-template-columns: 1fr; }
+  .page-skeleton__admin-hero-actions { justify-items: start; }
+  .page-skeleton__admin-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -658,6 +1304,19 @@ body.theme-high-contrast {
   .page-skeleton__cards,
   .page-skeleton--admin .page-skeleton__cards { grid-template-columns: 1fr; }
   .page-skeleton--admin .page-skeleton__stat-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-topbar { min-height: 64px; padding-inline: 16px; }
+  .page-skeleton__admin-content { padding: 20px 14px 40px; }
+  .page-skeleton__admin-metric-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-terminal-toolbar { flex-direction: column; }
+  .page-skeleton__admin-terminal-actions { flex-wrap: wrap; }
+  .page-skeleton__admin-job-row { grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 20px; }
+  .page-skeleton__admin-job-trace { grid-column: 1 / -1; }
+  .page-skeleton__admin-job-ops { display: none; }
+  .page-skeleton__admin-detail { min-height: 360px; padding: 22px; }
+  .page-skeleton__admin-detail-grid { grid-template-columns: 1fr; }
+  .page-skeleton__admin-terminal-toolbar { padding: 18px 20px; }
+  .page-skeleton__admin-job-group-head,
+  .page-skeleton__admin-terminal-footer { padding-inline: 20px; }
   .runner-shell-page--loading[data-loading-state="loading"] .runner-shell-loading { width: calc(100% - 28px); margin: 28px auto; }
 
   .page-skeleton--auth,
@@ -689,6 +1348,179 @@ body.theme-high-contrast {
   }
 }
 
+/* User pages use the same collapsed, fixed rail as the loaded runner shell.
+ * Keep the skeleton on that exact chrome contract so content never appears to
+ * jump sideways when the route finishes loading. */
+.page-skeleton--runner {
+  display: block;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.page-skeleton--runner .page-skeleton__rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  box-sizing: border-box;
+  width: 96px;
+  min-height: 100dvh;
+  height: 100dvh;
+  align-items: center;
+  padding: 16px 10px 14px;
+  overflow: hidden;
+}
+
+.page-skeleton--runner .page-skeleton__brand-row {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.page-skeleton--runner .page-skeleton__brand,
+.page-skeleton--runner .page-skeleton__rail-toggle,
+.page-skeleton--runner .page-skeleton__brand-subline,
+.page-skeleton--runner .page-skeleton__rail-label,
+.page-skeleton--runner .page-skeleton__rail-index,
+.page-skeleton--runner .page-skeleton__rail-footer-label {
+  display: none;
+}
+
+.page-skeleton--runner .page-skeleton__rail-links {
+  width: 100%;
+}
+
+.page-skeleton--runner .page-skeleton__rail-item {
+  justify-content: center;
+  width: 100%;
+  padding: 10px;
+}
+
+.page-skeleton--runner .page-skeleton__rail-footer {
+  width: 100%;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.page-skeleton--runner .page-skeleton__main {
+  min-height: 100dvh;
+  margin-left: 88px;
+}
+
+.page-skeleton--runner .page-skeleton__topbar {
+  min-height: 80px;
+  padding-inline: 20px;
+}
+
+.page-skeleton--runner .page-skeleton__canvas {
+  width: calc(100% - 40px);
+  max-width: none;
+  margin: 0 20px;
+  padding: 24px 20px 52px;
+  box-sizing: border-box;
+}
+
+.page-skeleton__runner-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 61px;
+  margin-top: 24px;
+  padding: 18px 4px 0;
+  border-top: 1px solid var(--hermes-skeleton-line);
+}
+
+.page-skeleton__runner-footer-brand {
+  width: 110px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.page-skeleton__runner-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.page-skeleton__runner-footer-links > .page-skeleton__block {
+  width: 44px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+/* The profile page has its own tablet breakpoint: metrics stack before the
+ * wider training and history cards do. Keep the preview in the same order. */
+@media (max-width: 960px) and (min-width: 861px) {
+  .page-skeleton--profile .page-skeleton__profile-metric-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .page-skeleton--profile .page-skeleton__profile-metric-card { min-height: 142px; }
+  .page-skeleton--profile .page-skeleton__profile-training-grid { grid-template-columns: 1.4fr 1fr; }
+  .page-skeleton--profile .page-skeleton__profile-training-grid > .page-skeleton__panel { min-height: 473px; }
+  .page-skeleton--profile .page-skeleton__profile-progression { min-height: 410px; }
+  .page-skeleton--profile .page-skeleton__profile-bottom-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .page-skeleton--profile .page-skeleton__profile-bottom-card { min-height: 727px; }
+  .page-skeleton--profile .page-skeleton__profile-rewards { min-height: 568px; }
+}
+
+@media (max-width: 860px) {
+  .page-skeleton--runner {
+    display: block;
+  }
+
+  .page-skeleton--runner .page-skeleton__rail {
+    position: static;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 14px;
+    border-right: 0;
+    border-bottom: 1px solid var(--hermes-skeleton-line);
+  }
+
+  .page-skeleton--runner .page-skeleton__brand,
+  .page-skeleton--runner .page-skeleton__rail-label,
+  .page-skeleton--runner .page-skeleton__rail-index,
+  .page-skeleton--runner .page-skeleton__rail-footer-label {
+    display: block;
+  }
+
+  .page-skeleton--runner .page-skeleton__brand-row {
+    justify-content: space-between;
+  }
+
+  .page-skeleton--runner .page-skeleton__rail-links {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(118px, 1fr);
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .page-skeleton--runner .page-skeleton__rail-item {
+    justify-content: flex-start;
+    width: auto;
+    padding: 9px 26px 9px 10px;
+  }
+
+  .page-skeleton--runner .page-skeleton__rail-footer {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page-skeleton--runner .page-skeleton__main {
+    margin-left: 0;
+  }
+
+  .page-skeleton--runner .page-skeleton__canvas {
+    width: min(100%, calc(100% - 28px));
+    margin-inline: auto;
+    padding: 18px 0 42px;
+  }
+}
+
 /* Route-specific skeleton geometry. Each route keeps the same visual landmarks
    as its loaded page instead of collapsing into the generic KPI shell above. */
 .page-skeleton__topbar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
@@ -715,7 +1547,6 @@ body.theme-high-contrast {
 .page-skeleton__prediction-hero,
 .page-skeleton__muscle-hero,
 .page-skeleton__rewards-hero,
-.page-skeleton__admin-hero,
 .page-skeleton__add-shoes-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, .6fr); align-items: center; gap: clamp(22px, 5vw, 66px); min-height: 280px; }
 .page-skeleton__profile-avatar { width: 148px; height: 148px; border-radius: 50%; justify-self: center; }
 .page-skeleton__hero-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-self: stretch; }
@@ -865,28 +1696,27 @@ body.theme-high-contrast {
 .page-skeleton--heatmap-page { min-height: 100dvh; background: #e9e2d7; }
 .page-skeleton__heatmap-map-shell { position: relative; min-height: 100dvh; overflow: hidden; background: #d9e5e5; }
 .page-skeleton__heatmap-canvas { position: absolute; inset: 0; min-height: 100%; background: radial-gradient(circle at 45% 42%, rgba(255,255,255,.72), transparent 32%), linear-gradient(140deg, rgba(241,235,225,.8), rgba(180,214,219,.86)); }
-.page-skeleton__heatmap-topbar { position: absolute; z-index: 2; top: 22px; left: 24px; right: 24px; display: grid; grid-template-columns: 180px minmax(220px, 1fr) auto; align-items: center; gap: 18px; }
-.page-skeleton__heatmap-brand { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 16px; background: rgba(255,252,247,.82); box-shadow: 0 14px 34px rgba(69, 89, 91, .13); }
+.page-skeleton__heatmap-topbar { position: absolute; z-index: 2; top: 22px; left: 22px; right: 22px; display: grid; grid-template-columns: auto minmax(250px, 390px) minmax(0, 1fr); align-items: center; gap: 14px; padding: 8px; }
+.page-skeleton__heatmap-brand { display: flex; align-items: center; gap: 14px; min-height: 58px; padding: 0 18px; border-radius: 18px; background: rgba(255,252,247,.82); box-shadow: 0 14px 34px rgba(69, 89, 91, .13); }
 .page-skeleton__heatmap-brand > .page-skeleton__block:first-child { width: 84px; height: 16px; border-radius: 4px; }
 .page-skeleton__heatmap-brand > .page-skeleton__block:last-child { width: 48px; height: 8px; border-radius: 999px; }
-.page-skeleton__heatmap-search { display: flex; align-items: center; gap: 10px; width: min(420px, 100%); height: 42px; padding: 0 14px; border-radius: 999px; background: rgba(255,252,247,.78); box-shadow: 0 14px 34px rgba(69, 89, 91, .1); }
+.page-skeleton__heatmap-search { display: flex; align-items: center; gap: 14px; min-width: 0; min-height: 58px; padding: 0 18px; border-radius: 18px; background: rgba(255,252,247,.78); box-shadow: 0 14px 34px rgba(69, 89, 91, .1); }
 .page-skeleton__heatmap-search > .page-skeleton__block:first-child { width: 18px; height: 18px; border-radius: 50%; }
 .page-skeleton__heatmap-search > .page-skeleton__block:last-child { width: 126px; height: 9px; border-radius: 999px; }
-.page-skeleton__heatmap-actions { display: flex; gap: 8px; }
-.page-skeleton__heatmap-actions > .page-skeleton__block { width: 38px; height: 38px; border-radius: 50%; background-color: rgba(255,252,247,.82); }
-.page-skeleton__heatmap-recenter { position: absolute; z-index: 2; top: 92px; left: 24px; width: 132px; height: 34px; border-radius: 999px; background-color: rgba(255,252,247,.82); }
-.page-skeleton__heatmap-legend { position: absolute; z-index: 2; right: 24px; bottom: 24px; width: min(240px, calc(100% - 48px)); padding: 18px; border: 1px solid rgba(255,255,255,.62); border-radius: 18px; background: rgba(255,252,247,.88); box-shadow: 0 18px 45px rgba(69, 89, 91, .14); }
-.page-skeleton__heatmap-card-kicker { width: 116px; height: 9px; border-radius: 999px; }
-.page-skeleton__heatmap-legend-scale { display: grid; gap: 8px; margin-top: 16px; }
-.page-skeleton__heatmap-legend-scale > .page-skeleton__block { height: 9px; border-radius: 999px; }
-.page-skeleton__heatmap-legend-meta { display: grid; gap: 8px; margin-top: 18px; }
-.page-skeleton__heatmap-legend-meta > .page-skeleton__block { height: 12px; border-radius: 999px; }
-.page-skeleton__heatmap-utility-rail { position: absolute; z-index: 2; top: 140px; left: 24px; display: grid; gap: 8px; padding: 8px; border-radius: 18px; background: rgba(255,252,247,.83); box-shadow: 0 18px 42px rgba(69, 89, 91, .13); }
-.page-skeleton__heatmap-utility-rail > .page-skeleton__block { width: 34px; height: 34px; border-radius: 10px; }
-.page-skeleton__heatmap-sessions { position: absolute; z-index: 2; left: 24px; bottom: 24px; width: min(470px, calc(100% - 300px)); padding: 18px; border-color: rgba(255,255,255,.6); background: rgba(255,252,247,.9); box-shadow: 0 18px 45px rgba(69, 89, 91, .14); }
-.page-skeleton__heatmap-session-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
-.page-skeleton__heatmap-session-stats > .page-skeleton__block { height: 36px; border-radius: 10px; }
-.page-skeleton__heatmap-sessions .page-skeleton__rows { margin-top: 14px; }
+.page-skeleton__heatmap-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; margin-left: auto; width: 100%; }
+.page-skeleton__heatmap-actions > .page-skeleton__block { width: 54px; height: 54px; border-radius: 18px; background-color: rgba(255,252,247,.82); }
+.page-skeleton__heatmap-actions > .page-skeleton__block:first-child { width: 135px; }
+.page-skeleton__heatmap-actions > .page-skeleton__block:nth-child(2) { width: 103px; }
+.page-skeleton__heatmap-actions > .page-skeleton__block:last-child { border-radius: 50%; }
+.page-skeleton__heatmap-legend { position: absolute; z-index: 2; right: 26px; bottom: 26px; display: grid; gap: 20px; width: min(320px, calc(100% - 52px)); padding: 24px; border: 1px solid rgba(255,255,255,.62); border-radius: 26px; background: rgba(255,252,247,.88); box-shadow: 0 24px 62px rgba(69, 89, 91, .14); }
+.page-skeleton__heatmap-card-kicker { width: 92px; height: 17px; border-radius: 5px; }
+.page-skeleton__heatmap-legend-scale { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.page-skeleton__heatmap-legend-band { display: grid; gap: 8px; min-width: 0; }
+.page-skeleton__heatmap-legend-band-label { width: 100%; height: 17px; border-radius: 5px; }
+.page-skeleton__heatmap-legend-band-swatch { width: 100%; height: 42px; border-radius: 999px; }
+.page-skeleton__heatmap-utility-rail { position: absolute; z-index: 2; top: 110px; left: 18px; display: grid; gap: 7px; width: 60px; max-height: calc(100vh - 136px); padding: 5px; border-radius: 22px; background: rgba(255,252,247,.83); box-shadow: 0 18px 42px rgba(69, 89, 91, .13); overflow-x: hidden; overflow-y: auto; }
+.page-skeleton__heatmap-utility-rail > .page-skeleton__block { width: 50px; height: 50px; border-radius: 16px; }
+.page-skeleton__heatmap-utility-divider { width: 28px; height: 1px; margin: 2px auto; background: rgba(244, 238, 232, 0.18); }
 
 .page-skeleton__run-detail-profile { display: grid; gap: 20px; }
 .page-skeleton__run-detail-kicker, .page-skeleton__schedule-kicker, .page-skeleton__today-kicker, .page-skeleton__rewards-kicker, .page-skeleton__settings-kicker, .page-skeleton__insight-kicker { width: 118px; height: 9px; border-radius: 999px; }
@@ -1298,7 +2128,6 @@ body.theme-high-contrast {
   .page-skeleton__add-shoes-command,
   .page-skeleton__catalog-command,
   .page-skeleton__race-detail-command { grid-template-columns: 1fr; }
-  .page-skeleton__heatmap-sessions { width: min(470px, calc(100% - 48px)); }
   .page-skeleton__hero-art--gauge,
   .page-skeleton__reward-progress,
   .page-skeleton__prediction-time,
@@ -1341,10 +2170,8 @@ body.theme-high-contrast {
   .page-skeleton__muscle-reference-image { height: 170px; }
   .page-skeleton__heatmap-topbar { grid-template-columns: 1fr auto; top: 14px; left: 14px; right: 14px; }
   .page-skeleton__heatmap-search { display: none; }
-  .page-skeleton__heatmap-sessions { left: 14px; bottom: 14px; width: calc(100% - 28px); }
   .page-skeleton__heatmap-legend { right: 14px; bottom: 230px; width: 190px; }
   .page-skeleton__heatmap-utility-rail { left: 14px; top: 130px; }
-  .page-skeleton__heatmap-recenter { left: 14px; top: 90px; }
   .page-skeleton__landing-header,
   .page-skeleton__landing-main { width: min(100% - 28px, 680px); }
   .page-skeleton__landing-header { grid-template-columns: 1fr auto; }
@@ -2149,7 +2976,7 @@ body.theme-high-contrast {
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 760px) {
   .page-skeleton--profile .page-skeleton__profile-content { padding: 20px 16px 48px; }
   .page-skeleton__profile-metric-strip,
   .page-skeleton__profile-training-grid,
@@ -2184,4 +3011,163 @@ body.theme-high-contrast {
   .page-skeleton__shoes-signal-meta { grid-template-columns: 1fr; }
   .page-skeleton__shoes-inventory-card { grid-template-columns: 1fr; }
   .page-skeleton__shoes-inventory-meta { width: 100%; justify-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Final admin parity overrides must come after the shared panel rule above;
+ * the live admin route owns these surfaces and does not add the generic
+ * skeleton panel padding. */
+@media (max-width: 1100px) and (min-width: 901px) {
+  .page-skeleton--admin .page-skeleton__admin-overview { gap: 0; }
+  .page-skeleton--admin .page-skeleton__admin-ops-metrics { margin-bottom: 57px; }
+  .page-skeleton--admin .page-skeleton__admin-ops-queues { margin-bottom: 32px; }
+  .page-skeleton--admin .page-skeleton__admin-overview-charts { margin-bottom: 18px; }
+  .page-skeleton--admin .page-skeleton__admin-overview-two-col { margin-bottom: 42px; }
+  .page-skeleton--admin .page-skeleton__admin-overview-actions { grid-template-rows: repeat(3, 73.33px); }
+  .page-skeleton--admin .page-skeleton__admin-users-kpis { gap: 12px; }
+  .page-skeleton--admin .page-skeleton__admin-coursemaps { gap: 34px; }
+  .page-skeleton--admin .page-skeleton__admin-coursemaps-rail { padding: 0; }
+  .page-skeleton--admin .page-skeleton__admin-audit { gap: 18px; }
+  .page-skeleton--admin .page-skeleton__admin-audit-hero { display: grid; grid-template-rows: 187px 44px; }
+  .page-skeleton--admin .page-skeleton__admin-audit-metrics { gap: 14px; }
+  .page-skeleton--admin .page-skeleton__admin-audit-table { height: 3131px; min-height: 3131px; padding: 0; }
+  .page-skeleton--admin .page-skeleton__admin-settings { gap: 18px; }
+  .page-skeleton--admin .page-skeleton__admin-settings-hero > .page-skeleton__admin-route-heading {
+    min-height: 0;
+    height: 112px;
+    overflow: hidden;
+  }
+  .page-skeleton--admin .page-skeleton__admin-settings-stats {
+    grid-template-rows: repeat(3, 97px);
+    gap: 12px;
+  }
+  .page-skeleton--admin .page-skeleton__admin-settings-stats .page-skeleton__panel { min-height: 0; }
+  .page-skeleton--admin .page-skeleton__admin-shoes-catalog {
+    display: grid;
+    grid-template-rows: 112px 188px 2111px 243px;
+    row-gap: 0;
+    padding: 18px 20px;
+  }
+  .page-skeleton--admin .page-skeleton__admin-catalog-published { margin-top: 24px; }
+}
+
+/* The live heatmap intentionally stays on its dark map surface even while
+ * the rest of the runner shell uses the light theme. Keep the loading state
+ * on that same visual surface instead of showing the generic warm skeleton. */
+.page-skeleton--heatmap-page {
+  --hermes-skeleton-base: rgba(214, 228, 238, 0.12);
+  --hermes-skeleton-highlight: rgba(255, 255, 255, 0.2);
+  --hermes-skeleton-surface: rgba(8, 13, 18, 0.98);
+  --hermes-skeleton-line: rgba(255, 248, 238, 0.22);
+  background:
+    radial-gradient(circle at 18% 16%, rgba(255, 102, 92, 0.1), transparent 28%),
+    linear-gradient(180deg, #07090c 0%, #05070a 54%, #030406 100%);
+}
+
+.page-skeleton__heatmap-map-shell {
+  background:
+    radial-gradient(circle at top left, rgba(255, 94, 82, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(4, 6, 8, 0.98), rgba(5, 7, 10, 0.98));
+}
+
+.page-skeleton__heatmap-canvas {
+  background:
+    radial-gradient(circle at 32% 22%, rgba(73, 103, 116, 0.18), transparent 24%),
+    radial-gradient(circle at 76% 68%, rgba(255, 94, 82, 0.08), transparent 28%),
+    linear-gradient(180deg, #07090c 0%, #05070a 54%, #030406 100%);
+}
+
+.page-skeleton--heatmap-page :is(
+  .page-skeleton__heatmap-brand,
+  .page-skeleton__heatmap-search,
+  .page-skeleton__heatmap-actions > .page-skeleton__block,
+  .page-skeleton__heatmap-legend,
+  .page-skeleton__heatmap-utility-rail
+) {
+  border: 1px solid rgba(255, 248, 238, 0.22);
+  border-color: rgba(255, 248, 238, 0.22);
+  background: rgba(8, 13, 18, 0.98);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.page-skeleton__heatmap-topbar {
+  border: 1px solid rgba(255, 248, 238, 0.22);
+}
+
+.page-skeleton__heatmap-utility-rail > .page-skeleton__block {
+  border: 1px solid rgba(255, 248, 238, 0.22);
+}
+
+.page-skeleton--heatmap-page .page-skeleton__heatmap-utility-rail {
+  background: rgba(4, 8, 12, 0.96);
+}
+
+@media (max-width: 1180px) {
+  .page-skeleton__heatmap-topbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .page-skeleton__heatmap-brand,
+  .page-skeleton__heatmap-search {
+    width: 100%;
+  }
+
+  .page-skeleton__heatmap-actions {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 920px) {
+  .page-skeleton__heatmap-topbar {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    gap: 10px;
+  }
+
+  .page-skeleton__heatmap-utility-rail {
+    top: auto;
+    bottom: 18px;
+    left: 16px;
+    grid-auto-flow: column;
+    grid-auto-columns: 52px;
+    width: auto;
+    max-height: none;
+    max-width: calc(100% - 32px);
+    padding-bottom: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .page-skeleton__heatmap-legend {
+    left: 16px;
+    right: 16px;
+    bottom: 92px;
+    width: auto;
+    max-height: 244px;
+    overflow-y: auto;
+  }
+
+  .page-skeleton__heatmap-utility-rail > .page-skeleton__block {
+    width: 52px;
+    height: 52px;
+  }
+
+  .page-skeleton__heatmap-utility-divider {
+    width: 1px;
+    height: 28px;
+    margin: auto 2px;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-skeleton__heatmap-legend {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .page-skeleton__heatmap-legend-scale {
+    grid-template-columns: 1fr;
+  }
 }

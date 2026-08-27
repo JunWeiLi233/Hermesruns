@@ -103,6 +103,47 @@ function collectMissingPaths(sourceDir, targetDir, prefix = '') {
   return missing
 }
 
+// --- Build completeness assertion ------------------------------------------------
+// A previously shipped index.html referenced asset chunks that did not exist in
+// the published static dir (observed 2026-08-24 19:11), breaking the app at
+// runtime while the build reported success. Instead of warning, fail loudly:
+// every local asset referenced by the produced index.html must exist.
+function collectMissingIndexAssets(staticDir) {
+  const indexPath = path.join(staticDir, 'index.html')
+  if (!fs.existsSync(indexPath)) return ['index.html']
+
+  const html = fs.readFileSync(indexPath, 'utf8')
+  const references = new Set()
+
+  for (const match of html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+    let ref = match[1].trim()
+    if (!ref) continue
+    ref = ref.split('#')[0].split('?')[0]
+    if (!ref) continue
+    if (/^[a-z][a-z0-9+.-]*:/i.test(ref)) continue // http:, https:, data:, mailto:, ...
+    if (ref.startsWith('//')) continue
+    const relative = ref.replace(/^\/+/, '')
+    if (!relative) continue
+    references.add(relative)
+  }
+
+  const missing = []
+  for (const ref of references) {
+    if (!fs.existsSync(path.join(staticDir, ...ref.split('/')))) missing.push(ref)
+  }
+  return missing.sort()
+}
+
+function assertIndexAssetsExist(staticDir, label) {
+  const missing = collectMissingIndexAssets(staticDir)
+  if (missing.length === 0) return
+
+  console.error(`[frontend] ${label} is INCOMPLETE: index.html references ${missing.length} missing asset(s):`)
+  missing.forEach((ref) => console.error(` - ${ref}`))
+  console.error('[frontend] Failing the build instead of shipping an index.html that references nonexistent chunks.')
+  process.exit(1)
+}
+
 function emptyDirectory(targetDir) {
   retryFileOperation(() => fs.mkdirSync(targetDir, { recursive: true }), `Create ${targetDir}`)
 
@@ -273,6 +314,7 @@ function computeSourceFingerprint(extraArgs) {
     // it from the fingerprint or a forced build would poison the next comparison.
     const outputAffectingArgs = extraArgs.filter((arg) => arg !== '--force')
     hash.update(`#args\0${outputAffectingArgs.join(' ')}\n`)
+    hash.update(`#sourcemap\0${process.env.VITE_SOURCEMAP === 'true' ? 'true' : 'false'}\n`)
     return hash.digest('hex')
   } catch {
     // Any surprise while hashing inputs: fall back to a full build.
@@ -304,6 +346,8 @@ function publishedOutputLooksComplete() {
   const publishedAssets = fs.existsSync(backendAssetsDir) ? fs.readdirSync(backendAssetsDir) : []
   if (!publishedAssets.some((name) => name.endsWith('.js'))) return false
   if (fs.existsSync(backendLiveStaticDir) && !fs.existsSync(path.join(backendLiveStaticDir, 'index.html'))) return false
+  if (collectMissingIndexAssets(backendStaticDir).length > 0) return false
+  if (fs.existsSync(backendLiveStaticDir) && collectMissingIndexAssets(backendLiveStaticDir).length > 0) return false
   return true
 }
 
@@ -351,6 +395,14 @@ function pruneAssetsToGenerations(assetsDir, keepSet) {
         }
         continue
       }
+      // Security-sensitive retired entry points must disappear immediately,
+      // even while ordinary hashed chunks remain available for older tabs.
+      // The former public admin sign-in page is intentionally not retained.
+      if (entry.name.startsWith('AdminLogin-')) {
+        retryFileOperation(() => fs.rmSync(entryPath, { force: true }), `Prune retired admin login ${entryPath}`)
+        removed += 1
+        continue
+      }
       if (keepSet.has(relative)) continue
       retryFileOperation(() => fs.rmSync(entryPath, { force: true }), `Prune ${entryPath}`)
       removed += 1
@@ -359,6 +411,45 @@ function pruneAssetsToGenerations(assetsDir, keepSet) {
 
   walk(assetsDir)
   return removed
+}
+
+function stripSourceMapReferences(filePath) {
+  if (!/\.(?:js|css)$/i.test(filePath)) return false
+
+  const source = fs.readFileSync(filePath, 'utf8')
+  const sanitized = source
+    .replace(/(?:\r?\n)?\/\*[#@]\s*sourceMappingURL=[^*]*\*\/\s*$/, '')
+    .replace(/(?:\r?\n)?\/\/[#@]\s*sourceMappingURL=[^\r\n]*\s*$/, '')
+
+  if (sanitized === source) return false
+  retryFileOperation(() => fs.writeFileSync(filePath, sanitized), `Strip source map reference from ${filePath}`)
+  return true
+}
+
+function removeSourceMapArtifacts(staticDir) {
+  if (!fs.existsSync(staticDir)) return { removedMaps: 0, strippedReferences: 0 }
+
+  let removedMaps = 0
+  let strippedReferences = 0
+
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const entryPath = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        walk(entryPath)
+        continue
+      }
+      if (entry.name.endsWith('.map')) {
+        retryFileOperation(() => fs.rmSync(entryPath, { force: true }), `Remove source map ${entryPath}`)
+        removedMaps += 1
+        continue
+      }
+      if (stripSourceMapReferences(entryPath)) strippedReferences += 1
+    }
+  }
+
+  walk(staticDir)
+  return { removedMaps, strippedReferences }
 }
 
 function publishBuildOutput() {
@@ -427,7 +518,9 @@ for (const arg of process.argv.slice(2)) {
 
 process.env.VITE_MINIFY = minify ? 'true' : 'false'
 process.env.VITE_CSS_MINIFY = cssMinify ? 'true' : 'false'
-process.env.VITE_SOURCEMAP = 'true'
+// Source maps are opt-in for local debugging and must not ship by default.
+process.env.VITE_SOURCEMAP = process.env.VITE_SOURCEMAP || 'false'
+const sourceMapsEnabled = process.env.VITE_SOURCEMAP === 'true'
 
 retryFileOperation(() => fs.rmSync(buildOutputDir, { recursive: true, force: true }), `Remove ${buildOutputDir}`)
 
@@ -459,6 +552,14 @@ if (result.status !== 0) {
 
 try {
   publishBuildOutput()
+  if (!sourceMapsEnabled) {
+    const sanitized = removeSourceMapArtifacts(backendStaticDir)
+    if (sanitized.removedMaps > 0 || sanitized.strippedReferences > 0) {
+      console.log(
+        `[frontend] Removed ${sanitized.removedMaps} source map(s) and ${sanitized.strippedReferences} sourceMappingURL reference(s).`,
+      )
+    }
+  }
 } catch (error) {
   if (fs.existsSync(backupAssetsDir)) {
     try {
@@ -472,6 +573,10 @@ try {
 }
 
 retryFileOperation(() => fs.rmSync(backupAssetsDir, { recursive: true, force: true }), `Remove ${backupAssetsDir}`)
+
+// The final published index.html must not reference any asset that is missing
+// from the backend static dir (build completeness assertion).
+assertIndexAssetsExist(backendStaticDir, 'Published backend static')
 
 if (fs.existsSync(backendLiveStaticDir)) {
   // Verify the source is complete first (stays a no-op if already in sync).

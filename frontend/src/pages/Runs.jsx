@@ -7,6 +7,7 @@ const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
 const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
+import { invalidateResourceCache } from '../api/resourceCache';
 import AppIcon from '../components/AppIcon';
 import PageSkeleton from '../components/PageSkeleton';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -16,6 +17,7 @@ import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
+import { preloadRoute } from '../utils/routePreload';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
 import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import { createRoutePreviewRequestCoordinator } from './runsRequestCoordinator';
@@ -145,9 +147,10 @@ function normalizeRoutePreview(preview) {
 const ROUTE_PREVIEW_VIEW_SIZE = 100;
 const ROUTE_PREVIEW_PADDING = 24;
 const ROUTE_PREVIEW_INNER_SIZE = ROUTE_PREVIEW_VIEW_SIZE - (ROUTE_PREVIEW_PADDING * 2);
-const ROUTE_TILE_SUBDOMAINS = ['a', 'b', 'c', 'd'];
 const ROUTE_TILE_MIN_ZOOM = 2;
-const ROUTE_TILE_MAX_ZOOM = 18;
+// Esri World Dark Gray Base stops at LOD 16; CARTO's dark tiles now require
+// a registered API key, so 16 is also the keyless ceiling for thumbnails.
+const ROUTE_TILE_MAX_ZOOM = 16;
 const ROUTE_TILE_MAX_LAYERS = 64;
 const ROUTE_TILE_TARGET_CSS_PX = 128;
 const ROUTE_TILE_MAX_MERCATOR_LAT = 85.05112878;
@@ -165,7 +168,6 @@ function pickRouteTileZoom(latSpan, lngSpan) {
   return Math.max(ROUTE_TILE_MIN_ZOOM, Math.min(ROUTE_TILE_MAX_ZOOM, rawZoom));
 }
 
-  // Mirror Heatmap map tiles but use the no-labels variant at thumbnail scale.
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -188,8 +190,9 @@ function buildRouteTileUrl(zoom, x, y) {
   if (![zoom, x, y].every(Number.isFinite)) return null;
   const n = 2 ** zoom;
   if (zoom < ROUTE_TILE_MIN_ZOOM || zoom > ROUTE_TILE_MAX_ZOOM || x < 0 || y < 0 || x >= n || y >= n) return null;
-  const sub = ROUTE_TILE_SUBDOMAINS[(x + y) % ROUTE_TILE_SUBDOMAINS.length];
-  return `https://${sub}.basemaps.cartocdn.com/dark_nolabels/${zoom}/${x}/${y}.png`;
+  // Esri Dark Gray (no labels at thumbnail scale); the MapServer tile path is
+  // /tile/{z}/{y}/{x} with no file extension.
+  return `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${zoom}/${y}/${x}`;
 }
 
 function tileRangeForPreviewBounds(viewBounds, zoom) {
@@ -431,6 +434,10 @@ function RoutePreviewThumb({ preview, provider, runName, bbox }) {
 
 const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
 const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
+// The history render window grows on this cadence until every filtered run is
+// mounted, so loading never depends on where the scroll sentinel sits or on
+// month cards being expanded/collapsed. The observer only accelerates it.
+const RUNS_BACKGROUND_LOAD_STEP_MS = 120;
 const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT + (RECENT_RUNS_LOAD_BATCH_SIZE * 2);
 const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE * 3;
 
@@ -706,6 +713,9 @@ const Runs = memo(function Runs() {
       .catch(() => {});
 
     await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
+    // The slim cache only needs the runs payload; profile/strava fall back to
+    // the values seeded above (cache/metadata) when their endpoints fail, so
+    // a flaky side endpoint no longer blocks cache refreshes.
     if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
       writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
     }
@@ -1057,6 +1067,7 @@ const Runs = memo(function Runs() {
     try {
       await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
       resetRoutePreviewState();
+      invalidateResourceCache('/api/activities');
       // Optimistically remove from state + clear per-run caches.
       setAllRuns(prev => prev.filter(r => r.id !== run.id));
       setRoutePreviewFallbacks(prev => {
@@ -1083,6 +1094,18 @@ const Runs = memo(function Runs() {
       setDeleting(false);
     }
   }
+
+  // Stream the remaining history in bounded batches on a timer so the list
+  // always finishes loading — whether month cards are expanded, collapsed, or
+  // the scroll sentinel never enters view. Scrolling to the sentinel (below)
+  // still accelerates the same growth; nothing about the fold state gates it.
+  useEffect(() => {
+    if (!hasMoreRuns || loadState !== 'ready') return undefined;
+    const stepTimer = window.setInterval(() => {
+      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+    }, RUNS_BACKGROUND_LOAD_STEP_MS);
+    return () => window.clearInterval(stepTimer);
+  }, [filteredRuns.length, hasMoreRuns, loadState]);
 
   useEffect(() => {
     if (!hasMoreRuns || loadState !== 'ready') return undefined;
@@ -1180,8 +1203,8 @@ const Runs = memo(function Runs() {
               ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
             ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
               <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
+                <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <div className="import-source-header">
-                  <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                   <div className="import-source-copy">
                     <span className="import-source-title">{t(titleKey)}</span>
                     <span className="import-source-hint">{t(hintKey)}</span>
@@ -1247,6 +1270,8 @@ const Runs = memo(function Runs() {
                 type="button"
                 className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
                 onClick={() => navigate(item.route)}
+                onPointerEnter={() => preloadRoute(item.route)}
+                onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1259,6 +1284,8 @@ const Runs = memo(function Runs() {
               type="button"
               className="runner-shell-workout-btn runner-dashboard-workout-btn"
               onClick={() => navigate('/today-run')}
+              onPointerEnter={() => preloadRoute('/today-run')}
+              onFocus={() => preloadRoute('/today-run')}
               aria-label={t('profile.dashboard_start_workout')}
             >
               <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
@@ -1407,6 +1434,8 @@ const Runs = memo(function Runs() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              onPointerEnter={() => preloadRoute(item.route)}
+              onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
@@ -1419,6 +1448,8 @@ const Runs = memo(function Runs() {
             type="button"
             className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
+            onPointerEnter={() => preloadRoute('/today-run')}
+            onFocus={() => preloadRoute('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
           >
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>

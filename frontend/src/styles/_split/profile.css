@@ -5298,18 +5298,18 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   min-height: 0;
   align-items: center;
   justify-content: flex-start;
-  gap: 12px;
+  gap: 7px;
   overflow: hidden;
 }
 
 .runner-dashboard-page.is-sidebar-collapsed .runner-shell-side-link {
   width: 52px;
   max-width: 52px;
-  min-height: 44px;
+  min-height: 42px;
   align-items: center;
   justify-content: center;
   margin-inline: auto;
-  padding: 10px !important;
+  padding: 9px 10px !important;
   overflow: hidden;
 }
 
@@ -5343,6 +5343,10 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   border-radius: 999px;
   justify-content: center;
   overflow: hidden;
+}
+
+.runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-side-link-label {
+  display: none;
 }
 
 .runner-dashboard-page.is-sidebar-collapsed .runner-dashboard-workout-btn-label {
@@ -5452,6 +5456,7 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
   .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) .runner-dashboard-side-link-label,
   .runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) .runner-dashboard-side-link-label {
+    display: inline;
     opacity: 1;
     width: auto;
     overflow: visible;

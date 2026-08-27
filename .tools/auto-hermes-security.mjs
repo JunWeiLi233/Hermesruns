@@ -693,6 +693,11 @@ function runSecretAndPiiHunter(rootDir) {
           if ([".md", ".html", ".svg"].includes(ext) && ["Generic API Key", "High Entropy Alphanumeric"].includes(pat.name)) return false;
           if (["Generic API Key", "High Entropy Alphanumeric"].includes(pat.name)) {
             const index = typeof match.index === "number" ? match.index : content.indexOf(m);
+            const pathLike = m.includes("/") && (
+              /https?:\/\/[^\s"'`]*$/i.test(content.slice(Math.max(0, index - 120), index))
+              || /^(?:[A-Za-z0-9_.-]+\/){2,}[A-Za-z0-9_.-]+$/.test(m)
+            );
+            if (pathLike) return false;
             const context = content.slice(Math.max(0, index - 120), Math.min(content.length, index + m.length + 120));
             if (!SENSITIVE_KEY_PATTERNS.test(context)) return false;
             const before = index > 0 ? content[index - 1] : "";

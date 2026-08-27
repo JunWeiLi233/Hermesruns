@@ -4,31 +4,36 @@ import logo361 from '../assets/brand-logos/361.webp';
 import asicsLogo from '../assets/brand-logos/asics.webp';
 import newBalanceLogo from '../assets/brand-logos/new-balance.png';
 import nikeLogo from '../assets/brand-logos/nike.webp';
-import pumaLogo from '../assets/brand-logos/puma.png';
+import pumaLogo from '../assets/brand-logos/puma-reference.png';
 import sauconyLogo from '../assets/brand-logos/saucony.png';
 import xtepLogo from '../assets/brand-logos/xtep.png';
-import altraLogo from '../assets/brand-logos/altra.svg';
-import antaLogo from '../assets/brand-logos/anta.svg';
-import bmaiLogo from '../assets/brand-logos/bmai.svg';
-import brooksLogo from '../assets/brand-logos/brooks.svg';
-import dayanLogo from '../assets/brand-logos/dayan.svg';
-import doWinLogo from '../assets/brand-logos/do-win.svg';
+import altraLogo from '../assets/brand-logos/altra-user.png';
+import antaLogo from '../assets/brand-logos/anta-user.png';
+import bmaiLogo from '../assets/brand-logos/bmai-user.png';
+import brooksLogo from '../assets/brand-logos/brooks-user.png';
+import craftLogo from '../assets/brand-logos/craft-reference.png';
+import dayanLogo from '../assets/brand-logos/dayan-dynafish.png';
+import diadoraLogo from '../assets/brand-logos/diadora-reference.png';
+import doWinLogo from '../assets/brand-logos/do-win-user.png';
 import hokaLogo from '../assets/brand-logos/hoka.svg';
-import inov8Logo from '../assets/brand-logos/inov-8.svg';
-import liningLogo from '../assets/brand-logos/lining.svg';
-import macondoLogo from '../assets/brand-logos/macondo.svg';
-import merrellLogo from '../assets/brand-logos/merrell.svg';
-import mizunoLogo from '../assets/brand-logos/mizuno.svg';
-import nordaLogo from '../assets/brand-logos/norda.svg';
-import onLogo from '../assets/brand-logos/on.svg';
-import peakLogo from '../assets/brand-logos/peak.svg';
-import qiaodanLogo from '../assets/brand-logos/qiaodan.svg';
-import reebokLogo from '../assets/brand-logos/reebok.svg';
-import salomonLogo from '../assets/brand-logos/salomon.svg';
-import skechersLogo from '../assets/brand-logos/skechers.svg';
-import topoAthleticLogo from '../assets/brand-logos/topo-athletic.svg';
-import underArmourLogo from '../assets/brand-logos/under-armour.svg';
-import volantiLogo from '../assets/brand-logos/volanti.svg';
+import inov8Logo from '../assets/brand-logos/inov8-user.png';
+import liningLogo from '../assets/brand-logos/lining-user.png';
+import macondoLogo from '../assets/brand-logos/macondo-reference.png';
+import laSportivaLogo from '../assets/brand-logos/la-sportiva-user.png';
+import merrellLogo from '../assets/brand-logos/merrell-user.png';
+import mizunoLogo from '../assets/brand-logos/mizuno-reference.png';
+import nordaLogo from '../assets/brand-logos/norda-user.png';
+import onLogo from '../assets/brand-logos/on-background-removed.png';
+import peakLogo from '../assets/brand-logos/peak-user.png';
+import qiaodanLogo from '../assets/brand-logos/qiaodan-user.png';
+import reebokLogo from '../assets/brand-logos/reebok-reference.png';
+import salomonLogo from '../assets/brand-logos/salomon-reference.png';
+import skechersLogo from '../assets/brand-logos/skechers-user.png';
+import topoAthleticLogo from '../assets/brand-logos/topo-athletic-user.png';
+import underArmourLogo from '../assets/brand-logos/under-armour-reference.png';
+import volantiLogo from '../assets/brand-logos/volanti-user.png';
+import karhuLogo from '../assets/brand-logos/karhu-reference.png';
+import kiprunLogo from '../assets/brand-logos/kiprun-reference.png';
 import { getShoeBrandAssetKey, getShoeBrandFallbackSpec } from '../utils/shoeBrandLogo';
 
 const BRAND_LOGO_ASSETS = {
@@ -45,14 +50,19 @@ const BRAND_LOGO_ASSETS = {
   anta: antaLogo,
   bmai: bmaiLogo,
   brooks: brooksLogo,
+  craft: craftLogo,
   dayan: dayanLogo,
+  diadora: diadoraLogo,
   dowin: doWinLogo,
   hoka: hokaLogo,
   inov8: inov8Logo,
+  lasportiva: laSportivaLogo,
   lining: liningLogo,
   macondo: macondoLogo,
   merrell: merrellLogo,
   mizuno: mizunoLogo,
+  karhu: karhuLogo,
+  kiprun: kiprunLogo,
   norda: nordaLogo,
   on: onLogo,
   peak: peakLogo,
@@ -92,7 +102,19 @@ export function getShoeBrandLogoBackgroundStyle(brand, cssVarName = '--add-shoes
   };
 }
 
-export default function ShoeBrandLogo({ brand, fallbackEmoji }) {
+export default function ShoeBrandLogo({ brand, fallbackEmoji, logoUrl, loading = 'lazy' }) {
+  if (logoUrl) {
+    return (
+      <img
+        className="shoe-brand-logo-svg shoe-brand-logo-img"
+        src={logoUrl}
+        alt={`${brand} logo`}
+        loading={loading}
+        decoding="async"
+      />
+    );
+  }
+
   const asset = getBrandLogoAsset(brand);
   if (asset) {
     return (
@@ -100,7 +122,7 @@ export default function ShoeBrandLogo({ brand, fallbackEmoji }) {
         className="shoe-brand-logo-svg shoe-brand-logo-img"
         src={asset}
         alt={`${brand} logo`}
-        loading="lazy"
+        loading={loading}
         decoding="async"
       />
     );

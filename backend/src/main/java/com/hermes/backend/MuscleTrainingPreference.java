@@ -17,7 +17,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -86,11 +88,16 @@ public class MuscleTrainingPreference {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    private LocalDate cycleStartDate;
+
     @PrePersist
     void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         if (createdAt == null) {
             createdAt = now;
+        }
+        if (cycleStartDate == null) {
+            cycleStartDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         }
         updatedAt = now;
     }
@@ -157,5 +164,13 @@ public class MuscleTrainingPreference {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public LocalDate getCycleStartDate() {
+        return cycleStartDate;
+    }
+
+    public void setCycleStartDate(LocalDate cycleStartDate) {
+        this.cycleStartDate = cycleStartDate;
     }
 }

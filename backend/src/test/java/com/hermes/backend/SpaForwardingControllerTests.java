@@ -39,19 +39,19 @@ class SpaForwardingControllerTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"/admin", "/admin/"})
-    void adminLoginRoutesServeSpaShell(String path) throws Exception {
+    void adminLoginRoutesAreConcealedWithoutAdminSession(String path) throws Exception {
         mockMvc.perform(get(path))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+                .andExpect(status().isNotFound());
     }
 
     @Test
-    void unknownBrowserRouteServesSpaShellForClientRedirect() throws Exception {
-        mockMvc.perform(get("/docs").accept(MediaType.TEXT_HTML))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+    void unknownNonAssetPathIsUnauthorizedNotAServerError() throws Exception {
+        // Secure by default: a root-level path that is neither an SPA route nor a static
+        // asset no longer falls through permitAll — anonymous callers get the JSON 401
+        // entry point instead of a 404/500 (still never a server error).
+        mockMvc.perform(get("/missing-static-resource.txt"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
     }
 
     @ParameterizedTest
@@ -63,18 +63,9 @@ class SpaForwardingControllerTests {
             "/dashboard/audit",
             "/dashboard/settings"
     })
-    void dashboardChildRoutesServeSpaShellOnRefresh(String path) throws Exception {
+    void dashboardChildRoutesAreConcealedWithoutAdminPortalSession(String path) throws Exception {
         mockMvc.perform(get(path))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
-    }
-
-    @Test
-    void missingStaticResourceReturns404InsteadOfServerError() throws Exception {
-        mockMvc.perform(get("/missing-static-resource.txt"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error").value("Not found"));
+                .andExpect(status().isNotFound());
     }
 
     @Test

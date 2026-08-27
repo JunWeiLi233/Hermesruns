@@ -41,6 +41,8 @@ class ShoeCatalogControllerTests {
                 List.of(Map.of(
                         "id", 1L,
                         "brand", "Nike",
+                        "brandZh", "",
+                        "logoUrl", "",
                         "logo", "👟",
                         "models", List.of(Map.of(
                                 "id", 11L,
@@ -79,6 +81,47 @@ class ShoeCatalogControllerTests {
         );
 
         assertError(response, HttpStatus.BAD_REQUEST, "Unexpected fields: extra");
+    }
+
+    @Test
+    void createBrandAcceptsLocalizedNameAndLogoReference() {
+        AuthService authService = mock(AuthService.class);
+        ShoeCatalogBrandRepository brandRepository = mock(ShoeCatalogBrandRepository.class);
+        AdminAuditService adminAuditService = mock(AdminAuditService.class);
+        Runner admin = admin();
+        when(authService.findByAuthorizationHeader("Bearer admin-token")).thenReturn(Optional.of(admin));
+        when(authService.isAdmin(admin)).thenReturn(true);
+        when(brandRepository.findByNameIgnoreCase("Volanti")).thenReturn(Optional.empty());
+        when(brandRepository.save(any(ShoeCatalogBrand.class))).thenAnswer(invocation -> {
+            ShoeCatalogBrand saved = invocation.getArgument(0);
+            saved.setId(21L);
+            return saved;
+        });
+        ShoeCatalogController controller = new ShoeCatalogController(
+                authService,
+                brandRepository,
+                mock(ShoeCatalogModelRepository.class),
+                mock(OfficialShoeCatalogImportService.class),
+                adminAuditService
+        );
+
+        ResponseEntity<?> response = controller.createBrand(
+                "Bearer admin-token",
+                Map.of(
+                        "brand", "Volanti",
+                        "brandZh", "沃兰提",
+                        "logoUrl", "https://example.com/volanti.png"
+                )
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isEqualTo(Map.of(
+                "id", 21L,
+                "brand", "Volanti",
+                "brandZh", "沃兰提",
+                "logoUrl", "https://example.com/volanti.png",
+                "created", true
+        ));
     }
 
     @Test

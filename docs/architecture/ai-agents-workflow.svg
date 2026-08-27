@@ -43,7 +43,8 @@
       <rect x="242" y="114" width="184" height="86" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
       <text x="256" y="136" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Command Surfaces</text>
 <text x="256" y="150" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.codex/commands/auto-hermes.md</text>
-<text x="256" y="164" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.codex/commands/auto-hermes-max.md</text>
+<text x="256" y="164" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.codex/commands/auto-hermes-</text>
+<text x="256" y="178" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">max.md</text>
     </g>
   
 
@@ -51,8 +52,9 @@
       <rect x="466" y="126" width="168" height="72" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="466" y="126" width="168" height="72" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
       <text x="480" y="148" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Controller</text>
-<text x="480" y="162" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-controller.mjs</text>
-<text x="480" y="176" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">bounded round selection</text>
+<text x="480" y="162" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-</text>
+<text x="480" y="176" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">controller.mjs</text>
+<text x="480" y="190" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">bounded round selection</text>
     </g>
   
 
@@ -72,7 +74,8 @@
       <rect x="254" y="274" width="182" height="86" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
       <text x="268" y="296" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Loop Owners</text>
 <text x="268" y="310" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-loop.mjs</text>
-<text x="268" y="324" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-max-loop.mjs</text>
+<text x="268" y="324" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-max-</text>
+<text x="268" y="338" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">loop.mjs</text>
     </g>
   
 
@@ -80,8 +83,10 @@
       <rect x="474" y="274" width="160" height="86" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="474" y="274" width="160" height="86" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.5"></rect>
       <text x="488" y="296" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Supervisor</text>
-<text x="488" y="310" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-supervisor.mjs</text>
-<text x="488" y="324" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">website-audit exhaustion stop gate</text>
+<text x="488" y="310" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-</text>
+<text x="488" y="324" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">supervisor.mjs</text>
+<text x="488" y="338" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">website-audit exhaustion</text>
+<text x="488" y="352" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stop gate</text>
     </g>
   
 
@@ -89,27 +94,32 @@
       <rect x="694" y="266" width="222" height="106" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="694" y="266" width="222" height="106" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
       <text x="708" y="288" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Specialist Lanes</text>
-<text x="708" y="302" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">lanes: frontend-agent, backend-agent, planning-agent, reviewer-agent, debugger-agent</text>
-<text x="708" y="316" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">website-audit fallback</text>
-<text x="708" y="330" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">merge gate on max mode</text>
+<text x="708" y="302" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">lanes: frontend-agent, backend-agent,</text>
+<text x="708" y="316" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">planning-agent, reviewer-agent,</text>
+<text x="708" y="330" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">debugger-agent</text>
+<text x="708" y="344" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">website-audit fallback</text>
+<text x="708" y="358" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">merge gate on max mode</text>
     </g>
   
 
     <g>
-      <rect x="274" y="442" width="162" height="72" rx="8" fill="#0f172a" opacity="0.92"></rect>
-      <rect x="274" y="442" width="162" height="72" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <rect x="274" y="442" width="162" height="86" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="274" y="442" width="162" height="86" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
       <text x="288" y="464" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Round Close</text>
-<text x="288" y="478" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-round-close.mjs</text>
-<text x="288" y="492" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">promotion + trace writeback</text>
+<text x="288" y="478" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-round-</text>
+<text x="288" y="492" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">close.mjs</text>
+<text x="288" y="506" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">promotion + trace</text>
+<text x="288" y="520" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">writeback</text>
     </g>
   
 
     <g>
-      <rect x="482" y="442" width="170" height="72" rx="8" fill="#0f172a" opacity="0.92"></rect>
-      <rect x="482" y="442" width="170" height="72" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <rect x="482" y="442" width="170" height="86" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="482" y="442" width="170" height="86" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
       <text x="496" y="464" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Finish Helper</text>
-<text x="496" y="478" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-finish.mjs</text>
-<text x="496" y="492" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-commit.ps1</text>
+<text x="496" y="478" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-hermes-</text>
+<text x="496" y="492" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">finish.mjs</text>
+<text x="496" y="506" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">.tools/auto-commit.ps1</text>
     </g>
   
 
@@ -126,102 +136,102 @@
   
     <g>
       <line x1="123" y1="156" x2="242" y2="157" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="182.5" y="150.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">invoke</text>
+      <text x="220.5" y="150.5" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">invoke</text>
     </g>
   
 
     <g>
       <line x1="334" y1="200" x2="345" y2="274" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="339.5" y="231" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">dispatch</text>
+      <text x="365.5" y="231" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">dispatch</text>
     </g>
   
 
     <g>
       <line x1="426" y1="157" x2="466" y2="162" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="446" y="153.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">route</text>
+      <text x="446" y="153.5" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">route</text>
     </g>
   
 
     <g>
       <line x1="634" y1="162" x2="676" y2="159" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="655" y="154.5" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">read queue</text>
+      <text x="655" y="154.5" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">reads</text>
     </g>
   
 
     <g>
       <line x1="550" y1="198" x2="554" y2="274" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="552" y="230" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">fallback</text>
+      <text x="520" y="230" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">fallback</text>
     </g>
   
 
     <g>
       <line x1="436" y1="317" x2="474" y2="317" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="455" y="311" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">continuity</text>
+      <text x="455" y="311" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">handoff</text>
     </g>
   
 
     <g>
       <line x1="634" y1="317" x2="694" y2="319" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="664" y="312" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">launch</text>
+      <text x="664" y="312" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">launch</text>
     </g>
   
 
     <g>
       <line x1="805" y1="372" x2="815" y2="430" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="810" y="395" text-anchor="middle" fill="#22d3ee" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">results + proofs</text>
+      <text x="822" y="401" text-anchor="start" fill="#22d3ee" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">results + proofs</text>
     </g>
   
 
     <g>
       <line x1="345" y1="360" x2="355" y2="442" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="350" y="395" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">verified round</text>
+      <text x="344" y="400" text-anchor="end" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">verified round</text>
     </g>
   
 
     <g>
-      <line x1="436" y1="478" x2="482" y2="478" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="459" y="472" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">true clean stop</text>
+      <line x1="436" y1="485" x2="482" y2="485" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="459" y="437" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">true clean stop</text>
     </g>
   
 
     <g>
-      <line x1="652" y1="478" x2="710" y2="478" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="681" y="472" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">conditional diagram refresh</text>
+      <line x1="652" y1="485" x2="710" y2="478" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="681" y="433.5" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">conditional diagram refresh</text>
     </g>
   
 
     <g>
-      <line x1="789" y1="222" x2="306" y2="478" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
-      <text x="547.5" y="344" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">writeback</text>
+      <path d="M902 159 L952 159 L952 546 L355 546 L355 528" fill="none" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></path>
+      <text x="653.5" y="540" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">writeback</text>
     </g>
   
   
     <g>
-      <rect x="760" y="520" width="248" height="126" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1"></rect>
-      <text x="772" y="532" fill="#e2e8f0" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Legend</text>
+      <rect x="254" y="556" width="248" height="114" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1"></rect>
+      <text x="266" y="568" fill="#e2e8f0" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Legend</text>
       
-      <rect x="772" y="534" width="14" height="10" rx="3" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1"></rect>
-      <text x="794" y="543" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">workflow surfaces / child lanes</text>
+      <rect x="266" y="570" width="14" height="10" rx="3" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1"></rect>
+      <text x="288" y="579" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">workflow surfaces / child lanes</text>
     
 
-      <rect x="772" y="552" width="14" height="10" rx="3" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1"></rect>
-      <text x="794" y="561" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">repo-owned orchestration helpers</text>
+      <rect x="266" y="586" width="14" height="10" rx="3" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1"></rect>
+      <text x="288" y="595" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">repo-owned orchestration helpers</text>
     
 
-      <rect x="772" y="570" width="14" height="10" rx="3" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1"></rect>
-      <text x="794" y="579" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">state + memory artifacts</text>
+      <rect x="266" y="602" width="14" height="10" rx="3" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1"></rect>
+      <text x="288" y="611" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">state + memory artifacts</text>
     
 
-      <rect x="772" y="588" width="14" height="10" rx="3" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1"></rect>
-      <text x="794" y="597" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">merge / stop / review gates</text>
+      <rect x="266" y="618" width="14" height="10" rx="3" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1"></rect>
+      <text x="288" y="627" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">merge / stop / review gates</text>
     
 
-      <rect x="772" y="606" width="14" height="10" rx="3" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1"></rect>
-      <text x="794" y="615" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">documentation outputs</text>
+      <rect x="266" y="634" width="14" height="10" rx="3" fill="rgba(120, 53, 15, 0.34)" stroke="#fbbf24" stroke-width="1"></rect>
+      <text x="288" y="643" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">documentation outputs</text>
     
 
-      <rect x="772" y="624" width="14" height="10" rx="3" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1"></rect>
-      <text x="794" y="633" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">human entrypoint</text>
+      <rect x="266" y="650" width="14" height="10" rx="3" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1"></rect>
+      <text x="288" y="659" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">human entrypoint</text>
     
     </g>
   

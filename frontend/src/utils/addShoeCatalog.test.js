@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { buildSeriesCatalog } from './addShoeCatalog.js';
+import { buildSeriesCatalog, mergeShoeCatalog } from './addShoeCatalog.js';
 
 const catalog = [
   {
@@ -39,3 +39,21 @@ assert.deepEqual(
 );
 
 console.log('[PASS] Add shoe catalog series filtering passed.');
+
+const merged = mergeShoeCatalog(
+  [{ brand: 'Nike', logo: 'N', models: [{ model: 'Pegasus', type: 'daily', category: 'trainer' }] }],
+  {
+    brands: [
+      { brand: 'Nike', models: [{ id: 41, model: 'Pegasus', type: 'daily', modelEn: 'Pegasus Runner' }] },
+      { brand: 'Topo Athletic', models: [{ id: 99, model: 'Pursuit', type: 'daily' }] },
+    ],
+  },
+);
+
+assert.equal(merged.find((entry) => entry.brand === 'Nike').models[0].id, 41);
+assert.equal(merged.find((entry) => entry.brand === 'Nike').models[0].modelEn, 'Pegasus Runner');
+assert.equal(merged.find((entry) => entry.brand === 'Nike').models[0].category, 'trainer');
+assert.equal(merged.find((entry) => entry.brand === 'Topo Athletic').models[0].id, 99);
+assert.equal(merged.find((entry) => entry.brand === 'Nike').models.length, 1);
+
+console.log('[PASS] Shared admin and runner shoe catalog merge passed.');

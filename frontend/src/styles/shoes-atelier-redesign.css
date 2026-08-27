@@ -252,10 +252,19 @@
 
 #root .shoes-atelier-redesign .shoe-inventory-topbar-title h2,
 #root .shoes-atelier-redesign .shoe-inventory-hero h1,
+#root .shoes-atelier-redesign .shoe-inventory-workspace-copy h1,
 #root .shoes-atelier-redesign .shoe-inventory-card-copy h2 {
   color: var(--shoe-atelier-ink) !important;
   letter-spacing: 0;
   text-transform: none;
+}
+
+#root .shoes-atelier-redesign :is(
+  .shoe-inventory-hero h1,
+  .shoe-inventory-workspace-copy h1
+) {
+  font-style: normal;
+  transform: none;
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-topbar-title h2 {
@@ -542,11 +551,29 @@
   color: rgba(104, 99, 93, 0.9);
 }
 
+#root .shoes-atelier-redesign .shoe-inventory-card-retirement-text {
+  font-size: 0.96rem;
+}
+
 #root .shoes-atelier-redesign .shoe-inventory-card-metrics {
   display: grid;
   grid-template-columns: minmax(130px, 0.38fr) minmax(180px, 0.62fr);
   gap: 12px;
   align-items: end;
+}
+
+#root .shoes-atelier-redesign .shoes-profile-workspace .shoe-inventory-card-metrics {
+  align-items: stretch;
+}
+
+#root .shoes-atelier-redesign .shoes-profile-workspace .shoe-inventory-card-metric > .shoe-inventory-brand-label {
+  /* Metric captions are plain text; keep shared pill treatments off this row. */
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 #root .shoes-atelier-redesign .shoe-inventory-card-metric {
@@ -778,7 +805,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-rede
   min-width: 0;
   padding: 14px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.58);
+  background: #f1f2f2;
 }
 
 #root .shoe-edit-field--wide {
@@ -801,16 +828,20 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-rede
   margin: 0;
   border: 0;
   border-radius: 8px;
-  background: rgba(255, 250, 243, 0.9);
+  background: #d8dada;
   color: #2c2f30;
   font: 750 1rem/1.2 "Manrope", var(--font-body);
   box-shadow: inset 0 0 0 1px rgba(44, 47, 48, 0.08);
   transition: background 0.18s ease, box-shadow 0.18s ease;
 }
 
+#root .shoe-edit-field--max-distance input {
+  padding-inline: 14px;
+}
+
 #root .shoe-edit-field input:focus {
   outline: none;
-  background: #fffaf3;
+  background: #d8dada;
   box-shadow: inset 0 0 0 2px rgba(160, 57, 42, 0.34);
 }
 
@@ -827,10 +858,22 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoes-atelier-rede
   font-weight: 800;
 }
 
+#root .shoe-edit-modal-card .shoe-edit-primary-toggle {
+  background: #f1f2f2;
+}
+
 #root .shoe-edit-primary-toggle input {
-  width: 18px;
-  height: 18px;
-  accent-color: #a0392a;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 #root .shoe-edit-modal-actions {
@@ -1596,6 +1639,14 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-c
 #root .shoe-photo-studio-primary-btn {
   background: linear-gradient(135deg, #a0392a, #f07561);
   color: #fff6f2;
+}
+
+#root .shoe-photo-studio-inline-row .shoe-photo-studio-primary-btn {
+  padding-inline: 16px;
+}
+
+#root .shoe-photo-studio-clear {
+  padding-inline: 14px;
 }
 
 #root .shoe-photo-studio-clear,

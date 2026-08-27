@@ -143,9 +143,23 @@ public class PersonalizedRunningPlanner {
         DEFAULT_RUN_DAYS.forEach(day -> {
             if (selected.size() < sessionsPerWeek) selected.add(day);
         });
+        if (sessionsPerWeek >= 3 && selected.stream().noneMatch(this::isWeekend)) {
+            DayOfWeek lastSelected = null;
+            for (DayOfWeek day : selected) {
+                lastSelected = day;
+            }
+            if (lastSelected != null) {
+                selected.remove(lastSelected);
+                selected.add(DayOfWeek.SUNDAY);
+            }
+        }
         return selected.stream()
                 .sorted(Comparator.comparingInt(DayOfWeek::getValue))
                 .toList();
+    }
+
+    private boolean isWeekend(DayOfWeek day) {
+        return day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY;
     }
 
     private int defaultDayRank(DayOfWeek day) {
@@ -176,7 +190,7 @@ public class PersonalizedRunningPlanner {
         };
         double target = Math.max(floor, chronicWeekly * multiplier);
         if (history.volume28Km() > 0) {
-            target = Math.min(target, chronicWeekly * MAX_WEEKLY_GROWTH);
+            target = Math.min(target, Math.max(floor, chronicWeekly * MAX_WEEKLY_GROWTH));
         }
         return round1(target);
     }
@@ -290,6 +304,14 @@ public class PersonalizedRunningPlanner {
 
     private SessionDraft applyTodayProtection(SessionDraft draft, LocalDate date, PlannerInput input, String phase) {
         if (!date.equals(input.today())) return draft;
+
+        // A first-day onboarding plan should leave room to establish a baseline
+        // before asking a new runner to train. Keep the onboarding reason code
+        // so the UI explains the conservative choice without presenting it as
+        // a readiness mutation.
+        if ("onboarding".equals(phase)) {
+            return new SessionDraft(CoachWorkoutType.REST, "rest", "onboarding", false, null, false);
+        }
 
         if ("protect".equals(phase)) {
             CoachWorkoutType protectedType = "REST".equals(input.readinessVerdict()) && !"HIGH".equals(input.injuryRisk())

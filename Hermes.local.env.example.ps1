@@ -55,29 +55,33 @@ $env:APP_BOOTSTRAP_ADMIN_PASSWORD = "set-a-strong-admin-password"
 # -----------------------------------------------------------------------------
 # Local mock accounts (development only)
 # -----------------------------------------------------------------------------
-$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "true"
+# The shared runner is DISABLED by default. To enable it, set
+# APP_LOCAL_SHARED_RUNNER_ENABLED = "true" and set your own strong
+# APP_LOCAL_SHARED_RUNNER_PASSWORD (bootstrap refuses a blank password).
+# Set a different strong password for every mock account below.
+$env:APP_LOCAL_SHARED_RUNNER_ENABLED = "false"
 $env:APP_LOCAL_SHARED_RUNNER_EMAIL = "strava+140971747@hermes.local"
-$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_SHARED_RUNNER_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME = "Hermes Shared Runner"
 
 $env:APP_LOCAL_TERRITORY_RIVAL_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_RIVAL_EMAIL = "territory-rival@hermes.local"
-$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_RIVAL_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_RIVAL_DISPLAY_NAME = "Hermes Temporal Rival"
 
 $env:APP_LOCAL_TERRITORY_FLUSHING_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_FLUSHING_EMAIL = "territory-flushing@hermes.local"
-$env:APP_LOCAL_TERRITORY_FLUSHING_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_FLUSHING_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_FLUSHING_DISPLAY_NAME = "Hermes Flushing Territory Tester"
 
 $env:APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL = "territory-flushing-inner@hermes.local"
-$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_FLUSHING_INNER_DISPLAY_NAME = "Hermes Inner Flushing Occupier"
 
 $env:APP_LOCAL_TERRITORY_BERLIN_ENABLED = "true"
 $env:APP_LOCAL_TERRITORY_BERLIN_EMAIL = "territory-berlin@hermes.local"
-$env:APP_LOCAL_TERRITORY_BERLIN_PASSWORD = "HermesDev2026!"
+$env:APP_LOCAL_TERRITORY_BERLIN_PASSWORD = "<set-local-password>"
 $env:APP_LOCAL_TERRITORY_BERLIN_DISPLAY_NAME = "Hermes Berlin Land Conqueror"
 
 # -----------------------------------------------------------------------------
@@ -152,6 +156,14 @@ $env:GARMIN_WELLNESS_SYNC_DAYS_BACK = "30"
 
 # Number of past days to pull on first-ever sync for a runner.
 $env:GARMIN_WELLNESS_SYNC_INITIAL_DAYS_BACK = "90"
+
+# -----------------------------------------------------------------------------
+# CARTO Basemap Tiles (optional)
+# -----------------------------------------------------------------------------
+# Register at https://carto.com/basemaps/apikey — free up to 5M tile requests/month.
+# Consumed ONLY by the backend tile proxy (/api/maps/tiles/carto/...), so the key
+# never ships to the browser or the frontend bundle.
+$env:APP_CARTO_BASEMAPS_API_KEY = ""
 
 # -----------------------------------------------------------------------------
 # AI / ML (Gemini Vision for Shoe Scanning & Course Map Analysis)

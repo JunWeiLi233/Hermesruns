@@ -266,8 +266,9 @@ export function runAutoHermesDockerGate(rawArgs = process.argv.slice(2)) {
 }
 
 function main() {
-  const { output } = runAutoHermesDockerGate(process.argv.slice(2));
+  const { output, result } = runAutoHermesDockerGate(process.argv.slice(2));
   process.stdout.write(output);
+  if (!result.passed) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -23,7 +23,7 @@ Codex command note for the bounded auto-hermes control plane.
 - `/auto-hermes` persists Ralph grounding artifacts and supervisor state in `.ai-sync` so the loop owner remains a real repo-backed execution surface rather than a prompt-only brief writer.
 - Default executor-backed Codex/OMX worker rounds run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the Codex fallback prefers the installed `codex` CLI with `--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust` when supported, then falls back to bundled `codex-local`.
 - Planned Codex subagent lanes inherit that active executor permission context; do not silently downgrade agents to sandboxed `--full-auto` unless an explicit executor command/config overrides the default.
-- Finish behavior now routes through `.tools/auto-hermes-finish.mjs`: auto-commit only when needed on a true clean stop with publishable product files, and auto-push is now also allowed when a clean stop leaves unpublished local commits on the current branch and `origin` still equals `https://github.com/520HXC/run.git`.
+- Finish behavior now routes through `.tools/auto-hermes-finish.mjs`: auto-commit only when needed on a true clean stop with publishable product files, and auto-push is now also allowed when a clean stop leaves unpublished local commits on the current branch and `origin` still equals `https://github.com/JunWeiLi233/Hermesruns.git`.
 
 ## Frontend Design Notes
 

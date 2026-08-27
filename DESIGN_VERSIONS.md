@@ -1,5 +1,762 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-25-044
+Date: 2026-08-25
+Surface: Admin overview shoe-inventory metric card
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/dashboardMetricCardSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the coral active, hover, and focus border treatment from the shoe-inventory metric card while keeping its neutral card surface and selected trend behavior; keyboard focus now uses a neutral visible ring.
+Why: The selected `用户跑鞋库存` card rendered as an unintended red panel around the metric.
+Preserve list: Shoe inventory count, metric-trend toggle, chart panel, hover and keyboard interaction, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-043`
+Notes: Presentation-only interaction-state correction; the chart panel remains the selection affordance and keyboard focus remains visible.
+
+### Version: DV-2026-08-25-043
+Date: 2026-08-25
+Surface: Admin users filter action buttons
+Files: `frontend/src/styles/_split/admin.css`, `frontend/src/pages/adminUsersFilterActionSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a light-grey surface and visible neutral border to the 刷新, 保存筛选, and 导出 CSV actions in the users filter toolbar.
+Why: The three actions blended into the surrounding white controls and lacked a clear button boundary.
+Preserve list: User search and filter behavior, saved-filter persistence, CSV export, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-042`
+Notes: Presentation-only control-surface adjustment; hover and focus-visible states remain neutral and distinct.
+
+### Version: DV-2026-08-25-042
+Date: 2026-08-25
+Surface: Admin overview audit-events chart
+Files: `backend/src/main/java/com/hermes/backend/AdminAuditLog.java`, `backend/src/main/java/com/hermes/backend/AdminAuditLogRepository.java`, `backend/src/main/java/com/hermes/backend/AdminAuditPortalController.java`, `backend/src/main/java/com/hermes/backend/AdminPortalService.java`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminAuditTrendPersistence.smoke.test.js`
+What changed: Audit cleanup now soft-deletes rows for the live event list while preserving their timestamps, and the overview chart reads a dedicated historical daily-count endpoint that includes retained rows.
+Why: Deleting or clearing visible audit events must not erase historical activity from the audit graph.
+Preserve list: Admin authorization, live audit search/pagination, cleanup controls, trend date range, localization, responsive layout, and audit metadata.
+Rollback target: `DV-2026-08-25-041`
+Notes: Historical audit rows remain in the database with `deletedAt`; no audit event is physically removed by the admin cleanup endpoints.
+
+### Version: DV-2026-08-25-041
+Date: 2026-08-25
+Surface: Admin shoe catalog brand-card interactions
+Files: `frontend/src/utils/catalogLongPress.js`, `frontend/src/pages/catalogLongPressClickableButtons.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Preserved the nested brand and series button as the native click target when a catalog card also supports long-press deletion by limiting pointer capture to presses that start on the card shell itself.
+Why: Pointer capture from the wrapper could retarget a normal brand-card click to the shell, leaving visible brand buttons unresponsive.
+Preserve list: Brand selection, series selection, long-press deletion, explicit delete mode, footer actions, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-040`
+Notes: Interaction-only fix; no catalog data, API, or deletion semantics changed.
+
+### Version: DV-2026-08-25-040
+Date: 2026-08-25
+Surface: Admin users bulk-action confirmation modal
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminUsersBulkActionsModal.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the native confirmation prompt for `授予 Pro`, `撤销 Pro`, and `停用账号` with a shared admin confirmation modal that shows the selected action and dry-run impact count before applying it.
+Why: Bulk user actions need a consistent, keyboard-accessible confirmation surface that matches the rest of the admin dashboard.
+Preserve list: User selection, dry-run and apply API contracts, audit logging, refresh behavior, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-039`
+Notes: The preview request runs when an action is selected; the mutation only runs after the modal's explicit confirmation.
+
+### Version: DV-2026-08-25-039
+Date: 2026-08-25
+Surface: Admin shoe catalog specific-shoe modal
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogSpecificShoeField.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a localized, required `具体鞋款` input to the modal opened by the `添加具体鞋款` card action while keeping the regular `添加系列` flow brand-only.
+Why: The specific-shoe action opened a brand/type form without collecting the concrete shoe model needed by the catalog API.
+Preserve list: Existing brand creation, series creation, catalog deletion, shoe image workflows, modal behavior, API payloads, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-038`
+Notes: Behavioral form-context correction; specific mode posts a model entry and brand-only mode continues to post a brand entry.
+
+### Version: DV-2026-08-25-038
+Date: 2026-08-25
+Surface: Races calendar add-race action
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesAddButtonPadding.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added balanced padding on all four sides of the `添加赛事` action in the races calendar section header, including the mobile layout.
+Why: The action label was too close to the control edges, reducing visual separation and its comfortable click target.
+Preserve list: Race discovery, saved calendar, modal opening behavior, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-037`
+Notes: Presentation-only spacing correction; no race data or interaction behavior changed.
+
+### Version: DV-2026-08-25-037
+Date: 2026-08-25
+Surface: Shoes image-picker clear-image action
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoesPhotoModalClearButtonPadding.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added balanced horizontal padding to the `清除图片` action in the shoe image picker while preserving its neutral surface, label, and clear-image behavior.
+Why: The button label was too close to both edges of the control.
+Preserve list: Current-image preview, clear-image action, pending upload flow, image search, modal layout, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-25-036`
+Notes: Presentation-only spacing correction; no image state or API behavior changed.
+
+### Version: DV-2026-08-25-036
+Date: 2026-08-25
+Surface: Shoes image-import modal label
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/pages/shoeScanModalLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inherited decorative background strip behind the `识图导入` label while preserving the scan-import modal's upload and preview behavior.
+Why: A more-specific modal rule was reapplying the tinted strip after the generic transparent cleanup.
+Preserve list: Image import, preview, duplicate handling, modal layout, scrolling, localization, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-25-035`
+
+### Version: DV-2026-08-25-035
+Date: 2026-08-25
+Surface: Shoes inventory image loading on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/shoesImageLoadingPolicy.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the Shoes inventory card photos and brand logos load eagerly while retaining lazy loading as the shared default for catalog, admin, and other off-surface logo consumers.
+Why: The browser was reporting its lazy-image intervention on the Shoes inventory route and replacing visible card images with deferred placeholders.
+Preserve list: Shoe inventory data, background removal, image-picker behavior, catalog/admin loading policy, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-034`
+
+### Version: DV-2026-08-25-034
+Date: 2026-08-25
+Surface: Analysis ACWR tooltip date row
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisCoachAcwrChart.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative coral dot displayed beside the selected date in the Coach Insight ACWR tooltip while preserving the acute and chronic metric markers below.
+Why: The header dot duplicated the tooltip's metric color language and visually competed with the date.
+Preserve list: Load Balance and Coach Insight chart scrubbing, date labels, acute/chronic metrics, chart rendering, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-033`
+
+### Version: DV-2026-08-25-033
+Date: 2026-08-25
+Surface: Coach Insight active analysis navigation label
+Files: `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared active-link fill, border, and shadow from the Coach Insight rail item while preserving its active icon, label, marker, and route state.
+Why: The active Coach Insight label was rendered inside an unintended horizontal panel strip instead of the text-first analysis rail treatment.
+Preserve list: Coach Insight navigation, active-state semantics, icon and label styling, sidebar collapse behavior, localization, themes, keyboard focus, and all analysis content.
+Rollback target: `DV-2026-08-25-032`
+Notes: Presentation-only navigation cleanup; no route, data, or analysis behavior changed.
+
+### Version: DV-2026-08-25-032
+Date: 2026-08-25
+Surface: Shoes image-picker URL and search inputs
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesPhotoModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme image-picker text inputs to a solid light-grey surface while retaining their existing text, focus, and interaction behavior.
+Why: The URL and image-search fields were still using a warm cream fill that did not match the modal's neutral input treatment.
+Preserve list: Image upload, URL apply, network image search, candidate selection, current-image clearing, modal close action, scrolling, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-031`
+
+### Version: DV-2026-08-25-031
+Date: 2026-08-25
+Surface: Shoes image-picker local upload card
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesPhotoModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme local-upload card inside the shoe image picker to a solid light-grey surface while preserving its icon, copy, file input, and hover behavior.
+Why: The upload card was still using a warm translucent cream surface that did not match the requested neutral control treatment.
+Preserve list: Image upload, URL apply, network image search, candidate selection, current-image clearing, modal close action, scrolling, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-030`
+
+### Version: DV-2026-08-25-030
+Date: 2026-08-25
+Surface: Run Detail Strava resync action
+Files: `frontend/src/pages/RunDetail.jsx`, `frontend/src/pages/runDetailStravaResync.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made the Run Detail 重新同步 Strava action follow the background sync through completion, invalidate the activity cache, and refresh the selected run and recent-run data.
+Why: The control only displayed the initial sync response, so newly imported or updated Strava data remained hidden behind cached activity data on the detail page.
+Preserve list: Authenticated Strava sync endpoint, linked-run gating, failure feedback, route/detail analytics, cache isolation, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-029`
+
+### Version: DV-2026-08-25-029
+Date: 2026-08-25
+Surface: Shoes image-picker hero grid
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesPhotoModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the light-theme image-picker hero and modal shell completely white and removed the legacy decorative circle pseudo-element from the hero grid.
+Why: The circle remained visible after the white-surface treatment and made the selected-shoe header look like it had an unintended ring overlay.
+Preserve list: Image upload, URL apply, network image search, candidate selection, current-image clearing, modal close action, scrolling, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-025`
+
+### Version: DV-2026-08-25-025
+Date: 2026-08-25
+Surface: Shoes image-picker modal surface
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesPhotoModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme shoe image-picker modal shell to a solid white background and removed its inherited warm gradient while preserving the modal content surfaces and dark-theme treatment.
+Why: The image-picker modal background was still cream-toned around the white hero and panels, making the modal read as a tinted card instead of a clean white surface.
+Preserve list: Image upload, URL apply, network image search, candidate selection, current-image clearing, modal close action, scrolling, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-024`
+
+### Version: DV-2026-08-25-024
+Date: 2026-08-25
+Surface: Admin audit event-list clear action
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `backend/src/main/java/com/hermes/backend/AdminAuditPortalController.java`, `backend/src/main/java/com/hermes/backend/AdminPortalService.java`, `frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `backend/src/test/java/com/hermes/backend/AdminPortalControllerTests.java`, `DESIGN_VERSIONS.md`
+What changed: Added a 清空/Clear control to the audit event-list toolbar with a custom confirmation modal, a protected bulk-delete endpoint, and an audit entry recording the clear action.
+Why: Audit history is destructive data, so clearing it must require explicit confirmation and remain visible in the audit trail.
+Preserve list: Single-record delete confirmation, search, pagination, export control, audit authorization, cache invalidation, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-023`
+
+### Version: DV-2026-08-25-023
+Date: 2026-08-25
+Surface: Dashboard jobs filter controls
+Files: `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardJobsCommandDeck.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the status and type filter grids to a light-grey surface in the Jobs command-deck toolbar.
+Why: The two filter controls needed clearer separation from the surrounding white toolbar while keeping their existing behavior and geometry.
+Preserve list: Job filtering, clear-history action, refresh action, command-deck layout, localization, responsive sizing, themes, and accessibility.
+Rollback target: `DV-2026-08-25-022`
+
+### Version: DV-2026-08-25-022
+Date: 2026-08-25
+Surface: Admin catalog series type selector
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminCatalogSeriesField.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The catalog `类型` selector is now interactive as soon as the add-catalog form opens instead of remaining disabled until a series name is entered.
+Why: The control appeared available but could not be opened in the form's initial state.
+Preserve list: Catalog brand/series submission, type payload, localized options, modal layout, validation, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-021`
+
+### Version: DV-2026-08-25-021
+Date: 2026-08-25
+Surface: Admin shoe catalog brand delete mode
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Every brand card now receives the upper-right delete action, including fallback brands without database IDs; fallback deletions persist as locally hidden brands while database-backed brands still use the DELETE endpoint.
+Why: Delete mode previously skipped cards without persisted IDs, so the action was not consistent across the full brand grid.
+Preserve list: Brand selection, add-brand card, confirmation modal, server-backed deletion, fallback catalog data, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-020`
+
+### Version: DV-2026-08-25-020
+Date: 2026-08-25
+Surface: Dashboard status reminder toast
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Dashboard feedback now appears as a wide green toast above the bottom edge and dismisses automatically after three seconds.
+Why: Make the audit deletion reminder easy to notice without leaving a persistent strip in the dashboard layout.
+Preserve list: Delete confirmation modal, audit DELETE endpoint, pagination behavior, overview refresh, error feedback, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-019`
+
+### Version: DV-2026-08-25-019
+Date: 2026-08-25
+Surface: Admin shoe catalog image picker modal
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/adminCatalogImageModalActions.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the catalog image search button to the upload button's neutral white surface, light border, and non-skewed rounded rectangle.
+Why: The search action was inheriting the coral cut-corner primary treatment instead of the outlined modal control language.
+Preserve list: Pending/live previews, file upload, image search behavior, candidate selection, modal close behavior, catalog image APIs, localization, responsive sizing, themes, and accessibility.
+Rollback target: `DV-2026-08-25-018`
+
+### Version: DV-2026-08-25-018
+Date: 2026-08-25
+Surface: Admin shoe catalog image picker modal
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminCatalogImageModalActions.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the manual image-URL input and its staging button from the dashboard shoe 修改 modal; file upload and image search remain available.
+Why: The modal should use the visible upload/search workflows without presenting an extra URL field.
+Preserve list: Pending/live previews, file upload, image search, candidate selection, modal close behavior, catalog image APIs, localization, responsive sizing, themes, and accessibility.
+Rollback target: `DV-2026-08-25-017`
+
+### Version: DV-2026-08-25-017
+Date: 2026-08-25
+Surface: Dashboard audit delete confirmation
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/dashboardAuditTerminal.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the audit table's browser confirmation prompt with a portaled admin modal showing the selected action and target, explanatory copy, Cancel, and coral Delete actions.
+Why: Keep destructive audit deletion inside the dashboard's established confirmation language and make the affected record visible before the request is sent.
+Preserve list: Audit DELETE endpoint, pagination behavior, overview refresh, error feedback, admin role gate, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-016`
+
+### Version: DV-2026-08-25-016
+Date: 2026-08-25
+Surface: Admin shoe catalog fallback deletion
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/components/CatalogLongPressCard.jsx`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Delete-mode controls no longer disable fallback cards without database IDs. They now confirm the action and persist a local hidden-series override, while database-backed cards continue using the admin DELETE endpoint.
+Why: The prior ID guard left the delete control stuck in a disabled state, preventing admins from removing the visible fallback series cards.
+Preserve list: Persisted catalog deletion confirmation/API, long-press fallback, add-series card, catalog layout, localization, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-25-015`
+
+### Version: DV-2026-08-25-015
+Date: 2026-08-25
+Surface: Admin catalog refresh action
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminShoesCatalogLongPress.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Rewired the catalog Refresh button to reload both catalog inventory and image assets, disable duplicate requests while loading, and show localized success or failure feedback.
+Why: Refreshing inventory alone left image and status data stale, making the button appear non-functional.
+Preserve list: Catalog filters, published-card actions, deletion modal, image workflow, admin APIs, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-014`
+
+### Version: DV-2026-08-25-014
+Date: 2026-08-25
+Surface: Admin shoe catalog delete-mode fallback cards
+Files: `frontend/src/components/CatalogLongPressCard.jsx`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Delete mode now renders the upper-right delete control on every visible series card, including built-in fallback cards; cards without persisted IDs keep the control disabled so no invalid delete request is sent.
+Why: Activating delete mode must visibly mark the whole catalog grid, while fallback-only entries must remain safe when the backend has no deletable row.
+Preserve list: Persisted-card deletion confirmation/API, long-press fallback, add-series card, catalog layout, localization, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-25-013`
+
+### Version: DV-2026-08-25-013
+Date: 2026-08-25
+Surface: Admin shoe catalog delete-mode data binding
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Admin catalog loading now accepts both wrapped and array response shapes so persisted series IDs reach the delete-mode cards.
+Why: Without IDs, the delete-mode card appeared active but no upper-right delete control could render for the visible fallback cards.
+Preserve list: Existing delete confirmation, admin DELETE endpoints, long-press fallback, card placement, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-012`
+
+### Version: DV-2026-08-25-012
+Date: 2026-08-25
+Surface: Admin published catalog delete confirmation
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminShoesCatalogLongPress.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the published catalog card’s browser delete prompt with a white admin modal containing the target shoe identity, explanatory copy, Cancel, and coral Delete actions.
+Why: Give the new upper-right delete action a clear, consistent confirmation experience without changing the delete API or safety gate.
+Preserve list: Existing catalog deletion endpoint, confirmation requirement, image edit workflow, card hover/focus actions, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-011`
+
+### Version: DV-2026-08-25-010
+Date: 2026-08-25
+Surface: Admin published catalog card actions
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminShoesCatalogLongPress.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the bottom `维护图片` action from published catalog cards and added upper-right hover/focus actions for `修改` and `删除`. `修改` reuses the image picker; `删除` reuses the existing admin catalog-model delete API and confirmation.
+Why: Keep the catalog card compact while making maintenance actions available where the admin is interacting with the card.
+Preserve list: Catalog filtering, image-picker behavior, model deletion confirmation/API, long-press browser deletion, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-009`
+
+### Version: DV-2026-08-25-009
+Date: 2026-08-25
+Surface: Admin catalog series form fields
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogSeriesField.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Renamed the catalog form’s visible model fields to series fields and replaced specific shoe examples with series-oriented placeholders in English and Chinese.
+Why: The form is used to add catalog series, but its labels and examples implied that admins should enter a specific shoe variant.
+Preserve list: Existing form state, validation, catalog API payloads, brand creation, series creation, type selection, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-008`
+
+### Version: DV-2026-08-25-008
+Date: 2026-08-25
+Surface: Admin shoe series card interaction
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminSeriesCardImageAction.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Published series cards no longer open the catalog image-maintenance modal when clicked.
+Why: The series browser should not route ordinary card clicks into the image-maintenance workflow.
+Preserve list: Series card rendering, long-press deletion, add-series card behavior, separate catalog-row image controls, catalog image modal availability from its remaining entry points, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-007`
+
+### Version: DV-2026-08-25-007
+Date: 2026-08-25
+Surface: Admin shoe series browser cards
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminSeriesCardImageAction.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the visible `维护图片` maintenance-image action from published series cards.
+Why: Series cards should present the brand, model, and training type without exposing an image-maintenance label on every card.
+Preserve list: Series selection, long-press deletion, add-series card, catalog image workflow outside the series-card label, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-006`
+
+### Version: DV-2026-08-25-006
+Date: 2026-08-25
+Surface: Admin shoe brand browser add card
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/adminShoesRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final add-brand card to the admin brand rail. It opens the shared catalog form for creating a brand, with optional first-series details.
+Why: Admins needed an in-context way to create a new brand without leaving the catalog browser.
+Preserve list: Existing brand selection, series and image management, catalog add/delete APIs, filters, modal validation, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-005`
+
+### Version: DV-2026-08-25-005
+Date: 2026-08-25
+Surface: Admin catalog image preview modal
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/adminCatalogImageModalActions.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the publish-verified-image and clear-preview action row from the catalog image preview modal.
+Why: The preview modal should focus on reviewing, staging, uploading, and searching candidate images; the two actions shown in the reference crop were not part of this surface.
+Preserve list: Pending/live previews, URL staging, file upload, image search, candidate selection, modal close behavior, catalog image APIs, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-004`
+
+### Version: DV-2026-08-25-004
+Date: 2026-08-25
+Surface: Admin dashboard modal system
+Files: `frontend/src/components/Modal.jsx`, `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/adminDashboardModalReference.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the reference confirmation-modal language to every active admin-dashboard modal: a quiet grey scrim, white rounded card, coral circular icon badge, strong title, plain close control, muted supporting copy, and outlined/solid action pair.
+Why: Admin dashboard modals were inheriting unrelated page and theme treatments instead of presenting one consistent, readable confirmation surface.
+Preserve list: Modal open/close behavior, Escape handling, overlay dismissal, portal behavior, form fields, uploads, catalog and shoe actions, localization, responsive sizing, themes outside the explicitly scoped admin treatment, and accessibility semantics.
+Rollback target: `DV-2026-08-25-003`
+
+### Version: DV-2026-08-25-003
+Date: 2026-08-25
+Surface: Admin shoe series browser add card
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/adminShoesRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final add-series card to the selected brand's series grid. It opens the existing catalog form with the active brand prefilled.
+Why: Admins needed an in-context way to add a new series without leaving the brand's series browser.
+Preserve list: Existing series card add/edit behavior, brand selection, catalog filters, catalog API, modal validation, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-002`
+
+### Version: DV-2026-08-25-002
+Date: 2026-08-25
+Surface: Admin settings logout button
+Files: `frontend/src/styles/admin-kinetic-editorial.css`, `frontend/src/pages/adminLogoutButtonSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the logout control's border silhouette to the admin login button by removing the global cut-corner clip and using the shared rounded rectangle radius.
+Why: The logout action was the remaining admin primary button rendered as a skewed corner shape instead of the rounded rectangle used by the admin login surface.
+Preserve list: Logout behavior, admin session handling, button label, inline sizing, color treatment, hover state, disabled state, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-001`
+
+### Version: DV-2026-08-25-001
+Date: 2026-08-25
+Surface: Admin shoe catalog brand-to-series browser
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/utils/addShoeCatalog.js`, `frontend/src/styles/admin-monitoring-dashboard.css`, `DESIGN_VERSIONS.md`
+What changed: Replaced the admin shoes flat catalog view with the same shared brand and series browser used by the runner add-shoes flow. Admins can choose a brand, select a series card, and open a prefilled add or edit flow; persisted catalog rows remain available below for maintenance.
+Why: The admin surface showed an empty/flat catalog disconnected from the shoe series that runners can actually select in `/shoes/add`.
+Preserve list: Admin-only routing and audit-backed catalog APIs, catalog add/edit/delete behavior, runner catalog fallback, localized labels, search/type filters, existing persisted rows, modal viewport safety, keyboard focus, and light/dark theme readability.
+Rollback target: `DV-2026-08-24-208`
+
+### Version: DV-2026-08-24-208
+Date: 2026-08-24
+Surface: Admin course-map queue filters
+Files: `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardCourseMapFilterSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the course-map search input and status select to a light-grey surface in the light admin theme.
+Why: The two queue filters were blending into the surrounding white workspace instead of reading as distinct controls.
+Preserve list: Course-map search and status behavior, refresh, pagination, archive action, queue collapse, race selection, workbench layout, responsive behavior, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-207`
+
+### Version: DV-2026-08-24-207
+Date: 2026-08-24
+Surface: Admin course-map queue card border alignment
+Files: `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardMonitoringDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Normalized the hover and selected course-map queue cards to keep the same subtle neutral border token as the publish workspace while retaining the coral selected-state marker.
+Why: The active queue card switched to a heavier coral outline, so its grid treatment did not match the publish workspace surface shown beside it.
+Preserve list: Course-map search, status filter, refresh, pagination, archive action, queue collapse, race selection, virtualized row rendering, selection marker, workbench actions, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-206`
+
+### Version: DV-2026-08-24-207
+Date: 2026-08-24
+Surface: Admin course-map queue scroll containment
+Files: `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardCourseMapWorkbenchRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The desktop course-map queue wrapper now fills the reserved rail track and owns vertical scrolling around the full react-window content; the virtualized content root keeps its natural item height instead of being forced to the viewport height.
+Why: The prior rule hid overflow and resized the virtualized child itself, so loaded race cards could continue outside the intended queue boundary.
+Preserve list: Course-map search, status filter, refresh, pagination, archive action, queue collapse, race selection, virtualized row rendering, workbench actions, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-206`
+
+### Version: DV-2026-08-24-206
+Date: 2026-08-24
+Surface: Admin course-map queue overflow correction
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardCourseMapWorkbenchRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The course-map queue now observes the actual selected-race stage height and applies that measurement to the desktop rail, so the queue ends at the same boundary as the final scan-timeline block while the race list remains the only internal scroll surface.
+Why: A percentage height could not resolve because the grid had no definite parent height, allowing the queue's loaded catalog to expand the row and overflow past the stage.
+Preserve list: Course-map search, status filter, refresh, pagination, archive action, queue collapse, race selection, virtualized row rendering, workbench actions, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-205`
+
+### Version: DV-2026-08-24-205
+Date: 2026-08-24
+Surface: Admin course-map queue stage alignment
+Files: `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardCourseMapWorkbenchRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: On desktop, the course-map queue now stretches to the selected-race stage height and uses the remaining rail space as its internal scroll viewport, ending level with the scan timeline.
+Why: The queue was allowed to size itself from the full catalog, so its card extended beyond the final workbench grid instead of aligning with the right-side timeline.
+Preserve list: Course-map search, status filter, refresh, pagination, archive action, queue collapse, race selection, virtualized row rendering, workbench actions, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-204`
+
+### Version: DV-2026-08-24-204
+Date: 2026-08-24
+Surface: Admin course-map queue height
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/dashboardCourseMapWorkbenchRework.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Let the course-map queue grid flow through every loaded race card instead of clipping the virtualized list to a 640px inner viewport.
+Why: The queue stopped at a nested scroll boundary before the final grid/card, making later races inaccessible without a second scrollbar.
+Preserve list: Course-map search, status filter, refresh, pagination, archive action, queue collapse, race selection, virtualized row rendering, workbench actions, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-24-203`
+
+### Version: DV-2026-08-24-203
+Date: 2026-08-24
+Surface: Load Balance chart tooltip date header
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/pages/analysisLoadBalanceTooltip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative coral dot beside the selected date in the Load Balance tooltip while retaining the acute and chronic metric dots.
+Why: The header marker did not explain the chart and duplicated the meaningful metric color cues below it.
+Preserve list: Tooltip date, acute/chronic values and markers, chart interaction, Coach Insight tooltip marker, data calculations, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-24-202`
+
+### Version: DV-2026-08-24-202
+Date: 2026-08-24
+Surface: Add Shoes featured brand card outline
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the legacy left-edge pseudo-border and normalized the selected featured-brand card to one consistent coral outline.
+Why: The extra left accent made the active card look heavier on one side than the other.
+Preserve list: Featured brand selection, active styling, brand/model grids, setup controls, import behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-201`
+
+### Version: DV-2026-08-23-201
+Date: 2026-08-23
+Surface: Add Shoes inventory heading strip
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesHeadingSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative panel strip behind the Add Shoes inventory heading and status row while preserving the catalog and setup cards below.
+Why: The horizontal strip made the heading content read as a nested panel instead of part of the Add Shoes page flow.
+Preserve list: Inventory title, status metrics, brand/model selection, setup controls, import behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-200`
+
+### Version: DV-2026-08-23-200
+Date: 2026-08-23
+Surface: Muscle Training exercise-block wrapper
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingPersonalizedPlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the nested panel strip painted by the exercise-block wrapper while preserving the individual exercise cards.
+Why: The shared card sweep treated the nested `-card__blocks` wrapper as a second surface connecting the two exercise cards.
+Preserve list: Exercise cards, exercise names and prescriptions, planned-session layout, outer personalized-plan card, safety adjustment, composer, data loading, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-199`
+
+### Version: DV-2026-08-23-199
+Date: 2026-08-23
+Surface: Muscle Training planned-session metrics
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingTodayPlanStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the nested panel strip behind the planned-session duration and target-RPE metrics while retaining the individual metric tiles and outer personalized-plan card.
+Why: The nested session surface visually duplicated the surrounding plan card.
+Preserve list: White personalized-plan card, duration and RPE values, metric-tile backgrounds, planned exercises, safety adjustment, composer, data loading, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-198`
+
+### Version: DV-2026-08-23-198
+Date: 2026-08-23
+Surface: Muscle Training plan status chips
+Files: `frontend/src/features/muscle-training/PersonalizedStrengthPlanPanel.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingPersonalizedPlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the confidence and freshness status-chip blocks from the personalized strength-plan header.
+Why: The two chips added unnecessary secondary grid surfaces above the plan content.
+Preserve list: Personalized plan card, title and copy, week strip, planned session, safety adjustment, composer, data loading, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-197`
+
+### Version: DV-2026-08-23-197
+Date: 2026-08-23
+Surface: Import source cards
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/Runs.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative 01/02/03 markers from the FIT/GPX, COROS, and Huawei import cards and let their headers use the full card width.
+Why: The step numbers added visual noise to the upload cards without improving source selection.
+Preserve list: Source titles, tags, hints, file inputs, selected-file states, import submission, localization, routing, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-196`
+
+### Version: DV-2026-08-23-196
+Date: 2026-08-23
+Surface: Import training data modal title decoration
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative red dash beneath the shared “Import Workout Data” modal title in Analysis and Runs.
+Why: The underline added an unwanted accent beneath the modal heading.
+Preserve list: Modal title, upload icon, close control, source badges, file selection behavior, actions, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-195`
+
+### Version: DV-2026-08-23-195
+Date: 2026-08-23
+Surface: FIT/GPX import source badge
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the FIT/GPX source badge to a light-grey fill with dark readable text in the shared Runs and Analysis import modals.
+Why: The source badge was using a warm coral or black fill instead of the requested light-grey treatment.
+Preserve list: Source label, file selection behavior, card layout, selection state, modal actions, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-194`
+
+### Version: DV-2026-08-23-194
+Date: 2026-08-23
+Surface: Muscle Training personalized-plan card background
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingTodayPlanStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the white personalized-plan card background and its existing surface treatment.
+Why: The previous strip-removal override also removed the surrounding card background requested to remain visible.
+Preserve list: Personalized-plan background, duration and RPE metric tiles, week selection, planned exercises, safety adjustment, composer behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-193`
+
+### Version: DV-2026-08-23-193
+Date: 2026-08-23
+Surface: Muscle Training planned-session metric strip
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingTodayPlanStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the outer white strip from the personalized plan surface while retaining the individual duration and target-RPE metric tiles.
+Why: The previous selector targeted the separate today-plan heading instead of the `PlannedStrengthSessionCard` that renders the screenshot metrics.
+Preserve list: Duration and RPE values, metric-tile backgrounds, planned-session content, week selection, safety adjustment, composer behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-192`
+
+### Version: DV-2026-08-23-192
+Date: 2026-08-23
+Surface: Muscle Training today-plan metric strip
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingTodayPlanStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the full-width wrapper strip behind the today-plan metrics while retaining the individual duration and RPE metric cards.
+Why: The wrapper background made the two metrics look like they sat on a separate horizontal panel instead of the page surface.
+Preserve list: Duration and RPE values, metric-card backgrounds, today's plan content, exercise blocks, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-191`
+
+### Version: DV-2026-08-23-191
+Date: 2026-08-23
+Surface: Muscle Training top selector title strip
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/muscleTrainingTopPanelStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the accidental liquid-glass strip from the `肌群选择` title wrapper while preserving the surrounding Muscle Training card surface.
+Why: The shared `[class*="-panel"]` sweep interpreted `.mt-top-panel-head` as a standalone panel instead of nested heading content.
+Preserve list: Muscle selector, parent card background, anatomy interaction, target buttons, exercise recommendations, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-190`
+
+### Version: DV-2026-08-23-190
+Date: 2026-08-23
+Surface: Muscle Training planned-session child surface
+Files: `frontend/src/styles/_split/muscle-training.css`, `frontend/src/pages/muscleTrainingPersonalizedPlanner.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the light-theme border, radius, padding, background, and shadow from the planned-session child card so its focus and dose labels sit directly on the parent plan surface.
+Why: The focus/dose sub-card created an unwanted second panel while the surrounding personalized-plan background should remain.
+Preserve list: Parent plan surface, focus and dose content, metrics, exercise blocks, start action, data behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-189`
+
+### Version: DV-2026-08-23-189
+Date: 2026-08-23
+Surface: Runs month-card separation
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/runsGridHeaderBackground.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared history/month-list shell treatment and added explicit spacing and independent white card surfaces for each month group.
+Why: Month sections were visually merging into one shared card instead of reading as separate month cards.
+Preserve list: Month folding, run cards, delete controls, filters, loading/empty states, routing, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-23-188`
+
+### Version: DV-2026-08-23-188
+Date: 2026-08-23
+Surface: Add Shoes Step 3 form surfaces
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the nickname field, max-distance field, and primary-toggle row to the same light-grey surface as the model search control.
+Why: The Step 3 controls were still using the warm cream fill and did not match the requested light-grey grid treatment.
+Preserve list: Form labels, values, validation, checkbox behavior, borders, focus states, routing, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-23-187`
+
+### Version: DV-2026-08-23-187
+Date: 2026-08-23
+Surface: Add Shoes heading strip final cascade
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the late heading outline and rounded boundary after the route-canvas cleanup, leaving the title, fleet metrics, and supporting copy directly on the page surface.
+Why: A subsequent boundary rule restored the visible white-strip edge even though the heading fill was already transparent.
+Preserve list: Heading copy, fleet metrics, icon, catalog and setup grids, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-186`
+
+### Version: DV-2026-08-23-186
+Date: 2026-08-23
+Surface: Add Shoes heading and route canvas strip removal
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the remaining white route-canvas layer and the late rounded heading boundary so the Add Shoes title and fleet metrics sit directly on the page surface.
+Why: The earlier transparent heading rule removed the fill but a later cascade still left a visible white strip and card outline around the heading.
+Preserve list: Heading copy, fleet metrics, icon, catalog and setup grids, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-185`
+
+### Version: DV-2026-08-23-185
+Date: 2026-08-23
+Surface: Add Shoes heading boundary cascade
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the Add Shoes heading’s 1px rounded border after later route-canvas cleanup rules overrode it, while keeping the white fill removed.
+Why: The final cascade had reintroduced the exact border regression the user reported, even though the earlier transparent-fill rule was correct.
+Preserve list: Heading copy, fleet metrics, transparent fill, catalog grids, route behavior, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-23-184`
+
+### Version: DV-2026-08-23-184
+Date: 2026-08-23
+Surface: Running-brand logos
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/components/shoeBrandLogoFallback.smoke.test.js`, `frontend/src/assets/brand-logos/under-armour-reference.png`, `frontend/src/assets/brand-logos/macondo-reference.png`, `frontend/src/assets/brand-logos/puma-reference.png`, `frontend/src/assets/brand-logos/reebok-reference.png`, `frontend/src/assets/brand-logos/salomon-reference.png`, `DESIGN_VERSIONS.md`
+What changed: Updated the Under Armour, Macondo, Puma, Reebok, and Salomon catalog logos to use the supplied reference images.
+Why: The running-brand grid was showing older or fallback logo artwork instead of the requested brand references.
+Preserve list: Brand names, catalog models, selection behavior, logo accessibility labels, card layout, responsive sizing, localization, themes, and route behavior.
+Rollback target: `DV-2026-08-23-183`
+
+### Version: DV-2026-08-23-183
+Date: 2026-08-23
+Surface: Add Shoes expanded brand grid flow
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inherited absolute-positioned popup geometry from the expanded brand list so additional running brands render as normal rows inside the Step 1 grid.
+Why: The earlier grid placement still inherited modal positioning, padding, and background styles, so clicking the control could make the brands appear detached from the grid.
+Preserve list: Brand catalog data, expand/collapse behavior, brand selection, model filtering, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-181`
+
+### Version: DV-2026-08-23-180
+Date: 2026-08-23
+Surface: Add Shoes heading surface
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesHeadingSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed only the separate white background strip behind the Add Shoes title, summary, and fleet metrics while preserving the existing outline and rounded shape.
+Why: The heading surface read as an extra white panel around the text instead of part of the page composition, but its border still provides the intended boundary.
+Preserve list: Add Shoes copy, fleet metrics, icon, catalog and setup grids, route behavior, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-23-179`
+
+### Version: DV-2026-08-23-015
+Date: 2026-08-23
+Surface: Runner sidebar Shoes icon
+Files: `frontend/src/components/AppIcon.jsx`, `frontend/src/utils/runnerShellNav.js`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/pages/shoeSidebarIcon.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the `跑鞋` sidebar's ruler-like icon with a reusable running-shoe outline based on the supplied reference image, including the collar, laces, upper contour, and sole line.
+Why: The existing sidebar symbol communicated measurement rather than running shoes and did not match the requested shoe reference.
+Preserve list: Sidebar routes, active state, labels, collapsed layout, themes, responsive behavior, accessibility, and the Settings unit-toggle icon.
+Rollback target: `DV-2026-08-23-014`
+
+### Version: DV-2026-08-23-014
+Date: 2026-08-23
+Surface: Shoes image-import action
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/shoesImageImportBadge.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Retried the shoe-scan availability check when the user opens image import, so a transient backend startup or auth failure no longer leaves the modal permanently unavailable for the rest of the page session.
+Why: The toolbar action performed its availability check only once during page initialization, even though the backend may still be starting when the page mounts.
+Preserve list: Image upload, AI scan quota handling, scan results, duplicate resolution, localization, themes, responsive layout, accessibility, and route behavior.
+Rollback target: `DV-2026-08-23-013`
+
+### Version: DV-2026-08-23-013
+Date: 2026-08-23
+Surface: Add Shoes Step 1 desktop width
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Let the brand-selection step span the full desktop Add Shoes workspace, then keep model selection and shoe configuration side by side below it.
+Why: The previous desktop grid reserved the configuration column while pushing Step 3 down, leaving unused horizontal space beside the first step.
+Preserve list: Brand and model selection, filters, search, form submission, responsive collapse, localization, themes, accessibility, and route behavior.
+Rollback target: `DV-2026-08-23-012`
+
+### Version: DV-2026-08-23-012
+Date: 2026-08-23
+Surface: Today Run light-theme grid surfaces
+Files: `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/todayRunLightThemeContrast.smoke.test.js`, `frontend/src/pages/todayRunCommandDeckRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the Today Run coaching cards, decision panels, plan cards, and nested plan tiles to opaque white surfaces in light themes while preserving the warm page background.
+Why: The cards were reading as cream/translucent against the Today Run canvas instead of matching the requested white grid treatment.
+Preserve list: Training recommendations, readiness calculations, coach data, interactive controls, localization, dark themes, responsive layout, accessibility, and route behavior.
+Rollback target: `DV-2026-08-23-011`
+
+### Version: DV-2026-08-23-011
+Date: 2026-08-23
+Surface: Import Data modal surface
+Files: `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profileImportModalDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the shared Import Data modal card to an opaque white surface while preserving the guide, source cards, upload controls, and action states.
+Why: The modal's warm translucent gradient made the primary workspace read as cream instead of the requested white surface.
+Preserve list: Import behavior, file selection, source-specific cards, guide content, validation, submit/cancel actions, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-010`
+
+### Version: DV-2026-08-23-010
+Date: 2026-08-23
+Surface: Races personal-best distance grid
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesPbGridLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Let the marathon personal-best card occupy one column so it sits beside the half-marathon card in the desktop two-column grid.
+Why: The featured marathon card was spanning both columns, leaving the half-marathon result alone and pushing marathon onto a separate full-width row.
+Preserve list: Personal-best calculations, distance labels, empty states, featured styling, responsive single-column layout, localization, themes, and race-page behavior.
+Rollback target: `DV-2026-08-23-009`
+
+### Version: DV-2026-08-23-009
+Date: 2026-08-23
+Surface: Marathon prediction hero media
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/assets/generated/prediction-marathon-hero.png`, `frontend/src/pages/predictionMarathonHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied marathon race photo to the right side of the `/prediction/marathon` hero grid.
+Why: The marathon hero had no visual media after the confidence panel was removed, leaving the primary forecast surface visually unbalanced.
+Preserve list: Prediction calculations, confidence-panel removal, coach recommendation, evidence tiles, trend chart, route behavior, localization, themes, and responsive layout.
+Rollback target: `DV-2026-08-23-008`
+
+### Version: DV-2026-08-23-008
+Date: 2026-08-23
+Surface: Marathon prediction confidence panel
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/predictionForecastConfidenceRemoval.smoke.test.js`, `frontend/src/pages/predictionHalfConfidencePanel.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant confidence card from `/prediction/marathon` and kept the existing full-width hero treatment.
+Why: Marathon prediction already communicates its result through the forecast, evidence, trend, and coach sections; the large confidence card added an unnecessary side panel.
+Preserve list: Prediction calculations, weather adjustment, evidence tiles, trend chart, coach recommendation, route behavior, localization, themes, and responsive layout.
+Rollback target: `DV-2026-08-23-007`
+
+### Version: DV-2026-08-23-007
+Date: 2026-08-23
+Surface: Add Shoes route shell spacing
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the Add Shoes canvas width cap, horizontal inset, vertical padding, and section gap to the Shoes atelier shell.
+Why: `/shoes/add` used a wider canvas and looser outer spacing than `/shoes`, making its catalog workspace read as a separate layout instead of the same page system.
+Preserve list: Catalog and model selection, filters, search, form submission, responsive breakpoints, localization, themes, accessibility, and route behavior.
+Rollback target: `DV-2026-08-23-145`
+Notes: Browser harness reached the local dev server, but the protected route redirected to `/login`; authenticated visual proof remains unavailable without a signed-in session.
+
+### Version: DV-2026-08-23-006
+Date: 2026-08-23
+Surface: Shoes edit primary-shoe toggle modal grid
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoesAtelierRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Scoped the light-grey primary-shoe toggle surface to the edit modal card so the rule reaches the modal markup rendered outside the Shoes page wrapper.
+Why: The first page-wrapper selector could not match the modal’s sibling markup, leaving the visible grid pale red.
+Preserve list: Toggle behavior, checked state, label copy, focus affordance, modal layout, localization, themes, and shoe editing behavior.
+Rollback target: `DV-2026-08-23-005`
+
+### Version: DV-2026-08-23-005
+Date: 2026-08-23
+Surface: Shoes edit primary-shoe toggle grid
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoesAtelierRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the primary-shoe toggle grid to the shared light-grey surface while preserving its interaction, label, and contrast treatment.
+Why: The grid was using a pale red background that did not match the neutral shoe-page surfaces.
+Preserve list: Toggle behavior, checked state, label copy, focus affordance, modal layout, localization, themes, and shoe editing behavior.
+Rollback target: `DV-2026-08-23-004`
+
+### Version: DV-2026-08-23-004
+Date: 2026-08-23
+Surface: Shoes inventory delete confirmation
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the browser confirm dialog for permanent shoe deletion with the Runs-style modal, including localized copy, warning, cancel action, destructive confirmation, and in-progress state.
+Why: The Shoes delete action had no designed modal and exposed a native browser prompt instead of matching the application’s confirmation surface.
+Preserve list: Permanent-delete API behavior, shoe inventory refresh, error status, localized copy, keyboard and overlay dismissal, dark-theme support, responsive layout, and unrelated shoe actions.
+Rollback target: `DV-2026-08-23-003`
+
+### Version: DV-2026-08-23-003
+Date: 2026-08-23
+Surface: Shoes inventory metric label strips
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoeInventoryCardLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the background, border, shadow, radius, and padding treatment from the mileage and retirement metric labels while preserving their text styling.
+Why: The labels were rendered as red rounded strips instead of plain metric captions.
+Preserve list: Metric values, retirement progress, title alignment, card actions, responsive stacking, localization, themes, and shoe data behavior.
+Rollback target: `DV-2026-08-23-002`
+
+### Version: DV-2026-08-23-002
+Date: 2026-08-23
+Surface: Shoes inventory metric title row
+Files: `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoeInventoryCardLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Scoped the profile shoe-card metric grid back to `align-items: stretch` so the later atelier cascade cannot vertically offset the two titles.
+Why: The first alignment rule was overridden by the atelier card rule’s `align-items: end`, leaving the mileage title lower than the retirement title.
+Preserve list: Metric values, retirement progress, card actions, responsive stacking, localization, themes, and shoe data behavior.
+Rollback target: `DV-2026-08-23-001`
+
+### Version: DV-2026-08-23-001
+Date: 2026-08-23
+Surface: Shoes inventory metric titles
+Files: `frontend/src/styles/_split/shoes.css`, `frontend/src/pages/shoeInventoryCardLayout.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Top-aligned the mileage and retirement metric content so both titles share the same horizontal row.
+Why: The retirement metric has more content and was vertically centering its grid independently, leaving its title higher than the mileage title.
+Preserve list: Shoe metrics, retirement progress, card actions, responsive stacking, localization, themes, and shoe data behavior.
+Rollback target: `DV-2026-08-22-005`
+
 ### Version: DV-2026-08-22-005
 Date: 2026-08-22
 Surface: Coach Insight today-training plan
@@ -2882,8 +3639,8 @@ Notes: Shared navigation rendering, active labels, parent breadcrumbs, responsiv
 Date: 2026-08-02
 Surface: Local shared-runner login hint on `/login`
 Files: `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/loginLocalMockHint.smoke.test.js`, `README.md`, `DESIGN_VERSIONS.md`
-What changed: Corrected the documented local mock password to the backend default `HermesDev2026!` and clarified that `APP_LOCAL_SHARED_RUNNER_PASSWORD` can override it.
-Why: The login hint advertised `HermesLocal1!`, while the backend bootstrap accepted `HermesDev2026!` by default, causing local sign-in attempts to fail.
+What changed: Corrected the documented local mock password to the then-backend default and clarified that `APP_LOCAL_SHARED_RUNNER_PASSWORD` can override it.
+Why: The login hint advertised a stale password while the backend bootstrap accepted a different hardcoded dev default, causing local sign-in attempts to fail. (The login hint and the hardcoded dev default password have since been removed entirely.)
 Rollback target: `DV-2026-08-02-06`
 Notes: Authentication flow, account email, environment override, and production safety guards are preserved.
 
@@ -7970,3 +8727,493 @@ Why: The previous percentage-height image chain depended on an auto-height grid 
 Preserve list: Shoe image loading and background processing, image-picker interaction, card layout, mobile sizing, responsive behavior, themes, and all shoe data/actions.
 Rollback target: `DV-2026-08-22-141`
 Notes: Presentation-only image-slot correction; no image URLs, processing API, or shoe data behavior changed.
+
+### Version: DV-2026-08-23-143
+Date: 2026-08-23
+Surface: Shoes page image-import action on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/pages/shoesImageImportBadge.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the Pro badge displayed beneath the `识图导入` action while keeping non-Pro quota feedback available.
+Why: The image-import control should present as a standard action without a plan-tier badge beneath it.
+Preserve list: Image-import behavior, scan modal opening, quota handling, localized labels, file selection, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-22-142`
+Notes: Presentation-only badge removal; no entitlement, quota, or scan API behavior changed.
+
+### Version: DV-2026-08-23-144
+Date: 2026-08-23
+Surface: Shoes page filter groups on `/shoes`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the three inventory filter groups—mileage sort, brand filter, and shoe browsing—to solid white light-theme surfaces.
+Why: The filter grids should match the page’s white card language instead of carrying a tinted translucent background.
+Preserve list: Filter and sort behavior, active states, labels, spacing, responsive columns, dark themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-143`
+Notes: Presentation-only light-theme surface correction; dark-theme styling remains unchanged.
+
+### Version: DV-2026-08-23-145
+Date: 2026-08-23
+Surface: Add Shoes catalog workspace on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed Add Shoes as a Profile-aligned catalog workspace with a dominant searchable model browser and a desktop-sticky setup panel that collapses below the catalog on mobile.
+Why: The add flow should make model discovery fast while retaining the selected shoe and configuration controls in view.
+Preserve list: Catalog/API loading, local fallback, filters, search, brand expansion, model selection, form values, submit payload, routing, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-23-144`
+Notes: Presentation-only route redesign; no API or persistence contract changes.
+
+### Version: DV-2026-08-23-145
+Date: 2026-08-23
+Surface: Shoes photo modal hero grid on `/shoes`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesPhotoModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the photo modal’s hero grid to a solid white light-theme surface and adjusted its text, pills, and decorative ring for contrast.
+Why: The photo modal hero should match the Shoes page’s white-grid treatment instead of rendering as a dark strip in the light theme.
+Preserve list: Image selection, upload, URL application, network search, modal controls, dark themes, localization, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-144`
+Notes: Presentation-only light-theme correction; the dark photo-modal hero remains unchanged.
+
+### Version: DV-2026-08-23-146
+Date: 2026-08-23
+Surface: Shoes edit modal maximum-distance field on `/shoes`
+Files: `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/shoes-atelier-redesign.css`, `frontend/src/pages/shoeEditMaxDistancePadding.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a focused field hook and 14px inline padding to the `最大里程 (km)` input.
+Why: The numeric value was visually flush with the input’s left edge compared with the other edit fields.
+Preserve list: Shoe editing, validation bounds, save behavior, other field spacing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-145`
+Notes: Presentation-only spacing correction; no form data or API behavior changed.
+
+### Version: DV-2026-08-23-147
+Date: 2026-08-23
+Surface: Shoes edit modal surface on `/shoes`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoeEditModalWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the Shoes edit modal card to a solid white surface in light themes.
+Why: The modal background should match the white card treatment used across the Shoes interface.
+Preserve list: Edit fields, validation, save/cancel behavior, field-panel contrast, dark themes, localization, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-146`
+Notes: Presentation-only light-theme surface correction; field-panel backgrounds and dark-theme modal styling remain unchanged.
+
+### Version: DV-2026-08-23-148
+Date: 2026-08-23
+Surface: Shoes page filter groups on `/shoes`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the three inventory filter groups—mileage sort, brand filter, and shoe browsing—to a dark-grey light-theme surface with readable labels and inactive controls.
+Why: The filter grids should use a stronger dark-grey visual treatment while keeping their controls legible.
+Preserve list: Filter and sort behavior, active states, labels, spacing, responsive columns, dark themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-147`
+Notes: Presentation-only light-theme surface correction; dark-theme styling remains unchanged.
+
+### Version: DV-2026-08-23-149
+Date: 2026-08-23
+Surface: Shoes page inventory operations grid on `/shoes`
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/shoesGridVisibility.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the outer inventory-operations container to dark grey and the three inner filter groups to light grey in light themes, with contrast-matched labels and inactive controls.
+Why: The inventory operations hierarchy should clearly distinguish its dark outer frame from the three lighter filter grids inside it.
+Preserve list: Filter and sort behavior, active states, labels, spacing, responsive columns, dark themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-148`
+Notes: Presentation-only light-theme surface correction; dark-theme styling remains unchanged.
+
+### Version: DV-2026-08-23-150
+Date: 2026-08-23
+Surface: Profile progression line chart on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/_split/profile-dashboard-redesign.css`, `frontend/src/pages/profileProgressionPointGeometry.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added small fixed-size HTML marker dots over the progression chart so data points remain circular while the SVG line stretches responsively.
+Why: The chart’s non-uniformly scaled SVG coordinate space can distort SVG dots into ovals; the overlay keeps marker geometry square at every width.
+Preserve list: Progression data, line and area paths, timeframe switching, chart range labels, responsive layout, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-149`
+Notes: Presentation-only marker geometry correction; chart data and interaction behavior remain unchanged.
+
+### Version: DV-2026-08-23-151
+Date: 2026-08-23
+Surface: Profile progression line chart on `/profile`
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/_split/profile-dashboard-redesign.css`, `frontend/src/pages/profileProgressionPointGeometry.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the progression chart’s data-point marker overlay so the graph displays only its line and filled area.
+Why: The Profile progression chart should not show dots over the line.
+Preserve list: Progression data, line and area paths, timeframe switching, chart range labels, responsive layout, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-150`
+Notes: Presentation-only marker removal; chart data and interaction behavior remain unchanged.
+
+### Version: DV-2026-08-23-152
+Date: 2026-08-23
+Surface: Races catalog cards on `/races`
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesCompactCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reduced the desktop image height and spacing of the featured and discovery race cards while preserving the existing mobile composition.
+Why: The race cards occupied too much vertical space and made the catalog harder to scan.
+Preserve list: Race image loading, card navigation, event metadata, add-to-plan actions, filters, responsive behavior, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-151`
+Notes: Presentation-only compactness correction; no race catalog or interaction behavior changed.
+
+### Version: DV-2026-08-23-154
+Date: 2026-08-23
+Surface: Add/edit race modal on `/races`
+Files: `frontend/src/pages/Races.jsx`, `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesAddModalRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the race form modal into a white rounded surface with a coral flag icon, plain close control, lighter fields, and weighted cancel/create actions.
+Why: The “添加赛事” modal needed the same calm, compact visual language as the reference delete modal while retaining its existing form workflow.
+Preserve list: Race creation/editing, validation, delete behavior, form state, localization, keyboard dismissal, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-23-153`
+Notes: Presentation-only modal redesign; no race data or submit behavior changed.
+
+### Version: DV-2026-08-23-155
+Date: 2026-08-23
+Surface: Create race action in the `/races` add/edit modal
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesAddModalRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the inherited slanted clip path from the coral “创建赛事” action and matched the cancel button’s straight rounded border geometry.
+Why: The primary action’s diagonal edges conflicted with the reference modal’s calm rectangular button language.
+Preserve list: Submit behavior, action hierarchy, coral emphasis, hover state, responsive stacking, localization, and accessibility.
+Rollback target: `DV-2026-08-23-154`
+Notes: Presentation-only border correction; no form or race data behavior changed.
+
+### Version: DV-2026-08-23-153
+Date: 2026-08-23
+Surface: Half-marathon prediction hero on `/prediction/half`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/assets/generated/prediction-half-marathon-hero.png`, `frontend/src/pages/predictionHalfMarathonHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied race-start image as the right-side visual panel of the half-marathon prediction hero while preserving the existing prediction copy and actions.
+Why: The half-marathon hero had unused space on the right and needed the same visual treatment already used by the other race-prediction heroes.
+Preserve list: Prediction calculations, navigation actions, confidence behavior, responsive stacking, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-23-152`
+Notes: Presentation-only hero media addition; no prediction data or interaction behavior changed.
+
+### Version: DV-2026-08-23-155
+Date: 2026-08-23
+Surface: Add Shoes workspace heading on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reframed the oversized split heading as a compact white metric-card surface with a coral add icon, restrained title scale, and the existing inventory stats and copy.
+Why: The Add Shoes entry surface should match the compact VDOT card language instead of opening with a large editorial hero grid.
+Preserve list: Catalog loading, brand/model selection, filters, search, form state, submit payload, routing, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-23-145`
+Notes: Presentation-only heading redesign; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-156
+Date: 2026-08-23
+Surface: Remaining Add Shoes grids on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Applied the compact white metric-card treatment to the brand rail, model browser, selected-shoe summary, configuration surfaces, and supporting grid cards while retaining coral active states.
+Why: The rest of the Add Shoes flow should visually belong to the same calm card system as the redesigned heading and VDOT reference card.
+Preserve list: Brand/model selection, filters, search, selected-shoe state, form inputs, submit behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-155`
+Notes: Presentation-only grid restyling; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-157
+Date: 2026-08-23
+Surface: Add Shoes workspace heading background on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the full-width white background strip and border from the workspace heading while preserving its text, icon, stats, and spacing.
+Why: The heading content should sit directly on the page canvas instead of reading as a separate horizontal band.
+Preserve list: Heading copy, inventory stats, icon, catalog grids, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-156`
+Notes: Presentation-only background removal; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-158
+Date: 2026-08-23
+Surface: Add Shoes catalog and setup grid wrappers on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared background, border, and shadow from the catalog and configuration wrapper surfaces so the individual grids sit independently on the page canvas.
+Why: The wrapper fill was visually connecting the brand, model, and configuration grids into one continuous background.
+Preserve list: Brand/model selection, filters, search, selected-shoe state, form inputs, submit behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-157`
+Notes: Presentation-only wrapper-surface removal; individual grid/card surfaces and all shoe workflow behavior remain unchanged.
+
+### Version: DV-2026-08-23-159
+Date: 2026-08-23
+Surface: Add Shoes route canvas background on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the route root’s radial/linear background wash so the remaining gaps between the catalog and setup grids use the underlying page canvas.
+Why: The root gradient remained visible after the child wrapper surfaces were removed and continued to visually connect the grids.
+Preserve list: Brand/model selection, filters, search, selected-shoe state, form inputs, submit behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-158`
+Notes: Presentation-only route background removal; individual grid/card surfaces and all shoe workflow behavior remain unchanged.
+
+### Version: DV-2026-08-23-160
+Date: 2026-08-23
+Surface: Add Shoes route canvas background on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the warm radial/linear route background while keeping the workspace heading transparent, removing the white strip behind its text.
+Why: The page needs its original visual atmosphere without turning the heading copy into a separate white band.
+Preserve list: Heading copy, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-159`
+Notes: Presentation-only background restoration and heading-strip removal; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-161
+Date: 2026-08-23
+Surface: Add Shoes route canvas background on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Superseded the restored warm root gradient with a transparent route canvas so no page-wide paint layer connects the independent grids.
+Why: The restored root gradient remained visible between the catalog and setup grids and contradicted the requested separated-grid treatment.
+Preserve list: Heading copy, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-160`
+Notes: Presentation-only final-cascade correction; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-162
+Date: 2026-08-23
+Surface: Add Shoes workspace heading card on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the rounded white card layer around the Add Shoes heading while retaining the warm route background behind it.
+Why: The heading grid had lost its visible button/card surface after the strip-removal pass, leaving the heading copy floating on the page canvas.
+Preserve list: Heading copy, plus icon, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-161`
+Notes: Presentation-only card-layer restoration; no shoe API or persistence behavior changed.
+
+### Version: DV-2026-08-23-163
+Date: 2026-08-23
+Surface: Today Run command deck layout on `/today-run`
+Files: `frontend/src/styles/_split/today-run.css`, `frontend/src/pages/todayRunCommandDeckRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the lower workout blueprint and automated coach grids from a desktop two-column arrangement to a single vertical stack.
+Why: The two related grids should read in sequence, with the training blueprint followed by the automated coach context, instead of competing horizontally for the same row.
+Preserve list: Training content, coach data, buttons, navigation, responsive collapse, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-23-162`
+Notes: Presentation-only layout change; no training recommendation or API behavior changed.
+
+### Version: DV-2026-08-23-164
+Date: 2026-08-23
+Surface: Today Run morning briefing grid on `/today-run`
+Files: `frontend/src/styles/_split/today-run.css`, `frontend/src/styles/contrast-fixes.css`, `frontend/src/pages/todayRunLightThemeContrast.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme “今日寄语” briefing grid to a light-grey surface while preserving its copy, status pill, wellness notes, and border rhythm.
+Why: The briefing grid needed a quieter neutral surface that separates it from the white command card without introducing another tinted panel.
+Preserve list: Morning briefing content, downshift interaction, wellness insights, contrast, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-23-163`
+Notes: Presentation-only color adjustment; no training recommendation or API behavior changed.
+
+### Version: DV-2026-08-23-163
+Date: 2026-08-23
+Surface: Add Shoes shared shell atmosphere on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the route gradient and disabled the shared runner-shell/canvas pseudo-elements so no background wash or grid spans the gaps between the independent grids.
+Why: The root and pseudo-element layers remained visible after the individual wrapper backgrounds were removed.
+Preserve list: Heading card, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-162`
+Notes: Presentation-only connector-layer removal scoped to Add Shoes; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-164
+Date: 2026-08-23
+Surface: Add Shoes body-level shell atmosphere on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Disabled the shared fixed `body::before` atmosphere while Add Shoes is mounted so the transparent route canvas does not reveal a global gradient between its grids.
+Why: The body-level pseudo-element remained after the route root and runner-shell pseudo-elements were cleared.
+Preserve list: Heading card, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-163`
+Notes: Presentation-only body pseudo-element removal scoped with `:has()`; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-165
+Date: 2026-08-23
+Surface: Add Shoes base surfaces on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the route body, root, shell main, canvas, workspace, and setup layout parents to plain white with no background image.
+Why: The warm inherited page surface remained visible between the independent grids after the shared pseudo-elements were removed.
+Preserve list: Heading card, inventory stats, catalog/setup grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-164`
+Notes: Presentation-only route-scoped base-surface reset; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-166
+Date: 2026-08-23
+Surface: Add Shoes separated work areas on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added spacing and independent white bordered surfaces for the catalog header, brand step, model step, and configuration grid.
+Why: The previous white base reset removed the connecting cream layer but left the major areas reading as one continuous sheet.
+Preserve list: Heading copy, inventory stats, brand/model selection, filters, model cards, configuration form, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-165`
+Notes: Presentation-only route-scoped separation; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-167
+Date: 2026-08-23
+Surface: Add Shoes catalog step wrappers on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the outer background, border, radius, and shadow from the Step 1 and Step 2 catalog wrappers while preserving their child grids and controls.
+Why: The step wrappers were still rendering as giant cards around the individual brand/model surfaces.
+Preserve list: Step headings, brand/model cards, filter chips, search, model selection, configuration form, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-166`
+Notes: Presentation-only route-scoped wrapper reset; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-170
+Date: 2026-08-23
+Surface: Add Shoes base step hook on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `frontend/src/styles/add-shoes-profile-alignment.css`, `DESIGN_VERSIONS.md`
+What changed: Removed both shared `add-shoes-step` and `add-shoes-step-card` hooks from the Step 1 and Step 2 catalog wrappers; only the layout-only catalog hook remains.
+Why: The legacy stylesheet applied a card background and radius through the base `add-shoes-step` class even after the card-specific hook was removed.
+Preserve list: Step headings, brand/model cards, filter chips, search, model selection, Step 3 configuration card, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-169`
+Notes: Presentation-only route-scoped class-hook correction; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-171
+Date: 2026-08-23
+Surface: Add Shoes numbered-step alignment on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Offset the desktop setup column by the catalog header-row height so the Step 3 header aligns vertically with Step 1; reset the offset for stacked layouts.
+Why: The catalog panel renders its stage header before Step 1, while the setup panel began at the workspace top.
+Preserve list: Catalog header, Step 1 and Step 2 brand/model grids, Step 3 form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-170`
+Notes: Presentation-only route-scoped alignment; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-26-001
+Date: 2026-08-26
+Surface: Command-entry authentication error message
+Files: `frontend/src/styles/_split/auth.css`, `frontend/src/pages/authCommandEntryRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Refined the command-entry error alert into a readable warning panel with a coral marker, left-aligned typography, safe wrapping, and bounded scrolling for long backend messages; success notices retain a separate green treatment.
+Why: Raw server exceptions could expand into an unstructured, hard-to-scan strip and overwhelm the authentication card when the message was long.
+Preserve list: Error and success message content, alert semantics, authentication behavior, form controls, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-031`
+Notes: Presentation-only auth alert polish; no backend error contract or authentication flow changed.
+
+### Version: DV-2026-08-23-175
+Date: 2026-08-23
+Surface: Add Shoes auxiliary catalog rail on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the auxiliary parent-rail grid and its duplicate return link; expanded the remaining catalog header across the available internal columns.
+Why: The rail was an unnecessary separate grid between the catalog header and the Step 1/Step 2 work areas.
+Preserve list: Catalog header navigation, Step 1 brand grid, Step 2 filters and model grid, Step 3 form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-173`
+Notes: Presentation-only route-scoped grid removal; the primary catalog back button remains available.
+
+### Version: DV-2026-08-23-176
+Date: 2026-08-23
+Surface: Add Shoes vertical step sequence on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the desktop side-by-side grid placement with one full-width column so Step 1, Step 2, and Step 3 render in top-to-bottom order.
+Why: A late `display: contents` layout rule placed Step 2 beside Step 3 and made the numbered workflow read out of sequence.
+Preserve list: Catalog header, Step 1 brand grid, Step 2 filters and model grid, Step 3 form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-175`
+Notes: Presentation-only route-scoped flow correction; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-182
+Date: 2026-08-23
+Surface: Personalized runner-strength planner on `/muscle-training`
+Files: `frontend/src/features/muscle-training/`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js`, `frontend/src/pages/muscleTrainingPersonalizedPlanner.smoke.test.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `backend/src/main/java/com/hermes/backend/MusclePlanDto.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingController.java`, `DESIGN_VERSIONS.md`
+What changed: Promoted the deterministic four-week backend strength plan into the primary current-week UI, with one atomic response adapter for initial load and every replan. Retained the safety-adapted manual composer as a clearly secondary control inside the plan and kept the existing anatomy selector, exercise library, and reference workspace below it.
+Why: The personalized planner contract existed, but the route still led with a detached daily composition flow that could refetch or update recommendation state separately from the complete plan response.
+Preserve list: Existing anatomy heatmap and target selection, exercise protocols and reference media, profile settings, run check-in inputs, route shell, backend-owned planning decisions, localization, dark and high-contrast themes, responsive layout, and keyboard access.
+Rollback files: `frontend/src/features/muscle-training/`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js`, `frontend/src/pages/muscleTrainingPersonalizedPlanner.smoke.test.js`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `backend/src/main/java/com/hermes/backend/MusclePlanDto.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingController.java`.
+Task 8 verification: `mvn.cmd -f backend/pom.xml -Dtest=PersonalizedStrengthPlanEngineTest,RunnerStrengthSignalServiceTest,MuscleTrainingSessionServiceTest,MuscleTrainingMetricsServiceTest,MuscleTrainingControllerTests test`; `mvn.cmd -f backend/pom.xml -DskipTests compile`; `npm.cmd --prefix frontend run test`; `npm.cmd --prefix frontend run lint`; `npm.cmd --prefix frontend run build`; inspect `backend/target/classes/static/index.html` asset references; then run authenticated `/muscle-training` browser and network verification for `GET /api/training/muscle/plan` and `PUT /api/training/muscle/today`.
+Notes: Source integration only in Task 7. Build, served-bundle validation, and authenticated browser/runtime proof remain explicitly pending for Task 8.
+
+### Version: DV-2026-08-23-177
+Date: 2026-08-23
+Surface: Add Shoes model search control on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the Step 2 model-search input surface to dark grey and adjusted its text, placeholder, and search-icon colors for contrast.
+Why: The search control was still using the inherited warm paper surface instead of the requested dark-grey treatment.
+Preserve list: Step 2 filters and model search behavior, Step 1 brand grid, Step 3 form behavior, routing, localization, themes, responsive layout, focus indication, and accessibility.
+Rollback target: `DV-2026-08-23-176`
+Notes: Presentation-only route-scoped control styling; no search or catalog behavior changed.
+
+### Version: DV-2026-08-23-178
+Date: 2026-08-23
+Surface: Add Shoes complete brand expansion on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: The Step 1 “show more brands” action now expands against the complete built-in running-brand catalog even when the catalog API returns a plain array of brands.
+Why: Array-shaped API responses bypassed the catalog merge, so the expansion could omit project-owned running brands that were present in the built-in catalog.
+Preserve list: Existing featured-brand layout, expand/collapse interaction, brand selection, model filtering, API catalog additions, local catalog fallback, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-177`
+Notes: Data-source normalization only; no backend contract or brand-selection behavior changed.
+
+### Version: DV-2026-08-23-181
+Date: 2026-08-23
+Surface: Add Shoes Step 1 brand expansion placement on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved the brand-expansion control into the Step 1 grid’s open slot; expanded brands now wrap into full rows below without horizontal scrolling.
+Why: The control was rendered below the brand deck, leaving unused space at the right of the first row and forcing the complete catalog into a disconnected lower area.
+Preserve list: Complete brand catalog, expand/collapse behavior, brand selection, model filtering, API additions, local fallback, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-180`
+Notes: Presentation-only grid-flow correction; no catalog or selection behavior changed.
+
+### Version: DV-2026-08-23-174
+Date: 2026-08-23
+Surface: Personalized muscle-plan focus and prescription integrity on `/muscle-training`
+Files: `backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java`, `backend/src/test/java/com/hermes/backend/MuscleTrainingSessionServiceTest.java`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingTodayPlanHeading.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made micro sessions retain their assigned focus with short quiet prescriptions, forced mobility reset to remain optional and low fatigue at every requested dose, capped very short sessions to a compact prescription, and made the heading subtitle use today's applied focus instead of the week-wide load focus.
+Why: The initial non-empty-session repair could still show the wrong focus label, reuse a generic recovery block for every micro focus, and over-prescribe exercises relative to a short configured duration.
+Preserve list: Non-strength-day blank behavior, balanced standard and strong sessions outside mobility reset, equipment and noise filters, impact eligibility gates, legacy session definitions, plan/check-in APIs, route layout, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-173`
+Notes: This closes the independent review findings against the personalized strength-planner specification; mobility reset remains the explicit exception to whole-body strength coverage.
+
+### Version: DV-2026-08-23-168
+Date: 2026-08-23
+Surface: Personalized daily strength heading on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingTodayPlanHeading.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a top full-width heading grid that composes the backend-assigned strength session into a complete daily plan with localized session context, duration, target effort, exercise count, and every prescribed block and exercise.
+Why: The backend already supplied a personalized daily strength assignment and its complete session definition, but the frontend exposed the exercises only through lower browsing surfaces and did not present the day plan as one actionable unit.
+Preserve list: Backend planning logic, plan/check-in APIs, muscle selector and exercise-detail interactions, training settings, route shell, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-167`
+Notes: The heading grid is conditional on both the daily strength assignment and its session definition; non-strength days render no empty placeholder.
+
+### Version: DV-2026-08-23-169
+Date: 2026-08-23
+Surface: Add Shoes catalog wrapper paint on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the shared card hook on the Step 1 and Step 2 catalog wrappers with a layout-only hook and explicitly disabled their background, border, pseudo-element, shadow, and transform paint.
+Why: Shared card and liquid-glass selectors could still repaint the former wrappers after a CSS-only reset, leaving a giant background around the child grids.
+Preserve list: Step headings, brand/model cards, filter chips, search, model selection, Step 3 configuration card, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-168`
+Notes: Presentation-only route-scoped wrapper hook correction; no shared shell behavior changed on other pages.
+
+### Version: DV-2026-08-23-172
+Date: 2026-08-23
+Surface: Personalized daily strength session contract on `/muscle-training`
+Files: `backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java`, `backend/src/test/java/com/hermes/backend/MuscleTrainingSessionServiceTest.java`, `backend/src/test/java/com/hermes/backend/MuscleTrainingControllerTests.java`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/pages/muscleTrainingTodayPlanHeading.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Composed each custom planner assignment into a complete personalized session definition with non-empty warm-up, main, accessory, or recovery blocks; localized the custom focus and dose in the heading grid and added display metadata for the new upper-body support exercises.
+Why: Custom `CUSTOM_*` assignment IDs fell through the legacy session builder and returned a generic English title with zero exercises, leaving the personalized daily plan visually empty.
+Preserve list: Existing planning inputs and safety gates, non-strength-day blank behavior, legacy session definitions, check-in APIs, muscle selector and exercise-detail interactions, route shell, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-171`
+Notes: This repairs the data contract required by `DV-2026-08-23-168`; impact work remains gated by experience, noise preference, dose, and training phase.
+
+### Version: DV-2026-08-23-173
+Date: 2026-08-23
+Surface: Add Shoes Step 2 and Step 3 alignment on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the desktop sticky behavior from the setup panel and placed it in normal flow at the Step 2 vertical offset so the Step 2 and Step 3 headers share a horizontal line.
+Why: The sticky setup panel returned to the viewport top during scrolling, leaving Step 3 above the model-selection step instead of aligned with it.
+Preserve list: Catalog header, Step 1 brand grid, Step 2 filters and model grid, Step 3 form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-23-172`
+Notes: Presentation-only route-scoped alignment; no shared shell behavior changed on other pages.
+### Version: DV-2026-08-25-010
+Date: 2026-08-25
+Surface: Admin shoe catalog series grid
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/components/CatalogLongPressCard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a delete-mode card beside the add-series card; activating it reveals upper-right delete controls on every visible series card while retaining the existing confirmation and API deletion flow.
+Why: Admins need an explicit, discoverable way to manage catalog series without relying on a hidden gesture.
+Preserve list: Existing add-series flow, brand selection, search and type filters, deletion confirmation, admin API endpoints, long-press fallback, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-009`
+### Version: DV-2026-08-25-011
+Date: 2026-08-25
+Surface: Admin shoe catalog delete-mode controls
+Files: `frontend/src/components/CatalogLongPressCard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Explicit delete mode now marks each upper-right delete action visible and clickable directly, instead of relying only on the long-press-ready wrapper state.
+Why: The delete-mode card must visibly reveal the controls immediately after it is activated.
+Preserve list: Existing delete confirmation, admin DELETE endpoints, long-press fallback, card placement, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-010`
+### Version: DV-2026-08-25-025
+Date: 2026-08-25
+Surface: Admin shoe catalog series cards
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/components/CatalogLongPressCard.jsx`, `frontend/src/styles/admin-monitoring-dashboard.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogDeleteMode.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a bottom-left 添加具体鞋款/Add specific shoe action to every published series card, opening the existing catalog-entry form with the selected brand prefilled.
+Why: Admins need a direct affordance for adding concrete shoes from the series they are reviewing.
+Preserve list: Series selection, add-series card, delete mode, long-press deletion, catalog filters, localization, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-024`
+### Version: DV-2026-08-25-026
+Date: 2026-08-25
+Surface: Admin catalog-entry modal copy
+Files: `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogSeriesField.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Renamed the catalog-entry name fields from series-oriented labels to shoe-name labels and replaced generic series examples with the concrete `Nimbus 25` running-shoe example.
+Why: The form creates a specific catalog shoe entry, so its labels and placeholder should describe the value the admin must enter.
+Preserve list: Brand-first creation, localized fields, type selection, catalog API contract, existing series browser copy, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-025`
+
+### Version: DV-2026-08-25-028
+Date: 2026-08-25
+Surface: Runner sidebar collapsed icon rhythm
+Files: `frontend/src/styles/_split/profile.css`, `frontend/src/components/runnerShellSidebarRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the collapsed sidebar navigation gap, row height, and vertical padding to the expanded sidebar, and removed hidden labels from the collapsed layout so every icon keeps the same vertical position in both states.
+Why: Collapsed navigation used a larger rhythm and invisible labels still contributed wrapped height, shifting the icon sequence out of alignment.
+Preserve list: Sidebar collapse/expand behavior, icon centering, active marker, labels, workout action, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-027`
+
+### Version: DV-2026-08-25-027
+Date: 2026-08-25
+Surface: Admin catalog-entry modal shoe-name fields
+Files: `frontend/src/pages/Dashboard.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/adminCatalogSeriesField.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the shoe-name input group from the catalog modal and clarified that the form now creates a brand-first catalog entry.
+Why: The modal should not expose an unused shoe-name field when this flow is limited to creating a shared brand directory.
+Preserve list: Brand-first submission, type selection, catalog API contract, existing series browser actions, responsive layout, themes, and accessibility.
+Rollback target: `DV-2026-08-25-026`
+
+### Version: DV-2026-08-25-031
+Date: 2026-08-25
+Surface: ACWR load-balance overview card on `/analysis`
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/_split/analysis.css`, `frontend/src/pages/analysisLoadBalanceOverviewStatusRemoval.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant blank status capsule from the ACWR overview card and cleaned its desktop and responsive grid areas so no empty status row remains.
+Why: The capsule rendered as an unexplained pale square in the overview grid while the card already communicated its load balance through the gauge, score, and explanatory copy.
+Preserve list: ACWR title, gauge, score, explanatory copy, load-balance navigation, responsive layout, localization, themes, and accessibility.
+Rollback target: `DV-2026-08-25-030`

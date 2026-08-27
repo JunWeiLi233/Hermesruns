@@ -46,3 +46,31 @@ export function restoreRunsScrollPosition(
     if (rootStyle) rootStyle.scrollBehavior = previousScrollBehavior ?? '';
   });
 }
+
+/**
+ * Trims month groups (already sorted most-recent-first, each carrying its full
+ * run list) down to a shared render budget. Groups keep their true aggregate
+ * count/total for the header copy; only the rendered cards are limited, and
+ * groups whose budget is exhausted are dropped entirely so no month header
+ * renders above an empty grid. Runs the same for expanded and collapsed
+ * months — folding a card never changes how many runs stream in.
+ */
+export function budgetMonthGroupsByRunCount<G extends { runs: unknown[] }>(
+  groups: G[],
+  limit: number,
+): G[] {
+  if (!Number.isFinite(limit)) return [];
+  let budget = Math.max(0, Math.floor(limit));
+  const budgeted: G[] = [];
+  for (const group of groups) {
+    if (budget <= 0) break;
+    if (group.runs.length <= budget) {
+      budget -= group.runs.length;
+      budgeted.push(group);
+      continue;
+    }
+    budgeted.push({ ...group, runs: group.runs.slice(0, budget) as G['runs'] });
+    budget = 0;
+  }
+  return budgeted;
+}

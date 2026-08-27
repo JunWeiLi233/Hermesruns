@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { apiFetch, apiJson } from '../api';
+import { cachedApiJson, invalidateResourceCache } from '../api/resourceCache';
 import AppIcon from '../components/AppIcon';
 import FooterNavLinks from '../components/FooterNavLinks';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
@@ -32,6 +33,8 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineCont
 
 const TELEMETRY_CHART_SAMPLE_INTERVAL_SECONDS = 0.1;
 const TELEMETRY_CHART_RENDER_POINT_BUDGET = 12000;
+const RUN_DETAIL_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
+const RUN_DETAIL_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 
 function readSelectedRunFromSession(expectedId) {
   if (typeof window === 'undefined') return null;
@@ -280,7 +283,7 @@ export default function RunDetail() {
     async function bootstrapRunFromActivities() {
       setIsBootstrappingRun(true);
       try {
-        const activities = await apiJson('/api/activities');
+        const activities = await cachedApiJson('/api/activities');
         if (cancelled) return;
         const matchedRun = Array.isArray(activities)
           ? activities.find((activity) => String(activity?.id) === String(id))
@@ -311,13 +314,15 @@ export default function RunDetail() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
+    // /api/shoes stays uncached on purpose: its write sites (Shoes/AddShoes/
+    // RunDetail assign/admin flows) cannot all be covered by invalidation.
     apiJson('/api/shoes').then((data) => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
-    apiJson('/api/profile/me').then((data) => setProfile(data)).catch(() => {});
+    cachedApiJson('/api/profile/me').then((data) => setProfile(data)).catch(() => {});
   }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || !id) return;
-    apiJson('/api/activities').then((data) => {
+    cachedApiJson('/api/activities').then((data) => {
       if (Array.isArray(data)) {
         setRecentRuns(data.filter((r) => r.distanceKm > 0 && r.movingTimeSeconds > 0 && String(r.id) !== String(id)));
       }
@@ -338,6 +343,8 @@ export default function RunDetail() {
       if (response?.activityId != null && String(response.activityId) !== String(run.id)) {
         throw new Error('Activity mismatch');
       }
+      // The assignment changed this run's shoeId inside /api/activities.
+      invalidateResourceCache('/api/activities');
       const selectedShoe = isUnlinking
         ? null
         : shoes.find((item) => String(item.id) === String(normalizedShoeId));
@@ -712,19 +719,86 @@ export default function RunDetail() {
     };
   }, [run, recentRuns]);
 
+  async function refreshRunFromActivities() {
+    if (!isAuthenticated || !id) return null;
+    invalidateResourceCache('/api/activities');
+    try {
+      const activities = await apiJson('/api/activities');
+      if (!Array.isArray(activities)) return null;
+
+      const matchedRun = activities.find((activity) => String(activity?.id) === String(id));
+      if (matchedRun) {
+        setRun(matchedRun);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
+        }
+      }
+      setRecentRuns(activities.filter((activity) => (
+        activity.distanceKm > 0
+        && activity.movingTimeSeconds > 0
+        && String(activity.id) !== String(id)
+      )));
+      return matchedRun || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function pollRunDetailStravaSyncCompletion() {
+    const deadlineMs = Date.now() + RUN_DETAIL_STRAVA_SYNC_POLL_DEADLINE_MS;
+    let sawActiveSync = false;
+
+    while (Date.now() < deadlineMs) {
+      let syncStatus;
+      try {
+        syncStatus = await apiJson('/api/auth/strava/sync-status');
+      } catch {
+        return null;
+      }
+
+      if (syncStatus?.active) sawActiveSync = true;
+      const finished = syncStatus?.status === 'COMPLETED'
+        || syncStatus?.status === 'FAILED'
+        || (sawActiveSync && !syncStatus?.active);
+
+      if (finished) {
+        if (syncStatus?.status === 'COMPLETED') {
+          await refreshRunFromActivities();
+        }
+        return syncStatus;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, RUN_DETAIL_STRAVA_SYNC_POLL_INTERVAL_MS));
+    }
+
+    return null;
+  }
+
   async function handleResync() {
     setSyncDisabled(true);
     setSyncBtnText(t('run_detail.syncing'));
     try {
       const res = await apiFetch('/api/strava/sync');
-      setSyncBtnText(res.ok ? t('run_detail.sync_started') : t('run_detail.sync_failed'));
+      const rawMessage = (await res.text()).trim();
+      if (!res.ok) {
+        setSyncBtnText(t('run_detail.sync_failed'));
+      } else if (/^Strava sync started$/i.test(rawMessage)) {
+        setSyncBtnText(t('run_detail.sync_started'));
+        const syncStatus = await pollRunDetailStravaSyncCompletion();
+        if (syncStatus?.status === 'FAILED') {
+          setSyncBtnText(t('run_detail.sync_failed'));
+        }
+      } else {
+        setSyncBtnText(t('run_detail.sync_failed'));
+      }
     } catch {
       setSyncBtnText(t('run_detail.sync_failed'));
+    } finally {
+      window.setTimeout(() => {
+        setSyncDisabled(false);
+        setSyncBtnText('');
+      }, 3200);
     }
-    window.setTimeout(() => {
-      setSyncDisabled(false);
-      setSyncBtnText('');
-    }, 3200);
   }
 
   async function handleShare() {
@@ -886,10 +960,19 @@ export default function RunDetail() {
     : null;
 
   const visibleLapRows = showAllSplits ? lapRows : lapRows.slice(0, 5);
+  const lapPaceSeconds = (lap) => {
+    if (Number.isFinite(lap?.durationSeconds) && lap.durationSeconds > 0 && lap.distanceKm > 0) {
+      return lap.durationSeconds / lap.distanceKm;
+    }
+    const match = /(\d+):(\d{2})/.exec(String(lap?.pace || ''));
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+  };
   const fastestVisibleLapIndex = visibleLapRows.reduce((bestIndex, lap, index, source) => {
-    if (!lap?.pace) return bestIndex;
+    const seconds = lapPaceSeconds(lap);
+    if (seconds == null) return bestIndex;
     if (bestIndex === -1) return index;
-    return String(lap.pace) < String(source[bestIndex]?.pace || '') ? index : bestIndex;
+    const bestSeconds = lapPaceSeconds(source[bestIndex]);
+    return bestSeconds == null || seconds < bestSeconds ? index : bestIndex;
   }, -1);
 
   const distanceValue = distKm != null ? distKm.toFixed(2) : '--';
@@ -916,7 +999,7 @@ export default function RunDetail() {
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
               {run.provider === 'STRAVA' && (
-                <button className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
+                <button type="button" className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
                   {syncBtnText || t('run_detail.resync_strava')}
                 </button>
               )}

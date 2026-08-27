@@ -11,7 +11,7 @@ const routeVariants = {
   '/login': 'auth',
   '/signup': 'signup',
   '/forgot-password': 'forgot-password',
-  '/admin': 'admin-login',
+  '/admin': 'admin',
   '/terms': 'legal',
   '/privacy': 'legal',
   '/profile': 'profile',
@@ -19,6 +19,10 @@ const routeVariants = {
   '/runs/:id': 'run-detail',
   '/analysis': 'analysis',
   '/analysis/:insight': 'analysis-insight',
+  '/analysis/load-balance': 'analysis-load',
+  '/analysis/intensity': 'analysis-intensity',
+  '/analysis/injury-risk': 'analysis-injury',
+  '/analysis/coach-insight': 'analysis-coach',
   '/prediction/:id': 'prediction',
   '/heatmap': 'heatmap',
   '/weather': 'weather',
@@ -42,8 +46,10 @@ const routeVariants = {
 assert(
   appSource.includes("import PageSkeleton from './components/PageSkeleton';")
     && appSource.includes('<Suspense fallback={<RouteLoading />}>')
-    && appSource.includes('return <PageSkeleton variant={variant} />;')
+    && appSource.includes('return <PageSkeleton variant={variant} activeTab={activeTab} />;')
     && appSource.includes("get('skeleton-preview')")
+    && appSource.includes('ADMIN_SKELETON_ROUTE_TABS')
+    && appSource.includes('getAdminSkeletonTab')
     && appSource.includes("'login'")
     && appSource.includes('if (skeletonPreviewVariant)')
     && Object.values(routeVariants).every((variant) => appSource.includes(`variant = '${variant}'`)),
@@ -53,7 +59,9 @@ assert(
 assert(
   skeletonSource.includes('aria-busy="true"')
     && skeletonSource.includes('page-skeleton--${variant}')
-    && skeletonSource.includes("['page-skeleton', 'page-skeleton--runner', `page-skeleton--${variant}`]")
+    && skeletonSource.includes("['page-skeleton', 'page-skeleton--runner', 'is-sidebar-collapsed', `page-skeleton--${variant}`]")
+    && skeletonSource.includes('function RunnerFooterSkeleton()')
+    && skeletonSource.includes('page-skeleton__runner-footer')
     && skeletonSource.includes('page-skeleton--legal')
     && skeletonSource.includes('page-skeleton__rail')
     && skeletonSource.includes('page-skeleton__rail-item')
@@ -75,6 +83,9 @@ assert(
     && skeletonSource.includes('page-skeleton__shoes-signal')
     && skeletonSource.includes('page-skeleton__shoes-inventory-grid')
     && skeletonSource.includes('page-skeleton__heatmap-map-shell')
+    && skeletonSource.includes('page-skeleton__heatmap-utility-divider')
+    && skeletonSource.includes('page-skeleton__heatmap-legend-band-label')
+    && skeletonSource.includes('page-skeleton__heatmap-legend-band-swatch')
     && skeletonSource.includes('page-skeleton__schedule-week-grid')
     && skeletonSource.includes('page-skeleton__schedule-command-metric')
     && skeletonSource.includes('page-skeleton__schedule-coach-card')
@@ -95,7 +106,7 @@ assert(
     && skeletonSource.includes('page-skeleton__prediction-command-grid')
     && skeletonSource.includes('page-skeleton__admin-layout')
     && skeletonSource.includes('page-skeleton__admin-sidebar')
-    && ['profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction', 'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data', 'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule', 'muscle-training', 'admin']
+    && ['profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'prediction', 'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data', 'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule', 'muscle-training', 'admin']
       .every((variant) => skeletonSource.includes(`variant === '${variant}'`))
     && skeletonSource.includes("if (variant === 'landing')")
     && skeletonSource.includes('page-skeleton__landing-hero')
@@ -171,6 +182,14 @@ assert(
     && styleSource.includes('@keyframes hermesSkeletonShimmer')
     && styleSource.includes('.runner-shell-page--loading[data-loading-state="loading"]')
     && styleSource.includes('.dashboard-body--loading')
+    && styleSource.includes('--hermes-skeleton-base: rgba(214, 228, 238, 0.12)')
+    && styleSource.includes('linear-gradient(180deg, #07090c 0%, #05070a 54%, #030406 100%)')
+    && styleSource.includes('grid-template-columns: auto minmax(250px, 390px) minmax(0, 1fr)')
+    && styleSource.includes('width: 60px; max-height: calc(100vh - 136px)')
+    && styleSource.includes('right: 26px; bottom: 26px; display: grid; gap: 20px; width: min(320px, calc(100% - 52px)); padding: 24px; border: 1px solid')
+    && styleSource.includes('border-radius: 26px; background: rgba(255,252,247,.88)')
+    && styleSource.includes('grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px')
+    && styleSource.includes('height: 42px; border-radius: 999px')
     && styleSource.includes('@media (prefers-reduced-motion: reduce)'),
   'Loading skeleton styles should cover route shells, admin shells, reduced motion, and data-page fallbacks.',
 );
@@ -182,6 +201,16 @@ assert(
     '.page-skeleton__weather-hero',
     '.page-skeleton__weather-metrics',
     '.page-skeleton__weather-forecast',
+    '.page-skeleton__runs-shell',
+    '.page-skeleton__analysis-load',
+    '.page-skeleton__analysis-intensity',
+    '.page-skeleton__analysis-injury-profile',
+    '.page-skeleton__analysis-coach',
+    '.page-skeleton__races-content',
+    '.page-skeleton__catalog-shell',
+    '.page-skeleton__garmin-shell',
+    '.page-skeleton__import-shell',
+    '.page-skeleton__shoes-screen',
     '.page-skeleton__hero-metrics',
     '.page-skeleton__product-grid',
     '.page-skeleton__race-detail-hero',
@@ -206,7 +235,6 @@ assert(
     '.page-skeleton__shoes-inventory-grid',
     '.page-skeleton__heatmap-map-shell',
     '.page-skeleton__heatmap-legend',
-    '.page-skeleton__heatmap-sessions',
     '.page-skeleton__schedule-week-grid',
     '.page-skeleton__schedule-bottom-grid',
     '.page-skeleton__today-coaching',
@@ -258,6 +286,62 @@ assert(
     && styleSource.includes('.page-skeleton__topbar-pill')
     && styleSource.includes('min-height: 80px'),
   'The loading shell should preserve the live runner rail, numbered navigation rows, topbar, and canvas proportions.',
+);
+
+assert(
+  skeletonSource.includes('function AdminPageSkeleton({ activeTab = \'overview\' })')
+    && skeletonSource.includes('const ADMIN_SKELETON_TABS')
+    && skeletonSource.includes('Array.from({ length: ADMIN_SKELETON_TABS.length }')
+    && skeletonSource.includes('page-skeleton__admin-content')
+    && skeletonSource.includes('page-skeleton__admin-hero')
+    && skeletonSource.includes('page-skeleton__admin-metric-grid')
+    && skeletonSource.includes("const isJobs = activeTab === 'jobs'")
+    && skeletonSource.includes('page-skeleton__admin-spotlight')
+    && skeletonSource.includes('page-skeleton__admin-workspace')
+    && skeletonSource.includes('page-skeleton__admin-detail')
+    && skeletonSource.includes('page-skeleton__admin-job-row'),
+  'The admin jobs skeleton should preserve the loaded hierarchy: hero, metrics, spotlight, queue, and detail workspace.',
+);
+
+assert(
+  ['AdminOverviewSkeleton', 'AdminUsersSkeleton', 'AdminCourseMapsSkeleton', 'AdminShoesSkeleton', 'AdminAuditSkeleton', 'AdminSettingsSkeleton']
+    .every((name) => skeletonSource.includes(`function ${name}()`))
+    && [
+      'page-skeleton__admin-overview-charts',
+      'page-skeleton__admin-overview-two-col',
+      'page-skeleton__admin-users-hero',
+      'page-skeleton__admin-coursemaps-grid',
+      'page-skeleton__admin-shoes-catalog',
+      'page-skeleton__admin-audit-table',
+      'page-skeleton__admin-settings-grid',
+    ].every((className) => skeletonSource.includes(className) && styleSource.includes(`.${className}`)),
+  'Every non-jobs admin destination should expose route-specific loading landmarks instead of the generic list fallback.',
+);
+
+assert(
+  styleSource.includes('--hermes-admin-skeleton-rail-width: 240px')
+    && styleSource.includes('--hermes-admin-skeleton-topbar-height: 80px')
+    && styleSource.includes('.page-skeleton__admin-sidebar {')
+    && styleSource.includes('position: fixed;')
+    && styleSource.includes('margin-left: var(--hermes-admin-skeleton-rail-width);')
+    && styleSource.includes('min-height: var(--hermes-admin-skeleton-topbar-height);')
+    && styleSource.includes('@media (max-width: 1100px) and (min-width: 901px)')
+    && styleSource.includes('grid-template-rows: 182px 159px;')
+    && styleSource.includes('grid-template-rows: 128px 1081px 374px 591px 147px 99px;')
+    && styleSource.includes('min-height: 267px;')
+    && styleSource.includes('min-height: 196px;')
+    && styleSource.includes('.page-skeleton__admin-spotlight {')
+    && styleSource.includes('.page-skeleton__admin-workspace {')
+    && styleSource.includes('.page-skeleton__admin-detail {')
+    && styleSource.includes('.page-skeleton__admin-job-row'),
+  'The admin skeleton should use the same fixed rail, topbar, spotlight, and two-column workspace geometry as the loaded admin shell.',
+);
+
+assert(
+  fs.readFileSync(new URL('./Dashboard.jsx', import.meta.url), 'utf8').includes('<PageSkeleton variant="admin" activeTab={activeTab} />')
+    && fs.readFileSync(new URL('./Dashboard.jsx', import.meta.url), 'utf8').includes('admin-jobs-command-deck__spotlight')
+    && fs.readFileSync(new URL('./Dashboard.jsx', import.meta.url), 'utf8').includes('admin-jobs-command-deck__workspace'),
+  'The admin skeleton should retain the active dashboard destination and mirror the loaded jobs landmarks.',
 );
 
 console.log('[PASS] Shared page skeleton guardrails passed.');

@@ -1,6 +1,11 @@
 # Stage 1 - Build frontend
-FROM node:26-alpine AS frontend-build
+FROM node:24-alpine AS frontend-build
 WORKDIR /frontend
+
+# Production source maps must be an explicit opt-in. The build script also
+# defaults this to false, but keeping it in the image contract prevents a
+# Railway environment variable from accidentally publishing source maps.
+ENV VITE_SOURCEMAP=false
 
 COPY frontend/package*.json ./
 RUN npm ci --ignore-scripts
@@ -17,7 +22,7 @@ COPY frontend/src ./src
 RUN node scripts/run-vite-build.mjs
 
 # Stage 2 - Build backend (with frontend bundle already in static/)
-FROM eclipse-temurin:25-jdk-alpine AS backend-build
+FROM eclipse-temurin:17-jdk-alpine AS backend-build
 WORKDIR /backend
 
 COPY backend/pom.xml ./
@@ -32,10 +37,16 @@ COPY --from=frontend-build /backend/src/main/resources/static \
 RUN chmod +x ./mvnw && ./mvnw -q -DskipTests package
 
 # Stage 3 - Runtime
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-COPY --from=backend-build /backend/target/*.jar app.jar
+RUN addgroup -S hermes \
+    && adduser -S -G hermes hermes \
+    && chown -R hermes:hermes /app
+
+COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar
+
+USER hermes
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

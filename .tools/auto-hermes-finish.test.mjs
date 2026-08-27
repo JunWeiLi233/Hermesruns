@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { runAutoHermesFinish } from "./auto-hermes-finish.mjs";
+import { HERMES_REPOSITORY_URL } from "./hermes-repository.mjs";
 
 function makeFixture() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "auto-hermes-finish-"));
@@ -62,8 +63,8 @@ function makeFixture() {
     push: true,
     remoteStatusOverride: {
       remoteName: "origin",
-      targetUrl: "https://github.com/520HXC/run.git",
-      actualUrl: "https://github.com/520HXC/run.git",
+      targetUrl: HERMES_REPOSITORY_URL,
+      actualUrl: HERMES_REPOSITORY_URL,
       matchesTarget: true,
       reason: "Git remote 'origin' matches the expected publish target.",
     },
@@ -86,8 +87,8 @@ function makeFixture() {
     autoPushWhenNeeded: true,
     remoteStatusOverride: {
       remoteName: "origin",
-      targetUrl: "https://github.com/520HXC/run.git",
-      actualUrl: "https://github.com/520HXC/run.git",
+      targetUrl: HERMES_REPOSITORY_URL,
+      actualUrl: HERMES_REPOSITORY_URL,
       matchesTarget: true,
       reason: "Git remote 'origin' matches the expected publish target.",
     },
@@ -137,8 +138,8 @@ function makeFixture() {
     summary: "clean stop left unpublished local commits",
     remoteStatusOverride: {
       remoteName: "origin",
-      targetUrl: "https://github.com/520HXC/run.git",
-      actualUrl: "https://github.com/520HXC/run.git",
+      targetUrl: HERMES_REPOSITORY_URL,
+      actualUrl: HERMES_REPOSITORY_URL,
       matchesTarget: true,
       reason: "Git remote 'origin' matches the expected publish target.",
     },
@@ -198,8 +199,8 @@ function makeFixture() {
     push: true,
     remoteStatusOverride: {
       remoteName: "origin",
-      targetUrl: "https://github.com/520HXC/run.git",
-      actualUrl: "https://github.com/520HXC/run.git",
+      targetUrl: HERMES_REPOSITORY_URL,
+      actualUrl: HERMES_REPOSITORY_URL,
       matchesTarget: true,
       reason: "Git remote 'origin' matches the expected publish target.",
     },

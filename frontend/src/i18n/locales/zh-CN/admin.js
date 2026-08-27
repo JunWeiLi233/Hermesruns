@@ -28,7 +28,7 @@ export default {
       "tab_settings": "控制台设置",
 
       "metric_active_users": "活跃运动员",
-      "metric_shoes_inventory": "跑鞋库存",
+      "metric_shoes_inventory": "用户跑鞋库存",
       "metric_audit_24h": "24H 审计事件",
       "metric_pending_maps": "待审核地图",
 

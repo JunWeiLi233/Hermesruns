@@ -45,8 +45,14 @@ public class MuscleTrainingController {
         if (runnerOpt.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
         Runner runner = runnerOpt.get();
 
-        AutomatedCoachService.CoachStateDto coachState = automatedCoachService.getCoachState(runner);
-        List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = automatedCoachService.getSchedule(runner, 7);
+        TodayCheckInDto todayCheckIn = plannerService.getTodayCheckIn(runner);
+        boolean preserveManualSchedule = todayCheckIn != null;
+        AutomatedCoachService.CoachStateDto coachState = preserveManualSchedule
+                ? automatedCoachService.getCoachStatePreservingSchedule(runner)
+                : automatedCoachService.getCoachState(runner);
+        List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = preserveManualSchedule
+                ? automatedCoachService.getSchedulePreservingSchedule(runner, 7)
+                : automatedCoachService.getSchedule(runner, 7);
 
         return ResponseEntity.ok(plannerService.getPlan(runner, coachState, schedule));
     }

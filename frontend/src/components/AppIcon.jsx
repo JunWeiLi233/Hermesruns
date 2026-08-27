@@ -61,6 +61,15 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M18 16.5 16 12.5" />
         </>
       );
+    case 'shoe_outline':
+      return titled(
+        <>
+          <path d="M3 13.1c.8-1.5 1.1-3.2 1.1-5.8V6.4c0-.8.8-1.1 1.3-.4 1 1.9 3.1 2.8 4.8 1.9l2.2-1.7c.8-.6 1.5-.6 2.3.1l3 2.4c1.8 1.4 3.9 2 6 2.4 1.1.2 2 1 2.4 1.6.3.5-.1.9-.8 1.2-1.7.8-3.6 1.1-5.5 1.1H7.3c-1.9 0-3.5-.4-4.2-1.1-.3-.3-.3-.6-.1-.9Z" />
+          <path d="M3.2 11.2c2.7 1.3 5.5 1.7 8.2 1.1 1.9-.4 3.2-.4 5.2 0 1.8.4 3.5.6 5.5.3" />
+          <path d="M13.5 6.5c-.8-.8-.8-1.8-.2-2.4.7-.8 1.5-.6 2.2.1l1.8 1.8" />
+          <path d="m16.2 7.8-1.1 1.6M17.8 8.7l-1.1 1.6M19.4 9.5l-1.2 1.6" />
+        </>
+      );
     case 'flag':
       return titled(
         <>
@@ -164,6 +173,31 @@ export default function AppIcon({ name, className = '', title }) {
           <path d="M12 16V6" />
           <path d="m8.5 9.5 3.5-3.5 3.5 3.5" />
           <path d="M5 18.5v1a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5v-1" />
+        </>
+      );
+    case 'image':
+      return titled(
+        <>
+          <rect x="3.5" y="4" width="17" height="16" rx="2" />
+          <circle cx="8.5" cy="9" r="1.2" />
+          <path d="m5.5 17 4.2-4.2 2.8 2.6 2.2-2.1 3.8 3.7" />
+        </>
+      );
+    case 'sticky_note_2':
+      return titled(
+        <>
+          <path d="M6 3.5h9l3 3V20.5H6Z" />
+          <path d="M15 3.5v3h3" />
+          <path d="M9 11h6M9 15h4" />
+        </>
+      );
+    case 'storefront':
+      return titled(
+        <>
+          <path d="M4 10.5v9h16v-9" />
+          <path d="M3 10.5h18l-1.8-6H4.8Z" />
+          <path d="M8 10.5v2a2 2 0 0 0 4 0v-2a2 2 0 0 0 4 0v-2" />
+          <path d="M9 19.5v-4h6v4" />
         </>
       );
     case 'verified':
@@ -496,6 +530,15 @@ export default function AppIcon({ name, className = '', title }) {
         <>
           <path d="m6 6 12 12" />
           <path d="M18 6 6 18" />
+        </>
+      );
+    case 'delete':
+      return titled(
+        <>
+          <path d="M5 7h14" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="m8 7 .7-2h6.6l.7 2" />
+          <path d="M7 7l.7 13h8.6L17 7" />
         </>
       );
     case 'logout':

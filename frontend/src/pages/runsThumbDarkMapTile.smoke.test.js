@@ -14,19 +14,19 @@ const bundledStyle = readFileSync(path.join(here, '../styles/style.generated.css
 assert.match(
   runsSource,
   /buildRouteTileLayers/,
-  'Runs page should compute positioned CartoDB dark tile layers for each run thumbnail bbox.',
+  'Runs page should compute positioned dark tile layers for each run thumbnail bbox.',
 );
 
 assert.match(
   runsSource,
-  /dark_nolabels/,
-  'Runs page must use the dark_nolabels CartoDB tile style so the orange route stays the focal point.',
+  /World_Dark_Gray_Base\/MapServer\/tile\/\$\{zoom\}\/\$\{y\}\/\$\{x\}/,
+  'Runs page must use Esri Dark Gray tiles so the orange route stays the focal point on the keyless dark basemap.',
 );
 
-assert.match(
+assert.doesNotMatch(
   runsSource,
-  /basemaps\.cartocdn\.com/,
-  'Runs page should source thumbnail tiles from the same CartoDB CDN used by Heatmap.',
+  /basemaps\.cartocdn\.com|dark_nolabels/,
+  'Runs page must not source thumbnail tiles from CARTO basemaps because anonymous requests now render an API KEY REQUIRED watermark.',
 );
 
 assert.match(

@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -56,6 +57,11 @@ public class SecurityConfig {
                             response.getWriter().write("{\"error\":\"Invalid or expired session token.\"}");
                         }))
                 .authorizeHttpRequests(auth -> auth
+                        // CORS preflight requests never carry credentials (no Authorization
+                        // header), so let OPTIONS on /api/** reach the MVC CORS processor when
+                        // APP_CORS_ALLOWED_ORIGINS is configured; the actual requests below
+                        // still require authentication.
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup", "/api/auth/verify-email",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
@@ -68,14 +74,44 @@ public class SecurityConfig {
                                 "/api/auth/password-rules", "/api/auth/ping"
                         ).permitAll()
                         .requestMatchers("/api/auth/admin-login").permitAll()
+                        .requestMatchers("/api/auth/admin-mfa/**").permitAll()
                         .requestMatchers("/api/billing/stripe/webhook").permitAll()
                         // Leaflet requests basemap tiles as image URLs and cannot attach the
                         // runner's bearer token. The proxy only returns public OSM tiles, so
                         // keep this read-only endpoint available without authentication.
                         .requestMatchers("/api/maps/tiles/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/dev/console-errors").authenticated()
+                        .requestMatchers(
+                                "/api/admin", "/api/admin/**",
+                                "/api/auth/runners", "/api/auth/runners/**",
+                                "/api/shoe-catalog/admin", "/api/shoe-catalog/admin/**",
+                                "/api/shoes/admin", "/api/shoes/admin/**",
+                                "/api/config/admin", "/api/config/admin/**",
+                                "/api/dev", "/api/dev/**"
+                        ).hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
+                        // Every admin document route requires the short-lived HttpOnly portal
+                        // cookie. Administrators authenticate through the normal /login page;
+                        // this role rule is an independent second authorization boundary.
+                        .requestMatchers("/admin", "/admin/", "/dashboard", "/dashboard/**", "/workflows")
+                        .hasRole("ADMIN")
+                        // Frontend SPA shell: the route list lives in exactly one place,
+                        // SpaForwardingController.SPA_ROUTES, shared with the @GetMapping above.
+                        // Protected admin routes have already been matched above.
+                        .requestMatchers(SpaForwardingController.SPA_ROUTES.toArray(String[]::new)).permitAll()
+                        // Static assets the SPA needs before a session token exists, plus the
+                        // Boot /error dispatch so anonymous error paths never mask real responses.
+                        // ("/" itself is already covered by SPA_ROUTES above.)
+                        .requestMatchers(
+                                "/index.html", "/assets/**",
+                                "/favicon.ico", "/favicon.svg", "/hermes-tab-icon.svg", "/icons.svg",
+                                "/robots.txt", "/sitemap.xml",
+                                "/images/**",
+                                "/error"
+                        ).permitAll()
+                        // Secure by default: anything not explicitly permitted above now
+                        // requires authentication instead of silently becoming public.
+                        .anyRequest().authenticated())
                 .build();
     }
 }

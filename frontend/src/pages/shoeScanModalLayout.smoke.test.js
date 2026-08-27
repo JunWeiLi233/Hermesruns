@@ -37,6 +37,11 @@ const minimalPreviewStyles = activeShoesStyles.slice(activeShoesStyles.indexOf('
 assertContains(minimalPreviewStyles, 'border: 1px solid var(--runner-profile-line);', 'Minimal scan preview border');
 assertContains(minimalPreviewStyles, 'border-radius: 16px;', 'Minimal scan preview radius');
 assertContains(minimalPreviewStyles, 'font-size: clamp(1.2rem, 2vw, 1.45rem);', 'Minimal scan preview heading');
+assert.match(
+  minimalPreviewStyles,
+  /\.modal-card\.shoe-scan-modal-card \.shoe-scan-modal-kicker-row\s*\{[\s\S]*?background:\s*transparent;/,
+  'The scan-import label must not render a background strip behind its text.',
+);
 assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-overlay::before,', 'Minimal scan preview decorative reset');
 assertContains(minimalPreviewStyles, 'content: none;', 'Minimal scan preview decorative reset');
 assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-upload,', 'Minimal scan preview action');
@@ -44,6 +49,7 @@ assertContains(minimalPreviewStyles, 'border-radius: 8px;', 'Minimal scan previe
 
 for (const [label, filePath] of sources) {
   const source = readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
+  const sourceMinimalPreviewStyles = source.slice(source.indexOf('/* Minimal shoe scan preview */'));
 
   assertContains(source, '/* Shoe scan import compact repair */', label);
   assertContains(source, 'width: min(960px, calc(100vw - 32px));', label);
@@ -57,6 +63,11 @@ for (const [label, filePath] of sources) {
   assertContains(source, '/* Shoe scan narrow viewport hard stop: keep only the functional import form. */', label);
   assertContains(source, '.shoe-scan-modal-visual {\n    display: none !important;\n  }', label);
   assertContains(source, 'width: min(520px, calc(100vw - 24px));', label);
+  assert.match(
+    sourceMinimalPreviewStyles,
+    /\.modal-card\.shoe-scan-modal-card \.shoe-scan-modal-kicker-row\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?background-image:\s*none;/,
+    `${label} should not render a background strip behind the scan-import label.`,
+  );
 
   assert.doesNotMatch(
     source,

@@ -230,6 +230,13 @@
   border-radius: 999px;
 }
 
+/* The settings logout action follows the admin-login button silhouette rather
+   than the older cut-corner primary action shape. */
+.dashboard-body.admin-command-page .admin-settings-studio__logout {
+  clip-path: none !important;
+  border-radius: var(--radius-md, 12px) !important;
+}
+
 .dashboard-body.admin-command-page .admin-coursemap-publish-canvas__secondary-row,
 .dashboard-body.admin-command-page .admin-coursemap-action-group__buttons {
   display: flex;
@@ -247,11 +254,28 @@
   align-items: center;
 }
 
-/* The decision-dock primary CTA (AI 扫描上传 / 发布) was a full-dock bar
-   (width 100%, min-height 52-58px); make it a compact circular pill too. */
+/* The decision-dock primary CTA (AI 扫描上传 / 发布) should read as the same
+   quiet rounded status control as the verdict beside it, not as an angled
+   filled action bar. */
 .dashboard-body.admin-command-page .admin-coursemap-publish-canvas__primary {
   width: auto;
   min-height: 44px;
+  margin-top: 0;
+  padding: 0 18px;
+  border: 1px solid var(--course-map-line, var(--admin-profile-line)) !important;
+  border-radius: 999px !important;
+  background: var(--course-map-surface-strong, var(--admin-profile-card-strong)) !important;
+  color: var(--course-map-ink, var(--admin-profile-ink)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 8px 18px rgba(44, 47, 48, 0.05) !important;
+  clip-path: none !important;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-body.admin-command-page .admin-coursemap-publish-canvas__primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--admin-profile-flame) 34%, var(--course-map-line, var(--admin-profile-line))) !important;
+  background: color-mix(in srgb, var(--admin-profile-flame) 8%, var(--course-map-surface-strong, var(--admin-profile-card-strong))) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72), 0 10px 20px rgba(44, 47, 48, 0.07) !important;
 }
 
 /* At ≤1360px the base stylesheet collapses the dock to a single column,
@@ -384,19 +408,21 @@
 }
 
 .dashboard-body.admin-command-page .ops-metric-card--toggle:hover {
-  border-color: var(--accent-coral-strong, #f07561);
+  border-color: var(--admin-profile-line, rgba(112, 61, 46, 0.13));
   transform: translateY(-1px);
 }
 
 .dashboard-body.admin-command-page .ops-metric-card--toggle:focus-visible {
   outline: none;
-  border-color: var(--accent-coral-strong, #f07561);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-coral-strong, #f07561) 18%, transparent);
+  border-color: var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-profile-ink, #201a17) 18%, transparent);
 }
 
 .dashboard-body.admin-command-page .ops-metric-card--toggle.is-active {
-  border-color: var(--accent-coral-strong, #f07561);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-coral-strong, #f07561) 12%, transparent);
+  /* Keep the selected metric functional without adding a coral panel ring.
+     The chart panel below remains the selection affordance. */
+  border-color: var(--admin-profile-line, rgba(112, 61, 46, 0.13));
+  box-shadow: var(--admin-profile-shadow-soft, 0 12px 26px rgba(44, 47, 48, 0.05));
 }
 
 /* Growth-trend line chart panel opened from the metric strip */
@@ -533,9 +559,9 @@
 }
 
 .dashboard-body.admin-command-page .ops-health-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   padding: 10px 14px;
   background: var(--bg-glass, rgba(245,246,247,0.70));
   border-radius: var(--radius-sm, 8px);
@@ -546,6 +572,7 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-strong, #2c2f30);
+  text-align: center;
 }
 
 .dashboard-body.admin-command-page .ops-health-val {
@@ -1355,6 +1382,8 @@ body.theme-high-contrast .dashboard-body.admin-command-page .ops-audit-row {
 .admin-command-page .admin-coursemap-rework .btn-primary.btn-inline-md {
   min-height: 40px;
   padding: 0 20px;
+  clip-path: none !important;
+  border-radius: 999px !important;
 }
 
 .admin-command-page .admin-coursemap-rework .admin-track-hub-sidebar__search .btn-secondary.btn-inline-md {
@@ -1471,6 +1500,8 @@ body.theme-high-contrast .dashboard-body.admin-command-page .ops-audit-row {
 .admin-command-page .admin-shoe-rework .btn-primary.btn-inline-md {
   min-height: 40px;
   padding: 0 20px;
+  clip-path: none !important;
+  border-radius: 999px !important;
 }
 
 /* ── Shoe feature-card action pills (DV-2026-08-15-34) ──────────────────────

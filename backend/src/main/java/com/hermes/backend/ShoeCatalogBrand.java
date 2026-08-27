@@ -16,6 +16,12 @@ public class ShoeCatalogBrand {
     @Column(nullable = false, length = 100, unique = true)
     private String name;
 
+    @Column(length = 100)
+    private String nameZh;
+
+    @Column(columnDefinition = "text")
+    private String logoUrl;
+
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -29,7 +35,12 @@ public class ShoeCatalogBrand {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
+    public String getNameZh() { return nameZh; }
+    public void setNameZh(String nameZh) { this.nameZh = nameZh; }
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
-

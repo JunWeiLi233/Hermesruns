@@ -46,6 +46,24 @@ assert.ok(
   'Auth redesign should restyle the signup password strength panel.',
 );
 
+assert.match(
+  redesignSection,
+  /\.auth-page\[data-auth-redesign="command-entry"\] \.error-alert\s*\{[\s\S]*display:\s*grid;[\s\S]*overflow-wrap:\s*anywhere;[\s\S]*max-height:[^;]+;[\s\S]*overflow:\s*auto;/,
+  'Auth error alerts should safely contain long backend messages without breaking the command-entry layout.',
+);
+
+assert.match(
+  redesignSection,
+  /\.auth-page\[data-auth-redesign="command-entry"\] \.error-alert::before\s*\{[\s\S]*content:\s*["']!["'];/,
+  'Auth error alerts should expose a compact visual warning marker.',
+);
+
+assert.match(
+  redesignSection,
+  /\.auth-page\[data-auth-redesign="command-entry"\] \.error-alert--success\s*\{[\s\S]*display:\s*block;[\s\S]*border-left-color:/,
+  'Success notices should keep a distinct, non-warning treatment from error alerts.',
+);
+
 assert.doesNotMatch(
   redesignSection,
   /font-size:\s*clamp\(/,

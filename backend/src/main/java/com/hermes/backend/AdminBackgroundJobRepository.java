@@ -17,6 +17,13 @@ public interface AdminBackgroundJobRepository extends JpaRepository<AdminBackgro
     List<AdminBackgroundJob> findTop10ByStatusOrderByCreatedAtDesc(String status);
     List<AdminBackgroundJob> findTop10ByStatusInOrderByCreatedAtDesc(List<String> statuses);
     List<AdminBackgroundJob> findTop5ByJobTypeInOrderByCreatedAtDesc(List<String> jobTypes);
+    List<AdminBackgroundJob> findByStatusIn(List<String> statuses);
+    long countByStatusIn(List<String> statuses);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Transactional
+    @Query("delete from AdminBackgroundJob job where job.status in :statuses")
+    int deleteByStatusIn(@Param("statuses") List<String> statuses);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

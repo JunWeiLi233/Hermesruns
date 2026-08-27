@@ -175,6 +175,18 @@ assert.match(
 
 assert.match(
   styleSource,
+  /\.admin-command-page \.admin-command-route--courseMaps \.admin-coursemap-rail__item:hover,[\s\S]*\.admin-command-page \.admin-command-route--courseMaps \.admin-coursemap-rail__item\.is-active\s*\{[\s\S]*border-color:\s*var\(--course-map-line\)/,
+  'The selected course-map queue card should keep the same neutral border as the publish workspace.',
+);
+
+assert.match(
+  styleSource,
+  /\.admin-command-page \.admin-command-route--courseMaps \.admin-coursemap-rail__item\.is-active::before\s*\{[\s\S]*background:\s*var\(--admin-profile-flame\)/,
+  'The selected course-map queue card should retain its coral selection marker after border normalization.',
+);
+
+assert.match(
+  styleSource,
   /Liquid-glass pass for the course-map workspace[\s\S]*--course-map-surface:\s*rgba\(255, 251, 242, 0\.62\)[\s\S]*backdrop-filter:\s*blur\(24px\) saturate\(138%\)/,
   'Course-map shells should use a translucent liquid-glass layer rather than opaque cards.',
 );

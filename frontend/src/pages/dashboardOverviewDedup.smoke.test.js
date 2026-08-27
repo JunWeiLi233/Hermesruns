@@ -36,4 +36,22 @@ assert.doesNotMatch(
   'Raw Number() coercion over queue payload fields produces NaN when the API sends arrays.',
 );
 
+assert.match(
+  dashboardSource,
+  /const catalogReviewSummary = useMemo\(\s*\(\)\s*=>\s*summarizeAdminShoeCatalogStatus\(catalogItems\)/,
+  'The overview shoe chart should summarize the shared catalog used by dashboard/shoes.',
+);
+
+assert.match(
+  dashboardSource,
+  /catalogReviewSummary\.live[\s\S]*catalogReviewSummary\.pending[\s\S]*catalogReviewSummary\.missing/,
+  'The overview shoe chart should use catalog status counts instead of runner shoe queues.',
+);
+
+assert.match(
+  dashboardSource,
+  /activeTab === 'overview'[\s\S]*loadCatalogInventory\(\)[\s\S]*loadCatalogImageAssets\(\)/,
+  'The overview must load the same catalog inventory and image assets as dashboard/shoes before rendering its chart.',
+);
+
 console.log('[PASS] Dashboard overview dedup + NaN guardrails passed.');

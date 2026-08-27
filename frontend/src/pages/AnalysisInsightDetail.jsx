@@ -1398,7 +1398,7 @@ export default function AnalysisInsightDetail() {
     { key: 'activities', label: t('profile.dashboard_nav_activities'), route: '/runs', icon: 'history' },
     { key: 'heatmap', label: t('profile.dashboard_nav_heatmap'), route: '/heatmap', icon: 'map' },
     { key: 'weather_engine', label: t('profile.dashboard_nav_weather_engine'), route: '/weather', icon: 'weather' },
-    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'straighten' },
+    { key: 'shoes', label: t('profile.dashboard_nav_shoes'), route: '/shoes', icon: 'shoe_outline' },
     { key: 'races', label: t('profile.dashboard_nav_races'), route: '/races', icon: 'flag' },
     { key: 'schedule', label: t('profile.dashboard_nav_schedule'), route: '/schedule', icon: 'calendar_today' },
     { key: 'muscle', label: t('muscle_training.nav_label'), route: '/muscle-training', icon: 'fitness_center' },
@@ -1618,7 +1618,6 @@ export default function AnalysisInsightDetail() {
                           <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
                             <div className="analysis-load-command-chart-tooltip-head">
                               <span>{coachLoadScrubber.label}</span>
-                              <i aria-hidden="true" />
                             </div>
                             <div className="analysis-load-command-chart-tooltip-metrics">
                               <div className="analysis-load-command-chart-tooltip-metric is-acute">
@@ -2098,10 +2097,9 @@ export default function AnalysisInsightDetail() {
                     )}
                     {loadScrubber ? (
                       <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
-                        <div className="analysis-load-command-chart-tooltip-head">
-                          <span>{loadScrubber.label}</span>
-                          <i aria-hidden="true" />
-                        </div>
+                      <div className="analysis-load-command-chart-tooltip-head">
+                        <span>{loadScrubber.label}</span>
+                      </div>
                         <div className="analysis-load-command-chart-tooltip-metrics">
                           <div className="analysis-load-command-chart-tooltip-metric is-acute">
                             <i aria-hidden="true" />
