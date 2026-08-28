@@ -13,7 +13,7 @@ $localPgCtl = Join-Path $localPostgresRoot "pgsql\bin\pg_ctl.exe"
 $localPgIsReady = Join-Path $localPostgresRoot "pgsql\bin\pg_isready.exe"
 
 # ── Kill previous Hermes terminals ──
-$hermesTitles = @("Hermes - Spring Boot Server", "Hermes - Python Engine", "Hermes - Auto Import Watcher")
+$hermesTitles = @("Hermes - Spring Boot Server", "Hermes - Auto Import Watcher")
 
 foreach ($title in $hermesTitles) {
     $procs = Get-Process cmd -ErrorAction SilentlyContinue |

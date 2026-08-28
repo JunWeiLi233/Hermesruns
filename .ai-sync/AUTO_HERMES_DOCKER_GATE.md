@@ -1,20 +1,19 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-08-27T15:40:32.360Z
-Passed: yes
-Git Head: bda8805c1e88ae893e7bb808e50660ca00567161
+Generated: 2026-08-27T22:34:29.206Z
+Passed: no
+Git Head: cef2a342ae1e9dff2249b78a8ccc56e7f3191a43
 Command: docker build -f C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main\Dockerfile -t hermes-autohermes-gate:local .
-Reason: Docker publish gate passed for the current working tree.
+Reason: Docker publish gate failed for the current working tree.
 
 ## Status Snapshot
 ```text
 M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
  M .ai-sync/AUTO_HERMES_DOCKER_GATE.md
- M backend/src/main/java/com/hermes/backend/AdminPortalController.java
- M backend/src/main/java/com/hermes/backend/AdminUserPortalController.java
- M backend/src/main/java/com/hermes/backend/AutomatedCoachService.java
- M backend/src/main/java/com/hermes/backend/MuscleTrainingController.java
- M backend/src/main/java/com/hermes/backend/PersonalizedRunningPlanner.java
+ M .tools/refresh-architecture-diagrams.mjs
+ M DESIGN_VERSIONS.md
+ M README.md
+ M README.zh-CN.md
  D backend/src/main/resources/static/assets/AddShoes-BG28lgf5.js
  D backend/src/main/resources/static/assets/AddShoes-BlonEYJl.js
  D backend/src/main/resources/static/assets/Analysis-AtfnU_T8.js
@@ -84,8 +83,8 @@ M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
  D backend/src/main/resources/static/assets/WeatherEngine-COTWl7X4.js
  D backend/src/main/resources/static/assets/WeatherEngine-Dqj-5JSB.js
  M backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js
- M backend/src/main/resources/static/assets/i18n-en-wSQKucKh.js
- M backend/src/main/resources/static/assets/i18n-zh-CN-CqgO2bk_.js
+ D backend/src/main/resources/static/assets/i18n-en-wSQKucKh.js
+ D backend/src/main/resources/static/assets/i18n-zh-CN-CqgO2bk_.js
  D backend/src/main/resources/static/assets/index-1KmyoMTj.css
  D backend/src/main/resources/static/assets/index-3zAKehRo.js
  D backend/src/main/resources/static/assets/index-BwfWnXxH.css
@@ -99,20 +98,54 @@ M .ai-sync/AUTO_HERMES_DOCKER_GATE.json
  D backend/src/main/resources/static/assets/shoeRotation-D73GLUVM.js
  M backend/src/main/resources/static/assets/worldRaceCatalog-RBzrmQ8R.js
  M backend/src/main/resources/static/index.html
-M  docs/ai/functionality-direction-tree.json
- M frontend/src/App.jsx
- M frontend/src/contexts/AuthContext.jsx
- M frontend/src/i18n/locales/en/pages.js
- M frontend/src/i18n/locales/zh-CN/pages.js
- M frontend/src/pages/AddShoes.jsx
- M frontend/src/pages/Analysis.jsx
- M frontend/src/pages/AnalysisInsightDetail.jsx
- M frontend/src/pages/Login.jsx
- M frontend/src/pages/Runs.jsx
- M frontend/src/styles/analysis-profile-visual-alignment.css
+ M docs/PROJECT_MAP.md
+ M frontend/src/pages/Landing.jsx
+ M frontend/src/pages/Signup.jsx
+ M frontend/src/pages/landingCommandEditorial.smoke.test.js
+ M frontend/src/pages/signupRecaptcha.smoke.test.js
+ M frontend/src/styles/_split/landing.css
+?? docs/architecture/api-system.html
+?? docs/architecture/api-system.svg
+?? docs/architecture/data-dictionaries.html
+?? docs/architecture/data-dictionaries.svg
+?? docs/superpowers/plans/2026-08-27-hermesruns-ios.md
+?? docs/superpowers/specs/2026-08-27-hermesruns-ios-design.md
+?? ios/HermesRuns.xcodeproj/project.pbxproj
+?? ios/HermesRuns.xcodeproj/xcshareddata/xcschemes/HermesRuns.xcscheme
+?? ios/HermesRuns/HermesRunsApp.swift
+?? ios/HermesRuns/Models/HermesModels.swift
+?? ios/HermesRuns/Networking/HermesAPIClient.swift
+?? ios/HermesRuns/Resources/Info.plist
+?? ios/HermesRuns/Storage/KeychainStore.swift
+?? ios/HermesRuns/Stores/SessionStore.swift
+?? ios/HermesRuns/Theme/HermesTheme.swift
+?? ios/HermesRuns/Views/AnalysisView.swift
+?? ios/HermesRuns/Views/ForgotPasswordView.swift
+?? ios/HermesRuns/Views/LoginView.swift
+?? ios/HermesRuns/Views/MainTabView.swift
+?? ios/HermesRuns/Views/MoreView.swift
+?? ios/HermesRuns/Views/MuscleTrainingView.swift
+?? ios/HermesRuns/Views/ProfileView.swift
+?? ios/HermesRuns/Views/RaceEditorView.swift
+?? ios/HermesRuns/Views/RacesView.swift
+?? ios/HermesRuns/Views/RewardsView.swift
+?? ios/HermesRuns/Views/RootView.swift
+?? ios/HermesRuns/Views/RunDetailView.swift
+?? ios/HermesRuns/Views/RunsView.swift
+?? ios/HermesRuns/Views/ScheduleView.swift
+?? ios/HermesRuns/Views/SettingsView.swift
+?? ios/HermesRuns/Views/ShoeEditorView.swift
+?? ios/HermesRuns/Views/ShoesView.swift
+?? ios/HermesRuns/Views/TodayView.swift
+?? ios/HermesRuns/Views/WeatherView.swift
+?? ios/HermesRunsTests/HermesRunsTests.swift
+?? ios/README.md
+?? ios/validate-ios-scaffold.mjs
 ```
 
 ## Output
-
-none
-
+```text
+ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+Command failed: C:\Program Files\Docker\Docker\resources\bin\docker.exe build -f C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main\Dockerfile -t hermes-autohermes-gate:local .
+ERROR: failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
+```

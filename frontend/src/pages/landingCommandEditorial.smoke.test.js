@@ -50,10 +50,12 @@ assert(
   landingStyleSource.includes('Landing command editorial redesign')
     && /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/.test(landingStyleSource)
     && /\.landing-command-deck-grid\s*\{[\s\S]*display:\s*block;/.test(landingStyleSource)
-    && /\.landing-command-card-stack\s*\{[\s\S]*grid-template-columns:\s*repeat\(12,\s*minmax\(0,\s*1fr\)\);/.test(landingStyleSource)
-    && /\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;[\s\S]*grid-row:\s*1\s*\/\s*span\s*2;/.test(landingStyleSource)
-    && /\.landing-command-card:nth-child\(2\),\s*\.landing-command-card:nth-child\(3\)\s*\{[\s\S]*grid-column:\s*8\s*\/\s*-1;/.test(landingStyleSource),
-  'Landing command CSS should use the full-width asymmetric feature deck without reserving an empty column.',
+    && /\.landing-command-card-stack\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);[\s\S]*gap:\s*16px;/.test(landingStyleSource)
+    && /\.landing-command-card\s*\{[\s\S]*display:\s*flex;[\s\S]*flex-direction:\s*column;[\s\S]*min-height:\s*466px;[\s\S]*border-radius:\s*24px;/.test(landingStyleSource)
+    && /\.landing-command-card-head\s*\{[\s\S]*align-items:\s*baseline;[\s\S]*gap:\s*18px;/.test(landingStyleSource)
+    && !/\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;/.test(landingStyleSource)
+    && !landingStyleSource.includes('landing-command-card-index'),
+  'Landing command CSS should use the equal three-column card anatomy matching the daily-answers grid (inline head, muted body, bottom metric) without the retired bento spans.',
 );
 
 assert(
@@ -154,10 +156,10 @@ assert(
     && landingSource.includes("date: t('landing.cinematic_race_col_date')")
     && landingSource.includes('<em className="landing-cinematic-map-caption-field is-date"><span>{metricLabels.date}</span>{race.date}</em>')
     && landingSource.includes('<small className="landing-cinematic-map-caption-field is-days"><span>{metricLabels.days}</span>{race.days}</small>')
-    && landingSource.includes('<b className="landing-cinematic-map-caption-field is-goal"><span>{metricLabels.goal}</span>{race.goal}</b>')
+    && landingSource.includes('<b className="landing-cinematic-map-caption-field is-distance"><span>{metricLabels.distance}</span><i>{race.distance}</i></b>')
     && landingSource.includes("data-label={t('landing.cinematic_race_col_date')}")
     && landingSource.includes("data-label={t('landing.cinematic_race_col_days')}")
-    && landingSource.includes("data-label={t('landing.cinematic_race_col_goal')}")
+    && landingSource.includes("data-label={t('landing.cinematic_race_col_distance')}")
     && landingSource.includes('className="landing-cinematic-sr-only"'),
   'Landing race rows and map captions should use fixed projected coordinates, a data-driven cycle duration, and a readable pin-to-readout-to-row animation instead of fake route or score-panel motion.',
 );
@@ -168,35 +170,19 @@ assert(
     && landingSource.includes("t('landing.cinematic_race_paris')")
     && landingSource.includes("t('landing.cinematic_race_valencia')")
     && landingSource.includes("t('landing.cinematic_race_sydney')")
-    && landingSource.includes("geo: { lat: 51.5072, lng: -0.1276 }")
-    && landingSource.includes("geo: { lat: 40.7128, lng: -74.006 }")
-    && landingSource.includes("geo: { lat: 48.8566, lng: 2.3522 }")
-    && landingSource.includes("geo: { lat: 39.4699, lng: -0.3763 }")
-    && landingSource.includes("geo: { lat: -33.8688, lng: 151.2093 }"),
+    && landingSource.includes('buildLandingRaceShowcase(raceCountdownNow)')
+    && landingSource.includes("'sydney-marathon': t('landing.cinematic_race_sydney')")
+    && landingSource.includes("'new-york-city-marathon': t('landing.cinematic_race_new_york')"),
   'Landing race map should include additional famous marathons with real projected coordinates.',
 );
 
 assert(
-  landingSource.includes("id: 'tokyo'")
-    && landingSource.includes("id: 'boston'")
-    && landingSource.includes("id: 'london'")
-    && landingSource.includes("id: 'berlin'")
-    && landingSource.includes("id: 'chicago'")
-    && landingSource.includes("id: 'newYork'")
-    && landingSource.includes("id: 'paris'")
-    && landingSource.includes("id: 'valencia'")
-    && landingSource.includes("id: 'sydney'")
-    && landingSource.includes("id: 'comrades'")
-    && landingSource.includes('tokyo: { x: 83.65, y: 13.65 }')
-    && landingSource.includes('boston: { x: 29.85, y: 11.60 }')
-    && landingSource.includes('london: { x: 47.35, y: 8.95 }')
-    && landingSource.includes('berlin: { x: 51.55, y: 8.55 }')
-    && landingSource.includes('chicago: { x: 27.45, y: 12.15 }')
-    && landingSource.includes('newYork: { x: 29.60, y: 12.15 }')
-    && landingSource.includes('paris: { x: 49.45, y: 10.05 }')
-    && landingSource.includes('valencia: { x: 47.10, y: 12.40 }')
-    && landingSource.includes('sydney: { x: 85.25, y: 35.55 }')
-    && landingSource.includes('comrades: { x: 55.50, y: 34.40 }'),
+  landingSource.includes("'berlin-marathon': t(")
+    && landingSource.includes("'chicago-marathon': t(")
+    && landingSource.includes("'comrades-marathon': t(")
+    && landingSource.includes("'tokyo-marathon': { x: 83.65, y: 13.65 }")
+    && landingSource.includes("'new-york-city-marathon': { x: 29.60, y: 12.15 }")
+    && landingSource.includes("'comrades-marathon': { x: 55.50, y: 34.40 }"),
   'Landing race map pins should use PNG-calibrated city-region anchors so coastal races sit on the correct marathon region instead of nearby ocean, New Zealand, or the wrong coastline.',
 );
 
@@ -272,12 +258,12 @@ assert(
     && !/\.landing-cinematic-map-caption span,\s*[\r\n]\.landing-cinematic-map-caption em/.test(styleSource)
     && /\.landing-cinematic-map-caption-order\s*\{[\s\S]*font-size:\s*0\.68rem/.test(styleSource)
     && /\.landing-cinematic-map-caption-verb\s*\{[\s\S]*font-size:\s*0\.52rem/.test(styleSource)
-    && /\.landing-cinematic-map-caption-strip\s*\{[\s\S]*position:\s*relative;[\s\S]*width:\s*100%;[\s\S]*min-height:\s*58px/.test(styleSource)
-    && /\.landing-cinematic-map-caption-meta\s*\{[\s\S]*grid-template-columns:\s*auto/.test(styleSource)
-    && /\.landing-cinematic-map-caption-meta em,[\s\S]*\.landing-cinematic-map-caption-meta small,[\s\S]*\.landing-cinematic-map-caption-meta b\s*\{[\s\S]*font-size:\s*0\.6rem/.test(styleSource)
+    && /\.landing-cinematic-map-caption-strip\s*\{[\s\S]*position:\s*relative;[\s\S]*width:\s*100%;[\s\S]*min-height:\s*124px/.test(styleSource)
+    && /\.landing-cinematic-map-caption-meta\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)/.test(styleSource)
+    && /\.landing-cinematic-map-caption-meta em,[\s\S]*\.landing-cinematic-map-caption-meta small,[\s\S]*\.landing-cinematic-map-caption-meta b\s*\{[\s\S]*font-size:\s*0\.74rem/.test(styleSource)
     && /\.landing-cinematic-map-caption-field\.is-date\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-caption-date-step/.test(styleSource)
     && /\.landing-cinematic-map-caption-field\.is-days\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-caption-days-step/.test(styleSource)
-    && /\.landing-cinematic-map-caption-field\.is-goal\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-caption-goal-step/.test(styleSource)
+    && /\.landing-cinematic-map-caption-field\.is-distance\s*\{[\s\S]*animation-name:\s*landing-cinematic-map-caption-goal-step/.test(styleSource)
     && /@keyframes landing-cinematic-map-caption-date-step\s*\{[\s\S]*4%,\s*8%/.test(styleSource)
     && /@keyframes landing-cinematic-map-caption-goal-step\s*\{[\s\S]*13%,\s*18%/.test(styleSource)
     && /\.landing-cinematic-map-caption-meta em span,[\s\S]*\.landing-cinematic-map-caption-meta small span,[\s\S]*\.landing-cinematic-map-caption-meta b span\s*\{[\s\S]*color:\s*rgba\(33,\s*30,\s*27,\s*0\.48\)/.test(styleSource)
@@ -292,7 +278,7 @@ assert(
 );
 
 assert(
-  /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-race-row\s*\{[\s\S]*grid-template-columns:\s*auto minmax\(0,\s*1fr\) auto;[\s\S]*min-height:\s*92px/.test(styleSource)
+  /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-race-row\s*\{[\s\S]*grid-template-columns:\s*36px minmax\(0,\s*1fr\) auto;[\s\S]*min-height:\s*0/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-bottom-deck\s*\{[\s\S]*left:\s*50%;[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);[\s\S]*width:\s*min\(320px,\s*calc\(100% - 28px\)\)/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-guide\s*\{[\s\S]*position:\s*static/.test(styleSource)
     && /@media \(max-width:\s*760px\)\s*\{[\s\S]*\.landing-cinematic-map-caption-strip\s*\{[\s\S]*position:\s*relative/.test(styleSource),

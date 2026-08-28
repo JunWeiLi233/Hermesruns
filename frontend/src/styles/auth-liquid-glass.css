@@ -233,6 +233,20 @@
   z-index: 2;
 }
 
+/* Keep the compact auth labels readable without making their hit areas
+   smaller than a comfortable touch target on desktop or mobile. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] :is(
+  .auth-flow-legal a,
+  .signup-link--auth a,
+  .forgot-password--auth
+) {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 4px;
+}
+
 #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-row {
   display: flex;
   align-items: center;
@@ -999,6 +1013,55 @@
     border-radius: 24px;
   }
 
+  /* Keep the brand mark and carousel in normal flow on phones. The desktop
+     command-entry layout pins the mark to the panel corner, but that leaves the
+     mobile carousel starting at the same y-position and causes the headline to
+     paint over the logo. */
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-brand-inner {
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 24px;
+    padding: 0;
+    transform: none;
+  }
+
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-wrap {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    align-items: flex-start;
+    flex: 0 0 auto;
+  }
+
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-slide-viewport {
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Preserve the small visual type while giving every text link a reliable
+     44px touch target. */
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] :is(
+    .auth-flow-legal a,
+    .signup-link--auth a,
+    .forgot-password--auth
+  ) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 4px;
+  }
+
+  /* Preserve the compact visual language while keeping supporting copy at a
+     readable 12px minimum on narrow screens. */
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-label,
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-badge,
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-rule,
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-legal a,
+  #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .global-footer-links a {
+    font-size: 0.75rem;
+  }
+
   #root .legal-page--terms.auth-page--liquid-glass .legal-page-hero--editorial {
     padding: 24px 18px 20px;
   }
@@ -1028,4 +1091,35 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* Shared readability and hit-area guarantees for the public/auth surfaces.
+   These overrides sit at the end of the liquid-glass layer so the legacy
+   compact defaults cannot shrink supporting copy or legal controls below the
+   visual audit baseline. */
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-label,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-badge,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .pwd-strength-rule,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-legal a,
+#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .global-footer-links a {
+  font-size: 0.75rem;
+}
+
+#root .auth-page--liquid-glass .auth-flow-google-g,
+#root .legal-page.auth-page--liquid-glass .privacy-hero-panel span,
+#root .legal-page.auth-page--liquid-glass .privacy-signal span {
+  font-size: 0.75rem;
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-back {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+#root .legal-page.auth-page--liquid-glass .legal-page-kicker,
+#root .legal-page.auth-page--liquid-glass .legal-page-hero-meta,
+#root .legal-page.auth-page--liquid-glass .legal-page-row-index,
+#root .legal-page.auth-page--liquid-glass .legal-page-footer,
+#root .legal-page.auth-page--liquid-glass .global-footer-links a {
+  font-size: 0.75rem;
 }

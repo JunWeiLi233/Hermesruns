@@ -48,12 +48,12 @@ const DEFAULT_FORM = {
 
 const DISCOVERY_VISUALS = [
   {
-    image: '/images/races/boston-marathon-hero.png',
+    image: '/images/races/boston-marathon-hero.webp',
     tag: 'Majors',
     meta: 'Editorial',
   },
   {
-    image: '/images/races/discovery-offroad.png',
+    image: '/images/races/discovery-offroad.webp',
     tag: 'Off-Road',
     meta: 'Deep Dive',
   },
@@ -181,6 +181,8 @@ const RaceCard = memo(function RaceCard({
           className="race-center-card-image"
           src={imgSrc}
           alt={raceName}
+          width="1200"
+          height="900"
           loading="lazy"
           decoding="async"
           onLoad={(event) => onImageLoad(event, race)}
@@ -241,6 +243,8 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
           className="race-center-featured-image"
           src={imgSrc}
           alt={raceName}
+          width="1200"
+          height="800"
           loading="eager"
           decoding="async"
           onLoad={(event) => onImageLoad(event, race)}
@@ -803,8 +807,10 @@ const Races = memo(function Races() {
               <section className="race-center-hero">
                 <img
                   className="race-center-hero-image"
-                  src="/images/races/race-center-hero.png"
+                  src="/images/races/race-center-hero.webp"
                   alt={t('races.stitch_hero_image_alt')}
+                  width="1600"
+                  height="900"
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"

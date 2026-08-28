@@ -16,6 +16,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 public class SpaForwardingController {
 
@@ -80,10 +82,11 @@ public class SpaForwardingController {
         "/muscle-training",
         "/workflows"
     }, produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> forward() throws IOException {
+    public ResponseEntity<String> forward(HttpServletRequest request) throws IOException {
+        boolean indexable = isIndexableRoute(request.getRequestURI());
         Path localStaticIndex = Path.of("target", "classes", "static", "index.html");
         if (Files.isRegularFile(localStaticIndex)) {
-            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8));
+            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8), indexable);
         }
 
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {
@@ -91,16 +94,22 @@ public class SpaForwardingController {
                 return ResponseEntity.notFound().build();
             }
             String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            return htmlResponse(html);
+            return htmlResponse(html, indexable);
         }
     }
 
-    private ResponseEntity<String> htmlResponse(String html) {
-        return ResponseEntity.ok()
+    private boolean isIndexableRoute(String requestUri) {
+        return "/".equals(requestUri) || "/terms".equals(requestUri) || "/privacy".equals(requestUri);
+    }
+
+    private ResponseEntity<String> htmlResponse(String html, boolean indexable) {
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
                 .header(HttpHeaders.PRAGMA, "no-cache")
-                .header(HttpHeaders.EXPIRES, "0")
-                .contentType(MediaType.TEXT_HTML)
-                .body(html);
+                .header(HttpHeaders.EXPIRES, "0");
+        if (!indexable) {
+            response.header("X-Robots-Tag", "noindex, nofollow, noarchive");
+        }
+        return response.contentType(MediaType.TEXT_HTML).body(html);
     }
 }

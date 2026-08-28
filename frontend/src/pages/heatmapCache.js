@@ -12,7 +12,10 @@ export const HEATMAP_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function getHeatmapCacheKey(accountEmail) {
   const normalizedEmail = typeof accountEmail === 'string' ? accountEmail.trim().toLowerCase() : '';
-  return normalizedEmail ? `profile-heatmap:${normalizedEmail}` : null;
+  // v2: the backend now computes bounds from trimmed coordinate samples, so
+  // every client must drop payloads cached with the old world-stretched
+  // bounds (a stray GPS point pinned the map at world zoom for up to a week).
+  return normalizedEmail ? `profile-heatmap:v2:${normalizedEmail}` : null;
 }
 
 export function getHeatmapCacheFreshnessTier(savedAt, now = Date.now()) {

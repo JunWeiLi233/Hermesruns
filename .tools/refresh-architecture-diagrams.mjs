@@ -14,6 +14,8 @@ const AUTO_HERMES_MAX_COMMAND_PATH = ".codex/commands/auto-hermes-max.md";
 const OUTPUT_DIR = "docs/architecture";
 const AGENT_DIAGRAM_SLUG = "ai-agents-workflow";
 const SAAS_DIAGRAM_SLUG = "saas-architecture";
+const API_SYSTEM_SLUG = "api-system";
+const DATA_DICTIONARY_SLUG = "data-dictionaries";
 const README_MARKER_START = "<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->";
 const README_MARKER_END = "<!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS END -->";
 const SKILL_TEMPLATE_PATH = ".codex/skills/architecture-diagram-generator/assets/template.html";
@@ -841,6 +843,198 @@ function createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts = {}
   };
 }
 
+// Top-down request lifecycle: browser client -> servlet filters ->
+// Spring Security access tiers -> controllers -> services -> stores.
+// Row bands share center heights so the primary arrows stay vertical.
+function createApiSystemSpec() {
+  const pages = routeForBox(276, 108, 232, 104);
+  const apiClient = routeForBox(560, 108, 232, 104);
+  const storage = routeForBox(276, 238, 232, 90);
+  const filters = routeForBox(276, 402, 516, 110);
+  const publicAccess = routeForBox(276, 560, 232, 104);
+  const adminAccess = routeForBox(560, 560, 232, 104);
+  const runnerAccess = routeForBox(844, 560, 232, 104);
+  const controllers = routeForBox(276, 736, 300, 104);
+  const services = routeForBox(616, 736, 300, 104);
+  const stores = routeForBox(956, 736, 300, 104);
+
+  return {
+    slug: API_SYSTEM_SLUG,
+    title: "Hermes API System — Request Lifecycle",
+    subtitle: "One /api request from React apiFetch through the servlet filters and Spring Security tiers to controllers, services, and stores.",
+    width: 1320,
+    height: 890,
+    groups: [
+      { x: 248, y: 78, width: 568, height: 276, label: "React SPA — browser", kind: "cloud" },
+      { x: 248, y: 362, width: 1028, height: 504, label: "Spring Boot :8080 — API Runtime", kind: "cloud" },
+    ],
+    boxes: [
+      { ...pages, kind: "frontend", title: "Lazy Pages (26)", lines: ["runner + admin surfaces", "apiFetch / apiJson calls", "React Router route gates"] },
+      { ...apiClient, kind: "frontend", title: "frontend/src/api.ts", lines: ["Bearer hermes_jwt header", "401 → clear keys → /login", "same-origin :8080 proxy"] },
+      { ...storage, kind: "external", title: "localStorage", lines: ["hermes_jwt · hermes_role", "hermes_email · hermes_lang"] },
+      {
+        ...filters,
+        kind: "security",
+        title: "Servlet Filter Chain — in order",
+        lines: [
+          "1 · ApiRateLimitFilter — /api abuse guard, webhooks exempt",
+          "2 · WebhookRateLimitFilter — strava + stripe burst control",
+          "3 · SecurityHeadersFilter — baseline response headers",
+          "4 · JwtAuthenticationFilter — Bearer JWT → principal",
+          "5 · SecurityConfig — STATELESS · CSRF off (token-based)",
+        ],
+      },
+      { ...publicAccess, kind: "security", title: "Public · permitAll", lines: ["/api/auth/login · signup", "google · strava OAuth", "stripe + strava webhooks", "/api/maps/tiles/**"] },
+      { ...adminAccess, kind: "security", title: "Admin · ROLE_ADMIN", lines: ["/api/admin/** portals", "shoe + race catalog CRUD", "/dashboard/** documents", "portal cookie 2nd gate"] },
+      { ...runnerAccess, kind: "backend", title: "Runner · authenticated", lines: ["any /api/** with JWT", "activities · shoes · races", "coach · wellness · weather", "imports · profile · maps"] },
+      { ...controllers, kind: "backend", title: "REST Controllers (31)", lines: ["auth · activities · shoes", "races · coach · wellness", "imports · weather · maps"] },
+      { ...services, kind: "backend", title: "Domain Services", lines: ["parse · normalize · analyze", "coaching + rating engines", "webhook processors"] },
+      { ...stores, kind: "database", title: "JPA Repositories", lines: ["27 entities · H2 / PostgreSQL", "audit trail + job store", "JPA / Hibernate"] },
+    ],
+    arrows: [
+      lineArrow(pages.x + pages.width, pages.centerY, apiClient.x, apiClient.centerY, "apiFetch"),
+      lineArrow(storage.x + storage.width, storage.centerY, apiClient.x, apiClient.centerY - 28, "hermes_jwt", { dashed: true, labelAnchor: "end", labelDx: -6 }),
+      lineArrow(apiClient.centerX, apiClient.y + apiClient.height, filters.centerX, filters.y, "fetch /api/* + Bearer", { labelAnchor: "start", labelDx: 12, labelDy: 6 }),
+      lineArrow(publicAccess.centerX, filters.y + filters.height, publicAccess.centerX, publicAccess.y, "permitAll", { labelAnchor: "start", labelDx: 12, labelDy: 8 }),
+      lineArrow(adminAccess.centerX, filters.y + filters.height, adminAccess.centerX, adminAccess.y, "ROLE_ADMIN", { labelAnchor: "start", labelDx: 12, labelDy: 8 }),
+      lineArrow(filters.x + filters.width, filters.y + filters.height - 22, runnerAccess.centerX, runnerAccess.y, "authenticated", { labelAnchor: "start", labelDx: 20, labelDy: -6 }),
+      lineArrow(publicAccess.centerX, publicAccess.y + publicAccess.height, publicAccess.centerX, controllers.y, "auth + webhook handlers", { labelAnchor: "start", labelDx: 12 }),
+      lineArrow(adminAccess.centerX, adminAccess.y + adminAccess.height, controllers.x + 224, controllers.y, "admin portal APIs", { labelAnchor: "end", labelDx: -3, labelDy: -7 }),
+      lineArrow(runnerAccess.centerX, runnerAccess.y + runnerAccess.height, controllers.x + 284, controllers.y, "runner surface APIs", { labelDx: -40, labelDy: -10 }),
+      lineArrow(controllers.x + controllers.width, controllers.centerY, services.x, services.centerY, "call"),
+      lineArrow(services.x + services.width, services.centerY, stores.x, stores.centerY, "persist"),
+      pathArrow(
+        [
+          [filters.x + filters.width, filters.centerY + 20],
+          [900, filters.centerY + 20],
+          [900, apiClient.centerY],
+          [apiClient.x + apiClient.width, apiClient.centerY],
+        ],
+        "401 → clear keys → /login",
+        { dashed: true, color: PALETTE.securityStroke, labelAt: [908, 300], labelAnchor: "start" },
+      ),
+    ],
+    legend: [
+      { kind: "frontend", label: "SPA pages + api client" },
+      { kind: "security", label: "filters + access tiers" },
+      { kind: "backend", label: "controllers + services" },
+      { kind: "database", label: "JPA stores" },
+      { kind: "external", label: "browser localStorage" },
+    ],
+    legendX: 1024,
+    legendY: 108,
+    cards: [
+      {
+        title: "Token Boundary",
+        items: [
+          "apiFetch attaches Bearer hermes_jwt plus Accept-Language on every /api call.",
+          "A 401 clears the hermes_* localStorage keys and redirects to /login.",
+          "Sessions are STATELESS and CSRF stays off because auth is header-token based.",
+        ],
+      },
+      {
+        title: "Filter Order",
+        items: [
+          "Rate limits guard /api first (webhook paths exempt), then security headers, then the JWT filter.",
+          "SecurityConfig matchers route each request into the public, admin, or runner tier.",
+          "Admin surfaces need ROLE_ADMIN plus the short-lived portal cookie for /dashboard documents.",
+        ],
+      },
+      {
+        title: "Downstream Plane",
+        items: [
+          "31 REST controllers under /api map to stateless domain services.",
+          "JPA repositories persist 27 entities on H2 (dev) or PostgreSQL (production).",
+          "Stripe and Strava webhooks re-enter through permitAll controllers with their own rate limiter.",
+        ],
+      },
+    ],
+    footer: "Generated from SecurityConfig, the servlet filters, frontend/src/api.ts, and the REST controller inventory.",
+  };
+}
+
+// Two mirrored columns: static frontend dictionaries on the left, JPA entity
+// families on the right. Pair arrows run right-to-left in a monotonic order
+// so they never cross each other in the wide corridor.
+function createDataDictionarySpec() {
+  const shoeCatalog = routeForBox(276, 108, 232, 104);
+  const raceCatalog = routeForBox(276, 234, 232, 90);
+  const contracts = routeForBox(276, 350, 232, 104);
+  const muscleMasks = routeForBox(276, 480, 232, 76);
+  const i18nLocales = routeForBox(276, 582, 232, 104);
+  const gearEntities = routeForBox(812, 108, 444, 62);
+  const raceEntities = routeForBox(812, 196, 444, 62);
+  const activityEntities = routeForBox(812, 284, 444, 62);
+  const coachingEntities = routeForBox(812, 372, 444, 90);
+  const identityEntities = routeForBox(812, 488, 444, 90);
+  const wellnessEntities = routeForBox(812, 604, 444, 90);
+
+  return {
+    slug: DATA_DICTIONARY_SLUG,
+    title: "Hermes Data Dictionaries — Frontend Bundles vs Backend Entities",
+    subtitle: "Static frontend dictionaries, the shared TypeScript contracts, and the 27 JPA entity families behind /api.",
+    width: 1320,
+    height: 850,
+    groups: [
+      { x: 248, y: 78, width: 288, height: 634, label: "Frontend Dictionaries — bundled", kind: "cloud" },
+      { x: 792, y: 78, width: 484, height: 642, label: "Backend JPA Entities — 27 tables", kind: "cloud" },
+    ],
+    boxes: [
+      { ...shoeCatalog, kind: "frontend", title: "shoeCatalog.js", lines: ["brands × models matrix", "category + system type", "CN-first: 李宁 · 飞电", "brand logo tokens"] },
+      { ...raceCatalog, kind: "frontend", title: "worldRaceCatalog.json", lines: ["world races · cities · months", "Vite JSON import"] },
+      { ...contracts, kind: "security", title: "contracts/*.ts", lines: ["api.ts · activity.ts · prediction.ts", "ApiErrorPayload envelope", "typed /api payloads"] },
+      { ...muscleMasks, kind: "frontend", title: "muscleMasks.data.json", lines: ["muscle slug → region mask", "pairs coach slugs to UI"] },
+      { ...i18nLocales, kind: "frontend", title: "i18n locales", lines: ["en + zh-CN UI copy", "hermes_lang switch", "Accept-Language header"] },
+      { ...gearEntities, kind: "database", title: "Gear Catalog (4)", lines: ["Shoe · ShoeCatalogBrand · ShoeCatalogModel · ShoeImageAsset"] },
+      { ...raceEntities, kind: "database", title: "Races & Routes (4)", lines: ["RaceEvent · RaceCourseMapAsset · GeneratedRaceGpxAsset · PlannedRoute"] },
+      { ...activityEntities, kind: "database", title: "Activity Core (2)", lines: ["Activity · ActivityPoint (+ embedded metrics)"] },
+      { ...coachingEntities, kind: "database", title: "Coaching & Muscle (6)", lines: ["CoachTrainingBlock · CoachScheduledWorkout · CoachFeedbackAlert · CoachRunnerState · MuscleTrainingPreference · MuscleTrainingCheckIn"] },
+      { ...identityEntities, kind: "database", title: "Identity & Ops (5)", lines: ["Runner · RunnerAdminNote · AdminAuditLog · AdminSavedFilter · AdminBackgroundJob"] },
+      { ...wellnessEntities, kind: "database", title: "Wellness Logs (6)", lines: ["DailySleepData · DailyStressData · DailyHRVData · DailyWellnessSummary · BodyCompositionData · SorenessLog"] },
+    ],
+    arrows: [
+      lineArrow(gearEntities.x, gearEntities.centerY, shoeCatalog.x + shoeCatalog.width, shoeCatalog.centerY, "GET /api/shoe-catalog", { labelDy: -3 }),
+      lineArrow(raceEntities.x, raceEntities.centerY, raceCatalog.x + raceCatalog.width, raceCatalog.centerY, "user races vs static seed", { dashed: true, labelDx: -20, labelDy: -5 }),
+      lineArrow(activityEntities.x, activityEntities.centerY, contracts.x + contracts.width, contracts.centerY, "run summary DTO shapes", { labelDx: -40, labelDy: -10 }),
+      lineArrow(coachingEntities.x, coachingEntities.centerY, muscleMasks.x + muscleMasks.width, muscleMasks.centerY, "check-in slug targets", { dashed: true, labelDx: -40, labelDy: -14 }),
+    ],
+    legend: [
+      { kind: "frontend", label: "static frontend dictionaries" },
+      { kind: "security", label: "shared TS contract types" },
+      { kind: "database", label: "JPA entity families" },
+    ],
+    legendX: 40,
+    legendY: 758,
+    cards: [
+      {
+        title: "Frontend Bundles",
+        items: [
+          "Four static dictionaries ship inside the Vite build; no API call needed to render them.",
+          "i18n keeps en + zh-CN copy in lockstep and adds Accept-Language to every apiFetch.",
+          "worldRaceCatalog loads through a native Vite JSON import with a JS re-export for compatibility.",
+        ],
+      },
+      {
+        title: "Backend Families",
+        items: [
+          "27 JPA entities group into six families; Runner is the root of the runner-facing ones.",
+          "Admin operations keep their own audit log, saved filters, and background job stores.",
+          "Gear and race dictionaries are admin-managed CRUD tables, not code constants.",
+        ],
+      },
+      {
+        title: "Correspondence",
+        items: [
+          "GET /api/shoe-catalog serves the backend catalog that seeds shoeCatalog.js.",
+          "contracts/*.ts type the JSON payloads (ApiErrorPayload, activity summaries, predictions).",
+          "Muscle masks map coaching check-in slugs to the UI regions they highlight.",
+        ],
+      },
+    ],
+    footer: "Generated from frontend/src/data, frontend/src/contracts, frontend/src/i18n, and the backend @Entity inventory.",
+  };
+}
+
 function buildReadmeBlock() {
   return `${README_MARKER_START}
 ### Live Architecture Diagrams
@@ -856,6 +1050,18 @@ Source artifact: [docs/architecture/${AGENT_DIAGRAM_SLUG}.html](docs/architectur
 ![Hermes SaaS architecture](docs/architecture/${SAAS_DIAGRAM_SLUG}.svg)
 
 Source artifact: [docs/architecture/${SAAS_DIAGRAM_SLUG}.html](docs/architecture/${SAAS_DIAGRAM_SLUG}.html)
+
+#### API System
+
+![Hermes API system](docs/architecture/${API_SYSTEM_SLUG}.svg)
+
+Source artifact: [docs/architecture/${API_SYSTEM_SLUG}.html](docs/architecture/${API_SYSTEM_SLUG}.html)
+
+#### Data Dictionaries
+
+![Hermes data dictionaries](docs/architecture/${DATA_DICTIONARY_SLUG}.svg)
+
+Source artifact: [docs/architecture/${DATA_DICTIONARY_SLUG}.html](docs/architecture/${DATA_DICTIONARY_SLUG}.html)
 ${README_MARKER_END}`;
 }
 
@@ -920,6 +1126,8 @@ export function runArchitectureDiagramRefresh(rawArgs = process.argv.slice(2)) {
   const specs = [
     createAgentWorkflowSpec(agentLanes),
     createSaasArchitectureSpec(routeSummary, lazyPageNames, stackFacts),
+    createApiSystemSpec(),
+    createDataDictionarySpec(),
   ];
 
   const writtenPaths = [];

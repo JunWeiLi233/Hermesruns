@@ -4,11 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { getBackendBaseUrl } from '../api';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import {
+  buildLandingRaceShowcase,
+  formatRaceDistanceLabel,
+  formatRaceMonthLabel,
+} from '../utils/landingRaceShowcase.js';
 import AppIcon from '../components/AppIcon';
 import HermesMarkSvg from '../components/HermesMarkSvg';
 import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
-import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.png';
+import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.webp';
 import shoeRunMaster from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
+import '../styles/_split/landing.css';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const SHOE_GAIT_MOTION_STOPS = [
@@ -24,23 +30,10 @@ const SHOE_GAIT_MOTION_STOPS = [
   { progress: 1, phase: 'landed', x: 0, y: 0, rotate: 0, scaleX: 1, scaleY: 1, originX: 50, originY: 70 },
 ];
 const HERO_FOCUS_SCROLL_FRACTION = 0.14;
-const landingRaceDateFormatter = new Intl.DateTimeFormat('en-US', {
-  day: '2-digit',
-  month: 'short',
-  timeZone: 'UTC',
-});
 
 function parseRaceDate(isoDate) {
   const [year, month, day] = isoDate.split('-').map(Number);
   return Date.UTC(year, month - 1, day);
-}
-
-function formatRaceDate(isoDate) {
-  const raceDate = new Date(parseRaceDate(isoDate));
-  const parts = landingRaceDateFormatter.formatToParts(raceDate);
-  const day = parts.find((part) => part.type === 'day')?.value ?? '';
-  const month = parts.find((part) => part.type === 'month')?.value.toUpperCase() ?? '';
-  return `${day} ${month}`;
 }
 
 function getRaceCountdownDays(isoDate, now = new Date()) {
@@ -500,16 +493,16 @@ function projectWorldPoint({ lat, lng }) {
 }
 
 const RACE_MAP_CITY_ANCHORS = {
-  tokyo: { x: 83.65, y: 13.65 },
-  boston: { x: 29.85, y: 11.60 },
-  london: { x: 47.35, y: 8.95 },
-  berlin: { x: 51.55, y: 8.55 },
-  chicago: { x: 27.45, y: 12.15 },
-  newYork: { x: 29.60, y: 12.15 },
-  paris: { x: 49.45, y: 10.05 },
-  valencia: { x: 47.10, y: 12.40 },
-  sydney: { x: 85.25, y: 35.55 },
-  comrades: { x: 55.50, y: 34.40 },
+  'tokyo-marathon': { x: 83.65, y: 13.65 },
+  'boston-marathon': { x: 29.85, y: 11.60 },
+  'london-marathon': { x: 47.35, y: 8.95 },
+  'berlin-marathon': { x: 51.55, y: 8.55 },
+  'chicago-marathon': { x: 27.45, y: 12.15 },
+  'new-york-city-marathon': { x: 29.60, y: 12.15 },
+  'paris-marathon': { x: 49.45, y: 10.05 },
+  'valencia-marathon': { x: 47.10, y: 12.40 },
+  'sydney-marathon': { x: 85.25, y: 35.55 },
+  'comrades-marathon': { x: 55.50, y: 34.40 },
 };
 
 function resolveRaceMapPoint(race) {
@@ -545,6 +538,28 @@ function buildCurvedFlightPath(points) {
 }
 
 function WorldMap({ races, metricLabels, flowLabels }) {
+  // The dotted base map is a mid-page asset; only fetch it once the map
+  // section approaches the viewport so first-load bandwidth stays for the hero.
+  const mapHostRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    const host = mapHostRef.current;
+    if (!host) return undefined;
+    if (typeof IntersectionObserver !== 'function') {
+      setMapReady(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setMapReady(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '600px 0px' });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
   const racePins = races.map((race) => ({
     ...race,
     pin: race.pin ?? (race.geo ? resolveRaceMapPoint(race) : null),
@@ -560,13 +575,13 @@ function WorldMap({ races, metricLabels, flowLabels }) {
   ];
 
   return (
-    <div className="landing-cinematic-map" style={{ '--race-cycle-duration': raceCycleDuration }} aria-hidden="true">
+    <div ref={mapHostRef} className="landing-cinematic-map" style={{ '--race-cycle-duration': raceCycleDuration }} aria-hidden="true">
       <svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
         <g className="landing-cinematic-map-graticule">
           {WORLD_MAP_GRATICULE.map((path) => <path key={path} d={path} />)}
         </g>
         <image
-          href={worldMapPoliticalDotted}
+          href={mapReady ? worldMapPoliticalDotted : undefined}
           width="100"
           height="50"
           preserveAspectRatio="none"
@@ -623,7 +638,7 @@ function WorldMap({ races, metricLabels, flowLabels }) {
               <div className="landing-cinematic-map-caption-meta">
                 <em className="landing-cinematic-map-caption-field is-date"><span>{metricLabels.date}</span>{race.date}</em>
                 <small className="landing-cinematic-map-caption-field is-days"><span>{metricLabels.days}</span>{race.days}</small>
-                <b className="landing-cinematic-map-caption-field is-goal"><span>{metricLabels.goal}</span>{race.goal}</b>
+                <b className="landing-cinematic-map-caption-field is-distance"><span>{metricLabels.distance}</span><i>{race.distance}</i></b>
               </div>
             </div>
           ))}
@@ -713,42 +728,44 @@ export default function Landing() {
   const commandCards = [
     {
       number: '01',
-      icon: 'zones',
       title: t('landing.cinematic_answer_1_title'),
       body: t('landing.cinematic_answer_1_body'),
       metric: t('landing.command_card_1_metric'),
     },
     {
       number: '02',
-      icon: 'vdot',
       title: t('landing.cinematic_answer_2_title'),
       body: t('landing.cinematic_answer_2_body'),
       metric: t('landing.command_card_2_metric'),
     },
     {
       number: '03',
-      icon: 'shoe',
       title: t('landing.cinematic_answer_3_title'),
       body: t('landing.cinematic_answer_3_body'),
       metric: t('landing.command_card_3_metric'),
     },
   ];
 
-  const races = [
-    { id: 'tokyo', name: t('landing.cinematic_race_tokyo'), raceDate: '2027-03-07', goal: 'PB', geo: { lat: 35.6762, lng: 139.6503 } },
-    { id: 'boston', name: t('landing.cinematic_race_boston'), raceDate: '2027-04-19', goal: 'Q+8', geo: { lat: 42.3601, lng: -71.0589 } },
-    { id: 'london', name: t('landing.cinematic_race_london'), raceDate: '2027-04-25', goal: '2:58', geo: { lat: 51.5072, lng: -0.1276 } },
-    { id: 'berlin', name: t('landing.cinematic_race_berlin'), raceDate: '2026-09-27', goal: '2:55', geo: { lat: 52.52, lng: 13.405 } },
-    { id: 'chicago', name: t('landing.cinematic_race_chicago'), raceDate: '2026-10-11', goal: 'Sub-3', geo: { lat: 41.8781, lng: -87.6298 } },
-    { id: 'newYork', name: t('landing.cinematic_race_new_york'), raceDate: '2026-11-01', goal: 'Sub-3', geo: { lat: 40.7128, lng: -74.006 } },
-    { id: 'paris', name: t('landing.cinematic_race_paris'), raceDate: '2027-04-11', goal: 'PB', geo: { lat: 48.8566, lng: 2.3522 } },
-    { id: 'valencia', name: t('landing.cinematic_race_valencia'), raceDate: '2026-12-06', goal: '2:52', geo: { lat: 39.4699, lng: -0.3763 } },
-    { id: 'sydney', name: t('landing.cinematic_race_sydney'), raceDate: '2026-08-30', goal: 'Major', geo: { lat: -33.8688, lng: 151.2093 } },
-    { id: 'comrades', name: t('landing.cinematic_race_comrades'), raceDate: '2027-06-13', goal: 'Silver', geo: { lat: -29.8587, lng: 31.0218 } },
-  ].map((race) => ({
+  // Showcase facts (months, distances, coordinates) come from the bundled
+  // world race catalog; only the display names localize through landing keys.
+  const showcaseNames = {
+    'berlin-marathon': t('landing.cinematic_race_berlin'),
+    'sydney-marathon': t('landing.cinematic_race_sydney'),
+    'chicago-marathon': t('landing.cinematic_race_chicago'),
+    'new-york-city-marathon': t('landing.cinematic_race_new_york'),
+    'valencia-marathon': t('landing.cinematic_race_valencia'),
+    'tokyo-marathon': t('landing.cinematic_race_tokyo'),
+    'boston-marathon': t('landing.cinematic_race_boston'),
+    'london-marathon': t('landing.cinematic_race_london'),
+    'paris-marathon': t('landing.cinematic_race_paris'),
+    'comrades-marathon': t('landing.cinematic_race_comrades'),
+  };
+  const races = buildLandingRaceShowcase(raceCountdownNow).map((race) => ({
     ...race,
-    date: formatRaceDate(race.raceDate),
-    days: getRaceCountdownDays(race.raceDate, raceCountdownNow),
+    name: showcaseNames[race.id] ?? race.catalogName,
+    date: formatRaceMonthLabel(race.nextOccurrence),
+    days: getRaceCountdownDays(race.nextOccurrence.toISOString().slice(0, 10), raceCountdownNow),
+    distance: formatRaceDistanceLabel(race.distanceKm),
   }));
 
   const compareRows = [
@@ -769,7 +786,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="landing-page--cinematic landing-page--liquid-glass">
+    <div className="landing-page--cinematic landing-page--liquid-glass" data-hermes-landing="true">
       {/* ── Navigation ── */}
       <header className={`landing-cinematic-nav ${isScrolled ? 'is-scrolled' : ''}`}>
         <PageWidth className="landing-cinematic-nav-inner">
@@ -810,7 +827,7 @@ export default function Landing() {
 
               <div className="landing-cinematic-hero-actions">
                 <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
-                  <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" />
+                  <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="eager" decoding="async" />
                 </button>
                 <Link to="/signup" className="landing-cinematic-hero-alt-link">
                   {t('landing.get_started')}
@@ -831,11 +848,10 @@ export default function Landing() {
             <RevealSection className="landing-command-card-stack">
               {commandCards.map((card) => (
                 <article key={card.number} className="landing-command-card">
-                  <div className="landing-command-card-index">
+                  <div className="landing-command-card-head">
                     <span>{card.number}</span>
-                    <LandingGlyph name={card.icon} />
+                    <h2>{card.title}</h2>
                   </div>
-                  <h3>{card.title}</h3>
                   <p>{card.body}</p>
                   <strong>{card.metric}</strong>
                 </article>
@@ -912,7 +928,7 @@ export default function Landing() {
                 metricLabels={{
                   date: t('landing.cinematic_race_col_date'),
                   days: t('landing.cinematic_race_col_days'),
-                  goal: t('landing.cinematic_race_col_goal'),
+                  distance: t('landing.cinematic_race_col_distance'),
                 }}
                 flowLabels={{
                   select: t('landing.cinematic_race_flow_select'),
@@ -926,7 +942,7 @@ export default function Landing() {
                   <span>{t('landing.cinematic_race_col_race')}</span>
                   <span>{t('landing.cinematic_race_col_date')}</span>
                   <span>{t('landing.cinematic_race_col_days')}</span>
-                  <span>{t('landing.cinematic_race_col_goal')}</span>
+                  <span>{t('landing.cinematic_race_col_distance')}</span>
                 </div>
                 {races.map((race, index) => (
                   <div
@@ -948,9 +964,9 @@ export default function Landing() {
                       <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_days')}: </span>
                       {race.days}
                     </strong>
-                    <em data-label={t('landing.cinematic_race_col_goal')} className={index === 0 ? 'is-primary' : ''}>
-                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_goal')}: </span>
-                      {race.goal}
+                    <em data-label={t('landing.cinematic_race_col_distance')} className={index === 0 ? 'is-primary' : ''}>
+                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_distance')}: </span>
+                      {race.distance}
                     </em>
                   </div>
                 ))}
@@ -999,7 +1015,7 @@ export default function Landing() {
                 <p>{t('landing.cinematic_cta_copy')}</p>
                 <div className="landing-cinematic-hero-actions">
                   <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
-                    <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" />
+                    <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="lazy" decoding="async" />
                   </button>
                   <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--outline is-large">
                     {t('landing.get_started')}

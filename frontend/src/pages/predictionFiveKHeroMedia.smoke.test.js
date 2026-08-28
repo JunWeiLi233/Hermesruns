@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'PredictionDetail.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '..', 'styles', 'prediction-profile-alignment.css'), 'utf8');
-const assetPath = path.join(here, '..', 'assets', 'generated', 'prediction-5k-hero.png');
+const assetPath = path.join(here, '..', 'assets', 'generated', 'prediction-5k-hero.webp');
 
 assert.ok(existsSync(assetPath), 'The 5K prediction hero needs its supplied street-running image asset.');
 assert.match(

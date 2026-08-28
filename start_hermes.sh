@@ -69,16 +69,8 @@ echo "[2/4] Waking up Spring Boot (Java)..."
 "$ROOT/.tools/run-backend.sh" >>"$BACKEND_LOG" 2>&1 &
 BACKEND_PID=$!
 
-# 4. Start the Python services when a local virtualenv is available
+# 4. Start the Python auto-import watcher when a local virtualenv is available
 if [ -n "$PYTHON_EXE" ]; then
-  if [ -f "$ROOT/backend/src/main/resources/static/vdot_engine.py" ]; then
-    echo "[3/4] Waking up Python VDOT Engine..."
-    "$PYTHON_EXE" "$ROOT/backend/src/main/resources/static/vdot_engine.py" >/dev/null 2>&1 &
-  else
-    echo "[3/4] Python VDOT Engine not started: vdot_engine.py is not present in this tree."
-    echo "      VDOT analytics run inside Spring Boot, so nothing is lost."
-  fi
-
   if [ -f "$SYNC_CONFIG" ]; then
     echo "[3/4] Waking up Hermes auto-import watcher..."
     "$PYTHON_EXE" "$ROOT/.tools/hermes_auto_sync.py" "$SYNC_CONFIG" >/dev/null 2>&1 &
@@ -88,9 +80,8 @@ if [ -n "$PYTHON_EXE" ]; then
     echo "      then set auth email/password and import folders. See README \"Garmin / COROS Auto-Import\"."
   fi
 else
-  echo "[3/4] Skipping Python VDOT Engine. No local virtualenv was found."
+  echo "[3/4] Skipping auto-import watcher. No local virtualenv was found."
   echo "      To enable: python3 -m venv .venv"
-  echo "[3/4] Skipping auto-import watcher because Python is unavailable."
 fi
 
 # 5. Wait until Spring Boot serves the site before opening the browser

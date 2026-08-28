@@ -1068,7 +1068,7 @@ export default function RunDetail() {
                 <div className="run-detail-gear-row">
                   <div className="run-detail-gear-art">
                     {linkedShoe?.photoUrl ? (
-                      <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} />
+                      <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} width="800" height="800" loading="lazy" decoding="async" />
                     ) : (
                       <div className="run-detail-gear-placeholder">H</div>
                     )}

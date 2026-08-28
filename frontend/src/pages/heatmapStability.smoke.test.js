@@ -102,28 +102,18 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /function buildMergedHeatmapPayload\(basePayload, points, loadPhase = 'complete'\)[\s\S]*?loadPhase,[\s\S]*?complete: hasCompleteGps/,
-  'Heatmap should carry an explicit GPS load phase so coverage previews are not presented as full received totals.',
-);
-assert.match(
-  heatmapSource,
   /HEATMAP_REQUEST_TIMEOUT_MS = 120000/,
-  'Heatmap all-point fetch should not use the old short timeout that aborts large GPS payloads.',
+  'Heatmap sampled fetch should keep the long timeout so slow cold caches cannot abort the render pool.',
 );
 assert.match(
   heatmapSource,
-  /const HEATMAP_INITIAL_PAGE_SIZE = 5000;[\s\S]*?HEATMAP_BACKGROUND_PAGE_SIZE = 100000;[\s\S]*?fetchHeatmapPage\(offset, nextLimit, signal\)[\s\S]*?HEATMAP_BACKGROUND_PAGE_SIZE/,
-  'Heatmap should render a small first GPS page, then continue loading remaining GPS pages in the background.',
+  /const HEATMAP_SAMPLE_LIMIT = 25000;[\s\S]*?async function fetchSampledHeatmap\(signal\) \{[\s\S]*?\/api\/profile\/heatmap\?sample=true&limit=\$\{HEATMAP_SAMPLE_LIMIT\}/,
+  'Heatmap should load one bounded server-side render pool instead of paging the full GPS history.',
 );
 assert.doesNotMatch(
   heatmapSource,
   /HEATMAP_INITIAL_COVERAGE_LIMIT|fetchHeatmapCoverage|coverage=true/,
-  'Heatmap initial loading should not launch the full-dataset coverage window query alongside the paged GPS load.',
-);
-assert.match(
-  heatmapSource,
-  /fetchCompleteHeatmap\(heatmapController\.signal, \(partialHeatmap\) => \{[\s\S]*?setHeatmap\(partialHeatmap\);[\s\S]*?setHeatmapState\('ready'\);/,
-  'Heatmap should switch to ready state on the first progressive page instead of waiting for every GPS point.',
+  'Heatmap initial loading should not launch the full-dataset coverage window query alongside the sampled pool.',
 );
 assert.match(
   heatmapCacheSource,
@@ -137,7 +127,7 @@ assert.match(
 );
 assert.match(
   heatmapCacheSource,
-  /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:\$\{normalizedEmail\}/,
+  /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:v2:\$\{normalizedEmail\}/,
   'Heatmap cache should be keyed from the authenticated account email so every official-site user gets an isolated cache.',
 );
 assert.match(
@@ -157,18 +147,13 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const cacheKey = getHeatmapCacheKey\(authEmail\);[\s\S]*?const cachedHeatmap = await readCachedHeatmapPayload\(cacheKey\)\.catch\(\(\) => null\);[\s\S]*?setHeatmap\(cachedHeatmap\);[\s\S]*?setHeatmapState\('ready'\);[\s\S]*?getHeatmapCacheFreshnessTier\(cachedHeatmap\.diagnostics\?\.cacheSavedAt\) === 'fresh'[\s\S]*?return;[\s\S]*?if \(cancelled \|\| hasRenderableDataRef\.current\) return;[\s\S]*?scheduleHeatmapCacheWrite\(cacheKey, completeHeatmap\);/,
+  /const cacheKey = getHeatmapCacheKey\(authEmail\);[\s\S]*?const cachedHeatmap = await readCachedHeatmapPayload\(cacheKey\)\.catch\(\(\) => null\);[\s\S]*?setHeatmap\(cachedHeatmap\);[\s\S]*?setHeatmapState\('ready'\);[\s\S]*?getHeatmapCacheFreshnessTier\(cachedHeatmap\.diagnostics\?\.cacheSavedAt\) === 'fresh'[\s\S]*?return;[\s\S]*?const heatmapData = await fetchSampledHeatmap\(heatmapController\.signal\);[\s\S]*?scheduleHeatmapCacheWrite\(cacheKey, completeHeatmap\);/,
   'Heatmap should render a cached complete GPS payload immediately and short-circuit the network refetch while the cache is fresh; older-but-valid caches refresh silently and only complete results rewrite the cache.',
 );
 assert.match(
   heatmapSource,
   /if \(!database \|\| !key \|\| !payload \|\| payload\.diagnostics\?\.complete === false \|\| !Array\.isArray\(payload\.points\)\)/,
   'Heatmap cache writes should reject missing keys, partial payloads, and non-point payloads.',
-);
-assert.match(
-  heatmapSource,
-  /const firstProgress = buildMergedHeatmapPayload\(firstPagePayload, points\.slice\(\), 'recentPreview'\);[\s\S]*?onProgress\(firstProgress\);[\s\S]*?fetchHeatmapPagesWithBounds\(/,
-  'Heatmap should publish the first page immediately and avoid React updates for every background page.',
 );
 assert.match(
   heatmapSource,

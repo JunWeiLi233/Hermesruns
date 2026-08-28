@@ -1,6 +1,6 @@
 # Stops everything Hermes leaves behind on this machine:
 #   1. Spring Boot backend listening on :8080 (plus its Maven wrapper parent).
-#   2. Python VDOT engine and auto-import watcher.
+#   2. Python auto-import watcher.
 #   3. OMX MCP server sets spawned by Codex sessions in this repo
 #      (.codex/runtime/omx-launcher.mjs + oh-my-codex dist mcp servers).
 #   4. Orphaned (parent-dead) wmux mcp-bundle and Codex node_repl processes.
@@ -50,11 +50,11 @@ if (-not $SkipBackend) {
     }
   }
 
-  # --- 2. Python engines for this repo ---
+  # --- 2. Python watcher for this repo ---
   $pythonEngines = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-    Where-Object { $_.CommandLine -match [regex]::Escape($root) -and $_.CommandLine -match 'vdot_engine\.py|hermes_auto_sync\.py' }
+    Where-Object { $_.CommandLine -match [regex]::Escape($root) -and $_.CommandLine -match 'hermes_auto_sync\.py' }
   foreach ($proc in $pythonEngines) {
-    Stop-ProcessTreeSafe ([int]$proc.ProcessId) "python engine"
+    Stop-ProcessTreeSafe ([int]$proc.ProcessId) "python watcher"
   }
 }
 

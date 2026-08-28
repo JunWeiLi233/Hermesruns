@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -276,8 +278,12 @@ class ProfileControllerTests {
         when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
         when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(3L);
-        when(activityPointRepository.findHeatmapBoundsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
-                .thenReturn(List.<Object[]>of(new Object[]{40.0, -74.0, 41.0, -73.0}));
+        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 1, 20000))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{11L, 41.0, -74.0, 0.0, 0}
+                ));
         when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
                 .thenReturn(List.of(
                         new Object[]{12L, 40.0, -73.0, 0.0, 0},
@@ -309,6 +315,113 @@ class ProfileControllerTests {
     }
 
     @Test
+    void heatmapBoundsIgnoreStrayGpsOutliers() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(100L);
+
+        // 98 real points around New York City plus two stray readings — one in
+        // the Mediterranean (the exact latitude/longitude observed dragging a
+        // production heatmap to world zoom) and one in northern Canada. The
+        // trimmed bounds must stay on the real running area.
+        List<Object[]> coordinateSamples = new ArrayList<>();
+        for (int index = 0; index < 98; index += 1) {
+            coordinateSamples.add(new Object[]{12L, 40.0 + (index % 10) * 0.1, -74.0 + (index % 8) * 0.1, 0.0, 0});
+        }
+        coordinateSamples.add(new Object[]{13L, 33.0, 22.8, 0.0, 0});
+        coordinateSamples.add(new Object[]{13L, 58.0, -100.0, 0.0, 0});
+        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 1, 20000))
+                .thenReturn(coordinateSamples);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
+                .thenReturn(coordinateSamples);
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.bounds()).isNotNull();
+        assertThat(body.bounds().minLatitude()).isGreaterThan(39.0);
+        assertThat(body.bounds().maxLatitude()).isLessThan(42.0);
+        assertThat(body.bounds().minLongitude()).isGreaterThan(-75.0);
+        assertThat(body.bounds().maxLongitude()).isLessThan(-72.0);
+    }
+
+    @Test
+    void heatmapSampleModeReturnsBoundedPoolCachedAsComplete() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
+        when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
+        when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(1_000_000L);
+        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 40, 25000))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{11L, 41.0, -74.0, 0.0, 0}
+                ));
+        ProfileController controller = new ProfileController(
+                authService,
+                mock(RunnerRepository.class),
+                activityRepository,
+                activityPointRepository,
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class),
+                mock(AutomatedCoachService.class),
+                mock(RaceEventRepository.class),
+                mock(MuscleTrainingPlannerService.class),
+                mock(AcclimatizationService.class),
+                mock(ShoeRepository.class),
+                cacheStore
+        );
+
+        ResponseEntity<?> response = controller.heatmap("Bearer runner-token", null, null, null, true);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ProfileController.HeatmapResponse body = (ProfileController.HeatmapResponse) response.getBody();
+        assertThat(body.pointCount()).isEqualTo(1_000_000L);
+        assertThat(body.sampledPointCount()).isEqualTo(3);
+        assertThat(body.points()).extracting(ProfileController.HeatPoint::activityId).containsExactly(12L, 12L, 11L);
+        assertThat(body.page()).isNull();
+        assertThat(body.diagnostics().complete()).isTrue();
+        assertThat(body.bounds()).isNotNull();
+
+        // The sampled-final payload is cacheable: a second call must be served
+        // from the response cache without re-querying the coordinate sample.
+        // The compact wire format drops the unused intensity field, so compare
+        // everything the renderer actually consumes.
+        ResponseEntity<?> cachedResponse = controller.heatmap("Bearer runner-token", null, null, null, true);
+        ProfileController.HeatmapResponse cachedBody = (ProfileController.HeatmapResponse) cachedResponse.getBody();
+        assertThat(cachedBody.pointCount()).isEqualTo(body.pointCount());
+        assertThat(cachedBody.sampledPointCount()).isEqualTo(body.sampledPointCount());
+        assertThat(cachedBody.diagnostics().complete()).isTrue();
+        assertThat(cachedBody.points())
+                .usingRecursiveComparison()
+                .ignoringFields("intensity")
+                .isEqualTo(body.points());
+        verify(activityPointRepository, times(1)).findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 40, 25000);
+        verify(activityPointRepository, never()).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
+    }
+
+    @Test
     void heatmapReturnsPagedGpsPointsWithoutFullPayloadQuery() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -318,8 +431,12 @@ class ProfileControllerTests {
         when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
         when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(5L);
-        when(activityPointRepository.findHeatmapBoundsByRunnerAndType(runner.getId(), ActivityType.RUN.name()))
-                .thenReturn(List.<Object[]>of(new Object[]{40.0, -74.0, 41.0, -73.0}));
+        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 1, 20000))
+                .thenReturn(List.of(
+                        new Object[]{12L, 40.0, -73.0, 0.0, 0},
+                        new Object[]{12L, 40.1, -73.1, 1000.0, 300},
+                        new Object[]{11L, 41.0, -74.0, 0.0, 0}
+                ));
         when(activityPointRepository.findHeatmapPointsPageByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 2, 1L))
                 .thenReturn(List.of(
                         new Object[]{12L, 40.1, -73.1, 1000.0, 300},

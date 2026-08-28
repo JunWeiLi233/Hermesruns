@@ -6,47 +6,63 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const toolDir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(toolDir, '..');
-const indexCssPath = resolve(root, 'frontend/src/index.css');
+const styleEntryPoints = [
+  resolve(root, 'frontend/src/index.css'),
+  resolve(root, 'frontend/src/styles/app.css'),
+];
 const outputPath = resolve(root, 'frontend/src/styles/style.generated.css');
 const localImportPattern = /@import\s+(['"])(\.\/[^'"]+\.css)\1\s*;/g;
+const legacyManifestPattern = /\/\* HERMES_LEGACY_STYLE_MANIFEST_START[\s\S]*?HERMES_LEGACY_STYLE_MANIFEST_END \*\//g;
 
 export function buildActiveStyleBundle() {
-  const indexCss = readFileSync(indexCssPath, 'utf8');
-  const imports = [...indexCss.matchAll(localImportPattern)].map((match) => match[2]);
+  const entries = styleEntryPoints.map((entryPath) => ({
+    entryPath,
+    source: readFileSync(entryPath, 'utf8'),
+  }));
+  const imports = entries.flatMap(({ entryPath, source }) => [...source.matchAll(localImportPattern)].map((match) => ({
+    entryPath,
+    importPath: match[2],
+  })));
 
   if (imports.length === 0) {
-    throw new Error('frontend/src/index.css does not contain local CSS imports.');
+    throw new Error('The active CSS entry points do not contain local CSS imports.');
   }
 
   const sections = [
     '/*',
     ' * GENERATED FILE - DO NOT EDIT.',
-    ' * Source order: frontend/src/index.css and its local CSS imports.',
+    ' * Source order: frontend/src/index.css, app.css, landing.css, and their local CSS imports.',
     ' * Regenerate with: node .tools/generate-legacy-style-bundle.mjs',
     ' */',
   ];
 
-  for (const importPath of imports) {
-    const absolutePath = resolve(dirname(indexCssPath), importPath);
+  const seenImports = new Set();
+  for (const { entryPath, importPath } of imports) {
+    const absolutePath = resolve(dirname(entryPath), importPath);
     const relativePath = relative(root, absolutePath).split(sep).join('/');
+    if (seenImports.has(relativePath)) continue;
+    seenImports.add(relativePath);
     if (!existsSync(absolutePath)) {
       throw new Error(`Missing CSS import: ${relativePath}`);
     }
     sections.push(`/* Source: ${relativePath} */`, readFileSync(absolutePath, 'utf8').trimEnd());
   }
 
-  const indexOwnedCss = indexCss
-    .replace(/^@import\s+[^;]+;\s*$/gm, '')
-    .replace(/^@config\s+[^;]+;\s*$/gm, '')
-    .trim();
-
-  if (indexOwnedCss) {
-    sections.push('/* Source: frontend/src/index.css (non-import rules) */', indexOwnedCss);
+  for (const { entryPath, source } of entries) {
+    const ownedCss = source
+      .replace(legacyManifestPattern, '')
+      .replace(/^@import\s+[^;]+;\s*$/gm, '')
+      .replace(/^@config\s+[^;]+;\s*$/gm, '')
+      .trim();
+    const relativeEntryPath = relative(root, entryPath).split(sep).join('/');
+    if (ownedCss) {
+      sections.push(`/* Source: ${relativeEntryPath} (non-import rules) */`, ownedCss);
+    }
   }
 
   return {
     css: `${sections.join('\n\n')}\n`,
-    importCount: imports.length,
+    importCount: seenImports.size,
   };
 }
 

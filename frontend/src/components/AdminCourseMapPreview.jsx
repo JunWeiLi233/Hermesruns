@@ -374,6 +374,10 @@ export default function AdminCourseMapPreview({
               src={imageUrl}
               alt={title}
               className={`admin-review-preview__image${isCardVariant ? ' admin-review-preview__image--card' : ''}`}
+              loading="lazy"
+              decoding="async"
+              width="1600"
+              height="900"
               onError={() => setImageFailed(true)}
             />
           ) : null}
@@ -402,6 +406,10 @@ export default function AdminCourseMapPreview({
           src={imageUrl}
           alt={title}
           className={`admin-review-preview__image${isCardVariant ? ' admin-review-preview__image--card' : ''}`}
+          loading="lazy"
+          decoding="async"
+          width="1600"
+          height="900"
           onError={() => setImageFailed(true)}
         />
         {showPreviewSummary ? (

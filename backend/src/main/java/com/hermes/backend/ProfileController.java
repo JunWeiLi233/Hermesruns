@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +41,19 @@ public class ProfileController {
     private static final int DEFAULT_HEATMAP_PAGE_LIMIT = 50000;
     private static final int DEFAULT_HEATMAP_COVERAGE_LIMIT = 60000;
     private static final int MAX_HEATMAP_PAGE_LIMIT = 100000;
+    // Sampled render pool: the heatmap draws at most ~12k dots, so the sample
+    // mode returns one bounded, strided pool (25k points) instead of letting
+    // clients page through the full multi-million-point history (~75MB JSON
+    // observed in production, all parsed and cached on the main thread).
+    private static final int DEFAULT_HEATMAP_SAMPLE_LIMIT = 25000;
+    // Bounds come from a strided coordinate sample with tail trimming instead of
+    // a raw SQL min/max: a single stray GPS reading (import glitch, dropped-fix
+    // point) used to stretch the map across the planet and pin the heatmap at
+    // world zoom, which looked broken and made every redraw project the full
+    // point pool.
+    private static final int HEATMAP_BOUNDS_SAMPLE_LIMIT = 20000;
+    private static final int HEATMAP_BOUNDS_MIN_SAMPLES_FOR_TRIM = 50;
+    private static final double HEATMAP_BOUNDS_TRIM_FRACTION = 0.02;
     private static final int MAX_SETTINGS_MANTRA_LENGTH = 180;
     private static final int PROFILE_DASHBOARD_INITIAL_RUN_LIMIT = 180;
     private static final long MAX_PROFILE_AVATAR_UPLOAD_BYTES = 3L * 1024 * 1024;
@@ -299,11 +313,11 @@ public class ProfileController {
         ));
     }
     public ResponseEntity<?> heatmap(String authorizationHeader) {
-        return heatmap(authorizationHeader, null, null, null);
+        return heatmap(authorizationHeader, null, null, null, null);
     }
 
     public ResponseEntity<?> heatmap(String authorizationHeader, Long offset, Integer limit) {
-        return heatmap(authorizationHeader, offset, limit, null);
+        return heatmap(authorizationHeader, offset, limit, null, null);
     }
 
     @GetMapping("/profile/heatmap")
@@ -311,7 +325,8 @@ public class ProfileController {
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
             @RequestParam(value = "offset", required = false) Long offset,
             @RequestParam(value = "limit", required = false) Integer limit,
-            @RequestParam(value = "coverage", required = false) Boolean coverage
+            @RequestParam(value = "coverage", required = false) Boolean coverage,
+            @RequestParam(value = "sample", required = false) Boolean sample
     ) {
         Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
         if (runnerOptional.isEmpty()) {
@@ -342,9 +357,45 @@ public class ProfileController {
             return ResponseEntity.ok(response);
         }
 
-        HeatmapBounds bounds = buildBoundsFromAggregateRows(activityPointRepository.findHeatmapBoundsByRunnerAndType(
+        if (Boolean.TRUE.equals(sample)) {
+            HeatmapResponse cachedSample = cacheStore.get(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, HeatmapResponse.class).orElse(null);
+            if (isCompleteHeatmapResponse(cachedSample, sourcePointCount)) {
+                return ResponseEntity.ok(cachedSample);
+            }
+            // One bounded query serves both the render pool and the trimmed
+            // bounds; the stride covers the entire ordered dataset by
+            // construction, so the response is final (nothing left to fetch)
+            // even though it carries only a sample of the GPS history.
+            int safeLimit = Math.max(1, Math.min(MAX_HEATMAP_PAGE_LIMIT, limit == null ? DEFAULT_HEATMAP_SAMPLE_LIMIT : limit));
+            int stride = Math.max(1, (int) Math.ceil(sourcePointCount * 1.0 / safeLimit));
+            List<Object[]> sampleRows = activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(
+                    runner.getId(),
+                    ActivityType.RUN.name(),
+                    stride,
+                    safeLimit
+            );
+            HeatmapBounds sampledBounds = buildRobustBoundsFromSamples(sampleRows);
+            List<Object[]> validActivityPoints = filterValidHeatmapRows(sampleRows);
+            List<HeatPoint> points = buildHeatPoints(validActivityPoints);
+            HeatmapResponse response = new HeatmapResponse(
+                    points,
+                    sourcePointCount,
+                    points.size(),
+                    activityCount,
+                    sampledBounds,
+                    new HeatmapDiagnostics(sourcePointCount, sampleRows.size(), points.size(), true),
+                    null
+            );
+            cacheStore.put(HeatmapCacheKey.NAMESPACE, heatmapCacheKey, response, HEATMAP_CACHE_TTL);
+            return ResponseEntity.ok(response);
+        }
+
+        int boundsStride = Math.max(1, (int) Math.ceil(sourcePointCount * 1.0 / HEATMAP_BOUNDS_SAMPLE_LIMIT));
+        HeatmapBounds bounds = buildRobustBoundsFromSamples(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(
                 runner.getId(),
-                ActivityType.RUN.name()
+                ActivityType.RUN.name(),
+                boundsStride,
+                HEATMAP_BOUNDS_SAMPLE_LIMIT
         ));
 
         if (Boolean.TRUE.equals(coverage)) {
@@ -665,60 +716,63 @@ public class ProfileController {
         }
     }
 
-    private HeatmapBounds buildBoundsFromAggregateRows(List<Object[]> boundsRows) {
-        if (boundsRows == null || boundsRows.isEmpty()) {
-            return null;
-        }
-        return buildBoundsFromSamples(boundsRows.get(0));
-    }
-    private HeatmapBounds buildBoundsFromSamples(Object[] boundsRow) {
-        if (boundsRow == null || boundsRow.length < 4) {
-            return null;
-        }
-        Double minLatitude = toNullableDouble(boundsRow[0]);
-        Double minLongitude = toNullableDouble(boundsRow[1]);
-        Double maxLatitude = toNullableDouble(boundsRow[2]);
-        Double maxLongitude = toNullableDouble(boundsRow[3]);
-        if (!isValidGpsCoordinate(minLatitude, minLongitude) || !isValidGpsCoordinate(maxLatitude, maxLongitude)) {
-            return null;
-        }
-        return new HeatmapBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
-    }
-
-    private HeatmapBounds buildBoundsFromSamples(List<Object[]> points) {
-        if (points.isEmpty()) {
+    private HeatmapBounds buildRobustBoundsFromSamples(List<Object[]> points) {
+        if (points == null || points.isEmpty()) {
             return null;
         }
 
-        double minLatitude = Double.MAX_VALUE;
-        double maxLatitude = -Double.MAX_VALUE;
-        double minLongitude = Double.MAX_VALUE;
-        double maxLongitude = -Double.MAX_VALUE;
-
+        List<Double> latitudes = new ArrayList<>();
+        List<Double> longitudes = new ArrayList<>();
         for (Object[] point : points) {
             Double lat = toNullableDouble(point[1]);
             Double lng = toNullableDouble(point[2]);
             if (!isValidGpsCoordinate(lat, lng)) {
                 continue;
             }
-            minLatitude = Math.min(minLatitude, lat);
-            maxLatitude = Math.max(maxLatitude, lat);
-            minLongitude = Math.min(minLongitude, lng);
-            maxLongitude = Math.max(maxLongitude, lng);
+            latitudes.add(lat);
+            longitudes.add(lng);
         }
 
-        if (minLatitude == Double.MAX_VALUE) {
+        if (latitudes.isEmpty()) {
             return null;
         }
 
-        return new HeatmapBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
+        return new HeatmapBounds(
+                trimmedEdge(latitudes, true),
+                trimmedEdge(longitudes, true),
+                trimmedEdge(latitudes, false),
+                trimmedEdge(longitudes, false)
+        );
+    }
+
+    /**
+     * Edge of the coordinate distribution after dropping the outer
+     * HEATMAP_BOUNDS_TRIM_FRACTION of samples on the requested side. Small
+     * samples (a brand-new account, a single short run) keep plain min/max —
+     * with too few points there is no majority to defend.
+     */
+    private double trimmedEdge(List<Double> values, boolean lower) {
+        List<Double> sorted = new ArrayList<>(values);
+        Collections.sort(sorted);
+        int trim = sorted.size() >= HEATMAP_BOUNDS_MIN_SAMPLES_FOR_TRIM
+                ? (int) Math.floor(sorted.size() * HEATMAP_BOUNDS_TRIM_FRACTION)
+                : 0;
+        return lower ? sorted.get(trim) : sorted.get(sorted.size() - 1 - trim);
     }
 
     private boolean isCompleteHeatmapResponse(HeatmapResponse response, long sourcePointCount) {
-        if (response == null || response.pointCount() != sourcePointCount || response.sampledPointCount() != sourcePointCount) {
+        if (response == null || response.pointCount() != sourcePointCount) {
             return false;
         }
-        return response.points() != null && response.points().size() == sourcePointCount;
+        if (response.points() == null || response.points().size() != response.sampledPointCount()) {
+            return false;
+        }
+        if (response.sampledPointCount() == sourcePointCount) {
+            return true;
+        }
+        // Sampled-final payload: fewer points than the source history, but a
+        // stride that covered the whole dataset and no further page to fetch.
+        return response.page() == null && response.diagnostics() != null && response.diagnostics().complete();
     }
 
     private List<Object[]> filterValidHeatmapRows(List<Object[]> activityPoints) {
@@ -1031,6 +1085,21 @@ public class ProfileController {
         @JsonValue
         public Object[] toJson() {
             return new Object[]{activityId, latitude, longitude, speedRatio};
+        }
+
+        // Inverse of toJson() so the server-side response cache can actually
+        // deserialize its own payloads — without this creator every cache
+        // "hit" failed to decode and the full point set was re-queried.
+        @JsonCreator
+        public static HeatPoint fromJson(double[] values) {
+            boolean hasIntensity = values.length > 4;
+            return new HeatPoint(
+                    (long) values[0],
+                    values[1],
+                    values[2],
+                    hasIntensity ? values[3] : 0.0,
+                    values[values.length - 1]
+            );
         }
     }
 

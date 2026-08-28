@@ -10,36 +10,311 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
-    />
-    <title>Hermes | Running Analytics App with Strava Sync</title>
+    <link rel="canonical" href="https://hermesruns.com/" data-hermes-seo="canonical" />
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <title>Running Analytics with Strava Sync | Hermes</title>
     <meta
       name="description"
-      content="Hermes is a running analytics app with Strava sync, VO2max estimation, pace zones, race time prediction, route heatmaps, and shoe mileage tracking."
+      content="Analyze runs with VO2max estimates, pace zones, race predictions, route heatmaps, and shoe mileage tracking. Connect Strava and train with better context."
     />
-    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+    <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" data-hermes-seo="robots" />
+    <meta name="author" content="Hermes" data-hermes-seo="author" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Hermes | Running Analytics App with Strava Sync" />
+    <meta property="og:site_name" content="Hermes" />
+    <meta property="og:url" content="https://hermesruns.com/" />
+    <meta property="og:title" content="Running Analytics with Strava Sync | Hermes" />
     <meta
       property="og:description"
-      content="Analyze your runs with VO2max, training zones, race predictions, and route heatmaps. Connect Strava for automatic activity sync."
+      content="Analyze runs with VO2max estimates, pace zones, race predictions, route heatmaps, and shoe mileage tracking. Connect Strava and train with better context."
     />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://hermesruns.com/images/hermes-og-image.svg" />
+    <meta property="og:image:alt" content="Hermes running analytics for training load, race predictions, and shoe mileage" />
+    <meta property="og:image:type" content="image/svg+xml" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hermes | Running Analytics App with Strava Sync" />
+    <meta name="twitter:title" content="Running Analytics with Strava Sync | Hermes" />
     <meta
       name="twitter:description"
-      content="Running analytics with Strava sync, VO2max estimation, pace zones, race predictions, and shoe tracking."
+      content="Analyze runs with VO2max estimates, pace zones, race predictions, route heatmaps, and shoe mileage tracking. Connect Strava and train with better context."
     />
-    <script type="module" crossorigin src="/assets/index-3zAKehRo.js"></script>
+    <meta name="twitter:image" content="https://hermesruns.com/images/hermes-og-image.svg" />
+    <meta name="twitter:image:alt" content="Hermes running analytics for training load, race predictions, and shoe mileage" />
+    <meta name="twitter:url" content="https://hermesruns.com/" />
+    <script type="application/ld+json" id="hermes-seo-jsonld">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://hermesruns.com/#organization",
+            "name": "Hermes",
+            "url": "https://hermesruns.com/",
+            "logo": "https://hermesruns.com/images/hermes-og-image.svg",
+            "sameAs": ["https://github.com/JunWeiLi233/Hermesruns"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://hermesruns.com/#website",
+            "url": "https://hermesruns.com/",
+            "name": "Hermes Running Analytics",
+            "publisher": { "@id": "https://hermesruns.com/#organization" },
+            "inLanguage": "en"
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://hermesruns.com/#webpage",
+            "url": "https://hermesruns.com/",
+            "name": "Running Analytics with Strava Sync | Hermes",
+            "isPartOf": { "@id": "https://hermesruns.com/#website" },
+            "about": { "@id": "https://hermesruns.com/#webapplication" },
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "https://hermesruns.com/images/hermes-og-image.svg"
+            },
+            "dateModified": "2026-08-27",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://hermesruns.com/#webapplication",
+            "name": "Hermes Running Analytics",
+            "url": "https://hermesruns.com/",
+            "description": "Analyze runs with VO2max estimates, pace zones, race predictions, route heatmaps, and shoe mileage tracking. Connect Strava and train with better context.",
+            "image": "https://hermesruns.com/images/hermes-og-image.svg",
+            "applicationCategory": "SportsApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Requires JavaScript and a modern web browser.",
+            "featureList": [
+              "VO2max estimation and training zones",
+              "Race finish time predictions",
+              "Interactive route heatmaps",
+              "Shoe mileage tracking",
+              "Strava activity synchronization"
+            ],
+            "publisher": { "@id": "https://hermesruns.com/#organization" },
+            "inLanguage": "en"
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://hermesruns.com/#faq",
+            "url": "https://hermesruns.com/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What is Hermes running analytics?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Hermes turns synced running activity into practical training context, including pace zones, VO2max estimates, race predictions, route heatmaps, and shoe mileage."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does Hermes work with Strava?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. Connect Strava to import your running history and keep future activities available for analysis in Hermes."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can Hermes help predict race finish times?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Hermes uses your recent running context to provide race finish-time estimates that help you set a realistic target and plan effort."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is my running data private?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Hermes is designed to keep your running context personal. Review the privacy policy for details about account data, connected services, and your controls."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Who is Hermes for?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Hermes is for runners who want a clearer view of training load, routes, race readiness, and the shoes they use across their running week."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <style>
+      .hermes-seo-fallback {
+        --fallback-paper: #f4efe6;
+        --fallback-ink: #20201d;
+        --fallback-muted: rgba(33, 28, 22, .72);
+        --fallback-faint: rgba(33, 28, 22, .54);
+        --fallback-coral: #f07561;
+        --fallback-dark: #0a0a0b;
+        --fallback-dark-ink: #f4f4f5;
+        --fallback-rule: rgba(33, 28, 22, .14);
+        min-height: 100vh;
+        color: var(--fallback-ink);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, .38), transparent 22%),
+          radial-gradient(circle at 78% 22%, rgba(216, 95, 76, .12), transparent 22rem),
+          var(--fallback-paper);
+        font: 16px/1.7 "Inter", "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        isolation: isolate;
+      }
+      .hermes-seo-fallback *, .hermes-seo-fallback *::before, .hermes-seo-fallback *::after { box-sizing: border-box; }
+      .hermes-seo-fallback a { color: inherit; }
+      .hermes-seo-fallback__header, .hermes-seo-fallback__hero, .hermes-seo-fallback__section, .hermes-seo-fallback__footer { width: min(1240px, calc(100% - 64px)); margin: 0 auto; }
+      .hermes-seo-fallback__header { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px; min-height: 76px; border-bottom: 1px solid rgba(255, 255, 255, .34); background: rgba(244, 239, 230, .76); box-shadow: 0 12px 36px rgba(73, 52, 37, .08), inset 0 -1px 0 rgba(255, 255, 255, .46); backdrop-filter: blur(24px) saturate(145%); }
+      .hermes-seo-fallback__header nav, .hermes-seo-fallback__header-actions, .hermes-seo-fallback__footer nav { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+      .hermes-seo-fallback__header nav { justify-content: center; gap: 28px; }
+      .hermes-seo-fallback__header-actions { justify-content: flex-end; gap: 10px; }
+      .hermes-seo-fallback__brand { display: inline-flex; align-items: center; gap: 10px; font-family: "Manrope", "Inter", sans-serif; font-weight: 800; letter-spacing: .18em; text-decoration: none; }
+      .hermes-seo-fallback__brand::before { content: "H"; display: inline-grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(255, 255, 255, .54); border-radius: 50%; color: var(--fallback-coral); background: rgba(255, 255, 255, .48); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 6px 18px rgba(73, 52, 37, .1); font-family: "Manrope", "Inter", sans-serif; font-size: 14px; letter-spacing: 0; }
+      .hermes-seo-fallback__header nav a, .hermes-seo-fallback__header-actions > a:not(.hermes-seo-fallback__cta) { color: rgba(33, 28, 22, .72); font-size: .84rem; font-weight: 650; text-decoration: none; }
+      .hermes-seo-fallback__header nav a:hover, .hermes-seo-fallback__header-actions > a:not(.hermes-seo-fallback__cta):hover, .hermes-seo-fallback__actions > a:not(.hermes-seo-fallback__cta):hover { color: var(--fallback-coral); }
+      .hermes-seo-fallback__cta { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 0 18px; border: 0; border-radius: 999px; color: #1a1c20 !important; background: var(--fallback-coral); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .46), 0 14px 30px rgba(160, 57, 42, .24); font-weight: 700; text-decoration: none; }
+      .hermes-seo-fallback__hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); align-items: center; gap: 56px; padding: clamp(6rem, 12vh, 9.5rem) 0 clamp(4.5rem, 9vh, 7rem); }
+      .hermes-seo-fallback__hero > div { max-width: 680px; }
+      .hermes-seo-fallback__eyebrow { margin: 0 0 16px; color: var(--fallback-coral); font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .72rem; font-weight: 800; letter-spacing: .16em; line-height: 1.4; text-transform: uppercase; }
+      .hermes-seo-fallback h1, .hermes-seo-fallback h2, .hermes-seo-fallback h3 { font-family: "Manrope", "Inter", sans-serif; line-height: 1.08; }
+      .hermes-seo-fallback h1 { max-width: 700px; margin: 0 0 28px; font-size: clamp(3.3rem, 8vw, 7.4rem); font-weight: 800; letter-spacing: -.045em; }
+      .hermes-seo-fallback h2 { margin: 0 0 28px; font-size: clamp(2.4rem, 5vw, 4.7rem); font-weight: 800; letter-spacing: -.045em; }
+      .hermes-seo-fallback h3 { margin: 0 0 10px; font-size: 1.15rem; font-weight: 750; }
+      .hermes-seo-fallback p { color: var(--fallback-muted); }
+      .hermes-seo-fallback__lede { max-width: 48ch; margin: 0 0 28px; font-size: clamp(1.05rem, 1.6vw, 1.3rem); }
+      .hermes-seo-fallback__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin: 0; }
+      .hermes-seo-fallback__actions > a:not(.hermes-seo-fallback__cta) { color: var(--fallback-muted); font-weight: 650; text-decoration: none; }
+      .hermes-seo-fallback__media { margin: 0; }
+      .hermes-seo-fallback__media img { display: block; width: 100%; height: auto; border: 1px solid rgba(255, 255, 255, .18); border-radius: 28px; background: #101419; box-shadow: 0 28px 56px rgba(73, 52, 37, .16), inset 0 1px 0 rgba(255, 255, 255, .28); }
+      .hermes-seo-fallback__media figcaption { margin-top: 12px; color: var(--fallback-faint); font-size: .82rem; }
+      .hermes-seo-fallback__section { padding: clamp(4.5rem, 8vw, 7rem) 0; border-top: 1px solid var(--fallback-rule); }
+      .hermes-seo-fallback__feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 24px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 28px; background: #0a0a0b; box-shadow: 0 26px 60px rgba(73, 52, 37, .14); }
+      .hermes-seo-fallback__feature-grid article { min-height: 180px; padding: 24px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 20px; background: rgba(255, 255, 255, .04); }
+      .hermes-seo-fallback__feature-grid h3 { color: var(--fallback-dark-ink); }
+      .hermes-seo-fallback__feature-grid p { color: #b8b8b8; }
+      .hermes-seo-fallback__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+      .hermes-seo-fallback__steps li { padding: 24px; border: 1px solid rgba(255, 255, 255, .54); border-radius: 20px; color: var(--fallback-muted); background: rgba(255, 253, 248, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 8px 22px rgba(73, 52, 37, .08); backdrop-filter: blur(14px) saturate(135%); }
+      .hermes-seo-fallback__steps strong { display: block; margin-bottom: 8px; color: var(--fallback-ink); font-family: "Manrope", "Inter", sans-serif; font-size: 1.3rem; }
+      .hermes-seo-fallback__trust { max-width: 1240px; padding: clamp(2rem, 4vw, 3.5rem); border-radius: 28px; background: rgba(255, 253, 248, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 8px 22px rgba(73, 52, 37, .08); }
+      .hermes-seo-fallback__trust p { max-width: 780px; font-size: 1.15rem; }
+      .hermes-seo-fallback__faq { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+      .hermes-seo-fallback__faq article { padding: 24px; border: 1px solid rgba(255, 255, 255, .54); border-radius: 20px; background: rgba(255, 253, 248, .3); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .62), 0 8px 22px rgba(73, 52, 37, .08); backdrop-filter: blur(14px) saturate(135%); }
+      .hermes-seo-fallback__footer { display: flex; justify-content: space-between; gap: 24px; padding: 48px 0; border-top: 1px solid var(--fallback-rule); color: var(--fallback-faint); font-size: .86rem; }
+      @media (max-width: 980px) { .hermes-seo-fallback__header { grid-template-columns: 1fr auto; } .hermes-seo-fallback__header nav { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; padding-bottom: 16px; } .hermes-seo-fallback__hero { grid-template-columns: 1fr; gap: 36px; } .hermes-seo-fallback__media { max-width: 760px; } }
+      @media (max-width: 760px) { .hermes-seo-fallback__header, .hermes-seo-fallback__hero, .hermes-seo-fallback__section, .hermes-seo-fallback__footer { width: min(100% - 40px, 1240px); } .hermes-seo-fallback__header { display: flex; align-items: flex-start; flex-direction: column; gap: 14px; padding: 18px 0; } .hermes-seo-fallback__header nav, .hermes-seo-fallback__header-actions { justify-content: flex-start; width: 100%; } .hermes-seo-fallback__header nav { gap: 16px; padding-bottom: 0; } .hermes-seo-fallback__header-actions { flex-wrap: wrap; } .hermes-seo-fallback__hero { gap: 32px; padding-top: 4.5rem; } .hermes-seo-fallback h1 { font-size: clamp(3rem, 16vw, 5rem); } .hermes-seo-fallback__feature-grid, .hermes-seo-fallback__faq, .hermes-seo-fallback__steps { grid-template-columns: 1fr; } .hermes-seo-fallback__feature-grid { padding: 16px; } .hermes-seo-fallback__footer { align-items: flex-start; flex-direction: column; } }
+    </style>
+    <script type="module" crossorigin src="/assets/index-D7q8st1q.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-xSXa1GVp.js">
     <link rel="modulepreload" crossorigin href="/assets/framework-CkRCiuW0.js">
-    <link rel="modulepreload" crossorigin href="/assets/i18n-zh-CN-CqgO2bk_.js">
-    <link rel="modulepreload" crossorigin href="/assets/i18n-en-wSQKucKh.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-BwfWnXxH.css">
+    <link rel="modulepreload" crossorigin href="/assets/i18n-en-C1gIL7iO.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-B_2Xj9LE.css">
   </head>
   <body>
+    <noscript>
+      <div id="hermes-seo-fallback" class="hermes-seo-fallback">
+      <header class="hermes-seo-fallback__header">
+        <a class="hermes-seo-fallback__brand" href="/" aria-label="Hermes home">HERMES</a>
+        <nav aria-label="Homepage navigation">
+          <a href="#features">Features</a>
+          <a href="#how-it-works">How it works</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="hermes-seo-fallback__header-actions">
+          <a href="/login">Sign in</a>
+          <a class="hermes-seo-fallback__cta" href="/signup">Start analyzing your runs</a>
+        </div>
+      </header>
+
+      <main>
+        <section class="hermes-seo-fallback__hero" aria-labelledby="hermes-seo-title">
+          <div>
+            <p class="hermes-seo-fallback__eyebrow">RUNNING ANALYTICS · STRAVA SYNC</p>
+            <h1 id="hermes-seo-title">Running analytics with Strava sync</h1>
+            <p class="hermes-seo-fallback__lede">
+              Hermes helps you understand every run with pace zones, VO2max estimates, race finish-time predictions,
+              route heatmaps, and shoe mileage tracking in one focused training workspace.
+            </p>
+            <p class="hermes-seo-fallback__actions">
+              <a class="hermes-seo-fallback__cta" href="/signup">Start analyzing your runs</a>
+              <a href="#features">Explore the features</a>
+            </p>
+          </div>
+          <figure class="hermes-seo-fallback__media">
+            <img src="/images/hermes-og-image.svg" alt="Hermes running analytics dashboard preview" width="1200" height="630" loading="eager" decoding="async" />
+            <figcaption>Clearer context for your training, routes, races, and running shoes.</figcaption>
+          </figure>
+        </section>
+
+        <section id="features" class="hermes-seo-fallback__section" aria-labelledby="hermes-features-title">
+          <p class="hermes-seo-fallback__eyebrow">THE DAILY VIEW</p>
+          <h2 id="hermes-features-title">One running analytics app for the decisions that matter</h2>
+          <div class="hermes-seo-fallback__feature-grid">
+            <article>
+              <h3>VO2max and training zones</h3>
+              <p>See a useful estimate of aerobic fitness and translate effort into pace zones that make your next workout easier to understand.</p>
+            </article>
+            <article>
+              <h3>Race finish-time predictions</h3>
+              <p>Use recent training context to set a realistic race target, compare distances, and arrive at a pacing plan with more confidence.</p>
+            </article>
+            <article>
+              <h3>Route heatmaps</h3>
+              <p>Explore where you run and how your routes fit together with visual heatmaps that turn a long activity history into a readable picture.</p>
+            </article>
+            <article>
+              <h3>Shoe mileage tracking</h3>
+              <p>Track mileage by shoe so you know which pair is carrying the work and when it may be time to rotate or replace your running shoes.</p>
+            </article>
+            <article>
+              <h3>Strava activity synchronization</h3>
+              <p>Connect Strava and bring your running history into Hermes, so your analysis starts with the activities you already recorded.</p>
+            </article>
+            <article>
+              <h3>Training context without noise</h3>
+              <p>Keep the important signals together: effort, load, routes, race readiness, and equipment, without making you hunt through disconnected tools.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="how-it-works" class="hermes-seo-fallback__section" aria-labelledby="hermes-workflow-title">
+          <p class="hermes-seo-fallback__eyebrow">A SIMPLE WORKFLOW</p>
+          <h2 id="hermes-workflow-title">From synced activity to a clearer next step</h2>
+          <ol class="hermes-seo-fallback__steps">
+            <li><strong>Connect.</strong> Sign up and connect Strava to make your running history available in Hermes.</li>
+            <li><strong>Understand.</strong> Review pace, zones, fitness signals, route patterns, and shoe mileage in one place.</li>
+            <li><strong>Decide.</strong> Use the context to choose the right effort today and prepare for the races ahead.</li>
+          </ol>
+        </section>
+
+        <section class="hermes-seo-fallback__section hermes-seo-fallback__trust" aria-labelledby="hermes-trust-title">
+          <p class="hermes-seo-fallback__eyebrow">BUILT FOR TRUST</p>
+          <h2 id="hermes-trust-title">Your training data should help you, not distract you</h2>
+          <p>Hermes is built around focused running analysis and transparent choices. Learn how account information and connected activity data are handled in the <a href="/privacy">privacy policy</a>, and review the <a href="/terms">terms of service</a> before you begin.</p>
+        </section>
+
+        <section id="faq" class="hermes-seo-fallback__section" aria-labelledby="hermes-faq-title">
+          <p class="hermes-seo-fallback__eyebrow">COMMON QUESTIONS</p>
+          <h2 id="hermes-faq-title">Running analytics FAQ</h2>
+          <div class="hermes-seo-fallback__faq">
+            <article><h3>What is Hermes running analytics?</h3><p>Hermes turns synced activity into practical context, including pace zones, VO2max estimates, race predictions, route heatmaps, and shoe mileage.</p></article>
+            <article><h3>Does Hermes work with Strava?</h3><p>Yes. Connect Strava to import your running history and keep future activities available for analysis.</p></article>
+            <article><h3>Can Hermes help predict race finish times?</h3><p>Hermes provides race finish-time estimates from your recent running context to help you set a realistic target and plan effort.</p></article>
+            <article><h3>Is my running data private?</h3><p>Hermes is designed to keep your running context personal. See the <a href="/privacy">privacy policy</a> for account, connected-service, and user-control details.</p></article>
+            <article><h3>Who is Hermes for?</h3><p>Hermes is for runners who want a clearer view of training load, routes, race readiness, and the shoes they use across their running week.</p></article>
+          </div>
+        </section>
+      </main>
+
+      <footer class="hermes-seo-fallback__footer">
+        <span>HERMES · Running analytics with Strava sync</span>
+        <nav aria-label="Legal navigation"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="https://github.com/JunWeiLi233/Hermesruns">Open source project</a><a href="mailto:support@hermes.run">Support</a></nav>
+      </footer>
+      </div>
+    </noscript>
     <div id="root"></div>
   </body>
 </html>

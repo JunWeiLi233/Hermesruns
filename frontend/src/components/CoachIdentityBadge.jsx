@@ -8,9 +8,9 @@ export default function CoachIdentityBadge({ coach, lang, className = '' }) {
   return (
     <div className={`coach-identity-badge${className ? ` ${className}` : ''}`}>
       {coach.avatarUrl ? (
-        <img className="coach-identity-avatar" src={coach.avatarUrl} alt={coach.name} decoding="async" />
+        <img className="coach-identity-avatar" src={coach.avatarUrl} alt={coach.name} width="96" height="96" loading="lazy" decoding="async" />
       ) : (
-        <img className="coach-identity-avatar coach-identity-avatar--fallback" src={fallbackAvatarSrc} alt={coach.name || 'Hermes Coach'} decoding="async" />
+        <img className="coach-identity-avatar coach-identity-avatar--fallback" src={fallbackAvatarSrc} alt={coach.name || 'Hermes Coach'} width="96" height="96" loading="lazy" decoding="async" />
       )}
       <div className="coach-identity-copy">
         <strong>{coach.name}</strong>

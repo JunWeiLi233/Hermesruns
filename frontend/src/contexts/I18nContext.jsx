@@ -8,7 +8,7 @@ import {
   getLocaleDefinition,
   normalizeLocale,
 } from '../i18n/localeRegistry.js';
-import { translate } from '../i18n/translationRuntime.js';
+import { translate, ensureLocaleMessages } from '../i18n/translationRuntime.js';
 
 const STORAGE_KEY = 'hermes_lang';
 
@@ -46,6 +46,21 @@ export function I18nProvider({ children }) {
     return normalizeLocale(stored || detectSystemLanguage());
   });
 
+  // Non-default locale dictionaries load on demand; until the chunk arrives
+  // translate() falls back to the eager DEFAULT_LOCALE copy, then this bump
+  // re-renders consumers in the requested language.
+  const [messagesVersion, setMessagesVersion] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    ensureLocaleMessages(lang).then(() => {
+      if (!cancelled) setMessagesVersion((version) => version + 1);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang]);
+
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.lang = getLocaleDefinition(lang).htmlLang;
@@ -64,7 +79,7 @@ export function I18nProvider({ children }) {
 
   const t = useCallback((key, replacements) => {
     return translate(lang, key, replacements, reportMissingTranslation);
-  }, [lang]);
+  }, [lang, messagesVersion]);
 
   const formatNumber = useCallback((value, options) => formatNumberForLocale(lang, value, options), [lang]);
   const formatDate = useCallback((value, options) => formatDateForLocale(lang, value, options), [lang]);
@@ -79,7 +94,7 @@ export function I18nProvider({ children }) {
     formatNumber,
     formatDate,
     formatList,
-  }), [formatDate, formatList, formatNumber, lang, setLang, t]);
+  }), [formatDate, formatList, formatNumber, lang, messagesVersion, setLang, t]);
 
   return (
     <I18nContext.Provider value={contextValue}>

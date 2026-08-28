@@ -88,13 +88,7 @@ function loadRecaptchaScript(siteKey) {
   const scriptId = 'hermes-recaptcha-v3';
   const existing = document.getElementById(scriptId);
   if (existing) {
-    if (existing.dataset.loaded === 'true') {
-      return Promise.resolve();
-    }
-    return new Promise((resolve, reject) => {
-      existing.addEventListener('load', () => resolve(), { once: true });
-      existing.addEventListener('error', () => reject(new Error('recaptcha_script_failed')), { once: true });
-    });
+    return waitForRecaptchaApi();
   }
 
   return new Promise((resolve, reject) => {
@@ -105,10 +99,30 @@ function loadRecaptchaScript(siteKey) {
     script.defer = true;
     script.onload = () => {
       script.dataset.loaded = 'true';
-      resolve();
+      waitForRecaptchaApi().then(resolve, reject);
     };
     script.onerror = () => reject(new Error('recaptcha_script_failed'));
     document.head.appendChild(script);
+  });
+}
+
+function waitForRecaptchaApi(timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+
+  return new Promise((resolve, reject) => {
+    const checkReady = () => {
+      if (window.grecaptcha?.ready && window.grecaptcha?.execute) {
+        resolve();
+        return;
+      }
+      if (Date.now() >= deadline) {
+        reject(new Error('recaptcha_unavailable'));
+        return;
+      }
+      setTimeout(checkReady, 25);
+    };
+
+    checkReady();
   });
 }
 
@@ -489,6 +503,10 @@ export default function Signup() {
                   className="auth-flow-btn__strava-official"
                   src={stravaConnectButton}
                   alt={stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}
+                  width="237"
+                  height="48"
+                  loading="eager"
+                  decoding="async"
                 />
               </button>
 

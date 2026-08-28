@@ -34,6 +34,8 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 
 Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. More commands: [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
 
+Native iOS client: see [ios/README.md](ios/README.md) for the SwiftUI app and Xcode setup.
+
 ## Feature Highlights
 
 | Area | What you get |
@@ -75,6 +77,18 @@ Source artifact: [docs/architecture/ai-agents-workflow.html](docs/architecture/a
 ![Hermes SaaS architecture](docs/architecture/saas-architecture.svg)
 
 Source artifact: [docs/architecture/saas-architecture.html](docs/architecture/saas-architecture.html)
+
+#### API System
+
+![Hermes API system](docs/architecture/api-system.svg)
+
+Source artifact: [docs/architecture/api-system.html](docs/architecture/api-system.html)
+
+#### Data Dictionaries
+
+![Hermes data dictionaries](docs/architecture/data-dictionaries.svg)
+
+Source artifact: [docs/architecture/data-dictionaries.html](docs/architecture/data-dictionaries.html)
 <!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS END -->
 
 ## Documentation

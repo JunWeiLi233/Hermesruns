@@ -1,39 +1,39 @@
-import adidasLogo from '../assets/brand-logos/adidas.png';
-import erkeLogo from '../assets/brand-logos/erke.jpg';
+import adidasLogo from '../assets/brand-logos/adidas.webp';
+import erkeLogo from '../assets/brand-logos/erke.webp';
 import logo361 from '../assets/brand-logos/361.webp';
 import asicsLogo from '../assets/brand-logos/asics.webp';
-import newBalanceLogo from '../assets/brand-logos/new-balance.png';
+import newBalanceLogo from '../assets/brand-logos/new-balance.webp';
 import nikeLogo from '../assets/brand-logos/nike.webp';
-import pumaLogo from '../assets/brand-logos/puma-reference.png';
-import sauconyLogo from '../assets/brand-logos/saucony.png';
-import xtepLogo from '../assets/brand-logos/xtep.png';
-import altraLogo from '../assets/brand-logos/altra-user.png';
-import antaLogo from '../assets/brand-logos/anta-user.png';
-import bmaiLogo from '../assets/brand-logos/bmai-user.png';
-import brooksLogo from '../assets/brand-logos/brooks-user.png';
-import craftLogo from '../assets/brand-logos/craft-reference.png';
-import dayanLogo from '../assets/brand-logos/dayan-dynafish.png';
-import diadoraLogo from '../assets/brand-logos/diadora-reference.png';
-import doWinLogo from '../assets/brand-logos/do-win-user.png';
+import pumaLogo from '../assets/brand-logos/puma-reference.webp';
+import sauconyLogo from '../assets/brand-logos/saucony.webp';
+import xtepLogo from '../assets/brand-logos/xtep.webp';
+import altraLogo from '../assets/brand-logos/altra-user.webp';
+import antaLogo from '../assets/brand-logos/anta-user.webp';
+import bmaiLogo from '../assets/brand-logos/bmai-user.webp';
+import brooksLogo from '../assets/brand-logos/brooks-user.webp';
+import craftLogo from '../assets/brand-logos/craft-reference.webp';
+import dayanLogo from '../assets/brand-logos/dayan-dynafish.webp';
+import diadoraLogo from '../assets/brand-logos/diadora-reference.webp';
+import doWinLogo from '../assets/brand-logos/do-win-user.webp';
 import hokaLogo from '../assets/brand-logos/hoka.svg';
-import inov8Logo from '../assets/brand-logos/inov8-user.png';
-import liningLogo from '../assets/brand-logos/lining-user.png';
-import macondoLogo from '../assets/brand-logos/macondo-reference.png';
-import laSportivaLogo from '../assets/brand-logos/la-sportiva-user.png';
-import merrellLogo from '../assets/brand-logos/merrell-user.png';
-import mizunoLogo from '../assets/brand-logos/mizuno-reference.png';
-import nordaLogo from '../assets/brand-logos/norda-user.png';
-import onLogo from '../assets/brand-logos/on-background-removed.png';
-import peakLogo from '../assets/brand-logos/peak-user.png';
-import qiaodanLogo from '../assets/brand-logos/qiaodan-user.png';
-import reebokLogo from '../assets/brand-logos/reebok-reference.png';
-import salomonLogo from '../assets/brand-logos/salomon-reference.png';
-import skechersLogo from '../assets/brand-logos/skechers-user.png';
-import topoAthleticLogo from '../assets/brand-logos/topo-athletic-user.png';
-import underArmourLogo from '../assets/brand-logos/under-armour-reference.png';
-import volantiLogo from '../assets/brand-logos/volanti-user.png';
-import karhuLogo from '../assets/brand-logos/karhu-reference.png';
-import kiprunLogo from '../assets/brand-logos/kiprun-reference.png';
+import inov8Logo from '../assets/brand-logos/inov8-user.webp';
+import liningLogo from '../assets/brand-logos/lining-user.webp';
+import macondoLogo from '../assets/brand-logos/macondo-reference.webp';
+import laSportivaLogo from '../assets/brand-logos/la-sportiva-user.webp';
+import merrellLogo from '../assets/brand-logos/merrell-user.webp';
+import mizunoLogo from '../assets/brand-logos/mizuno-reference.webp';
+import nordaLogo from '../assets/brand-logos/norda-user.webp';
+import onLogo from '../assets/brand-logos/on-background-removed.webp';
+import peakLogo from '../assets/brand-logos/peak-user.webp';
+import qiaodanLogo from '../assets/brand-logos/qiaodan-user.webp';
+import reebokLogo from '../assets/brand-logos/reebok-reference.webp';
+import salomonLogo from '../assets/brand-logos/salomon-reference.webp';
+import skechersLogo from '../assets/brand-logos/skechers-user.webp';
+import topoAthleticLogo from '../assets/brand-logos/topo-athletic-user.webp';
+import underArmourLogo from '../assets/brand-logos/under-armour-reference.webp';
+import volantiLogo from '../assets/brand-logos/volanti-user.webp';
+import karhuLogo from '../assets/brand-logos/karhu-reference.webp';
+import kiprunLogo from '../assets/brand-logos/kiprun-reference.webp';
 import { getShoeBrandAssetKey, getShoeBrandFallbackSpec } from '../utils/shoeBrandLogo';
 
 const BRAND_LOGO_ASSETS = {
@@ -109,6 +109,8 @@ export default function ShoeBrandLogo({ brand, fallbackEmoji, logoUrl, loading =
         className="shoe-brand-logo-svg shoe-brand-logo-img"
         src={logoUrl}
         alt={`${brand} logo`}
+        width="256"
+        height="256"
         loading={loading}
         decoding="async"
       />
@@ -122,6 +124,8 @@ export default function ShoeBrandLogo({ brand, fallbackEmoji, logoUrl, loading =
         className="shoe-brand-logo-svg shoe-brand-logo-img"
         src={asset}
         alt={`${brand} logo`}
+        width="256"
+        height="256"
         loading={loading}
         decoding="async"
       />

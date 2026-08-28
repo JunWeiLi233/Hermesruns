@@ -39,7 +39,7 @@ public class ApiExceptionLoggingAdvice {
         String uri = request == null ? "" : request.getRequestURI();
         log.warn("Missing resource ip={} method={} uri={}", ip, method, uri);
         if (isBrowserSpaRoute(request, uri)) {
-            return spaForwardingController.forward();
+            return spaForwardingController.forward(request);
         }
         if (uri.startsWith("/assets/")) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -104,4 +104,3 @@ public class ApiExceptionLoggingAdvice {
         return !lastSegment.contains(".");
     }
 }
-

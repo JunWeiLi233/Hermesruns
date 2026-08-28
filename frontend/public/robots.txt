@@ -9,6 +9,7 @@ Disallow: /signup
 Disallow: /forgot-password
 Disallow: /profile
 Disallow: /runs
+Disallow: /run
 Disallow: /heatmap
 Disallow: /analysis
 Disallow: /prediction

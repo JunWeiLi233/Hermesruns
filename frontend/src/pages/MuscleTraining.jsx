@@ -3957,7 +3957,7 @@ export default function MuscleTraining() {
                         aria-pressed={isSelected}
                       >
                         <span className="mt-top-action-thumb">
-                          <img src={exerciseImage} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                          <img src={exerciseImage} alt="" aria-hidden="true" width="900" height="600" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                           {isLibrary && <i>{stitchCopy.topLibraryBadge}</i>}
                         </span>
                         <span className="mt-top-action-copy">
@@ -3979,7 +3979,7 @@ export default function MuscleTraining() {
                 </div>
                 <div className="mt-top-reference-card">
                   <figure className="mt-top-reference-media">
-                    <img src={topReferenceImage} alt="" aria-hidden="true" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                    <img src={topReferenceImage} alt="" aria-hidden="true" width="900" height="600" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
                     <figcaption>
                       <strong>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</strong>
                       <span>{selectedProtocolItem?.exercise ? formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh) : ''}</span>
@@ -4041,7 +4041,7 @@ export default function MuscleTraining() {
                   >
                     <span>{ta.label}</span>
                     <span className="mt-filter-visual" aria-hidden="true">
-                      <img src={ta.image} alt="" loading="lazy" />
+                      <img src={ta.image} alt="" width="900" height="600" loading="lazy" decoding="async" />
                     </span>
                     <small>({ta.planCount})</small>
                   </button>
@@ -4179,6 +4179,8 @@ export default function MuscleTraining() {
                     <img
                       src={selectedExerciseReferenceImage}
                       alt={selectedExerciseCopy?.name || selectedRailTargetCard?.label || stitchCopy.noExerciseSelected}
+                      width="900"
+                      height="600"
                       loading="lazy"
                       decoding="async"
                       referrerPolicy="no-referrer"

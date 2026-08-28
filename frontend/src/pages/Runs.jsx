@@ -400,6 +400,8 @@ function RoutePreviewThumb({ preview, provider, runName, bbox }) {
           data-route-tile-layer={layer.key}
           alt=""
           aria-hidden="true"
+          width="256"
+          height="256"
           loading="lazy"
           decoding="async"
         />

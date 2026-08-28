@@ -10,8 +10,20 @@ import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
-import predictionFiveKHeroImage from '../assets/generated/prediction-5k-hero.png';
-import predictionTenKHeroImage from '../assets/generated/prediction-10k-hero.png';
+import predictionFiveKHeroImage from '../assets/generated/prediction-5k-hero.webp';
+import predictionFiveKHeroAvif640 from '../assets/generated/prediction-5k-hero-640.avif';
+import predictionFiveKHeroAvif960 from '../assets/generated/prediction-5k-hero-960.avif';
+import predictionFiveKHeroAvif1200 from '../assets/generated/prediction-5k-hero-1200.avif';
+import predictionFiveKHeroWebp640 from '../assets/generated/prediction-5k-hero-640.webp';
+import predictionFiveKHeroWebp960 from '../assets/generated/prediction-5k-hero-960.webp';
+import predictionFiveKHeroWebp1200 from '../assets/generated/prediction-5k-hero-1200.webp';
+import predictionTenKHeroImage from '../assets/generated/prediction-10k-hero.webp';
+import predictionTenKHeroAvif640 from '../assets/generated/prediction-10k-hero-640.avif';
+import predictionTenKHeroAvif1280 from '../assets/generated/prediction-10k-hero-1280.avif';
+import predictionTenKHeroAvif1600 from '../assets/generated/prediction-10k-hero-1600.avif';
+import predictionTenKHeroWebp640 from '../assets/generated/prediction-10k-hero-640.webp';
+import predictionTenKHeroWebp1280 from '../assets/generated/prediction-10k-hero-1280.webp';
+import predictionTenKHeroWebp1600 from '../assets/generated/prediction-10k-hero-1600.webp';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
@@ -427,7 +439,31 @@ export default function PredictionDetail() {
 
               {distance?.key === '5k' || distance?.key === '10k' ? (
                 <div className="prediction-forecast-hero-media" aria-hidden="true">
-                  <img src={distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage} alt="" loading="eager" decoding="async" />
+                  <picture>
+                    <source
+                      type="image/avif"
+                      srcSet={distance?.key === '10k'
+                        ? `${predictionTenKHeroAvif640} 640w, ${predictionTenKHeroAvif1280} 1280w, ${predictionTenKHeroAvif1600} 1600w`
+                        : `${predictionFiveKHeroAvif640} 640w, ${predictionFiveKHeroAvif960} 960w, ${predictionFiveKHeroAvif1200} 1200w`}
+                      sizes="(max-width: 900px) 100vw, 52vw"
+                    />
+                    <source
+                      type="image/webp"
+                      srcSet={distance?.key === '10k'
+                        ? `${predictionTenKHeroWebp640} 640w, ${predictionTenKHeroWebp1280} 1280w, ${predictionTenKHeroWebp1600} 1600w`
+                        : `${predictionFiveKHeroWebp640} 640w, ${predictionFiveKHeroWebp960} 960w, ${predictionFiveKHeroWebp1200} 1200w`}
+                      sizes="(max-width: 900px) 100vw, 52vw"
+                    />
+                    <img
+                      src={distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage}
+                      alt=""
+                      width={distance?.key === '10k' ? 1600 : 1200}
+                      height={distance?.key === '10k' ? 901 : 650}
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                    />
+                  </picture>
                 </div>
               ) : null}
 

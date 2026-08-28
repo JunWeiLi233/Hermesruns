@@ -1,5 +1,15 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-27-004
+Date: 2026-08-27
+Surface: Public landing page Lighthouse hardening
+Files: `frontend/src/pages/Landing.jsx`, `frontend/src/styles/_split/landing.css`, `frontend/src/App.jsx`, `frontend/src/index.css`, `frontend/src/styles/app.css`, `frontend/index.html`
+What changed: Preserved the landing visual system while correcting the feature-card heading hierarchy, reserving Strava CTA image space, optimizing below-the-fold media loading, and moving route-specific styles and the icon font off the landing critical path.
+Why: Mobile Lighthouse identified render-blocking CSS and font work, image payload waste, a layout-stability risk, and a skipped heading level.
+Preserve list: Kinetic Editorial landing composition, race-map motion, Strava and email actions, localized copy, responsive layout, themes, accessibility semantics, and reduced-motion behavior.
+Rollback target: `DV-2026-08-27-003`
+Notes: Performance and semantics correction; no new landing interaction or content was introduced.
+
 ### Version: DV-2026-08-25-044
 Date: 2026-08-25
 Surface: Admin overview shoe-inventory metric card
@@ -9216,4 +9226,34 @@ Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/_split/analysis.c
 What changed: Removed the redundant blank status capsule from the ACWR overview card and cleaned its desktop and responsive grid areas so no empty status row remains.
 Why: The capsule rendered as an unexplained pale square in the overview grid while the card already communicated its load balance through the gauge, score, and explanatory copy.
 Preserve list: ACWR title, gauge, score, explanatory copy, load-balance navigation, responsive layout, localization, themes, and accessibility.
+
+### Version: DV-2026-08-27-001
+Date: 2026-08-27
+Surface: Native iOS runner companion
+Files: `ios/HermesRuns.xcodeproj/project.pbxproj`, `ios/HermesRuns.xcodeproj/xcshareddata/xcschemes/HermesRuns.xcscheme`, `ios/HermesRuns/`, `ios/README.md`, `DESIGN_VERSIONS.md`
+What changed: Added a SwiftUI iOS 16 application shell with Hermes's Kinetic Editorial mobile treatment: Today-first coaching, readiness, workout blueprint, recent runs, shoe rotation, secure sign-in, and connection settings.
+Why: Runners need the next training decision and its supporting context on mobile without duplicating the backend's coaching methodology or weakening the existing web product.
+Preserve list: Existing Spring Boot API contracts, auth/session semantics, local-first data ownership, existing web routes and integrations, readiness/VDOT/ACWR methodology, bilingual web surfaces, and admin boundaries.
+Rollback target: No prior native iOS surface; remove the `ios/` tree and this entry.
+Notes: Native compilation and simulator visual proof remain pending on a macOS/Xcode host; this Windows checkout passed the source/scaffold gates only.
 Rollback target: `DV-2026-08-25-030`
+
+### Version: DV-2026-08-27-002
+Date: 2026-08-27
+Surface: Native iOS runner tools in the More tab
+Files: `ios/HermesRuns/Views/MoreView.swift`, `ios/HermesRuns/Views/AnalysisView.swift`, `ios/HermesRuns/Views/ScheduleView.swift`, `ios/HermesRuns/Views/RacesView.swift`, `ios/HermesRuns/Views/WeatherView.swift`, `ios/HermesRuns/Views/RewardsView.swift`, `ios/HermesRuns/Views/ProfileView.swift`, `ios/HermesRuns/Stores/SessionStore.swift`, `ios/HermesRuns/Networking/HermesAPIClient.swift`, `DESIGN_VERSIONS.md`
+What changed: Extended the native runner companion with a More tab and read-only analysis backed by `/api/activities/analysis` when available, 14-day schedule, race countdown, weather context, run-derived milestones, and profile destinations.
+Why: These surfaces expose the existing runner context on mobile while keeping mutation-heavy admin, import, OAuth, map, race-planning, and editing flows on the established web app.
+Preserve list: Existing API contracts, web routes, backend coaching methodology, secure session storage, Today-first hierarchy, and truthful read-only boundaries.
+Rollback target: `DV-2026-08-27-001`
+Notes: Native compilation and simulator visual proof remain pending on a macOS/Xcode host.
+
+### Version: DV-2026-08-27-003
+Date: 2026-08-27
+Surface: Bundled frontend image assets
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/Landing.jsx`, `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/pages/Races.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/data/worldRaceCatalog.json`, `frontend/src/assets/`, `frontend/public/images/races/`, `frontend/src/pages/staticImageOptimization.smoke.test.js`, `frontend/src/assets/muscle-training/ASSET_SOURCES.md`, `.gitignore`, `DESIGN_VERSIONS.md`
+What changed: Converted every displayed local PNG/JPEG artwork asset, public race hero, and used shoe-brand raster logo to WebP at the same dimensions, updated all imports and URL references/guardrails, and removed unreferenced legacy/duplicate local image files.
+Why: Reduce frontend image transfer size and keep the shipped asset directory limited to files that the application actually displays.
+Preserve list: Image dimensions and transparency, route behavior, fallback logo handling, SVG icons, backend course-map uploads and test fixtures, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-27-002`
+Notes: Pillow WebP quality 88 with no resizing; 42 converted assets save approximately 12.1 MB (85.9%) before the production build.

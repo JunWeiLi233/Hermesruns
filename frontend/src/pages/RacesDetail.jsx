@@ -22,7 +22,7 @@ import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, remembe
 import { deriveRaceMapTrust } from '../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../utils/raceDetailRequestPolicy';
 
-const DEFAULT_HERO_IMAGE = '/images/races/race-detail-default-hero.png';
+const DEFAULT_HERO_IMAGE = '/images/races/race-detail-default-hero.webp';
 const EVENT_DAY_OVERRIDES = {
   'tokyo-marathon': 1,
   'boston-marathon': 20,
@@ -1223,6 +1223,11 @@ export default function RacesDetail() {
                 className="race-detail-hero-image"
                 src={heroImage}
                 alt={race?.name || t('races.detail_nav')}
+                width="1600"
+                height="900"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 onLoad={(event) => {
                   rememberLoadedRaceImage(race, event.currentTarget?.currentSrc || event.currentTarget?.src || '');
                 }}

@@ -289,16 +289,8 @@ echo [2/4] Waking up Spring Boot (Java)...
 if exist "%HERMES_BACKEND_LOG%" del "%HERMES_BACKEND_LOG%" >nul 2>nul
 start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 
-:: 3. Start the Python services when a local virtualenv is available
+:: 3. Start the Python auto-import watcher when a local virtualenv is available
 if defined PYTHON_EXE (
-    if exist "%ROOT%backend\src\main\resources\static\vdot_engine.py" (
-        echo [3/4] Waking up Python VDOT Engine...
-        start "Hermes - Python Engine" cmd /k "cd /d %ROOT% && \"%PYTHON_EXE%\" backend\src\main\resources\static\vdot_engine.py"
-    ) else (
-        echo [3/4] Python VDOT Engine not started: vdot_engine.py is not present in this tree.
-        echo       VDOT analytics run inside Spring Boot, so nothing is lost.
-    )
-
     if exist "%SYNC_CONFIG%" (
         echo [3/4] Waking up Hermes auto-import watcher...
         start "Hermes - Auto Import Watcher" cmd /k "cd /d %ROOT% && \"%PYTHON_EXE%\" .tools\hermes_auto_sync.py \"%SYNC_CONFIG%\""
@@ -308,9 +300,8 @@ if defined PYTHON_EXE (
         echo       then set auth email/password and import folders. See README "Garmin / COROS Auto-Import".
     )
 ) else (
-    echo [3/4] Skipping Python VDOT Engine. No local virtualenv was found.
+    echo [3/4] Skipping auto-import watcher. No local virtualenv was found.
     echo       To enable: py -3.12 -m venv .venv
-    echo [3/4] Skipping auto-import watcher because Python is unavailable.
 )
 
 :: 4. Wait until Spring Boot serves the site before opening the browser
@@ -411,7 +402,7 @@ echo Launching Hermes...
 start "" "%APP_URL%"
 echo ==========================================
 echo Hermes is online!
-echo To stop everything ^(backend, Python engines, leftover background processes^), run stop_hermes.cmd
+echo To stop everything ^(backend, auto-import watcher, leftover background processes^), run stop_hermes.cmd
 echo ==========================================
 if not defined HERMES_NO_PAUSE pause
 exit /b 0

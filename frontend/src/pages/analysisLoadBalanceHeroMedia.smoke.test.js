@@ -11,12 +11,12 @@ const styleSource = read('styles/analysis-load-balance-profile-alignment.css');
 
 assert.match(
   insightSource,
-  /import loadBalanceTrack from '\.\.\/assets\/generated\/load-balance-track\.png';/,
+  /import loadBalanceTrack from '\.\.\/assets\/generated\/load-balance-track\.webp';/,
   'Load Balance must import the supplied track image as a bundled asset.',
 );
 assert.match(
   insightSource,
-  /className="analysis-load-profile-visual" aria-hidden="true"[\s\S]*<img src=\{loadBalanceTrack\} alt="" \/>/,
+  /className="analysis-load-profile-visual" aria-hidden="true"[\s\S]*<img src=\{loadBalanceTrack\} alt=""(?:\s+[^>]*)?\/>/,
   'The Load Balance hero must render the track image as a decorative visual layer.',
 );
 assert.match(

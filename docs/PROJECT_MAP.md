@@ -40,6 +40,7 @@ Note: if `backend/pom.xml` and docs disagree on dependency versions, `pom.xml` w
 - `.tools/`: build, sync, verification, workflow, and maintenance scripts.
 - `frontend/`: React app, frontend tests, styles, build scripts.
 - `backend/`: Spring Boot app, Maven wrapper, backend tests.
+- `ios/`: native SwiftUI client, Xcode project, secure session storage, and iOS runner views.
 - `task-images/`: local task proof/design artifacts; treat as local-only unless user asks to publish.
 
 ## 4. Frontend module map
@@ -64,6 +65,8 @@ Note: if `backend/pom.xml` and docs disagree on dependency versions, `pom.xml` w
 - `frontend/src/styles/_split/`: split CSS by surface or feature.
 
 Key route mapping is in `frontend/src/App.jsx`: `/profile`, `/runs`, `/run/:id`, `/analysis`, `/heatmap`, `/weather`, `/today-run`, `/shoes`, `/races`, `/schedule`, `/muscle-training`, `/rewards`, `/settings`, and `/dashboard/*`.
+
+Native iOS mapping is in `ios/HermesRuns.xcodeproj`: `SessionStore` owns Keychain-backed authentication, the Today dashboard snapshot, canonical analysis summaries, and the 14-day Coach schedule; `HermesAPIClient` consumes `/api/auth/login`, `/api/auth/logout`, `/api/today/dashboard`, `/api/activities/analysis`, and `/api/coach/schedule`; `MainTabView` hosts Today, Runs, Shoes, and More, with read-only Analysis, Schedule, Races, Weather, Rewards, Profile, and Settings destinations. Admin, OAuth linking, imports, maps, race planning, and editing flows remain on the web surface.
 
 ## 5. Backend module map
 

@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -26,7 +27,8 @@ class SpaForwardingControllerTests {
         mockMvc.perform(get("/muscle-training"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
     }
 
     @Test
@@ -34,7 +36,15 @@ class SpaForwardingControllerTests {
         mockMvc.perform(get("/shoe-catalog"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
+    @Test
+    void legalRouteRemainsIndexable() throws Exception {
+        mockMvc.perform(get("/privacy"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Robots-Tag"));
     }
 
     @ParameterizedTest

@@ -105,7 +105,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/index.html", "/assets/**",
                                 "/favicon.ico", "/favicon.svg", "/hermes-tab-icon.svg", "/icons.svg",
-                                "/robots.txt", "/sitemap.xml",
+                                "/robots.txt", "/sitemap.xml", "/llms.txt",
                                 "/images/**",
                                 "/error"
                         ).permitAll()

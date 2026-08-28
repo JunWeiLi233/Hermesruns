@@ -189,21 +189,6 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
     );
 
     @Query(value = """
-            select min(ap.latitude), min(ap.longitude), max(ap.latitude), max(ap.longitude)
-            from activity_points ap
-            join activities a on a.id = ap.activity_id
-            where a.runner_id = :runnerId
-              and a.activity_type = :activityType
-              and ap.latitude is not null
-              and ap.longitude is not null
-              and ap.latitude between -90 and 90
-              and ap.longitude between -180 and 180
-            """, nativeQuery = true)
-    List<Object[]> findHeatmapBoundsByRunnerAndType(
-            @Param("runnerId") Long runnerId,
-            @Param("activityType") String activityType
-    );
-    @Query(value = """
             with ordered_points as (
                 select ap.activity_id,
                        ap.latitude,

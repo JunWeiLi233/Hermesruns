@@ -1,7 +1,12 @@
 @import 'tailwindcss';
 @import './styles/_split/tokens.css';
-@import './styles/_split/runner-shell.css';
 @import './styles/_split/shared.css';
+
+/* HERMES_LEGACY_STYLE_MANIFEST_START
+ * Runtime route styles are loaded by App.jsx and Landing.jsx. Keep this
+ * source-order manifest for the generated compatibility bundle and existing
+ * style-contract tooling without putting these rules on the landing critical path.
+@import './styles/_split/runner-shell.css';
 @import './styles/_split/auth.css';
 @import './styles/_split/landing.css';
 @import './styles/_split/profile.css';
@@ -15,7 +20,6 @@
 @import './styles/_split/heatmap.css';
 @import './styles/_split/weather.css';
 @import './styles/_split/rewards.css';
-
 @import './styles/_split/settings.css';
 @import './styles/_split/integrations.css';
 @import './styles/_split/subscription.css';
@@ -47,6 +51,7 @@
 @import './styles/add-shoes-profile-alignment.css';
 @import './styles/grid-cards-white.css';
 @import './styles/runner-shell-workout-button.css';
+ * HERMES_LEGACY_STYLE_MANIFEST_END */
 
 /* Leaflet positions default 256px tiles at fractional screen coordinates.
  * Overlap their painted edges by one pixel so the map backing never appears

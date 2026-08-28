@@ -19,21 +19,16 @@ import {
   isHeatmapCacheWriteEpochCurrent,
   invalidateHeatmapCache,
 } from './heatmapCache';
-import {
-  HEATMAP_PAGE_FETCH_CONCURRENCY,
-  computeBackgroundPagePlan,
-  fetchHeatmapPagesWithBounds,
-  isCompletePageAssembly,
-} from './heatmapPagePlan';
 import { STRAVA_SYNC_FINISHED_EVENT } from '../utils/stravaAutoSync';
 import 'leaflet/dist/leaflet.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const HEATMAP_REQUEST_TIMEOUT_MS = 120000;
-const HEATMAP_INITIAL_PAGE_SIZE = 5000;
-const HEATMAP_BACKGROUND_PAGE_SIZE = 100000;
-const MAX_HEATMAP_PAGES = 1000;
+// The server returns one bounded, strided render pool (it draws ~12k dots, so
+// more fidelity is invisible); this replaced paging the full multi-million-
+// point history (~75MB JSON observed in production) through the main thread.
+const HEATMAP_SAMPLE_LIMIT = 25000;
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
@@ -109,27 +104,6 @@ function normalizePointSpeedRatios(points) {
   if (points[0] && Number.isFinite(points[0].visualSpeedRatio)) return points;
 
   return points.map(normalizeHeatPointForRender);
-}
-
-function buildMergedHeatmapPayload(basePayload, points, loadPhase = 'complete') {
-  if (!basePayload) return null;
-
-  const sourcePointCount = Number(basePayload.pointCount) || points.length;
-  const hasCompleteGps = loadPhase === 'complete' && points.length >= sourcePointCount;
-  return {
-    ...basePayload,
-    points,
-    sampledPointCount: points.length,
-    diagnostics: {
-      ...(basePayload.diagnostics || {}),
-      sourceGpsPointCount: Number(basePayload.diagnostics?.sourceGpsPointCount) || sourcePointCount,
-      queriedGpsPointCount: points.length,
-      returnedGpsPointCount: points.length,
-      loadPhase,
-      complete: hasCompleteGps,
-    },
-    page: null,
-  };
 }
 
 function readHeatmapCacheRecord(database, key) {
@@ -228,73 +202,10 @@ function scheduleHeatmapCacheWrite(cacheKey, payload) {
   window.setTimeout(startWrite, 0);
 }
 
-async function fetchHeatmapPage(offset, limit, signal) {
-  const pagePayload = await apiJson(`/api/profile/heatmap?offset=${offset}&limit=${limit}`, { signal });
-  if (!pagePayload || typeof pagePayload !== 'object') return null;
-  return pagePayload;
-}
-
-async function fetchCompleteHeatmap(signal, onProgress) {
-  const points = [];
-  let offset = 0;
-  const nextLimit = HEATMAP_INITIAL_PAGE_SIZE;
-
-  const firstPagePayload = await fetchHeatmapPage(offset, nextLimit, signal);
-  if (!firstPagePayload) return null;
-
-  const firstPagePoints = Array.isArray(firstPagePayload.points) ? firstPagePayload.points : [];
-  for (const point of firstPagePoints) {
-    points.push(normalizeHeatPointForRender(point));
-  }
-
-  if (typeof onProgress === 'function') {
-    const firstProgress = buildMergedHeatmapPayload(firstPagePayload, points.slice(), 'recentPreview');
-    if (firstProgress) onProgress(firstProgress);
-  }
-
-  const sourcePointCount = Number(firstPagePayload.pointCount || 0);
-
-  const firstReturnedPointCount = Number(firstPagePayload.page?.returnedPointCount || firstPagePoints.length);
-  const firstPageOffset = Number(firstPagePayload.page?.offset || 0);
-  const firstPageLimit = Number(firstPagePayload.page?.limit) || HEATMAP_INITIAL_PAGE_SIZE;
-  // returnedPointCount reports VALID points, but a page that filled its
-  // request limit consumed the full offset span server-side: continue at
-  // offset + limit so rows the valid-row filter dropped are not re-fetched
-  // (and duplicated). A short first page means the dataset ended, so the
-  // plan is skipped by the hasMore gate anyway.
-  offset = firstReturnedPointCount >= firstPageLimit
-    ? firstPageOffset + firstPageLimit
-    : firstPageOffset + firstReturnedPointCount;
-
-  if (firstPagePayload.page?.hasMore && offset < sourcePointCount) {
-    const pagePlan = computeBackgroundPagePlan({
-      sourcePointCount,
-      startOffset: offset,
-      pageSize: HEATMAP_BACKGROUND_PAGE_SIZE,
-      maxPages: MAX_HEATMAP_PAGES - 1,
-    });
-
-    if (pagePlan.length > 0) {
-      const pageResults = await fetchHeatmapPagesWithBounds(
-        pagePlan,
-        (pageOffset, pageLimit) => fetchHeatmapPage(pageOffset, pageLimit, signal),
-        HEATMAP_PAGE_FETCH_CONCURRENCY,
-      );
-
-      for (const pagePayload of pageResults) {
-        const pagePoints = Array.isArray(pagePayload?.points) ? pagePayload.points : [];
-        for (const point of pagePoints) {
-          points.push(normalizeHeatPointForRender(point));
-        }
-      }
-
-      if (!isCompletePageAssembly(pagePlan, pageResults)) {
-        return buildMergedHeatmapPayload(firstPagePayload, points, 'partialFull');
-      }
-    }
-  }
-
-  return buildMergedHeatmapPayload(firstPagePayload, points);
+async function fetchSampledHeatmap(signal) {
+  const payload = await apiJson(`/api/profile/heatmap?sample=true&limit=${HEATMAP_SAMPLE_LIMIT}`, { signal });
+  if (!payload || typeof payload !== 'object') return null;
+  return payload;
 }
 
 function formatCoordinate(value, positiveSuffix, negativeSuffix) {
@@ -392,11 +303,7 @@ export default function Heatmap() {
         // runs silently in the background and only swaps in a complete result.
       }
 
-      const heatmapData = await fetchCompleteHeatmap(heatmapController.signal, (partialHeatmap) => {
-        if (cancelled || hasRenderableDataRef.current) return;
-        setHeatmap(partialHeatmap);
-        setHeatmapState('ready');
-      });
+      const heatmapData = await fetchSampledHeatmap(heatmapController.signal);
 
       if (cancelled) return;
       const completeHeatmap = heatmapData && typeof heatmapData === 'object' ? heatmapData : null;

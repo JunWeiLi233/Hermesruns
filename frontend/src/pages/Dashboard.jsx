@@ -80,7 +80,7 @@ function ShoeImage({ src, alt, className, noImageLabel }) {
 
   if (!encodedSrc) return <div className="admin-shoe-img-empty">{noImageLabel || alt || 'No image'}</div>;
   if (!processed) return <div className="admin-shoe-img-loading" />;
-  return <img className={className} src={processed} alt={alt} loading="lazy" decoding="async" />;
+  return <img className={className} src={processed} alt={alt} width="800" height="800" loading="lazy" decoding="async" />;
 }
 
 const TAB_ITEMS = [
@@ -5885,7 +5885,7 @@ const Dashboard = memo(function Dashboard() {
                   if (!safeUrl) return null;
                   return (
                     <button key={index} type="button" className="img-picker-candidate" onClick={() => setShoePendingPhoto(safeUrl, 'scan')}>
-                      <img src={encodeURI(safeUrl)} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
+                      <img src={encodeURI(safeUrl)} alt={`candidate ${index + 1}`} width="512" height="512" loading="lazy" decoding="async" />
                     </button>
                   );
                 })()
@@ -5939,7 +5939,7 @@ const Dashboard = memo(function Dashboard() {
             <div className="img-picker-grid">
               {catalogImageCandidates.map((url, index) => (
                 <button key={index} type="button" className="img-picker-candidate" disabled={Boolean(catalogImageAction)} onClick={() => setCatalogImagePending(url, 'scan')}>
-                  <img src={url} alt={`candidate ${index + 1}`} loading="lazy" decoding="async" />
+                  <img src={url} alt={`candidate ${index + 1}`} width="512" height="512" loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
@@ -6077,7 +6077,7 @@ const Dashboard = memo(function Dashboard() {
               <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleCatalogBrandLogoUpload} disabled={catalogBrandLogoUploading} />
             </label>
             {getSafeImageUrl(catalogBrandLogoUrl) && (
-              <img className="admin-catalog-brand-logo-preview" src={encodeURI(getSafeImageUrl(catalogBrandLogoUrl))} alt={t('dashboard.catalog_brand_logo_preview')} />
+              <img className="admin-catalog-brand-logo-preview" src={encodeURI(getSafeImageUrl(catalogBrandLogoUrl))} alt={t('dashboard.catalog_brand_logo_preview')} width="512" height="512" loading="lazy" decoding="async" />
             )}
           </div>
           <div className="modal-actions">

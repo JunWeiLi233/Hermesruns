@@ -77,7 +77,7 @@ export default function SettingsAtlasLayout({
               htmlFor="st-profile-avatar-input"
               title={avatarActionLabel}
             >
-              {avatarUrl ? <img src={avatarUrl} alt="" /> : initials}
+              {avatarUrl ? <img src={avatarUrl} alt="" width="256" height="256" loading="eager" decoding="async" /> : initials}
               <span className="st-hero-avatar-edit" aria-hidden="true">
                 <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
               </span>

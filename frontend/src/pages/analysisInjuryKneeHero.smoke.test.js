@@ -13,12 +13,12 @@ const injuryBranch = pageSource.slice(injuryBranchStart, injuryBranchEnd);
 assert.ok(injuryBranchStart >= 0 && injuryBranchEnd > injuryBranchStart, 'The injury-risk detail branch should remain addressable.');
 assert.match(
   pageSource,
-  /import injuryKneeAnatomy from '\.\.\/assets\/generated\/injury-knee-anatomy\.png';/,
+  /import injuryKneeAnatomy from '\.\.\/assets\/generated\/injury-knee-anatomy\.webp';/,
   'The injury-risk hero should import the supplied knee anatomy artwork.',
 );
 assert.match(
   injuryBranch,
-  /className="analysis-injury-knee-art" aria-hidden="true"\s*>\s*<img src=\{injuryKneeAnatomy\} alt="" \/>/s,
+  /className="analysis-injury-knee-art" aria-hidden="true"\s*>\s*<img src=\{injuryKneeAnatomy\} alt=""(?:\s+[^>]*)?\/>/s,
   'The injury-risk focus card should render the knee artwork as decorative media.',
 );
 assert.match(

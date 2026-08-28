@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const heatmapSource = readFileSync(path.join(here, 'Heatmap.jsx'), 'utf8');
 const heatmapCacheSource = readFileSync(path.join(here, 'heatmapCache.js'), 'utf8');
-const heatmapPagePlanSource = readFileSync(path.join(here, 'heatmapPagePlan.js'), 'utf8');
 const authContextSource = readFileSync(path.join(here, '../contexts/AuthContext.jsx'), 'utf8');
 const profileControllerSource = readFileSync(
   path.join(here, '../../../backend/src/main/java/com/hermes/backend/ProfileController.java'),
@@ -25,10 +24,10 @@ assert.match(
   'Heatmap cache should expose pure fresh/refresh/stale freshness tiers.',
 );
 const freshTierIndex = heatmapSource.indexOf("getHeatmapCacheFreshnessTier(cachedHeatmap.diagnostics?.cacheSavedAt) === 'fresh'");
-const fetchCallIndex = heatmapSource.indexOf('fetchCompleteHeatmap(heatmapController.signal');
+const fetchCallIndex = heatmapSource.indexOf('fetchSampledHeatmap(heatmapController.signal');
 assert.ok(
   freshTierIndex !== -1 && fetchCallIndex !== -1 && freshTierIndex < fetchCallIndex,
-  'A fresh cache tier must be checked before any fetchCompleteHeatmap call so warm visits skip the network refetch entirely.',
+  'A fresh cache tier must be checked before any fetchSampledHeatmap call so warm visits skip the network refetch entirely.',
 );
 const tierReturnTail = heatmapSource.slice(freshTierIndex, freshTierIndex + 400);
 assert.match(
@@ -42,44 +41,39 @@ assert.match(
   'When cached data is already on screen, only a fully complete refresh may replace it.',
 );
 
-// 2. Parallel page fetching: bounded-concurrency pool, no sequential loop.
+// 2. Single sampled fetch: one bounded request instead of paging the full
+// multi-million-point GPS history through the main thread.
 assert.match(
-  heatmapPagePlanSource,
-  /export const HEATMAP_PAGE_FETCH_CONCURRENCY = 3;/,
-  'Heatmap background pages should be fetched through a bounded pool of at most 3 in-flight requests.',
-);
-assert.match(
-  heatmapPagePlanSource,
-  /export function computeBackgroundPagePlan\(\{ sourcePointCount, startOffset, pageSize, maxPages \}\)/,
-  'Heatmap should compute the deterministic background page offset plan up front.',
-);
-assert.match(
-  heatmapPagePlanSource,
-  /export async function fetchHeatmapPagesWithBounds\(pagePlan, fetchPage, concurrency = HEATMAP_PAGE_FETCH_CONCURRENCY\) \{[\s\S]*?const results = new Array\(pagePlan\.length\)\.fill\(null\);[\s\S]*?let nextIndex = 0;[\s\S]*?while \(firstError === null\)[\s\S]*?await Promise\.all\(/,
-  'The page pool should keep per-index result slots with a worker loop bounded by firstError and Promise.all.',
+  heatmapSource,
+  /const HEATMAP_SAMPLE_LIMIT = 25000;/,
+  'Heatmap should request one bounded server-side render pool instead of every GPS point.',
 );
 assert.match(
   heatmapSource,
-  /const pageResults = await fetchHeatmapPagesWithBounds\([\s\S]*?\(pageOffset, pageLimit\) => fetchHeatmapPage\(pageOffset, pageLimit, signal\),[\s\S]*?HEATMAP_PAGE_FETCH_CONCURRENCY,/,
-  'Heatmap should fetch background pages through the bounded pool while propagating the abort signal.',
+  /async function fetchSampledHeatmap\(signal\) \{[\s\S]*?\/api\/profile\/heatmap\?sample=true&limit=\$\{HEATMAP_SAMPLE_LIMIT\}[\s\S]*?\}/,
+  'Heatmap should fetch the whole heatmap through the single sample=true endpoint with a bounded limit.',
 );
 assert.doesNotMatch(
   heatmapSource,
-  /for \(let pageIndex = 1; pageIndex < MAX_HEATMAP_PAGES; pageIndex \+= 1\)/,
-  'Heatmap must not restore the strictly sequential one-page-at-a-time background loop.',
+  /offset=\$\{offset\}|HEATMAP_BACKGROUND_PAGE_SIZE|MAX_HEATMAP_PAGES|fetchHeatmapPage|computeBackgroundPagePlan|fetchHeatmapPagesWithBounds|isCompletePageAssembly/,
+  'Heatmap must not restore the paged offset/limit background fetching that moved the full GPS history through the main thread.',
 );
-assert.match(
+assert.doesNotMatch(
   heatmapSource,
-  /if \(!isCompletePageAssembly\(pagePlan, pageResults\)\) \{\s*[\s\S]*?'partialFull'\);/,
-  'A failed or misaligned background page must degrade to the partial payload exactly like the sequential loop did.',
+  /heatmapPagePlan/,
+  'Heatmap should not import the removed background page-plan module.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /buildMergedHeatmapPayload|partialFull|recentPreview/,
+  'The single sampled response needs no client-side page merging or partial-load phases.',
 );
 
-// 3. Early paint: the paged GPS load must remain the only initial data path;
-// expensive full-dataset coverage is deliberately not launched alongside it.
+// 3. No full-dataset coverage query alongside the sampled pool.
 assert.doesNotMatch(
   heatmapSource,
   /HEATMAP_INITIAL_COVERAGE_LIMIT|fetchHeatmapCoverage|coverage=true/,
-  'Heatmap initial loading should not launch the full-dataset coverage window query alongside the paged GPS load.',
+  'Heatmap loading should not launch the full-dataset coverage window query alongside the sampled pool.',
 );
 
 // 4. Cheaper render churn: one full-array pool build + idle-scheduled write.
@@ -105,29 +99,26 @@ assert.match(
   'Every cache invalidation must bump the write generation so deferred writes captured before it are skipped.',
 );
 
-// 4b. Cross-repo pin: the deterministic page plan assumes the backend honors
-// the full background page size, so a backend limit reduction must trip here.
+// 4b. Cross-repo pin: the sampled pool request must stay within the backend's
+// hard endpoint cap, and the two sides should agree on the default size.
 const backendMaxPageLimitMatch = profileControllerSource.match(/MAX_HEATMAP_PAGE_LIMIT\s*=\s*(\d+)\s*;/);
 assert.ok(
   backendMaxPageLimitMatch,
-  'ProfileController should declare MAX_HEATMAP_PAGE_LIMIT so the frontend page size can be cross-checked.',
+  'ProfileController should declare MAX_HEATMAP_PAGE_LIMIT so the frontend sample size can be cross-checked.',
 );
-const frontendBackgroundPageSizeMatch = heatmapSource.match(/HEATMAP_BACKGROUND_PAGE_SIZE = (\d+);/);
+const backendSampleLimitMatch = profileControllerSource.match(/DEFAULT_HEATMAP_SAMPLE_LIMIT\s*=\s*(\d+)\s*;/);
 assert.ok(
-  frontendBackgroundPageSizeMatch,
-  'Heatmap should declare HEATMAP_BACKGROUND_PAGE_SIZE as a plain integer for the backend cross-check.',
+  backendSampleLimitMatch,
+  'ProfileController should declare DEFAULT_HEATMAP_SAMPLE_LIMIT so the frontend sample size can be cross-checked.',
 );
 assert.equal(
-  Number(backendMaxPageLimitMatch[1]),
-  Number(frontendBackgroundPageSizeMatch[1]),
-  `Frontend HEATMAP_BACKGROUND_PAGE_SIZE (${frontendBackgroundPageSizeMatch[1]}) must equal backend MAX_HEATMAP_PAGE_LIMIT (${backendMaxPageLimitMatch[1]}); a backend page-limit reduction would silently break the deterministic offset plan.`,
+  Number(backendSampleLimitMatch[1]),
+  Number(heatmapSource.match(/HEATMAP_SAMPLE_LIMIT = (\d+);/)[1]),
+  'Frontend HEATMAP_SAMPLE_LIMIT must equal backend DEFAULT_HEATMAP_SAMPLE_LIMIT; drifting sizes silently change payload weight.',
 );
-
-// 4c. First-page offset: a full first page consumed its whole span server-side.
-assert.match(
-  heatmapSource,
-  /offset = firstReturnedPointCount >= firstPageLimit\s*\?\s*firstPageOffset \+ firstPageLimit\s*:\s*firstPageOffset \+ firstReturnedPointCount;/,
-  'When the first page fills its request limit, background pages must start at offset + limit so filter-dropped rows are not re-fetched and duplicated.',
+assert.ok(
+  Number(heatmapSource.match(/HEATMAP_SAMPLE_LIMIT = (\d+);/)[1]) <= Number(backendMaxPageLimitMatch[1]),
+  'Frontend HEATMAP_SAMPLE_LIMIT must not exceed the backend MAX_HEATMAP_PAGE_LIMIT cap.',
 );
 
 // 5. Strava-sync invalidation hook.

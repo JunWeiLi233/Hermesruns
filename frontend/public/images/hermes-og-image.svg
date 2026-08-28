@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Hermes running analytics</title>
+  <desc id="description">Running analytics with Strava sync, training load, race predictions, and shoe mileage tracking.</desc>
+  <rect width="1200" height="630" fill="#0d162b"/>
+  <circle cx="1010" cy="-40" r="330" fill="#16335f" opacity="0.72"/>
+  <circle cx="1060" cy="610" r="270" fill="#10264a" opacity="0.9"/>
+  <path d="M0 512C176 466 260 548 410 504s234-42 364 9 248 50 426-38" fill="none" stroke="#d6ecff" stroke-width="2" opacity="0.22"/>
+  <path d="M0 535C176 489 260 571 410 527s234-42 364 9 248 50 426-38" fill="none" stroke="#55b7ff" stroke-width="3" opacity="0.62"/>
+  <g fill="#f5f8fc">
+    <text x="96" y="142" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" letter-spacing="8">HERMES</text>
+    <text x="96" y="286" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700">Run with</text>
+    <text x="96" y="372" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="700" fill="#69c0ff">better context.</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#b6c7dc" font-size="24">
+    <text x="100" y="438">VO2max  ·  Training load  ·  Race predictions  ·  Shoe mileage</text>
+  </g>
+  <g transform="translate(1000 330)" fill="none" stroke="#69c0ff" stroke-width="10" stroke-linecap="round">
+    <path d="M-70-44h140M-70 0h140M-70 44h140"/>
+    <path d="M-42-72v144M0-72v144M42-72v144" opacity="0.48"/>
+  </g>
+</svg>

@@ -16,8 +16,9 @@ import { resolveAssignedCoach } from '../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../utils/analysisInsights';
 import { buildRunDetailPath } from '../utils/runRoute';
 import { resolvePersonalizedCoachRecommendation } from '../utils/personalizedCoachPlan';
-import injuryKneeAnatomy from '../assets/generated/injury-knee-anatomy.png';
-import loadBalanceTrack from '../assets/generated/load-balance-track.png';
+import injuryKneeAnatomy from '../assets/generated/injury-knee-anatomy.webp';
+import loadBalanceTrack from '../assets/generated/load-balance-track.webp';
+import loadBalanceTrackAvif from '../assets/generated/load-balance-track.avif';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -1766,7 +1767,7 @@ export default function AnalysisInsightDetail() {
 
               <article className="analysis-cinematic-card analysis-cinematic-card--coach analysis-profile-v2-focus">
                 <div className="analysis-injury-knee-art" aria-hidden="true">
-                  <img src={injuryKneeAnatomy} alt="" />
+                  <img src={injuryKneeAnatomy} alt="" width="647" height="474" loading="lazy" decoding="async" />
                 </div>
                 <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-cinematic-coach-badge" />
                 <div className="analysis-cinematic-coach-copy">
@@ -1999,7 +2000,10 @@ export default function AnalysisInsightDetail() {
 
               <section className="analysis-load-profile-decision analysis-profile-v2-focus">
                 <div className="analysis-load-profile-visual" aria-hidden="true">
-                  <img src={loadBalanceTrack} alt="" />
+                  <picture>
+                    <source srcSet={loadBalanceTrackAvif} type="image/avif" />
+                    <img src={loadBalanceTrack} alt="" width="731" height="1024" loading="lazy" decoding="async" />
+                  </picture>
                 </div>
                 <div className="analysis-load-profile-decision-copy">
                   <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-load-coach-badge" />

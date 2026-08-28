@@ -34,9 +34,13 @@ const ShoeRecommendation = ({ recommendedShoe }) => {
 
       <div className="flex gap-4">
         {recommendedShoe.photoUrl ? (
-          <img 
-            src={recommendedShoe.photoUrl} 
+          <img
+            src={recommendedShoe.photoUrl}
             alt={recommendedShoe.model}
+            width="80"
+            height="80"
+            loading="lazy"
+            decoding="async"
             className="w-20 h-20 object-cover rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-inner"
           />
         ) : (

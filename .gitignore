@@ -8,6 +8,7 @@ Thumbs.db
 .zcode/
 .playwright-mcp/
 .worktree-align-backups/
+.seo-cache/
 
 # local debug screenshots at repo root
 /landing-*.png
@@ -125,6 +126,12 @@ audit-midnight.json
 
 # Images (local reference screenshots / design assets)
 images/
+# The races page consumes these public images at runtime; keep the compressed
+# WebP variants source-controlled rather than treating the directory as a
+# local-only screenshot cache.
+!frontend/public/images/
+!frontend/public/images/races/
+!frontend/public/images/races/*.webp
 # Legacy local task-image folder; renamed storage lives in course-map-images/.
 task-images/
 course-map-images/*

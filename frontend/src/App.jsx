@@ -1,4 +1,4 @@
-import React, { Suspense, useLayoutEffect } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { UnitProvider } from './contexts/UnitContext';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
+import SeoHead from './components/SeoHead';
 import { routeParamPreloaders, routePreloaders } from './utils/routePreload';
 
 // Route chunks are loaded through the shared routePreloaders map so
@@ -131,12 +132,45 @@ function RouteLoading() {
   return <PageSkeleton variant={variant} activeTab={activeTab} />;
 }
 
+function SkeletonPreview({ variant, activeTab }) {
+  return <PageSkeleton variant={variant} activeTab={activeTab} />;
+}
+
 function AdminOnlyRoute({ children }) {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!authHydrated) return <RouteLoading />;
   if (!isAdmin) return <Navigate to="/profile" replace />;
+  return children;
+}
+
+let appStylesLoaded = false;
+let appStylesPromise;
+
+function RouteStyleGate({ children }) {
+  const { pathname } = useLocation();
+  const [stylesReady, setStylesReady] = useState(() => appStylesLoaded);
+
+  useEffect(() => {
+    if (pathname === '/' || appStylesLoaded) return undefined;
+
+    let active = true;
+    if (!appStylesPromise) {
+      appStylesPromise = import('./styles/app.css').then(() => {
+        appStylesLoaded = true;
+      });
+    }
+    appStylesPromise.then(() => {
+      if (active) setStylesReady(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [pathname]);
+
+  if (pathname !== '/' && !appStylesLoaded && !stylesReady) return <RouteLoading />;
   return children;
 }
 
@@ -155,7 +189,7 @@ function App() {
     const activeTab = skeletonPreviewVariant === 'admin' && typeof window !== 'undefined'
       ? getAdminSkeletonTab(window.location.pathname)
       : 'overview';
-    return <PageSkeleton variant={skeletonPreviewVariant} activeTab={activeTab} />;
+    return <SkeletonPreview variant={skeletonPreviewVariant} activeTab={activeTab} />;
   }
 
   return (
@@ -166,7 +200,9 @@ function App() {
             <AuthProvider>
               <Suspense fallback={<RouteLoading />}>
                 <ScrollToTop />
-                <Routes>
+                <SeoHead />
+                <RouteStyleGate>
+                  <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
@@ -201,7 +237,8 @@ function App() {
                   <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                  </Routes>
+                </RouteStyleGate>
               </Suspense>
             </AuthProvider>
           </UnitProvider>

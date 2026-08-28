@@ -124,6 +124,12 @@ function collectMissingIndexAssets(staticDir) {
     if (ref.startsWith('//')) continue
     const relative = ref.replace(/^\/+/, '')
     if (!relative) continue
+    // Route links such as /signup and /privacy are valid SPA navigation, not
+    // static files that Vite should emit. Only validate references that look
+    // like concrete files; this keeps the completeness guard focused on
+    // broken script, stylesheet, image, and other asset paths.
+    const fileName = relative.split('/').pop() ?? ''
+    if (!fileName.includes('.')) continue
     references.add(relative)
   }
 

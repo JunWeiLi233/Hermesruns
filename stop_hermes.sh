@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # POSIX mirror of stop_hermes.bat — shuts down the Hermes stack on macOS/Linux.
 # Stops the Spring Boot backend (port 8080 + spring-boot:run processes) and any
-# Python VDOT engine / auto-import watcher.
+# Python auto-import watcher.
 set -uo pipefail
 
 echo "=========================================="
@@ -14,8 +14,7 @@ if command -v lsof >/dev/null 2>&1; then
 fi
 pkill -f "spring-boot:run" 2>/dev/null || true
 
-echo "Stopping Python (VDOT Engine / auto-import watcher)..."
-pkill -f "vdot_engine.py" 2>/dev/null || true
+echo "Stopping Python (auto-import watcher)..."
 pkill -f "hermes_auto_sync.py" 2>/dev/null || true
 
 echo "=========================================="

@@ -27,6 +27,7 @@ public class SecurityHeadersFilter implements Filter {
         httpResponse.setHeader("X-Frame-Options", "DENY");
         httpResponse.setHeader("X-Content-Type-Options", "nosniff");
         httpResponse.setHeader("X-XSS-Protection", "1; mode=block");
+        httpResponse.setHeader("Cross-Origin-Opener-Policy", "same-origin");
         httpResponse.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         // geolocation=(self): allow browser geolocation for same-origin UI (e.g. weather bar).
         httpResponse.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=()");
@@ -35,7 +36,7 @@ public class SecurityHeadersFilter implements Filter {
         // style-src keeps 'unsafe-inline' for dynamic style injection from bundled UI libs.
         httpResponse.setHeader("Content-Security-Policy",
                 "default-src 'self'; " +
-                "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
+                "script-src 'self' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://static.cloudflareinsights.com; " +
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
                 "img-src 'self' data: https: blob:; " +
                 "font-src 'self' https://fonts.gstatic.com; " +
@@ -47,7 +48,7 @@ public class SecurityHeadersFilter implements Filter {
                 "https://www.google.com/recaptcha/ " +
                 "https://generativelanguage.googleapis.com " +
                 "https://api.stripe.com https://*.stripe.com " +
-                "https://api.open-meteo.com");
+                "https://api.open-meteo.com https://static.cloudflareinsights.com https://cloudflareinsights.com");
         chain.doFilter(request, response);
     }
 }

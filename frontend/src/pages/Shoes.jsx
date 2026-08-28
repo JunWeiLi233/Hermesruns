@@ -131,7 +131,7 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading
   if (!processed) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed} alt={alt} onError={onError} loading={loading} decoding="async" />;
+  return <img className={className} src={processed} alt={alt} width="800" height="800" onError={onError} loading={loading} decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -1577,7 +1577,7 @@ const Shoes = memo(function Shoes() {
             </div>
             <div className="shoe-scan-modal-preview">
               {scanPreviewUrl ? (
-                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
+                <img src={scanPreviewUrl} alt={t('shoes.scan_title')} width="1200" height="1200" className="shoe-scan-modal-preview-image" loading="lazy" decoding="async" />
               ) : (
                 <div className="shoe-scan-modal-preview-empty">
                   <AppIcon name="image_search" className="runner-dashboard-side-link-icon" />

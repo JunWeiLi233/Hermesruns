@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hermes API System — Request Lifecycle</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #020617;
+        --panel: #0f172a;
+        --panel-border: #1e293b;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: radial-gradient(circle at top, rgba(34, 211, 238, 0.1), transparent 30%), var(--bg);
+        color: var(--text);
+      }
+      .container {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+      .shell {
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        background: rgba(15, 23, 42, 0.92);
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(2, 6, 23, 0.45);
+      }
+      .header {
+        padding: 24px 28px 12px;
+      }
+      .header h1 {
+        margin: 0 0 10px;
+        font-size: 28px;
+      }
+      .header p, .meta {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .diagram {
+        padding: 0 20px 20px;
+      }
+      .diagram svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        padding: 0 20px 24px;
+      }
+      .card {
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.9);
+        padding: 18px 18px 16px;
+      }
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 13px;
+      }
+      .card ul {
+        margin: 0;
+        padding-left: 16px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .footer {
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+        padding: 16px 20px 24px;
+      }
+      @media (max-width: 960px) {
+        .cards { grid-template-columns: 1fr; }
+        .container { padding: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <section class="shell">
+        <header class="header">
+          <h1>Hermes API System — Request Lifecycle</h1>
+          <p>One /api request from React apiFetch through the servlet filters and Spring Security tiers to controllers, services, and stores.</p>
+        </header>
+        <section class="diagram">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 890" role="img" aria-labelledby="title desc">
+  <title id="title">Hermes API System — Request Lifecycle</title>
+  <desc id="desc">One /api request from React apiFetch through the servlet filters and Spring Security tiers to controllers, services, and stores.</desc>
+  
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,0.08)" stroke-width="1"></path>
+      </pattern>
+      <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+        <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"></polygon>
+      </marker>
+    </defs>
+    <rect width="1320" height="890" fill="#020617"></rect>
+    <rect width="1320" height="890" fill="url(#grid)"></rect>
+  
+  <text x="40" y="42" fill="#e2e8f0" font-size="24" font-weight="700" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Hermes API System — Request Lifecycle</text>
+  <text x="40" y="64" fill="#94a3b8" font-size="11" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">One /api request from React apiFetch through the servlet filters and Spring Security tiers to controllers, services, and stores.</text>
+  
+    <g>
+      <rect x="248" y="78" width="568" height="276" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.25" stroke-dasharray="8,4"></rect>
+      <text x="260" y="96" fill="#fbbf24" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">React SPA — browser</text>
+    </g>
+  
+
+    <g>
+      <rect x="248" y="362" width="1028" height="504" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.25" stroke-dasharray="8,4"></rect>
+      <text x="260" y="380" fill="#fbbf24" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Spring Boot :8080 — API Runtime</text>
+    </g>
+  
+  
+    <g>
+      <rect x="276" y="108" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="276" y="108" width="232" height="104" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="290" y="130" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Lazy Pages (26)</text>
+<text x="290" y="144" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">runner + admin surfaces</text>
+<text x="290" y="158" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">apiFetch / apiJson calls</text>
+<text x="290" y="172" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">React Router route gates</text>
+    </g>
+  
+
+    <g>
+      <rect x="560" y="108" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="560" y="108" width="232" height="104" rx="8" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1.5"></rect>
+      <text x="574" y="130" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">frontend/src/api.ts</text>
+<text x="574" y="144" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Bearer hermes_jwt header</text>
+<text x="574" y="158" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">401 → clear keys → /login</text>
+<text x="574" y="172" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">same-origin :8080 proxy</text>
+    </g>
+  
+
+    <g>
+      <rect x="276" y="238" width="232" height="90" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="276" y="238" width="232" height="90" rx="8" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1.5"></rect>
+      <text x="290" y="260" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">localStorage</text>
+<text x="290" y="274" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">hermes_jwt · hermes_role</text>
+<text x="290" y="288" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">hermes_email · hermes_lang</text>
+    </g>
+  
+
+    <g>
+      <rect x="276" y="402" width="516" height="110" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="276" y="402" width="516" height="110" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.5"></rect>
+      <text x="290" y="424" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Servlet Filter Chain —</text>
+<text x="290" y="438" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">in order</text>
+<text x="290" y="452" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">1 · ApiRateLimitFilter — /api abuse guard, webhooks exempt</text>
+<text x="290" y="466" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">2 · WebhookRateLimitFilter — strava + stripe burst control</text>
+<text x="290" y="480" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">3 · SecurityHeadersFilter — baseline response headers</text>
+<text x="290" y="494" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">4 · JwtAuthenticationFilter — Bearer JWT → principal</text>
+<text x="290" y="508" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">5 · SecurityConfig — STATELESS · CSRF off (token-based)</text>
+    </g>
+  
+
+    <g>
+      <rect x="276" y="560" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="276" y="560" width="232" height="104" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.5"></rect>
+      <text x="290" y="582" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Public · permitAll</text>
+<text x="290" y="596" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/api/auth/login · signup</text>
+<text x="290" y="610" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">google · strava OAuth</text>
+<text x="290" y="624" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">stripe + strava webhooks</text>
+<text x="290" y="638" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/api/maps/tiles/**</text>
+    </g>
+  
+
+    <g>
+      <rect x="560" y="560" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="560" y="560" width="232" height="104" rx="8" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1.5"></rect>
+      <text x="574" y="582" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Admin · ROLE_ADMIN</text>
+<text x="574" y="596" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/api/admin/** portals</text>
+<text x="574" y="610" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">shoe + race catalog CRUD</text>
+<text x="574" y="624" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">/dashboard/** documents</text>
+<text x="574" y="638" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">portal cookie 2nd gate</text>
+    </g>
+  
+
+    <g>
+      <rect x="844" y="560" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="844" y="560" width="232" height="104" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <text x="858" y="582" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Runner · authenticated</text>
+<text x="858" y="596" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">any /api/** with JWT</text>
+<text x="858" y="610" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">activities · shoes · races</text>
+<text x="858" y="624" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">coach · wellness · weather</text>
+<text x="858" y="638" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">imports · profile · maps</text>
+    </g>
+  
+
+    <g>
+      <rect x="276" y="736" width="300" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="276" y="736" width="300" height="104" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <text x="290" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">REST Controllers (31)</text>
+<text x="290" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">auth · activities · shoes</text>
+<text x="290" y="786" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">races · coach · wellness</text>
+<text x="290" y="800" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">imports · weather · maps</text>
+    </g>
+  
+
+    <g>
+      <rect x="616" y="736" width="300" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="616" y="736" width="300" height="104" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
+      <text x="630" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Domain Services</text>
+<text x="630" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">parse · normalize · analyze</text>
+<text x="630" y="786" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">coaching + rating engines</text>
+<text x="630" y="800" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">webhook processors</text>
+    </g>
+  
+
+    <g>
+      <rect x="956" y="736" width="300" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
+      <rect x="956" y="736" width="300" height="104" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.5"></rect>
+      <text x="970" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA Repositories</text>
+<text x="970" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">27 entities · H2 / PostgreSQL</text>
+<text x="970" y="786" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">audit trail + job store</text>
+<text x="970" y="800" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA / Hibernate</text>
+    </g>
+  
+  
+    <g>
+      <line x1="508" y1="160" x2="560" y2="160" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="534" y="154" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">apiFetch</text>
+    </g>
+  
+
+    <g>
+      <line x1="508" y1="283" x2="560" y2="132" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" stroke-dasharray="6,4"></line>
+      <text x="528" y="201.5" text-anchor="end" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">hermes_jwt</text>
+    </g>
+  
+
+    <g>
+      <line x1="676" y1="212" x2="534" y2="402" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="617" y="307" text-anchor="start" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">fetch /api/* + Bearer</text>
+    </g>
+  
+
+    <g>
+      <line x1="392" y1="512" x2="392" y2="560" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="404" y="538" text-anchor="start" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">permitAll</text>
+    </g>
+  
+
+    <g>
+      <line x1="676" y1="512" x2="676" y2="560" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="688" y="538" text-anchor="start" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">ROLE_ADMIN</text>
+    </g>
+  
+
+    <g>
+      <line x1="792" y1="490" x2="960" y2="560" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="896" y="513" text-anchor="start" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">authenticated</text>
+    </g>
+  
+
+    <g>
+      <line x1="392" y1="664" x2="392" y2="736" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="404" y="694" text-anchor="start" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">auth + webhook handlers</text>
+    </g>
+  
+
+    <g>
+      <line x1="676" y1="664" x2="500" y2="736" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="585" y="687" text-anchor="end" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">admin portal APIs</text>
+    </g>
+  
+
+    <g>
+      <line x1="960" y1="664" x2="560" y2="736" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="720" y="684" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">runner surface APIs</text>
+    </g>
+  
+
+    <g>
+      <line x1="576" y1="788" x2="616" y2="788" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="596" y="782" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">call</text>
+    </g>
+  
+
+    <g>
+      <line x1="916" y1="788" x2="956" y2="788" stroke="#94a3b8" stroke-width="1.4" marker-end="url(#arrowhead)" ></line>
+      <text x="936" y="782" fill="#94a3b8" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">persist</text>
+    </g>
+  
+
+    <g>
+      <path d="M792 477 L900 477 L900 160 L792 160" fill="none" stroke="#fb7185" stroke-width="1.4" marker-end="url(#arrowhead)" stroke-dasharray="6,4"></path>
+      <text x="908" y="300" text-anchor="start" fill="#fb7185" font-size="8" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">401 → clear keys → /login</text>
+    </g>
+  
+  
+    <g>
+      <rect x="1024" y="108" width="248" height="98" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1"></rect>
+      <text x="1036" y="120" fill="#e2e8f0" font-size="10" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Legend</text>
+      
+      <rect x="1036" y="122" width="14" height="10" rx="3" fill="rgba(8, 51, 68, 0.42)" stroke="#22d3ee" stroke-width="1"></rect>
+      <text x="1058" y="131" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">SPA pages + api client</text>
+    
+
+      <rect x="1036" y="138" width="14" height="10" rx="3" fill="rgba(136, 19, 55, 0.38)" stroke="#fb7185" stroke-width="1"></rect>
+      <text x="1058" y="147" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">filters + access tiers</text>
+    
+
+      <rect x="1036" y="154" width="14" height="10" rx="3" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1"></rect>
+      <text x="1058" y="163" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">controllers + services</text>
+    
+
+      <rect x="1036" y="170" width="14" height="10" rx="3" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1"></rect>
+      <text x="1058" y="179" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA stores</text>
+    
+
+      <rect x="1036" y="186" width="14" height="10" rx="3" fill="rgba(30, 41, 59, 0.56)" stroke="#94a3b8" stroke-width="1"></rect>
+      <text x="1058" y="195" fill="#94a3b8" font-size="9" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">browser localStorage</text>
+    
+    </g>
+  
+</svg>
+
+        </section>
+        <section class="cards">
+          
+    <article class="card">
+      <h3>Token Boundary</h3>
+      <ul>
+        <li>apiFetch attaches Bearer hermes_jwt plus Accept-Language on every /api call.</li><li>A 401 clears the hermes_* localStorage keys and redirects to /login.</li><li>Sessions are STATELESS and CSRF stays off because auth is header-token based.</li>
+      </ul>
+    </article>
+  
+
+    <article class="card">
+      <h3>Filter Order</h3>
+      <ul>
+        <li>Rate limits guard /api first (webhook paths exempt), then security headers, then the JWT filter.</li><li>SecurityConfig matchers route each request into the public, admin, or runner tier.</li><li>Admin surfaces need ROLE_ADMIN plus the short-lived portal cookie for /dashboard documents.</li>
+      </ul>
+    </article>
+  
+
+    <article class="card">
+      <h3>Downstream Plane</h3>
+      <ul>
+        <li>31 REST controllers under /api map to stateless domain services.</li><li>JPA repositories persist 27 entities on H2 (dev) or PostgreSQL (production).</li><li>Stripe and Strava webhooks re-enter through permitAll controllers with their own rate limiter.</li>
+      </ul>
+    </article>
+  
+        </section>
+        <footer class="footer">
+          <p class="meta">Repo-local architecture diagram artifact.</p>
+          <p class="meta">Generated from SecurityConfig, the servlet filters, frontend/src/api.ts, and the REST controller inventory.</p>
+        </footer>
+      </section>
+    </main>
+  </body>
+</html>

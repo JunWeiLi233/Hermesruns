@@ -66,4 +66,18 @@ class SecurityHeadersFilterTests {
         assertThat(csp).contains("frame-src");
         assertThat(csp).contains("https://www.youtube-nocookie.com");
     }
+
+    @Test
+    void securityHeadersSupportInsightsAndCrossOriginIsolation() throws Exception {
+        SecurityHeadersFilter filter = new SecurityHeadersFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getHeader("Cross-Origin-Opener-Policy")).isEqualTo("same-origin");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("https://static.cloudflareinsights.com")
+                .contains("https://cloudflareinsights.com");
+    }
 }

@@ -448,6 +448,10 @@ export default function Login() {
                       className="auth-flow-btn__strava-official"
                       src={stravaConnectButton}
                       alt={t('index.stitch_strava_cta')}
+                      width="237"
+                      height="48"
+                      loading="eager"
+                      decoding="async"
                     />
                   </button>
                 )}

@@ -26,7 +26,7 @@ import { buildRewardShowcase, RewardGlyph } from '../utils/rewardBadges';
 import ComebackMessage from '../components/ComebackMessage';
 import PageSkeleton from '../components/PageSkeleton';
 
-const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.png';
+const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.webp';
 const PR_SNAPSHOT_VERSION = 1;
 
 function getPrSnapshotStorageKey(email) {

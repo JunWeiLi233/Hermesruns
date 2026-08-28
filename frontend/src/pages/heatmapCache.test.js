@@ -3,7 +3,7 @@ import { getHeatmapCacheKey, invalidateHeatmapCache } from './heatmapCache.js';
 
 assert.equal(
   getHeatmapCacheKey(' Runner@Example.COM '),
-  'profile-heatmap:runner@example.com',
+  'profile-heatmap:v2:runner@example.com',
   'heatmap cache keys should be isolated by normalized account email',
 );
 
@@ -46,7 +46,7 @@ try {
 
 assert.equal(
   deletedKey,
-  'profile-heatmap:runner@example.com',
+  'profile-heatmap:v2:runner@example.com',
   'run deletion should remove the account heatmap cache record',
 );
 
