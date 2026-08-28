@@ -34,4 +34,54 @@ assert.match(
   'Signup should read recaptchaSiteKey from /api/auth/providers.',
 );
 
+const helperStart = source.indexOf('function loadRecaptchaScript(siteKey)');
+const helperEnd = source.indexOf('export default function Signup()');
+assert.notEqual(helperStart, -1, 'Signup reCAPTCHA helpers should be present.');
+assert.notEqual(helperEnd, -1, 'Signup component should follow the reCAPTCHA helpers.');
+
+const createHelpers = new Function(
+  `${source.slice(helperStart, helperEnd)}; return { getSignupCaptchaToken };`,
+);
+
+const originalWindow = globalThis.window;
+const originalDocument = globalThis.document;
+
+try {
+  globalThis.window = {};
+  globalThis.document = {
+    getElementById: () => null,
+    createElement: () => ({
+      dataset: {},
+    }),
+    head: {
+      appendChild(script) {
+        setTimeout(() => {
+          globalThis.window.grecaptcha = {
+            ready(callback) {
+              setTimeout(callback, 0);
+            },
+          };
+          script.onload();
+          setTimeout(() => {
+            globalThis.window.grecaptcha.execute = async () => 'token-after-google-init';
+          }, 20);
+        }, 0);
+        return script;
+      },
+    },
+  };
+
+  const { getSignupCaptchaToken } = createHelpers();
+  const token = await getSignupCaptchaToken({ required: true, siteKey: 'public-test-site-key' });
+
+  assert.equal(
+    token,
+    'token-after-google-init',
+    'Signup should wait for grecaptcha.execute when Google finishes initialization just after script load.',
+  );
+} finally {
+  globalThis.window = originalWindow;
+  globalThis.document = originalDocument;
+}
+
 console.log('[PASS] Signup reCAPTCHA guardrails passed.');
