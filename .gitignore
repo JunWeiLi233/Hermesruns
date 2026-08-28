@@ -341,6 +341,7 @@ frontend/VISUAL_QA_LIGHT_SYSTEM.md
 .claude/agent-memory/
 .claude/checkpoints/
 .claude/worktrees/
+.worktrees/
 
 # Auto-hermes tools (task claim state, bridge, etc.)
 .tools/auto-hermes-claim-state.mjs
