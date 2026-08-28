@@ -1109,6 +1109,10 @@ const Runs = memo(function Runs() {
   // or sort) so batching immediately restarts from the reset window. The
   // cleanup also disconnects on unmount. The button rendered inside the
   // sentinel is the manual fallback for browsers without IntersectionObserver.
+  // visibleRunsCount stays a dependency because re-observing after each batch
+  // growth makes IntersectionObserver deliver a fresh initial entry — a
+  // persistent observer whose intersection state never changed would stall
+  // growth while the sentinel stays inside the pre-armed rootMargin.
   useEffect(() => {
     if (!hasMoreRuns || loadState !== 'ready') return undefined;
     const sentinel = loadMoreSentinelRef.current;

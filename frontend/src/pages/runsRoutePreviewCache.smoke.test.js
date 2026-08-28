@@ -29,14 +29,14 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT \+ \(RECENT_RUNS_LOAD_BATCH_SIZE \* 2\);/,
-  'Runs page should keep the initial route-preview window bounded while loading previews after the list paints.',
+  /const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = 15;/,
+  'Runs page should keep the initial route-preview window bounded (15 == the previous 3 + 6×2 derivation) so data-fetch volume stays unchanged while loading previews after the list paints.',
 );
 
 assert.match(
   runsSource,
-  /const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE \* 3;/,
-  'Runs page should prefetch a short route-preview lookahead beyond the visible card count.',
+  /const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = 18;/,
+  'Runs page should prefetch a short route-preview lookahead (18 == the previous 6×3 derivation) beyond the visible card count.',
 );
 
 assert.match(
@@ -283,14 +283,14 @@ assert.doesNotMatch(
 
 assert.match(
   runsSource,
-  /const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;/,
-  'Runs history should initially list exactly three recent runs before page-scroll expansion.',
+  /const RUNS_RENDER_BATCH_SIZE = 60;/,
+  'Runs history should load additional runs in bounded scroll batches of 60 cards.',
 );
 
 assert.match(
   runsSource,
-  /const RECENT_RUNS_LOAD_BATCH_SIZE = 6;/,
-  'Runs history should load additional runs in bounded scroll batches.',
+  /const RECENT_RUNS_INITIAL_VISIBLE_COUNT = RUNS_RENDER_BATCH_SIZE;/,
+  'Runs history should initially list exactly one render batch (60 runs, the previous 3-card window scaled to the render budget) before page-scroll expansion.',
 );
 
 assert.match(
@@ -325,19 +325,19 @@ assert.match(
 
 assert.match(
   runsSource,
-  /new IntersectionObserver\(\(entries\) => \{[\s\S]*setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns\.length\)\)/,
+  /new IntersectionObserver\(\(entries\) => \{[\s\S]*setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)/,
   'Runs history should expand when page scrolling brings the loader sentinel into view.',
 );
 
 assert.match(
   runsSource,
-  /if \(!hasMoreRuns \|\| loadState !== 'ready'\) return undefined;[\s\S]*?\}, \[filteredRuns\.length, hasMoreRuns, loadState, visibleRunsCount\]\);/,
-  'Runs history should re-arm the loader observer after each visible batch changes.',
+  /if \(!hasMoreRuns \|\| loadState !== 'ready'\) return undefined;[\s\S]*?\}, \[filteredRuns, hasMoreRuns, loadState, visibleRunsCount\]\);/,
+  'Runs history should re-arm the loader observer after each visible batch change or filtered-list change.',
 );
 
 assert.match(
   runsSource,
-  /className="recent-runs-load-more"[\s\S]*onClick=\{\(\) => setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns\.length\)\)\}[\s\S]*\{t\('runs\.load_more'\)\}/,
+  /className="recent-runs-load-more"[\s\S]*onClick=\{\(\) => setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)\}[\s\S]*\{t\('runs\.load_more'\)\}/,
   'Runs history should expose a manual load-more control when IntersectionObserver is unavailable.',
 );
 
