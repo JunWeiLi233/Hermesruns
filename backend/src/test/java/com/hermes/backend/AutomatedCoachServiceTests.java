@@ -94,12 +94,12 @@ class AutomatedCoachServiceTests {
         when(scheduleRepository.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any())).thenReturn(existing);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(12L);
         List<RunMetricsProjection> recentRuns = List.of(
-                runMetric(today.minusDays(1).atTime(7, 0), 5.0, 1_650, 155.0),
-                runMetric(today.minusDays(3).atTime(7, 0), 5.5, 1_815, 158.0),
-                runMetric(today.minusDays(5).atTime(8, 0), 6.0, 2_040, 160.0),
-                runMetric(today.minusDays(8).atTime(7, 0), 5.0, 1_700, 154.0),
-                runMetric(today.minusDays(10).atTime(7, 0), 5.5, 1_870, 156.0),
-                runMetric(today.minusDays(12).atTime(8, 0), 6.0, 2_070, 159.0)
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.TUESDAY)).atTime(7, 0), 5.0, 1_650, 155.0),
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.THURSDAY)).atTime(7, 0), 5.5, 1_815, 158.0),
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY)).atTime(8, 0), 6.0, 2_040, 160.0),
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.TUESDAY)).minusWeeks(1).atTime(7, 0), 5.0, 1_700, 154.0),
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.THURSDAY)).minusWeeks(1).atTime(7, 0), 5.5, 1_870, 156.0),
+                runMetric(today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SATURDAY)).minusWeeks(1).atTime(8, 0), 6.0, 2_070, 159.0)
         );
         when(activityRepository.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
                 .thenReturn(recentRuns);
