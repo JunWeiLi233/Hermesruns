@@ -1,6 +1,6 @@
 ---
 name: hermes-dev
-description: Hermes repository workflow and conventions for Codex. Use when working in C:\Users\Junwei\Downloads\Hermes or on the Hermes app, especially for Spring Boot backend, React frontend, H2/Postgres data flows, Google or Strava OAuth, Stripe billing, admin tooling, runner analytics, coach scheduling, and shoe import features.
+description: Hermes repository workflow and conventions for Codex. Use when working in C:/Users/<local-user>\Downloads\Hermes or on the Hermes app, especially for Spring Boot backend, React frontend, H2/Postgres data flows, Google or Strava OAuth, Stripe billing, admin tooling, runner analytics, coach scheduling, and shoe import features.
 ---
 
 Use this skill whenever the task is in the Hermes repository or clearly about Hermes product behavior.

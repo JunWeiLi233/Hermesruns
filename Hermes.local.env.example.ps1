@@ -115,6 +115,11 @@ $env:APP_GOOGLE_GEOCODING_API_KEY = "your-google-geocoding-api-key"
 # Fallback aliases also accepted: APP_STRAVA_CLIENT_ID, APP_STRAVA_CLIENT_SECRET, APP_STRAVA_REDIRECT_URI
 $env:STRAVA_CLIENT_ID = "your-strava-client-id"
 $env:STRAVA_CLIENT_SECRET = "your-strava-client-secret"
+# Keep the localhost default for local runs — Strava always permits
+# localhost/127.0.0.1 redirect URIs regardless of the app's registered
+# callback domain. Only production (Railway env) should set the public URL;
+# setting it locally routes local Strava logins to the production site
+# (the local backend then never receives the OAuth token).
 $env:STRAVA_REDIRECT_URI = "http://localhost:8080/api/auth/strava/callback"
 
 # Strava webhook verification token (create via Strava API push_subscriptions).
