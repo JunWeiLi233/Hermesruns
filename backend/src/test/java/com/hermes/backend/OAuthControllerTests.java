@@ -329,7 +329,7 @@ class OAuthControllerTests {
                 "athlete", Map.of(
                         "id", 424242L,
                         "username", "junwei-runs",
-                        "firstname", "Junwei",
+                        "firstname", "Alex",
                         "lastname", "Runner"
                 )
         )));

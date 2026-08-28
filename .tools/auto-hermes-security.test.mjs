@@ -181,7 +181,7 @@ check("secret scan skips local artifacts but still scans source files", async ()
     fs.writeFileSync(target, content, "utf8");
   };
 
-  write(".ai-sync/AGENT_SYNC.md", "Junwei local state with sk-" + "a".repeat(40));
+  write(".ai-sync/AGENT_SYNC.md", "Alex local state with sk-" + "a".repeat(40));
   write(".claude/worktrees/agent-a/frontend/node_modules/pkg/index.js", "const token = 'sk-" + "b".repeat(40) + "';");
   write("backend/src/main/resources/static/assets/index-generated.js", "const token = 'sk-" + "c".repeat(40) + "';");
   write("frontend/src/sourceLeak.js", "const token = 'sk-" + "d".repeat(40) + "';");

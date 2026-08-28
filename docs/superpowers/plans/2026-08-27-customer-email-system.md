@@ -12,7 +12,7 @@
 
 ## Guardrails before implementation
 
-- Work from `C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main` on the current branch.
+- Work from `C:/Users/<local-user>\Downloads\Hermesruns\Hermesruns-main` on the current branch.
 - Preserve every unrelated modified or untracked file. Stage and commit only the exact files listed by each task.
 - Never print or commit `RESEND_API_KEY`, Google Workspace credentials, provider-generated verification tokens, password-reset links, or email bodies.
 - Do not change the existing signup rollback rule: a newly inserted runner row is deleted when verification delivery fails, while a recycled soft-deleted account is retained.

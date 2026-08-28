@@ -163,7 +163,7 @@ Example (targeting `#omc-dev` with production-tested settings):
 
 ```bash
 jq \
-  --arg command "(clawdbot agent --session-id omx-hooks --message {{instruction}} --thinking minimal --deliver --reply-channel discord --reply-to 'channel:1468539002985644084' --timeout 120 --json >>/tmp/omx-openclaw-agent.jsonl 2>&1 || true)" \
+  --arg command "(clawdbot agent --session-id omx-hooks --message {{instruction}} --thinking minimal --deliver --reply-channel discord --reply-to 'channel:<redacted>' --timeout 120 --json >>/tmp/omx-openclaw-agent.jsonl 2>&1 || true)" \
   '.notifications = (.notifications // {enabled: true}) |
    .notifications.enabled = true |
    .notifications.verbosity = "verbose" |
@@ -213,7 +213,7 @@ Verification for this mode:
 
 ```bash
 clawdbot agent --session-id omx-hooks --message "OMX hook test via clawdbot agent path" \
-  --thinking minimal --deliver --reply-channel discord --reply-to 'channel:1468539002985644084' --timeout 120 --json
+  --thinking minimal --deliver --reply-channel discord --reply-to 'channel:<redacted>' --timeout 120 --json
 ```
 
 Dev runbook (Korean + tmux follow-up):

@@ -12,7 +12,7 @@
 
 ## Constraints and safety gates
 
-- Deploy the exact dirty working tree in `C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main`; do not rebase, reset, or replace the user's uncommitted work.
+- Deploy the exact dirty working tree in `C:/Users/<local-user>\Downloads\Hermesruns\Hermesruns-main`; do not rebase, reset, or replace the user's uncommitted work.
 - Never print, commit, or upload values from `Hermes.local.env.ps1`, `.env`, database URLs, OAuth credentials, Cloudflare tokens, recovery codes, or bootstrap secrets.
 - Keep `.git`, local environment files, local database artifacts, logs, task images, caches, and development tools outside the Railway upload context.
 - Keep the current local origin and Cloudflare Tunnel intact until Railway, PostgreSQL, public auth, and admin Access checks pass.
