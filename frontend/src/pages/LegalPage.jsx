@@ -7,6 +7,7 @@ import FooterNavLinks from '../components/FooterNavLinks';
 import HermesLogo from '../components/HermesLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../utils/supportContact';
 
 const LEGAL_COPY = {
   en: {
@@ -37,7 +38,7 @@ const LEGAL_COPY = {
         },
         {
           heading: 'Termination',
-          body: 'We may suspend or terminate accounts that violate these Terms, threaten platform security, or abuse the service. You may stop using Hermes at any time. Questions about these Terms can be sent to support@hermes.run.',
+          body: `We may suspend or terminate accounts that violate these Terms, threaten platform security, or abuse the service. You may stop using Hermes at any time. Questions about these Terms can be sent to ${SUPPORT_EMAIL}.`,
         },
       ],
       updated: 'Last updated: April 11, 2026',
@@ -65,7 +66,7 @@ const LEGAL_COPY = {
         },
         {
           heading: 'Your choices',
-          body: 'You can disconnect integrations, update profile details, and request help with account-related privacy questions through support@hermes.run. Depending on your region, you may also have rights to access, correct, export, or delete certain personal information.',
+          body: `You can disconnect integrations, update profile details, and request help with account-related privacy questions through ${SUPPORT_EMAIL}. Depending on your region, you may also have rights to access, correct, export, or delete certain personal information.`,
         },
         {
           heading: 'Policy updates',
@@ -107,7 +108,7 @@ const LEGAL_COPY = {
         },
         {
           heading: '终止与联系',
-          body: '如果账户违反本条款、威胁平台安全或滥用服务，我们可以暂停或终止访问。你也可以随时停止使用 Hermes。如对本条款有疑问，可联系 support@hermes.run。',
+          body: `如果账户违反本条款、威胁平台安全或滥用服务，我们可以暂停或终止访问。你也可以随时停止使用 Hermes。如对本条款有疑问，可联系 ${SUPPORT_EMAIL}。`,
         },
       ],
       updated: '最后更新：2026 年 4 月 11 日',
@@ -135,7 +136,7 @@ const LEGAL_COPY = {
         },
         {
           heading: '你的权利与选择',
-          body: '你可以断开第三方连接、更新个人资料，也可以通过 support@hermes.run 咨询与账户隐私相关的问题。根据你所在地区，可能还享有访问、更正、导出或删除部分个人信息的权利。',
+          body: `你可以断开第三方连接、更新个人资料，也可以通过 ${SUPPORT_EMAIL} 咨询与账户隐私相关的问题。根据你所在地区，可能还享有访问、更正、导出或删除部分个人信息的权利。`,
         },
         {
           heading: '政策更新',
@@ -150,6 +151,19 @@ const LEGAL_COPY = {
     signoff: '今天，你跑步了吗？',
   },
 };
+
+function renderLegalBody(body) {
+  const [beforeSupport, afterSupport] = String(body).split(SUPPORT_EMAIL);
+  if (afterSupport === undefined) return body;
+
+  return (
+    <>
+      {beforeSupport}
+      <a href={SUPPORT_MAILTO}>{SUPPORT_EMAIL}</a>
+      {afterSupport}
+    </>
+  );
+}
 
 export default function LegalPage({ variant = 'terms' }) {
   const navigate = useNavigate();
@@ -235,7 +249,7 @@ export default function LegalPage({ variant = 'terms' }) {
                 </span>
                 <div className="legal-page-row-copy">
                   <h2>{section.heading}</h2>
-                  <p>{section.body}</p>
+                  <p>{renderLegalBody(section.body)}</p>
                 </div>
               </article>
             ))}
