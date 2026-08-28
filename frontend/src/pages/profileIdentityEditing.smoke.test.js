@@ -42,7 +42,7 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /avatarUrl \? <img src=\{avatarUrl\} alt="" \/> : initials/,
+  /avatarUrl \? <img src=\{avatarUrl\} alt=""[^>]*\/> : initials/,
   'The hero should immediately render the saved profile image and retain initials as a fallback.',
 );
 
