@@ -48,6 +48,28 @@ describe('resolvePersonalizedCoachRecommendation', () => {
     expect(result.recommendation.purpose).toBe('today_run.personalized_reason_readiness_protect');
   });
 
+  it('never surfaces a planned distance on rest days, even with a stale payload value', () => {
+    const result = resolvePersonalizedCoachRecommendation({
+      coachPayload: {
+        today: {
+          workoutType: 'REST',
+          plannedDistanceKm: 43.8,
+          plannedDurationMinutes: 45,
+          reasonCode: 'readiness_protect',
+          intent: 'rest',
+          phase: 'protect',
+        },
+        plan: { confidence: 62 },
+      },
+      t,
+      lang: 'zh-CN',
+      unit: 'km',
+    });
+
+    expect(result.recommendation.distance).toBe('today_run.personalized_distance_rest');
+    expect(result.recommendation.distance).not.toContain('43.8');
+  });
+
   it('returns null when no structured backend session exists', () => {
     expect(resolvePersonalizedCoachRecommendation({ coachPayload: null, t, lang: 'en', unit: 'km' })).toBeNull();
   });

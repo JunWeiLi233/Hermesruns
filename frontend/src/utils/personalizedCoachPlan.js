@@ -20,6 +20,9 @@ function localizedTitle(workoutType, t) {
 }
 
 function localizedTarget(today, t, lang, unit) {
+  // A rest day never has a run distance, even if a stale planned value
+  // arrives in the payload — the grid must not show "43.8 km" next to rest.
+  if (today?.workoutType === 'REST') return t('today_run.personalized_distance_rest');
   const distanceKm = Number(today?.plannedDistanceKm);
   if (Number.isFinite(distanceKm) && distanceKm > 0) {
     return formatDistance(distanceKm, 1, lang, unit);

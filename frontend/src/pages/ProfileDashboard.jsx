@@ -1005,12 +1005,15 @@ export default function ProfileDashboard() {
   }, [nextRace]);
 
   const heroWorkout = coachToday?.today || null;
+  const isRestDay = heroWorkout?.workoutType === 'REST';
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
   const heroDuration = heroWorkout?.plannedDurationMinutes
     ? formatPlannedDuration(heroWorkout.plannedDurationMinutes)
     : todayBundle.recommendation?.distance || '--';
   const heroPace = todayBundle.recommendation?.pace || '--';
-  const heroLoad = coachState?.volumeKm7d
+  // The 7-day volume reads like "today's distance" on a rest day — hide it
+  // there so the grid never suggests a 43.8 km rest-day run.
+  const heroLoad = !isRestDay && coachState?.volumeKm7d
     ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
     : '--';
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);

@@ -35,14 +35,14 @@
 
 #root .add-shoes-profile-redesign .add-shoes-editorial-hero {
   display: grid;
-  grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: stretch;
   overflow: visible;
   border-radius: 0;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-editorial-hero-main {
-  grid-column: span 10;
   position: relative;
   min-height: 330px;
   display: grid;
@@ -146,10 +146,9 @@
 }
 
 #root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail {
-  grid-column: span 6;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 14px;
 }
 
@@ -186,6 +185,7 @@
   font-family: "Outfit", "Manrope", var(--font-display);
   font-size: 2.8rem;
   font-weight: 950;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
   line-height: 0.92;
 }
@@ -206,41 +206,47 @@
   color: rgba(255, 248, 238, 0.66);
 }
 
-#root .add-shoes-profile-redesign .add-shoes-shell,
-#root .add-shoes-profile-redesign .add-shoes-main-column {
+/* Catalog workspace: browser panel + setup aside on Profile's two-column idiom. */
+#root .add-shoes-profile-redesign .add-shoes-catalog-workspace {
   min-width: 0;
-  display: contents;
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  gap: 20px;
+  align-items: start;
 }
 
+/* Stage is a normal flow card (hd-card pattern): children own the full width,
+   so no step can ever auto-place into a collapsed track. */
 #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(16, minmax(0, 1fr));
-  gap: 20px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-#root .add-shoes-profile-redesign .add-shoes-stage-head,
-#root .add-shoes-profile-redesign .add-shoes-parent-rail,
-#root .add-shoes-profile-redesign .add-shoes-step-card {
-  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 26px;
+  padding: 26px;
+  border: 1px solid var(--profile-line);
   border-radius: 22px;
-  box-shadow: var(--profile-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.22)),
+    var(--profile-paper) !important;
+  box-shadow: var(--profile-shadow) !important;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-stage-head {
-  grid-column: span 11;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 18px;
-  padding: 30px;
-  border: 1px solid var(--profile-line);
-  background: var(--profile-paper) !important;
+}
+
+/* Catalog steps stack vertically inside the stage card. */
+#root .add-shoes-profile-redesign .add-shoes-catalog-step {
+  min-width: 0;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-catalog-step + .add-shoes-catalog-step {
+  padding-top: 28px;
+  border-top: 1px solid var(--profile-line);
 }
 
 #root .add-shoes-profile-redesign .add-shoes-stage-copy h2,
@@ -260,7 +266,6 @@
 #root .add-shoes-profile-redesign :is(
   .add-shoes-stage-copy p,
   .add-shoes-step-head p,
-  .add-shoes-parent-rail p,
   .add-shoes-model-board-header p
 ) {
   margin: 0;
@@ -269,31 +274,12 @@
   line-height: 1.5;
 }
 
-#root .add-shoes-profile-redesign .add-shoes-parent-rail {
-  grid-column: span 5;
-  display: grid;
-  align-content: space-between;
-  gap: 14px;
-  padding: 28px;
-  border: 1px solid rgba(255, 248, 238, 0.12);
-  background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 18px),
-    linear-gradient(145deg, #29241f, var(--profile-carbon)) !important;
-  color: #fff8ee;
-}
-
-#root .add-shoes-profile-redesign .add-shoes-parent-rail .add-shoes-panel-kicker {
-  color: #ef8b77;
-}
-
-#root .add-shoes-profile-redesign .add-shoes-parent-rail p {
-  color: rgba(255, 248, 238, 0.66);
-}
-
 #root .add-shoes-profile-redesign .add-shoes-step-card {
-  grid-column: 1 / -1;
+  min-width: 0;
   padding: 32px;
   border: 1px solid var(--profile-line);
+  border-radius: 22px;
+  box-shadow: var(--profile-shadow);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.2)),
     var(--profile-paper) !important;
@@ -399,7 +385,7 @@
 #root .add-shoes-profile-redesign .add-shoes-brand-deck-grid,
 #root .add-shoes-profile-redesign .add-shoes-brand-expand-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -472,21 +458,13 @@
 #root .add-shoes-profile-redesign :is(
   .add-shoes-brand-expand-btn,
   .add-shoes-filter-chip,
-  .add-shoes-secondary-btn,
-  .add-shoes-parent-link,
-  .add-shoes-stage-back
+  .add-shoes-secondary-btn
 ) {
   border: 1px solid var(--profile-line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.52) !important;
   color: var(--profile-ink) !important;
   box-shadow: none;
-}
-
-#root .add-shoes-profile-redesign .add-shoes-parent-link {
-  background: rgba(255, 248, 238, 0.08) !important;
-  color: #fff8ee !important;
-  border-color: rgba(255, 248, 238, 0.14);
 }
 
 #root .add-shoes-profile-redesign .add-shoes-filter-chip.is-active {
@@ -537,7 +515,7 @@
 
 #root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
   gap: 12px;
   padding: 14px;
 }
@@ -557,9 +535,18 @@
   padding: 8px;
 }
 
+/* Setup aside: plain column (no sticky — removed by DV-2026-08-23-173). */
+#root .add-shoes-profile-redesign .add-shoes-setup-panel {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 20px;
+}
+
 #root .add-shoes-profile-redesign .add-shoes-setup-payload-shell {
   display: grid;
-  grid-template-columns: minmax(280px, 6fr) minmax(0, 10fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
 }
 
@@ -715,7 +702,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
 
 body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign :is(
   .add-shoes-status-card,
-  .add-shoes-stage-head,
+  .add-shoes-browser-panel.add-shoes-stage,
   .add-shoes-step-card,
   .add-shoes-brand-deck-card,
   .add-shoes-model-card,
@@ -732,7 +719,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
   .add-shoes-field input,
   .add-shoes-toggle,
   .add-shoes-secondary-btn,
-  .add-shoes-stage-back,
   .add-shoes-filter-chip,
   .add-shoes-brand-expand-btn
 ) {
@@ -746,30 +732,18 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
 }
 
 @media (max-width: 1180px) {
-  #root .add-shoes-profile-redesign .add-shoes-editorial-hero-main,
-  #root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail,
-  #root .add-shoes-profile-redesign .add-shoes-stage-head,
-  #root .add-shoes-profile-redesign .add-shoes-parent-rail {
-    grid-column: 1 / -1;
+  #root .add-shoes-profile-redesign .add-shoes-catalog-workspace {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
 
-  #root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 980px) {
+  #root .add-shoes-profile-redesign .add-shoes-editorial-hero {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #root .add-shoes-profile-redesign .add-shoes-status-card:first-child {
     grid-column: auto;
-  }
-
-  #root .add-shoes-profile-redesign .add-shoes-brand-deck,
-  #root .add-shoes-profile-redesign .add-shoes-setup-payload-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  #root .add-shoes-profile-redesign .add-shoes-brand-deck-grid,
-  #root .add-shoes-profile-redesign .add-shoes-brand-expand-grid,
-  #root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -778,11 +752,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
     width: min(calc(100% - 24px), 1500px);
     padding-top: 14px;
     gap: 16px;
-  }
-
-  #root .add-shoes-profile-redesign .add-shoes-editorial-hero,
-  #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   #root .add-shoes-profile-redesign .add-shoes-editorial-hero-main {
@@ -795,6 +764,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
   }
 
   #root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail,
+  #root .add-shoes-profile-redesign .add-shoes-brand-deck,
   #root .add-shoes-profile-redesign .add-shoes-brand-deck-grid,
   #root .add-shoes-profile-redesign .add-shoes-brand-expand-grid,
   #root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid,
@@ -802,7 +772,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
     grid-template-columns: minmax(0, 1fr);
   }
 
-  #root .add-shoes-profile-redesign .add-shoes-stage-head,
   #root .add-shoes-profile-redesign .add-shoes-model-board-top {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -812,8 +781,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
   }
 
   #root .add-shoes-profile-redesign .add-shoes-step-card,
-  #root .add-shoes-profile-redesign .add-shoes-stage-head,
-  #root .add-shoes-profile-redesign .add-shoes-parent-rail {
+  #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
     padding: 20px;
   }
 
@@ -845,3 +813,4 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
     transform: none !important;
   }
 }
+

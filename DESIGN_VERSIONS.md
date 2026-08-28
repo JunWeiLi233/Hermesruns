@@ -1,5 +1,15 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-28-001
+Date: 2026-08-28
+Surface: Add Shoes page design consolidation
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/styles/style.generated.css`, `DESIGN_VERSIONS.md`
+What changed: Merged the dormant Kinetic Editorial skin (formerly `add-shoes-awesome-redesign.css`) into the single Add Shoes route stylesheet. The editorial layer was rescoped from the unused `add-shoes-awesome-redesign` hook onto the page's own `.add-shoes-page` hook and appended after the profile-alignment base so it wins by cascade order; the separate stylesheet, its import, and the second class hook were removed.
+Why: Two parallel skins for `/shoes/add` (one active, one orphaned) made the design authority ambiguous; the merged file keeps the editorial warm-paper/glass/coral look the runner approved in preview while the profile-alignment base continues to cover markup sections the editorial layer does not restyle.
+Preserve list: Editorial hero, brand deck with featured card and eight secondary cards, expandable extra-brand grid, model board with filter chips and search, setup payload summary, form step, midnight and high-contrast theme overrides, responsive breakpoints, and all existing intake behavior.
+Rollback target: `DV-2026-08-27-004`
+Notes: Cascade-neutral consolidation — identical specificity to the previewed layering, so the rendered result matches what was reviewed before the merge.
+
 ### Version: DV-2026-08-27-004
 Date: 2026-08-27
 Surface: Public landing page Lighthouse hardening
@@ -9266,3 +9276,13 @@ What changed: Reworked the personal-record dialog to use the shared light confir
 Why: Align the PR modal with the provided confirmation-modal reference while keeping the personal-record meaning, values, localization, close behavior, and responsive layout intact.
 Preserve list: Personal-record detection and formatting, translated copy, record metadata, modal dismissal behavior, theme support, responsive layout, and accessibility.
 Rollback target: `DV-2026-08-27-003`
+
+### Version: DV-2026-08-28-002
+Date: 2026-08-28
+Surface: Add Shoes route layout rebuild on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the 16-track spanning architecture with the Profile page's flow-card layout after the step-card hook removal left catalog steps collapsing into single tracks (30px cards, vertical headings); brand/model grids now auto-fill with minimum column widths.
+Why: The step sections had no grid-column rules after DV-2026-08-23-171, so the route rendered a collapsed, unreadable layout at every desktop width.
+Preserve list: 3-step flow, brand deck and expansion, model board filters/search, setup form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-28-001`
+Notes: A concurrent session briefly re-activated the retired `add-shoes-awesome-redesign.css` layer (root class + app.css import); it was removed again because its `#root`-scoped rules overrode this layout and squeezed the brand deck to ~75px columns. That session later merged the same Kinetic Editorial skin into the tail of `add-shoes-profile-alignment.css`; the merge was moved to `frontend/src/styles/add-shoes-kinetic-editorial-merged.css.disabled` because its cascade-order wins re-broke the brand deck (~50px cards at 1280px), crushed the setup form, and washed out the light-theme hero text. `add-shoes-profile-redesign` remains the sole rendered design authority for this route.

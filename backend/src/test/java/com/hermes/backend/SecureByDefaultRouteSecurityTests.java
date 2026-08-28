@@ -75,6 +75,7 @@ class SecureByDefaultRouteSecurityTests {
         String path = route
                 .replace("{section:[^.]+}", "settings")
                 .replace("{detail:[^.]+}", "general")
+                .replace("{id:[^.]+}", "123")
                 .replace("{id}", "123")
                 .replace("{insightKey}", "cadence")
                 .replace("{distKey}", "10k")

@@ -414,9 +414,12 @@ export default function TodayRun() {
     ? prettifyWorkoutType(coachPayload.today.workoutType, t)
     : recommendation.type;
 
-  const coachDistance = coachPayload?.today?.plannedDistanceKm != null
-    ? formatDistance(coachPayload.today.plannedDistanceKm, 1, lang, unit)
-    : recommendation.distance;
+  const isRestDay = coachPayload?.today?.workoutType === 'REST';
+  const coachDistance = isRestDay
+    ? t('today_run.personalized_distance_rest')
+    : coachPayload?.today?.plannedDistanceKm != null
+      ? formatDistance(coachPayload.today.plannedDistanceKm, 1, lang, unit)
+      : recommendation.distance;
 
   const coachDuration = coachPayload?.today?.plannedDurationMinutes != null
     ? formatPlannedDuration(coachPayload.today.plannedDurationMinutes)

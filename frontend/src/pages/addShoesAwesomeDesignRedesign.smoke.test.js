@@ -49,24 +49,44 @@ assert.match(
   '--profile-paper: #fffaf3;',
   '--profile-ink: #211c18;',
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero',
-  'grid-template-columns: repeat(16, minmax(0, 1fr));',
+  'grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);',
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-main',
-  'grid-column: span 10;',
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail',
-  'grid-column: span 6;',
+  '#root .add-shoes-profile-redesign .add-shoes-catalog-workspace',
+  'grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);',
   '#root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage',
+  '#root .add-shoes-profile-redesign .add-shoes-catalog-step',
+  '#root .add-shoes-profile-redesign .add-shoes-setup-panel',
   '#root .add-shoes-profile-redesign .add-shoes-brand-deck-feature',
   '#root .add-shoes-profile-redesign .add-shoes-selected-summary',
   '#root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid',
-  'grid-template-columns: repeat(4, minmax(0, 1fr));',
+  'grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));',
+  'grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));',
+  'font-variant-numeric: tabular-nums;',
   '#root .add-shoes-profile-redesign .add-shoes-setup-payload-shell',
-  'grid-template-columns: minmax(280px, 6fr) minmax(0, 10fr);',
   'body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign',
   '@media (max-width: 1180px)',
+  '@media (max-width: 980px)',
   '@media (max-width: 760px)',
   '@media (prefers-reduced-motion: reduce)',
   'grid-template-columns: minmax(0, 1fr);',
 ].forEach((snippet) => assertIncludes(redesignCss, snippet, 'Add Shoes Profile CSS'));
+
+/* Layout-lock contract (DV-2026-08-28-002): the stage is a single-column flow
+   card. Track-spanning stage grids collapsed the catalog steps into ~60px
+   tracks after DV-2026-08-23-171 removed the step-card spans from the JSX. */
+const stageRuleMatch = redesignCss.match(
+  /#root \.add-shoes-profile-redesign \.add-shoes-browser-panel\.add-shoes-stage\s*\{[\s\S]*?\n\}/,
+);
+assert.ok(stageRuleMatch, 'Add Shoes stage rule block should exist.');
+assert.ok(
+  !redesignCss.includes('repeat(16'),
+  'Add Shoes stage must stay a single-column flow card anywhere in this stylesheet; a 16-track stage grid without step spans collapses the catalog steps.',
+);
+assert.ok(
+  !redesignCss.includes('grid-column: span'),
+  'Add Shoes Profile layout must not depend on grid-column track spans; span rules silently orphaned the catalog steps once their JSX hooks were removed.',
+);
 
 assert.doesNotMatch(
   redesignCss,

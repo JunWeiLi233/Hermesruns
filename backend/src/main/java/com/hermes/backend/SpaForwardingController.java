@@ -60,6 +60,7 @@ public class SpaForwardingController {
         "/dashboard/{section:[^.]+}/{detail:[^.]+}",
         "/profile",
         "/runs",
+        "/runs/{id:[^.]+}",
         "/heatmap",
         "/run",
         "/run/{id}",

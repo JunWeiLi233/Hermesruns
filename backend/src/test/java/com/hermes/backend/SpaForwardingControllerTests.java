@@ -41,6 +41,17 @@ class SpaForwardingControllerTests {
     }
 
     @Test
+    void runDetailDeepLinkServesSpaShell() throws Exception {
+        // /runs/{id} is the canonical activity deep link (buildRunDetailPath); refreshing
+        // or sharing it must serve the SPA shell anonymously, not the JSON 401 entry point.
+        mockMvc.perform(get("/runs/1857"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
+    @Test
     void legalRouteRemainsIndexable() throws Exception {
         mockMvc.perform(get("/privacy"))
                 .andExpect(status().isOk())
