@@ -39,6 +39,11 @@ assert.match(
   /git push --force-with-lease origin "HEAD:refs\/heads\/\$ACTIVITY_BRANCH"/,
   "The workflow must update the review branch instead of pushing to main.",
 );
+assert.match(
+  workflow,
+  /git commit --author="JunWeiLi233 <70492516\+JunWeiLi233@users\.noreply\.github\.com>" -m "docs: refresh readme activity graph"/,
+  "Automated graph commits must retain the approved repository-owner author identity.",
+);
 assert.doesNotMatch(
   workflow,
   /^\s*git push\s*$/m,
