@@ -2,11 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,26 +16,22 @@ public class EmailVerificationService {
 
     private final AuthService authService;
     private final RunnerRepository runnerRepository;
+    private final TransactionalMailSender transactionalMailSender;
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
-
-    @Value("${spring.mail.host:}")
-    private String mailHost;
-
-    @Value("${app.mail.from:noreply@localhost}")
-    private String mailFrom;
-
-    @Value("${app.billing.public-base-url:http://localhost:8080}")
+    @Value("${app.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
 
-    public EmailVerificationService(AuthService authService, RunnerRepository runnerRepository) {
+    public EmailVerificationService(
+            AuthService authService,
+            RunnerRepository runnerRepository,
+            TransactionalMailSender transactionalMailSender) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
+        this.transactionalMailSender = transactionalMailSender;
     }
 
     public boolean isMailConfigured() {
-        return mailSender != null && mailHost != null && !mailHost.isBlank();
+        return transactionalMailSender.isConfigured();
     }
 
     /**
@@ -54,12 +46,12 @@ public class EmailVerificationService {
         Long id = runner.getId();
         try {
             sendMail(runner.getEmail(), plain);
-        } catch (MailException e) {
-            log.error("Verification email failed for {}; rolling back signup row {}", runner.getEmail(), id, e);
+        } catch (MailDeliveryException exception) {
+            log.error("Verification email delivery failed runnerId={}", id);
             if (deleteRunnerRowOnMailFailure && id != null) {
                 runnerRepository.deleteById(id);
             }
-            throw e;
+            throw exception;
         }
     }
 
@@ -93,23 +85,23 @@ public class EmailVerificationService {
     }
 
     private void sendMail(String toEmail, String plainToken) {
-        if (!isMailConfigured()) {
-            throw new IllegalStateException("Mail is not configured");
-        }
         String base = trimTrailingSlash(publicBaseUrl);
         String link = base + "/api/auth/verify-email?token=" + plainToken;
-
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setFrom(mailFrom);
-        msg.setTo(toEmail);
-        msg.setSubject("Verify your Hermes account");
-        msg.setText(
+        String text =
                 "Welcome to Hermes.\n\n"
                         + "Open this link to verify your email (expires in " + TOKEN_HOURS + " hours):\n"
                         + link
-                        + "\n\nIf you did not sign up, ignore this message.\n");
-
-        mailSender.send(msg);
+                        + "\n\nIf you did not sign up, ignore this message.\n";
+        String html = "<p>Welcome to Hermes.</p>"
+                + "<p>Open this link to verify your email (expires in " + TOKEN_HOURS + " hours): "
+                + "<a href=\"" + link + "\">Verify your email</a></p>"
+                + "<p>If you did not sign up, ignore this message.</p>";
+        transactionalMailSender.send(new TransactionalMailMessage(
+                toEmail,
+                "Verify your Hermes account",
+                text,
+                html,
+                "hermes-email-verification-" + UUID.randomUUID()));
     }
 
     private static String trimTrailingSlash(String url) {

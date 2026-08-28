@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router';
 import { useI18n } from '../contexts/I18nContext';
+import { SUPPORT_MAILTO } from '../utils/supportContact';
 
 export default function FooterNavLinks({ className = '', publicOnly = false }) {
   const { t } = useI18n();
@@ -10,7 +11,7 @@ export default function FooterNavLinks({ className = '', publicOnly = false }) {
     <div className={classes}>
       <Link to="/terms">{t('landing.stitch_footer_terms')}</Link>
       <Link to="/privacy">{t('landing.stitch_footer_privacy')}</Link>
-      <a href="mailto:support@hermes.run">{t('landing.stitch_footer_support')}</a>
+      <a href={SUPPORT_MAILTO}>{t('landing.stitch_footer_support')}</a>
       {!publicOnly && <Link to="/settings">{t('profile.settings')}</Link>}
     </div>
   );
