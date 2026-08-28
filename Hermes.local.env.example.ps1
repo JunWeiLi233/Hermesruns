@@ -93,6 +93,17 @@ $env:APP_GOOGLE_CLIENT_ID = "your-google-client-id"
 $env:APP_GOOGLE_CLIENT_SECRET = "your-google-client-secret"
 $env:APP_GOOGLE_REDIRECT_URI = "http://localhost:8080/api/auth/google/callback"
 
+# -----------------------------------------------------------------------------
+# Google reCAPTCHA v3 (anti-bot on password sign-up)
+# -----------------------------------------------------------------------------
+# Railway does not execute this PowerShell file. Add these same variable names
+# under the Railway service's Variables tab, without the surrounding quotes.
+# Create the pair at https://www.google.com/recaptcha/admin and allow the live
+# hostname (for example hermesruns.com) in the reCAPTCHA key settings.
+$env:RECAPTCHA_SITE_KEY = "your-recaptcha-site-key"
+$env:RECAPTCHA_SECRET_KEY = "your-recaptcha-secret-key"
+$env:RECAPTCHA_THRESHOLD = "0.5"
+
 # Google Geocoding API key for marathon route map georeferencing (optional).
 # Obtain from https://console.cloud.google.com/apis/credentials
 $env:APP_GOOGLE_GEOCODING_API_KEY = "your-google-geocoding-api-key"

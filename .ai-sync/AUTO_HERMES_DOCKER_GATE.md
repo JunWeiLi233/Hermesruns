@@ -1,15 +1,14 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-08-28T17:31:31.855Z
+Generated: 2026-08-28T19:17:04.414Z
 Passed: yes
-Git Head: b819e7fdc85e1cabeea17e01de3dc97c3a804af6
-Command: docker build -f C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main\.worktrees\customer-email-system-publish-standalone\Dockerfile -t hermes-autohermes-gate:local .
+Git Head: a7d664f80e1a2ba719e26eed630e13cae4c0bfc5
+Command: docker build -f C:\Users\Junwei\Downloads\Hermesruns\Hermesruns-main\.worktrees\recaptcha-railway-fix\Dockerfile -t hermes-autohermes-gate:local .
 Reason: Docker publish gate passed for the current working tree.
 
 ## Status Snapshot
-```text
-M backend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java
-```
+
+clean working tree
 
 ## Output
 

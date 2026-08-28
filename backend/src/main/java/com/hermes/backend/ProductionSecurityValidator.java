@@ -151,11 +151,11 @@ public class ProductionSecurityValidator {
     }
 
     private void validateRecaptchaKeys() {
-        if (recaptchaSecretKey == null || recaptchaSecretKey.isBlank()) {
+        if (!RecaptchaConfiguration.hasText(recaptchaSecretKey)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: set RECAPTCHA_SECRET_KEY so signup bot protection is active.");
         }
-        if (recaptchaSiteKey == null || recaptchaSiteKey.isBlank()) {
+        if (!RecaptchaConfiguration.hasText(recaptchaSiteKey)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: set RECAPTCHA_SITE_KEY so signup can generate verification tokens.");
         }
