@@ -9257,3 +9257,12 @@ Why: Reduce frontend image transfer size and keep the shipped asset directory li
 Preserve list: Image dimensions and transparency, route behavior, fallback logo handling, SVG icons, backend course-map uploads and test fixtures, localization, themes, responsive layout, and accessibility.
 Rollback target: `DV-2026-08-27-002`
 Notes: Pillow WebP quality 88 with no resizing; 42 converted assets save approximately 12.1 MB (85.9%) before the production build.
+
+### Version: DV-2026-08-28-001
+Date: 2026-08-28
+Surface: Profile personal-record celebration modal
+Files: `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/pages/profilePrModalProfileRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the personal-record dialog to use the shared light confirmation-sheet language: achievement icon, large graphite title, restrained copy, flat record rows, and a dark full-width dismissal action.
+Why: Align the PR modal with the provided confirmation-modal reference while keeping the personal-record meaning, values, localization, close behavior, and responsive layout intact.
+Preserve list: Personal-record detection and formatting, translated copy, record metadata, modal dismissal behavior, theme support, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-27-003`

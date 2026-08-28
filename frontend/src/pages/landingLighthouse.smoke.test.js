@@ -8,6 +8,7 @@ const frontendRoot = path.resolve(here, '..');
 const repoRoot = path.resolve(frontendRoot, '..', '..');
 const landingSource = readFileSync(path.join(here, 'Landing.jsx'), 'utf8');
 const appSource = readFileSync(path.join(frontendRoot, 'App.jsx'), 'utf8');
+const dashboardSource = readFileSync(path.join(here, 'Dashboard.jsx'), 'utf8');
 const indexCss = readFileSync(path.join(frontendRoot, 'index.css'), 'utf8');
 const activeIndexCss = indexCss.replace(/\/\* HERMES_LEGACY_STYLE_MANIFEST_START[\s\S]*?HERMES_LEGACY_STYLE_MANIFEST_END \*\//, '');
 const indexHtml = readFileSync(path.join(frontendRoot, '..', 'index.html'), 'utf8');
@@ -61,10 +62,20 @@ assert.doesNotMatch(
   /fonts\.googleapis\.com\/css2[^\n]*Material\+Symbols/,
   'The icon font should not block the landing document before the app bootstraps.',
 );
-assert.match(
+assert.doesNotMatch(
+  indexHtml,
+  /preconnect[^>]*fonts\.(googleapis|gstatic)\.com/,
+  'The document should not preconnect to Google Fonts on every page when only the admin dashboard uses the icon font.',
+);
+assert.doesNotMatch(
   appCss,
-  /@import url\('https:\/\/fonts\.googleapis\.com\/css2\?[^;]+Material\+Symbols/,
-  'Non-landing routes should load the icon font with their application stylesheet.',
+  /fonts\.googleapis\.com[^\n]*Material\+Symbols/,
+  'The application stylesheet must not chain a cross-origin Google Fonts import; it gates every authenticated route behind RouteStyleGate.',
+);
+assert.match(
+  dashboardSource,
+  /id = 'admin-material-symbols-font'/,
+  'The admin dashboard chunk should load the Material Symbols icon font on demand for its data-icon spans.',
 );
 assert.match(
   appSource,

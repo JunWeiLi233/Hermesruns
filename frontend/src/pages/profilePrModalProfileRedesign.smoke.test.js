@@ -14,6 +14,12 @@ assert.match(
 );
 
 assert.match(
+  profileSource,
+  /icon={<AppIcon name="emoji_events" className="runner-pr-modal-icon" \/>}/,
+  'The personal-record modal should use an achievement icon in the reference modal header.',
+);
+
+assert.match(
   liquidGlassStyleSource,
   /\.runner-pr-modal-card\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 32px\);[\s\S]*?border:\s*1px solid color-mix\(in srgb, var\(--runner-profile-line\) 78%, white 22%\);[\s\S]*?background:[\s\S]*?var\(--runner-profile-card-strong\)/,
   'The personal-record dialog should use the bounded Profile paper surface rather than a dark celebration card.',
@@ -35,6 +41,18 @@ assert.match(
   liquidGlassStyleSource,
   /\.runner-pr-modal-primary\s*\{[\s\S]*?background:\s*var\(--runner-profile-action-bg\);[\s\S]*?color:\s*var\(--runner-profile-action-ink\);/,
   'The dismissal action should use the Profile primary-button colors.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /\.runner-pr-modal-card \.modal-header-icon\s*\{[\s\S]*?background:\s*#fff0ec;[\s\S]*?color:\s*#f26956;/,
+  'The personal-record dialog should expose the coral achievement icon treatment.',
+);
+
+assert.match(
+  liquidGlassStyleSource,
+  /\.runner-pr-modal-primary\s*\{[\s\S]*?border-radius:\s*6px;[\s\S]*?background:\s*#111111;[\s\S]*?color:\s*#ffffff;/,
+  'The PR dismissal action should follow the reference modal black action treatment.',
 );
 
 console.log('[PASS] Profile personal-record modal redesign guardrails passed.');

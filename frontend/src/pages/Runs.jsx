@@ -6,7 +6,7 @@ import { buildRunDetailPath } from '../utils/runRoute';
 const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
 const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../contexts/I18nContext';
-import { apiFetch, apiJson } from '../api';
+import { apiFetch, apiJson, getBackendBaseUrl } from '../api';
 import { invalidateResourceCache } from '../api/resourceCache';
 import AppIcon from '../components/AppIcon';
 import PageSkeleton from '../components/PageSkeleton';
@@ -190,9 +190,10 @@ function buildRouteTileUrl(zoom, x, y) {
   if (![zoom, x, y].every(Number.isFinite)) return null;
   const n = 2 ** zoom;
   if (zoom < ROUTE_TILE_MIN_ZOOM || zoom > ROUTE_TILE_MAX_ZOOM || x < 0 || y < 0 || x >= n || y >= n) return null;
-  // Esri Dark Gray (no labels at thumbnail scale); the MapServer tile path is
-  // /tile/{z}/{y}/{x} with no file extension.
-  return `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${zoom}/${y}/${x}`;
+  // Esri Dark Gray (no labels at thumbnail scale), served same-origin through
+  // the backend tile proxy so visitor networks that cannot reach
+  // arcgisonline.com still render the thumbnail map surface.
+  return `${getBackendBaseUrl()}/api/maps/tiles/esri-dark/${zoom}/${y}/${x}.png`;
 }
 
 function tileRangeForPreviewBounds(viewBounds, zoom) {

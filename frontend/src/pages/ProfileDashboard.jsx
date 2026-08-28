@@ -1060,6 +1060,7 @@ export default function ProfileDashboard() {
         isOpen={Boolean(prCelebration)}
         onClose={() => setPrCelebration(null)}
         title={t('profile.pr_modal_title')}
+        icon={<AppIcon name="emoji_events" className="runner-pr-modal-icon" />}
         shellClassName="runner-pr-modal-shell"
         cardClassName="runner-pr-modal-card"
       >

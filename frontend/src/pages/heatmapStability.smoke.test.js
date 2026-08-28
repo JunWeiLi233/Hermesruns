@@ -226,13 +226,13 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /World_Dark_Gray_Base\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}[\s\S]*?World_Dark_Gray_Reference\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}/,
-  'Heatmap should render the keyless Esri Dark Gray basemap (base + labels) so tiles never degrade into API-key watermarks.',
+  /\/api\/maps\/tiles\/esri-dark\/\{z\}\/\{y\}\/\{x\}\.png[\s\S]*?\/api\/maps\/tiles\/esri-dark-labels\/\{z\}\/\{y\}\/\{x\}\.png/,
+  'Heatmap should render the Esri Dark Gray basemap (base + labels) through the same-origin backend proxy so tiles never degrade into API-key watermarks.',
 );
 assert.doesNotMatch(
   heatmapSource,
-  /basemaps\.cartocdn\.com|dark_all|dark_nolabels/,
-  'Heatmap must not load CARTO basemaps anonymously because they now render an API KEY REQUIRED watermark tile.',
+  /basemaps\.cartocdn\.com|dark_all|dark_nolabels|server\.arcgisonline\.com/,
+  'Heatmap must not load basemap tiles from third-party hosts: CARTO watermarks anonymous requests, and direct Esri hosts are unreachable from some visitor networks (black canvas with dots only).',
 );
 assert.match(
   heatmapSource,

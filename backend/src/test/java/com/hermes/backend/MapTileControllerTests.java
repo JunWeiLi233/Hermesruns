@@ -254,4 +254,50 @@ class MapTileControllerTests {
         assertThat(response.getBody()).isNull();
         verifyNoInteractions(restTemplate);
     }
+
+    @Test
+    void esriDarkTileProxiesEsriZyxPathAndCaches() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tile = new byte[] { 5, 6, 7 };
+        when(restTemplate.exchange(
+                eq("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/12/1178/1607"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
+
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080");
+
+        ResponseEntity<byte[]> first = controller.esriDarkTile(12, 1178, 1607);
+        ResponseEntity<byte[]> second = controller.esriDarkTile(12, 1178, 1607);
+
+        assertThat(first.getStatusCode().value()).isEqualTo(200);
+        assertThat(first.getBody()).containsExactly(tile);
+        assertThat(second.getBody()).containsExactly(tile);
+        verify(restTemplate, times(1)).exchange(
+                eq("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/12/1178/1607"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        );
+    }
+
+    @Test
+    void esriDarkLabelsTileProxiesReferenceLayer() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tile = new byte[] { 8 };
+        when(restTemplate.exchange(
+                eq("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/12/1178/1607"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
+
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080");
+
+        ResponseEntity<byte[]> response = controller.esriDarkLabelsTile(12, 1178, 1607);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).containsExactly(tile);
+    }
 }

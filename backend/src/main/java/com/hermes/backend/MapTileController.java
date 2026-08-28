@@ -37,6 +37,8 @@ public class MapTileController {
     private static final Duration TILE_CACHE_TTL = Duration.ofHours(6);
     private static final long IN_FLIGHT_WAIT_SECONDS = 35;
     private static final String CARTO_BASEMAPS_HOST = "https://basemaps.cartocdn.com/rastertiles/";
+    // Esri's tile path is /tile/{z}/{y}/{x} with no file extension.
+    private static final String ESDI_DARK_GRAY_HOST = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
     // Strict allow-list: the style segment becomes part of cache keys, so it
     // must never carry caller-controlled extras (query strings, paths).
     private static final Set<String> CARTO_BASEMAP_STYLES = Set.of(
@@ -111,6 +113,37 @@ public class MapTileController {
         return proxyTile(
                 "carto/" + style + "/" + z + "/" + x + "/" + y + retinaSuffix,
                 CARTO_BASEMAPS_HOST + style + "/" + z + "/" + x + "/" + y + retinaSuffix + ".png?key=" + cartoBasemapsApiKey
+        );
+    }
+
+    /**
+     * Esri Dark Gray basemap proxy (base + labels). Third-party tile hosts
+     * (arcgisonline.com among them) are unreachable from some visitor
+     * networks, which rendered the heatmap as a black canvas with GPS dots.
+     * Serving the tiles same-origin through this proxy removes that client
+     * reachability dependency and adds the shared TTL cache.
+     */
+    @GetMapping("/tiles/esri-dark/{z}/{y}/{x}.png")
+    public ResponseEntity<byte[]> esriDarkTile(
+        @PathVariable int z,
+        @PathVariable int y,
+        @PathVariable int x
+    ) {
+        return proxyTile(
+                "esri-dark/" + z + "/" + y + "/" + x,
+                ESDI_DARK_GRAY_HOST + "World_Dark_Gray_Base/MapServer/tile/" + z + "/" + y + "/" + x
+        );
+    }
+
+    @GetMapping("/tiles/esri-dark-labels/{z}/{y}/{x}.png")
+    public ResponseEntity<byte[]> esriDarkLabelsTile(
+        @PathVariable int z,
+        @PathVariable int y,
+        @PathVariable int x
+    ) {
+        return proxyTile(
+                "esri-dark-labels/" + z + "/" + y + "/" + x,
+                ESDI_DARK_GRAY_HOST + "World_Dark_Gray_Reference/MapServer/tile/" + z + "/" + y + "/" + x
         );
     }
 

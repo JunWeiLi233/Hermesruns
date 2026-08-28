@@ -19,14 +19,14 @@ assert.match(
 
 assert.match(
   runsSource,
-  /World_Dark_Gray_Base\/MapServer\/tile\/\$\{zoom\}\/\$\{y\}\/\$\{x\}/,
-  'Runs page must use Esri Dark Gray tiles so the orange route stays the focal point on the keyless dark basemap.',
+  /\/api\/maps\/tiles\/esri-dark\/\$\{zoom\}\/\$\{y\}\/\$\{x\}\.png/,
+  'Runs page must source thumbnail tiles from the same-origin Esri Dark Gray proxy so the orange route keeps its dark basemap on every visitor network.',
 );
 
 assert.doesNotMatch(
   runsSource,
-  /basemaps\.cartocdn\.com|dark_nolabels/,
-  'Runs page must not source thumbnail tiles from CARTO basemaps because anonymous requests now render an API KEY REQUIRED watermark.',
+  /basemaps\.cartocdn\.com|dark_nolabels|server\.arcgisonline\.com/,
+  'Runs page must not load thumbnail tiles from third-party hosts: CARTO watermarks anonymous requests, and direct Esri hosts are unreachable from some visitor networks.',
 );
 
 assert.match(

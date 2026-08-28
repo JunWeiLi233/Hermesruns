@@ -53,6 +53,19 @@ import { Bar, Doughnut, Line } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutController, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
+// The admin command surface renders Material Symbols ligatures through
+// data-icon spans (admin.css content: attr(data-icon)); every other icon in
+// the app is the inline AppIcon SVG system. Load the icon font only for this
+// admin dashboard chunk instead of shipping it inside app.css to every
+// authenticated runner route.
+if (typeof document !== 'undefined' && !document.getElementById('admin-material-symbols-font')) {
+  const adminIconFontLink = document.createElement('link');
+  adminIconFontLink.id = 'admin-material-symbols-font';
+  adminIconFontLink.rel = 'stylesheet';
+  adminIconFontLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0';
+  document.head.appendChild(adminIconFontLink);
+}
+
 
 function ShoeImage({ src, alt, className, noImageLabel }) {
   const encodedSrc = src ? encodeURI(src) : '';

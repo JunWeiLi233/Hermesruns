@@ -148,6 +148,16 @@ function AdminOnlyRoute({ children }) {
 let appStylesLoaded = false;
 let appStylesPromise;
 
+// The application stylesheet is large and gated behind RouteStyleGate, so
+// start fetching it during module evaluation — before React mounts and the
+// gate's effect runs — for any non-landing entry URL. Landing keeps its own
+// lightweight stylesheet and never pays for the app bundle's CSS.
+if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+  appStylesPromise = import('./styles/app.css').then(() => {
+    appStylesLoaded = true;
+  });
+}
+
 function RouteStyleGate({ children }) {
   const { pathname } = useLocation();
   const [stylesReady, setStylesReady] = useState(() => appStylesLoaded);

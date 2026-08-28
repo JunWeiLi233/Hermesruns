@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
-import { apiJson } from '../api';
+import { apiJson, getBackendBaseUrl } from '../api';
 import AppIcon from '../components/AppIcon';
 import HermesLogo from '../components/HermesLogo';
 import { getRunnerShellNavItems } from '../utils/runnerShellNav';
@@ -431,8 +431,11 @@ export default function Heatmap() {
         });
 
         // CARTO basemaps now reject anonymous tile requests with an "API KEY
-        // REQUIRED" watermark. Esri's Dark Gray canvas is the keyless dark
-        // basemap that keeps this page's dark design (base + labels overlay).
+        // REQUIRED" watermark, and third-party tile hosts (Esri included) are
+        // unreachable from some visitor networks, which painted the page as a
+        // black canvas with dots only. Both layers therefore load same-origin
+        // through the backend tile proxy, which fetches Esri's Dark Gray
+        // canvas server-side and caches it.
         const darkTileOptions = {
           maxZoom: 20,
           maxNativeZoom: 16,
@@ -445,8 +448,9 @@ export default function Heatmap() {
           errorTileUrl: 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22256%22 height=%22256%22 viewBox=%220 0 256 256%22%3E%3Crect width=%22256%22 height=%22256%22 fill=%22%2305070a%22/%3E%3C/svg%3E',
           attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS',
         };
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', darkTileOptions).addTo(map);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', darkTileOptions).addTo(map);
+        const backendBase = getBackendBaseUrl();
+        L.tileLayer(`${backendBase}/api/maps/tiles/esri-dark/{z}/{y}/{x}.png`, darkTileOptions).addTo(map);
+        L.tileLayer(`${backendBase}/api/maps/tiles/esri-dark-labels/{z}/{y}/{x}.png`, darkTileOptions).addTo(map);
 
         const dotCanvas = L.DomUtil.create('canvas', 'heatmap-page-dot-canvas leaflet-zoom-animated');
         dotCanvas.setAttribute('aria-hidden', 'true');

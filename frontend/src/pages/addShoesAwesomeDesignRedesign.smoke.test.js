@@ -13,6 +13,7 @@ const readOptional = (relativePath) => {
 
 const addShoesSource = read('pages/AddShoes.jsx');
 const indexCss = read('index.css');
+const appCss = read('styles/app.css');
 const redesignCss = readOptional('styles/add-shoes-profile-alignment.css');
 
 const assertIncludes = (source, snippet, label) => {
@@ -32,6 +33,10 @@ assert.ok(
   indexCss.indexOf("@import './styles/dark-mode-cohesion.css';") < indexCss.indexOf("@import './styles/add-shoes-profile-alignment.css';"),
   'Add Shoes Profile CSS should be the final route-level design authority.',
 );
+// index.css only carries the legacy manifest entry; styles/app.css holds the runtime import loaded via RouteStyleGate.
+// Strip /* */ blocks so a commented-out import cannot satisfy the runtime guardrail.
+const appCssActive = appCss.replace(/\/\*[\s\S]*?\*\//g, '');
+assertIncludes(appCssActive, "@import './add-shoes-profile-alignment.css';", 'runtime Add Shoes Profile redesign import in styles/app.css');
 
 assert.match(
   redesignCss,
