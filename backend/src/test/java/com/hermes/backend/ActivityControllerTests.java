@@ -182,7 +182,7 @@ class ActivityControllerTests {
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
 
-        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token");
+        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertInstanceOf(List.class, response.getBody());
@@ -244,7 +244,7 @@ class ActivityControllerTests {
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
 
-        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token");
+        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertInstanceOf(List.class, response.getBody());
@@ -282,7 +282,7 @@ class ActivityControllerTests {
 
         when(authService.findByAuthorizationHeader("Bearer expired")).thenReturn(Optional.empty());
 
-        ResponseEntity<?> response = controller.getUserRuns("Bearer expired");
+        ResponseEntity<?> response = controller.getUserRuns("Bearer expired", null, null);
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         // Must be a JSON body (Map), not a plain string, so the frontend can parse it safely.
@@ -291,6 +291,126 @@ class ActivityControllerTests {
         java.util.Map<String, String> body = (java.util.Map<String, String>) response.getBody();
         assertNotNull(body.get("error"));
         assertNotNull(body.get("code"));
+    }
+
+    @Test
+    void getUserRunReturnsSingleFeedItemWithoutFullHistoryQuery() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        ReadinessService readinessService = mock(ReadinessService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                runnerRepository, secretEncryptionService, elevationCorrectionService,
+                acclimatizationService, readinessService, restTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        Activity activity = new Activity();
+        activity.setId(19L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+        activity.setName("Hudson Tempo");
+        activity.setDistanceKm(12.4);
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(19L, runner)).thenReturn(Optional.of(activity));
+
+        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", 19L, null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertInstanceOf(java.util.Map.class, response.getBody());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> run = (java.util.Map<String, Object>) response.getBody();
+        assertEquals("Hudson Tempo", run.get("name"));
+        assertEquals(12.4, run.get("distanceKm"));
+        // The detail lookup must not enumerate the runner's whole history.
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class));
+    }
+
+    @Test
+    void getUserRunReturns404ForMissingOrForeignActivity() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        ReadinessService readinessService = mock(ReadinessService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                runnerRepository, secretEncryptionService, elevationCorrectionService,
+                acclimatizationService, readinessService, restTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(404L, runner)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", 404L, null);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void getUserRunsLimitCapsFeedToMostRecentItems() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+        ReadinessService readinessService = mock(ReadinessService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                runnerRepository, secretEncryptionService, elevationCorrectionService,
+                acclimatizationService, readinessService, restTemplate
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        Activity first = new Activity();
+        first.setId(3L);
+        first.setRunner(runner);
+        first.setActivityType(ActivityType.RUN);
+        first.setName("Newest");
+        Activity second = new Activity();
+        second.setId(2L);
+        second.setRunner(runner);
+        second.setActivityType(ActivityType.RUN);
+        second.setName("Middle");
+        Activity third = new Activity();
+        third.setId(1L);
+        third.setRunner(runner);
+        third.setActivityType(ActivityType.RUN);
+        third.setName("Oldest");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN))
+                .thenReturn(java.util.Arrays.asList(first, second, third));
+
+        ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", null, 2);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        List<?> body = (List<?>) response.getBody();
+        assertEquals(2, body.size());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> head = (java.util.Map<String, Object>) body.get(0);
+        assertEquals("Newest", head.get("name"));
     }
 
     @Test

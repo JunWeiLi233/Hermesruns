@@ -281,14 +281,13 @@ export default function RunDetail() {
     let cancelled = false;
 
     async function bootstrapRunFromActivities() {
+      // A cached run paints instantly; the single-activity endpoint (not the
+      // full /api/activities history, ~677KB in production) keeps it fresh.
       setIsBootstrappingRun(true);
       try {
-        const activities = await cachedApiJson('/api/activities');
+        const matchedRun = await apiJson(`/api/activities?id=${id}`);
         if (cancelled) return;
-        const matchedRun = Array.isArray(activities)
-          ? activities.find((activity) => String(activity?.id) === String(id))
-          : null;
-        setRun(matchedRun || null);
+        setRun(matchedRun && typeof matchedRun === 'object' ? matchedRun : null);
         if (matchedRun && typeof window !== 'undefined') {
           sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
         } else if (typeof window !== 'undefined') {
@@ -322,7 +321,10 @@ export default function RunDetail() {
 
   useEffect(() => {
     if (!isAuthenticated || !id) return;
-    cachedApiJson('/api/activities').then((data) => {
+    // The comparison windows use at most 20 recent runs and the sidebar shows
+    // 4, so the most recent 30 feed items replace the full history download
+    // (~677KB observed in production) this effect used to make.
+    cachedApiJson('/api/activities?limit=30').then((data) => {
       if (Array.isArray(data)) {
         setRecentRuns(data.filter((r) => r.distanceKm > 0 && r.movingTimeSeconds > 0 && String(r.id) !== String(id)));
       }
@@ -378,13 +380,18 @@ export default function RunDetail() {
   }
 
   useEffect(() => {
-    if (!run?.id || !isAuthenticated) return;
+    // Key on the run id, not the run object: bootstrap and background
+    // refreshes replace the object identity without changing the run, and
+    // each replacement re-fetched points/analytics/telemetry/elevation
+    // (observed fetching the quartet three times for one run).
+    const runId = run?.id;
+    if (!runId || !isAuthenticated) return;
     async function fetchPoints() {
       try {
         const [res, analyticsRes, telemetryRes] = await Promise.all([
-          apiFetch(`/api/activities/${run.id}/points`),
-          apiFetch(`/api/activities/${run.id}/analytics`),
-          apiFetch(`/api/activities/${run.id}/telemetry`),
+          apiFetch(`/api/activities/${runId}/points`),
+          apiFetch(`/api/activities/${runId}/analytics`),
+          apiFetch(`/api/activities/${runId}/telemetry`),
         ]);
         if (!res.ok) return;
         const data = await res.json();
@@ -407,7 +414,7 @@ export default function RunDetail() {
     }
     async function fetchElevationStatus() {
       try {
-        const elevStatusRes = await apiFetch(`/api/activities/${run.id}/elevation/status`);
+        const elevStatusRes = await apiFetch(`/api/activities/${runId}/elevation/status`);
         if (elevStatusRes.ok) {
           const payload = await elevStatusRes.json();
           setElevationStatus(payload && typeof payload === 'object' ? payload : null);
@@ -418,7 +425,7 @@ export default function RunDetail() {
     }
     fetchPoints();
     fetchElevationStatus();
-  }, [run, isAuthenticated]);
+  }, [run?.id, isAuthenticated]);
 
   useEffect(() => {
     setSelectedTelemetryPoint(null);
@@ -721,23 +728,25 @@ export default function RunDetail() {
 
   async function refreshRunFromActivities() {
     if (!isAuthenticated || !id) return null;
-    invalidateResourceCache('/api/activities');
+    invalidateResourceCache('/api/activities?limit=30');
     try {
-      const activities = await apiJson('/api/activities');
-      if (!Array.isArray(activities)) return null;
-
-      const matchedRun = activities.find((activity) => String(activity?.id) === String(id));
-      if (matchedRun) {
+      const [matchedRun, activities] = await Promise.all([
+        apiJson(`/api/activities?id=${id}`).catch(() => null),
+        apiJson('/api/activities?limit=30').catch(() => null),
+      ]);
+      if (matchedRun && typeof matchedRun === 'object') {
         setRun(matchedRun);
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('hermes_selected_run', JSON.stringify(matchedRun));
         }
       }
-      setRecentRuns(activities.filter((activity) => (
-        activity.distanceKm > 0
-        && activity.movingTimeSeconds > 0
-        && String(activity.id) !== String(id)
-      )));
+      if (Array.isArray(activities)) {
+        setRecentRuns(activities.filter((activity) => (
+          activity.distanceKm > 0
+            && activity.movingTimeSeconds > 0
+            && String(activity.id) !== String(id)
+        )));
+      }
       return matchedRun || null;
     } catch {
       return null;

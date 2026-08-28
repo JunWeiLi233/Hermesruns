@@ -66,15 +66,33 @@ public class ActivityController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getUserRuns(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+    public ResponseEntity<?> getUserRuns(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "id", required = false) Long id,
+            @RequestParam(value = "limit", required = false) Integer limit) {
         Optional<Runner> activeUser = authService.findByAuthorizationHeader(authHeader);
 
         if (activeUser.isEmpty()) {
             return err(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
         }
 
+        // The run detail page used to download the runner's entire activity
+        // list (~677KB observed in production) just to find one activity, so
+        // ?id= serves the same feed-item shape for a single run.
+        if (id != null) {
+            return activityDataAccess.findActivityForRunner(id, activeUser.get())
+                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity)))
+                    .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
+        }
+
+        // Runs come back newest-first, so a limit serves the most recent N.
+        // Consumers that need the whole history (the Runs list) omit it.
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get());
-        return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
+        var feed = runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem);
+        if (limit != null) {
+            feed = feed.limit(Math.max(1, Math.min(limit, 500)));
+        }
+        return ResponseEntity.ok(feed.toList());
     }
 
     @GetMapping("/route-previews")
