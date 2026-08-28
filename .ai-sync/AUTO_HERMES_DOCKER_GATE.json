@@ -1,11 +1,10 @@
 {
-  "generatedAt": "2026-08-28T17:18:42.373Z",
+  "generatedAt": "2026-08-28T17:31:31.855Z",
   "passed": true,
-  "gitHead": "ed89b12b64fc6037c0b9ec630e2616c04e5144c5",
-  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+  "gitHead": "b819e7fdc85e1cabeea17e01de3dc97c3a804af6",
+  "statusSnapshot": "M backend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java",
   "changedPaths": [
-    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
-    "ai-sync/AUTO_HERMES_DOCKER_GATE.json"
+    "ackend/src/test/java/com/hermes/backend/AutomatedCoachServiceTests.java"
   ],
   "command": "docker build -f C:\\Users\\Junwei\\Downloads\\Hermesruns\\Hermesruns-main\\.worktrees\\customer-email-system-publish-standalone\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
