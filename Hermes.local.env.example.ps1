@@ -140,18 +140,14 @@ $env:STRIPE_PRICE_PRO_MONTHLY = "price_xxxxxxxxxxxxxxxxxxxxx"
 $env:APP_BILLING_PRICE_LABEL = "$9 / month"
 
 # -----------------------------------------------------------------------------
-# Email (SMTP for Account Verification)
+# Transactional email (disabled locally)
 # -----------------------------------------------------------------------------
-# If SPRING_MAIL_HOST is left empty, new password-signup accounts skip inbox verification (dev only).
-$env:SPRING_MAIL_HOST = ""
-# $env:SPRING_MAIL_HOST = "smtp.gmail.com"
-
-$env:SPRING_MAIL_PORT = "587"
-$env:SPRING_MAIL_USERNAME = ""
-$env:SPRING_MAIL_PASSWORD = ""
-
-# "From" address on outgoing verification emails.
-$env:APP_MAIL_FROM = "noreply@localhost"
+# Keep the provider disabled unless a deliberate local test setup is configured.
+# This template contains no delivery credential and cannot send mail by default.
+$env:APP_MAIL_PROVIDER = "disabled"
+$env:RESEND_API_KEY = ""
+$env:APP_MAIL_FROM = "Hermes <no-reply@local.hermes>"
+$env:APP_MAIL_REPLY_TO = "support@local.hermes"
 
 # -----------------------------------------------------------------------------
 # Garmin Wellness Sync

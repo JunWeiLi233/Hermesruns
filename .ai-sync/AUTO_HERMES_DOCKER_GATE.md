@@ -10,7 +10,6 @@ Reason: Docker publish gate passed for the current working tree.
 
 clean working tree
 
-
 ## Output
 
 none
