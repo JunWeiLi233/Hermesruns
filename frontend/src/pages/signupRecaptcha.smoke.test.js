@@ -52,7 +52,6 @@ try {
     getElementById: () => null,
     createElement: () => ({
       dataset: {},
-      addEventListener: () => {},
     }),
     head: {
       appendChild(script) {
@@ -73,18 +72,11 @@ try {
   };
 
   const { getSignupCaptchaToken } = createHelpers();
-  let outcome;
-  try {
-    outcome = {
-      token: await getSignupCaptchaToken({ required: true, siteKey: 'public-test-site-key' }),
-    };
-  } catch (error) {
-    outcome = { error: error instanceof Error ? error.message : String(error) };
-  }
+  const token = await getSignupCaptchaToken({ required: true, siteKey: 'public-test-site-key' });
 
-  assert.deepEqual(
-    outcome,
-    { token: 'token-after-google-init' },
+  assert.equal(
+    token,
+    'token-after-google-init',
     'Signup should wait for grecaptcha.execute when Google finishes initialization just after script load.',
   );
 } finally {

@@ -4,6 +4,17 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.ByteArrayOutputStream;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+
 /**
  * Fails fast in production when known-weak defaults would be exposed on the public internet.
  */
@@ -32,6 +43,21 @@ public class ProductionSecurityValidator {
 
     @Value("${app.billing.public-base-url:}")
     private String publicBaseUrl;
+
+    @Value("${app.mail.provider:disabled}")
+    private String mailProvider;
+
+    @Value("${app.mail.resend.api-key:}")
+    private String resendApiKey;
+
+    @Value("${app.mail.from:}")
+    private String mailFrom;
+
+    @Value("${app.mail.reply-to:}")
+    private String mailReplyTo;
+
+    @Value("${app.public-base-url:}")
+    private String mailPublicBaseUrl;
 
     @Value("${recaptcha.secret-key:}")
     private String recaptchaSecretKey;
@@ -72,6 +98,7 @@ public class ProductionSecurityValidator {
         validateHsts();
         validateCorsOrigins();
         validatePublicBaseUrl();
+        validateTransactionalMail();
         validateStravaWebhookToken();
         validateAdminSecurity();
         validateRecaptchaKeys();
@@ -124,11 +151,11 @@ public class ProductionSecurityValidator {
     }
 
     private void validateRecaptchaKeys() {
-        if (recaptchaSecretKey == null || recaptchaSecretKey.isBlank()) {
+        if (!RecaptchaConfiguration.hasText(recaptchaSecretKey)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: set RECAPTCHA_SECRET_KEY so signup bot protection is active.");
         }
-        if (recaptchaSiteKey == null || recaptchaSiteKey.isBlank()) {
+        if (!RecaptchaConfiguration.hasText(recaptchaSiteKey)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: set RECAPTCHA_SITE_KEY so signup can generate verification tokens.");
         }
@@ -195,6 +222,260 @@ public class ProductionSecurityValidator {
             throw new IllegalStateException(
                     "HERMES_ENV=production: APP_PUBLIC_BASE_URL must use HTTPS.");
         }
+    }
+
+    private void validateTransactionalMail() {
+        if (!"resend".equals(mailProvider)) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_MAIL_PROVIDER must be resend.");
+        }
+        if (!isSafeHeaderToken(resendApiKey)) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: RESEND_API_KEY is required.");
+        }
+        if (!isApprovedFromMailbox(mailFrom)) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_MAIL_FROM must be one mailbox at mail.hermesruns.com.");
+        }
+        if (!"support@hermesruns.com".equalsIgnoreCase(mailReplyTo)) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_MAIL_REPLY_TO must be support@hermesruns.com.");
+        }
+        if (!isSafePublicBaseUrl(mailPublicBaseUrl)) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_PUBLIC_BASE_URL must be a safe absolute HTTPS URL outside loopback.");
+        }
+    }
+
+    private boolean isApprovedFromMailbox(String address) {
+        if (address == null || address.isBlank() || containsControlCharacter(address)) {
+            return false;
+        }
+        int openBracket = address.indexOf('<');
+        int closeBracket = address.indexOf('>');
+        if (openBracket < 0 && closeBracket < 0) {
+            return isApprovedBareMailbox(address);
+        }
+        if (openBracket < 2
+                || closeBracket != address.length() - 1
+                || openBracket != address.lastIndexOf('<')
+                || closeBracket != address.lastIndexOf('>')
+                || address.charAt(openBracket - 1) != ' ') {
+            return false;
+        }
+        String displayName = address.substring(0, openBracket - 1);
+        String mailbox = address.substring(openBracket + 1, closeBracket);
+        return isConservativeAsciiDisplayName(displayName) && isApprovedBareMailbox(mailbox);
+    }
+
+    private boolean isApprovedBareMailbox(String address) {
+        if (address.isBlank() || containsBareMailboxDelimiterOrControl(address)) {
+            return false;
+        }
+        int at = address.indexOf('@');
+        if (at <= 0 || at != address.lastIndexOf('@') || at == address.length() - 1) {
+            return false;
+        }
+        String localPart = address.substring(0, at);
+        String domain = address.substring(at + 1);
+        return isValidLocalPart(localPart) && "mail.hermesruns.com".equalsIgnoreCase(domain);
+    }
+
+    private boolean isConservativeAsciiDisplayName(String displayName) {
+        if (displayName.isEmpty()) {
+            return false;
+        }
+        boolean previousWasSpace = false;
+        for (int index = 0; index < displayName.length(); index++) {
+            char character = displayName.charAt(index);
+            if (character == ' ') {
+                if (index == 0 || index == displayName.length() - 1 || previousWasSpace) {
+                    return false;
+                }
+                previousWasSpace = true;
+            } else if (isAsciiLetterOrDigit(character)) {
+                previousWasSpace = false;
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isSafeHeaderToken(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character < '!' || character > '~') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean containsControlCharacter(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            if (Character.isISOControl(value.charAt(index))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsBareMailboxDelimiterOrControl(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isWhitespace(character) || Character.isISOControl(character)
+                    || "()<>[],:;\\\"".indexOf(character) >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isValidLocalPart(String localPart) {
+        if (localPart.isEmpty() || localPart.length() > 64 || localPart.startsWith(".")
+                || localPart.endsWith(".") || localPart.contains("..")) {
+            return false;
+        }
+        for (int index = 0; index < localPart.length(); index++) {
+            char character = localPart.charAt(index);
+            if (!(isAsciiLetterOrDigit(character) || ".!#$%&'*+/=?^_`{|}~-".indexOf(character) >= 0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isAsciiLetterOrDigit(char character) {
+        return (character >= 'a' && character <= 'z')
+                || (character >= 'A' && character <= 'Z')
+                || (character >= '0' && character <= '9');
+    }
+
+    private boolean isSafePublicBaseUrl(String rawValue) {
+        if (rawValue == null || rawValue.isBlank() || containsUnsafeUrlCharacter(rawValue)) {
+            return false;
+        }
+        try {
+            URI uri = new URI(rawValue);
+            String host = uri.getHost();
+            return uri.isAbsolute()
+                    && "https".equalsIgnoreCase(uri.getScheme())
+                    && host != null
+                    && !host.isBlank()
+                    && uri.getUserInfo() == null
+                    && uri.getQuery() == null
+                    && uri.getFragment() == null
+                    && (uri.getPort() == -1 || (uri.getPort() >= 1 && uri.getPort() <= 65535))
+                    && !isLoopbackHost(host)
+                    && !containsEncodedUnsafeUrlCharacter(rawValue);
+        } catch (URISyntaxException exception) {
+            return false;
+        }
+    }
+
+    private boolean containsUnsafeUrlCharacter(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isWhitespace(character) || Character.isSpaceChar(character) || Character.isISOControl(character)
+                    || "<>\\\"'`".indexOf(character) >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsEncodedUnsafeUrlCharacter(String value) {
+        String decoded = percentDecodeUtf8(value);
+        return decoded == null || decoded.indexOf('%') >= 0 || containsUnsafeUrlCharacter(decoded);
+    }
+
+    private String percentDecodeUtf8(String value) {
+        StringBuilder decoded = new StringBuilder(value.length());
+        for (int index = 0; index < value.length();) {
+            if (value.charAt(index) != '%') {
+                decoded.append(value.charAt(index++));
+                continue;
+            }
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            while (index < value.length() && value.charAt(index) == '%') {
+                if (index + 2 >= value.length()) {
+                    return null;
+                }
+                int high = Character.digit(value.charAt(index + 1), 16);
+                int low = Character.digit(value.charAt(index + 2), 16);
+                if (high < 0 || low < 0) {
+                    return null;
+                }
+                bytes.write((high << 4) + low);
+                index += 3;
+            }
+            try {
+                decoded.append(StandardCharsets.UTF_8.newDecoder()
+                        .onMalformedInput(CodingErrorAction.REPORT)
+                        .onUnmappableCharacter(CodingErrorAction.REPORT)
+                        .decode(ByteBuffer.wrap(bytes.toByteArray())));
+            } catch (CharacterCodingException exception) {
+                return null;
+            }
+        }
+        return decoded.toString();
+    }
+
+    private boolean isLoopbackHost(String host) {
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        if (normalizedHost.endsWith(".")) {
+            normalizedHost = normalizedHost.substring(0, normalizedHost.length() - 1);
+        }
+        if ("localhost".equals(normalizedHost) || normalizedHost.endsWith(".localhost")) {
+            return true;
+        }
+        String addressCandidate = normalizedHost.startsWith("[") && normalizedHost.endsWith("]")
+                ? normalizedHost.substring(1, normalizedHost.length() - 1)
+                : normalizedHost;
+        int scopeIndex = addressCandidate.indexOf('%');
+        if (scopeIndex >= 0) {
+            addressCandidate = addressCandidate.substring(0, scopeIndex);
+        }
+        if (isAmbiguousLegacyNumericHost(addressCandidate)) {
+            return true;
+        }
+        if (!isNumericAddressLiteral(addressCandidate)) {
+            return false;
+        }
+        try {
+            return InetAddress.getByName(addressCandidate).isLoopbackAddress();
+        } catch (UnknownHostException exception) {
+            return true;
+        }
+    }
+
+    private boolean isNumericAddressLiteral(String value) {
+        return value.matches("[0-9]+")
+                || value.matches("[0-9.]+")
+                || (value.contains(":") && value.matches("[0-9a-f:.]+"));
+    }
+
+    private boolean isAmbiguousLegacyNumericHost(String value) {
+        if (value.matches("0x[0-9a-f]+")) {
+            return true;
+        }
+        if (!value.matches("[0-9.]+")) {
+            return false;
+        }
+        String[] octets = value.split("\\.", -1);
+        if (octets.length != 4) {
+            return true;
+        }
+        for (String octet : octets) {
+            if (octet.isEmpty() || (octet.length() > 1 && octet.charAt(0) == '0')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String normalize(String value) {

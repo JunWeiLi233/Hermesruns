@@ -8,6 +8,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RecaptchaVerifierTests {
 
     @Test
+    void normalizeRemovesWrappingQuotesFromRailwayCopiedValues() {
+        assertThat(RecaptchaConfiguration.normalize("  \"secret-value\"  ")).isEqualTo("secret-value");
+        assertThat(RecaptchaConfiguration.normalize("'site-value'")).isEqualTo("site-value");
+    }
+
+    @Test
     void verifyAllowsSignupWhenRecaptchaSecretIsNotConfigured() {
         RecaptchaVerifier verifier = new RecaptchaVerifier();
         ReflectionTestUtils.setField(verifier, "secretKey", "");

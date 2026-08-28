@@ -2697,6 +2697,23 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   color: var(--lp-ink-muted);
 }
 
+.legal-page-row-copy a {
+  color: var(--lp-coral);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+
+.legal-page-row-copy a:hover {
+  color: var(--lp-ink);
+}
+
+.legal-page-row-copy a:focus-visible {
+  outline: 2px solid var(--lp-coral);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 .legal-page--terms .legal-page-footer {
   display: grid;
   grid-template-areas:

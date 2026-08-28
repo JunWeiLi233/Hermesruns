@@ -93,6 +93,17 @@ $env:APP_GOOGLE_CLIENT_ID = "your-google-client-id"
 $env:APP_GOOGLE_CLIENT_SECRET = "your-google-client-secret"
 $env:APP_GOOGLE_REDIRECT_URI = "http://localhost:8080/api/auth/google/callback"
 
+# -----------------------------------------------------------------------------
+# Google reCAPTCHA v3 (anti-bot on password sign-up)
+# -----------------------------------------------------------------------------
+# Railway does not execute this PowerShell file. Add these same variable names
+# under the Railway service's Variables tab, without the surrounding quotes.
+# Create the pair at https://www.google.com/recaptcha/admin and allow the live
+# hostname (for example hermesruns.com) in the reCAPTCHA key settings.
+$env:RECAPTCHA_SITE_KEY = "your-recaptcha-site-key"
+$env:RECAPTCHA_SECRET_KEY = "your-recaptcha-secret-key"
+$env:RECAPTCHA_THRESHOLD = "0.5"
+
 # Google Geocoding API key for marathon route map georeferencing (optional).
 # Obtain from https://console.cloud.google.com/apis/credentials
 $env:APP_GOOGLE_GEOCODING_API_KEY = "your-google-geocoding-api-key"
@@ -129,18 +140,14 @@ $env:STRIPE_PRICE_PRO_MONTHLY = "price_xxxxxxxxxxxxxxxxxxxxx"
 $env:APP_BILLING_PRICE_LABEL = "$9 / month"
 
 # -----------------------------------------------------------------------------
-# Email (SMTP for Account Verification)
+# Transactional email (disabled locally)
 # -----------------------------------------------------------------------------
-# If SPRING_MAIL_HOST is left empty, new password-signup accounts skip inbox verification (dev only).
-$env:SPRING_MAIL_HOST = ""
-# $env:SPRING_MAIL_HOST = "smtp.gmail.com"
-
-$env:SPRING_MAIL_PORT = "587"
-$env:SPRING_MAIL_USERNAME = ""
-$env:SPRING_MAIL_PASSWORD = ""
-
-# "From" address on outgoing verification emails.
-$env:APP_MAIL_FROM = "noreply@localhost"
+# Keep the provider disabled unless a deliberate local test setup is configured.
+# This template contains no delivery credential and cannot send mail by default.
+$env:APP_MAIL_PROVIDER = "disabled"
+$env:RESEND_API_KEY = ""
+$env:APP_MAIL_FROM = "Hermes <no-reply@local.hermes>"
+$env:APP_MAIL_REPLY_TO = "support@local.hermes"
 
 # -----------------------------------------------------------------------------
 # Garmin Wellness Sync

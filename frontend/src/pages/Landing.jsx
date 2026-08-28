@@ -15,6 +15,7 @@ import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import worldMapPoliticalDotted from '../assets/generated/landing-world-map-political-dotted.webp';
 import shoeRunMaster from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 import '../styles/_split/landing.css';
+import { SUPPORT_MAILTO } from '../utils/supportContact';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const SHOE_GAIT_MOTION_STOPS = [
@@ -782,7 +783,7 @@ export default function Landing() {
   const footerUtilityLinks = [
     { label: t('landing.stitch_footer_terms'), to: '/terms' },
     { label: t('landing.stitch_footer_privacy'), to: '/privacy' },
-    { label: t('landing.stitch_footer_support'), href: 'mailto:support@hermes.run' },
+    { label: t('landing.stitch_footer_support'), href: SUPPORT_MAILTO },
   ];
 
   return (
