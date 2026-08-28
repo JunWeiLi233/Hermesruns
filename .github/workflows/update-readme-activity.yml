@@ -37,7 +37,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch --create "$ACTIVITY_BRANCH"
           git add docs/github-commit-activity.svg
-          git commit -m "docs: refresh readme activity graph"
+          git commit --author="JunWeiLi233 <70492516+JunWeiLi233@users.noreply.github.com>" -m "docs: refresh readme activity graph"
           git push --force-with-lease origin "HEAD:refs/heads/$ACTIVITY_BRANCH"
           {
             echo "### README activity graph ready for review"
