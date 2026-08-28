@@ -176,14 +176,12 @@ public class OAuthController {
     @GetMapping("/auth/providers")
     public ResponseEntity<Map<String, Object>> getAuthProviders() {
         Map<String, Object> response = new HashMap<>(systemConfigService.getOAuthProviderStatus());
-        response.put("recaptchaSiteKey", recaptchaSiteKey);
-        response.put("recaptchaRequired", hasText(recaptchaSecretKey));
-        response.put("recaptchaConfigured", hasText(recaptchaSecretKey) && hasText(recaptchaSiteKey));
+        String publicSiteKey = RecaptchaConfiguration.normalize(recaptchaSiteKey);
+        response.put("recaptchaSiteKey", publicSiteKey);
+        response.put("recaptchaRequired", RecaptchaConfiguration.hasText(recaptchaSecretKey));
+        response.put("recaptchaConfigured", RecaptchaConfiguration.hasText(recaptchaSecretKey)
+                && RecaptchaConfiguration.hasText(publicSiteKey));
         return ResponseEntity.ok(response);
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 
     private String effectiveStravaClientId() {
