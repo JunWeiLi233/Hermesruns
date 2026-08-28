@@ -434,14 +434,18 @@ function RoutePreviewThumb({ preview, provider, runName, bbox }) {
   );
 }
 
-const RECENT_RUNS_INITIAL_VISIBLE_COUNT = 3;
-const RECENT_RUNS_LOAD_BATCH_SIZE = 6;
-// The history render window grows on this cadence until every filtered run is
-// mounted, so loading never depends on where the scroll sentinel sits or on
-// month cards being expanded/collapsed. The observer only accelerates it.
-const RUNS_BACKGROUND_LOAD_STEP_MS = 120;
-const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = RECENT_RUNS_INITIAL_VISIBLE_COUNT + (RECENT_RUNS_LOAD_BATCH_SIZE * 2);
-const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = RECENT_RUNS_LOAD_BATCH_SIZE * 3;
+// Render budget for the history list. Live measurement on a full history
+// (7,436 run cards, a 35,337px-tall document) showed mounting every card up
+// front dominates page load with multi-hundred-ms long tasks. Only the first
+// RUNS_RENDER_BATCH_SIZE cards of the filtered list mount initially; each
+// sentinel intersection below the list appends one more batch, so the DOM
+// grows only as the runner actually scrolls toward older runs.
+const RUNS_RENDER_BATCH_SIZE = 60;
+const RECENT_RUNS_INITIAL_VISIBLE_COUNT = RUNS_RENDER_BATCH_SIZE;
+// Route-preview prefetch volume stays decoupled from the render batch so the
+// thumbnail metadata fetch footprint does not balloon with the window size.
+const ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT = 15;
+const ROUTE_PREVIEW_PREFETCH_LOOKAHEAD = 18;
 
 function normalizeRoutePreviewBatch(data) {
   const previewUpdates = {};
@@ -1097,18 +1101,14 @@ const Runs = memo(function Runs() {
     }
   }
 
-  // Stream the remaining history in bounded batches on a timer so the list
-  // always finishes loading — whether month cards are expanded, collapsed, or
-  // the scroll sentinel never enters view. Scrolling to the sentinel (below)
-  // still accelerates the same growth; nothing about the fold state gates it.
-  useEffect(() => {
-    if (!hasMoreRuns || loadState !== 'ready') return undefined;
-    const stepTimer = window.setInterval(() => {
-      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
-    }, RUNS_BACKGROUND_LOAD_STEP_MS);
-    return () => window.clearInterval(stepTimer);
-  }, [filteredRuns.length, hasMoreRuns, loadState]);
-
+  // Append one more render batch when the runner approaches the end of the
+  // mounted list (sentinel sits just past the last card, pre-armed with a
+  // full-viewport rootMargin). The observer disconnects when the final batch
+  // completes — hasMoreRuns flips false so this effect stops creating one —
+  // and is re-created whenever the filtered list changes (new search, filter,
+  // or sort) so batching immediately restarts from the reset window. The
+  // cleanup also disconnects on unmount. The button rendered inside the
+  // sentinel is the manual fallback for browsers without IntersectionObserver.
   useEffect(() => {
     if (!hasMoreRuns || loadState !== 'ready') return undefined;
     const sentinel = loadMoreSentinelRef.current;
@@ -1116,7 +1116,7 @@ const Runs = memo(function Runs() {
 
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
-      setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length));
+      setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length));
     }, {
       root: null,
       rootMargin: getRunsLoadMoreRootMargin(window.innerHeight),
@@ -1125,7 +1125,7 @@ const Runs = memo(function Runs() {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [filteredRuns.length, hasMoreRuns, loadState, visibleRunsCount]);
+  }, [filteredRuns, hasMoreRuns, loadState, visibleRunsCount]);
 
   useEffect(() => {
     if (!Array.isArray(routePreviewRuns) || routePreviewRuns.length === 0) return undefined;
@@ -1645,7 +1645,7 @@ const Runs = memo(function Runs() {
                       <button
                         type="button"
                         className="recent-runs-load-more"
-                        onClick={() => setVisibleRunsCount((current) => Math.min(current + RECENT_RUNS_LOAD_BATCH_SIZE, filteredRuns.length))}
+                        onClick={() => setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length))}
                       >
                         {t('runs.load_more')}
                       </button>

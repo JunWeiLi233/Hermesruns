@@ -1975,6 +1975,19 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   gap: 14px;
 }
 
+/* Skip layout/paint of offscreen run cards: one shell renders per activity,
+   and a full history measured live at 7,436 cards on a 35,337px-tall Runs
+   page caused multi-hundred-ms long tasks while the list painted.
+   content-visibility: auto lets the browser treat every offscreen card as a
+   cheap placeholder box; the `auto` keyword in contain-intrinsic-size keeps
+   each card's last-rendered height once it has been laid out, so the
+   scrollbar position stays stable while scrolling (160px approximates the
+   compact card minimum before the first layout teaches the real size). */
+.recent-runs-card-shell {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
+}
+
 .recent-runs-load-more-sentinel {
   box-sizing: border-box;
   display: flex;
