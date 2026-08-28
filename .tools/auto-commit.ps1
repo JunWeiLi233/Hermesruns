@@ -202,6 +202,7 @@ function Get-PathPolicy {
         '^\.tools/audit-marathon-coursemaps\.mjs$',
         '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test)\.mjs$',
         '^docs/(ADMIN_SECURITY_DEPLOYMENT\.md|PROJECT_MAP\.md)$',
+        '^docs/deployment/',
         '^docs/ai/',
         '^docs/auto-hermes/',
         '^docs/repo-rules/',
