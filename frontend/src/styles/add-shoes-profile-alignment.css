@@ -533,6 +533,15 @@
   width: 48px;
   height: 48px;
   padding: 8px;
+  justify-self: center;
+  align-self: start;
+}
+
+/* Center the visible mark, not just the transparent source canvas. */
+#root .add-shoes-profile-redesign .add-shoes-model-art .shoe-brand-logo-img {
+  width: 36px;
+  height: 36px;
+  transform: translateY(-4px);
 }
 
 /* Setup aside: plain column (no sticky — removed by DV-2026-08-23-173). */
