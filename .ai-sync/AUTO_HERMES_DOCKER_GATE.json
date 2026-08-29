@@ -1,18 +1,14 @@
 {
-  "generatedAt": "2026-08-29T19:22:01.549Z",
+  "generatedAt": "2026-08-29T19:23:54.366Z",
   "passed": true,
-  "gitHead": "cf28849bef6c7661ac9001a956f81cb473fab926",
-  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\nM  .tools/auto-hermes-push-main.test.mjs\n D Hermes.local.env.example.ps1\n M backend/src/main/resources/static/assets/AppIcon-Db8LnTNX.js\n M backend/src/main/resources/static/assets/Modal-Da0Vg0nv.js\n M backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js\n M backend/src/main/resources/static/index.html\nM  start_hermes.bat",
+  "gitHead": "3cb8939b8e46cbe81c6b165d7aaa6c3c31d62f79",
+  "statusSnapshot": "D Hermes.local.env.example.ps1\n M backend/src/main/resources/static/assets/AppIcon-Db8LnTNX.js\n M backend/src/main/resources/static/assets/Modal-Da0Vg0nv.js\n M backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js\n M backend/src/main/resources/static/index.html",
   "changedPaths": [
-    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
-    ".tools/auto-hermes-push-main.test.mjs",
-    "Hermes.local.env.example.ps1",
-    "ai-sync/AUTO_HERMES_DOCKER_GATE.json",
     "backend/src/main/resources/static/assets/AppIcon-Db8LnTNX.js",
     "backend/src/main/resources/static/assets/Modal-Da0Vg0nv.js",
     "backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js",
     "backend/src/main/resources/static/index.html",
-    "start_hermes.bat"
+    "ermes.local.env.example.ps1"
   ],
   "command": "docker build -f D:\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
