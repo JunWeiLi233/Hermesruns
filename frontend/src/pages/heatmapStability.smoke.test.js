@@ -206,8 +206,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  /const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?zoomAnimationActiveRef\.current = false;[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?const queuedZoomDelta = queuedZoomStepsRef\.current;[\s\S]*?queuedZoomStepsRef\.current = 0;[\s\S]*?if \(queuedZoomDelta === 0\) \{[\s\S]*?finishZoomRender\(\);[\s\S]*?return;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomDelta[\s\S]*?map\.setZoom\(nextZoom, \{ animate: true \}\)/,
-  'Heatmap zooming should skip intermediate redraws and coalesce queued clicks into one follow-up animation before the atomic full repaint.',
+  /const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?zoomAnimationActiveRef\.current = false;[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?const queuedZoomStep = Math\.sign\(queuedZoomStepsRef\.current\);[\s\S]*?if \(queuedZoomStep === 0\) \{[\s\S]*?finishZoomRender\(\);[\s\S]*?return;[\s\S]*?queuedZoomStepsRef\.current -= queuedZoomStep;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomStep[\s\S]*?map\.setZoom\(nextZoom, \{ animate: true \}\)/,
+  'Heatmap zooming should skip intermediate redraws and drain queued clicks one level at a time before the atomic full repaint.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -229,6 +229,21 @@ assert.match(
   /\/api\/maps\/tiles\/esri-dark\/\{z\}\/\{y\}\/\{x\}\.png[\s\S]*?\/api\/maps\/tiles\/esri-dark-labels\/\{z\}\/\{y\}\/\{x\}\.png/,
   'Heatmap should render the Esri Dark Gray basemap (base + labels) through the same-origin backend proxy so tiles never degrade into API-key watermarks.',
 );
+assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-map-shell \.leaflet-layer,\s*\.heatmap-page-map-shell \.leaflet-tile-container,\s*\.heatmap-page-map-shell \.leaflet-tile,\s*\.heatmap-page-dark-tile-layer\s*\{\s*background:\s*transparent !important;/,
+  'Heatmap tile layers and transparent label tiles must not paint an opaque backing over the Esri base map.',
+);
+assert.match(
+  heatmapSource,
+  /const activateOsmFallback = \(\) => \{[\s\S]*?\/api\/maps\/tiles\/\{z\}\/\{x\}\/\{y\}\.png[\s\S]*?baseTileLayer\.on\('tileerror', activateOsmFallback\)/,
+  'Heatmap should recover from a failed Esri base tile with the same-origin OSM proxy instead of leaving a black map under the labels layer.',
+);
+assert.match(
+  heatmapSource,
+  /if \(fallbackBaseTileLayer \|\| disposed\) return;[\s\S]*?labelsTileLayer\.bringToFront\(\);/,
+  'The OSM basemap recovery should activate once and keep the labels layer readable above the fallback streets.',
+);
 assert.doesNotMatch(
   heatmapSource,
   /basemaps\.cartocdn\.com|dark_all|dark_nolabels|server\.arcgisonline\.com/,
@@ -248,6 +263,31 @@ assert.match(
   heatmapSource,
   /const zoomMap = \(delta\) => \{[\s\S]*?const zoomStep = Math\.sign\(delta\);[\s\S]*?if \(zoomAnimationActiveRef\.current\) \{[\s\S]*?queuedZoomStepsRef\.current = clamp\([\s\S]*?queuedZoomStepsRef\.current \+ zoomStep,[\s\S]*?-3,[\s\S]*?3,[\s\S]*?return;[\s\S]*?const targetZoom = clamp\(map\.getZoom\(\) \+ zoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);[\s\S]*?map\.setZoom\(targetZoom, \{ animate: true \}\);/,
   'Heatmap zoom controls should queue rapid clicks and request a bounded zoom step without serializing every click.',
+);
+assert.match(
+  heatmapSource,
+  /const queuedZoomStep = Math\.sign\(queuedZoomStepsRef\.current\);[\s\S]*?queuedZoomStepsRef\.current -= queuedZoomStep;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);/,
+  'Heatmap should drain queued zoom input one level per animation so rapid clicks never become an instant multi-level jump.',
+);
+assert.doesNotMatch(
+  heatmapSource,
+  /const queuedZoomDelta = queuedZoomStepsRef\.current;[\s\S]*?map\.getZoom\(\) \+ queuedZoomDelta/,
+  'Heatmap should not apply multiple queued zoom levels in one animation.',
+);
+assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-map-shell \.leaflet-zoom-anim \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.45s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
+  'Heatmap zoom transforms should use a longer eased transition so button and wheel zooming feels smooth.',
+);
+assert.match(
+  heatmapSource,
+  /map\.getContainer\(\)\.classList\.add\('is-zooming'\)[\s\S]*?map\.getContainer\(\)\.classList\.remove\('is-zooming'\)/,
+  'Heatmap should hold an explicit zooming state for the full transform lifecycle so the smooth transition cannot disappear before the animation settles.',
+);
+assert.match(
+  heatmapStyleSource,
+  /\.heatmap-page-map-shell \.leaflet-container\.is-zooming \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.45s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
+  'Heatmap should apply its eased zoom transition while its own zooming state is active, even when Leaflet removes its transient animation class early.',
 );
 assert.match(
   heatmapSource,
@@ -281,8 +321,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-map-canvas \{[\s\S]*?background: #05070a[\s\S]*?leaflet-container,[\s\S]*?leaflet-tile-pane,[\s\S]*?leaflet-tile-container,[\s\S]*?heatmap-page-dark-tile-layer[\s\S]*?background: #05070a !important[\s\S]*?leaflet-tile:not\(\.leaflet-tile-loaded\)[\s\S]*?opacity: 0 !important/,
-  'Heatmap map tiles should use a dark backing and hide unloaded tile images so zooming cannot flash white.',
+  /\.heatmap-page-map-canvas \{[\s\S]*?background: #05070a[\s\S]*?leaflet-container,[\s\S]*?leaflet-map-pane,[\s\S]*?leaflet-tile-pane\s*\{[\s\S]*?background: #05070a !important[\s\S]*?leaflet-layer,[\s\S]*?leaflet-tile-container,[\s\S]*?leaflet-tile,[\s\S]*?heatmap-page-dark-tile-layer[\s\S]*?background: transparent !important[\s\S]*?leaflet-tile:not\(\.leaflet-tile-loaded\)[\s\S]*?opacity: 0 !important/,
+  'Heatmap should keep a dark pane behind transparent tile layers and hide unloaded tile images so zooming cannot flash white.',
 );
 
 assert.match(

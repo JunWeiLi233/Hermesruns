@@ -599,9 +599,13 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: center;
     height: 100%;
+    min-height: 430px;
+    box-sizing: border-box;
     padding: 26px 24px 30px;
+    text-align: center;
 }
 
 .race-center-hero-chip {
@@ -639,6 +643,7 @@
     font-weight: 800;
     letter-spacing: -0.08em;
     line-height: 0.88;
+    text-align: center;
     text-transform: uppercase;
 }
 
@@ -646,8 +651,10 @@
     display: inline;
 }
 
-.race-center-hero-title--empty {
+.race-center-hero h1.race-center-hero-title--empty {
     max-width: none;
+    white-space: nowrap;
+    font-size: clamp(2rem, 7vw, 6.1rem);
 }
 
 .race-center-hero-accent {
@@ -657,14 +664,16 @@
 
 .race-center-hero p {
     max-width: 720px;
-    margin: 14px 0 0;
+    margin: 14px auto 0;
     color: rgba(229, 226, 225, 0.78);
     font-size: 1rem;
     line-height: 1.6;
 }
 
 .race-center-hero-actions {
+    width: 100%;
     gap: 12px;
+    justify-content: center;
     flex-wrap: wrap;
     margin-top: 24px;
 }
@@ -2945,6 +2954,7 @@
     }
 
     .race-center-hero-body {
+        min-height: 360px;
         padding: 20px 18px 24px;
     }
 
@@ -2953,8 +2963,9 @@
         font-size: 3.4rem;
     }
 
-    .race-center-hero-title--empty {
+    .race-center-hero h1.race-center-hero-title--empty {
         max-width: 100%;
+        font-size: clamp(1.7rem, 8vw, 3.4rem);
     }
 
     .race-center-hero-accent {

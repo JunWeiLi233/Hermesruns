@@ -1,5 +1,175 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-30-003
+Date: 2026-08-30
+Surface: Race-detail stat and coach card surfaces
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/pages/raceDetailWhiteCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Hardened the active race-detail theme cascade so the two stat cards and coach insight card use solid white backgrounds with no residual gradients in light themes.
+Why: The three cards shown in the race-detail command grid still inherited tinted gradient surfaces despite the light-theme card treatment.
+Preserve list: Race-detail data, prediction and coach copy, card layout, dark themes, borders, shadows, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-002`
+Notes: Presentation-only surface correction; the override is scoped to light themes and the race-detail route.
+
+### Version: DV-2026-08-30-002
+Date: 2026-08-30
+Surface: Races hero vertical alignment
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesHeroCenterAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Vertically centered the already horizontally centered races hero content within the image panel.
+Why: The hero group remained anchored to the bottom rather than sitting at the visual center of the panel.
+Preserve list: Race hero image, empty and upcoming-race copy, countdown behavior, hero actions, discovery catalog, saved race calendar, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-30-001`
+Notes: Presentation-only alignment correction; no race data or interaction behavior changed.
+
+### Version: DV-2026-08-30-001
+Date: 2026-08-30
+Surface: Races hero content alignment
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/racesHeroCenterAlignment.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Centered the races hero heading, summary, and action row within the hero while preserving the existing image, responsive sizing, and controls.
+Why: The hero content was anchored to the left edge instead of reading as a centered empty-state composition.
+Preserve list: Race hero image, empty and upcoming-race copy, countdown behavior, hero actions, discovery catalog, saved race calendar, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-013`
+Notes: Presentation-only alignment correction; no race data or interaction behavior changed.
+
+### Version: DV-2026-08-29-013
+Date: 2026-08-29
+Surface: Add Shoes brand/count spacing on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesBrandSpacing.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a 6px baseline gap between each running-shoe brand name and its series count.
+Why: The brand name and count were visually touching in the compact brand cards.
+Preserve list: Brand-card surfaces, text-strip reset, typography, wrapping behavior, selection states, disclosure behavior, localization, themes, and responsive layout.
+Rollback target: `DV-2026-08-29-012`
+Notes: The copy wrapper uses inline flex with wrapping so the spacing remains readable on narrow cards.
+
+### Version: DV-2026-08-29-012
+Date: 2026-08-29
+Surface: Add Shoes brand copy strip removal on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesBrandCopySurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed background color, background image, border, radius, and shadow from the brand-card copy wrapper and its text children.
+Why: A residual panel strip remained behind the brand name and model-count text even after the wrapper itself was made transparent.
+Preserve list: Brand card surfaces, logo tiles, text typography, spacing, selected states, disclosure behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-011`
+Notes: The reset is route-scoped and keeps the existing wrapper-only rule for compatibility with current surface contracts.
+
+### Version: DV-2026-08-29-011
+Date: 2026-08-29
+Surface: Add Shoes single filter selection on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Made category and type filter chips mutually exclusive so the Step 2 filter row can show only one selected button at a time.
+Why: Independent category and type state allowed two filter chips to appear active simultaneously.
+Preserve list: Filter labels, model filtering, search, brand selection, card layout, Step 3 flow, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-29-010`
+Notes: Selecting either filter family resets the other to `all`; selecting the category `全部` clears both filters.
+
+### Version: DV-2026-08-29-010
+Date: 2026-08-29
+Surface: Add Shoes light page background on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the warm gradient behind the Add Shoes workflow with a flat light-grey page surface.
+Why: The page background needed to separate the white Step 1, Step 2, and Step 3 cards without competing warm tones.
+Preserve list: Individual step-card surfaces, inner brand/model/form cards, disclosure behavior, layout spacing, dark-theme colors, localization, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-29-009`
+Notes: The change is scoped to the Add Shoes route root; card backgrounds and dark-theme overrides remain unchanged.
+
+### Version: DV-2026-08-29-009
+Date: 2026-08-29
+Surface: Add Shoes separated step cards on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the individual Step 1, Step 2, and Step 3 card surfaces while removing only the shared workspace background container.
+Why: The previous surface override flattened the step cards themselves instead of separating them from the oversized parent background.
+Preserve list: Individual step borders, radii, shadows, spacing, inner brand/model/summary/form cards, disclosure behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-008`
+Notes: The workspace is transparent and borderless; `.add-shoes-step-card` remains the visual boundary for each workflow step.
+
+### Version: DV-2026-08-29-008
+Date: 2026-08-29
+Surface: Add Shoes step container surfaces on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the outer background, border, radius, and shadow from the Step 1, Step 2, and Step 3 containers.
+Why: The workflow steps were visually nested inside large background cards that competed with the actual brand, model, summary, and form cards.
+Preserve list: Step spacing and padding, inner card surfaces, brand/model selection, disclosure behavior, Step 3 form behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-007`
+Notes: Route-scoped final overrides flatten only `.add-shoes-step-card`; inner cards keep their existing surfaces.
+
+### Version: DV-2026-08-29-007
+Date: 2026-08-29
+Surface: Add Shoes Brooks-adjacent disclosure card on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Placed the more-brands disclosure card after the regular brand cards so it follows Brooks in the primary brand-grid row.
+Why: The disclosure card was in the grid but appeared at its leading edge instead of beside the Brooks card shown at the end of the current brand list.
+Preserve list: Card styling, keyboard disclosure behavior, accessible state, revealed brand ordering, brand/model selection, filters, search, Step 3 flow, localization, themes, and responsive layout.
+Rollback target: `DV-2026-08-29-006`
+Notes: Position-only correction; no brand data or interaction semantics changed.
+
+### Version: DV-2026-08-29-006
+Date: 2026-08-29
+Surface: Add Shoes brand disclosure card on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Placed the more-brands disclosure control as the first card in the primary brand grid beside the featured running-shoe brand card.
+Why: The previous full-width pill sat below the grid and visually separated the action from the brand choices it expands.
+Preserve list: Disclosure behavior and accessible state, revealed brand ordering, brand selection, model selection, filters, search, Step 3 flow, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-005`
+Notes: The control keeps its existing localized label and `aria-expanded` state while using the same card footprint as the surrounding brand choices.
+
+### Version: DV-2026-08-29-005
+Date: 2026-08-29
+Surface: Add Shoes accessible brand expansion on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Moved revealed extra-brand cards into the primary brand grid and connected the disclosure button to a stable, keyboard-accessible expansion region.
+Why: The previous control opened a separate placeholder grid below the primary brand cards, making the expanded brands visually disconnected from the brand selection grid.
+Preserve list: Disclosure label and toggle state, brand selection, card focus behavior, model selection, Step 3 flow, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-004`
+Notes: The expansion wrapper uses `display: contents` only within the primary grid so each revealed brand remains an independent grid item; mobile column rules continue to apply to the primary grid.
+
+### Version: DV-2026-08-29-004
+Date: 2026-08-29
+Surface: Add Shoes wide canvas shell on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Overrode the shared Profile shell's 1390px desktop canvas cap for Add Shoes while preserving its existing left inset and inner padding.
+Why: The shell cap left the brand and model grids visibly short of the right edge and created an asymmetric blank region.
+Preserve list: Equal outer margins, Step 1 and Step 2 grid proportions, Step 3 flow, brand/model selection, filters, search, form behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-003`
+Notes: Wide-screen layout-only correction; the existing mobile canvas rule remains unchanged.
+
+### Version: DV-2026-08-29-003
+Date: 2026-08-29
+Surface: Add Shoes canvas width on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Extended the Add Shoes canvas across the available main-column width while preserving equal 24px outer margins.
+Why: The previous 1500px cap left an unnecessary blank region on the right side of the brand and model grids at wider viewport sizes.
+Preserve list: Step sequence, brand/model selection, filters, search, Step 3 form behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-002`
+Notes: Layout-only width correction; the inner grid tracks and mobile margin override remain unchanged.
+
+### Version: DV-2026-08-29-001
+Date: 2026-08-29
+Surface: Add Shoes Step 3 flow
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the Add Shoes catalog workspace to a single column so the Step 3 configuration card follows the complete Step 2 model grid at every supported width.
+Why: The desktop two-column workspace placed Step 3 beside the model grid instead of preserving the intended sequential intake flow.
+Preserve list: Brand and model selection, filters, search, form validation, cancellation, submission, localization, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-28-002`
+Notes: Layout-only correction; the existing narrower breakpoint already used the approved one-column flow.
+
+### Version: DV-2026-08-29-002
+Date: 2026-08-29
+Surface: Add Shoes editorial hero grid on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the entire editorial hero grid, including its headline panel and status-card rail, from the Add Shoes page.
+Why: The requested page should open directly into the shoe catalog workflow without the separate top hero grid.
+Preserve list: Catalog header, brand/model selection, filters, search, Step 3 configuration form, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-001`
+Notes: Presentation-only section removal; no shoe selection, form validation, or persistence behavior changed.
+
+### Version: DV-2026-08-29-003
+Date: 2026-08-29
+Surface: Add Shoes selected-shoe summary surface on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesSelectedSummaryWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme selected-shoe summary card to a solid white background and switched its title, copy, kicker, and pills to readable light-surface colors.
+Why: The selected-shoe configuration grid was rendering as a dark panel against the light Add Shoes workspace.
+Preserve list: Selected-shoe state, form controls, validation, submission behavior, dark themes, routing, localization, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-002`
+Notes: Presentation-only light-theme surface correction; no shoe workflow or persistence behavior changed.
+
 ### Version: DV-2026-08-28-001
 Date: 2026-08-28
 Surface: Add Shoes page design consolidation

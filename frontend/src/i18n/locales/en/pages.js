@@ -249,7 +249,6 @@ export default {
     "divider_alt": "Or use email / Google",
     "email_label": "Email Address",
     "password_label": "Password",
-    "local_mock_password_hint": "For this local mock account, use HermesDev2026!, or the value of APP_LOCAL_SHARED_RUNNER_PASSWORD.",
     "forgot_password": "Forgot Password?",
     "password_placeholder": "Enter your password",
     "submit": "Sign In",

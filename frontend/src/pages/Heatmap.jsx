@@ -449,8 +449,31 @@ export default function Heatmap() {
           attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS',
         };
         const backendBase = getBackendBaseUrl();
-        L.tileLayer(`${backendBase}/api/maps/tiles/esri-dark/{z}/{y}/{x}.png`, darkTileOptions).addTo(map);
-        L.tileLayer(`${backendBase}/api/maps/tiles/esri-dark-labels/{z}/{y}/{x}.png`, darkTileOptions).addTo(map);
+        const baseTileLayer = L.tileLayer(
+          `${backendBase}/api/maps/tiles/esri-dark/{z}/{y}/{x}.png`,
+          darkTileOptions,
+        );
+        const labelsTileLayer = L.tileLayer(
+          `${backendBase}/api/maps/tiles/esri-dark-labels/{z}/{y}/{x}.png`,
+          darkTileOptions,
+        );
+        let fallbackBaseTileLayer = null;
+        const activateOsmFallback = () => {
+          if (fallbackBaseTileLayer || disposed) return;
+          fallbackBaseTileLayer = L.tileLayer(
+            `${backendBase}/api/maps/tiles/{z}/{x}/{y}.png`,
+            {
+              ...darkTileOptions,
+              className: 'heatmap-page-osm-fallback-tile-layer',
+              maxNativeZoom: 19,
+              attribution: 'OpenStreetMap contributors',
+            },
+          ).addTo(map);
+          labelsTileLayer.bringToFront();
+        };
+        baseTileLayer.on('tileerror', activateOsmFallback);
+        baseTileLayer.addTo(map);
+        labelsTileLayer.addTo(map);
 
         const dotCanvas = L.DomUtil.create('canvas', 'heatmap-page-dot-canvas leaflet-zoom-animated');
         dotCanvas.setAttribute('aria-hidden', 'true');
@@ -684,6 +707,7 @@ export default function Heatmap() {
           if (disposed) return;
           isZoomingMap = false;
           zoomAnimationActiveRef.current = false;
+          map.getContainer().classList.remove('is-zooming');
           zoomSettleTimeoutId = null;
           scheduleRouteDots('full');
         };
@@ -711,6 +735,7 @@ export default function Heatmap() {
             window.clearTimeout(zoomSettleTimeoutId);
           }
           isZoomingMap = true;
+          map.getContainer().classList.add('is-zooming');
           skipNextMovePreview = true;
           zoomSettleTimeoutId = window.setTimeout(finishZoomRender, 480);
         };
@@ -721,13 +746,13 @@ export default function Heatmap() {
           }
           zoomSettleTimeoutId = null;
 
-          const queuedZoomDelta = queuedZoomStepsRef.current;
-          queuedZoomStepsRef.current = 0;
-          if (queuedZoomDelta === 0) {
+          const queuedZoomStep = Math.sign(queuedZoomStepsRef.current);
+          if (queuedZoomStep === 0) {
             finishZoomRender();
             return;
           }
-          const nextZoom = clamp(map.getZoom() + queuedZoomDelta, map.getMinZoom(), map.getMaxZoom());
+          queuedZoomStepsRef.current -= queuedZoomStep;
+          const nextZoom = clamp(map.getZoom() + queuedZoomStep, map.getMinZoom(), map.getMaxZoom());
           if (nextZoom === map.getZoom()) {
             finishZoomRender();
             return;
@@ -759,6 +784,7 @@ export default function Heatmap() {
             }
             cancelFullDraw();
             zoomAnimationActiveRef.current = false;
+            map.getContainer().classList.remove('is-zooming');
             queuedZoomStepsRef.current = 0;
           },
         };

@@ -173,19 +173,35 @@
   background: #05070a;
 }
 .heatmap-page-map-shell .leaflet-container,
-.heatmap-page-map-shell .leaflet-pane,
 .heatmap-page-map-shell .leaflet-map-pane,
-.heatmap-page-map-shell .leaflet-tile-pane,
+.heatmap-page-map-shell .leaflet-tile-pane {
+  background: #05070a !important;
+}
+
 .heatmap-page-map-shell .leaflet-layer,
 .heatmap-page-map-shell .leaflet-tile-container,
 .heatmap-page-map-shell .leaflet-tile,
 .heatmap-page-dark-tile-layer {
-  background: #05070a !important;
+  background: transparent !important;
 }
 
 .heatmap-page-map-shell .leaflet-tile {
   backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+/* Give each one-level zoom enough time to interpolate without slowing panning. */
+.heatmap-page-map-shell .leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
+}
+
+.heatmap-page-map-shell .leaflet-container.is-zooming .leaflet-zoom-animated {
+  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
+}
+
+/* Keep the recovery basemap in the same dark visual language as Esri. */
+.heatmap-page-osm-fallback-tile-layer .leaflet-tile {
+  filter: grayscale(1) invert(0.92) brightness(0.75) contrast(1.15);
 }
 
 .heatmap-page-map-shell .leaflet-tile:not(.leaflet-tile-loaded) {

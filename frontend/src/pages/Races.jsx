@@ -817,11 +817,6 @@ const Races = memo(function Races() {
                 />
                 <div className="race-center-hero-overlay" />
                 <div className="race-center-hero-body">
-                  <div className="race-center-hero-chip">
-                    <span className="race-center-hero-chip-dot" aria-hidden="true" />
-                    <span>{t('races.stitch_next_major_event')}</span>
-                  </div>
-
                   <h1 className={nextRace ? undefined : 'race-center-hero-title--empty'}>
                     {nextRace ? (
                       <>
