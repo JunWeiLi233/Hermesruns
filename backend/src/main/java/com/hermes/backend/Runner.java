@@ -82,6 +82,12 @@ public class Runner {
 
     private Long stravaTokenExpiresAt;
 
+    /**
+     * Epoch seconds of the last successful incremental Strava activity-list sync.
+     * Timezone-unambiguous high-water mark for the {@code after} list parameter.
+     */
+    private Long stravaListCursorEpoch;
+
     private String garminConnectEmail;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -284,6 +290,14 @@ public class Runner {
 
     public void setStravaTokenExpiresAt(Long stravaTokenExpiresAt) {
         this.stravaTokenExpiresAt = stravaTokenExpiresAt;
+    }
+
+    public Long getStravaListCursorEpoch() {
+        return stravaListCursorEpoch;
+    }
+
+    public void setStravaListCursorEpoch(Long stravaListCursorEpoch) {
+        this.stravaListCursorEpoch = stravaListCursorEpoch;
     }
 
     public String getGarminConnectEmail() { return garminConnectEmail; }

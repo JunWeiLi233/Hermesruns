@@ -146,9 +146,11 @@ for /f "delims=" %%V in ('dir /b /ad "%USERPROFILE%\.m2\wrapper\dists" 2^>nul ^|
 cd /d "%ROOT%\backend"
 
 echo [Hermes] Igniting Spring Boot...
-:: Memory-optimized JVM flags for small servers (2GB RAM)
+:: Memory-optimized JVM flags for small servers (2GB RAM).
+:: Metaspace needs 384m: devtools reloads the app through a second classloader,
+:: and 192m OOMs during startup on large classpaths (observed 2026-08-29).
 if not defined JAVA_TOOL_OPTIONS (
-  set "JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m"
+  set "JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=384m"
 )
 if defined MVN_CMD (
   call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run

@@ -5,12 +5,16 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -37,11 +41,13 @@ class ActivityStravaStreamServiceTests {
     @Test
     void hydratesMoreThanOneBatchThroughOneAtomicPersistenceCall() {
         ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         ActivityStravaStreamService service = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate
@@ -80,11 +86,13 @@ class ActivityStravaStreamServiceTests {
     @Test
     void malformedStreamWithoutLatLngMakesNoPersistenceCall() {
         ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         ActivityStravaStreamService service = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate
@@ -111,11 +119,13 @@ class ActivityStravaStreamServiceTests {
     @Test
     void acceptsNumberCoordinatesWhenHydrating() {
         ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         ActivityStravaStreamService service = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate
@@ -142,13 +152,85 @@ class ActivityStravaStreamServiceTests {
     }
 
     @Test
-    void invalidCoordinatesMakeNoPersistenceCall() {
+    void noGpsTombstoneSkipsStreamFetchOnRunView() {
         ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         ActivityStravaStreamService service = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
+                runnerRepository,
+                secretEncryptionService,
+                restTemplate
+        );
+        ReflectionTestUtils.setField(service, "noGpsRetryDays", 30);
+
+        Activity activity = new Activity();
+        activity.setId(19L);
+        activity.setStravaId("strava-19");
+        activity.setGpsStreamState("NO_GPS");
+        activity.setGpsStreamCheckedAt(LocalDateTime.now().minusDays(1));
+        Runner runner = new Runner();
+        runner.setStravaAccessToken("stored-token");
+
+        when(activityDataAccess.hasPoints(activity)).thenReturn(false);
+        when(secretEncryptionService.decrypt("stored-token")).thenReturn("access-token");
+
+        service.hydrateActivityPointsIfMissing(activity, runner);
+
+        verify(restTemplate, never()).exchange(anyString(), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
+        verify(activityDataAccess, never()).savePointsIfAbsentAtomically(anyLong(), anyList());
+        verify(activityRepository, never()).save(any(Activity.class));
+    }
+
+    @Test
+    void treadmillStreamWithoutLatLngIsTombstonedForLaterViews() {
+        ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        ActivityStravaStreamService service = new ActivityStravaStreamService(
+                activityDataAccess,
+                activityRepository,
+                runnerRepository,
+                secretEncryptionService,
+                restTemplate
+        );
+        ReflectionTestUtils.setField(service, "noGpsRetryDays", 30);
+
+        Activity activity = new Activity();
+        activity.setId(19L);
+        List<Map<String, Object>> streamsWithoutLatlng = List.of(
+                Map.of("type", "time", "data", List.of(0, 1, 2))
+        );
+        when(restTemplate.exchange(
+                anyString(),
+                eq(HttpMethod.GET),
+                anyHttpEntity(),
+                anyTypeRef()
+        )).thenReturn(ResponseEntity.ok(streamsWithoutLatlng));
+
+        service.fetchAndCacheStravaStream(activity, "strava-19", "access-token");
+
+        assertEquals("NO_GPS", activity.getGpsStreamState());
+        assertNotNull(activity.getGpsStreamCheckedAt());
+        verify(activityRepository).save(activity);
+        verify(activityDataAccess, never()).savePointsIfAbsentAtomically(anyLong(), anyList());
+    }
+
+    @Test
+    void invalidCoordinatesMakeNoPersistenceCall() {
+        ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        SecretEncryptionService secretEncryptionService = mock(SecretEncryptionService.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        ActivityStravaStreamService service = new ActivityStravaStreamService(
+                activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate

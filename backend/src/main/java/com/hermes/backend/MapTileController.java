@@ -23,6 +23,7 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,10 @@ public class MapTileController {
     private static final Logger log = LoggerFactory.getLogger(MapTileController.class);
     private static final Duration TILE_CACHE_TTL = Duration.ofHours(6);
     private static final long IN_FLIGHT_WAIT_SECONDS = 35;
+    // Raw tile bytes retained per process. Unbounded before, this map held every
+    // tile ever served for the process lifetime and was the single largest
+    // steady-state heap retainer on Railway.
+    private static final long MAX_CACHED_TILE_BYTES = 64L * 1024 * 1024;
     private static final String CARTO_BASEMAPS_HOST = "https://basemaps.cartocdn.com/rastertiles/";
     // Esri's tile path is /tile/{z}/{y}/{x} with no file extension.
     private static final String ESDI_DARK_GRAY_HOST = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
@@ -51,7 +56,7 @@ public class MapTileController {
     private final String publicBaseUrl;
     private final String cartoBasemapsApiKey;
     private final TtlCacheStore cacheStore;
-    private final Map<String, CachedTile> tileCache = new ConcurrentHashMap<>();
+    private final BoundedTileCache tileCache;
     private final Map<String, CompletableFuture<CachedTile>> inFlightTiles = new ConcurrentHashMap<>();
 
     @Autowired
@@ -61,10 +66,7 @@ public class MapTileController {
         @Value("${app.carto-basemaps-api-key:}") String cartoBasemapsApiKey,
         TtlCacheStore cacheStore
     ) {
-        this.restTemplate = restTemplate;
-        this.publicBaseUrl = publicBaseUrl;
-        this.cartoBasemapsApiKey = cartoBasemapsApiKey;
-        this.cacheStore = cacheStore;
+        this(restTemplate, publicBaseUrl, cartoBasemapsApiKey, cacheStore, MAX_CACHED_TILE_BYTES);
     }
 
     public MapTileController(RestTemplate restTemplate, String publicBaseUrl) {
@@ -73,6 +75,24 @@ public class MapTileController {
 
     MapTileController(RestTemplate restTemplate, String publicBaseUrl, String cartoBasemapsApiKey) {
         this(restTemplate, publicBaseUrl, cartoBasemapsApiKey, TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+    }
+
+    MapTileController(RestTemplate restTemplate, String publicBaseUrl, TtlCacheStore cacheStore, long maxTileCacheBytes) {
+        this(restTemplate, publicBaseUrl, "", cacheStore, maxTileCacheBytes);
+    }
+
+    private MapTileController(
+        RestTemplate restTemplate,
+        String publicBaseUrl,
+        String cartoBasemapsApiKey,
+        TtlCacheStore cacheStore,
+        long maxTileCacheBytes
+    ) {
+        this.restTemplate = restTemplate;
+        this.publicBaseUrl = publicBaseUrl;
+        this.cartoBasemapsApiKey = cartoBasemapsApiKey;
+        this.cacheStore = cacheStore;
+        this.tileCache = new BoundedTileCache(maxTileCacheBytes);
     }
 
     @GetMapping("/tiles/{z}/{x}/{y}.png")
@@ -150,13 +170,13 @@ public class MapTileController {
     private ResponseEntity<byte[]> proxyTile(String cacheKey, String upstreamUrl) {
         // Most zooms revisit tiles already fetched in this process. Check the
         // raw in-memory bytes first; the generic TTL store serializes PNGs as
-        // Base64 JSON and is intentionally only the cold/cross-instance path.
+        // Base64 JSON and is intentionally only the cross-instance/Redis path.
         CachedTile localCached = tileCache.get(cacheKey);
         CachedTile cached = localCached != null && !localCached.isExpired()
                 ? localCached
                 : cacheStore.get("map-tile", cacheKey, CachedTileCacheValue.class)
                         .map(value -> new CachedTile(value.body(), value.contentType(), Instant.now().plus(TILE_CACHE_TTL)))
-                        .orElse(null);
+                        .orElse(localCached);
         if (cached != null && cached != localCached) {
             tileCache.put(cacheKey, cached);
         }
@@ -204,7 +224,12 @@ public class MapTileController {
             String resolvedContentType = (contentType == null ? MediaType.IMAGE_PNG : contentType).toString();
             CachedTile resolvedTile = new CachedTile(body, resolvedContentType, Instant.now().plus(TILE_CACHE_TTL));
             tileCache.put(cacheKey, resolvedTile);
-            cacheStore.put("map-tile", cacheKey, new CachedTileCacheValue(body, resolvedContentType), TILE_CACHE_TTL);
+            // The serialized copy only pays off when Redis can share it across
+            // instances; with Redis disabled it was a permanent ~1.4x duplicate
+            // of every tile on top of the bounded raw-byte cache.
+            if (cacheStore.hasDurableBacking()) {
+                cacheStore.put("map-tile", cacheKey, new CachedTileCacheValue(body, resolvedContentType), TILE_CACHE_TTL);
+            }
             inFlight.complete(resolvedTile);
             log.debug("Tile fetched and cached: {}", cacheKey);
             return okResponse(resolvedTile);
@@ -238,7 +263,7 @@ public class MapTileController {
     }
 
     void forceExpireAllForTests() {
-        tileCache.replaceAll((key, tile) -> new CachedTile(tile.body(), tile.contentType(), Instant.EPOCH));
+        tileCache.forceExpireAll();
     }
 
     private String normalizedReferer() {
@@ -277,5 +302,58 @@ public class MapTileController {
     }
 
     private record CachedTileCacheValue(byte[] body, String contentType) {
+    }
+
+    /**
+     * Access-ordered LRU bounded by total retained tile bytes. Synchronized is
+     * enough: map mutations are nanosecond-scale next to the upstream tile
+     * fetches that populate this cache.
+     */
+    private static final class BoundedTileCache {
+        private final long maxBytes;
+        private final LinkedHashMap<String, CachedTile> entries = new LinkedHashMap<>(16, 0.75f, true);
+        private long retainedBytes;
+
+        BoundedTileCache(long maxBytes) {
+            this.maxBytes = maxBytes;
+        }
+
+        synchronized CachedTile get(String key) {
+            // Expired entries stay: they are the stale-fallback served when an
+            // upstream refresh fails, and the weight LRU bounds their cost.
+            return entries.get(key);
+        }
+
+        synchronized void put(String key, CachedTile tile) {
+            CachedTile previous = entries.put(key, tile);
+            if (previous != null) {
+                retainedBytes -= weight(previous);
+            }
+            retainedBytes += weight(tile);
+            trimToWeight();
+        }
+
+        synchronized void remove(String key) {
+            CachedTile previous = entries.remove(key);
+            if (previous != null) {
+                retainedBytes -= weight(previous);
+            }
+        }
+
+        synchronized void forceExpireAll() {
+            entries.replaceAll((key, tile) -> new CachedTile(tile.body(), tile.contentType(), Instant.EPOCH));
+        }
+
+        private void trimToWeight() {
+            while (retainedBytes > maxBytes && !entries.isEmpty()) {
+                var oldest = entries.keySet().iterator().next();
+                remove(oldest);
+            }
+        }
+
+        private static long weight(CachedTile tile) {
+            byte[] body = tile.body();
+            return (body == null ? 0 : body.length) + 64;
+        }
     }
 }

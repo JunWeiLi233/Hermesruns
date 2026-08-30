@@ -300,4 +300,58 @@ class MapTileControllerTests {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         assertThat(response.getBody()).containsExactly(tile);
     }
+
+    @Test
+    void tileCacheEvictsLeastRecentlyUsedTilesWhenWeightCapExceeded() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tileA = new byte[1024];
+        byte[] tileB = new byte[1024];
+        when(restTemplate.exchange(
+                eq("https://tile.openstreetmap.org/10/20/30.png"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tileA));
+        when(restTemplate.exchange(
+                eq("https://tile.openstreetmap.org/10/20/31.png"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tileB));
+
+        // Cap fits roughly one tile body; the second fetch must evict the first.
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080", TtlCacheStore.inMemoryForTests(new com.fasterxml.jackson.databind.ObjectMapper(), java.time.Clock.systemUTC()), 1100);
+        controller.tile(10, 20, 30);
+        controller.tile(10, 20, 31);
+        ResponseEntity<byte[]> refetched = controller.tile(10, 20, 30);
+
+        assertThat(refetched.getStatusCode().value()).isEqualTo(200);
+        assertThat(refetched.getBody()).containsExactly(tileA);
+        verify(restTemplate, times(2)).exchange(
+                eq("https://tile.openstreetmap.org/10/20/30.png"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        );
+    }
+
+    @Test
+    void tileSkipsSerializedCacheCopyWhenRedisBackingIsUnavailable() {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        byte[] tile = new byte[] { 12, 13, 14 };
+        when(restTemplate.exchange(
+                eq("https://tile.openstreetmap.org/10/20/30.png"),
+                eq(HttpMethod.GET),
+            ArgumentMatchers.<HttpEntity<?>>any(),
+                eq(byte[].class)
+        )).thenReturn(ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(tile));
+
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new com.fasterxml.jackson.databind.ObjectMapper(), java.time.Clock.systemUTC());
+        MapTileController controller = new MapTileController(restTemplate, "http://localhost:8080", cacheStore, 1100);
+
+        ResponseEntity<byte[]> response = controller.tile(10, 20, 30);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(cacheStore.localEntrySizeForTests()).isZero();
+    }
 }

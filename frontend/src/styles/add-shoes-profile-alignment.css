@@ -12,7 +12,8 @@
   --profile-carbon: #1c1916;
   --profile-shadow: 0 20px 48px rgba(76, 54, 39, 0.08);
   min-height: 100dvh;
-  background: #eef0f2 !important;
+  background: #f1f2f2 !important;
+  background-image: none !important;
   color: var(--profile-ink);
 }
 
@@ -33,12 +34,21 @@
 }
 
 #root .add-shoes-profile-redesign .add-shoes-canvas {
-  width: min(calc(100% - 48px), 1500px);
-  max-width: 1500px;
+  width: calc(100% - 48px);
+  max-width: none;
   margin-inline: auto;
   padding: 24px 0 52px;
   display: grid;
   gap: 24px;
+}
+
+/* The shared Profile shell caps wide canvases at 1390px; keep its inset and
+   let Add Shoes use the full main-column width instead. */
+@media (min-width: 1100px) {
+  #root .add-shoes-profile-redesign .add-shoes-canvas {
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+  }
 }
 
 #root .add-shoes-profile-redesign .add-shoes-editorial-hero {
@@ -210,7 +220,7 @@
   color: rgba(255, 248, 238, 0.66);
 }
 
-/* Catalog workspace: one full-width flow for the three-step intake. */
+/* Catalog workspace: keep the setup step below the complete catalog stage. */
 #root .add-shoes-profile-redesign .add-shoes-catalog-workspace {
   min-width: 0;
   display: grid;
@@ -221,30 +231,29 @@
 
 /* Retain the old hook as a non-painting compatibility selector for stale markup. */
 #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
-  min-width: 0;
   display: contents;
 }
 
-/* Hide the removed intro if a browser restores an older lazy route chunk. */
-#root .add-shoes-profile-redesign :is(.add-shoes-stage-head, .add-shoes-workspace-heading) {
+/* Hide the removed workspace heading if a browser restores an older lazy
+   route chunk; the redesigned .add-shoes-stage-head stays visible. */
+#root .add-shoes-profile-redesign .add-shoes-workspace-heading {
   display: none !important;
 }
 
-/* Each step owns its own surface and therefore reads as an independent card.
-   Include the legacy catalog hook so an older lazy chunk cannot re-form one
-   unpainted shared stage while the stylesheet is already current. */
-#root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card) {
+#root .add-shoes-profile-redesign .add-shoes-stage-head {
   min-width: 0;
-  width: 100%;
-  padding: 32px;
-  border: 1px solid var(--profile-line);
-  border-radius: 22px;
-  box-shadow: var(--profile-shadow);
-  background-color: #fff !important;
-  background-image: none !important;
-  transform: translateZ(0);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
 }
 
+/* Catalog steps stack vertically inside the stage card. */
+#root .add-shoes-profile-redesign .add-shoes-catalog-step {
+  min-width: 0;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-stage-copy h2,
 #root .add-shoes-profile-redesign .add-shoes-step-head h2 {
   margin: 5px 0 4px;
   color: var(--profile-ink);
@@ -264,7 +273,34 @@
   line-height: 1.5;
 }
 
-#root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card):hover {
+#root .add-shoes-profile-redesign .add-shoes-step-card {
+  min-width: 0;
+  padding: 32px;
+  border: 1px solid var(--profile-line);
+  border-radius: 22px;
+  box-shadow: var(--profile-shadow);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.2)),
+    var(--profile-paper) !important;
+  transform: translateZ(0);
+}
+
+#root .add-shoes-profile-redesign .add-shoes-model-board {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-catalog-step:not(.add-shoes-model-board) {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-setup-payload {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-step-card:hover {
   box-shadow: 0 24px 54px rgba(76, 54, 39, 0.1) !important;
 }
 
@@ -306,6 +342,35 @@
   gap: 12px;
 }
 
+#root .add-shoes-profile-redesign .add-shoes-brand-deck-grid > .add-shoes-brand-expand-grid {
+  display: contents;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-brand-deck-grid > .add-shoes-brand-expand-card {
+  width: 100%;
+  min-height: 138px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  text-align: left;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-brand-deck-grid > .add-shoes-brand-expand-card > span:first-child {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: start;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-brand-deck-grid > .add-shoes-brand-expand-card > .runner-dashboard-side-link-icon {
+  grid-column: 2;
+  grid-row: 2;
+  justify-self: end;
+}
+
 #root .add-shoes-profile-redesign .add-shoes-brand-deck-card,
 #root .add-shoes-profile-redesign .add-shoes-model-card {
   min-width: 0;
@@ -345,8 +410,9 @@
 }
 
 #root .add-shoes-profile-redesign .add-shoes-brand-deck-card.is-active {
+  border: 1px solid var(--profile-accent) !important;
   background: rgba(255, 255, 255, 0.42) !important;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-brand-tile,
@@ -374,8 +440,25 @@
 }
 
 #root .add-shoes-profile-redesign .add-shoes-brand-card-copy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
   border: 0 !important;
   background: transparent !important;
+  box-shadow: none !important;
+}
+
+#root .add-shoes-profile-redesign :is(
+  .add-shoes-brand-card-copy,
+  .add-shoes-brand-card-copy strong,
+  .add-shoes-brand-card-copy span
+) {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
 
@@ -438,6 +521,7 @@
   border: 1px solid var(--profile-line);
   border-radius: 20px;
   background: #fff !important;
+  background-image: none !important;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-model-grid-head.add-shoes-model-board-header {
@@ -452,6 +536,7 @@
   gap: 12px;
   padding: 14px;
   background: #fff !important;
+  background-image: none !important;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-model-card {
@@ -780,6 +865,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redes
   color: var(--profile-ink) !important;
 }
 
+/* Keep the workflow container transparent while preserving each step card. */
+#root .add-shoes-profile-redesign .add-shoes-catalog-workspace {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature {
   border-color: var(--profile-line) !important;
   background: rgba(255, 255, 255, 0.42) !important;
@@ -795,4 +888,3 @@ body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redes
 body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature-copy p {
   color: var(--profile-muted) !important;
 }
-

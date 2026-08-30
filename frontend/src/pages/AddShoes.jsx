@@ -233,6 +233,7 @@ export default function AddShoes() {
   const profileLabel = (email?.split('@')[0] || 'Hermes').trim();
   const selectedBrandName = localizeShoeBrand(formBrand || browserBrand?.brand || '', lang);
   const selectedModelName = getCatalogModelLabel(selectedCatalogModel || { model: formModel }, lang) || formModel;
+  const browserTitle = browserBrand ? localizeShoeBrand(browserBrand.brand, lang) : t('shoes.browser_brand');
   const browserModelPlaceholder = browserBrand
     ? t('shoes.add_page_search_models', { brand: localizeShoeBrand(browserBrand.brand, lang) })
     : t('shoes.add_page_search_models_empty');
@@ -358,7 +359,15 @@ export default function AddShoes() {
 
         <div className="runner-shell-canvas add-shoes-canvas">
           <div className="add-shoes-catalog-workspace">
-            <section className="add-shoes-catalog-step add-shoes-step-card">
+            <div className="add-shoes-stage-head">
+                  <div className="add-shoes-stage-copy">
+                    <span className="add-shoes-panel-kicker">{t('shoes.browser_kicker')}</span>
+                    <h2>{browserTitle}</h2>
+                    <p>{t('shoes.browser_copy')}</p>
+                  </div>
+            </div>
+
+                <section className="add-shoes-catalog-step add-shoes-step-card">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">1</span><div><h2>{t('shoes.add_page_step_brand_title')}</h2><p>{t('shoes.add_page_step_brand_copy')}</p></div></div>
                   <div className="add-shoes-brand-deck">
                     <div className="add-shoes-brand-deck-grid">
@@ -377,44 +386,43 @@ export default function AddShoes() {
                           </button>
                         );
                       })}
-                    </div>
-                    {extraBrands.length ? (
-                      <div className="add-shoes-brand-expand-shell">
+                      {extraBrands.length ? (
                         <button
                           type="button"
-                          className={cx('add-shoes-brand-expand-btn', showExtraBrands && 'is-open')}
+                          className={cx('add-shoes-brand-expand-btn', 'add-shoes-brand-expand-card', showExtraBrands && 'is-open')}
                           onClick={() => setShowExtraBrands((current) => !current)}
                           aria-expanded={showExtraBrands}
+                          aria-controls="add-shoes-extra-brands"
                         >
                           <span>{showExtraBrands ? t('shoes.add_page_more_brands_hide') : t('shoes.add_page_more_brands_toggle')}</span>
                           <AppIcon name={showExtraBrands ? 'expand_less' : 'expand_more'} className="runner-dashboard-side-link-icon" />
                         </button>
-                        {showExtraBrands ? (
-                          <div className="add-shoes-brand-expand-grid">
-                            {extraBrands.map((brand) => {
-                              const isActive = browserBrand?.brand === brand.brand;
-                              return (
-                                <button
-                                  key={`extra-${brand.brand}`}
-                                  type="button"
-                                  className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
-                                  onClick={() => handleBrandPick(brand)}
-                                  aria-pressed={isActive ? 'true' : 'false'}
-                                  aria-label={localizeShoeBrand(brand.brand, lang)}
-                                >
-                                  <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
-                                  <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
+                      ) : null}
+                      {extraBrands.length ? (
+                        <div id="add-shoes-extra-brands" className="add-shoes-brand-expand-grid" hidden={!showExtraBrands}>
+                          {extraBrands.map((brand) => {
+                            const isActive = browserBrand?.brand === brand.brand;
+                            return (
+                              <button
+                                key={`extra-${brand.brand}`}
+                                type="button"
+                                className={cx('add-shoes-brand-deck-card', 'add-shoes-brand-deck-card--extra', isActive && 'is-active')}
+                                onClick={() => handleBrandPick(brand)}
+                                aria-pressed={isActive ? 'true' : 'false'}
+                                aria-label={localizeShoeBrand(brand.brand, lang)}
+                              >
+                                <span className="add-shoes-brand-tile"><ShoeBrandLogo brand={brand.brand} fallbackEmoji={brand.logo} /></span>
+                                <span className="add-shoes-brand-card-copy"><strong>{localizeShoeBrand(brand.brand, lang)}</strong><span>{t('shoes.model_count', { count: brand.models?.length || 0 })}</span></span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
             </section>
 
-            <section className="add-shoes-catalog-step add-shoes-model-board add-shoes-step-card">
+                <section className="add-shoes-catalog-step add-shoes-model-board add-shoes-step-card">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-model-board-top">
                     <div className="add-shoes-filter-row">
@@ -449,9 +457,9 @@ export default function AddShoes() {
                       {browserModels.length === 0 ? <div className="add-shoes-model-empty">{t('shoes.browser_empty')}</div> : null}
                     </div>
                   </div>
-            </section>
+                </section>
 
-            <section className="add-shoes-step add-shoes-step--form add-shoes-step-card add-shoes-setup-payload">
+              <section className="add-shoes-step add-shoes-step--form add-shoes-step-card add-shoes-setup-payload">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">3</span><div><h2>{t('shoes.add_page_step_configure_title')}</h2><p>{t('shoes.add_page_step_configure_copy')}</p></div></div>
                   <div className="add-shoes-setup-payload-shell">
                     <div className="add-shoes-selected-summary">
@@ -477,7 +485,7 @@ export default function AddShoes() {
                       </div>
                     </form>
                   </div>
-            </section>
+              </section>
           </div>
 
           <footer className="runner-shell-footer runner-dashboard-footer add-shoes-footer">

@@ -92,6 +92,7 @@ class ActivityControllerTests {
         ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository, jdbcTemplate);
         ActivityStravaStreamService stravaStreamService = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate
@@ -122,6 +123,7 @@ class ActivityControllerTests {
         ActivityDataAccess activityDataAccess = new ActivityDataAccess(activityRepository, activityPointRepository, jdbcTemplate);
         ActivityStravaStreamService stravaStreamService = new ActivityStravaStreamService(
                 activityDataAccess,
+                activityRepository,
                 runnerRepository,
                 secretEncryptionService,
                 restTemplate

@@ -52,6 +52,31 @@ body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .r
   background-image: none !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .race-detail-page .race-detail-count-card {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .race-detail-page .race-detail-elevation-chart {
+  background: #fff !important;
+  background-color: #fff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .race-detail-page .race-detail-course-card {
+  background: #fff !important;
+  background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .race-center-hero h1.race-center-hero-title--empty {
+  color: #000 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .race-detail-page :is(.race-detail-stat-card, .race-detail-coach-card) {
+  background: #fff !important;
+  background-image: none !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .race-center-card-cta {
   background: #f1f2f2 !important;
 }

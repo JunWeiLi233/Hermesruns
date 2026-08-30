@@ -48,5 +48,17 @@ COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar
 
 USER hermes
 
+# Lean JVM footprint for small containers. Without these flags the JVM sizes
+# its heap from container ergonomics, grows toward that ceiling, and never
+# returns RSS — Railway reported 1.6 GB for this app. The heap/GC/metaspace
+# settings follow the locally proven profile (.tools/run-backend.*, without
+# the devtools-driven metaspace headroom); the free-ratio pair makes the JVM
+# uncommit heap after spikes. Deployments can override JAVA_OPTS without
+# rebuilding the image.
+ENV JAVA_OPTS="-Xms128m -Xmx768m -XX:+UseSerialGC \
+    -XX:MaxMetaspaceSize=256m \
+    -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 \
+    -XX:+ExitOnOutOfMemoryError"
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

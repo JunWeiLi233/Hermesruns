@@ -27,7 +27,7 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /add-shoes-brand-expand-shell/,
+  /add-shoes-brand-expand-card/,
   'Add Shoes should expose an expandable extra-brand section for less-common brands.',
 );
 

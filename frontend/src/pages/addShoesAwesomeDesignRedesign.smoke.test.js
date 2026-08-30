@@ -49,20 +49,20 @@ assert.ok(
 const appCssActive = appCss.replace(/\/\*[\s\S]*?\*\//g, '');
 assertIncludes(appCssActive, "@import './add-shoes-profile-alignment.css';", 'runtime Add Shoes Profile redesign import in styles/app.css');
 
-const addShoesPageRule = redesignCss.match(
-  /#root \.add-shoes-profile-redesign\s*\{[\s\S]*?\n\}/,
-);
-assert.ok(addShoesPageRule, 'Add Shoes page background rule should exist.');
-assert.match(
-  addShoesPageRule[0],
-  /background:\s*#eef0f2\s*!important;/,
-  'Add Shoes page should use a light grey background.',
-);
-
 assert.match(
   redesignCss,
-  /#root \.add-shoes-profile-redesign \.add-shoes-canvas\s*\{[\s\S]*width:\s*min\(calc\(100% - 48px\),\s*1500px\)[\s\S]*max-width:\s*1500px[\s\S]*margin-inline:\s*auto[\s\S]*padding:\s*24px 0 52px/,
-  'Add Shoes canvas should use a capped centered Profile grid.',
+  /^#root \.add-shoes-profile-redesign \.add-shoes-canvas\s*\{[^}]*width:\s*calc\(100% - 48px\);[^}]*max-width:\s*none;[^}]*margin-inline:\s*auto;[^}]*padding:\s*24px 0 52px/m,
+  'Add Shoes canvas should use the full available width while keeping equal side margins.',
+);
+assert.match(
+  redesignCss,
+  /^#root \.add-shoes-profile-redesign\s*\{[^}]*background:\s*#f1f2f2 !important;[^}]*background-image:\s*none !important;/m,
+  'Add Shoes light page surface should use a flat light-grey background.',
+);
+assert.match(
+  redesignCss,
+  /@media \(min-width:\s*1100px\) \{[\s\S]*?#root \.add-shoes-profile-redesign \.add-shoes-canvas\s*\{[^}]*width:\s*calc\(100% - 32px\) !important;[^}]*max-width:\s*none !important;/m,
+  'Add Shoes should override the Profile shell cap on wide screens while preserving its side inset.',
 );
 
 [
@@ -74,8 +74,10 @@ assert.match(
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-main',
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail',
   '#root .add-shoes-profile-redesign .add-shoes-catalog-workspace',
+  'grid-template-columns: minmax(0, 1fr);',
   '#root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage',
-  '#root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card)',
+  '#root .add-shoes-profile-redesign .add-shoes-catalog-step',
+  '#root .add-shoes-profile-redesign .add-shoes-setup-panel',
   '#root .add-shoes-profile-redesign .add-shoes-brand-deck-card.is-active',
   '#root .add-shoes-profile-redesign .add-shoes-selected-summary',
   '#root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid',
@@ -90,6 +92,48 @@ assert.match(
   '@media (prefers-reduced-motion: reduce)',
   'grid-template-columns: minmax(0, 1fr);',
 ].forEach((snippet) => assertIncludes(redesignCss, snippet, 'Add Shoes Profile CSS'));
+
+assert.match(
+  redesignCss,
+  /^#root \.add-shoes-profile-redesign \.add-shoes-catalog-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/m,
+  'Add Shoes Step 3 should flow below the full catalog stage at every width.',
+);
+
+const brandGridStart = addShoesSource.indexOf('<div className="add-shoes-brand-deck-grid">');
+const expandButtonStart = addShoesSource.indexOf("className={cx('add-shoes-brand-expand-btn', 'add-shoes-brand-expand-card'");
+const secondaryBrandMapStart = addShoesSource.indexOf('{secondaryBrands.map((brand) => {');
+const expandGridStart = addShoesSource.indexOf('id="add-shoes-extra-brands" className="add-shoes-brand-expand-grid"');
+assert.ok(
+  brandGridStart >= 0 && secondaryBrandMapStart > brandGridStart && expandButtonStart > secondaryBrandMapStart,
+  'The Add Shoes brand disclosure should follow the regular cards beside the Brooks card.',
+);
+assert.ok(
+  expandGridStart > brandGridStart,
+  'Expanded Add Shoes brand cards should be nested inside the primary brand grid.',
+);
+assertIncludes(addShoesSource, 'aria-controls="add-shoes-extra-brands"', 'Add Shoes brand disclosure target');
+assertIncludes(addShoesSource, 'add-shoes-brand-expand-card', 'Add Shoes brand disclosure card hook');
+assert.match(
+  redesignCss,
+  /#root \.add-shoes-profile-redesign \.add-shoes-brand-deck-grid\s*>\s*\.add-shoes-brand-expand-card\s*\{[^}]*min-height:\s*138px;[^}]*border-radius:\s*18px;/m,
+  'Add Shoes brand disclosure should use the same card treatment as the surrounding brand grid.',
+);
+assert.match(
+  redesignCss,
+  /#root \.add-shoes-profile-redesign \.add-shoes-catalog-workspace\s*\{[^}]*background:\s*transparent !important;[^}]*border:\s*0 !important;[^}]*box-shadow:\s*none !important;/m,
+  'Add Shoes workspace should not render one background card behind the separate steps.',
+);
+
+assert.match(
+  addShoesSource,
+  /function handleCategoryFilterPick\(categoryKey\) \{\s*setBrowserCategory\(categoryKey\);\s*setBrowserType\('all'\);\s*\}/,
+  'Selecting an Add Shoes category should clear any selected type filter.',
+);
+assert.match(
+  addShoesSource,
+  /function handleTypeFilterPick\(typeKey\) \{\s*setBrowserType\(typeKey\);\s*setBrowserCategory\(null\);\s*\}/,
+  'Selecting an Add Shoes type should clear any selected category filter.',
+);
 
 /* Layout-lock contract (DV-2026-08-28-002): the stage is a single-column flow
    card. Track-spanning stage grids collapsed the catalog steps into ~60px

@@ -6,14 +6,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 @Component
@@ -26,33 +29,44 @@ public class TtlCacheStore {
     private final Supplier<StringRedisTemplate> redisTemplateSupplier;
     private final ObjectMapper objectMapper;
     private final Clock clock;
-    private final ConcurrentHashMap<String, LocalEntry> localEntries = new ConcurrentHashMap<>();
+    // Bounded LRU fallback: without the entry cap this map grew monotonically
+    // (expired entries were only removed when their exact key was read again),
+    // which showed up as multi-hundred-MB heap growth on long-lived instances.
+    private final BoundedLocalCache localEntries;
     private volatile boolean redisFailureLogged;
 
     @Autowired
     public TtlCacheStore(
             AppRedisProperties redisProperties,
             ObjectProvider<StringRedisTemplate> redisTemplateProvider,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            @Value("${app.cache.local-max-entries:1024}") int localMaxEntries
     ) {
-        this(redisProperties, redisTemplateProvider::getIfAvailable, objectMapper, Clock.systemUTC());
+        this(redisProperties, redisTemplateProvider::getIfAvailable, objectMapper, Clock.systemUTC(), localMaxEntries);
     }
 
     private TtlCacheStore(
             AppRedisProperties redisProperties,
             Supplier<StringRedisTemplate> redisTemplateSupplier,
             ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            int localMaxEntries
     ) {
         this.redisProperties = redisProperties;
         this.redisTemplateSupplier = redisTemplateSupplier;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.localEntries = new BoundedLocalCache(Math.max(1, localMaxEntries));
     }
 
     static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock) {
         objectMapper.findAndRegisterModules();
-        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock);
+        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock, 1024);
+    }
+
+    static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock, int localMaxEntries) {
+        objectMapper.findAndRegisterModules();
+        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock, localMaxEntries);
     }
 
     public <T> Optional<T> get(String namespace, String key, Class<T> type) {
@@ -112,8 +126,27 @@ public class TtlCacheStore {
         }
     }
 
+    /**
+     * True when entries can survive this process (Redis reachable). Callers that
+     * already keep their own bounded in-memory copy of a payload can use this
+     * to skip storing a second serialized copy here.
+     */
+    public boolean hasDurableBacking() {
+        return redisTemplate() != null;
+    }
+
+    @Scheduled(fixedDelay = 300_000)
+    void sweepExpiredLocalEntries() {
+        Instant now = clock.instant();
+        localEntries.removeExpired(now);
+    }
+
     void forceExpireLocalForTests(String namespace, String key) {
-        localEntries.computeIfPresent(localKey(namespace, key), (ignored, entry) -> new LocalEntry(entry.json(), Instant.EPOCH));
+        localEntries.forceExpire(localKey(namespace, key));
+    }
+
+    int localEntrySizeForTests() {
+        return localEntries.size();
     }
 
     private String getJson(String namespace, String key) {
@@ -150,16 +183,7 @@ public class TtlCacheStore {
     }
 
     private String getLocal(String namespace, String key) {
-        String localKey = localKey(namespace, key);
-        LocalEntry entry = localEntries.get(localKey);
-        if (entry == null) {
-            return null;
-        }
-        if (clock.instant().isAfter(entry.expiresAt())) {
-            localEntries.remove(localKey);
-            return null;
-        }
-        return entry.json();
+        return localEntries.getIfFresh(localKey(namespace, key), clock.instant());
     }
 
     private StringRedisTemplate redisTemplate() {
@@ -191,5 +215,59 @@ public class TtlCacheStore {
         String ns = namespace == null || namespace.isBlank() ? "default" : namespace.trim();
         String k = key == null || key.isBlank() ? "unknown" : key.trim();
         return ns + "\n" + k;
+    }
+
+    /**
+     * Access-ordered LRU with a hard entry cap. Synchronized is enough here:
+     * operations are short map mutations, far below the HTTP fetch latencies
+     * the callers already tolerate.
+     */
+    private static final class BoundedLocalCache {
+        private final int maxEntries;
+        private final LinkedHashMap<String, LocalEntry> entries;
+
+        BoundedLocalCache(int maxEntries) {
+            this.maxEntries = maxEntries;
+            this.entries = new LinkedHashMap<>(16, 0.75f, true);
+        }
+
+        synchronized void put(String key, LocalEntry entry) {
+            entries.put(key, entry);
+            while (entries.size() > maxEntries) {
+                var oldest = entries.keySet().iterator().next();
+                entries.remove(oldest);
+            }
+        }
+
+        synchronized String getIfFresh(String key, Instant now) {
+            LocalEntry entry = entries.get(key);
+            if (entry == null) {
+                return null;
+            }
+            if (now.isAfter(entry.expiresAt())) {
+                entries.remove(key);
+                return null;
+            }
+            return entry.json();
+        }
+
+        synchronized void remove(String key) {
+            entries.remove(key);
+        }
+
+        synchronized int size() {
+            return entries.size();
+        }
+
+        synchronized void removeExpired(Instant now) {
+            entries.values().removeIf(entry -> now.isAfter(entry.expiresAt()));
+        }
+
+        synchronized void forceExpire(String key) {
+            LocalEntry entry = entries.get(key);
+            if (entry != null) {
+                entries.put(key, new LocalEntry(entry.json(), Instant.EPOCH));
+            }
+        }
     }
 }
