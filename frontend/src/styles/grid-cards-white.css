@@ -392,10 +392,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
   backdrop-filter: none !important;
 }
 
-/* The shared liquid-glass sweep treats the muscle-selection panel as a card.
-   Keep its anatomy panel contents intact while letting the heading sit on the
-   top workbench surface instead of a warm full-width strip. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card {
+/* The shared liquid-glass sweep can paint a second surface on the text
+   wrapper. Remove only that nested strip; keep the muscle-selection card and
+   its anatomy panel surface intact. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head h2 {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;

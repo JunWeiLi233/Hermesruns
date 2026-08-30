@@ -9,8 +9,8 @@ const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liqu
 const finalWhiteSource = readFileSync(path.join(here, '../styles/grid-cards-white.css'), 'utf8');
 
 const cardSweepIndex = liquidGlassSource.lastIndexOf('.runner-dashboard-page :is(');
-const panelResetIndex = finalWhiteSource.lastIndexOf(
-  'body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card {',
+const headingResetIndex = finalWhiteSource.lastIndexOf(
+  'body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,',
 );
 
 assert.ok(
@@ -18,13 +18,18 @@ assert.ok(
   'The final white-theme guard must load after the shared liquid-glass card sweep.',
 );
 assert.ok(
-  cardSweepIndex >= 0 && panelResetIndex >= 0,
-  'The muscle-selection panel must have a final reset after the shared card sweep.',
+  cardSweepIndex >= 0 && headingResetIndex >= 0,
+  'The muscle-selection heading must have a final nested reset after the shared card sweep.',
 );
 assert.match(
-  finalWhiteSource.slice(panelResetIndex, panelResetIndex + 460),
+  finalWhiteSource.slice(headingResetIndex, headingResetIndex + 520),
   /border:\s*0 !important;[\s\S]*border-radius:\s*0 !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
-  'The light-theme muscle-selection panel should not paint a strip behind its heading.',
+  'The light-theme muscle-selection heading should not paint a strip on top of its card.',
+);
+assert.doesNotMatch(
+  finalWhiteSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-top-muscle-card\s*\{[\s\S]*background:\s*transparent !important;/,
+  'The muscle-selection card background must remain intact while its heading strip is removed.',
 );
 
 console.log('[PASS] Muscle Training top-panel strip guardrails passed.');
