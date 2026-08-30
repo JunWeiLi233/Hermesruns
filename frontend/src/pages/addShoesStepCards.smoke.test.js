@@ -39,15 +39,23 @@ assert.doesNotMatch(
   /add-shoes-browser-panel add-shoes-stage/,
   'Add Shoes should not keep a shared card around Steps 1 and 2.',
 );
-assert.doesNotMatch(
+/* The runner-shell alignment (branch redesign) keeps a stage-head intro above
+   the three-step catalog; master's earlier removal is superseded here. Lock
+   the redesigned intro so it cannot silently regress. */
+assert.match(
   addShoesSource,
-  /add-shoes-stage-head|add-shoes-stage-copy|browserTitle/,
-  'Add Shoes should not render the removed catalog intro block.',
+  /<div className="add-shoes-stage-head">[\s\S]*?add-shoes-stage-copy[\s\S]*?add-shoes-panel-kicker[\s\S]*?\{browserTitle\}/,
+  'Add Shoes should render the stage-head intro with kicker and brand title above the catalog.',
 );
 assert.match(
   styleSource,
-  /:is\(\.add-shoes-stage-head, \.add-shoes-workspace-heading\)\s*\{\s*display:\s*none\s*!important;/,
-  'Add Shoes should hide the removed intro from legacy route chunks.',
+  /\.add-shoes-workspace-heading\s*\{\s*display:\s*none\s*!important;/,
+  'Add Shoes should hide the removed workspace heading from legacy route chunks.',
+);
+assert.match(
+  styleSource,
+  /\.add-shoes-stage-head\s*\{[\s\S]*?display:\s*flex;/,
+  'Add Shoes stage-head intro should lay out as a flex row.',
 );
 assert.match(
   styleSource,
@@ -56,13 +64,13 @@ assert.match(
 );
 assert.match(
   styleSource,
-  /:is\(\.add-shoes-catalog-step, \.add-shoes-step-card\)\s*\{[\s\S]*?border:\s*1px solid var\(--profile-line\);[\s\S]*?background:/,
-  'Add Shoes current and legacy step hooks should both paint independent cards.',
+  /\.add-shoes-step-card\s*\{[\s\S]*?border:\s*1px solid var\(--profile-line\);[\s\S]*?background:/,
+  'Add Shoes step cards should paint as independent bordered cards.',
 );
 assert.match(
   styleSource,
-  /:is\(\.add-shoes-catalog-step, \.add-shoes-step-card\)\s*\{[\s\S]*?background-color:\s*#fff\s*!important;[\s\S]*?background-image:\s*none\s*!important;/,
-  'Add Shoes step cards should use a solid white light-theme background.',
+  /\.add-shoes-catalog-step:not\(\.add-shoes-model-board\)\s*\{\s*background:\s*#fff !important;\s*background-image:\s*none !important;/,
+  'Add Shoes catalog step cards should use a solid white surface.',
 );
 const legacyAddShoesStepRule = legacyStyleSource.match(
   /\.hermes-site-frame\[data-gpt-taste-system="gpt-taste"\]\[data-runner-design="profile-aligned"\]:is\(\[data-route-path="\/shoes\/add"\], \[data-route-path="\/add-shoes"\]\) \.add-shoes-parent-rail,[\s\S]*?\.add-shoes-step-card\s*\{[\s\S]*?\n\}/,
