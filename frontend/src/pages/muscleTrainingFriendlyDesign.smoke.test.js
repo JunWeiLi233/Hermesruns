@@ -61,6 +61,12 @@ const videoEmbedKeys = new Set(extractTopLevelQuotedKeys(extractObjectBlock(page
 const compoundExerciseKeys = [
   ...pageSource.matchAll(/compoundLibraryExercise\(\{\s*key:\s*'([^']+)'/g),
 ].map((match) => match[1]);
+const researchedRunnerStrengthKeys = [
+  'barbell-hip-thrust',
+  'single-leg-leg-press',
+  'glute-ham-raise',
+  'squat-jump',
+];
 const runnerExerciseNames = extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_LIBRARY'));
 const runnerExerciseKeys = runnerExerciseNames.map(
   slugExerciseNameForTest,
@@ -537,10 +543,17 @@ assert.match(
   'Muscle Training should define the frontend-only compound target exercise library.',
 );
 
+for (const key of researchedRunnerStrengthKeys) {
+  assert.ok(
+    compoundExerciseKeys.includes(key),
+    `The researched runner-strength library should include ${key}.`,
+  );
+}
+
 assert.equal(
   (pageSource.match(/compoundLibraryExercise\(\{\s*[\r\n]+\s*key:/g) || []).length,
-  24,
-  'Each of the six target areas should expose four compound-library exercises.',
+  28,
+  'The six target areas should expose 24 compound exercises plus four researched runner-strength actions.',
 );
 
 for (const [targetKey, firstExercise, lastExercise] of [
