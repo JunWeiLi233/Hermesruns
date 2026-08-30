@@ -22,6 +22,7 @@ public record RunnerStrengthSignals(
         String injuryRisk,
         boolean raceWeek,
         boolean conservativeData,
+        boolean strengthSuppressed,
         boolean manualStrengthRequest,
         StrengthFocus requestedFocus,
         StrengthDose requestedDose,

@@ -157,7 +157,9 @@ public class PersonalizedStrengthPlanEngine {
             List<RunnerStrengthSignals.RunDaySignal> schedule,
             RunnerStrengthSignals.RunDaySignal day,
             RunnerStrengthSignals.StrengthDose dose) {
+        RunnerStrengthSignals.RunDaySignal previousDay = signalFor(schedule, day.date().minusDays(1));
         if (isRace(day) || day.keyRun() || day.longRun()
+                || (previousDay != null && previousDay.longRun())
                 || preRunBuffer(schedule, day.date(), dose) != BufferType.NONE) {
             return Integer.MIN_VALUE;
         }
@@ -219,6 +221,10 @@ public class PersonalizedStrengthPlanEngine {
         }
         if (day.longRun()) {
             return "LONG_RUN_DAY";
+        }
+        RunnerStrengthSignals.RunDaySignal previousDay = signalFor(schedule, day.date().minusDays(1));
+        if (previousDay != null && previousDay.longRun()) {
+            return "LONG_RUN_RECOVERY";
         }
         BufferType buffer = preRunBuffer(schedule, day.date(), dose);
         if (buffer == BufferType.KEY) {
@@ -398,7 +404,9 @@ public class PersonalizedStrengthPlanEngine {
     }
 
     private boolean noSessionState(RunnerStrengthSignals input) {
-        return "HIGH".equals(input.sorenessLevel()) || "HIGH".equals(input.injuryRisk());
+        return input.strengthSuppressed()
+                || "HIGH".equals(input.sorenessLevel())
+                || "HIGH".equals(input.injuryRisk());
     }
 
     private boolean lowDataConservative(RunnerStrengthSignals input) {

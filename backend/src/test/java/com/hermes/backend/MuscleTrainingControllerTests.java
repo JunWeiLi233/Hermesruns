@@ -127,7 +127,50 @@ class MuscleTrainingControllerTests {
     }
 
     @Test
-    void planFallsBackToSingleQuietFoundationForLowMileageQuietUser() throws Exception {
+    void planAppliesPersonalizedStrengthDecisionToLiveContract() throws Exception {
+        Runner runner = createRunner("muscle-strength-engine@test.local");
+        seedRecentRuns(runner, 8, 8.0, 50);
+        seedSchedule(runner, java.util.Collections.nCopies(28, CoachWorkoutType.REST));
+
+        mockMvc.perform(put("/api/training/muscle/profile")
+                        .header("Authorization", bearer(runner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "experienceLevel", "BEGINNER",
+                                "equipmentLevel", "DUMBBELL",
+                                "sessionMinutes", 40,
+                                "noisePreference", "NORMAL",
+                                "preferredStrengthDays", List.of(LocalDate.now().getDayOfWeek().name())
+                        ))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/api/training/muscle/today")
+                        .header("Authorization", bearer(runner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "runType", "REST",
+                                "entryState", "PLANNED",
+                                "strengthFocus", "POSTERIOR_CHAIN",
+                                "strengthDose", "STRONG"
+                        ))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/training/muscle/plan")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.strengthCoachDecision.algorithmVersion").value("runner-strength-v1"))
+                .andExpect(jsonPath("$.strengthCoachDecision.requestedFocus").value("POSTERIOR_CHAIN"))
+                .andExpect(jsonPath("$.strengthCoachDecision.requestedDose").value("STRONG"))
+                .andExpect(jsonPath("$.strengthCoachDecision.appliedFocus").value("POSTERIOR_CHAIN"))
+                .andExpect(jsonPath("$.strengthCoachDecision.appliedDose").value("STANDARD"))
+                .andExpect(jsonPath("$.strengthCoachDecision.safetyAction").value("DOWNGRADED"))
+                .andExpect(jsonPath("$.days[0].strength.sessionType").value("CUSTOM_POSTERIOR_CHAIN_STANDARD"))
+                .andExpect(jsonPath("$.sessions[0].sessionType").value("CUSTOM_POSTERIOR_CHAIN_STANDARD"))
+                .andExpect(jsonPath("$.sessions[0].blocks[0].exercises").isNotEmpty());
+    }
+
+    @Test
+    void planFallsBackToSingleQuietPersonalizedSessionForLowMileageQuietUser() throws Exception {
         Runner runner = createRunner("muscle-conservative@test.local");
 
         mockMvc.perform(put("/api/training/muscle/profile")
@@ -154,14 +197,14 @@ class MuscleTrainingControllerTests {
         JsonNode root = objectMapper.readTree(response);
         assertThat(root.path("rationale").toString()).contains("R_CONSERVATIVE_DATA", "R_QUIET_FILTER");
         assertThat(root.path("sessions")).hasSize(1);
-        assertThat(root.path("sessions").get(0).path("sessionType").asText()).isEqualTo("FOUNDATION_STRENGTH");
+        assertThat(root.path("sessions").get(0).path("sessionType").asText()).isEqualTo("CUSTOM_LEG_DAY_STANDARD");
         assertThat(root.path("sessions").get(0).path("blocks").toString()).doesNotContain("SOUND");
 
         long assignedStrengthDays = 0;
         for (JsonNode day : root.path("days")) {
             if (!day.path("strength").isMissingNode() && !day.path("strength").isNull()) {
                 assignedStrengthDays++;
-                assertThat(day.path("strength").path("sessionType").asText()).isEqualTo("FOUNDATION_STRENGTH");
+                assertThat(day.path("strength").path("sessionType").asText()).isEqualTo("CUSTOM_LEG_DAY_STANDARD");
             }
         }
         assertThat(assignedStrengthDays).isEqualTo(1);
@@ -208,12 +251,19 @@ class MuscleTrainingControllerTests {
         }
 
         long strengthDays = 0;
+        JsonNode appliedDay = null;
+        String appliedDate = root.path("strengthCoachDecision").path("appliedDate").asText();
         for (JsonNode day : days) {
             if (!day.path("strength").isNull()) {
                 strengthDays++;
             }
+            if (appliedDate.equals(day.path("date").asText())) {
+                appliedDay = day;
+            }
         }
-        assertThat(strengthDays).isEqualTo(2);
+        assertThat(strengthDays).isEqualTo(1);
+        assertThat(appliedDay).isNotNull();
+        assertThat(hasNoStrength(appliedDay)).isFalse();
     }
 
     @Test
@@ -253,6 +303,8 @@ class MuscleTrainingControllerTests {
 
         JsonNode root = objectMapper.readTree(response);
         assertThat(root.path("rationale").toString()).contains("R_RACE_WEEK", "R_RECOVERY_GATE", "R_SKIP_WEEK");
+        assertThat(root.path("strengthCoachDecision").path("appliedDate").isNull()).isTrue();
+        assertThat(root.path("strengthCoachDecision").path("safetyAction").asText()).isEqualTo("SUPPRESSED");
         for (JsonNode day : root.path("days")) {
             assertThat(day.path("strength").isNull()).isTrue();
         }

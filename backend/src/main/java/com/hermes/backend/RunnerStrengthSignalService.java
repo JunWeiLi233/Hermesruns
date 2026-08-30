@@ -67,6 +67,7 @@ public class RunnerStrengthSignalService {
                 injuryRisk,
                 metrics.raceWeek(),
                 metrics.conservativeMode(),
+                metrics.recommendedSessionsPerWeek() <= 0,
                 checkIn != null,
                 checkIn == null || checkIn.strengthFocus() == null
                         ? RunnerStrengthSignals.StrengthFocus.COACH_PICK
