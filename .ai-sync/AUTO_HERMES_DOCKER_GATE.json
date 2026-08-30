@@ -1,16 +1,13 @@
 {
-  "generatedAt": "2026-08-29T19:23:54.366Z",
+  "generatedAt": "2026-08-30T01:48:54.074Z",
   "passed": true,
-  "gitHead": "3cb8939b8e46cbe81c6b165d7aaa6c3c31d62f79",
-  "statusSnapshot": "D Hermes.local.env.example.ps1\n M backend/src/main/resources/static/assets/AppIcon-Db8LnTNX.js\n M backend/src/main/resources/static/assets/Modal-Da0Vg0nv.js\n M backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js\n M backend/src/main/resources/static/index.html",
+  "gitHead": "8ce090d9a6ce1b511ffa34c94cba08971499e2ef",
+  "statusSnapshot": "M .tools/auto-hermes-push-main.mjs\n M .tools/auto-hermes-push-main.test.mjs",
   "changedPaths": [
-    "backend/src/main/resources/static/assets/AppIcon-Db8LnTNX.js",
-    "backend/src/main/resources/static/assets/Modal-Da0Vg0nv.js",
-    "backend/src/main/resources/static/assets/addShoeCatalog-Bzcfhsul.js",
-    "backend/src/main/resources/static/index.html",
-    "ermes.local.env.example.ps1"
+    ".tools/auto-hermes-push-main.test.mjs",
+    "tools/auto-hermes-push-main.mjs"
   ],
-  "command": "docker build -f D:\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
+  "command": "docker build -f C:\\Users\\Junwei\\.codex\\worktrees\\8c02\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
   "output": ""
 }

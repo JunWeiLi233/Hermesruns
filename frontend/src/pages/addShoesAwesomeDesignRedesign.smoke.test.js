@@ -22,7 +22,18 @@ const assertIncludes = (source, snippet, label) => {
 
 assertIncludes(addShoesSource, 'add-shoes-page add-shoes-profile-redesign', 'Add Shoes Profile redesign hook');
 assertIncludes(addShoesSource, 'data-design-reference="profile-dashboard"', 'Add Shoes Profile reference lock');
-assertIncludes(addShoesSource, 'add-shoes-brand-deck-feature', 'Add Shoes featured brand decision card');
+assertIncludes(addShoesSource, 'className="add-shoes-brand-deck-card is-active"', 'Add Shoes featured brand should share the compact brand-card class');
+assertIncludes(addShoesSource, '<ShoeBrandLogo brand={featuredBrand.brand} fallbackEmoji={featuredBrand.logo} />', 'Add Shoes featured brand should use the normal logo tile');
+assert.doesNotMatch(
+  addShoesSource,
+  /add-shoes-brand-deck-feature/,
+  'Add Shoes should not render a separate oversized featured brand card.',
+);
+assert.match(
+  addShoesSource,
+  /<div className="add-shoes-brand-deck-grid">[\s\S]*?featuredBrand \? \([\s\S]*?className="add-shoes-brand-deck-card is-active"/,
+  'Add Shoes featured brand should be the first item in the shared brand-card grid.',
+);
 
 assertIncludes(indexCss, "@import './styles/add-shoes-profile-alignment.css';", 'late Add Shoes Profile redesign import');
 assert.ok(
@@ -37,6 +48,16 @@ assert.ok(
 // Strip /* */ blocks so a commented-out import cannot satisfy the runtime guardrail.
 const appCssActive = appCss.replace(/\/\*[\s\S]*?\*\//g, '');
 assertIncludes(appCssActive, "@import './add-shoes-profile-alignment.css';", 'runtime Add Shoes Profile redesign import in styles/app.css');
+
+const addShoesPageRule = redesignCss.match(
+  /#root \.add-shoes-profile-redesign\s*\{[\s\S]*?\n\}/,
+);
+assert.ok(addShoesPageRule, 'Add Shoes page background rule should exist.');
+assert.match(
+  addShoesPageRule[0],
+  /background:\s*#eef0f2\s*!important;/,
+  'Add Shoes page should use a light grey background.',
+);
 
 assert.match(
   redesignCss,
@@ -53,11 +74,9 @@ assert.match(
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-main',
   '#root .add-shoes-profile-redesign .add-shoes-editorial-hero-rail',
   '#root .add-shoes-profile-redesign .add-shoes-catalog-workspace',
-  'grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);',
   '#root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage',
-  '#root .add-shoes-profile-redesign .add-shoes-catalog-step',
-  '#root .add-shoes-profile-redesign .add-shoes-setup-panel',
-  '#root .add-shoes-profile-redesign .add-shoes-brand-deck-feature',
+  '#root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card)',
+  '#root .add-shoes-profile-redesign .add-shoes-brand-deck-card.is-active',
   '#root .add-shoes-profile-redesign .add-shoes-selected-summary',
   '#root .add-shoes-profile-redesign .add-shoes-model-board .add-shoes-model-grid',
   'grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));',
@@ -86,6 +105,32 @@ assert.ok(
 assert.ok(
   !redesignCss.includes('grid-column: span'),
   'Add Shoes Profile layout must not depend on grid-column track spans; span rules silently orphaned the catalog steps once their JSX hooks were removed.',
+);
+
+assert.doesNotMatch(
+  redesignCss,
+  /linear-gradient\(90deg,\s*rgba\(33, 28, 24, 0\.04\) 1px, transparent 1px\)/,
+  'Add Shoes should not render the decorative vertical grid line in the hero.',
+);
+assert.doesNotMatch(
+  redesignCss,
+  /linear-gradient\(0deg,\s*rgba\(33, 28, 24, 0\.032\) 1px, transparent 1px\)/,
+  'Add Shoes should not render the decorative horizontal grid line in the hero.',
+);
+assert.doesNotMatch(
+  redesignCss,
+  /background-size:\s*34px 34px,\s*34px 34px,\s*auto\s*!important/,
+  'Add Shoes should not retain the hero grid background sizing.',
+);
+assert.match(
+  redesignCss,
+  /\.runner-shell-page\.add-shoes-profile-redesign::before\s*\{[\s\S]*?content:\s*none\s*!important;/,
+  'Add Shoes should disable the shared page grid layer.',
+);
+assert.match(
+  redesignCss,
+  /\.runner-shell-page\.add-shoes-profile-redesign \.runner-shell-canvas::before\s*\{[\s\S]*?content:\s*none\s*!important;/,
+  'Add Shoes should disable the shared canvas grid layer.',
 );
 
 assert.doesNotMatch(

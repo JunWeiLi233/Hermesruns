@@ -9286,3 +9286,113 @@ Why: The step sections had no grid-column rules after DV-2026-08-23-171, so the 
 Preserve list: 3-step flow, brand deck and expansion, model board filters/search, setup form behavior, routing, localization, themes, responsive layout, and accessibility.
 Rollback target: `DV-2026-08-28-001`
 Notes: A concurrent session briefly re-activated the retired `add-shoes-awesome-redesign.css` layer (root class + app.css import); it was removed again because its `#root`-scoped rules overrode this layout and squeezed the brand deck to ~75px columns. That session later merged the same Kinetic Editorial skin into the tail of `add-shoes-profile-alignment.css`; the merge was moved to `frontend/src/styles/add-shoes-kinetic-editorial-merged.css.disabled` because its cascade-order wins re-broke the brand deck (~50px cards at 1280px), crushed the setup form, and washed out the light-theme hero text. `add-shoes-profile-redesign` remains the sole rendered design authority for this route.
+
+### Version: DV-2026-08-29-001
+Date: 2026-08-29
+Surface: Add Shoes decorative grid on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the hero's ruled background and disabled the shared page and canvas grid pseudo-elements for the Add Shoes route.
+Why: The requested Add Shoes surface should not show a page-wide or hero-level decorative grid behind the workflow.
+Preserve list: Heading card, inventory stats, catalog and setup layout grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-28-002`
+Notes: Presentation-only decoration removal; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-002
+Date: 2026-08-29
+Surface: Add Shoes editorial hero grid on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the entire editorial hero grid, including its headline panel and status-card rail, from the Add Shoes page.
+Why: The requested page should open directly into the shoe catalog workflow without the separate top hero grid.
+Preserve list: Catalog header, brand/model selection, filters, search, Step 3 configuration form, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-001`
+Notes: Presentation-only section removal; no shoe selection, form validation, or persistence behavior changed.
+
+### Version: DV-2026-08-29-003
+Date: 2026-08-29
+Surface: Add Shoes selected-shoe summary surface on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesSelectedSummaryWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the light-theme selected-shoe summary card to a solid white background and switched its title, copy, kicker, and pills to readable light-surface colors.
+Why: The selected-shoe configuration grid was rendering as a dark panel against the light Add Shoes workspace.
+Preserve list: Selected-shoe state, form controls, validation, submission behavior, dark themes, routing, localization, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-002`
+Notes: Presentation-only light-theme surface correction; no shoe workflow or persistence behavior changed.
+
+### Version: DV-2026-08-29-003
+Date: 2026-08-29
+Surface: Add Shoes three-step card flow on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Flattened the Add Shoes catalog/setup layout into three full-width sibling cards for brand selection, model confirmation, and shoe configuration; the stage heading remains an unboxed flow intro.
+Why: Make the three-step workflow visually distinct instead of presenting steps 1 and 2 inside a shared catalog card with step 3 in a separate column.
+Preserve list: Brand/model selection, catalog loading fallback, filters/search, selected-shoe summary, form validation and submit payload, routing, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-002`
+Notes: Presentation-only structure and spacing change; the legacy stage/setup selectors remain non-painting compatibility hooks for stale markup.
+
+### Version: DV-2026-08-29-004
+Date: 2026-08-29
+Surface: Add Shoes step-card surfaces on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the Step 1, Step 2, and Step 3 card surfaces to solid white in light mode while preserving the existing dark-theme override.
+Why: The three workflow cards should read as clean white surfaces against the Add Shoes page background.
+Preserve list: Three-card workflow structure, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-003`
+Notes: Presentation-only surface correction; no workflow or data behavior changed.
+
+### Version: DV-2026-08-29-005
+Date: 2026-08-29
+Surface: Add Shoes catalog intro removal on `/shoes/add`
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the standalone catalog kicker, selected-brand heading, and descriptive intro above the three-step cards.
+Why: The Add Shoes workflow should begin directly with Step 1 instead of showing a redundant catalog intro block.
+Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-004`
+Notes: Presentation-only content removal; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-006
+Date: 2026-08-29
+Surface: Add Shoes legacy intro compatibility on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a route-scoped hide for the removed catalog intro hooks so cached older lazy chunks cannot restore the intro above the step cards.
+Why: The visible route must stay free of the removed kicker, brand heading, and descriptive copy during stale-chunk recovery.
+Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-005`
+Notes: Compatibility-only presentation guard; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-007
+Date: 2026-08-29
+Surface: Add Shoes legacy white card override on `/shoes/add`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the legacy Profile-aligned warm translucent step-card background with explicit solid white color and no background image.
+Why: Older stylesheet paths were still overriding the intended white Step 1, Step 2, and Step 3 card surfaces.
+Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-006`
+Notes: Presentation-only compatibility override; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-008
+Date: 2026-08-29
+Surface: Add Shoes setup grid surface on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Set the Step 3 setup payload grid to a solid white background with no background image in both active and legacy route styles.
+Why: The Step 3 two-column grid should remain visibly white instead of inheriting the page or translucent theme surface.
+Preserve list: Three-card workflow, selected-shoe summary, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-007`
+Notes: Presentation-only grid surface correction; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-009
+Date: 2026-08-29
+Surface: Add Shoes final white-surface authority on `/shoes/add`
+Files: `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a final route-scoped white surface rule covering the step cards and Step 3 setup grid for legacy stylesheet consumers.
+Why: Later global design layers could otherwise reapply a warm translucent background after the card-specific white override.
+Preserve list: Three-card workflow, Step 3 setup grid, selected-shoe summary, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-008`
+Notes: Presentation-only cascade authority; no shoe workflow or data behavior changed.
+
+### Version: DV-2026-08-29-010
+Date: 2026-08-29
+Surface: Add Shoes search focus treatment on `/shoes/add`
+Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesSearchFocus.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the outer focus halo from the model-search wrapper and kept a compact inset focus indicator on the input.
+Why: The wrapper's coral ring created an unwanted double-highlight around the search field.
+Preserve list: Search behavior, keyboard focus visibility, model filtering, themes, responsive layout, and accessibility.
+Rollback target: `DV-2026-08-29-009`
+Notes: Presentation-only focus treatment correction; no search behavior changed.
