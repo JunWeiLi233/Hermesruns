@@ -4,7 +4,7 @@ const STRAVA_OAUTH_PENDING_SESSION_KEY = 'hermes_strava_oauth_pending_at';
 const STRAVA_OAUTH_PENDING_MAX_AGE_MS = 2 * 60 * 1000;
 export const STRAVA_SYNC_FINISHED_EVENT = 'hermes:strava-sync-finished';
 
-export function shouldTriggerStravaAutoSync({ isAuthenticated, authHydrated, token, storage = window.sessionStorage, nowMs = Date.now() }) {
+export function shouldTriggerStravaAutoSync({ isAuthenticated, authHydrated, token, storage = window.localStorage, nowMs = Date.now() }) {
   if (!isAuthenticated || !authHydrated || !token) return false;
   try {
     const raw = storage.getItem(AUTO_SYNC_SESSION_KEY);
@@ -18,7 +18,7 @@ export function shouldTriggerStravaAutoSync({ isAuthenticated, authHydrated, tok
   return true;
 }
 
-export function markStravaAutoSyncTriggered({ storage = window.sessionStorage, nowMs = Date.now() }) {
+export function markStravaAutoSyncTriggered({ storage = window.localStorage, nowMs = Date.now() }) {
   try {
     storage.setItem(AUTO_SYNC_SESSION_KEY, String(nowMs));
   } catch {

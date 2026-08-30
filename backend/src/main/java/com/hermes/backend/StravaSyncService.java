@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,9 @@ import org.slf4j.LoggerFactory;
 public class StravaSyncService {
 
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
+
+    /** Page size used for GET /athlete/activities; a full page means the window may not be drained yet. */
+    private static final int STRAVA_ACTIVITIES_PAGE_SIZE = 200;
 
     private static final Logger log = LoggerFactory.getLogger(StravaSyncService.class);
 
@@ -67,6 +71,15 @@ public class StravaSyncService {
 
     @Value("${strava.sync.max-pages-full:50}")
     private int stravaFullSyncMaxPages;
+
+    @Value("${strava.sync.cursor-buffer-seconds:21600}")
+    private long cursorBufferSeconds = 21600;
+
+    @Value("${strava.sync.no-gps-retry-days:30}")
+    private int noGpsRetryDays = 30;
+
+    /** Wall-clock ms of the most recent NEW_OR_UPDATED_RUN import; 0 = nothing imported yet. */
+    private final AtomicLong lastImportedActivityAtMs = new AtomicLong(0);
 
     public StravaSyncService(ActivityRepository activityRepository,
                              ActivityPointRepository activityPointRepository,
@@ -275,12 +288,22 @@ public class StravaSyncService {
         String currentAccessToken = accessToken;
         headers.setBearerAuth(currentAccessToken);
 
+        final long syncStartEpoch = Instant.now().getEpochSecond();
+        final Long afterEpoch = recentOnly && runner.getStravaListCursorEpoch() != null
+                ? Math.max(0L, runner.getStravaListCursorEpoch() - Math.max(0L, cursorBufferSeconds))
+                : null;
+
         int page = 1;
+        int lastPageSize = 0;
         final int maxPages = recentOnly ? Math.max(1, stravaRecentSyncMaxPages) : Math.max(1, stravaFullSyncMaxPages);
         boolean[] gpsRateLimited = {false};
         try {
             while (page <= maxPages) {
-                String activitiesUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=" + page;
+                String activitiesUrl = "https://www.strava.com/api/v3/athlete/activities?per_page="
+                        + STRAVA_ACTIVITIES_PAGE_SIZE + "&page=" + page;
+                if (afterEpoch != null) {
+                    activitiesUrl = activitiesUrl + "&after=" + afterEpoch;
+                }
                 ResponseEntity<List<Map<String, Object>>> response;
                 try {
                     response = restTemplate.exchange(
@@ -321,10 +344,12 @@ public class StravaSyncService {
                 List<Map<String, Object>> activities = response.getBody();
                 if (activities == null || activities.isEmpty()) {
                     tracker.markCompleted();
+                    advanceStravaListCursor(runnerId, syncStartEpoch);
                     return;
                 }
 
                 tracker.incrementProcessedPages();
+                lastPageSize = activities.size();
                 for (Map<String, Object> activityData : activities) {
                     StravaActivitySyncResult r = syncSingleStravaActivity(
                             runner, tracker, activityData, gpsRateLimited, restTemplate, headers, currentAccessToken);
@@ -336,12 +361,44 @@ public class StravaSyncService {
                 page++;
             }
             tracker.markCompleted();
+            // Only treat the window as drained when the last page was not full:
+            // exiting by page cap on a full 200-item page means older activities
+            // may still be inside the window, so keep the old cursor and let the
+            // next cycle re-cover the remainder.
+            if (lastPageSize < STRAVA_ACTIVITIES_PAGE_SIZE) {
+                advanceStravaListCursor(runnerId, syncStartEpoch);
+            }
         } catch (Exception exception) {
             String message = stravaListFetchFailureMessage(exception);
             tracker.markFailed(message);
             log.warn("Strava activity list sync failed for runner {}: {} ({})",
                     runnerId, message, exception.getClass().getSimpleName(), exception);
         }
+    }
+
+    /**
+     * Persist the incremental list-sync high-water mark after a successful sync.
+     * Reloads the freshest runner entity because the in-flight {@code runner}
+     * reference may have been replaced during a 401 token refresh.
+     */
+    private void advanceStravaListCursor(Long runnerId, long syncStartEpoch) {
+        try {
+            Runner currentRunner = runnerRepository.findById(runnerId).orElse(null);
+            if (currentRunner == null) {
+                return;
+            }
+            currentRunner.setStravaListCursorEpoch(syncStartEpoch);
+            runnerRepository.save(currentRunner);
+        } catch (Exception e) {
+            // A failed cursor write only means the next sync re-lists a slightly
+            // larger window; never fail the completed sync because of it.
+            log.warn("Strava sync: failed to advance list cursor for runner {}: {}", runnerId, e.getMessage());
+        }
+    }
+
+    /** True when an activity was imported or updated at/after the given epoch ms. */
+    public boolean hasImportedActivitySince(long epochMs) {
+        return lastImportedActivityAtMs.get() >= epochMs;
     }
 
     private String stravaListFetchFailureMessage(Exception exception) {
@@ -467,15 +524,19 @@ public class StravaSyncService {
             automatedCoachService.reaggregateRunner(runner.getId());
         }
 
-        if (!gpsRateLimited[0] && !activityPointRepository.existsByActivity(saved)) {
-            gpsRateLimited[0] = !fetchAndSaveGpsStream(saved, stravaId, accessToken, restTemplate, headers);
-        }
-
         if (existingActivity && previousType == ActivityType.RUN && !changedExistingActivity) {
             tracker.incrementSkippedDuplicates();
             return StravaActivitySyncResult.DUPLICATE_RUN;
         }
+
+        if (!gpsRateLimited[0]
+                && !activityPointRepository.existsByActivity(saved)
+                && !saved.isNoGpsRetryWindowActive(noGpsRetryDays)) {
+            gpsRateLimited[0] = !fetchAndSaveGpsStream(saved, stravaId, accessToken, restTemplate, headers);
+        }
+
         tracker.incrementImportedRuns();
+        lastImportedActivityAtMs.set(System.currentTimeMillis());
         return StravaActivitySyncResult.NEW_OR_UPDATED_RUN;
     }
 
@@ -564,7 +625,12 @@ public class StravaSyncService {
                 if ("heartrate".equals(type) && dataObj instanceof List<?> l) heartRate = l;
                 if ("cadence".equals(type) && dataObj instanceof List<?> l) cadence = l;
             }
-            if (latlng == null || latlng.isEmpty()) return true;
+            if (latlng == null || latlng.isEmpty()) {
+                // Treadmill / no-GPS activity: tombstone it so the stream is not
+                // re-fetched every sync cycle within the retry window.
+                markNoGpsTombstone(activity);
+                return true;
+            }
 
             int total = latlng.size();
             int stride = total > MAX_POINTS_PER_ACTIVITY
@@ -598,6 +664,13 @@ public class StravaSyncService {
                 points.add(point);
             }
 
+            if (points.isEmpty()) {
+                // latlng was present but every coordinate was invalid: tombstone it
+                // like the no-latlng case so the stream is not re-fetched every cycle.
+                markNoGpsTombstone(activity);
+                return true;
+            }
+
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             if (e.getStatusCode().value() == 429) {
                 log.warn("GPS rate limited — remaining GPS will sync on first run view");
@@ -612,9 +685,27 @@ public class StravaSyncService {
 
         if (points != null && !points.isEmpty()) {
             activityDataAccess.savePointsIfAbsentAtomically(activity.getId(), points);
+            clearNoGpsTombstone(activity);
         }
         log.info("GPS cached: {} ({} pts)", stravaId, points == null ? 0 : points.size());
         return true;
+    }
+
+    /** Record that this activity's stream has no usable GPS data and persist the tombstone. */
+    private void markNoGpsTombstone(Activity activity) {
+        activity.setGpsStreamState(Activity.GPS_STREAM_STATE_NO_GPS);
+        activity.setGpsStreamCheckedAt(LocalDateTime.now());
+        activityRepository.save(activity);
+    }
+
+    /** Clear a stale no-GPS tombstone once real GPS points were saved. */
+    private void clearNoGpsTombstone(Activity activity) {
+        if (activity.getGpsStreamState() == null) {
+            return;
+        }
+        activity.setGpsStreamState(null);
+        activity.setGpsStreamCheckedAt(LocalDateTime.now());
+        activityRepository.save(activity);
     }
 
     public SingleActivitySyncResult syncStravaActivityById(Runner runner, long stravaActivityId) {

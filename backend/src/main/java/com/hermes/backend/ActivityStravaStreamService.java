@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,17 +22,23 @@ public class ActivityStravaStreamService {
     private static final int MAX_POINTS_PER_ACTIVITY = 100_000;
 
     private final ActivityDataAccess activityDataAccess;
+    private final ActivityRepository activityRepository;
     private final RunnerRepository runnerRepository;
     private final SecretEncryptionService secretEncryptionService;
     private final RestTemplate restTemplate;
 
+    @Value("${strava.sync.no-gps-retry-days:30}")
+    private int noGpsRetryDays = 30;
+
     public ActivityStravaStreamService(
             ActivityDataAccess activityDataAccess,
+            ActivityRepository activityRepository,
             RunnerRepository runnerRepository,
             SecretEncryptionService secretEncryptionService,
             RestTemplate restTemplate
     ) {
         this.activityDataAccess = activityDataAccess;
+        this.activityRepository = activityRepository;
         this.runnerRepository = runnerRepository;
         this.secretEncryptionService = secretEncryptionService;
         this.restTemplate = restTemplate;
@@ -52,6 +60,13 @@ public class ActivityStravaStreamService {
     }
 
     public void fetchAndCacheStravaStream(Activity activity, String stravaId, String accessToken) {
+        if (activity.isNoGpsRetryWindowActive(noGpsRetryDays)) {
+            // Confirmed treadmill / no-GPS run inside its retry window: skip the
+            // HTTP call so repeated run views do not burn Strava requests.
+            logger.debug("Strava stream fetch skipped for activity {} (no-GPS tombstone active)", activity.getId());
+            return;
+        }
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -82,7 +97,12 @@ public class ActivityStravaStreamService {
             if ("heartrate".equals(type) && dataObj instanceof List<?> l) heartRate = l;
             if ("cadence".equals(type) && dataObj instanceof List<?> l) cadence = l;
         }
-        if (latlng == null || latlng.isEmpty()) return;
+        if (latlng == null || latlng.isEmpty()) {
+            // Tombstone the activity so later views/syncs skip the stream fetch
+            // within the retry window instead of retrying on every view.
+            markNoGpsTombstone(activity);
+            return;
+        }
 
         int total = latlng.size();
         int stride = total > MAX_POINTS_PER_ACTIVITY
@@ -118,7 +138,25 @@ public class ActivityStravaStreamService {
 
         if (!points.isEmpty()) {
             activityDataAccess.savePointsIfAbsentAtomically(activity.getId(), points);
+            clearNoGpsTombstone(activity);
         }
+    }
+
+    /** Record that this activity's stream has no usable GPS data and persist the tombstone. */
+    private void markNoGpsTombstone(Activity activity) {
+        activity.setGpsStreamState(Activity.GPS_STREAM_STATE_NO_GPS);
+        activity.setGpsStreamCheckedAt(LocalDateTime.now());
+        activityRepository.save(activity);
+    }
+
+    /** Clear a stale no-GPS tombstone once real GPS points were saved. */
+    private void clearNoGpsTombstone(Activity activity) {
+        if (activity.getGpsStreamState() == null) {
+            return;
+        }
+        activity.setGpsStreamState(null);
+        activity.setGpsStreamCheckedAt(LocalDateTime.now());
+        activityRepository.save(activity);
     }
 
     public String resolveRunnerStravaAccessToken(Runner runner) {

@@ -27,11 +27,47 @@ import java.time.LocalDateTime;
 )
 public class Activity extends ActivityRelationshipFields {
 
+    /** GPS stream marker for runs whose Strava stream has no usable latlng data (e.g. treadmill runs). */
+    public static final String GPS_STREAM_STATE_NO_GPS = "NO_GPS";
+
+    /** GPS stream state: null = unknown / has GPS, {@link #GPS_STREAM_STATE_NO_GPS} = stream confirmed unusable. */
+    private String gpsStreamState;
+
+    /** When the GPS stream state was last verified; drives the no-GPS retry window. */
+    private LocalDateTime gpsStreamCheckedAt;
+
     @PrePersist
     public void prePersist() {
         if (getCreatedAt() == null) {
             setCreatedAt(LocalDateTime.now());
         }
+    }
+
+    public String getGpsStreamState() {
+        return gpsStreamState;
+    }
+
+    public void setGpsStreamState(String gpsStreamState) {
+        this.gpsStreamState = gpsStreamState;
+    }
+
+    public LocalDateTime getGpsStreamCheckedAt() {
+        return gpsStreamCheckedAt;
+    }
+
+    public void setGpsStreamCheckedAt(LocalDateTime gpsStreamCheckedAt) {
+        this.gpsStreamCheckedAt = gpsStreamCheckedAt;
+    }
+
+    /**
+     * True while this activity was previously confirmed to have no usable GPS
+     * stream and is still inside the retry window of {@code retryDays} days,
+     * so callers can skip the stream fetch entirely.
+     */
+    public boolean isNoGpsRetryWindowActive(int retryDays) {
+        return GPS_STREAM_STATE_NO_GPS.equals(gpsStreamState)
+                && gpsStreamCheckedAt != null
+                && LocalDateTime.now().isBefore(gpsStreamCheckedAt.plusDays(retryDays));
     }
 
     public void addPoint(ActivityPoint point) {

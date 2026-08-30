@@ -47,6 +47,60 @@ const t = (key) => key;
 }
 
 {
+  const localStorageLog = [];
+  const localStorageBase = createStorage();
+  const sessionStorageLog = [];
+  const sessionStorageBase = createStorage();
+  const trackCalls = (log, base) => ({
+    getItem(key) {
+      log.push(`getItem:${key}`);
+      return base.getItem(key);
+    },
+    setItem(key, value) {
+      log.push(`setItem:${key}`);
+      base.setItem(key, value);
+    },
+    removeItem(key) {
+      log.push(`removeItem:${key}`);
+      base.removeItem(key);
+    },
+  });
+  const previousWindow = globalThis.window;
+  globalThis.window = {
+    localStorage: trackCalls(localStorageLog, localStorageBase),
+    sessionStorage: trackCalls(sessionStorageLog, sessionStorageBase),
+  };
+  try {
+    assert.equal(shouldTriggerStravaAutoSync({
+      isAuthenticated: true,
+      authHydrated: true,
+      token: 'token',
+      nowMs: 1000,
+    }), true);
+    markStravaAutoSyncTriggered({ nowMs: 1000 });
+    assert.equal(shouldTriggerStravaAutoSync({
+      isAuthenticated: true,
+      authHydrated: true,
+      token: 'token',
+      nowMs: 1000 + (5 * 60 * 1000),
+    }), false);
+    assert.deepEqual(localStorageLog, [
+      'getItem:hermes_strava_auto_sync_at',
+      'setItem:hermes_strava_auto_sync_at',
+      'getItem:hermes_strava_auto_sync_at',
+    ]);
+    assert.equal(localStorageBase.getItem('hermes_strava_auto_sync_at'), '1000');
+    assert.deepEqual(sessionStorageLog, []);
+  } finally {
+    if (previousWindow === undefined) {
+      delete globalThis.window;
+    } else {
+      globalThis.window = previousWindow;
+    }
+  }
+}
+
+{
   const storage = createStorage();
   markStravaOauthPendingFlag({ storage, nowMs: 1000 });
   assert.equal(consumeStravaOauthPendingFlag({ storage, nowMs: 2000 }), true);
