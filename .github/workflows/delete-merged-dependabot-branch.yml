@@ -21,8 +21,17 @@ jobs:
           script: |
             const branchName = context.payload.pull_request.head.ref;
             core.info(`Deleting merged Dependabot branch ${branchName}`);
-            await github.request("DELETE /repos/{owner}/{repo}/git/refs/heads/{ref}", {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: branchName,
-            });
+            try {
+              await github.request("DELETE /repos/{owner}/{repo}/git/refs/heads/{ref}", {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: branchName,
+              });
+              core.info(`Deleted merged Dependabot branch ${branchName}`);
+            } catch (error) {
+              if (error.status === 422 && error.message === "Reference does not exist") {
+                core.info(`Dependabot branch ${branchName} was already deleted; cleanup is complete.`);
+              } else {
+                throw error;
+              }
+            }
