@@ -282,6 +282,7 @@ export default {
   "admin_mfa_working": "正在验证...",
   "admin_mfa_cancel": "取消管理员登录",
   "admin_mfa_failed": "管理员验证失败。如果挑战已过期，请重新开始登录。",
+  "admin_mfa_setup_unavailable": "管理员通行密钥设置不可用。请在服务器配置 HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN，然后重新开始登录。",
   "admin_mfa_unsupported": "当前浏览器或安全环境无法使用通行密钥。请改用受支持的浏览器或恢复代码。",
     "stitch_slides_label": "功能展示轮播",
     "stitch_slide_details_label": "信息详情",

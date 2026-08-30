@@ -206,7 +206,7 @@ export default function AddShoes() {
     const source = Array.isArray(browserBrand?.models) ? browserBrand.models : [];
     const q = modelQuery.trim().toLowerCase();
     return source
-      .filter((item) => browserCategory === 'all' || (item.category || item.type || '') === browserCategory)
+      .filter((item) => !browserCategory || browserCategory === 'all' || (item.category || item.type || '') === browserCategory)
       .filter((item) => browserType === 'all' || (item.type || '') === browserType)
       .filter((item) => {
         if (!q) return true;
@@ -252,6 +252,16 @@ export default function AddShoes() {
     setFormBrand(brand.brand);
     setFormModel('');
     setSubmitState('');
+  }
+
+  function handleCategoryFilterPick(categoryKey) {
+    setBrowserCategory(categoryKey);
+    setBrowserType('all');
+  }
+
+  function handleTypeFilterPick(typeKey) {
+    setBrowserType(typeKey);
+    setBrowserCategory(null);
   }
 
   function handleModelPick(model) {
@@ -410,14 +420,14 @@ export default function AddShoes() {
                       ) : null}
                     </div>
                   </div>
-                </section>
+            </section>
 
                 <section className="add-shoes-catalog-step add-shoes-model-board add-shoes-step-card">
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-model-board-top">
                     <div className="add-shoes-filter-row">
-                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => { setBrowserCategory(categoryKey); setBrowserType('all'); }} aria-label={getCatalogCategoryLabel(categoryKey, lang)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
-                      {browserTypeOptions.filter((typeKey) => typeKey !== 'all').slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => { setBrowserType(typeKey); setBrowserCategory('all'); }} aria-label={t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
+                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => handleCategoryFilterPick(categoryKey)} aria-pressed={browserCategory === categoryKey} aria-label={getCatalogCategoryLabel(categoryKey, lang)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
+                      {browserTypeOptions.filter((typeKey) => typeKey !== 'all').slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => handleTypeFilterPick(typeKey)} aria-pressed={browserType === typeKey} aria-label={t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
                     </div>
                     <div className="add-shoes-search-row">
                       <span className="add-shoes-search-icon" aria-hidden="true"><AppIcon name="search" /></span>

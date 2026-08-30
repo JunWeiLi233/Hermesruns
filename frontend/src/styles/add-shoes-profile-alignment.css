@@ -229,10 +229,15 @@
   align-items: stretch;
 }
 
-/* Stage is a normal flow card (hd-card pattern): children own the full width,
-   so no step can ever auto-place into a collapsed track. */
+/* Retain the old hook as a non-painting compatibility selector for stale markup. */
 #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
   display: contents;
+}
+
+/* Hide the removed workspace heading if a browser restores an older lazy
+   route chunk; the redesigned .add-shoes-stage-head stays visible. */
+#root .add-shoes-profile-redesign .add-shoes-workspace-heading {
+  display: none !important;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-stage-head {
@@ -258,12 +263,7 @@
   line-height: 1;
 }
 
-#root .add-shoes-profile-redesign .add-shoes-stage-copy h2 {
-  font-size: 2rem;
-}
-
 #root .add-shoes-profile-redesign :is(
-  .add-shoes-stage-copy p,
   .add-shoes-step-head p,
   .add-shoes-model-board-header p
 ) {
@@ -507,8 +507,13 @@
 }
 
 #root .add-shoes-profile-redesign .add-shoes-search-row:focus-within {
-  border-color: var(--profile-accent);
-  box-shadow: 0 0 0 3px var(--profile-accent-soft);
+  border-color: var(--profile-line);
+  box-shadow: none;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-search-row input:focus-visible {
+  outline: 2px solid var(--profile-accent);
+  outline-offset: -2px;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-model-board-shell {
@@ -558,15 +563,18 @@
   transform: translateY(-4px);
 }
 
-/* Setup aside: plain column (no sticky — removed by DV-2026-08-23-173). */
-#root .add-shoes-profile-redesign .add-shoes-setup-panel {
-  display: contents;
-}
-
 #root .add-shoes-profile-redesign .add-shoes-setup-payload-shell {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
+  background-color: #fff !important;
+  background-image: none !important;
+}
+
+/* Keep stale setup markup from recreating a nested side column during rollout. */
+#root .add-shoes-profile-redesign .add-shoes-setup-panel {
+  min-width: 0;
+  display: contents;
 }
 
 #root .add-shoes-profile-redesign .add-shoes-selected-summary {
@@ -722,6 +730,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
 body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign :is(
   .add-shoes-status-card,
   .add-shoes-browser-panel.add-shoes-stage,
+  .add-shoes-catalog-step,
   .add-shoes-step-card,
   .add-shoes-brand-deck-card,
   .add-shoes-model-card,
@@ -799,7 +808,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
     grid-column: auto;
   }
 
-  #root .add-shoes-profile-redesign .add-shoes-step-card,
+  #root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card),
   #root .add-shoes-profile-redesign .add-shoes-browser-panel.add-shoes-stage {
     padding: 20px;
   }
@@ -864,3 +873,18 @@ body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redes
   box-shadow: none !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature {
+  border-color: var(--profile-line) !important;
+  background: rgba(255, 255, 255, 0.42) !important;
+  color: var(--profile-ink) !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature-copy strong {
+  color: var(--profile-ink) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature-copy span,
+body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redesign .add-shoes-brand-deck-feature-copy p {
+  color: var(--profile-muted) !important;
+}

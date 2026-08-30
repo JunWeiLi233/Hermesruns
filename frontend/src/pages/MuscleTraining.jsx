@@ -1388,10 +1388,26 @@ function inferStrengthDose(sessionType) {
   return parseCustomStrengthSessionType(sessionType)?.dose || DEFAULT_CHECK_IN_DRAFT.strengthDose;
 }
 
+function resolveStrengthCoachGridDecision(plan) {
+  const firstStrengthDay = (plan?.days || []).find((day) => day?.strength);
+  const sessionType = firstStrengthDay?.strength?.sessionType;
+  const engineDecision = plan?.strengthCoachDecision;
+  const appliedFocus = engineDecision ? engineDecision.appliedFocus : plan?.recommendedMuscleArea;
+  const appliedDose = engineDecision ? engineDecision.appliedDose : inferStrengthDose(sessionType);
+  return {
+    ...(engineDecision || {}),
+    appliedFocus,
+    appliedDose,
+    displayFocus: appliedFocus || plan?.recommendedMuscleArea || null,
+    targetKey: FOCUS_TO_TARGET_AREA[appliedFocus || plan?.recommendedMuscleArea] || 'legs',
+  };
+}
+
 function buildCheckInDraft(plan, isMile) {
   const today = Array.isArray(plan?.days) ? plan.days[0] : null;
   const checkIn = plan?.todayCheckIn;
   const sessionType = checkIn?.strengthSessionType || today?.strength?.sessionType;
+  const coachDecision = resolveStrengthCoachGridDecision(plan);
   if (checkIn) {
     return {
       runType: checkIn.runType || DEFAULT_CHECK_IN_DRAFT.runType,
@@ -1409,8 +1425,8 @@ function buildCheckInDraft(plan, isMile) {
     durationMinutes: today?.run?.plannedDurationMinutes ?? '',
     // Pre-fill the coach's recommended focus (Today's Strength Focus) when no
     // check-in exists yet; the user can still override in the composer.
-    strengthFocus: plan?.recommendedMuscleArea || inferStrengthFocus(sessionType),
-    strengthDose: inferStrengthDose(sessionType),
+    strengthFocus: coachDecision.displayFocus || inferStrengthFocus(sessionType),
+    strengthDose: coachDecision.appliedDose || inferStrengthDose(sessionType),
   };
 }
 
@@ -3152,15 +3168,25 @@ export default function MuscleTraining() {
       DUMBBELL: t('muscle_training.exercise_equipment_dumbbell'),
       GYM: t('muscle_training.exercise_equipment_gym'),
     },
-  }), [t]);  const sessionByType = useMemo(
+  }), [t]);
+  const sessionByType = useMemo(
     () => new Map((plan?.sessions || []).map((session) => [session.sessionType, session])),
     [plan],
   );
+  const strengthCoachDecision = useMemo(
+    () => resolveStrengthCoachGridDecision(plan),
+    [plan],
+  );
   const todayPlan = useMemo(() => (plan?.days || [])[0] || null, [plan]);
+  const gridStrengthDay = strengthCoachDecision?.appliedDate
+    ? (plan?.days || []).find((day) => (
+      day.date === strengthCoachDecision.appliedDate && day.strength
+    )) || todayPlan
+    : todayPlan;
   const featuredDay = todayPlan;
   const featuredSession = useMemo(
-    () => (featuredDay?.strength ? sessionByType.get(featuredDay.strength.sessionType) : null),
-    [featuredDay, sessionByType],
+    () => (gridStrengthDay?.strength ? sessionByType.get(gridStrengthDay.strength.sessionType) : null),
+    [gridStrengthDay, sessionByType],
   );
   const protocolItems = useMemo(() => {
     const items = [];
@@ -3639,12 +3665,15 @@ export default function MuscleTraining() {
     // Today's recommended muscle area comes from the backend plan. Apply it as
     // the default anatomy selection on first load (so the heatmap + chip auto-
     // highlight the coach's pick) unless the user has already chosen manually.
-    const area = nextPlan?.recommendedMuscleArea;
-    const reason = nextPlan?.recommendedMuscleReasonCode;
+    const coachDecision = resolveStrengthCoachGridDecision(nextPlan);
+    const area = coachDecision.displayFocus;
+    const reason = area === nextPlan?.recommendedMuscleArea
+      ? nextPlan?.recommendedMuscleReasonCode
+      : null;
     setRecommendedArea(area || null);
     setRecommendedReasonCode(reason || null);
     if (area && !userOverrideRef.current) {
-      const targetKey = FOCUS_TO_TARGET_AREA[area] || 'legs';
+      const targetKey = coachDecision.targetKey;
       const nextItems = buildTopRecommendationItems(targetKey);
       setSelectedMuscleTarget(targetKey);
       setActiveTarget(targetKey);
@@ -3657,8 +3686,25 @@ export default function MuscleTraining() {
   }, [isMile]);
 
   function applyPlanOnly(nextPlan) {
+    const coachDecision = resolveStrengthCoachGridDecision(nextPlan);
+    const area = coachDecision.displayFocus;
+    const reason = area === nextPlan?.recommendedMuscleArea
+      ? nextPlan?.recommendedMuscleReasonCode
+      : null;
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
+    setRecommendedArea(area || null);
+    setRecommendedReasonCode(reason || null);
+    userOverrideRef.current = false;
+    if (area) {
+      const nextItems = buildTopRecommendationItems(coachDecision.targetKey);
+      setSelectedMuscleTarget(coachDecision.targetKey);
+      setActiveTarget(coachDecision.targetKey);
+      setExpandedExerciseIdx(null);
+      if (nextItems[0]) {
+        setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
+      }
+    }
   }
 
   useEffect(() => {
@@ -3886,7 +3932,14 @@ export default function MuscleTraining() {
 
         {!loading && !error && plan && (
           <>
-            <section className="mt-top-workbench" aria-labelledby="mt-top-muscle-title">
+            <section
+              className="mt-top-workbench"
+              aria-labelledby="mt-top-muscle-title"
+              data-strength-algorithm={strengthCoachDecision?.algorithmVersion || undefined}
+              data-strength-focus={strengthCoachDecision?.appliedFocus || undefined}
+              data-strength-dose={strengthCoachDecision?.appliedDose || undefined}
+              data-strength-safety-action={strengthCoachDecision?.safetyAction || undefined}
+            >
               <article className="mt-top-panel mt-top-muscle-card">
                 <div className="mt-top-panel-head">
                   <h2 id="mt-top-muscle-title">{stitchCopy.topMuscleTitle}</h2>
@@ -3938,7 +3991,7 @@ export default function MuscleTraining() {
               <article className="mt-top-panel mt-top-actions-card">
                 <div className="mt-top-actions-head">
                   <h2>{stitchCopy.topActionsTitle}</h2>
-                  <span>{stitchCopy.topActionsSelected}</span>
+                  <span>{pickLabel(copy.strengthDoseOptions, strengthCoachDecision?.appliedDose, stitchCopy.topActionsSelected)}</span>
                 </div>
                 <div className="mt-top-action-list" role="list">
                   {topRecommendationItems.map((item) => {

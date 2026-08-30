@@ -85,6 +85,18 @@ body:is(.theme-light, .theme-high-contrast-light) #root .races-dashboard-page .r
   background: rgba(160, 57, 42, 0.18) !important;
 }
 
+/* Race-detail metric, coach, course, and elevation-chart surfaces are plain
+   white in light themes. */
+body:is(.theme-light, .theme-high-contrast-light) #root .race-detail-page :is(
+  .race-detail-stat-card,
+  .race-detail-coach-card,
+  .race-detail-course-card,
+  .race-detail-elevation-chart
+) {
+  background: #fff !important;
+  background-image: none !important;
+}
+
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card {
   background: #ffffff !important;
   background-image: none !important;

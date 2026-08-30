@@ -10,5 +10,20 @@ public record MusclePlanDto(
         TodayCheckInDto todayCheckIn,
         String planSource,
         String recommendedMuscleArea,
-        String recommendedMuscleReasonCode
-) {}
+        String recommendedMuscleReasonCode,
+        StrengthCoachDecisionDto strengthCoachDecision
+) {
+    public MusclePlanDto(
+            MuscleWeekContextDto weekContext,
+            List<MuscleDayPlanDto> days,
+            List<SessionDefinitionDto> sessions,
+            List<String> rationale,
+            TodayCheckInDto todayCheckIn,
+            String planSource,
+            String recommendedMuscleArea,
+            String recommendedMuscleReasonCode
+    ) {
+        this(weekContext, days, sessions, rationale, todayCheckIn, planSource,
+                recommendedMuscleArea, recommendedMuscleReasonCode, null);
+    }
+}

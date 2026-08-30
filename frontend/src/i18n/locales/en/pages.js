@@ -282,6 +282,7 @@ export default {
     "admin_mfa_working": "Verifying...",
     "admin_mfa_cancel": "Cancel administrator sign-in",
     "admin_mfa_failed": "Administrator verification failed. Start sign-in again if the challenge expired.",
+    "admin_mfa_setup_unavailable": "Admin passkey setup is unavailable. Configure HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN on the server, then start sign-in again.",
     "admin_mfa_unsupported": "This browser cannot use passkeys in the current secure context. Use a supported browser or a recovery code.",
     "stitch_slides_label": "Feature slideshow",
     "stitch_slide_details_label": "Slide details",

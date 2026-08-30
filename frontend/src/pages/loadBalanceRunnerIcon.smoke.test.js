@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const read = (relativePath) => readFileSync(path.join(here, '..', relativePath), 'utf8');
+const read = (relativePath) => readFileSync(path.join(here, '..', relativePath), 'utf8').replace(/\r\n/g, '\n');
 const appIconSource = read('components/AppIcon.jsx');
 const insightSource = read('pages/AnalysisInsightDetail.jsx');
 

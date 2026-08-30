@@ -20,3 +20,23 @@ assert.match(
 );
 
 console.log('[PASS] Add Shoes selected brand card matches the normal compact card surface.');
+
+/* Legacy light-theme guardrails for the removed feature-card markup: the
+   overrides stay in the stylesheet for stale lazy chunks, so keep them locked. */
+assert.match(
+  styles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.add-shoes-profile-redesign \.add-shoes-brand-deck-feature\s*\{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.42\)\s*!important;[\s\S]*?color:\s*var\(--profile-ink\)\s*!important;/,
+  'The featured brand card should share the normal brand-card light surface.',
+);
+
+assert.match(
+  styles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.add-shoes-profile-redesign \.add-shoes-brand-deck-feature-copy strong\s*\{[\s\S]*?color:\s*var\(--profile-ink\)\s*!important;/,
+  'The featured brand title should remain readable on the shared light surface.',
+);
+
+assert.match(
+  styles,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.add-shoes-profile-redesign \.add-shoes-brand-deck-feature-copy span,[\s\S]*?\.add-shoes-brand-deck-feature-copy p\s*\{[\s\S]*?color:\s*var\(--profile-muted\)\s*!important;/,
+  'The featured brand supporting copy should match normal light-card copy.',
+);

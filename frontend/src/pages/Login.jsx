@@ -162,7 +162,11 @@ export default function Login() {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+    if (!res.ok) {
+      const error = new Error(data.error || t('index.admin_mfa_failed'));
+      error.code = data.code;
+      throw error;
+    }
     return data.publicKey || data;
   }
 
@@ -206,8 +210,14 @@ export default function Login() {
       setRecoveryCodes(Array.isArray(data.recoveryCodes) ? data.recoveryCodes : []);
       setAdminMfaStage('recovery-codes');
       setBootstrapToken('');
-    } catch {
-      setError(isWebAuthnSupported() ? t('index.admin_mfa_failed') : t('index.admin_mfa_unsupported'));
+    } catch (mfaError) {
+      if (mfaError?.code === 'ADMIN_MFA_SETUP_UNAVAILABLE') {
+        setAdminMfaStage(null);
+        setBootstrapToken('');
+        setError(t('index.admin_mfa_setup_unavailable'));
+      } else {
+        setError(isWebAuthnSupported() ? t('index.admin_mfa_failed') : t('index.admin_mfa_unsupported'));
+      }
     } finally {
       setLoading(false);
     }

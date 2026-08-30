@@ -24,7 +24,11 @@ assertIncludes(addShoesSource, 'add-shoes-page add-shoes-profile-redesign', 'Add
 assertIncludes(addShoesSource, 'data-design-reference="profile-dashboard"', 'Add Shoes Profile reference lock');
 assertIncludes(addShoesSource, 'className="add-shoes-brand-deck-card is-active"', 'Add Shoes featured brand should share the compact brand-card class');
 assertIncludes(addShoesSource, '<ShoeBrandLogo brand={featuredBrand.brand} fallbackEmoji={featuredBrand.logo} />', 'Add Shoes featured brand should use the normal logo tile');
-assert.doesNotMatch(addShoesSource, /add-shoes-brand-deck-feature/, 'Add Shoes should not render a separate oversized featured brand card.');
+assert.doesNotMatch(
+  addShoesSource,
+  /add-shoes-brand-deck-feature/,
+  'Add Shoes should not render a separate oversized featured brand card.',
+);
 assert.match(
   addShoesSource,
   /<div className="add-shoes-brand-deck-grid">[\s\S]*?featuredBrand \? \([\s\S]*?className="add-shoes-brand-deck-card is-active"/,
@@ -122,12 +126,12 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /onClick=\{\(\) => \{\s*setBrowserCategory\(categoryKey\);\s*setBrowserType\('all'\);\s*\}\}/,
+  /function handleCategoryFilterPick\(categoryKey\) \{\s*setBrowserCategory\(categoryKey\);\s*setBrowserType\('all'\);\s*\}/,
   'Selecting an Add Shoes category should clear any selected type filter.',
 );
 assert.match(
   addShoesSource,
-  /onClick=\{\(\) => \{\s*setBrowserType\(typeKey\);\s*setBrowserCategory\('all'\);\s*\}\}/,
+  /function handleTypeFilterPick\(typeKey\) \{\s*setBrowserType\(typeKey\);\s*setBrowserCategory\(null\);\s*\}/,
   'Selecting an Add Shoes type should clear any selected category filter.',
 );
 

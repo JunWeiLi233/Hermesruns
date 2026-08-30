@@ -23,6 +23,10 @@ public class MuscleTrainingSessionService {
             MuscleTrainingPreference preference,
             MuscleTrainingMetricsService.PlanMetrics metrics
     ) {
+        CustomStrengthSession customSession = parseCustomSession(sessionType);
+        if (customSession != null) {
+            return buildCustomSessionDefinition(sessionType, customSession, preference, metrics);
+        }
         int targetRpe = targetRpe(preference, sessionType, metrics);
         int duration = sessionDurationMinutes(preference, sessionType, metrics);
         boolean shortSession = duration <= 25;
@@ -44,6 +48,64 @@ public class MuscleTrainingSessionService {
                 blocks
         );
     }
+
+    private SessionDefinitionDto buildCustomSessionDefinition(
+            String sessionType,
+            CustomStrengthSession customSession,
+            MuscleTrainingPreference preference,
+            MuscleTrainingMetricsService.PlanMetrics metrics
+    ) {
+        String baseType = switch (customSession.focus()) {
+            case "CALVES_ANKLES", "CORE_STABILITY", "MOBILITY_RESET" -> "RESILIENCE_CAPACITY";
+            default -> "FOUNDATION_STRENGTH";
+        };
+        SessionDefinitionDto base = buildSessionDefinition(baseType, preference, metrics);
+        int duration = switch (customSession.dose()) {
+            case "MICRO" -> Math.min(20, base.durationMinutes());
+            case "STRONG" -> Math.min(preference.getSessionMinutes(), base.durationMinutes() + 10);
+            default -> base.durationMinutes();
+        };
+        int targetRpe = switch (customSession.dose()) {
+            case "MICRO" -> Math.min(5, base.targetRpe());
+            case "STRONG" -> Math.min(8, base.targetRpe() + 1);
+            default -> base.targetRpe();
+        };
+        return new SessionDefinitionDto(
+                sessionType,
+                base.title(),
+                customEmphasis(customSession.focus(), base.emphasis()),
+                duration,
+                targetRpe,
+                base.optional(),
+                base.blocks()
+        );
+    }
+
+    private CustomStrengthSession parseCustomSession(String sessionType) {
+        if (sessionType == null || !sessionType.startsWith("CUSTOM_")) {
+            return null;
+        }
+        for (String dose : List.of("MICRO", "STANDARD", "STRONG")) {
+            String suffix = "_" + dose;
+            if (sessionType.endsWith(suffix)) {
+                String focus = sessionType.substring("CUSTOM_".length(), sessionType.length() - suffix.length());
+                return focus.isBlank() ? null : new CustomStrengthSession(focus, dose);
+            }
+        }
+        return null;
+    }
+
+    private String customEmphasis(String focus, String fallback) {
+        return switch (focus) {
+            case "POSTERIOR_CHAIN" -> "Posterior-chain strength, calf resilience, and trunk control";
+            case "CALVES_ANKLES" -> "Calf capacity, ankle control, and lower-leg durability";
+            case "CORE_STABILITY" -> "Trunk control, anti-rotation strength, and running posture";
+            case "MOBILITY_RESET" -> "Low-cost mobility, range of motion, and recovery control";
+            default -> fallback;
+        };
+    }
+
+    private record CustomStrengthSession(String focus, String dose) {}
 
     private String titleForSession(String sessionType) {
         return switch (sessionType) {
