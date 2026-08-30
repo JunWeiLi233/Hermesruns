@@ -228,6 +228,13 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data
   }
 }
 
+/* The exercise workspace owns its rows and filters; keep the section itself
+   transparent so the heading does not sit on a separate white strip. */
+#root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-exercises {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) :is(.mt-kicker, .mt-top-reference-head .mt-kicker, .muscle-profile-kicker, .strength-plan-section-label) {
   color: var(--mtpa-accent) !important;
   font-size: 0.68rem;

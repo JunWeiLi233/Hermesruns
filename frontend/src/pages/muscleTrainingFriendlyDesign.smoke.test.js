@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
 const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training.css'), 'utf8');
+const profileAlignmentSource = readFileSync(path.join(here, '../styles/muscle-training-profile-alignment.css'), 'utf8');
 const contrastSource = readFileSync(path.join(here, '../styles/contrast-fixes.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
@@ -1036,6 +1037,22 @@ assert.match(
   cssSource,
   /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\(\.mt-card,\s*\.mt-exercises,\s*\.mt-top-panel,\s*\.mt-top-reference-card,\s*\.mt-video-card,\s*\.mt-reference-card,\s*\.strength-plan-control-deck,\s*\.muscle-panel\)\s*\{[\s\S]*color:\s*#2c2f30 !important;/,
   'White theme should convert main cards to dark text on light surfaces.',
+);
+
+const whiteThemeSurfaceRuleIndex = profileAlignmentSource.indexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) :is(.mt-card, .mt-exercises,',
+);
+const whiteThemeExercisesResetIndex = profileAlignmentSource.lastIndexOf(
+  '#root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-exercises',
+);
+assert.ok(
+  whiteThemeSurfaceRuleIndex >= 0 && whiteThemeExercisesResetIndex > whiteThemeSurfaceRuleIndex,
+  'The white-theme exercise-section reset should be defined after the broad light-surface rule so the title band stays transparent.',
+);
+assert.match(
+  profileAlignmentSource.slice(whiteThemeExercisesResetIndex, whiteThemeExercisesResetIndex + 320),
+  /background:\s*transparent !important;[\s\S]*box-shadow:\s*none !important;/,
+  'The white-theme exercise section should not paint a separate strip behind its heading.',
 );
 
 assert.match(
