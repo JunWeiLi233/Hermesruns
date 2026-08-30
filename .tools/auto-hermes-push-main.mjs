@@ -92,21 +92,40 @@ function resolveGitDir(rootDir) {
   return path.resolve(rootDir, match[1].trim());
 }
 
-function readGitConfigValue(rootDir, section, key) {
+function resolveGitCommonDir(rootDir) {
   const gitDir = resolveGitDir(rootDir);
   if (!gitDir) return "";
-  const configPath = path.join(gitDir, "config");
-  if (!fs.existsSync(configPath)) return "";
-  let activeSection = "";
-  for (const line of fs.readFileSync(configPath, "utf8").split(/\r?\n/)) {
-    const sectionMatch = line.match(/^\s*\[(.+)]\s*$/);
-    if (sectionMatch) {
-      activeSection = sectionMatch[1].trim();
-      continue;
+  const commondirPath = path.join(gitDir, "commondir");
+  if (!fs.existsSync(commondirPath)) return gitDir;
+  const commondir = fs.readFileSync(commondirPath, "utf8").trim();
+  return commondir ? path.resolve(gitDir, commondir) : gitDir;
+}
+
+function resolveGitConfigPaths(rootDir) {
+  const gitDir = resolveGitDir(rootDir);
+  if (!gitDir) return [];
+  const commonDir = resolveGitCommonDir(rootDir);
+  return [...new Set([
+    path.join(gitDir, "config.worktree"),
+    path.join(gitDir, "config"),
+    path.join(commonDir, "config.worktree"),
+    path.join(commonDir, "config"),
+  ])].filter((configPath) => fs.existsSync(configPath));
+}
+
+function readGitConfigValue(rootDir, section, key) {
+  for (const configPath of resolveGitConfigPaths(rootDir)) {
+    let activeSection = "";
+    for (const line of fs.readFileSync(configPath, "utf8").split(/\r?\n/)) {
+      const sectionMatch = line.match(/^\s*\[(.+)]\s*$/);
+      if (sectionMatch) {
+        activeSection = sectionMatch[1].trim();
+        continue;
+      }
+      if (activeSection !== section) continue;
+      const keyMatch = line.match(/^\s*([^=]+?)\s*=\s*(.+?)\s*$/);
+      if (keyMatch && keyMatch[1].trim() === key) return keyMatch[2].trim();
     }
-    if (activeSection !== section) continue;
-    const keyMatch = line.match(/^\s*([^=]+?)\s*=\s*(.+?)\s*$/);
-    if (keyMatch && keyMatch[1].trim() === key) return keyMatch[2].trim();
   }
   return "";
 }
@@ -114,26 +133,36 @@ function readGitConfigValue(rootDir, section, key) {
 function readGitHead(rootDir) {
   const gitDir = resolveGitDir(rootDir);
   if (!gitDir) return { branch: "", head: "" };
+  const commonDir = resolveGitCommonDir(rootDir);
   const headPath = path.join(gitDir, "HEAD");
   if (!fs.existsSync(headPath)) return { branch: "", head: "" };
   const headContent = fs.readFileSync(headPath, "utf8").trim();
   const refMatch = headContent.match(/^ref:\s+refs\/heads\/(.+)$/);
   if (!refMatch) return { branch: "", head: headContent };
   const branch = refMatch[1];
-  const refPath = path.join(gitDir, "refs", "heads", ...branch.split("/"));
-  let head = fs.existsSync(refPath) ? fs.readFileSync(refPath, "utf8").trim() : "";
+  const refPaths = [...new Set([
+    path.join(gitDir, "refs", "heads", ...branch.split("/")),
+    path.join(commonDir, "refs", "heads", ...branch.split("/")),
+  ])];
+  let head = "";
+  const refPath = refPaths.find((candidate) => fs.existsSync(candidate));
+  if (refPath) head = fs.readFileSync(refPath, "utf8").trim();
   if (!head) {
-    const packedRefs = path.join(gitDir, "packed-refs");
-    if (fs.existsSync(packedRefs)) {
+    for (const packedRefs of [...new Set([
+      path.join(gitDir, "packed-refs"),
+      path.join(commonDir, "packed-refs"),
+    ])]) {
+      if (!fs.existsSync(packedRefs)) continue;
       const packed = fs.readFileSync(packedRefs, "utf8");
       const line = packed.split(/\r?\n/).find((candidate) => candidate.endsWith(` refs/heads/${branch}`));
       head = line ? line.split(/\s+/)[0] : "";
+      if (head) break;
     }
   }
   return { branch, head };
 }
 
-function loadDryRunGitMetadata(rootDir, remoteName) {
+export function loadDryRunGitMetadata(rootDir, remoteName) {
   const head = readGitHead(rootDir);
   return {
     remoteUrl: readGitConfigValue(rootDir, `remote "${remoteName}"`, "url"),

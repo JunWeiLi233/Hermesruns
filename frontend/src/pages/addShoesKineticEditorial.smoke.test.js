@@ -7,10 +7,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const addShoesSource = readFileSync(path.join(here, 'AddShoes.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
 
-assert.match(
+assert.doesNotMatch(
   addShoesSource,
-  /add-shoes-editorial-hero/,
-  'Add Shoes should expose a dedicated editorial hero shell.',
+  /<section className="add-shoes-editorial-hero">[\s\S]*?<\/section>/,
+  'Add Shoes should remove the entire editorial hero grid from the page.',
+);
+
+assert.doesNotMatch(
+  addShoesSource,
+  /<article className="add-shoes-status-card">/,
+  'Add Shoes should remove the status-card rail that belongs to the removed hero grid.',
 );
 
 assert.match(
