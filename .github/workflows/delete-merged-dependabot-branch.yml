@@ -29,7 +29,7 @@ jobs:
               });
               core.info(`Deleted merged Dependabot branch ${branchName}`);
             } catch (error) {
-              if (error.status === 422 && error.message === "Reference does not exist") {
+              if (error.status === 422 && error.message?.startsWith("Reference does not exist")) {
                 core.info(`Dependabot branch ${branchName} was already deleted; cleanup is complete.`);
               } else {
                 throw error;
