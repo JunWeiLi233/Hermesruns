@@ -11,7 +11,7 @@ const workflowExpectations = [
     required: [
       /actions\/checkout@v[67]/,
       /actions\/setup-node@v[67]/,
-      "actions/setup-java@v5",
+      /actions\/setup-java@v(?:5|6(?:\.\d+\.\d+)?)/,
     ],
     banned: [
       "actions/checkout@v4",
@@ -24,7 +24,7 @@ const workflowExpectations = [
     required: [
       /actions\/checkout@v[67]/,
       /actions\/setup-node@v[67]/,
-      "actions/setup-java@v5",
+      /actions\/setup-java@v(?:5|6(?:\.\d+\.\d+)?)/,
     ],
     banned: [
       "actions/checkout@v4",
@@ -37,7 +37,7 @@ const workflowExpectations = [
     required: [
       /actions\/checkout@v[67]/,
       /actions\/setup-node@v[67]/,
-      "actions/setup-java@v5",
+      /actions\/setup-java@v(?:5|6(?:\.\d+\.\d+)?)/,
     ],
     banned: [
       "actions/checkout@v4",
