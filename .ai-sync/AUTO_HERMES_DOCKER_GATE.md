@@ -1,16 +1,15 @@
 # Auto-Hermes Docker Gate
 
-Generated: 2026-08-30T01:48:54.074Z
+Generated: 2026-08-30T04:20:04.444Z
 Passed: yes
-Git Head: 8ce090d9a6ce1b511ffa34c94cba08971499e2ef
-Command: docker build -f C:\Users\Junwei\.codex\worktrees\8c02\Hermesruns\Dockerfile -t hermes-autohermes-gate:local .
+Git Head: 5b6f8a1949a92be478470d1e0991485bb9dc534e
+Command: docker build -f D:\Hermesruns-pr-readiness\Dockerfile -t hermes-autohermes-gate:local .
 Reason: Docker publish gate passed for the current working tree.
 
 ## Status Snapshot
-```text
-M .tools/auto-hermes-push-main.mjs
- M .tools/auto-hermes-push-main.test.mjs
-```
+
+clean working tree
+
 
 ## Output
 
