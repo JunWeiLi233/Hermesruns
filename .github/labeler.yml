@@ -1,0 +1,11 @@
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+enhancement:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "frontend/**"
+          - "backend/**"

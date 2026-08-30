@@ -17,6 +17,18 @@ jobs:
       pull-requests: write
 
     steps:
+    - uses: actions/checkout@v7
+    - name: Check labeler configuration
+      id: labeler-config
+      shell: bash
+      run: |
+        if [[ -f .github/labeler.yml ]]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "Labeler configuration is not present; skipping labeling."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        fi
     - uses: actions/labeler@v4
+      if: steps.labeler-config.outputs.configured == 'true'
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

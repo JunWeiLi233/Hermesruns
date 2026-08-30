@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styles = readFileSync(path.join(here, '../styles/_split/analysis.css'), 'utf8');
+const styles = readFileSync(path.join(here, '../styles/_split/analysis.css'), 'utf8').replace(/\r\n/g, '\n');
 const kickerSelectors = [
   '.analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker',
   '.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker',
