@@ -159,7 +159,7 @@ public class PersonalizedStrengthPlanEngine {
             RunnerStrengthSignals.StrengthDose dose) {
         RunnerStrengthSignals.RunDaySignal previousDay = signalFor(schedule, day.date().minusDays(1));
         if (isRace(day) || day.keyRun() || day.longRun()
-                || (previousDay != null && previousDay.longRun())
+                || (previousDay != null && (previousDay.keyRun() || previousDay.longRun()))
                 || preRunBuffer(schedule, day.date(), dose) != BufferType.NONE) {
             return Integer.MIN_VALUE;
         }

@@ -415,6 +415,7 @@ export default function RacesDetail() {
   const [runs, setRuns] = useState([]);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
+  const hasOfficialCourseMap = isOfficialCourseMapSource(courseMapData.source);
   const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
   const [elevationProfileSource, setElevationProfileSource] = useState('');
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
@@ -503,7 +504,7 @@ export default function RacesDetail() {
     if (!shouldFetch) {
       if (hasAlignedElevationSamples) {
         setElevationProfileSamples(courseMapData.elevationSamples);
-        setElevationProfileSource(t('races.detail_course_route_source'));
+        setElevationProfileSource(t(hasOfficialCourseMap ? 'races.detail_course_route_official_source' : 'races.detail_course_route_source'));
       } else {
         setElevationProfileSource('');
         setElevationProfileSamples([]);
@@ -534,7 +535,7 @@ export default function RacesDetail() {
     return () => {
       cancelled = true;
     };
-  }, [courseMapData.elevationSamples, courseMapRequestSettled, isAuthenticated, race, t]);
+  }, [courseMapData.elevationSamples, courseMapRequestSettled, hasOfficialCourseMap, isAuthenticated, race, t]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -636,7 +637,6 @@ export default function RacesDetail() {
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const hasAlignedRoute = mapTrust.trustedRouteGeometry && courseMapData.routeAvailable && routeMapPoints.length > 1;
-  const hasOfficialCourseMap = isOfficialCourseMapSource(courseMapData.source);
   const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust.trustedOverlay;
   const courseMapImageOverlayBounds = useMemo(
     () => (hasTrustedCourseMapOverlay && courseMapData.overlayImageUrl

@@ -261,7 +261,7 @@ class MuscleTrainingControllerTests {
                 appliedDay = day;
             }
         }
-        assertThat(strengthDays).isEqualTo(1);
+        assertThat(strengthDays).isEqualTo(2);
         assertThat(appliedDay).isNotNull();
         assertThat(hasNoStrength(appliedDay)).isFalse();
     }
