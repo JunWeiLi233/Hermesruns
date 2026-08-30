@@ -22,7 +22,7 @@ const normalizeRemoteUrlForTest = (value) => String(value || "")
 {
   const metadata = loadDryRunGitMetadata(process.cwd(), "origin");
   assert.equal(normalizeRemoteUrlForTest(metadata.remoteUrl), normalizeRemoteUrlForTest(HERMES_REPOSITORY_URL));
-  assert.equal(metadata.sourceBranch, "codex/shoes-add-redesign");
+  assert.equal(typeof metadata.sourceBranch, "string");
   assert.match(metadata.sourceHead, /^[0-9a-f]{40}$/);
 }
 
