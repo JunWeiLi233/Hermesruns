@@ -1,13 +1,11 @@
 {
-  "generatedAt": "2026-08-30T01:47:20.071Z",
+  "generatedAt": "2026-08-30T01:48:54.074Z",
   "passed": true,
-  "gitHead": "dcc845be015c5d54a00514794ba44a8422daef56",
-  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\n M .tools/auto-hermes-push-main.mjs\n M .tools/auto-hermes-push-main.test.mjs",
+  "gitHead": "8ce090d9a6ce1b511ffa34c94cba08971499e2ef",
+  "statusSnapshot": "M .tools/auto-hermes-push-main.mjs\n M .tools/auto-hermes-push-main.test.mjs",
   "changedPaths": [
-    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
-    ".tools/auto-hermes-push-main.mjs",
     ".tools/auto-hermes-push-main.test.mjs",
-    "ai-sync/AUTO_HERMES_DOCKER_GATE.json"
+    "tools/auto-hermes-push-main.mjs"
   ],
   "command": "docker build -f C:\\Users\\Junwei\\.codex\\worktrees\\8c02\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
