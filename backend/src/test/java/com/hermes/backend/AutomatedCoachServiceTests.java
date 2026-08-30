@@ -49,7 +49,8 @@ class AutomatedCoachServiceTests {
                         mock(DailySleepDataRepository.class),
                         mock(DailyHRVDataRepository.class),
                         mock(DailyStressDataRepository.class),
-                        mock(DailyWellnessSummaryRepository.class)
+                        mock(DailyWellnessSummaryRepository.class),
+                        mock(ActivityRepository.class)
                 ),
                 mock(ShoeTrackerService.class),
                 activityRepository
@@ -112,7 +113,8 @@ class AutomatedCoachServiceTests {
                         mock(DailySleepDataRepository.class),
                         mock(DailyHRVDataRepository.class),
                         mock(DailyStressDataRepository.class),
-                        mock(DailyWellnessSummaryRepository.class)
+                        mock(DailyWellnessSummaryRepository.class),
+                        mock(ActivityRepository.class)
                 ),
                 mock(ShoeTrackerService.class),
                 activityRepository
@@ -299,7 +301,7 @@ class AutomatedCoachServiceTests {
                 stateRepository,
                 scheduleRepository,
                 mock(CoachTrainingBlockRepository.class),
-                new ReadinessService(sleepRepository, hrvRepository, stressRepository, wellnessRepository)
+                new ReadinessService(sleepRepository, hrvRepository, stressRepository, wellnessRepository, mock(ActivityRepository.class))
         );
 
         List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = s.getSchedule(runner, 1);
@@ -309,7 +311,7 @@ class AutomatedCoachServiceTests {
         assertThat(todayDto.workoutType()).isEqualTo(CoachWorkoutType.REST.name());
         assertThat(todayDto.phase()).isEqualTo("onboarding");
         assertThat(todayDto.readinessAdjusted()).isFalse();
-        assertThat(state.getReadinessScore()).isEqualTo(92);
+        assertThat(state.getReadinessScore()).isEqualTo(89);
         assertThat(state.getReadinessVerdict()).isEqualTo("GO");
     }
 
@@ -365,7 +367,8 @@ class AutomatedCoachServiceTests {
                         mock(DailySleepDataRepository.class),
                         mock(DailyHRVDataRepository.class),
                         mock(DailyStressDataRepository.class),
-                        mock(DailyWellnessSummaryRepository.class)
+                        mock(DailyWellnessSummaryRepository.class),
+                        mock(ActivityRepository.class)
                 ),
                 shoeTracker,
                 activityRepository
@@ -394,7 +397,8 @@ class AutomatedCoachServiceTests {
                         mock(DailySleepDataRepository.class),
                         mock(DailyHRVDataRepository.class),
                         mock(DailyStressDataRepository.class),
-                        mock(DailyWellnessSummaryRepository.class)
+                        mock(DailyWellnessSummaryRepository.class),
+                        mock(ActivityRepository.class)
                 )
         );
     }
