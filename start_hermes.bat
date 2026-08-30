@@ -46,10 +46,8 @@ if exist "%ROOT%.venv\Scripts\python.exe" (
 :: Never silently replace another tree's backend on localhost:8080. Identify the
 :: tree that currently owns :8080 (runtime marker first, then the Spring Boot
 :: argfile of the listening java process) and abort unless it is THIS tree.
-:: Resolver exit codes: 0 = same tree, or no listener + no stale foreign marker,
+:: Resolver exit codes: 0 = same tree, or no listener after stale-marker cleanup,
 ::                      2 = :8080 is owned by another tree,
-::                      3 = no listener, but a stale runtime.json names another
-::                      tree that was not stopped cleanly,
 ::                      4 = owner unidentifiable;
 ::                      any other nonzero errorlevel (unexpected powershell
 ::                      failure) is also routed to the unknown path below.
@@ -61,11 +59,14 @@ powershell -NoProfile -Command ^
     "$listenerPids = @(netstat -ano | Select-String ':8080\s+.*LISTENING' | ForEach-Object { ($_ -replace '.*\s', '').Trim() } | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' } | Sort-Object -Unique);" ^
     "if ($listenerPids.Count -eq 0) {" ^
     "  if (Test-Path $marker) {" ^
+    "    $markerRoot = $null;" ^
     "    try {" ^
     "      $m = Get-Content $marker -Raw | ConvertFrom-Json;" ^
-    "      $markerRoot = ([string]$m.projectRoot).TrimEnd('\');" ^
-    "      if ($markerRoot -and $markerRoot -ne $thisRoot) { [IO.File]::WriteAllText('%GUARD_FILE%', $markerRoot, [Text.Encoding]::ASCII); exit 3 }" ^
+    "      $markerRoot = ([string]$m.projectRoot).TrimEnd('\')" ^
     "    } catch { }" ^
+    "    Remove-Item $marker -Force -ErrorAction SilentlyContinue;" ^
+    "    if (Test-Path $marker) { Remove-Item '%GUARD_FILE%' -ErrorAction SilentlyContinue; exit 4 };" ^
+    "    if ($markerRoot -and $markerRoot -ne $thisRoot) { Write-Host ('[Hermes] Cleared stale runtime marker from inactive tree: ' + $markerRoot) } else { Write-Host '[Hermes] Cleared stale runtime marker; port 8080 is free.' }" ^
     "  };" ^
     "  Remove-Item '%GUARD_FILE%' -ErrorAction SilentlyContinue; exit 0" ^
     "};" ^
@@ -96,7 +97,6 @@ powershell -NoProfile -Command ^
     "if ($owner) { [IO.File]::WriteAllText('%GUARD_FILE%', $owner, [Text.Encoding]::ASCII); exit 2 };" ^
     "exit 0"
 if errorlevel 4 goto :guard_unknown
-if errorlevel 3 goto :guard_stale_marker
 if errorlevel 2 goto :guard_cross_tree
 if errorlevel 1 goto :guard_unknown
 goto :takeover

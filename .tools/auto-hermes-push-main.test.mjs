@@ -12,9 +12,16 @@ const {
   runAutoHermesPushMain,
 } = await import(moduleUrl);
 
+const normalizeRemoteUrlForTest = (value) => String(value || "")
+  .trim()
+  .replace(/\\/g, "/")
+  .replace(/\.git$/i, "")
+  .replace(/\/+$/g, "")
+  .toLowerCase();
+
 {
   const metadata = loadDryRunGitMetadata(process.cwd(), "origin");
-  assert.equal(metadata.remoteUrl, HERMES_REPOSITORY_URL);
+  assert.equal(normalizeRemoteUrlForTest(metadata.remoteUrl), normalizeRemoteUrlForTest(HERMES_REPOSITORY_URL));
   assert.equal(metadata.sourceBranch, "codex/shoes-add-redesign");
   assert.match(metadata.sourceHead, /^[0-9a-f]{40}$/);
 }
@@ -166,3 +173,20 @@ const {
 }
 
 console.log("PASS auto-hermes-push-main");
+{
+  const launcher = fs.readFileSync(path.resolve("start_hermes.bat"), "utf8");
+  const noListenerStart = launcher.indexOf('"if ($listenerPids.Count -eq 0) {"');
+  const liveListenerStart = launcher.indexOf('"$owner = $null;"', noListenerStart);
+  assert.notEqual(noListenerStart, -1, "start_hermes.bat should expose a no-listener runtime-marker branch");
+  assert.notEqual(liveListenerStart, -1, "start_hermes.bat should keep a live-listener ownership branch");
+  const noListenerBranch = launcher.slice(noListenerStart, liveListenerStart);
+  assert.match(
+    noListenerBranch,
+    /Remove-Item \$marker -Force -ErrorAction SilentlyContinue/,
+    "a stale marker should be removed when port 8080 is free",
+  );
+  assert.doesNotMatch(noListenerBranch, /exit 3/, "a free port must not be blocked by a stale marker");
+  assert.doesNotMatch(launcher, /if errorlevel 3 goto :guard_stale_marker/);
+  assert.match(launcher, /if \(\$owner\)[\s\S]*exit 2/, "live foreign listeners stay protected");
+  assert.match(launcher, /if errorlevel 2 goto :guard_cross_tree/);
+}
