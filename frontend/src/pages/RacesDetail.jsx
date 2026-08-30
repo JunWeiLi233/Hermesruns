@@ -415,8 +415,8 @@ export default function RacesDetail() {
   const [runs, setRuns] = useState([]);
   const [resolvedHeroImage, setResolvedHeroImage] = useState(() => getCachedRaceImage(location.state?.race || worldRaceCatalog.find((entry) => entry.id === raceId) || null).imageUrl || '');
   const [courseMapData, setCourseMapData] = useState(EMPTY_COURSE_MAP);
+  const hasOfficialCourseMap = isOfficialCourseMapSource(courseMapData.source);
   const [courseMapRequestSettled, setCourseMapRequestSettled] = useState(false);
-  const [elevationProfileImage, setElevationProfileImage] = useState('');
   const [elevationProfileSource, setElevationProfileSource] = useState('');
   const [elevationProfileSamples, setElevationProfileSamples] = useState([]);
   const [activeElevationPointIndex, setActiveElevationPointIndex] = useState(null);
@@ -504,9 +504,8 @@ export default function RacesDetail() {
     if (!shouldFetch) {
       if (hasAlignedElevationSamples) {
         setElevationProfileSamples(courseMapData.elevationSamples);
-        setElevationProfileSource(t('races.detail_course_route_source'));
+        setElevationProfileSource(t(hasOfficialCourseMap ? 'races.detail_course_route_official_source' : 'races.detail_course_route_source'));
       } else {
-        setElevationProfileImage('');
         setElevationProfileSource('');
         setElevationProfileSamples([]);
       }
@@ -522,13 +521,11 @@ export default function RacesDetail() {
         });
         const data = await apiJson(`/api/races/elevation-profile?${params.toString()}`);
         if (!cancelled) {
-          setElevationProfileImage(typeof data?.imageUrl === 'string' ? data.imageUrl : '');
           setElevationProfileSource(typeof data?.source === 'string' ? data.source : '');
           setElevationProfileSamples(Array.isArray(data?.profileSamples) ? data.profileSamples.map((value) => Number(value)).filter((value) => Number.isFinite(value)) : []);
         }
       } catch {
         if (!cancelled) {
-          setElevationProfileImage('');
           setElevationProfileSource('');
           setElevationProfileSamples([]);
         }
@@ -538,7 +535,7 @@ export default function RacesDetail() {
     return () => {
       cancelled = true;
     };
-  }, [courseMapData.elevationSamples, courseMapRequestSettled, isAuthenticated, race, t]);
+  }, [courseMapData.elevationSamples, courseMapRequestSettled, hasOfficialCourseMap, isAuthenticated, race, t]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -640,7 +637,6 @@ export default function RacesDetail() {
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const hasAlignedRoute = mapTrust.trustedRouteGeometry && courseMapData.routeAvailable && routeMapPoints.length > 1;
-  const hasOfficialCourseMap = isOfficialCourseMapSource(courseMapData.source);
   const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust.trustedOverlay;
   const courseMapImageOverlayBounds = useMemo(
     () => (hasTrustedCourseMapOverlay && courseMapData.overlayImageUrl
@@ -1399,22 +1395,6 @@ export default function RacesDetail() {
                       <span>{elevationProfileSource || t('races.detail_course_empty_body')}</span>
                     </div>
                   )}
-                </div>
-                <div className="race-detail-course-footnote">
-                  <span>
-                    {t(courseMapData.elevationSamples.length && !hasOfficialCourseMap
-                      ? 'races.detail_course_hover_hint_aligned'
-                      : 'races.detail_course_hover_hint')}
-                  </span>
-                  {courseMapData.elevationSamples.length ? (
-                    <span>{t(hasOfficialCourseMap ? 'races.detail_course_route_official_source' : 'races.detail_course_route_source')}</span>
-                  ) : elevationProfileImage ? (
-                    <a href={elevationProfileImage} target="_blank" rel="noreferrer">
-                      {t('races.detail_course_source_link')}
-                    </a>
-                  ) : elevationProfileSource ? (
-                    <span>{elevationProfileSource}</span>
-                  ) : null}
                 </div>
                 <div className="race-detail-course-axis">
                   <span>{t('races.detail_course_axis_start')}</span>

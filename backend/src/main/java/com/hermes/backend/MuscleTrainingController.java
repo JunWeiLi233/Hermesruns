@@ -51,8 +51,8 @@ public class MuscleTrainingController {
                 ? automatedCoachService.getCoachStatePreservingSchedule(runner)
                 : automatedCoachService.getCoachState(runner);
         List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule = preserveManualSchedule
-                ? automatedCoachService.getSchedulePreservingSchedule(runner, 7)
-                : automatedCoachService.getSchedule(runner, 7);
+                ? automatedCoachService.getSchedulePreservingSchedule(runner, 28)
+                : automatedCoachService.getSchedule(runner, 28);
 
         return ResponseEntity.ok(plannerService.getPlan(runner, coachState, schedule));
     }
