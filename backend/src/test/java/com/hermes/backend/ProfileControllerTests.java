@@ -791,6 +791,7 @@ class ProfileControllerTests {
                 "steady", 86,
                 82, "GREEN",
                 80, 74, 83, 72,
+                80, 80,
                 82, true, true, "GARMIN",
                 190, 49, null,
                 null
@@ -1058,6 +1059,7 @@ class ProfileControllerTests {
                 "ready", 88,
                 84, "GREEN",
                 81, 75, 85, 73,
+                80, 80,
                 84, true, true, "GARMIN",
                 188, 50, null,
                 null

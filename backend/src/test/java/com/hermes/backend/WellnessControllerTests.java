@@ -143,7 +143,7 @@ class WellnessControllerTests {
             String restingHeartRate
     ) {
         return new ReadinessService.MultiSourceReadinessSnapshot(
-                new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75),
+                new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75, 75, 0),
                 new ReadinessService.MetricSources(sleep, hrv, restingHeartRate, stress)
         );
     }

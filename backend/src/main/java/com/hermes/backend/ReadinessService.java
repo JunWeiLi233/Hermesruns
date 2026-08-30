@@ -1,25 +1,71 @@
 package com.hermes.backend;
 
 import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Multi-source readiness scoring.
+ *
+ * Model (research-anchored):
+ * - Five components, each 0-100: sleep, HRV, resting HR, stress, and a
+ *   training-load readiness proxy computed from run history (available even
+ *   when no wearable/wellness data exists).
+ * - Components are aggregated with fixed weights (sleep .28, HRV .24, RHR .14,
+ *   stress .14, load .20) over the components that actually have data, then
+ *   shrunk toward the neutral score (75) in proportion to the missing
+ *   evidence weight: score = weightedMean * conf + 75 * (1 - conf). Partial
+ *   data therefore moves the score proportionally instead of freezing it at
+ *   neutral, and thin evidence can neither prove GO nor force REST.
+ * - HRV is interpreted against the runner's own rolling baseline when one
+ *   exists (>=5 days in 28): a change smaller than the smallest worthwhile
+ *   change (0.5 x baseline SD, per Plews/Buchheit) is neutral. Absolute ms
+ *   bands are only the fallback.
+ * - The load proxy maps the EWMA ACWR onto the 0.8-1.3 "sweet spot"
+ *   (Gabbett 2016), penalises Foster weekly monotony above 2.0, and penalises
+ *   quality sessions spaced closer than 24/48h.
+ */
 @Service
 public class ReadinessService {
+    private static final double WEIGHT_SLEEP = 0.28;
+    private static final double WEIGHT_HRV = 0.24;
+    private static final double WEIGHT_RHR = 0.14;
+    private static final double WEIGHT_STRESS = 0.14;
+    private static final double WEIGHT_LOAD = 0.20;
+
+    private static final int NEUTRAL_SCORE = 75;
+    private static final int HRV_BASELINE_MIN_DAYS = 5;
+    private static final int HRV_BASELINE_WINDOW_DAYS = 28;
+    private static final int LOAD_WINDOW_DAYS = 42;
+
+    // Load proxy tiers: base for an active runner with manageable load, then
+    // ACWR / monotony / hard-session-recency adjustments.
+    private static final int LOAD_BASE = 78;
+    private static final int LOAD_SWEET_SPOT_BONUS = 7;
+    private static final int LOAD_HIGH_PENALTY = 8;
+    private static final int LOAD_SPIKE_PENALTY = 25;
+    private static final int LOAD_EXTREME_SPIKE_PENALTY = 33;
+    private static final double MONOTONY_WARN = 2.0;
+    private static final double MONOTONY_HIGH = 2.5;
+
     private final DailySleepDataRepository sleepRepository;
     private final DailyHRVDataRepository hrvRepository;
     private final DailyStressDataRepository stressRepository;
     private final DailyWellnessSummaryRepository wellnessRepository;
+    private final ActivityRepository activityRepository;
 
     public ReadinessService(DailySleepDataRepository sleepRepository,
                             DailyHRVDataRepository hrvRepository,
                             DailyStressDataRepository stressRepository,
-                            DailyWellnessSummaryRepository wellnessRepository) {
+                            DailyWellnessSummaryRepository wellnessRepository,
+                            ActivityRepository activityRepository) {
         this.sleepRepository = sleepRepository;
         this.hrvRepository = hrvRepository;
         this.stressRepository = stressRepository;
         this.wellnessRepository = wellnessRepository;
+        this.activityRepository = activityRepository;
     }
 
     public List<ReadinessDay> getReadinessTrend(Runner runner, int days) {
@@ -28,12 +74,14 @@ public class ReadinessService {
 
         Map<LocalDate, List<DailySleepData>> sleepMap = sleepRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start, end)
                 .stream().collect(Collectors.groupingBy(DailySleepData::getDate));
-        Map<LocalDate, List<DailyHRVData>> hrvMap = hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start, end)
+        Map<LocalDate, List<DailyHRVData>> hrvMap = hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start.minusDays(HRV_BASELINE_WINDOW_DAYS * 2L), end)
                 .stream().collect(Collectors.groupingBy(DailyHRVData::getDate));
         Map<LocalDate, List<DailyStressData>> stressMap = stressRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start, end)
                 .stream().collect(Collectors.groupingBy(DailyStressData::getDate));
         Map<LocalDate, List<DailyWellnessSummary>> wellnessMap = wellnessRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start, end)
                 .stream().collect(Collectors.groupingBy(DailyWellnessSummary::getDate));
+
+        Map<LocalDate, List<RunMetricsProjection>> runsByDay = runsByDay(runner, start.minusDays(LOAD_WINDOW_DAYS), end);
 
         List<ReadinessDay> trend = new ArrayList<>();
         for (int i = 0; i < days; i++) {
@@ -55,12 +103,21 @@ public class ReadinessService {
                     runner == null ? null : runner.getWellnessRestingHrSource(),
                     runner == null ? null : runner.getRestingHeartRateBpm()
             );
-            ReadinessDay readiness = calculateDayReadiness(
-                    date,
-                    sleep.value(),
-                    hrv.value(),
-                    stress.value(),
-                    wellness.value()
+            Integer hrvMsToday = hrv.value() == null || hrv.value().getLastNightAvg() == null
+                    ? null
+                    : Integer.valueOf((int) Math.round(hrv.value().getLastNightAvg()));
+            double[] hrvBaseline = hrvBaselineFor(hrvMap, date);
+            Integer loadScore = computeLoadScore(trailingRuns(runsByDay, date), runner, date);
+
+            ReadinessResult readiness = computeReadiness(
+                    sleep.value() == null ? null : sleep.value().getSleepScore(),
+                    hrv.value() == null ? null : hrv.value().getStatus(),
+                    hrvMsToday,
+                    hrvBaseline,
+                    runner == null ? null : runner.getRestingHeartRateBpm(),
+                    wellness.value() == null ? null : wellness.value().getRestingHeartRate(),
+                    stress.value() == null ? null : stress.value().getOverallStressLevel(),
+                    loadScore
             );
             trend.add(new ReadinessDay(date, readiness.score(), hasSelectedDailyData(sleep, hrv, stress, wellness)));
         }
@@ -77,19 +134,28 @@ public class ReadinessService {
     }
 
     public ReadinessResult compute(CoachRunnerState state) {
-        int sleep = normalizeSleepComponent(state.getLastSleepScore());
-        int hrv = normalizeHrvComponent(state.getLastHrvStatus(), state.getLastHrvMs());
-        int rhr = normalizeRhrComponent(state.getBaselineRestingHr(), state.getLastNightRestingHr());
-        int stress = normalizeStressComponent(state.getLastStressScore());
-
-        int score = (sleep + hrv + rhr + stress) / 4;
-        String verdict;
-        if (score >= 85) verdict = "GO";
-        else if (score >= 70) verdict = "EASY";
-        else if (score >= 50) verdict = "RECOVERY";
-        else verdict = "REST";
-
-        return new ReadinessResult(score, verdict, sleep, hrv, rhr, stress);
+        if (state == null) {
+            return neutralResult();
+        }
+        LocalDate today = LocalDate.now();
+        Integer loadScore = computeLoadScore(runsForRunner(state.getRunner(), today), state.getRunner(), today);
+        double[] hrvBaseline = state.getRunner() == null
+                ? null
+                : hrvBaselineFor(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(
+                        state.getRunner(),
+                        today.minusDays(HRV_BASELINE_WINDOW_DAYS),
+                        today.minusDays(1)
+                ).stream().collect(Collectors.groupingBy(DailyHRVData::getDate)), today);
+        return computeReadiness(
+                state.getLastSleepScore(),
+                state.getLastHrvStatus(),
+                state.getLastHrvMs(),
+                hrvBaseline,
+                state.getBaselineRestingHr(),
+                state.getLastNightRestingHr(),
+                state.getLastStressScore(),
+                loadScore
+        );
     }
 
     public MultiSourceReadinessSnapshot resolveReadinessSnapshot(Runner runner, CoachRunnerState state, LocalDate date) {
@@ -130,13 +196,25 @@ public class ReadinessService {
                 ? fallback.getLastStressScore()
                 : stress.value().getOverallStressLevel();
 
+        double[] hrvBaseline = hrvMs == null && (hrvStatus == null || hrvStatus.isBlank())
+                ? null
+                : hrvBaselineFor(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(
+                        runner,
+                        targetDate.minusDays(HRV_BASELINE_WINDOW_DAYS),
+                        targetDate.minusDays(1)
+                ).stream().collect(Collectors.groupingBy(DailyHRVData::getDate)), targetDate);
+
+        Integer loadScore = computeLoadScore(runsForRunner(runner, targetDate), runner, targetDate);
+
         ReadinessResult readiness = computeReadiness(
                 sleepScore,
                 hrvStatus,
                 hrvMs,
+                hrvBaseline,
                 fallback.getBaselineRestingHr(),
                 restingHr,
-                stressScore
+                stressScore,
+                loadScore
         );
         return new MultiSourceReadinessSnapshot(
                 readiness,
@@ -146,9 +224,77 @@ public class ReadinessService {
                         sleep.value() != null,
                         hrv.value() != null,
                         wellness.value() != null,
-                        stress.value() != null
+                        stress.value() != null,
+                        loadScore != null
                 )
         );
+    }
+
+    /**
+     * Weighted aggregation with shrinkage toward neutral for missing evidence.
+     */
+    private ReadinessResult aggregate(
+            int sleep, boolean sleepAvailable,
+            int hrv, boolean hrvAvailable,
+            int rhr, boolean rhrAvailable,
+            int stress, boolean stressAvailable,
+            Integer loadScore
+    ) {
+        double weightedSum = 0;
+        double availableWeight = 0;
+        if (sleepAvailable) {
+            weightedSum += WEIGHT_SLEEP * sleep;
+            availableWeight += WEIGHT_SLEEP;
+        }
+        if (hrvAvailable) {
+            weightedSum += WEIGHT_HRV * hrv;
+            availableWeight += WEIGHT_HRV;
+        }
+        if (rhrAvailable) {
+            weightedSum += WEIGHT_RHR * rhr;
+            availableWeight += WEIGHT_RHR;
+        }
+        if (stressAvailable) {
+            weightedSum += WEIGHT_STRESS * stress;
+            availableWeight += WEIGHT_STRESS;
+        }
+        if (loadScore != null) {
+            weightedSum += WEIGHT_LOAD * loadScore;
+            availableWeight += WEIGHT_LOAD;
+        }
+
+        int score;
+        int confidence;
+        if (availableWeight <= 0) {
+            score = NEUTRAL_SCORE;
+            confidence = 0;
+        } else {
+            double weightedMean = weightedSum / availableWeight;
+            confidence = (int) Math.round(availableWeight * 100);
+            score = (int) Math.round(weightedMean * availableWeight + NEUTRAL_SCORE * (1 - availableWeight));
+        }
+
+        return new ReadinessResult(
+                score,
+                verdictFor(score),
+                sleep,
+                hrv,
+                rhr,
+                stress,
+                loadScore == null ? NEUTRAL_SCORE : loadScore,
+                confidence
+        );
+    }
+
+    private String verdictFor(int score) {
+        if (score >= 85) return "GO";
+        if (score >= 70) return "EASY";
+        if (score >= 50) return "RECOVERY";
+        return "REST";
+    }
+
+    private ReadinessResult neutralResult() {
+        return new ReadinessResult(NEUTRAL_SCORE, "EASY", NEUTRAL_SCORE, NEUTRAL_SCORE, NEUTRAL_SCORE, NEUTRAL_SCORE, NEUTRAL_SCORE, 0);
     }
 
     private boolean hasSelectedDailyData(SourceSelection<?>... selections) {
@@ -171,48 +317,63 @@ public class ReadinessService {
             Integer sleepScore,
             String hrvStatus,
             Integer hrvMs,
+            double[] hrvBaseline,
             Integer baselineRestingHr,
             Integer restingHr,
-            Integer stressScore
+            Integer stressScore,
+            Integer loadScore
     ) {
         int sleep = normalizeSleepComponent(sleepScore);
-        int hrv = normalizeHrvComponent(hrvStatus, hrvMs);
+        int hrv = normalizeHrvComponent(hrvStatus, hrvMs, hrvBaseline);
         int rhr = normalizeRhrComponent(baselineRestingHr, restingHr);
         int stress = normalizeStressComponent(stressScore);
 
-        int score = (sleep + hrv + rhr + stress) / 4;
-        String verdict;
-        if (score >= 85) verdict = "GO";
-        else if (score >= 70) verdict = "EASY";
-        else if (score >= 50) verdict = "RECOVERY";
-        else verdict = "REST";
-
-        return new ReadinessResult(score, verdict, sleep, hrv, rhr, stress);
+        return aggregate(
+                sleep, sleepScore != null,
+                hrv, hrvMs != null || (hrvStatus != null && !hrvStatus.isBlank()),
+                rhr, restingHr != null,
+                stress, stressScore != null,
+                loadScore
+        );
     }
 
     private int normalizeSleepComponent(Integer sleepScore) {
-        if (sleepScore == null) return 75;
+        if (sleepScore == null) return NEUTRAL_SCORE;
         return clamp(sleepScore);
     }
 
-    private int normalizeHrvComponent(String hrvStatus, Integer hrvMs) {
+    private int normalizeHrvComponent(String hrvStatus, Integer hrvMs, double[] hrvBaseline) {
         if (hrvStatus != null && !hrvStatus.isBlank()) {
             String normalized = hrvStatus.trim().toUpperCase();
             if ("BALANCED".equals(normalized)) return 85;
             if ("LOW".equals(normalized) || "POOR".equals(normalized) || "UNBALANCED".equals(normalized)) return 45;
         }
-        if (hrvMs == null) return 75;
+        if (hrvMs == null) return NEUTRAL_SCORE;
+        // Baseline-relative interpretation (Plews/Buchheit): today's value
+        // against the runner's own 28-day mean, with the smallest worthwhile
+        // change at half the baseline SD.
+        if (hrvBaseline != null) {
+            double mean = hrvBaseline[0];
+            double halfSwc = hrvBaseline[1] / 2.0;
+            if (halfSwc > 0.5) {
+                double delta = hrvMs - mean;
+                if (delta <= -2 * halfSwc) return 45;
+                if (delta <= -halfSwc) return 60;
+                if (delta < halfSwc) return NEUTRAL_SCORE;
+                return 85;
+            }
+        }
         if (hrvMs >= 80) return 85;
-        if (hrvMs >= 55) return 75;
+        if (hrvMs >= 55) return NEUTRAL_SCORE;
         if (hrvMs >= 35) return 60;
         return 45;
     }
 
     private int normalizeRhrComponent(Integer baselineRestingHr, Integer lastNightRestingHr) {
-        if (lastNightRestingHr == null) return 75;
+        if (lastNightRestingHr == null) return NEUTRAL_SCORE;
         if (baselineRestingHr == null) {
             if (lastNightRestingHr <= 50) return 82;
-            if (lastNightRestingHr <= 60) return 75;
+            if (lastNightRestingHr <= 60) return NEUTRAL_SCORE;
             return 60;
         }
 
@@ -224,7 +385,7 @@ public class ReadinessService {
     }
 
     private int normalizeStressComponent(Integer stressScore) {
-        if (stressScore == null) return 75;
+        if (stressScore == null) return NEUTRAL_SCORE;
         return clamp(100 - stressScore);
     }
 
@@ -232,40 +393,100 @@ public class ReadinessService {
         return Math.max(0, Math.min(100, value));
     }
 
-    private ReadinessDay calculateDayReadiness(LocalDate date, DailySleepData sleep, DailyHRVData hrv, DailyStressData stress, DailyWellnessSummary wellness) {
-        int score = 75; // Baseline
-        
-        // 1. Sleep (25 pts)
-        if (sleep != null && sleep.getSleepScore() != null) {
-            int ss = sleep.getSleepScore();
-            if (ss > 85) score += 10;
-            else if (ss < 50) score -= 20;
-            else if (ss < 70) score -= 5;
-        }
+    /**
+     * Training-load readiness proxy from run history. Returns null when the
+     * runner has no recent runs (component unavailable). Otherwise maps the
+     * EWMA ACWR sweet spot, Foster monotony, and hard-session spacing onto a
+     * 30-90 component score.
+     */
+    private Integer computeLoadScore(List<RunMetricsProjection> runs, Runner runner, LocalDate date) {
+        if (runs == null || runs.isEmpty()) return null;
+        Integer runnerMaxHr = runner == null ? null : runner.getMaxHeartRateBpm();
 
-        // 2. HRV (25 pts)
-        if (hrv != null && hrv.getStatus() != null) {
-            String status = hrv.getStatus().toUpperCase();
-            if (status.equals("BALANCED")) score += 10;
-            else if (status.equals("LOW") || status.equals("POOR")) score -= 15;
-        }
+        Double acwr = TrainingLoadAnalyzer.ewmaAcwr(runs, date);
+        Double monotony = TrainingLoadAnalyzer.weeklyMonotony(runs, date);
+        Integer hoursSinceHard = TrainingLoadAnalyzer.hoursSinceLastHardSession(runs, runnerMaxHr, date);
+        if (acwr == null && monotony == null && hoursSinceHard == null) return null;
 
-        // 3. Stress (25 pts)
-        if (stress != null && stress.getOverallStressLevel() != null) {
-            int sl = stress.getOverallStressLevel();
-            if (sl < 25) score += 5;
-            else if (sl > 75) score -= 15;
+        int score = LOAD_BASE;
+        if (acwr != null) {
+            if (acwr >= 0.8 && acwr <= 1.3) {
+                score += LOAD_SWEET_SPOT_BONUS;
+            } else if (acwr > 1.5) {
+                score -= acwr > 1.65 ? LOAD_EXTREME_SPIKE_PENALTY : LOAD_SPIKE_PENALTY;
+            } else if (acwr > 1.3) {
+                score -= LOAD_HIGH_PENALTY;
+            }
+            // acwr < 0.8: fresh or undertrained - not a readiness problem.
         }
-
-        // 4. RHR (25 pts) - Compare to baseline if possible
-        if (wellness != null && wellness.getRestingHeartRate() != null) {
-            // Simplified: higher RHR than usual (assume 55 as baseline if unknown)
-            if (wellness.getRestingHeartRate() > 65) score -= 10;
-            else if (wellness.getRestingHeartRate() < 50) score += 5;
+        if (monotony != null) {
+            if (monotony > MONOTONY_HIGH) score -= 15;
+            else if (monotony > MONOTONY_WARN) score -= 8;
         }
+        if (hoursSinceHard != null) {
+            if (hoursSinceHard < 24) score -= 10;
+            else if (hoursSinceHard < 48) score -= 5;
+        }
+        return Math.max(30, Math.min(90, score));
+    }
 
-        score = Math.max(0, Math.min(100, score));
-        return new ReadinessDay(date, score);
+    private List<RunMetricsProjection> runsForRunner(Runner runner, LocalDate date) {
+        if (runner == null) return List.of();
+        List<RunMetricsProjection> runs = activityRepository.findRunMetricsBetween(
+                runner,
+                ActivityType.RUN,
+                date.minusDays(LOAD_WINDOW_DAYS).atStartOfDay(),
+                date.plusDays(1).atStartOfDay()
+        );
+        return runs == null ? List.of() : runs;
+    }
+
+    private Map<LocalDate, List<RunMetricsProjection>> runsByDay(Runner runner, LocalDate start, LocalDate end) {
+        if (runner == null) return Map.of();
+        List<RunMetricsProjection> runs = activityRepository.findRunMetricsBetween(
+                runner,
+                ActivityType.RUN,
+                start.atStartOfDay(),
+                end.plusDays(1).atStartOfDay()
+        );
+        if (runs == null || runs.isEmpty()) return Map.of();
+        return runs.stream()
+                .filter(run -> run.getEffectiveStartTime() != null)
+                .collect(Collectors.groupingBy(run -> run.getEffectiveStartTime().toLocalDate()));
+    }
+
+    private List<RunMetricsProjection> trailingRuns(Map<LocalDate, List<RunMetricsProjection>> runsByDay, LocalDate date) {
+        if (runsByDay == null || runsByDay.isEmpty()) return List.of();
+        List<RunMetricsProjection> trailing = new ArrayList<>();
+        for (LocalDate day = date.minusDays(LOAD_WINDOW_DAYS); !day.isAfter(date); day = day.plusDays(1)) {
+            trailing.addAll(runsByDay.getOrDefault(day, List.of()));
+        }
+        return trailing;
+    }
+
+    /**
+     * Runner-specific HRV baseline (mean, SD) from the 28 days before
+     * {@code date}, or null when fewer than 5 distinct days have values.
+     */
+    private double[] hrvBaselineFor(Map<LocalDate, List<DailyHRVData>> hrvByDate, LocalDate date) {
+        if (hrvByDate == null || hrvByDate.isEmpty()) return null;
+        List<Double> values = new ArrayList<>();
+        LocalDate from = date.minusDays(HRV_BASELINE_WINDOW_DAYS);
+        LocalDate to = date.minusDays(1);
+        for (Map.Entry<LocalDate, List<DailyHRVData>> entry : hrvByDate.entrySet()) {
+            LocalDate entryDate = entry.getKey();
+            if (entryDate.isBefore(from) || entryDate.isAfter(to)) continue;
+            List<Double> dayValues = entry.getValue() == null ? null : entry.getValue().stream()
+                    .map(DailyHRVData::getLastNightAvg)
+                    .filter(Objects::nonNull)
+                    .toList();
+            if (dayValues == null || dayValues.isEmpty()) continue;
+            values.add(dayValues.stream().mapToDouble(Double::doubleValue).average().orElse(Double.NaN));
+        }
+        if (values.size() < HRV_BASELINE_MIN_DAYS) return null;
+        double mean = values.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+        double variance = values.stream().mapToDouble(v -> (v - mean) * (v - mean)).sum() / values.size();
+        return new double[]{mean, Math.sqrt(variance)};
     }
 
     private SourceSelection<DailySleepData> selectSleep(List<DailySleepData> entries, String preferredSource) {
@@ -355,8 +576,8 @@ public class ReadinessService {
     }
 
     private String sourceName(SourceSelection<?> selection) {
-        if (selection.sourceOverride() != null) return selection.sourceOverride();
-        return selection.provider() == null ? "AUTO" : selection.provider().name();
+        return selection.sourceOverride() != null ? selection.sourceOverride()
+                : selection.provider() == null ? "AUTO" : selection.provider().name();
     }
 
     public record ReadinessDay(LocalDate date, int score, boolean hasData) {
@@ -371,22 +592,24 @@ public class ReadinessService {
             int sleepScore,
             int hrvScore,
             int rhrScore,
-            int stressScore
+            int stressScore,
+            int loadScore,
+            int confidence
     ) {}
 
     public record MetricSources(String sleep, String hrv, String restingHeartRate, String stress) {}
 
-    public record MetricAvailability(boolean sleep, boolean hrv, boolean restingHeartRate, boolean stress) {
+    public record MetricAvailability(boolean sleep, boolean hrv, boolean restingHeartRate, boolean stress, boolean trainingLoad) {
         public boolean any() {
-            return sleep || hrv || restingHeartRate || stress;
+            return sleep || hrv || restingHeartRate || stress || trainingLoad;
         }
 
         public static MetricAvailability all() {
-            return new MetricAvailability(true, true, true, true);
+            return new MetricAvailability(true, true, true, true, true);
         }
 
         public static MetricAvailability none() {
-            return new MetricAvailability(false, false, false, false);
+            return new MetricAvailability(false, false, false, false, false);
         }
     }
 
