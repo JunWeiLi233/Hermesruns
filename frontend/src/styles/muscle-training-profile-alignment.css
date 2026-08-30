@@ -228,13 +228,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data
   }
 }
 
-/* The exercise workspace owns its rows and filters; keep the section itself
-   transparent so the heading does not sit on a separate white strip. */
-#root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-exercises {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
 #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) :is(.mt-kicker, .mt-top-reference-head .mt-kicker, .muscle-profile-kicker, .strength-plan-section-label) {
   color: var(--mtpa-accent) !important;
   font-size: 0.68rem;
@@ -578,4 +571,20 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data
   .mt-readiness-card--decision
 ) :is(p, span, small, em) {
   color: var(--runner-minimal-muted) !important;
+}
+
+/* This section is a workspace on the route canvas, not another card. Keep the
+   final cascade free of a full-width surface behind its heading. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises-head {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }

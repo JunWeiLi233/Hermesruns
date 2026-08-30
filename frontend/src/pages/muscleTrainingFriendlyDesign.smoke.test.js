@@ -1042,17 +1042,29 @@ assert.match(
 const whiteThemeSurfaceRuleIndex = profileAlignmentSource.indexOf(
   '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) :is(.mt-card, .mt-exercises,',
 );
-const whiteThemeExercisesResetIndex = profileAlignmentSource.lastIndexOf(
-  '#root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-exercises',
+const exercisesSurfaceResetIndex = profileAlignmentSource.lastIndexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises {',
 );
 assert.ok(
-  whiteThemeSurfaceRuleIndex >= 0 && whiteThemeExercisesResetIndex > whiteThemeSurfaceRuleIndex,
-  'The white-theme exercise-section reset should be defined after the broad light-surface rule so the title band stays transparent.',
+  whiteThemeSurfaceRuleIndex >= 0 && exercisesSurfaceResetIndex > whiteThemeSurfaceRuleIndex,
+  'The top-workbench exercise-section reset should be defined after the broad card rule so the title band stays transparent in every theme.',
 );
 assert.match(
-  profileAlignmentSource.slice(whiteThemeExercisesResetIndex, whiteThemeExercisesResetIndex + 320),
-  /background:\s*transparent !important;[\s\S]*box-shadow:\s*none !important;/,
-  'The white-theme exercise section should not paint a separate strip behind its heading.',
+  profileAlignmentSource.slice(exercisesSurfaceResetIndex, exercisesSurfaceResetIndex + 420),
+  /border:\s*0 !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  'The top-workbench exercise section should not paint a separate strip behind its heading.',
+);
+const exercisesHeadingResetIndex = profileAlignmentSource.lastIndexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises-head {',
+);
+assert.ok(
+  exercisesHeadingResetIndex > exercisesSurfaceResetIndex,
+  'The exercise heading wrapper reset should follow the section surface reset.',
+);
+assert.match(
+  profileAlignmentSource.slice(exercisesHeadingResetIndex, exercisesHeadingResetIndex + 260),
+  /background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  'The exercise heading wrapper should not retain a background strip of its own.',
 );
 
 assert.match(
