@@ -14,6 +14,10 @@ import java.util.Optional;
 public class InjuryRiskService {
 
     private static final Logger log = LoggerFactory.getLogger(InjuryRiskService.class);
+    // Loads are gathered 42 days back so the EWMA ACWR can also be evaluated
+    // 7 days ago for the trend comparison.
+    private static final int ACWR_TREND_LOOKBACK_DAYS = 42;
+    private static final double ACWR_TREND_DELTA = 0.10;
 
     private final SorenessLogRepository sorenessLogRepository;
     private final ActivityRepository activityRepository;
@@ -46,7 +50,9 @@ public class InjuryRiskService {
 
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
 
-        Double acwr = computeAcwr(runs);
+        Map<LocalDate, Double> dailyLoads = buildDailyLoads(runs, today);
+        Double acwr = TrainingLoadAnalyzer.ewmaAcwrFromDailyLoads(dailyLoads, today);
+        String acwrTrend = resolveAcwrTrend(dailyLoads, today, acwr);
 
         String sorenessLevel = sorenessLog.map(SorenessLog::getLevel).orElse(null);
         int riskPoints = computeRiskPoints(acwr, sorenessLevel);
@@ -64,44 +70,33 @@ public class InjuryRiskService {
                 coachVoice,
                 Math.round((riskPoints / 6.0f) * 100),
                 recommendationForRisk(combinedRisk),
-                "flat",
+                acwrTrend,
                 recentLogs,
                 coachVoice
         );
     }
 
-    private Double computeAcwr(List<Activity> runs) {
-        if (runs.isEmpty()) return null;
-        LocalDate today = LocalDate.now();
-        LocalDate start = today.minusDays(35);
-
+    private Map<LocalDate, Double> buildDailyLoads(List<Activity> runs, LocalDate today) {
         Map<LocalDate, Double> dailyLoads = new HashMap<>();
+        if (runs == null || runs.isEmpty()) return dailyLoads;
+        LocalDate start = today.minusDays(ACWR_TREND_LOOKBACK_DAYS);
         for (Activity run : runs) {
             LocalDate d = resolveLocalDate(run);
             if (d != null && !d.isBefore(start) && !d.isAfter(today)) {
                 dailyLoads.put(d, dailyLoads.getOrDefault(d, 0.0) + estimateLoad(run));
             }
         }
+        return dailyLoads;
+    }
 
-        Double lastAcwr = null;
-        double ewmaA = 0, ewmaC = 0;
-        double lambdaA = 2.0 / 8.0;
-        double lambdaC = 2.0 / 29.0;
-
-        for (LocalDate day = start; !day.isAfter(today); day = day.plusDays(1)) {
-            double load = dailyLoads.getOrDefault(day, 0.0);
-            if (day.equals(start)) {
-                ewmaA = load;
-                ewmaC = load;
-            } else {
-                ewmaA = load * lambdaA + (1 - lambdaA) * ewmaA;
-                ewmaC = load * lambdaC + (1 - lambdaC) * ewmaC;
-            }
-            if (ewmaC > 0.5) {
-                lastAcwr = ewmaA / ewmaC;
-            }
-        }
-        return lastAcwr;
+    private String resolveAcwrTrend(Map<LocalDate, Double> dailyLoads, LocalDate today, Double acwrToday) {
+        if (acwrToday == null || dailyLoads.isEmpty()) return "flat";
+        Double acwrWeekAgo = TrainingLoadAnalyzer.ewmaAcwrFromDailyLoads(dailyLoads, today.minusDays(7));
+        if (acwrWeekAgo == null) return "flat";
+        double delta = acwrToday - acwrWeekAgo;
+        if (delta > ACWR_TREND_DELTA) return "rising";
+        if (delta < -ACWR_TREND_DELTA) return "falling";
+        return "flat";
     }
 
     private LocalDate resolveLocalDate(Activity activity) {
@@ -118,17 +113,13 @@ public class InjuryRiskService {
 
     private double estimateLoad(Activity activity) {
         double km = distanceKm(activity);
-        int movingSec = activity.getMovingTimeSeconds();
-        if (movingSec <= 0 && activity.getDurationSeconds() != null) {
-            movingSec = activity.getDurationSeconds().intValue();
+        long seconds = 0;
+        if (activity.getMovingTimeSeconds() > 0) {
+            seconds = activity.getMovingTimeSeconds();
+        } else if (activity.getDurationSeconds() != null) {
+            seconds = activity.getDurationSeconds().intValue();
         }
-        if (km <= 0 || movingSec <= 0) return 0;
-        double paceSecPerKm = movingSec / km;
-        double velocity = (1000.0 / paceSecPerKm) * 60.0;
-        double vo2 = -4.60 + (0.182258 * velocity) + (0.000104 * velocity * velocity);
-        double vo2Fraction = Math.max(0.42, Math.min(1.2, vo2 / 50.0));
-        double intensityRatio = vo2Fraction / 0.85;
-        return (movingSec / 3600.0) * intensityRatio * intensityRatio * 100.0;
+        return TrainingLoadAnalyzer.loadUnits(km, seconds);
     }
 
     private int computeRiskPoints(Double acwr, String sorenessLevel) {

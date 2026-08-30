@@ -801,12 +801,17 @@ public class AutomatedCoachService {
         state.setReadinessScore(readiness.score());
         state.setReadinessVerdict(readiness.verdict());
         coachRunnerStateRepository.save(state);
+        // When recovery-data coverage is thin the verdict leans on the
+        // training-load proxy; say so instead of implying wearable evidence.
+        String basis = readiness.confidence() < 50
+                ? " Based on training-load proxy (limited recovery data)."
+                : "";
 
         if ("REST".equals(readiness.verdict())) {
             workout.setReadinessAdjusted(true);
             workout.setMutatedFrom(workout.getWorkoutType());
             workout.setWorkoutType(CoachWorkoutType.RECOVERY);
-            workout.setNotes("Readiness score " + readiness.score() + "/100 (REST). Downgraded to Recovery.");
+            workout.setNotes("Readiness score " + readiness.score() + "/100 (REST)." + basis);
             if (workout.getPlannedDistanceKm() != null) workout.setPlannedDistanceKm(round1(workout.getPlannedDistanceKm() * 0.5));
             return workout;
         }
@@ -816,10 +821,10 @@ public class AutomatedCoachService {
             workout.setMutatedFrom(workout.getWorkoutType());
             if (workout.getWorkoutType() == CoachWorkoutType.INTERVALS || workout.getWorkoutType() == CoachWorkoutType.THRESHOLD) {
                 workout.setWorkoutType(CoachWorkoutType.EASY);
-                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Downgraded to Easy.");
+                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Downgraded to Easy." + basis);
             } else {
                 workout.setWorkoutType(CoachWorkoutType.RECOVERY);
-                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Shortened to Recovery.");
+                workout.setNotes("Readiness score " + readiness.score() + "/100 (RECOVERY). Shortened to Recovery." + basis);
                 if (workout.getPlannedDistanceKm() != null) workout.setPlannedDistanceKm(round1(workout.getPlannedDistanceKm() * 0.6));
             }
             return workout;
@@ -921,7 +926,9 @@ public class AutomatedCoachService {
                 s.getLastHrvStatus(), s.getLastBodyBatteryAtWake(),
                 s.getReadinessScore(), s.getReadinessVerdict(),
                 readiness.sleepScore(), readiness.hrvScore(), readiness.rhrScore(), readiness.stressScore(),
-                readiness.score(), readinessDataSupported, sleepDataSupported, sleepDataSource,
+                readiness.loadScore(), readiness.confidence(),
+                readiness.score(), readinessDataSupported,
+                sleepDataSupported, sleepDataSource,
                 runner.getMaxHeartRateBpm(), runner.getRestingHeartRateBpm(), stamina,
                 coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).map(b -> new CoachTrainingBlockDto(
                         b.getRaceDistanceKm(), b.getTargetRaceDate(), b.getWeekIndex(), b.getCurrentLongRunKm(), b.getName()
@@ -938,7 +945,7 @@ public class AutomatedCoachService {
             ReadinessService.MultiSourceReadinessSnapshot snapshot,
             CoachRunnerState state
     ) {
-        if (snapshot != null && snapshot.readiness() != null && snapshot.hasSourceData()) {
+        if (snapshot != null && snapshot.readiness() != null) {
             return snapshot.readiness();
         }
         if (state != null) {
@@ -948,9 +955,9 @@ public class AutomatedCoachService {
             String verdict = state.getReadinessVerdict() != null ? state.getReadinessVerdict() : "EASY";
             int sleep = state.getLastSleepScore() != null ? state.getLastSleepScore() : score;
             int stress = state.getLastStressScore() != null ? Math.max(0, 100 - state.getLastStressScore()) : score;
-            return new ReadinessService.ReadinessResult(score, verdict, sleep, score, score, stress);
+            return new ReadinessService.ReadinessResult(score, verdict, sleep, score, score, stress, 75, 0);
         }
-        return new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75);
+        return new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75, 75, 0);
     }
 
     private CoachStaminaDto buildStaminaDto(Runner runner, CoachRunnerState state, CoachScheduledWorkout todayWorkout) {
@@ -1008,6 +1015,7 @@ public class AutomatedCoachService {
             String lastHrvStatus, Integer lastBodyBatteryAtWake,
             Integer readinessScore, String readinessVerdict,
             Integer readinessSleep, Integer readinessHrv, Integer readinessRhr, Integer readinessStress,
+            Integer readinessLoad, Integer readinessConfidence,
             Integer currentReadinessScore, boolean readinessDataSupported,
             boolean sleepDataSupported, String sleepDataSource,
             Integer profileMaxHeartRateBpm, Integer profileRestingHeartRateBpm, CoachStaminaDto stamina,

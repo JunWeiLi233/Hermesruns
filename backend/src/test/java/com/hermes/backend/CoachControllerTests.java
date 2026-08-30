@@ -241,6 +241,8 @@ class CoachControllerTests {
                 62,
                 48,
                 40,
+                80,
+                80,
                 84,
                 true,
                 true,
