@@ -49864,8 +49864,14 @@ body:is(.theme-light, .theme-high-contrast-light) .add-shoes-brand-expand-btn.is
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/shoes/add"], [data-route-path="/add-shoes"]) .add-shoes-parent-rail,
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/shoes/add"], [data-route-path="/add-shoes"]) .add-shoes-step-card {
   border: 1px solid var(--runner-profile-line);
-  background: rgba(255, 252, 246, 0.68) !important;
+  background-color: #fff !important;
+  background-image: none !important;
   box-shadow: none;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/shoes/add"], [data-route-path="/add-shoes"]) .add-shoes-setup-payload-shell {
+  background-color: #fff !important;
+  background-image: none !important;
 }
 
 .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"]:is([data-route-path="/shoes/add"], [data-route-path="/add-shoes"]) .add-shoes-step-number {
@@ -84489,4 +84495,20 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-page.run-detail-profi
 body.theme-light .recent-runs-thumb.is-route-preview,
 body.theme-light .recent-runs-thumb.has-route-tile {
   background: #15171c !important;
+}
+
+/* Final Add Shoes surface authority for legacy stylesheet consumers. */
+#root .add-shoes-profile-redesign :is(.add-shoes-catalog-step, .add-shoes-step-card, .add-shoes-setup-payload-shell) {
+  background-color: #fff !important;
+  background-image: none !important;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-search-row:focus-within {
+  border-color: var(--profile-line) !important;
+  box-shadow: none !important;
+}
+
+#root .add-shoes-profile-redesign .add-shoes-search-row input:focus-visible {
+  outline: 2px solid var(--profile-accent) !important;
+  outline-offset: -2px;
 }

@@ -51,6 +51,10 @@ $env:APP_JPA_DDL_AUTO = "update"
 # Creates the initial admin account on first startup. Both must be set to take effect.
 $env:APP_BOOTSTRAP_ADMIN_EMAIL = "admin@local.hermes"
 $env:APP_BOOTSTRAP_ADMIN_PASSWORD = "set-a-strong-admin-password"
+# Required before enrolling the first admin passkey. Generate a unique secret
+# with at least 32 characters, keep it private, and enter the same value once
+# Hermes asks for the one-time bootstrap secret.
+# $env:HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN = "replace-with-at-least-32-random-characters"
 
 # -----------------------------------------------------------------------------
 # Local mock accounts (development only)

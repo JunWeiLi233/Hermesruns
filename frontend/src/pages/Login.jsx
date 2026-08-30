@@ -11,8 +11,6 @@ import stravaConnectButton from '../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../utils/stravaLinking';
 import { createPasskey, getPasskey, isWebAuthnSupported } from '../utils/webauthn';
 
-const LOCAL_SHARED_RUNNER_EMAIL = 'strava+140971747@hermes.local';
-
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
@@ -37,7 +35,6 @@ export default function Login() {
   const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
   const hasConfiguredSocialProvider = stravaConfigured || googleConfigured;
-  const isLocalSharedRunnerEmail = email.trim().toLowerCase() === LOCAL_SHARED_RUNNER_EMAIL;
 
   useEffect(() => {
     const oauthMfa = searchParams.get('adminMfa');
@@ -165,7 +162,11 @@ export default function Login() {
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || t('index.admin_mfa_failed'));
+    if (!res.ok) {
+      const error = new Error(data.error || t('index.admin_mfa_failed'));
+      error.code = data.code;
+      throw error;
+    }
     return data.publicKey || data;
   }
 
@@ -209,8 +210,14 @@ export default function Login() {
       setRecoveryCodes(Array.isArray(data.recoveryCodes) ? data.recoveryCodes : []);
       setAdminMfaStage('recovery-codes');
       setBootstrapToken('');
-    } catch {
-      setError(isWebAuthnSupported() ? t('index.admin_mfa_failed') : t('index.admin_mfa_unsupported'));
+    } catch (mfaError) {
+      if (mfaError?.code === 'ADMIN_MFA_SETUP_UNAVAILABLE') {
+        setAdminMfaStage(null);
+        setBootstrapToken('');
+        setError(t('index.admin_mfa_setup_unavailable'));
+      } else {
+        setError(isWebAuthnSupported() ? t('index.admin_mfa_failed') : t('index.admin_mfa_unsupported'));
+      }
     } finally {
       setLoading(false);
     }
@@ -424,9 +431,6 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                {isLocalSharedRunnerEmail && (
-                  <p className="auth-flow-field-note" aria-live="polite">{t('index.local_mock_password_hint')}</p>
-                )}
               </div>
 
               <button type="submit" className="auth-flow-btn auth-flow-btn--submit" disabled={loading}>
