@@ -8,8 +8,16 @@ const moduleUrl = pathToFileURL(path.resolve(".tools/auto-hermes-push-main.mjs")
 const {
   buildAutoHermesPushMainPlan,
   isPublishBlockingFinding,
+  loadDryRunGitMetadata,
   runAutoHermesPushMain,
 } = await import(moduleUrl);
+
+{
+  const metadata = loadDryRunGitMetadata(process.cwd(), "origin");
+  assert.equal(metadata.remoteUrl, HERMES_REPOSITORY_URL);
+  assert.equal(metadata.sourceBranch, "codex/shoes-add-redesign");
+  assert.match(metadata.sourceHead, /^[0-9a-f]{40}$/);
+}
 
 {
   const plan = buildAutoHermesPushMainPlan({
