@@ -1,5 +1,5 @@
 # Stage 1 - Build frontend
-FROM node:24-alpine AS frontend-build
+FROM node:26-alpine AS frontend-build
 WORKDIR /frontend
 
 # Production source maps must be an explicit opt-in. The build script also
