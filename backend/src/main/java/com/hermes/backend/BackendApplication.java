@@ -26,9 +26,11 @@ public class BackendApplication {
     }
 
     // Railway launches the jar with SPRING_PROFILES_ACTIVE=production (no program args);
-    // --spring.profiles.active=production is honored too so local runs match.
+    // --spring.profiles.active=... program args and the -Dspring.profiles.active system
+    // property are honored too so local runs match.
     private static boolean runsInProduction(String[] args) {
-        if (containsProductionProfile(System.getenv("SPRING_PROFILES_ACTIVE"))) {
+        if (containsProductionProfile(System.getenv("SPRING_PROFILES_ACTIVE"))
+                || containsProductionProfile(System.getProperty("spring.profiles.active"))) {
             return true;
         }
         for (String arg : args) {

@@ -68,7 +68,7 @@ class RuntimeFootprintConfigContractTests {
 
         Properties defaults = loadMain("application.properties");
         assertThat(defaults.stringPropertyNames())
-                .doesNotContain("spring.datasource.hikari.data-source-properties.reWriteBatchedInserts");
+                .noneMatch(key -> key.startsWith("spring.datasource.hikari.data-source-properties."));
     }
 
     /**
@@ -82,7 +82,11 @@ class RuntimeFootprintConfigContractTests {
             Enumeration<URL> urls = RuntimeFootprintConfigContractTests.class.getClassLoader().getResources(location);
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
-                if (selected == null || !url.getPath().contains("test-classes")) {
+                if (!url.getPath().contains("test-classes")) {
+                    selected = url;
+                    break;
+                }
+                if (selected == null) {
                     selected = url;
                 }
             }
