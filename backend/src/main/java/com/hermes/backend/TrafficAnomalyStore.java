@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 @Component
 public class TrafficAnomalyStore {
     private static final Logger log = LoggerFactory.getLogger(TrafficAnomalyStore.class);
+    private static final int MAX_LOCAL_COUNTERS = 50_000;
 
     private static final class LocalCounter {
         long windowStartEpochSec;
@@ -144,6 +145,9 @@ public class TrafficAnomalyStore {
             int warn5xxPerWindow
     ) {
         String key = ip == null || ip.isBlank() ? "unknown" : ip.trim();
+        if (localCounters.size() > MAX_LOCAL_COUNTERS) {
+            evictStaleCounters(window);
+        }
         LocalCounter counter = localCounters.computeIfAbsent(key, ignored -> new LocalCounter());
         long now = clock.instant().getEpochSecond();
         synchronized (counter) {
@@ -170,6 +174,21 @@ public class TrafficAnomalyStore {
             }
             return new Snapshot(counter.any, counter.s4xx, counter.s429, counter.s5xx, firstWarning);
         }
+    }
+
+    void evictStaleCounters(Duration window) {
+        long now = clock.instant().getEpochSecond();
+        long windowSeconds = normalizeWindow(window).toSeconds();
+        localCounters.entrySet().removeIf(entry -> {
+            LocalCounter stored = entry.getValue();
+            synchronized (stored) {
+                return now - stored.windowStartEpochSec >= windowSeconds;
+            }
+        });
+    }
+
+    int localCounterCountForTests() {
+        return localCounters.size();
     }
 
     private StringRedisTemplate redisTemplate() {

@@ -6,11 +6,15 @@ import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -85,5 +89,77 @@ class AdminRouteExtractionControllerTests {
         ResponseEntity<?> response = controller.runPipeline("Bearer token", request);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void testPruneFinishedJobs_KeepsActiveJobs() throws Exception {
+        Runner runner = new Runner();
+        runner.setRole("ADMIN");
+        runner.setEmail("admin@hermes.com");
+        when(authService.findByAuthorizationHeader(any())).thenReturn(Optional.of(runner));
+
+        CountDownLatch blockPipeline = new CountDownLatch(1);
+        when(pipelineService.runPipeline(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    blockPipeline.await();
+                    return new MarathonRoutePipelineService.PipelineResult(null, null, null);
+                });
+
+        List<String> jobIds = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            ResponseEntity<?> response = controller.runPipeline("Bearer token", validRequest());
+            @SuppressWarnings("unchecked")
+            Map<String, String> body = (Map<String, String>) response.getBody();
+            jobIds.add(body.get("jobId"));
+        }
+
+        controller.pruneFinishedJobs();
+
+        // PENDING/RUNNING jobs are never pruned, even while the map is under pressure.
+        for (String jobId : jobIds) {
+            assertEquals(HttpStatus.OK, controller.getJobStatus("Bearer token", jobId).getStatusCode());
+        }
+
+        blockPipeline.countDown();
+    }
+
+    @Test
+    void testRunPipeline_PrunesOldestTerminalJobsBeyondRetentionCap() throws Exception {
+        Runner runner = new Runner();
+        runner.setRole("ADMIN");
+        runner.setEmail("admin@hermes.com");
+        when(authService.findByAuthorizationHeader(any())).thenReturn(Optional.of(runner));
+        when(pipelineService.runPipeline(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(new MarathonRoutePipelineService.PipelineResult(null, null, null));
+
+        List<String> jobIds = new ArrayList<>();
+        for (int i = 0; i < 60; i++) {
+            ResponseEntity<?> response = controller.runPipeline("Bearer token", validRequest());
+            @SuppressWarnings("unchecked")
+            Map<String, String> body = (Map<String, String>) response.getBody();
+            jobIds.add(body.get("jobId"));
+        }
+
+        // Wait until every job reached a terminal state and pruning brought the map back under the cap.
+        String newestJobId = jobIds.get(jobIds.size() - 1);
+        long deadline = System.currentTimeMillis() + 15_000;
+        while (System.currentTimeMillis() < deadline) {
+            ResponseEntity<?> newest = controller.getJobStatus("Bearer token", newestJobId);
+            boolean newestFinished = newest.getBody() instanceof AdminRouteExtractionController.JobStatus status
+                    && status.state != AdminRouteExtractionController.JobState.PENDING
+                    && status.state != AdminRouteExtractionController.JobState.RUNNING;
+            if (newestFinished && controller.jobCountForTests() <= 50) {
+                break;
+            }
+            Thread.sleep(20);
+        }
+
+        assertTrue(controller.jobCountForTests() <= 50);
+        assertEquals(HttpStatus.NOT_FOUND, controller.getJobStatus("Bearer token", jobIds.get(0)).getStatusCode());
+        assertEquals(HttpStatus.OK, controller.getJobStatus("Bearer token", newestJobId).getStatusCode());
+    }
+
+    private static MarathonRoutePipelineRequest validRequest() {
+        return new MarathonRoutePipelineRequest("r-1", "Name", "City", "Country", "Web", 42.2, "Path");
     }
 }
