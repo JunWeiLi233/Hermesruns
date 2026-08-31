@@ -17,6 +17,7 @@ import java.util.Optional;
 public class ActivityDataAccess {
 
     private static final int POINT_INSERT_BATCH_SIZE = 500;
+    private static final int POINT_UPDATE_BATCH_SIZE = 500;
 
     /**
      * Bulk insert for GPS points. JDBC batched because ActivityPoint uses an
@@ -31,6 +32,19 @@ public class ActivityDataAccess {
                 elevation_corrected_meters, heart_rate, cadence, ground_contact_time_ms,
                 vertical_oscillation_mm)
             values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+    /**
+     * Bulk elevation rewrite for existing GPS points. JDBC batched because a
+     * repository saveAll of the loaded entities issues one UPDATE per point;
+     * the batched statement rewrites the same rows in a fraction of the round
+     * trips. Only the two elevation columns recalibrate mutates are written;
+     * every other column keeps its stored value. The activity_id predicate is
+     * a defensive scope: callers pass the owning activity of the loaded points.
+     */
+    private static final String UPDATE_POINT_ELEVATION_SQL = """
+            update activity_points set elevation_raw_meters = ?, elevation_corrected_meters = ?
+            where activity_id = ? and id = ?
             """;
 
     private final ActivityRepository activityRepository;
@@ -192,6 +206,21 @@ public class ActivityDataAccess {
         return true;
     }
 
+    /**
+     * Batched update of the elevation columns recalibrate rewrites. Callers must
+     * have verified the runner owns the activity (see ActivityPoint ownership
+     * rule) and must have loaded the points for that same activity. Runs inside
+     * the caller's transaction; managed point entities should be detached after
+     * this call so the commit-time flush does not re-issue per-entity updates.
+     */
+    public void updatePointElevations(Long activityId, List<ActivityPoint> points) {
+        if (activityId == null || points == null || points.isEmpty()) {
+            return;
+        }
+        jdbcTemplate.batchUpdate(UPDATE_POINT_ELEVATION_SQL, points, POINT_UPDATE_BATCH_SIZE,
+                (ps, point) -> bindPointElevationUpdate(activityId, ps, point));
+    }
+
     private static void bindPointInsert(PreparedStatement ps, ActivityPoint point) throws SQLException {
         Activity activity = point.getActivity();
         if (activity == null || activity.getId() == null) {
@@ -210,6 +239,16 @@ public class ActivityDataAccess {
         setNullableInt(ps, 11, point.getCadence());
         setNullableDouble(ps, 12, point.getGroundContactTimeMs());
         setNullableDouble(ps, 13, point.getVerticalOscillationMm());
+    }
+
+    private static void bindPointElevationUpdate(Long activityId, PreparedStatement ps, ActivityPoint point) throws SQLException {
+        if (point.getId() == null) {
+            throw new IllegalArgumentException("ActivityPoint elevation update requires a persisted point");
+        }
+        setNullableDouble(ps, 1, point.getElevationRawMeters());
+        setNullableDouble(ps, 2, point.getElevationCorrectedMeters());
+        ps.setLong(3, activityId);
+        ps.setLong(4, point.getId());
     }
 
     private static void setNullableInt(PreparedStatement ps, int index, Integer value) throws SQLException {

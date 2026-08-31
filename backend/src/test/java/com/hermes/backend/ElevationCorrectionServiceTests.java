@@ -1,6 +1,9 @@
 package com.hermes.backend;
 
+import jakarta.persistence.EntityManager;
+
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,7 +30,7 @@ class ElevationCorrectionServiceTests {
     void computeStatusDoesNotFlagRollingRouteWhenDemAscentMatchesRawAscent() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
+        ElevationCorrectionService service = newService(repository, restTemplate);
         Activity activity = new Activity();
         List<ActivityPoint> points = List.of(
                 point(0, 40.000, -73.000, 10),
@@ -50,7 +55,7 @@ class ElevationCorrectionServiceTests {
     void computeStatusFlagsLargeRawAndDemAscentDiscrepancy() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
+        ElevationCorrectionService service = newService(repository, restTemplate);
         Activity activity = new Activity();
         List<ActivityPoint> points = List.of(
                 point(0, 40.000, -73.000, 10),
@@ -73,7 +78,7 @@ class ElevationCorrectionServiceTests {
     void computeStatusDoesNotFlagWhenDemProfileCannotBeFetched() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
+        ElevationCorrectionService service = newService(repository, restTemplate);
         Activity activity = new Activity();
         List<ActivityPoint> points = List.of(
                 point(0, 40.000, -73.000, 10),
@@ -93,14 +98,19 @@ class ElevationCorrectionServiceTests {
     @Test
     void recalibrateClearsWarningWhenCorrectedProfileMatchesDemAscent() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
+        ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
-        Activity activity = new Activity();
+        ElevationCorrectionService service = new ElevationCorrectionService(
+                repository, activityDataAccess, mock(EntityManager.class), restTemplate);
+        Activity activity = correctedProfileActivity(1L);
         List<ActivityPoint> points = List.of(
                 point(0, 40.000, -73.000, 10),
                 point(1, 40.001, -73.001, 70),
                 point(2, 40.002, -73.002, 10)
         );
+        // Raw goes missing (e.g. a provider without a barometric profile) so the
+        // batched update must carry the backfill from elevationMeters too.
+        points.get(1).setElevationRawMeters(null);
         when(repository.findByActivityOrderBySequenceIndexAsc(activity)).thenReturn(points);
         mockDem(restTemplate, List.of(10, 20, 10));
 
@@ -116,14 +126,29 @@ class ElevationCorrectionServiceTests {
         assertEquals(10.0, status.totalAscentDem(), 0.001);
         assertEquals(0.0, status.variance(), 0.001);
         assertTrue(status.hasCorrectedProfile());
-        verify(repository).saveAll(points);
+
+        // Points are persisted with one batched elevation update (same final
+        // field values the per-entity saveAll used to write), not a
+        // repository saveAll.
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<ActivityPoint>> updatedCaptor = ArgumentCaptor.forClass(List.class);
+        verify(activityDataAccess).updatePointElevations(eq(1L), updatedCaptor.capture());
+        List<ActivityPoint> updatedPoints = updatedCaptor.getValue();
+        assertEquals(3, updatedPoints.size());
+        assertEquals(10.0, updatedPoints.get(0).getElevationCorrectedMeters(), 0.001);
+        assertEquals(20.0, updatedPoints.get(1).getElevationCorrectedMeters(), 0.001);
+        assertEquals(10.0, updatedPoints.get(2).getElevationCorrectedMeters(), 0.001);
+        assertEquals(10.0, updatedPoints.get(0).getElevationRawMeters(), 0.001);
+        assertEquals(70.0, updatedPoints.get(1).getElevationRawMeters(), 0.001);
+        assertEquals(10.0, updatedPoints.get(2).getElevationRawMeters(), 0.001);
+        verify(repository, never()).saveAll(any());
     }
 
     @Test
     void statusCacheEvictsLeastRecentlyUsedEntriesBeyondCap() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
+        ElevationCorrectionService service = newService(repository, restTemplate);
 
         List<Activity> activities = new ArrayList<>();
         for (long id = 1; id <= 256; id++) {
@@ -157,7 +182,7 @@ class ElevationCorrectionServiceTests {
     void recalibrateStillDropsCachedStatusForRecalibratedActivity() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
-        ElevationCorrectionService service = new ElevationCorrectionService(repository, restTemplate);
+        ElevationCorrectionService service = newService(repository, restTemplate);
         Activity activity = correctedProfileActivity(1L);
         when(repository.findByActivityOrderBySequenceIndexAsc(activity)).thenReturn(correctedProfilePoints());
         mockDem(restTemplate, List.of(10, 20, 10));
@@ -167,6 +192,14 @@ class ElevationCorrectionServiceTests {
 
         service.recalibrate(activity, null);
         assertEquals(0, service.statusCacheSizeForTests());
+    }
+
+    private static ElevationCorrectionService newService(ActivityPointRepository repository, RestTemplate restTemplate) {
+        return new ElevationCorrectionService(
+                repository,
+                mock(ActivityDataAccess.class),
+                mock(EntityManager.class),
+                restTemplate);
     }
 
     private static Activity correctedProfileActivity(long id) {

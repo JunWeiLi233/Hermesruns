@@ -45,7 +45,10 @@ public class AdminBackgroundJobService {
     private static final ReentrantLock COURSE_MAP_SCAN_LOCK = new ReentrantLock(true);
     private static final Set<Long> COURSE_MAP_OWNED_JOB_IDS = ConcurrentHashMap.newKeySet();
     private static final Set<Long> COURSE_MAP_ACTIVE_JOB_IDS = ConcurrentHashMap.newKeySet();
-    private static final long COURSE_MAP_SCAN_QUEUE_POLL_MILLIS = 250;
+    // Course-map scans are long-lived jobs (map/image analysis), and each poll
+    // costs two repository queries; 1500ms keeps queued scans moving without
+    // burning 4 queries/second per waiting worker.
+    private static final long COURSE_MAP_SCAN_QUEUE_POLL_MILLIS = 1500;
 
     private final AdminBackgroundJobRepository adminBackgroundJobRepository;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);

@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import jakarta.persistence.EntityManager;
+
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
@@ -24,14 +26,22 @@ public class ElevationCorrectionService {
     private static final int STATUS_CACHE_MAX_ENTRIES = 256;
 
     private final ActivityPointRepository activityPointRepository;
+    private final ActivityDataAccess activityDataAccess;
+    private final EntityManager entityManager;
     private final RestTemplate restTemplate;
     // Bounded LRU cache: without the cap this map grew monotonically (one entry
     // per activity ever status-checked; entries only left on recalibrate).
     // Eviction only forces a status recompute on the next request.
     private final BoundedStatusCache statusCache = new BoundedStatusCache(STATUS_CACHE_MAX_ENTRIES);
 
-    public ElevationCorrectionService(ActivityPointRepository activityPointRepository, RestTemplate restTemplate) {
+    public ElevationCorrectionService(
+            ActivityPointRepository activityPointRepository,
+            ActivityDataAccess activityDataAccess,
+            EntityManager entityManager,
+            RestTemplate restTemplate) {
         this.activityPointRepository = activityPointRepository;
+        this.activityDataAccess = activityDataAccess;
+        this.entityManager = entityManager;
         this.restTemplate = restTemplate;
     }
 
@@ -111,7 +121,16 @@ public class ElevationCorrectionService {
             p.setElevationCorrectedMeters(demElev.get(i));
             corrected.add(demElev.get(i));
         }
-        activityPointRepository.saveAll(points);
+        // Batched raw-JDBC update of exactly the two elevation columns mutated
+        // above — repository saveAll issues one UPDATE per point. The points are
+        // managed entities, so detach them after the batched write; otherwise the
+        // commit-time flush would dirty-check them and re-issue a per-entity
+        // UPDATE on top of the batched statement. The detached in-memory values
+        // still feed the returned result below.
+        activityDataAccess.updatePointElevations(activity.getId(), points);
+        for (ActivityPoint point : points) {
+            entityManager.detach(point);
+        }
         if (activity.getId() != null) {
             statusCache.remove(activity.getId());
         }
