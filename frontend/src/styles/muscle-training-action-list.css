@@ -21,3 +21,12 @@
     box-sizing: border-box;
   }
 }
+
+/* At narrower widths the page should grow with the full action list instead
+   of trapping the cards inside the old 190px inner scrollbar. */
+@media (max-width: 960px) {
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-action-list {
+    max-height: none;
+    overflow: visible;
+  }
+}

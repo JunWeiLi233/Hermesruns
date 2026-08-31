@@ -13,6 +13,9 @@ const baseListIndex = muscleTrainingSource.indexOf('.mt-top-action-list {');
 const stretchBlockIndex = actionListSource.lastIndexOf(
   '@media (min-width: 961px) {\n  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-actions-card',
 );
+const mobileFlowBlockIndex = actionListSource.lastIndexOf(
+  '@media (max-width: 960px) {\n  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-action-list',
+);
 
 assert.ok(
   appSource.indexOf("@import './muscle-training-action-list.css';") > appSource.indexOf("@import './all-pages-liquid-glass.css';"),
@@ -31,6 +34,15 @@ assert.match(
   actionListSource.slice(stretchBlockIndex, stretchBlockIndex + 900),
   /\.mt-top-action-card\s*\{[\s\S]*height:\s*100%;[\s\S]*box-sizing:\s*border-box;/,
   'Desktop action rows should stretch to the grid tracks instead of staying content-sized.',
+);
+assert.ok(
+  mobileFlowBlockIndex >= 0,
+  'Narrow action lists should have an explicit page-flow override after the compact mobile cap.',
+);
+assert.match(
+  actionListSource.slice(mobileFlowBlockIndex, mobileFlowBlockIndex + 300),
+  /\.mt-top-action-list\s*\{[\s\S]*max-height:\s*none;[\s\S]*overflow:\s*visible;/,
+  'Narrow action cards should use the available page flow instead of an inner scroll box.',
 );
 
 console.log('[PASS] Muscle Training top-action list stretch guardrails passed.');
