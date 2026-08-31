@@ -141,12 +141,29 @@ class TtlCacheStoreTests {
     }
 
     @Test
+    void oversizedPutEvictsStaleLocalEntryAtSameKey() {
+        MutableClock clock = new MutableClock();
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock, 1024, 8);
+
+        store.put("race", "dual", "a", Duration.ofMinutes(5));
+        assertThat(store.get("race", "dual", String.class)).contains("a");
+
+        // Last-write-wins locally: the oversized overwrite must drop the old
+        // entry instead of leaving the stale smaller value being served.
+        store.put("race", "dual", "abcdefg", Duration.ofMinutes(5));
+
+        assertThat(store.localEntrySizeForTests()).isZero();
+        assertThat(store.get("race", "dual", String.class)).isEmpty();
+    }
+
+    @Test
     void oversizedValueIsStillWrittenToRedis() {
         MutableClock clock = new MutableClock();
         StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
         @SuppressWarnings("unchecked")
         ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(startsWith("hermes-test:cache:race:"))).thenReturn("\"abcdefg\"");
 
         TtlCacheStore store = TtlCacheStore.redisBackedForTests(new ObjectMapper(), clock, () -> redisTemplate, 8);
 
@@ -157,6 +174,8 @@ class TtlCacheStoreTests {
         // prefix plus the exact serialized payload and TTL.
         verify(valueOperations).set(startsWith("hermes-test:cache:race:"), eq("\"abcdefg\""),
                 eq(Duration.ofMinutes(5)));
+        // The Redis-first read path covers entries skipped locally.
+        assertThat(store.get("race", "huge", String.class)).contains("abcdefg");
     }
 
     @Test

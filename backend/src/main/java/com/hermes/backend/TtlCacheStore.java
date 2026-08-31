@@ -39,6 +39,7 @@ public class TtlCacheStore {
     // enabled) still receives them and callers already hold the value they put.
     private final int localMaxValueBytes;
     private volatile boolean redisFailureLogged;
+    private volatile boolean localValueSkipLogged;
 
     @Autowired
     public TtlCacheStore(
@@ -65,7 +66,7 @@ public class TtlCacheStore {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.localEntries = new BoundedLocalCache(Math.max(1, localMaxEntries));
-        this.localMaxValueBytes = localMaxValueBytes;
+        this.localMaxValueBytes = Math.max(1, localMaxValueBytes);
     }
 
     static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock) {
@@ -129,11 +130,19 @@ public class TtlCacheStore {
         Duration normalizedTtl = normalizeTtl(ttl);
         try {
             String json = objectMapper.writeValueAsString(value);
+            String localKey = localKey(namespace, key);
             // Value-size guard, local fallback only. Size is approximated with
-            // the serialized String's length() (chars ~ bytes); an oversized
-            // value skips local retention but still flows to Redis below.
+            // the serialized String's length() (chars ~ bytes, a lower bound
+            // for non-ASCII content); an oversized value skips local retention
+            // but still flows to Redis below.
             if (json.length() <= localMaxValueBytes) {
-                localEntries.put(localKey(namespace, key), new LocalEntry(json, clock.instant().plus(normalizedTtl)));
+                localEntries.put(localKey, new LocalEntry(json, clock.instant().plus(normalizedTtl)));
+            } else {
+                // Last-write-wins locally: drop any stale entry so reads can't
+                // keep serving the previous (smaller) value after an oversized
+                // overwrite.
+                localEntries.remove(localKey);
+                logLocalValueSkip(namespace, key, json.length());
             }
             putRedis(namespace, key, json, normalizedTtl);
         } catch (Exception e) {
@@ -229,6 +238,15 @@ public class TtlCacheStore {
         if (!redisFailureLogged) {
             redisFailureLogged = true;
             log.warn("Redis TTL cache store unavailable; falling back to local memory: {}", e.getMessage());
+        }
+    }
+
+    private void logLocalValueSkip(String namespace, String key, int serializedLength) {
+        if (!localValueSkipLogged) {
+            localValueSkipLogged = true;
+            log.debug("Local TTL cache value-size cap ({} chars) exceeded for namespace={} key={} size={}; "
+                    + "skipping local retention only, Redis path unaffected",
+                    localMaxValueBytes, namespace, key, serializedLength);
         }
     }
 
