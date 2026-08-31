@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_race_course_map_race_id", columnList = "raceId", unique = true),
         @Index(name = "idx_race_course_map_updated", columnList = "updatedAt")
 })
-public class RaceCourseMapAsset {
+public class RaceCourseMapAsset implements RaceCourseMapAssetListFields {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

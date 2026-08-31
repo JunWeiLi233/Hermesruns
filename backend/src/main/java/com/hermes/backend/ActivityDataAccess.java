@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -61,6 +62,15 @@ public class ActivityDataAccess {
 
     public List<Activity> findRunsForRunner(Runner runner) {
         return activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
+    }
+
+    /**
+     * Limited run-history read for feed callers that only need the most recent N runs.
+     * The cap goes into the query itself, so only N activity rows (and their eager
+     * runner/shoe associations) are loaded and mapped.
+     */
+    public List<Activity> findRunsForRunner(Runner runner, int limit) {
+        return activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN, Limit.of(limit));
     }
 
     public List<Activity> findActivitiesByIdsForRunner(List<Long> ids, Runner runner) {

@@ -25,6 +25,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -207,6 +209,9 @@ class ActivityControllerTests {
         assertEquals("M 12.00 88.00 L 88.00 12.00", routePreview.get("path"));
         assertEquals(12.0, routePreview.get("startX"));
         assertEquals(12.0, routePreview.get("finishY"));
+        // Without ?limit= the whole-history overload stays the one and only read path.
+        verify(activityRepository, times(1)).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class), any());
         verifyNoInteractions(activityPointRepository);
     }
 
@@ -371,7 +376,7 @@ class ActivityControllerTests {
     }
 
     @Test
-    void getUserRunsLimitCapsFeedToMostRecentItems() {
+    void getUserRunsLimitPushesBoundIntoQueryAndReturnsRepositoryRows() {
         AuthService authService = mock(AuthService.class);
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
@@ -407,6 +412,14 @@ class ActivityControllerTests {
         third.setName("Oldest");
 
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        // The limited read must use the Limit-parameterized overload; the SQL returns
+        // exactly the requested most-recent N rows, newest-first, so the repository
+        // stub answers with only the two newest (no in-memory slicing happens anymore).
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner),
+                eq(ActivityType.RUN),
+                argThat(bounded -> bounded != null && bounded.max() == 2)))
+                .thenReturn(java.util.Arrays.asList(first, second));
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN))
                 .thenReturn(java.util.Arrays.asList(first, second, third));
 
@@ -417,7 +430,57 @@ class ActivityControllerTests {
         assertEquals(2, body.size());
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> head = (java.util.Map<String, Object>) body.get(0);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> tail = (java.util.Map<String, Object>) body.get(1);
         assertEquals("Newest", head.get("name"));
+        assertEquals("Middle", tail.get("name"));
+        // The bounded overload is the one and only history read for a limited call...
+        verify(activityRepository, times(1)).findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner), eq(ActivityType.RUN), argThat(bounded -> bounded != null && bounded.max() == 2));
+        // ...and the whole-history overload must not run at all.
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class));
+        verifyNoInteractions(activityPointRepository);
+    }
+
+    @Test
+    void getUserRunsLimitClampsPushedQueryBound() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class)
+        );
+
+        Runner runner = new Runner();
+        runner.setId(77L);
+        Activity single = new Activity();
+        single.setId(1L);
+        single.setRunner(runner);
+        single.setActivityType(ActivityType.RUN);
+        single.setName("Only");
+
+        when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class), any()))
+                .thenReturn(List.of(single));
+
+        // limit <= 0 is clamped up to 1 (same Math.max(1, ...) rule as before).
+        ResponseEntity<?> zeroLimit = controller.getUserRuns("Bearer session-token", null, 0);
+        assertEquals(HttpStatus.OK, zeroLimit.getStatusCode());
+        assertEquals(1, ((List<?>) zeroLimit.getBody()).size());
+        verify(activityRepository).findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner), eq(ActivityType.RUN), argThat(bounded -> bounded != null && bounded.max() == 1));
+
+        // limit > 500 is clamped down to 500 (same Math.min(limit, 500) rule as before).
+        ResponseEntity<?> oversizedLimit = controller.getUserRuns("Bearer session-token", null, 10_000);
+        assertEquals(HttpStatus.OK, oversizedLimit.getStatusCode());
+        assertEquals(1, ((List<?>) oversizedLimit.getBody()).size());
+        verify(activityRepository).findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner), eq(ActivityType.RUN), argThat(bounded -> bounded != null && bounded.max() == 500));
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class));
     }
 
     @Test

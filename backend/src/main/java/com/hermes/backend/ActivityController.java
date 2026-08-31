@@ -89,12 +89,12 @@ public class ActivityController {
 
         // Runs come back newest-first, so a limit serves the most recent N.
         // Consumers that need the whole history (the Runs list) omit it.
-        List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get());
-        var feed = runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem);
-        if (limit != null) {
-            feed = feed.limit(Math.max(1, Math.min(limit, 500)));
-        }
-        return ResponseEntity.ok(feed.toList());
+        // The clamped limit goes into the query itself, so a limited feed load
+        // materializes only N run entities instead of the runner's full history.
+        List<Activity> runs = limit == null
+                ? activityDataAccess.findRunsForRunner(activeUser.get())
+                : activityDataAccess.findRunsForRunner(activeUser.get(), Math.max(1, Math.min(limit, 500)));
+        return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
     }
 
     @GetMapping("/route-previews")

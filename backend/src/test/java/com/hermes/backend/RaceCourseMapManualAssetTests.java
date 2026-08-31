@@ -337,7 +337,7 @@ class RaceCourseMapManualAssetTests {
         asset.setPendingSummary("Hermes aligned this upload.");
         asset.setPendingUpdatedAt(LocalDateTime.now());
         asset.setPendingRoutePointsJson(new ObjectMapper().writeValueAsString(denseRoute));
-        when(repository.findAll()).thenReturn(List.of(asset));
+        when(repository.findAllListRows()).thenReturn(List.of(toListRow(asset)));
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
 
@@ -352,6 +352,134 @@ class RaceCourseMapManualAssetTests {
         assertThat(pending.routePoints()).hasSize(32);
         assertThat(pending.routePoints().get(0).label()).isEqualTo("Start");
         assertThat(pending.routePoints().get(31).lat()).isEqualTo(denseRoute.get(499).lat());
+        // The list path reads the column projection, never full entities.
+        verify(repository).findAllListRows();
+        verify(repository, never()).findAll();
+    }
+
+    @Test
+    void listRaceCourseMapsPopulatesEveryDtoFieldFromProjectedColumns() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+
+        ObjectMapper mapper = new ObjectMapper();
+        LocalDateTime pendingUpdatedAt = LocalDateTime.of(2026, 8, 1, 9, 30);
+        LocalDateTime liveUpdatedAt = LocalDateTime.of(2026, 8, 2, 10, 15);
+        LocalDateTime entityUpdatedAt = LocalDateTime.of(2026, 8, 3, 11, 0);
+
+        java.util.ArrayList<RoutePoint> pendingRoute = new java.util.ArrayList<>();
+        for (int i = 0; i < 40; i++) {
+            pendingRoute.add(new RoutePoint(35.68 + i * 0.001, 139.76 + i * 0.001, i == 0 ? "Start" : null));
+        }
+        List<RoutePoint> liveRoute = List.of(
+                new RoutePoint(-6.2, 106.8, "Start"),
+                new RoutePoint(-6.25, 106.85, null)
+        );
+
+        RaceCourseMapAsset asset = new RaceCourseMapAsset();
+        asset.setRaceId("full-field-marathon");
+        asset.setRaceName("Full Field Marathon");
+        asset.setCity("Tokyo");
+        asset.setCountry("Japan");
+        asset.setLatitude(35.68);
+        asset.setLongitude(139.76);
+        asset.setDistanceKm(42.195);
+        asset.setPendingImageUrl("local-course-map:full-field-marathon.png");
+        asset.setPendingSource("admin-upload");
+        asset.setPendingConfidence(64);
+        asset.setPendingSummary("Hermes aligned this upload.");
+        asset.setPendingOverlayBoundsJson("{\"north\":35.8,\"south\":35.6,\"east\":139.9,\"west\":139.7}");
+        asset.setPendingRoutePointsJson(mapper.writeValueAsString(pendingRoute));
+        asset.setPendingAiAssisted(true);
+        asset.setPendingUpdatedAt(pendingUpdatedAt);
+        // The list never consumes these; populating them proves they cannot leak into rows.
+        asset.setPendingElevationSamplesJson("[100, 105, 110]");
+        asset.setPendingTotalClimbMeters(320);
+        asset.setLiveImageUrl("https://cdn.example.com/full-field-live.png");
+        asset.setLiveSource("known-official-course:unit-test");
+        asset.setLiveConfidence(88);
+        asset.setLiveSummary("Official course map.");
+        asset.setLiveOverlayBoundsJson("{\"north\":35.9,\"south\":35.5,\"east\":140.0,\"west\":139.6}");
+        asset.setLiveRoutePointsJson(mapper.writeValueAsString(liveRoute));
+        asset.setLiveAiAssisted(true);
+        asset.setLiveUpdatedAt(liveUpdatedAt);
+        asset.setLiveElevationSamplesJson("[120, 125]");
+        asset.setLiveTotalClimbMeters(280);
+
+        // A sparse second row exercises null/empty text columns end to end.
+        RaceCourseMapAsset sparse = new RaceCourseMapAsset();
+        sparse.setRaceId("sparse-race");
+        sparse.setRaceName("Sparse Race");
+        sparse.setCity(null);
+        sparse.setCountry(null);
+        sparse.setPendingImageUrl("");
+
+        org.springframework.test.util.ReflectionTestUtils.setField(asset, "updatedAt", entityUpdatedAt);
+        when(repository.findAllListRows()).thenReturn(List.of(toListRow(asset), toListRow(sparse)));
+
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        List<RaceCourseMapAdminRow> rows = service.listRaceCourseMaps();
+
+        assertThat(rows).hasSize(2);
+
+        RaceCourseMapAdminRow row = rows.get(0);
+        assertThat(row.raceId()).isEqualTo("full-field-marathon");
+        assertThat(row.raceName()).isEqualTo("Full Field Marathon");
+        assertThat(row.city()).isEqualTo("Tokyo");
+        assertThat(row.country()).isEqualTo("Japan");
+        assertThat(row.updatedAt()).isEqualTo(entityUpdatedAt.toString());
+        assertThat(row.hasPendingPreview()).isTrue();
+
+        PreviewSnapshot live = row.live();
+        assertThat(live).isNotNull();
+        assertThat(live.imageUrl()).isEqualTo("https://cdn.example.com/full-field-live.png");
+        assertThat(live.previewImageUrl()).isNull();
+        assertThat(live.source()).isEqualTo("known-official-course:unit-test");
+        assertThat(live.summary()).isEqualTo("Official course map.");
+        assertThat(live.confidence()).isEqualTo(88);
+        assertThat(live.updatedAt()).isEqualTo(liveUpdatedAt.toString());
+        assertThat(live.overlayBounds()).isNotNull();
+        assertThat(live.overlayBounds().north()).isEqualTo(35.9);
+        assertThat(live.overlayBounds().west()).isEqualTo(139.6);
+        assertThat(live.routePoints()).hasSize(2);
+        assertThat(live.routePoints().get(0).lat()).isEqualTo(-6.2);
+        assertThat(live.routePoints().get(1).lng()).isEqualTo(106.85);
+        assertThat(live.elevationSamples()).isEmpty();
+        assertThat(live.totalClimbMeters()).isNull();
+        assertThat(live.aiAssisted()).isTrue();
+        assertThat(live.courseMapDetected()).isTrue();
+
+        PreviewSnapshot pending = row.pendingPreview();
+        assertThat(pending).isNotNull();
+        assertThat(pending.imageUrl()).isEqualTo("local-course-map:full-field-marathon.png");
+        assertThat(pending.source()).isEqualTo("admin-upload");
+        assertThat(pending.summary()).isEqualTo("Hermes aligned this upload.");
+        assertThat(pending.confidence()).isEqualTo(64);
+        assertThat(pending.updatedAt()).isEqualTo(pendingUpdatedAt.toString());
+        assertThat(pending.overlayBounds()).isNotNull();
+        assertThat(pending.overlayBounds().east()).isEqualTo(139.9);
+        assertThat(pending.routePoints()).hasSize(32);
+        assertThat(pending.routePoints().get(0).label()).isEqualTo("Start");
+        assertThat(pending.routePoints().get(31).lat()).isEqualTo(pendingRoute.get(39).lat());
+        assertThat(pending.elevationSamples()).isEmpty();
+        assertThat(pending.totalClimbMeters()).isNull();
+        assertThat(pending.aiAssisted()).isTrue();
+        assertThat(pending.courseMapDetected()).isTrue();
+
+        RaceCourseMapAdminRow sparseRow = rows.get(1);
+        assertThat(sparseRow.raceId()).isEqualTo("sparse-race");
+        assertThat(sparseRow.raceName()).isEqualTo("Sparse Race");
+        assertThat(sparseRow.city()).isNull();
+        assertThat(sparseRow.country()).isNull();
+        assertThat(sparseRow.updatedAt()).isNull();
+        assertThat(sparseRow.hasPendingPreview()).isFalse();
+        assertThat(sparseRow.live()).isNull();
+        assertThat(sparseRow.pendingPreview()).isNull();
+
+        verify(repository).findAllListRows();
+        verify(repository, never()).findAll();
     }
 
     @Test
@@ -1233,7 +1361,7 @@ class RaceCourseMapManualAssetTests {
         asset.setPendingRoutePointsJson(points.toString());
         asset.setPendingElevationSamplesJson("[100, 105, 110, 115, 120]");
         asset.setPendingImageUrl("data:image/png;base64,perfcache");
-        when(repository.findAll()).thenReturn(java.util.List.of(asset));
+        when(repository.findAllListRows()).thenReturn(java.util.List.of(toListRow(asset)));
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
 
@@ -1243,7 +1371,41 @@ class RaceCourseMapManualAssetTests {
         org.junit.jupiter.api.Assertions.assertSame(first, second, "Second list call within the TTL must reuse the cached rows.");
         org.junit.jupiter.api.Assertions.assertTrue(first.get(0).pendingPreview().elevationSamples().isEmpty(),
                 "List-mode rows must skip the per-row elevation payload.");
-        verify(repository, org.mockito.Mockito.times(1)).findAll();
+        verify(repository, org.mockito.Mockito.times(1)).findAllListRows();
+        verify(repository, org.mockito.Mockito.never()).findAll();
+    }
+
+    /**
+     * Mirrors what the SQL projection selects: exactly the columns the admin list
+     * row consumes, read from a fixture entity in the JPQL constructor order.
+     */
+    private static RaceCourseMapAssetListRow toListRow(RaceCourseMapAsset asset) {
+        return new RaceCourseMapAssetListRow(
+                asset.getRaceId(),
+                asset.getRaceName(),
+                asset.getCity(),
+                asset.getCountry(),
+                asset.getLatitude(),
+                asset.getLongitude(),
+                asset.getDistanceKm(),
+                asset.getPendingImageUrl(),
+                asset.getPendingSource(),
+                asset.getPendingConfidence(),
+                asset.getPendingSummary(),
+                asset.getPendingOverlayBoundsJson(),
+                asset.getPendingRoutePointsJson(),
+                asset.getPendingAiAssisted(),
+                asset.getPendingUpdatedAt(),
+                asset.getLiveImageUrl(),
+                asset.getLiveSource(),
+                asset.getLiveConfidence(),
+                asset.getLiveSummary(),
+                asset.getLiveOverlayBoundsJson(),
+                asset.getLiveRoutePointsJson(),
+                asset.getLiveAiAssisted(),
+                asset.getLiveUpdatedAt(),
+                asset.getUpdatedAt()
+        );
     }
 
 }
