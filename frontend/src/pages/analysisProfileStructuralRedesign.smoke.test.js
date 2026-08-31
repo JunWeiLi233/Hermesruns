@@ -43,10 +43,10 @@ for (const [route, branch] of [
 ]) {
   assert.ok(branch.includes(`analysis-profile-v2--${route}`), `${route} must use its shared Profile v2 route marker.`);
   const requiredMarkers = [
-    'analysis-profile-v2-header',
     'analysis-profile-v2-focus',
     ...(route === 'coach' ? [] : ['analysis-profile-v2-metric-strip']),
   ];
+  if (route === 'coach') requiredMarkers.push('analysis-profile-v2-header');
   for (const marker of requiredMarkers) {
     assert.ok(branch.includes(marker), `${route} must include ${marker}.`);
   }

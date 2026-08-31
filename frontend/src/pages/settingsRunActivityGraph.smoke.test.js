@@ -55,7 +55,7 @@ assert.match(
 
 assert.match(
   graphSource,
-  /st-activity-calendar"\s*style=\{\{\s*'--st-activity-week-count':\s*calendar\.weeks\.length\s*\}\}/,
+  /st-activity-calendar"\s*style=\{\{\s*'--st-activity-week-count':\s*activeCalendar\.weeks\.length\s*\}\}/,
   'The graph should expose its week count to the fluid calendar layout.',
 );
 

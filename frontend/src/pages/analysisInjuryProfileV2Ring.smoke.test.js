@@ -15,27 +15,15 @@ const injuryBranchEnd = pageSource.indexOf("insightKey === 'load-balance'", inju
 assert.ok(injuryBranchStart >= 0 && injuryBranchEnd > injuryBranchStart, 'The injury-risk branch should remain addressable.');
 
 const injuryBranch = pageSource.slice(injuryBranchStart, injuryBranchEnd);
-assert.match(injuryBranch, /className="analysis-profile-v2-ring"/);
-assert.match(
+assert.doesNotMatch(
   injuryBranch,
-  /'--analysis-v2-progress':\s*`\$\{Math\.min\(100, Math\.max\(0, snapshot\.injury\.score\)\) \* 3\.6\}deg`/,
-  'The injury ring must continue to derive its progress from the clamped injury score.',
+  /analysis-profile-v2-ring|--analysis-v2-progress/,
+  'The removed Injury Risk hero must not leave its readiness ring in the route branch.',
 );
-
-assert.match(
+assert.doesNotMatch(
   styleSource,
-  /\.analysis-profile-v2--injury \.analysis-profile-v2-ring\s*\{[\s\S]*?box-sizing:\s*border-box;[\s\S]*?border:\s*0;[\s\S]*?background:\s*conic-gradient\(\s*from -90deg/,
-  'The injury ring must use a border-box conic track instead of painting progress beneath a solid border.',
-);
-assert.match(
-  styleSource,
-  /\.analysis-profile-v2--injury \.analysis-profile-v2-ring::before\s*\{[\s\S]*?background:\s*var\(--analysis-v2-paper\)/,
-  'The injury ring must mask its center with the active Profile surface.',
-);
-assert.match(
-  styleSource,
-  /\.analysis-profile-v2--injury \.analysis-profile-v2-ring\s*>\s*\*\s*\{[\s\S]*?position:\s*relative;[\s\S]*?z-index:\s*1;/,
-  'The injury ring value and denominator must remain above the track mask.',
+  /\.analysis-profile-v2--injury \.analysis-profile-v2-ring|\.analysis-profile-v2-ring\s*[,:{]/,
+  'The removed Injury Risk readiness ring must not leave orphaned CSS behind.',
 );
 
 console.log('[PASS] Injury Profile v2 ring contract passed.');

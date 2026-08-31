@@ -572,3 +572,72 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data
 ) :is(p, span, small, em) {
   color: var(--runner-minimal-muted) !important;
 }
+
+/* Keep the exercise grid as a single card surface while resetting only the
+   nested heading wrapper below so it does not create a second strip. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises {
+  border: 1px solid var(--mtpa-line) !important;
+  border-radius: var(--mtpa-radius-xl) !important;
+  background: var(--mtpa-card) !important;
+  background-image: none !important;
+  color: var(--mtpa-text) !important;
+  box-shadow: var(--mtpa-shadow-md) !important;
+}
+
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises-head {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* The shared card sweep also matches these text wrappers by class name. Keep
+   the video heading on its outer card surface instead of creating a strip. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-video-card .mt-card-head,
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-video-card .mt-card-title {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+
+
+/* The exercise workspace title is another text wrapper caught by the shared
+   card sweep; keep it on the page canvas above the exercise list. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises-head .mt-card-title {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Keep the reference grid item on a distinct card surface. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-reference-card {
+  border: 1px solid var(--mtpa-line-strong) !important;
+  background: var(--mtpa-card-strong) !important;
+  box-shadow: var(--mtpa-shadow-md) !important;
+}
+
+/* Extend that surface around the heading so the whole reference column reads
+   as one card instead of a heading followed by a detached panel. */
+#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-reference {
+  padding: 20px;
+  border: 1px solid var(--mtpa-line) !important;
+  border-radius: var(--mtpa-radius-xl) !important;
+  background: var(--mtpa-card-strong) !important;
+  box-shadow: var(--mtpa-shadow-md) !important;
+}
+
+@media (max-width: 720px) {
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-reference {
+    padding: 14px;
+  }
+}

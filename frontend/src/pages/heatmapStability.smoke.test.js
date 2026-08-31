@@ -311,8 +311,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-map-shell \{[\s\S]*?isolation: isolate;[\s\S]*?\.heatmap-page-map-canvas \{[\s\S]*?position: relative;[\s\S]*?z-index: 0;[\s\S]*?\.heatmap-page-topbar,[\s\S]*?\.heatmap-page-legend-card,[\s\S]*?\.heatmap-page-utility-rail,[\s\S]*?\.heatmap-page-empty\s*\{[\s\S]*?z-index: 30;/,
-  'Heatmap overlay bars should stay above Leaflet panes without relying on expensive full-map filters.',
+  /\.heatmap-page-map-shell \{[\s\S]*?isolation: isolate;[\s\S]*?\.heatmap-page-map-canvas \{[\s\S]*?position: relative;[\s\S]*?z-index: 0;[\s\S]*?\.heatmap-page-legend-card,[\s\S]*?\.heatmap-page-utility-rail,[\s\S]*?\.heatmap-page-empty\s*\{[\s\S]*?z-index: 30;[\s\S]*?\.heatmap-page-topbar \{[\s\S]*?z-index: 40;/,
+  'Heatmap overlay bars should stay above Leaflet panes, with the topbar one level above the empty-state veil, without relying on expensive full-map filters.',
 );
 assert.doesNotMatch(
   heatmapStyleSource,

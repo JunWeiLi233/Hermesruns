@@ -24,6 +24,7 @@ import predictionTenKHeroAvif1600 from '../assets/generated/prediction-10k-hero-
 import predictionTenKHeroWebp640 from '../assets/generated/prediction-10k-hero-640.webp';
 import predictionTenKHeroWebp1280 from '../assets/generated/prediction-10k-hero-1280.webp';
 import predictionTenKHeroWebp1600 from '../assets/generated/prediction-10k-hero-1600.webp';
+import predictionHalfHeroImage from '../assets/generated/prediction-half-hero.webp';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
@@ -35,6 +36,7 @@ import {
 } from '../utils/vdot';
 import { formatPaceSeconds } from '../utils/format';
 import { selectRacePrediction } from '../utils/predictionSelection.ts';
+import { hasMeaningfulWeatherTrendAdjustment } from '../utils/predictionTrend.js';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -128,7 +130,7 @@ export default function PredictionDetail() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const distance = useMemo(() => RACE_DISTANCES.find((d) => d.key === distKey), [distKey]);
-  const showConfidencePanel = distance?.key !== '5k' && distance?.key !== '10k' && distance?.key !== 'half';
+  const showConfidencePanel = distance?.key !== '5k' && distance?.key !== '10k' && distance?.key !== 'half' && distance?.key !== 'marathon';
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -254,10 +256,12 @@ export default function PredictionDetail() {
           date: point.date,
           raw,
           adjusted,
-          hasAdjustment: adjustedPointVdot - point.y > 0.05
-            && Number.isFinite(adjusted)
-            && Number.isFinite(raw)
-            && adjusted < raw - (1 / 60),
+          hasAdjustment: hasMeaningfulWeatherTrendAdjustment({
+            rawVdot: point.y,
+            adjustedVdot: adjustedPointVdot,
+            rawMinutes: raw,
+            adjustedMinutes: adjusted,
+          }),
         };
       })
       .filter((point) => Number.isFinite(point.raw) && point.raw > 0);
@@ -415,7 +419,7 @@ export default function PredictionDetail() {
 
         <div className="runner-shell-canvas">
           <div className="prediction-profile-content prediction-forecast-cockpit">
-            <section className={`prediction-forecast-hero${showConfidencePanel ? '' : ' is-confidence-removed'}${distance?.key === '5k' ? ' is-five-k' : distance?.key === '10k' ? ' is-ten-k' : ''}`}>
+            <section className={`prediction-forecast-hero${showConfidencePanel ? '' : ' is-confidence-removed'}${distance?.key === '5k' ? ' is-five-k' : distance?.key === '10k' ? ' is-ten-k' : distance?.key === 'half' ? ' is-half' : ''}`}>
               <div className="prediction-forecast-hero-copy">
                 <span className="prediction-forecast-kicker">{t('analysis.pred_cockpit_kicker')}</span>
                 <h1>{t('analysis.pred_cockpit_title', { dist: title })}</h1>
@@ -437,28 +441,34 @@ export default function PredictionDetail() {
                 </div>
               </div>
 
-              {distance?.key === '5k' || distance?.key === '10k' ? (
+              {distance?.key === '5k' || distance?.key === '10k' || distance?.key === 'half' ? (
                 <div className="prediction-forecast-hero-media" aria-hidden="true">
                   <picture>
-                    <source
-                      type="image/avif"
-                      srcSet={distance?.key === '10k'
-                        ? `${predictionTenKHeroAvif640} 640w, ${predictionTenKHeroAvif1280} 1280w, ${predictionTenKHeroAvif1600} 1600w`
-                        : `${predictionFiveKHeroAvif640} 640w, ${predictionFiveKHeroAvif960} 960w, ${predictionFiveKHeroAvif1200} 1200w`}
-                      sizes="(max-width: 900px) 100vw, 52vw"
-                    />
-                    <source
-                      type="image/webp"
-                      srcSet={distance?.key === '10k'
-                        ? `${predictionTenKHeroWebp640} 640w, ${predictionTenKHeroWebp1280} 1280w, ${predictionTenKHeroWebp1600} 1600w`
-                        : `${predictionFiveKHeroWebp640} 640w, ${predictionFiveKHeroWebp960} 960w, ${predictionFiveKHeroWebp1200} 1200w`}
-                      sizes="(max-width: 900px) 100vw, 52vw"
-                    />
+                    {distance?.key !== 'half' && (
+                      <>
+                        <source
+                          type="image/avif"
+                          srcSet={distance?.key === '10k'
+                            ? `${predictionTenKHeroAvif640} 640w, ${predictionTenKHeroAvif1280} 1280w, ${predictionTenKHeroAvif1600} 1600w`
+                            : `${predictionFiveKHeroAvif640} 640w, ${predictionFiveKHeroAvif960} 960w, ${predictionFiveKHeroAvif1200} 1200w`}
+                          sizes="(max-width: 900px) 100vw, 52vw"
+                        />
+                        <source
+                          type="image/webp"
+                          srcSet={distance?.key === '10k'
+                            ? `${predictionTenKHeroWebp640} 640w, ${predictionTenKHeroWebp1280} 1280w, ${predictionTenKHeroWebp1600} 1600w`
+                            : `${predictionFiveKHeroWebp640} 640w, ${predictionFiveKHeroWebp960} 960w, ${predictionFiveKHeroWebp1200} 1200w`}
+                          sizes="(max-width: 900px) 100vw, 52vw"
+                        />
+                      </>
+                    )}
                     <img
-                      src={distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage}
+                      src={distance?.key === 'half'
+                        ? predictionHalfHeroImage
+                        : distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage}
                       alt=""
-                      width={distance?.key === '10k' ? 1600 : 1200}
-                      height={distance?.key === '10k' ? 901 : 650}
+                      width={distance?.key === 'half' || distance?.key === '10k' ? 1600 : 1200}
+                      height={distance?.key === 'half' ? 550 : distance?.key === '10k' ? 901 : 650}
                       loading="eager"
                       fetchPriority="high"
                       decoding="async"

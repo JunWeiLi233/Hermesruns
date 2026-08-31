@@ -221,7 +221,6 @@
   background: none;
 }
 
-.heatmap-page-topbar,
 .heatmap-page-legend-card,
 .heatmap-page-utility-rail,
 .heatmap-page-empty {
@@ -230,6 +229,9 @@
 
 .heatmap-page-topbar {
   position: absolute;
+  /* The empty/loading veil (inset: 22px) spans this bar's row too; stay one
+     stacking level above it so brand navigation remains clickable. */
+  z-index: 40;
   top: 22px;
   left: 22px;
   right: 22px;

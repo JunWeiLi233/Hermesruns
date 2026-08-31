@@ -1,0 +1,32 @@
+/* The desktop action rail should occupy the full height of the workbench.
+   Keep the existing card surface and compact mobile layout unchanged. */
+@media (min-width: 961px) {
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-actions-card {
+    align-self: stretch;
+    height: 100% !important;
+    min-height: 0;
+  }
+
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-action-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    grid-auto-rows: minmax(86px, 1fr);
+    align-content: stretch;
+    overflow-y: auto;
+  }
+
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-action-card {
+    height: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* At narrower widths the page should grow with the full action list instead
+   of trapping the cards inside the old 190px inner scrollbar. */
+@media (max-width: 960px) {
+  #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-action-list {
+    max-height: none;
+    overflow: visible;
+  }
+}

@@ -131,6 +131,7 @@ export default function Analysis() {
   const [sorenessSubmitting, setSorenessSubmitting] = useState(false);
   const [sorenessLevelOverride, setSorenessLevelOverride] = useState(null);
   const [sorenessError, setSorenessError] = useState(null);
+  const [sorenessModalLevel, setSorenessModalLevel] = useState(null);
   const [hoveredVo2BarKey, setHoveredVo2BarKey] = useState(null);
   const vo2BarsContainerRef = useRef(null);
   const vo2TouchDismissTimerRef = useRef(null);
@@ -296,6 +297,9 @@ export default function Analysis() {
     sorenessLevelOverride ?? injuryStatus?.recentLogs?.[0]?.level ?? injuryStatus?.sorenessLevel ?? ''
   ).toLowerCase();
   const hasSorenessLog = ['low', 'medium', 'high'].includes(latestSorenessLevel);
+  const localizedCoachAdvice = injuryStatus?.risk === 'LOW'
+    ? t('analysis.stitch_injury_prevention_coach_advice_low')
+    : injuryStatus?.coachAdvice;
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -395,6 +399,13 @@ export default function Analysis() {
     } finally {
       setSorenessSubmitting(false);
     }
+  }
+
+  async function handleSorenessModalConfirm() {
+    if (!sorenessModalLevel || sorenessSubmitting) return;
+    const level = sorenessModalLevel;
+    setSorenessModalLevel(null);
+    await handleSorenessLog(level);
   }
 
   if (runsState === 'loading') return <PageSkeleton variant="analysis" />;
@@ -903,7 +914,7 @@ export default function Analysis() {
                         <button
                           type="button"
                           className={cx('analysis-injury-prevention-soreness-btn', 'is-low', latestSorenessLevel === 'low' && 'is-active-low')}
-                          onClick={() => handleSorenessLog('low')}
+                          onClick={() => setSorenessModalLevel('low')}
                           disabled={sorenessSubmitting}
                           aria-pressed={latestSorenessLevel === 'low'}
                         >
@@ -912,7 +923,7 @@ export default function Analysis() {
                         <button
                           type="button"
                           className={cx('analysis-injury-prevention-soreness-btn', 'is-medium', latestSorenessLevel === 'medium' && 'is-active-medium')}
-                          onClick={() => handleSorenessLog('medium')}
+                          onClick={() => setSorenessModalLevel('medium')}
                           disabled={sorenessSubmitting}
                           aria-pressed={latestSorenessLevel === 'medium'}
                         >
@@ -921,7 +932,7 @@ export default function Analysis() {
                         <button
                           type="button"
                           className={cx('analysis-injury-prevention-soreness-btn', 'is-high', latestSorenessLevel === 'high' && 'is-active-high')}
-                          onClick={() => handleSorenessLog('high')}
+                          onClick={() => setSorenessModalLevel('high')}
                           disabled={sorenessSubmitting}
                           aria-pressed={latestSorenessLevel === 'high'}
                         >
@@ -942,7 +953,7 @@ export default function Analysis() {
                       )}
                       {injuryStatus?.coachAdvice ? (
                         <div className="analysis-injury-prevention-coach-advice">
-                          {injuryStatus.coachAdvice}
+                          {localizedCoachAdvice}
                         </div>
                       ) : (
                         <div className="analysis-injury-prevention-coach-empty">
@@ -972,6 +983,39 @@ export default function Analysis() {
             <button type="submit" className="btn-primary modal-button">{t('profile.save_name')}</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(sorenessModalLevel)}
+        onClose={() => setSorenessModalLevel(null)}
+        title={t('analysis.stitch_injury_prevention_soreness_modal_title')}
+        shellClassName="analysis-soreness-modal-shell"
+        cardClassName="analysis-soreness-modal-card"
+      >
+        <div className="analysis-soreness-modal-content">
+          <div className={cx('analysis-soreness-modal-level', `is-${sorenessModalLevel || 'low'}`)}>
+            {sorenessModalLevel
+              ? t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`)
+              : ''}
+          </div>
+          <p className="analysis-soreness-modal-copy">
+            {sorenessModalLevel
+              ? t('analysis.stitch_injury_prevention_soreness_modal_copy', {
+                level: t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`),
+              })
+              : ''}
+          </p>
+          <div className="modal-actions analysis-soreness-modal-actions">
+            <button type="button" className="btn-secondary modal-button" onClick={() => setSorenessModalLevel(null)}>
+              {t('analysis.stitch_injury_prevention_soreness_modal_cancel')}
+            </button>
+            <button type="button" className="btn-primary modal-button" onClick={handleSorenessModalConfirm} disabled={sorenessSubmitting}>
+              {sorenessSubmitting
+                ? t('analysis.stitch_injury_prevention_logging')
+                : t('analysis.stitch_injury_prevention_soreness_modal_confirm')}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       <Modal

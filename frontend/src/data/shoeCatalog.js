@@ -176,25 +176,10 @@ const shoeCatalog = [
     model('疾风', '越野', 'trail'),
     model('脉行', '越野', 'trail'),
   ]),
-  brand('德尔惠', '🟣', [
-    model('猛将', '竞速', 'race'),
-    model('疾风', '竞速', 'race'),
-    model('破风', '竞速', 'race'),
-    model('速跑', '竞训', 'speed'),
-    model('闪电侠', '竞速', 'race'),
-    model('裂空', '竞速', 'race'),
-  ]),
-  brand('赛琪', '🟢', [
-    model('巨风', '竞训', 'speed'),
-    model('追风', '竞训', 'speed'),
-  ]),
   brand('金莱克', '🟠', [
     model('心跳', '竞训', 'speed'),
     model('P2', '综训', 'daily'),
     model('芷境', '缓震', 'daily'),
-  ]),
-  brand('思凯乐', '🟢', [
-    model('飞天', '越野', 'trail'),
   ]),
   brand('UP run', '🟣', [
     model('飞箭', '竞速', 'race'),
@@ -215,13 +200,6 @@ const shoeCatalog = [
     model('699', '体测', 'speed'),
     model('1200', '竞速', 'race'),
     model('6000', '体测', 'speed'),
-  ]),
-  brand('辛逸', '🟢', [
-    model('730', '体测', 'speed'),
-    model('737', '体测', 'speed'),
-    model('733', '体测', 'speed'),
-    model('1019', '竞训', 'speed'),
-    model('108', '竞训', 'speed'),
   ]),
   brand('弹射者', '🟠', [
     model('黑马', '竞速', 'race'),
@@ -248,38 +226,12 @@ const shoeCatalog = [
     model('上瘾', '竞速', 'race'),
     model('爆发', '竞速', 'race'),
   ]),
-  brand('星火力', '🔴', [
-    model('音速', '竞训', 'speed'),
-    model('极速', '竞速', 'race'),
-  ]),
   brand('领跑梦想', '🟡', [
     model('飝翼', '竞速', 'race'),
     model('闪速', '竞训', 'speed'),
     model('疾锋', '竞训', 'speed'),
     model('凌波', '竞速', 'race'),
     model('极韧', '综训', 'daily'),
-  ]),
-  brand('燃动力', '🟠', [
-    model('竞速', '竞训', 'speed'),
-    model('轻燃', '竞训', 'speed'),
-    model('大圣', '竞速', 'race'),
-    model('轻弹', '竞速', 'race'),
-    model('闪电GT', '竞速', 'race'),
-  ]),
-  brand('天赐之翼', '🪽', [
-    model('宙斯', '竞速', 'race'),
-    model('暴风', '竞速', 'race'),
-  ]),
-  brand('双星', '⚪', [
-    model('新田径', '体测', 'speed'),
-  ]),
-  brand('双星八特', '⚪', [
-    model('新体考', '体测', 'speed'),
-  ]),
-  brand('ONEMIX', '🟢', [
-    model('觅氧', '缓震', 'daily'),
-    model('劲飞爽', '竞速', 'race'),
-    model('悟爽', '缓震', 'daily'),
   ]),
   brand('FREETIE', '🔵', [
     model('云弹', '缓震', 'daily'),
@@ -292,38 +244,11 @@ const shoeCatalog = [
     model('赤狐', '竞速', 'race'),
     model('GTS', '竞速', 'race'),
   ]),
-  brand('强风跑霸', '🟤', [
-    model('风速', '竞速', 'race'),
-    model('鲲鹏', '竞速', 'race'),
-  ]),
-  brand('申亚', '🟢', [
-    model('008', '体测', 'speed'),
-    model('1906', '体测', 'speed'),
-    model('848', '体测', 'speed'),
-    model('1808', '体测', 'speed'),
-    model('2128', '体测', 'speed'),
-    model('2323', '体测', 'speed'),
-  ]),
-  brand('轻跑者', '🟣', [
-    model('锋刃', '竞速', 'race'),
-    model('影刃', '竞速', 'race'),
-    model('青羽', '竞速', 'race'),
-  ]),
   brand('喜得龙', '🔵', [
     model('逐风', '竞速', 'race'),
     model('龙影', '竞训', 'speed'),
     model('龙雀', '竞速', 'race'),
     model('游龙', '竞速', 'race'),
-  ]),
-  brand('R2 REALRUN', '⚫', [
-    model('LSD', '缓震', 'daily'),
-    model('无极', '缓震', 'daily'),
-    model('信念', '越野', 'trail'),
-    model('悠跑', '缓震', 'daily'),
-    model('风跑', '综训', 'daily'),
-    model('电跑', '竞速', 'race'),
-    model('云跑', '缓震', 'daily'),
-    model('云跑碳术', '竞速', 'race'),
   ]),
   brand('Nike', '🟠', [
     model('Miler', '缓震', 'daily'),
@@ -717,14 +642,6 @@ const shoeCatalog = [
     model('Atomo Star', '缓震', 'daily'),
     model('Frequenza', '竞训', 'speed'),
     model('Gara Carbon', '竞速', 'race'),
-  ]),
-  brand('NNormal', '⚫', [
-    model('Kjerag', '越野竞速', 'trail'),
-    model('Tomir', '越野', 'trail'),
-  ]),
-  brand('VJ', '🟤', [
-    model('XTRM', '越野', 'trail'),
-    model('MAXx', '越野', 'trail'),
   ]),
   brand('Kailas', '🟠', [
     model('Fuga DU', '越野竞速', 'trail'),

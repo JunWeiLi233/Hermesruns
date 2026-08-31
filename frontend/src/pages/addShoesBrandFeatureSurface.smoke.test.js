@@ -20,7 +20,6 @@ assert.match(
 );
 
 console.log('[PASS] Add Shoes selected brand card matches the normal compact card surface.');
-
 /* Legacy light-theme guardrails for the removed feature-card markup: the
    overrides stay in the stylesheet for stale lazy chunks, so keep them locked. */
 assert.match(

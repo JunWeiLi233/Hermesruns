@@ -5,11 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const atelier = readFileSync(path.join(here, '../styles/shoes-atelier-redesign.css'), 'utf8');
-const vault = readFileSync(path.join(here, '../styles/shoes-vault-redesign.css'), 'utf8');
 const shoesSource = readFileSync(path.join(here, './Shoes.jsx'), 'utf8');
 
 // The shoe card markup stacks card-top (art/copy/side row) → metrics →
-// actions. The atelier/vault 3-track card grids assumed the old flat
+// actions. The atelier 3-track card grid assumed the old flat
 // structure and squeezed the whole card-top into one narrow column.
 assert.match(
   shoesSource,
@@ -21,13 +20,8 @@ assert.match(
   /#root \.shoes-atelier-redesign \.shoe-inventory-card\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/,
   'Atelier card should stack rows in a single column.',
 );
-assert.match(
-  vault,
-  /#root \.shoes-atelier-redesign \.shoe-inventory-card\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/,
-  'Vault card should stack rows in a single column.',
-);
 assert.doesNotMatch(
-  atelier + vault,
+  atelier,
   /\.shoe-inventory-card\s*\{[^}]*grid-template-columns:\s*1\d\dpx/,
-  'No redesign stylesheet should keep a pixel-leading card grid track.',
+  'The atelier stylesheet should not keep a pixel-leading card grid track.',
 );

@@ -15,6 +15,10 @@ const BRAND_ALIASES = {
   '马孔多': 'macondo',
   '沃兰迪': 'volanti',
   '沃尔朗迪': 'volanti',
+  '海尔斯': 'haier',
+  '音速猫': 'soniccat',
+  '威量': 'veirun',
+  '伯希和': 'pelliot',
 };
 
 export function normalizeShoeBrandKey(brand) {
@@ -63,18 +67,17 @@ export function getShoeBrandFallbackSpec(brand) {
   if (key === 'warrior') return make({ bg: '#dc2626', fg: '#ffffff', text: 'WAR' });
   if (key === 'doublestar') return make({ bg: '#64748b', fg: '#ffffff', text: 'DS' });
 
-  // These catalog brands do not yet have a verified local image asset. Keep a
-  // brand-specific text mark in the shared resolver so catalog entries never
-  // regress to a raw emoji while avoiding unverified marketplace image reuse.
+  // Keep deterministic marks as a defensive fallback when a catalog image is
+  // unavailable, without reusing unverified marketplace product imagery.
   const catalogBrandMark = {
-    伯希和: { bg: '#0f766e', fg: '#ffffff', text: '伯希和' },
+    pelliot: { bg: '#0f766e', fg: '#ffffff', text: '伯希和' },
     思凯乐: { bg: '#2563eb', fg: '#ffffff', text: '思凯乐' },
     uprun: { bg: '#4f46e5', fg: '#ffffff', text: 'UP' },
-    海尔斯: { bg: '#1d4ed8', fg: '#ffffff', text: 'HEALTH' },
+    haier: { bg: '#1d4ed8', fg: '#ffffff', text: 'HEALTH' },
     辛逸: { bg: '#0891b2', fg: '#ffffff', text: '辛逸' },
     弹射者: { bg: '#ea580c', fg: '#ffffff', text: '弹射者' },
-    威量: { bg: '#7c3aed', fg: '#ffffff', text: '威量' },
-    音速猫: { bg: '#111827', fg: '#ffffff', text: '音速猫' },
+    veirun: { bg: '#7c3aed', fg: '#ffffff', text: '威量' },
+    soniccat: { bg: '#111827', fg: '#ffffff', text: '音速猫' },
     星火力: { bg: '#dc2626', fg: '#ffffff', text: 'MAX' },
     领跑梦想: { bg: '#ca8a04', fg: '#ffffff', text: 'LPMX' },
     燃动力: { bg: '#c2410c', fg: '#ffffff', text: '燃动力' },

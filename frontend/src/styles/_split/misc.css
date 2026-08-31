@@ -403,10 +403,6 @@ select:focus {
     max-width: 100%;
 }
 
-.run-level-medal {
-    display: block;
-}
-
 #map {
     width: 100%;
     height: 460px;

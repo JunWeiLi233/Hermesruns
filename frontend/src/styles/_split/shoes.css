@@ -1772,6 +1772,9 @@
 
 .shoe-brand-logo-img {
   display: block;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   padding: 4px;
   border: 1px solid rgba(171, 173, 174, 0.18);
@@ -4247,6 +4250,20 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.add-shoes-brand-logo {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  overflow: hidden;
+}
+
+.add-shoes-brand-logo .shoe-brand-logo-svg {
+  width: 100%;
+  height: 100%;
 }
 
 .add-shoes-brand-item {

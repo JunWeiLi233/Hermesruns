@@ -20,8 +20,15 @@ assert.doesNotMatch(
   /const injuryHeroLabel = t\('analysis\.injury_cinematic_live'\)/,
   'The removed hero pill should not leave an unused label binding behind.',
 );
-assert.match(injuryBranch, /analysis-cinematic-hero/);
-assert.match(injuryBranch, /\{injuryHeroTitle\}/);
-assert.match(injuryBranch, /\{injuryHeroSubtitle\}/);
+assert.doesNotMatch(
+  injuryBranch,
+  /analysis-cinematic-hero analysis-profile-v2-header|\{injuryHeroTitle\}|\{injuryHeroSubtitle\}|analysis-profile-v2-ring/,
+  'The Injury Risk hero shown in the reference should be removed completely.',
+);
+assert.match(
+  injuryBranch,
+  /analysis-profile-v2-focus|analysis-injury-profile-chart-card/,
+  'Removing the hero must preserve the Injury Risk detail content below it.',
+);
 
 console.log('[PASS] Injury-risk hero surface guard passed.');

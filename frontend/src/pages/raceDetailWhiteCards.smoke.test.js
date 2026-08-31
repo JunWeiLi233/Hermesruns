@@ -67,5 +67,4 @@ assert.match(
   /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.race-detail-page :is\([\s\S]*?\.race-detail-elevation-chart\s*\)\s*\{[\s\S]*?background:\s*#fff !important;[\s\S]*?background-image:\s*none !important;/,
   'The final white-card cascade should pin the race-detail elevation grid to pure white.',
 );
-
 console.log('[PASS] Race detail white-card surface guardrails passed.');

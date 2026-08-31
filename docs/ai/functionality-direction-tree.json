@@ -86,7 +86,7 @@
       "contracts": ["points", "analytics", "telemetry", "elevation status", "shoe assignment"],
       "frontend": {
         "entrypoints": ["frontend/src/pages/RunDetail.jsx"],
-        "supporting": ["frontend/src/utils/format.js", "frontend/src/components/RunLevelMedal.jsx"],
+        "supporting": ["frontend/src/utils/format.js"],
         "styles": ["frontend/src/styles/_split/runs.css", "frontend/src/styles/run-detail-profile-minimal.css"],
         "tests": ["frontend/src/pages/runDetailProfileCockpit.smoke.test.js", "frontend/src/pages/runDetailPerformanceMetricsRemoval.smoke.test.js"]
       },
@@ -174,7 +174,7 @@
       "contracts": ["location inputs", "forecast", "running context", "weather-adjusted fitness"],
       "frontend": {
         "entrypoints": ["frontend/src/pages/WeatherEngine.jsx"],
-        "supporting": ["frontend/src/utils/weatherLocation.js", "frontend/src/utils/weatherCodeIcon.js", "frontend/src/components/WeatherGlyph.jsx"],
+        "supporting": ["frontend/src/utils/weatherLocation.js", "frontend/src/components/WeatherGlyph.jsx"],
         "styles": ["frontend/src/styles/_split/weather.css"],
         "tests": ["frontend/src/pages/weatherEngineFastPaint.smoke.test.js", "frontend/src/utils/weatherLocation.test.js", "frontend/src/utils/analysisVo2BarsWeather.test.js"]
       },
@@ -196,7 +196,7 @@
       "contracts": ["inventory lifecycle", "catalog selection", "image validation", "scan quota", "activity assignment"],
       "frontend": {
         "entrypoints": ["frontend/src/pages/Shoes.jsx", "frontend/src/pages/AddShoes.jsx", "frontend/src/pages/ShoeCatalog.jsx"],
-        "supporting": ["frontend/src/components/ShoeRecommendation.jsx", "frontend/src/utils/shoeRotation.js", "frontend/src/utils/shoeImagePickerState.js", "frontend/src/data/shoeCatalog.js"],
+        "supporting": ["frontend/src/utils/shoeRotation.js", "frontend/src/utils/shoeImagePickerState.js", "frontend/src/data/shoeCatalog.js"],
         "styles": ["frontend/src/styles/_split/shoes.css", "frontend/src/styles/add-shoes-profile-alignment.css"],
         "tests": ["frontend/src/pages/shoesGridVisibility.smoke.test.js", "frontend/src/pages/shoeCatalogSearchSelection.smoke.test.js", "frontend/src/pages/shoeScanModalLayout.smoke.test.js"]
       },
@@ -218,7 +218,7 @@
       "contracts": ["saved race lifecycle", "course map geometry", "elevation profile", "map tile proxy"],
       "frontend": {
         "entrypoints": ["frontend/src/pages/Races.jsx", "frontend/src/pages/RacesDetail.jsx"],
-        "supporting": ["frontend/src/utils/raceDetailPresentation.js", "frontend/src/utils/raceDetailMapTrust.js", "frontend/src/data/worldRaceCatalog.js"],
+        "supporting": ["frontend/src/utils/raceDetailMapTrust.js", "frontend/src/data/worldRaceCatalog.js"],
         "styles": ["frontend/src/styles/_split/races.css"],
         "tests": ["frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js", "frontend/src/utils/raceDetailMapTrust.test.js", "frontend/src/pages/racesCatalogDistancePrecision.smoke.test.js"]
       },
@@ -284,7 +284,7 @@
       "contracts": ["reward calculation", "earned inventory", "active cosmetic theme", "activity ingestion drops"],
       "frontend": {
         "entrypoints": ["frontend/src/pages/Rewards.jsx"],
-        "supporting": ["frontend/src/utils/rewardCatalog.js", "frontend/src/utils/rewardBadges.jsx", "frontend/src/components/RewardsAccessCard.jsx"],
+        "supporting": ["frontend/src/utils/rewardCatalog.js", "frontend/src/utils/rewardBadges.jsx"],
         "styles": ["frontend/src/styles/_split/rewards.css", "frontend/src/styles/rewards-profile-alignment.css"],
         "tests": ["frontend/src/pages/rewardsMilestoneLedger.smoke.test.js", "frontend/src/utils/rewardCatalog.test.js", "frontend/src/utils/rewardCatalogIntegration.smoke.test.js"]
       },
@@ -418,7 +418,7 @@
         "entrypoints": ["frontend/src/main.jsx", "frontend/src/App.jsx", "frontend/src/api.ts"],
         "supporting": ["frontend/src/components/ErrorBoundary.jsx", "frontend/scripts/run-vite-build.mjs", "frontend/vite.config.js"],
         "styles": ["frontend/src/index.css", "frontend/src/styles/_split/shared.css"],
-        "tests": ["frontend/src/apiTypeContracts.smoke.test.js", "frontend/src/testToolchain.smoke.test.js", "frontend/vite.config.smoke.test.js"]
+        "tests": ["frontend/src/apiTypeContracts.smoke.test.js", "frontend/src/testToolchain.smoke.test.js"]
       },
       "backend": {
         "entrypoints": ["backend/src/main/java/com/hermes/backend/BackendApplication.java", "backend/src/main/java/com/hermes/backend/SecurityConfig.java", "backend/src/main/java/com/hermes/backend/SpaForwardingController.java"],
