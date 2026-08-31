@@ -214,15 +214,57 @@ class MuscleTrainingControllerTests {
     void planAvoidsKeyRunAndLongRunAdjacency() throws Exception {
         Runner runner = createRunner("muscle-placement@test.local");
         seedRecentRuns(runner, 8, 8.0, 55);
-        seedSchedule(runner, List.of(
+        // Weekly pattern chosen so exactly two buffer-legal strength days exist
+        // per week (today and today+4, repeating): a strength day may not sit
+        // on, directly after, or directly before a key run or long run, so
+        // THRESHOLD sits at +2 and LONG_RUN at +6. Seeding the full 28-day
+        // horizon matters twice over: the controller only takes the
+        // schedule-preserving path once a today check-in exists, and the
+        // strength engine drops to one conservative session per week unless
+        // the schedule covers every day of the 28-day horizon.
+        List<CoachWorkoutType> weeklyPattern = List.of(
+                CoachWorkoutType.EASY,
                 CoachWorkoutType.EASY,
                 CoachWorkoutType.THRESHOLD,
                 CoachWorkoutType.RECOVERY,
                 CoachWorkoutType.EASY,
-                CoachWorkoutType.REST,
-                CoachWorkoutType.LONG_RUN,
-                CoachWorkoutType.RECOVERY
-        ));
+                CoachWorkoutType.EASY,
+                CoachWorkoutType.LONG_RUN
+        );
+        List<CoachWorkoutType> horizon = new java.util.ArrayList<>();
+        for (int week = 0; week < 4; week++) {
+            horizon.addAll(weeklyPattern);
+        }
+        seedSchedule(runner, horizon);
+        // Without a today check-in the controller regenerates the coach week,
+        // so the seeded schedule never reaches the plan and the visible days
+        // drift with the run date. A check-in switches the controller to the
+        // schedule-preserving path, making the seeded week authoritative.
+        mockMvc.perform(put("/api/training/muscle/today")
+                        .header("Authorization", bearer(runner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "runType", "EASY",
+                                "entryState", "PLANNED",
+                                "distanceKm", 8.0,
+                                "durationMinutes", 48
+                        ))))
+                .andExpect(status().isOk());
+        // The strength engine scores candidate days by weekday preference, so
+        // with default preferences the second session can land beyond the
+        // visible 7-day window depending on the run date. Pin the preference
+        // to the two seeded free days (today and today+3) so the placement is
+        // deterministic for any anchor date.
+        mockMvc.perform(put("/api/training/muscle/profile")
+                        .header("Authorization", bearer(runner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "preferredStrengthDays", List.of(
+                                        LocalDate.now().getDayOfWeek().name(),
+                                        LocalDate.now().plusDays(4).getDayOfWeek().name()
+                                )
+                        ))))
+                .andExpect(status().isOk());
 
         String response = mockMvc.perform(get("/api/training/muscle/plan")
                         .header("Authorization", bearer(runner)))
@@ -254,7 +296,7 @@ class MuscleTrainingControllerTests {
         JsonNode appliedDay = null;
         String appliedDate = root.path("strengthCoachDecision").path("appliedDate").asText();
         for (JsonNode day : days) {
-            if (!day.path("strength").isNull()) {
+            if (!day.path("strength").isNull() && !day.path("strength").isMissingNode()) {
                 strengthDays++;
             }
             if (appliedDate.equals(day.path("date").asText())) {
