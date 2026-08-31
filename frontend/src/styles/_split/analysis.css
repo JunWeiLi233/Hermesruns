@@ -12,37 +12,6 @@
     flex-direction: column;
 }
 
-.analysis-run-level-donut-wrap {
-    position: relative;
-    width: min(100%, 200px);
-    height: 200px;
-    margin: 10px auto 0;
-}
-
-.analysis-run-level-donut-chart {
-    position: absolute;
-    inset: 0;
-}
-
-.analysis-run-level-medal-inner {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 2;
-    pointer-events: none;
-    line-height: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
-}
-
-.analysis-run-level-medal-inner--muted {
-    opacity: 0.42;
-    filter: grayscale(0.15) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
-}
-
 .analysis-title {
     font-size: clamp(2.3rem, 4vw, 3.2rem);
 }
