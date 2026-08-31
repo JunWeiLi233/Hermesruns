@@ -33,6 +33,11 @@ public class TtlCacheStore {
     // (expired entries were only removed when their exact key was read again),
     // which showed up as multi-hundred-MB heap growth on long-lived instances.
     private final BoundedLocalCache localEntries;
+    // Local-fallback value-size cap: the entry cap bounds COUNT, not BYTES, and
+    // raw Overpass responses cached 12h by RoutePlannerService are multi-MB JSON
+    // strings each. Oversized values skip LOCAL retention only — Redis (when
+    // enabled) still receives them and callers already hold the value they put.
+    private final int localMaxValueBytes;
     private volatile boolean redisFailureLogged;
 
     @Autowired
@@ -40,9 +45,11 @@ public class TtlCacheStore {
             AppRedisProperties redisProperties,
             ObjectProvider<StringRedisTemplate> redisTemplateProvider,
             ObjectMapper objectMapper,
-            @Value("${app.cache.local-max-entries:1024}") int localMaxEntries
+            @Value("${app.cache.local-max-entries:1024}") int localMaxEntries,
+            @Value("${app.cache.local-max-value-bytes:1048576}") int localMaxValueBytes
     ) {
-        this(redisProperties, redisTemplateProvider::getIfAvailable, objectMapper, Clock.systemUTC(), localMaxEntries);
+        this(redisProperties, redisTemplateProvider::getIfAvailable, objectMapper, Clock.systemUTC(),
+                localMaxEntries, localMaxValueBytes);
     }
 
     private TtlCacheStore(
@@ -50,23 +57,40 @@ public class TtlCacheStore {
             Supplier<StringRedisTemplate> redisTemplateSupplier,
             ObjectMapper objectMapper,
             Clock clock,
-            int localMaxEntries
+            int localMaxEntries,
+            int localMaxValueBytes
     ) {
         this.redisProperties = redisProperties;
         this.redisTemplateSupplier = redisTemplateSupplier;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.localEntries = new BoundedLocalCache(Math.max(1, localMaxEntries));
+        this.localMaxValueBytes = localMaxValueBytes;
     }
 
     static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock) {
-        objectMapper.findAndRegisterModules();
-        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock, 1024);
+        return inMemoryForTests(objectMapper, clock, 1024);
     }
 
     static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock, int localMaxEntries) {
+        return inMemoryForTests(objectMapper, clock, localMaxEntries, 1_048_576);
+    }
+
+    static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock, int localMaxEntries, int localMaxValueBytes) {
         objectMapper.findAndRegisterModules();
-        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock, localMaxEntries);
+        return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock,
+                localMaxEntries, localMaxValueBytes);
+    }
+
+    static TtlCacheStore redisBackedForTests(
+            ObjectMapper objectMapper,
+            Clock clock,
+            Supplier<StringRedisTemplate> redisTemplateSupplier,
+            int localMaxValueBytes
+    ) {
+        objectMapper.findAndRegisterModules();
+        return new TtlCacheStore(new AppRedisProperties(true, "hermes-test"), redisTemplateSupplier, objectMapper, clock,
+                1024, localMaxValueBytes);
     }
 
     public <T> Optional<T> get(String namespace, String key, Class<T> type) {
@@ -105,8 +129,12 @@ public class TtlCacheStore {
         Duration normalizedTtl = normalizeTtl(ttl);
         try {
             String json = objectMapper.writeValueAsString(value);
-            String localKey = localKey(namespace, key);
-            localEntries.put(localKey, new LocalEntry(json, clock.instant().plus(normalizedTtl)));
+            // Value-size guard, local fallback only. Size is approximated with
+            // the serialized String's length() (chars ~ bytes); an oversized
+            // value skips local retention but still flows to Redis below.
+            if (json.length() <= localMaxValueBytes) {
+                localEntries.put(localKey(namespace, key), new LocalEntry(json, clock.instant().plus(normalizedTtl)));
+            }
             putRedis(namespace, key, json, normalizedTtl);
         } catch (Exception e) {
             log.warn("Failed to serialize cache entry namespace={} key={}: {}", namespace, key, e.getMessage());

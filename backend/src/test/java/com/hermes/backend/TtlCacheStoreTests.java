@@ -2,13 +2,25 @@ package com.hermes.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
+import java.lang.reflect.Constructor;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Arrays;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TtlCacheStoreTests {
 
@@ -85,6 +97,91 @@ class TtlCacheStoreTests {
         TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), new MutableClock());
 
         assertThat(store.hasDurableBacking()).isFalse();
+    }
+
+    @Test
+    void skipsLocalFallbackForValuesOverTheValueSizeCap() {
+        MutableClock clock = new MutableClock();
+        // Jackson writes a String payload with surrounding quotes, so "abcdefg"
+        // serializes to 9 chars: one over the 8-char cap.
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock, 1024, 8);
+
+        store.put("race", "huge", "abcdefg", Duration.ofMinutes(5));
+
+        assertThat(store.localEntrySizeForTests()).isZero();
+        // Redis is disabled in this fixture, so the skipped local retention
+        // surfaces as a plain miss on the next read of the same key.
+        assertThat(store.get("race", "huge", String.class)).isEmpty();
+    }
+
+    @Test
+    void retainsValuesAtExactlyTheValueSizeCap() {
+        MutableClock clock = new MutableClock();
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock, 1024, 8);
+
+        // "abcdef" serializes to exactly 8 chars (quotes included): at the cap.
+        store.put("race", "exact", "abcdef", Duration.ofMinutes(5));
+        store.put("race", "small", "a", Duration.ofMinutes(5));
+
+        assertThat(store.localEntrySizeForTests()).isEqualTo(2);
+        assertThat(store.get("race", "exact", String.class)).contains("abcdef");
+        assertThat(store.get("race", "small", String.class)).contains("a");
+    }
+
+    @Test
+    void oversizedValueDoesNotDisturbOtherLocalEntries() {
+        MutableClock clock = new MutableClock();
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock, 1024, 8);
+
+        store.put("race", "small", "a", Duration.ofMinutes(5));
+        store.put("race", "huge", "abcdefg", Duration.ofMinutes(5));
+
+        assertThat(store.localEntrySizeForTests()).isEqualTo(1);
+        assertThat(store.get("race", "small", String.class)).contains("a");
+    }
+
+    @Test
+    void oversizedValueIsStillWrittenToRedis() {
+        MutableClock clock = new MutableClock();
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> valueOperations = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+
+        TtlCacheStore store = TtlCacheStore.redisBackedForTests(new ObjectMapper(), clock, () -> redisTemplate, 8);
+
+        store.put("race", "huge", "abcdefg", Duration.ofMinutes(5));
+
+        assertThat(store.localEntrySizeForTests()).isZero();
+        // The raw key is hashed by RedisKeySupport, so only assert the stable
+        // prefix plus the exact serialized payload and TTL.
+        verify(valueOperations).set(startsWith("hermes-test:cache:race:"), eq("\"abcdefg\""),
+                eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    void valueSizeCapFollowsTheLocalMaxEntriesConfigPattern() {
+        Constructor<TtlCacheStore> autowired = Arrays.stream(TtlCacheStore.class.getDeclaredConstructors())
+                .filter(ctor -> ctor.isAnnotationPresent(Autowired.class))
+                .map(ctor -> (Constructor<TtlCacheStore>) ctor)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("No @Autowired TtlCacheStore constructor"));
+
+        String entriesPlaceholder = valuePlaceholder(autowired, "app.cache.local-max-entries");
+        String bytesPlaceholder = valuePlaceholder(autowired, "app.cache.local-max-value-bytes");
+
+        assertThat(entriesPlaceholder).isEqualTo("${app.cache.local-max-entries:1024}");
+        assertThat(bytesPlaceholder).isEqualTo("${app.cache.local-max-value-bytes:1048576}");
+    }
+
+    private static String valuePlaceholder(Constructor<TtlCacheStore> constructor, String propertyPrefix) {
+        return Arrays.stream(constructor.getParameters())
+                .map(parameter -> parameter.getAnnotation(Value.class))
+                .filter(Objects::nonNull)
+                .map(Value::value)
+                .filter(placeholder -> placeholder.startsWith("${" + propertyPrefix + ":"))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing @Value for " + propertyPrefix));
     }
 
     private record CachePayload(String label, int count) {}
