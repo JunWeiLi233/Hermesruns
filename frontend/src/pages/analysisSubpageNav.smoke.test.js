@@ -12,8 +12,11 @@ const insightSource = read('pages/AnalysisInsightDetail.jsx');
 const predictionSource = read('pages/PredictionDetail.jsx');
 const profileSource = read('pages/ProfileDashboard.jsx');
 const indexSource = read('index.css');
+const appSource = read('styles/app.css');
 const loadBalanceCss = read('styles/analysis-load-balance-profile-alignment.css');
 const profileVisualAlignmentCss = read('styles/analysis-profile-visual-alignment.css');
+const finalWhiteCss = read('styles/grid-cards-white.css');
+const liquidGlassCss = read('styles/all-pages-liquid-glass.css');
 const analysisRoutes = [
   '/analysis',
   '/analysis/load-balance',
@@ -101,6 +104,23 @@ assert.match(
   profileVisualAlignmentCss,
   /body #root \.analysis-insight-detail-page\.is-coach-insight \.runner-shell-side-link\.is-active\s*\{[\s\S]*?border-color:\s*transparent\s*!important;[\s\S]*?background:\s*transparent\s*!important;[\s\S]*?box-shadow:\s*none\s*!important;/,
   'Coach Insight should keep its active rail label text-first without a panel strip.',
+);
+const activeRailSweepIndex = liquidGlassCss.lastIndexOf('.runner-shell-page .runner-shell-side-link.is-active {');
+const finalActiveRailResetIndex = finalWhiteCss.lastIndexOf(
+  'body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-coach-insight .runner-shell-side-link.is-active {',
+);
+assert.ok(
+  appSource.indexOf("@import './grid-cards-white.css';") > appSource.indexOf("@import './all-pages-liquid-glass.css';"),
+  'The final white-theme stylesheet must load after the shared shell sweep.',
+);
+assert.ok(
+  activeRailSweepIndex >= 0 && finalActiveRailResetIndex >= 0,
+  'Coach Insight should have a final active-rail reset after the shared shell sweep.',
+);
+assert.match(
+  finalWhiteCss.slice(finalActiveRailResetIndex, finalActiveRailResetIndex + 360),
+  /border-color:\s*transparent !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  'The Coach Insight title link should remove only its panel strip while preserving the sidebar and cards.',
 );
 assert.match(loadBalanceCss, /prefers-reduced-motion/);
 assert.match(loadBalanceCss, /theme-midnight/);

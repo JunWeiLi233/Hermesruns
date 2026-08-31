@@ -405,3 +405,12 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+
+/* The active Coach Insight rail item is text-first. Remove only its shared
+   navigation panel fill so the sidebar and all content-card surfaces remain. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-coach-insight .runner-shell-side-link.is-active {
+  border-color: transparent !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
