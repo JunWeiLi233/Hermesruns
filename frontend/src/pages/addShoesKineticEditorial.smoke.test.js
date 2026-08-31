@@ -27,7 +27,7 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /add-shoes-brand-expand-shell/,
+  /add-shoes-brand-expand-grid/,
   'Add Shoes should expose an expandable extra-brand section for less-common brands.',
 );
 
@@ -39,8 +39,8 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /for\s*\(\s*const\s+catalogBrand\s+of\s+shoeCatalog\s*\)/,
-  'Add Shoes expandable brand section should derive more running brands from shoeCatalog order.',
+  /return\s+browserBrands\.filter\(/,
+  'Add Shoes expandable brand section should derive extra brands from the same ordered browser catalog.',
 );
 
 assert.doesNotMatch(

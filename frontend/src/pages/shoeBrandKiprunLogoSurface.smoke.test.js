@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const logoSource = readFileSync(path.join(here, '../components/ShoeBrandLogo.jsx'), 'utf8');
-const assetPath = path.join(here, '../assets/brand-logos/kiprun-background-removed.png');
+const assetPath = path.join(here, '../assets/brand-logos/kiprun-background-removed.webp');
 
 assert.match(
   logoSource,
-  /import kiprunLogo from ['"]\.\.\/assets\/brand-logos\/kiprun-background-removed\.png['"];/,
+  /import kiprunLogo from ['"]\.\.\/assets\/brand-logos\/kiprun-background-removed\.webp['"];/,
   'KIPRUN should use the background-removed logo asset.',
 );
 assert.match(

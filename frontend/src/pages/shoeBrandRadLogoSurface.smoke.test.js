@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const logoSource = readFileSync(path.join(here, '../components/ShoeBrandLogo.jsx'), 'utf8');
-const assetPath = path.join(here, '../assets/brand-logos/rad-reference.png');
+const assetPath = path.join(here, '../assets/brand-logos/rad-reference.webp');
 
 assert.match(
   logoSource,
-  /import radLogo from ['"]\.\.\/assets\/brand-logos\/rad-reference\.png['"];/,
+  /import radLogo from ['"]\.\.\/assets\/brand-logos\/rad-reference\.webp['"];/,
   'R.A.D should use the supplied logo asset.',
 );
 assert.match(

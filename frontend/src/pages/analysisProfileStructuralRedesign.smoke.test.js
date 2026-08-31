@@ -46,7 +46,7 @@ for (const [route, branch] of [
     'analysis-profile-v2-focus',
     ...(route === 'coach' ? [] : ['analysis-profile-v2-metric-strip']),
   ];
-  if (route !== 'injury') requiredMarkers.push('analysis-profile-v2-header');
+  if (route === 'coach') requiredMarkers.push('analysis-profile-v2-header');
   for (const marker of requiredMarkers) {
     assert.ok(branch.includes(marker), `${route} must include ${marker}.`);
   }

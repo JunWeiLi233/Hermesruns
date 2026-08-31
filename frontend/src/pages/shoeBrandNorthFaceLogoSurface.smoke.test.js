@@ -5,11 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const logoSource = readFileSync(path.join(here, '../components/ShoeBrandLogo.jsx'), 'utf8');
-const assetPath = path.join(here, '../assets/brand-logos/the-north-face-reference.png');
+const assetPath = path.join(here, '../assets/brand-logos/the-north-face-reference.webp');
 
 assert.match(
   logoSource,
-  /import northFaceLogo from ['"]\.\.\/assets\/brand-logos\/the-north-face-reference\.png['"];/,
+  /import northFaceLogo from ['"]\.\.\/assets\/brand-logos\/the-north-face-reference\.webp['"];/,
   'The North Face should use the supplied logo asset.',
 );
 assert.match(

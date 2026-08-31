@@ -208,6 +208,9 @@ public class MuscleTrainingPlannerService {
         if (index > 0 && isLongRun(schedule.get(index - 1).workoutType())) {
             return "SKIP_LONG_RUN_DAY";
         }
+        if (index > 0 && isKeyRun(schedule.get(index - 1).workoutType())) {
+            return "SKIP_KEY_RUN_DAY";
+        }
         if (index + 1 < schedule.size() && isLongRun(schedule.get(index + 1).workoutType())) {
             return "SKIP_LONG_RUN_TOMORROW";
         }

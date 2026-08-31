@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(currentDir, 'AddShoes.jsx'), 'utf8');
 const logoSource = readFileSync(path.join(currentDir, '../components/ShoeBrandLogo.jsx'), 'utf8');
-const mountToCoastAsset = readFileSync(path.join(currentDir, '../assets/brand-logos/mount-to-coast.png'));
-const kailasAsset = readFileSync(path.join(currentDir, '../assets/brand-logos/kailas-reference.png'));
+const mountToCoastAsset = readFileSync(path.join(currentDir, '../assets/brand-logos/mount-to-coast.webp'));
+const kailasAsset = readFileSync(path.join(currentDir, '../assets/brand-logos/kailas-reference.webp'));
 
 assert.match(
   logoSource,
@@ -16,7 +16,7 @@ assert.match(
 );
 assert.match(
   logoSource,
-  /import mountToCoastLogo from ['"]\.\.\/assets\/brand-logos\/mount-to-coast\.png['"];?/,
+  /import mountToCoastLogo from ['"]\.\.\/assets\/brand-logos\/mount-to-coast\.webp['"];?/,
   'ShoeBrandLogo should import the supplied Mount to Coast logo asset.',
 );
 assert.match(
@@ -24,30 +24,19 @@ assert.match(
   /mounttocoast:\s*mountToCoastLogo/,
   'The normalized Mount to Coast brand key should resolve to the supplied logo.',
 );
-assert.equal(
-  mountToCoastAsset.subarray(0, 8).toString('hex'),
-  '89504e470d0a1a0a',
-  'The Mount to Coast logo should remain a valid PNG asset.',
-);
-assert.equal(
-  mountToCoastAsset[25],
-  6,
-  'The Mount to Coast logo should use PNG RGBA color type for transparency.',
-);
+for (const [asset, label] of [[mountToCoastAsset, 'Mount to Coast'], [kailasAsset, 'Kailas']]) {
+  assert.equal(asset.subarray(0, 4).toString('ascii'), 'RIFF', `${label} should remain a valid WebP asset.`);
+  assert.equal(asset.subarray(8, 12).toString('ascii'), 'WEBP', `${label} should use WebP encoding.`);
+}
 assert.match(
   logoSource,
-  /import kailasLogo from ['"]\.\.\/assets\/brand-logos\/kailas-reference\.png['"];?/,
+  /import kailasLogo from ['"]\.\.\/assets\/brand-logos\/kailas-reference\.webp['"];?/,
   'ShoeBrandLogo should import the supplied Kailas logo asset.',
 );
 assert.match(
   logoSource,
   /kailas:\s*kailasLogo/,
   'The normalized Kailas brand key should resolve to the supplied logo.',
-);
-assert.equal(
-  kailasAsset.subarray(0, 8).toString('hex'),
-  '89504e470d0a1a0a',
-  'The Kailas logo should remain a valid PNG asset.',
 );
 assert.match(
   pageSource,

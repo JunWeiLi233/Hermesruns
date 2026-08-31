@@ -24,7 +24,7 @@ import predictionTenKHeroAvif1600 from '../assets/generated/prediction-10k-hero-
 import predictionTenKHeroWebp640 from '../assets/generated/prediction-10k-hero-640.webp';
 import predictionTenKHeroWebp1280 from '../assets/generated/prediction-10k-hero-1280.webp';
 import predictionTenKHeroWebp1600 from '../assets/generated/prediction-10k-hero-1600.webp';
-import predictionHalfHeroImage from '../assets/generated/prediction-half-hero.png';
+import predictionHalfHeroImage from '../assets/generated/prediction-half-hero.webp';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
