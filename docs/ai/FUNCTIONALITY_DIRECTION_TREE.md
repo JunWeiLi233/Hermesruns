@@ -131,7 +131,7 @@ Use for today’s recommendation, the personalized 14-day running plan, readines
 
 Use for location, forecast, weather context, icons, heat adaptation, or weather-adjusted fitness.
 
-- Frontend first: `pages/WeatherEngine.jsx` → `utils/weatherLocation.js` / `utils/weatherCodeIcon.js`.
+- Frontend first: `pages/WeatherEngine.jsx` → `utils/weatherLocation.js`.
 - API seam: `/api/v1/weather/**`.
 - Backend first: `WeatherContextController.java` → `WeatherForecastService.java` or `WeatherAdjustedFitnessService.java` → external forecast client.
 - Separate upstream-provider failure from response interpretation and UI presentation.
@@ -186,7 +186,7 @@ Use for strength profile, week plan, daily composer, check-in, exercise library,
 
 Use for badges, reward progress, earned drops, inventory, or active theme.
 
-- Frontend first: `pages/Rewards.jsx`; then reward catalog/badge utilities and `RewardsAccessCard.jsx`.
+- Frontend first: `pages/Rewards.jsx`; then reward catalog/badge utilities.
 - API seam: `/api/cosmetics/**` plus activity data used by the rewards view.
 - Backend first: `rewards/DigitalCosmeticsController.java` → `DigitalCosmeticsService.java` → `DigitalCosmeticDropRepository.java`.
 - If a drop was not minted after import, also inspect `ActivityIngestedEventListenerComponent.java` and the ingest event path.
