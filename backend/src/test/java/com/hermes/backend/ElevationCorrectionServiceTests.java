@@ -99,9 +99,10 @@ class ElevationCorrectionServiceTests {
     void recalibrateClearsWarningWhenCorrectedProfileMatchesDemAscent() {
         ActivityPointRepository repository = mock(ActivityPointRepository.class);
         ActivityDataAccess activityDataAccess = mock(ActivityDataAccess.class);
+        EntityManager entityManager = mock(EntityManager.class);
         RestTemplate restTemplate = mock(RestTemplate.class);
         ElevationCorrectionService service = new ElevationCorrectionService(
-                repository, activityDataAccess, mock(EntityManager.class), restTemplate);
+                repository, activityDataAccess, entityManager, restTemplate);
         Activity activity = correctedProfileActivity(1L);
         List<ActivityPoint> points = List.of(
                 point(0, 40.000, -73.000, 10),
@@ -142,6 +143,10 @@ class ElevationCorrectionServiceTests {
         assertEquals(70.0, updatedPoints.get(1).getElevationRawMeters(), 0.001);
         assertEquals(10.0, updatedPoints.get(2).getElevationRawMeters(), 0.001);
         verify(repository, never()).saveAll(any());
+        // Regression guard: the mutated points are managed entities; unless each
+        // one is detached, the commit-time flush dirty-checks them and re-issues
+        // the per-entity UPDATE storm the batched statement exists to replace.
+        verify(entityManager, times(3)).detach(any(ActivityPoint.class));
     }
 
     @Test

@@ -133,8 +133,9 @@ class AdminBackgroundJobServiceTests {
 
     @Test
     void courseMapScanQueuePollStaysSlowToAvoidQueryStorm() {
-        // Each queued scan polls with two repository queries; a fast poll (the
-        // old 250ms) burns 4 queries/second per waiting worker. FIFO ordering
+        // The scan executor is single-threaded and holds the fair lock while
+        // waiting, so at most one worker polls; a fast poll (the old 250ms)
+        // burns a constant stream of queries from that worker. FIFO ordering
         // comes from the shared lock and claim query, not from poll speed.
         Long pollMillis = (Long) ReflectionTestUtils.getField(
                 AdminBackgroundJobService.class,
