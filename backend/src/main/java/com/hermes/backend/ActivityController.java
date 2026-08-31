@@ -29,6 +29,7 @@ public class ActivityController {
     private static final int MAX_ROUTE_PREVIEW_BATCH_SIZE = 50;
     private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
     private static final Duration ACTIVITY_READ_CACHE_TTL = Duration.ofMinutes(10);
+    private static final String ACTIVITY_HEATMAP_CACHE_NAMESPACE = "activity-heatmap";
 
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
@@ -307,7 +308,7 @@ public class ActivityController {
         // coordinate list is cached per runner (+ requested year) for a short TTL.
         String heatmapCacheKey = runner.getId() + ":" + (year == null ? "all" : year);
         Optional<List<double[]>> cachedHeatmap = cacheStore.get(
-                "activity-heatmap",
+                ACTIVITY_HEATMAP_CACHE_NAMESPACE,
                 heatmapCacheKey,
                 new TypeReference<>() {}
         );
@@ -330,7 +331,7 @@ public class ActivityController {
                         Math.round(((Number) row[1]).doubleValue() * 1_000_000d) / 1_000_000d})
                 .toList();
 
-        cacheStore.put("activity-heatmap", heatmapCacheKey, latlngs, ACTIVITY_READ_CACHE_TTL);
+        cacheStore.put(ACTIVITY_HEATMAP_CACHE_NAMESPACE, heatmapCacheKey, latlngs, ACTIVITY_READ_CACHE_TTL);
         return ResponseEntity.ok(latlngs);
     }
 
@@ -502,7 +503,12 @@ public class ActivityController {
         response.put("resolution", "source_elapsed_seconds");
         response.put("series", ActivityTelemetryResponseBuilder.buildTelemetrySeries(pts));
         response.put("trainingEffect", ActivityTelemetryResponseBuilder.estimateTrainingEffect(activity, pts));
-        cacheStore.put("activity-telemetry", telemetryCacheKey, response, ACTIVITY_READ_CACHE_TTL);
+        // An empty sample list usually means a transient hydration failure (stream
+        // fetch failed, points not stored yet); retries can succeed, so the empty
+        // payload is returned uncached — same rule as the analytics sibling.
+        if (!pts.isEmpty()) {
+            cacheStore.put("activity-telemetry", telemetryCacheKey, response, ACTIVITY_READ_CACHE_TTL);
+        }
         return ResponseEntity.ok(response);
     }
 
@@ -550,7 +556,11 @@ public class ActivityController {
             sample.put("bpm", ((Number) row[1]).intValue());
             samples.add(sample);
         }
-        cacheStore.put("activity-hr-samples", hrSamplesCacheKey, samples, ACTIVITY_READ_CACHE_TTL);
+        // Summary-only imports have no per-second HR data; points may still arrive
+        // later via stream hydration, so the empty list is returned uncached.
+        if (!samples.isEmpty()) {
+            cacheStore.put("activity-hr-samples", hrSamplesCacheKey, samples, ACTIVITY_READ_CACHE_TTL);
+        }
         return ResponseEntity.ok(samples);
     }
 
@@ -682,6 +692,16 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         ElevationCorrectionService.RecalibrateResult result = elevationCorrectionService.recalibrate(activityOpt.get(), request);
+        if (result.success()) {
+            // Recalibration rewrites elevationCorrectedMeters on every point and the
+            // client re-fetches telemetry immediately, so drop the now-stale
+            // per-activity read caches — telemetry plus both analytics response
+            // languages (normalizeResponseLanguage's closed "en"/"zh-CN" set).
+            String recalibratedActivityCacheKey = activeUser.get().getId() + ":" + activityOpt.get().getId();
+            cacheStore.evict("activity-telemetry", recalibratedActivityCacheKey);
+            cacheStore.evict("activity-analytics", recalibratedActivityCacheKey + ":en");
+            cacheStore.evict("activity-analytics", recalibratedActivityCacheKey + ":zh-CN");
+        }
         return ResponseEntity.ok(result);
     }
 
@@ -703,7 +723,10 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(activeUser.get().getId()));
-        cacheStore.evict("activity-heatmap", activeUser.get().getId() + ":all");
+        // Year-keyed activity-heatmap entries are intentionally left to TTL expiry:
+        // the all-time entry is the hot read path, and ownership 404s protect the
+        // year variants from cross-runner access.
+        cacheStore.evict(ACTIVITY_HEATMAP_CACHE_NAMESPACE, activeUser.get().getId() + ":all");
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 

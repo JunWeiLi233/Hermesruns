@@ -1310,4 +1310,230 @@ class ActivityControllerTests {
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         verify(activityPointRepository, never()).findHrSamplesByActivityIdOrdered(99L);
     }
+
+    @Test
+    void getActivityTelemetryDoesNotCacheEmptySampleSeries() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        // Transient hydration failure: no samples stored (yet).
+        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(51L)).thenReturn(List.of());
+
+        ResponseEntity<?> first = controller.getActivityTelemetry(51L, "Bearer token");
+        ResponseEntity<?> second = controller.getActivityTelemetry(51L, "Bearer token");
+
+        // The empty payload is still returned, identically, on every call...
+        assertEquals(HttpStatus.OK, first.getStatusCode());
+        assertEquals(HttpStatus.OK, second.getStatusCode());
+        assertEquals(0, ((Map<?, ?>) first.getBody()).get("sampleCount"));
+        assertEquals(0, ((Map<?, ?>) second.getBody()).get("sampleCount"));
+        // ...but it must not be pinned in the cache: retries re-query the source.
+        verify(activityPointRepository, times(2)).findAnalyticsSamplesByActivityIdOrdered(51L);
+    }
+
+    @Test
+    void getHeartRateSamplesDoesNotCacheEmptySampleList() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(activityPointRepository.findHrSamplesByActivityIdOrdered(51L)).thenReturn(List.of());
+
+        ResponseEntity<?> first = controller.getHeartRateSamples(51L, "Bearer token");
+        ResponseEntity<?> second = controller.getHeartRateSamples(51L, "Bearer token");
+
+        assertEquals(HttpStatus.OK, first.getStatusCode());
+        assertEquals(HttpStatus.OK, second.getStatusCode());
+        assertEquals(0, ((List<?>) first.getBody()).size());
+        assertEquals(0, ((List<?>) second.getBody()).size());
+        // The empty list is returned but not cached: retries re-query the source.
+        verify(activityPointRepository, times(2)).findHrSamplesByActivityIdOrdered(51L);
+    }
+
+    @Test
+    void getHeatmapInvalidYearReturns400WithoutTouchingCache() {
+        AuthService authService = mock(AuthService.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = mock(TtlCacheStore.class);
+        ActivityController controller = cachedController(authService, activityPointRepository, cacheStore);
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+
+        ResponseEntity<?> tooOld = controller.getHeatmapPoints("Bearer token", 1899);
+        ResponseEntity<?> tooNew = controller.getHeatmapPoints("Bearer token", 2101);
+
+        assertEquals(HttpStatus.BAD_REQUEST, tooOld.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, tooNew.getStatusCode());
+        // Rejected years must not read or write any cache entry.
+        verifyNoInteractions(cacheStore);
+        verifyNoInteractions(activityPointRepository);
+    }
+
+    @Test
+    void getHeatmapCachesYearAndAllTimeSeparatelyAndDeleteEvictsOnlyAllTime() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityPointRepository.findHeatmapCoordsByRunnerAndTypeAndYear(
+                runner,
+                ActivityType.RUN,
+                java.time.LocalDateTime.of(2026, 1, 1, 0, 0),
+                java.time.LocalDateTime.of(2027, 1, 1, 0, 0),
+                "2026%"))
+                .thenReturn(List.<Object[]>of(new Object[]{40.71, -74.00}));
+        when(activityPointRepository.findHeatmapCoordsByRunnerAndType(runner, ActivityType.RUN))
+                .thenReturn(List.<Object[]>of(new Object[]{40.72, -74.01}));
+
+        ResponseEntity<?> yearView = controller.getHeatmapPoints("Bearer token", 2026);
+        ResponseEntity<?> allTimeView = controller.getHeatmapPoints("Bearer token", null);
+        assertEquals(HttpStatus.OK, yearView.getStatusCode());
+        assertEquals(HttpStatus.OK, allTimeView.getStatusCode());
+        // Distinct cache entries: ?year=2026 and the all-time view don't share a key.
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndTypeAndYear(
+                runner, ActivityType.RUN,
+                java.time.LocalDateTime.of(2026, 1, 1, 0, 0),
+                java.time.LocalDateTime.of(2027, 1, 1, 0, 0),
+                "2026%");
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndType(runner, ActivityType.RUN);
+
+        Activity owned = new Activity();
+        owned.setId(101L);
+        when(activityRepository.findByIdAndRunner(101L, runner)).thenReturn(Optional.of(owned));
+        ResponseEntity<?> deleteResponse = controller.deleteActivity(101L, "Bearer token");
+        assertEquals(HttpStatus.OK, deleteResponse.getStatusCode());
+
+        // The all-time entry is evicted (re-queried) after the delete...
+        ResponseEntity<?> allTimeAfterDelete = controller.getHeatmapPoints("Bearer token", null);
+        assertEquals(HttpStatus.OK, allTimeAfterDelete.getStatusCode());
+        verify(activityPointRepository, times(2)).findHeatmapCoordsByRunnerAndType(runner, ActivityType.RUN);
+        // ...while the year-keyed entry stays cached until its own TTL expires
+        // (documented trade-off: ownership 404s protect it).
+        ResponseEntity<?> yearAfterDelete = controller.getHeatmapPoints("Bearer token", 2026);
+        assertEquals(HttpStatus.OK, yearAfterDelete.getStatusCode());
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndTypeAndYear(
+                runner, ActivityType.RUN,
+                java.time.LocalDateTime.of(2026, 1, 1, 0, 0),
+                java.time.LocalDateTime.of(2027, 1, 1, 0, 0),
+                "2026%");
+    }
+
+    @Test
+    void recalibrateElevationEvictsTelemetryAndAnalyticsCachesOnSuccess() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        TtlCacheStore cacheStore = mock(TtlCacheStore.class);
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                elevationCorrectionService, mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(elevationCorrectionService.recalibrate(activity, null)).thenReturn(
+                new ElevationCorrectionService.RecalibrateResult(
+                        true, "Elevation recalibrated via topography.", 3, 10.0, 12.0, false));
+
+        ResponseEntity<?> response = controller.recalibrateElevation(51L, "Bearer token", null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // The client re-fetches telemetry right after recalibrating: the stale
+        // telemetry entry plus both analytics language variants must be dropped.
+        verify(cacheStore).evict("activity-telemetry", "7:51");
+        verify(cacheStore).evict("activity-analytics", "7:51:en");
+        verify(cacheStore).evict("activity-analytics", "7:51:zh-CN");
+    }
+
+    @Test
+    void recalibrateElevationLeavesCachesInPlaceWhenRecalibrateFails() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        ElevationCorrectionService elevationCorrectionService = mock(ElevationCorrectionService.class);
+        TtlCacheStore cacheStore = mock(TtlCacheStore.class);
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                elevationCorrectionService, mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(elevationCorrectionService.recalibrate(activity, null)).thenReturn(
+                new ElevationCorrectionService.RecalibrateResult(
+                        false, "Failed to fetch DEM elevations", 0, null, null, false));
+
+        ResponseEntity<?> response = controller.recalibrateElevation(51L, "Bearer token", null);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        // A failed recalibration changes no data, so no cache entry is dropped.
+        verifyNoInteractions(cacheStore);
+    }
 }
