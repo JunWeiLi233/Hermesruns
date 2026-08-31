@@ -6,6 +6,12 @@ function normalizeCatalogKey(value) {
   return trimModelName(value).toLowerCase().replace(/[\s!.,'"-]+/g, '');
 }
 
+const REMOVED_RUNNER_BRAND_KEYS = new Set(['德尔惠', '申亚', '强风跑霸', '赛琪', 'ONEMIX', '轻跑者', 'NNormal', '天赐之翼', '星火力'].map(normalizeCatalogKey));
+
+function isRemovedRunnerBrand(brand) {
+  return REMOVED_RUNNER_BRAND_KEYS.has(normalizeCatalogKey(brand));
+}
+
 function getCanonicalSeriesName(modelName) {
   const trimmed = trimModelName(modelName);
   if (!trimmed) return '';
@@ -34,7 +40,9 @@ function filterBrandToSeriesModels(entry) {
 
 export function buildSeriesCatalog(catalog) {
   if (!Array.isArray(catalog)) return [];
-  return catalog.map((entry) => filterBrandToSeriesModels(entry));
+  return catalog
+    .filter((entry) => !isRemovedRunnerBrand(entry?.brand))
+    .map((entry) => filterBrandToSeriesModels(entry));
 }
 
 /**
@@ -55,6 +63,7 @@ export function mergeShoeCatalog(baseCatalog, dynamicCatalog) {
   for (const entry of Array.isArray(baseCatalog) ? baseCatalog : []) {
     const brand = trimModelName(entry?.brand);
     if (!brand) continue;
+    if (isRemovedRunnerBrand(brand)) continue;
     byBrand.set(normalizeCatalogKey(brand), {
       ...entry,
       brand,
@@ -65,6 +74,7 @@ export function mergeShoeCatalog(baseCatalog, dynamicCatalog) {
   for (const entry of dynamicBrands) {
     const brand = trimModelName(entry?.brand);
     if (!brand) continue;
+    if (isRemovedRunnerBrand(brand)) continue;
     const brandKey = normalizeCatalogKey(brand);
     const existing = byBrand.get(brandKey);
     const nextModels = Array.isArray(entry.models)
@@ -124,7 +134,7 @@ export function readLocalSeriesCatalog(storage) {
     const targetStorage = getLocalStorage(storage);
     if (!targetStorage?.getItem) return [];
     const parsed = JSON.parse(targetStorage.getItem(LOCAL_SERIES_CATALOG_STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.filter((entry) => !isRemovedRunnerBrand(entry?.brand)) : [];
   } catch {
     return [];
   }

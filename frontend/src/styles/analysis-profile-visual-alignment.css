@@ -107,8 +107,7 @@ body #root .analysis-profile-v2 .analysis-profile-v2-header {
   text-transform: uppercase;
 }
 
-.analysis-profile-v2-heading h1,
-.analysis-profile-v2--load .analysis-load-profile-heading h1 {
+.analysis-profile-v2-heading h1 {
   max-width: 24ch;
   margin: 6px 0 7px;
   color: var(--analysis-v2-ink);
@@ -121,8 +120,7 @@ body #root .analysis-profile-v2 .analysis-profile-v2-header {
   text-wrap: balance;
 }
 
-.analysis-profile-v2-heading > p,
-.analysis-profile-v2--load .analysis-load-profile-heading + * p {
+.analysis-profile-v2-heading > p {
   max-width: 68ch;
   margin: 0;
   color: var(--analysis-v2-muted);
@@ -140,7 +138,6 @@ body #root .analysis-profile-v2 .analysis-profile-v2-header {
   gap: 14px;
 }
 
-.analysis-profile-v2-ring,
 .analysis-profile-v2--coach .analysis-coach-profile-readiness-dial,
 .analysis-profile-v2--load .analysis-load-profile-ring {
   position: relative;
@@ -159,40 +156,10 @@ body #root .analysis-profile-v2 .analysis-profile-v2-header {
   color: var(--analysis-v2-ink);
 }
 
-.analysis-profile-v2-ring::after,
 .analysis-profile-v2--load .analysis-load-profile-ring::after {
   display: none;
 }
 
-/* Injury Risk needs a real progress track: the shared border paints over the
-   gradient, leaving only disconnected coral slivers at small sizes. */
-.analysis-profile-v2--injury .analysis-profile-v2-ring {
-  box-sizing: border-box;
-  border: 0;
-  background: conic-gradient(
-    from -90deg,
-    var(--analysis-v2-coral) 0 var(--analysis-v2-progress, 0deg),
-    rgba(28, 25, 23, 0.07) var(--analysis-v2-progress, 0deg) 360deg
-  );
-  box-shadow: none;
-  isolation: isolate;
-}
-
-.analysis-profile-v2--injury .analysis-profile-v2-ring::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--analysis-v2-paper);
-  pointer-events: none;
-}
-
-.analysis-profile-v2--injury .analysis-profile-v2-ring > * {
-  position: relative;
-  z-index: 1;
-}
-
-.analysis-profile-v2-ring strong,
 .analysis-profile-v2--coach .analysis-coach-profile-readiness-dial strong,
 .analysis-profile-v2--load .analysis-load-profile-ring strong {
   color: var(--analysis-v2-ink);
@@ -201,7 +168,6 @@ body #root .analysis-profile-v2 .analysis-profile-v2-header {
   letter-spacing: -0.05em;
 }
 
-.analysis-profile-v2-ring small,
 .analysis-profile-v2--coach .analysis-coach-profile-readiness-dial small {
   color: var(--analysis-v2-faint);
   font-size: 0.52rem;

@@ -39,13 +39,10 @@ assert.doesNotMatch(
   /add-shoes-browser-panel add-shoes-stage/,
   'Add Shoes should not keep a shared card around Steps 1 and 2.',
 );
-/* The runner-shell alignment (branch redesign) keeps a stage-head intro above
-   the three-step catalog; master's earlier removal is superseded here. Lock
-   the redesigned intro so it cannot silently regress. */
-assert.match(
+assert.doesNotMatch(
   addShoesSource,
-  /<div className="add-shoes-stage-head">[\s\S]*?add-shoes-stage-copy[\s\S]*?add-shoes-panel-kicker[\s\S]*?\{browserTitle\}/,
-  'Add Shoes should render the stage-head intro with kicker and brand title above the catalog.',
+  /add-shoes-stage-head/,
+  'Add Shoes should not render the redundant stage-head intro above the step cards.',
 );
 assert.match(
   styleSource,

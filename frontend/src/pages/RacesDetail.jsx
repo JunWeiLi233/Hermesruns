@@ -1194,8 +1194,6 @@ export default function RacesDetail() {
           <div className="runner-shell-topbar-left">
             <RunnerShellTopNav
               navItems={navItems}
-              parentLabel={t('profile.dashboard_nav_races')}
-              parentRoute="/races"
               activeLabel={topnavTitle}
               navigate={navigate}
             />
@@ -1291,7 +1289,6 @@ export default function RacesDetail() {
 
                 <article className="race-detail-coach-card">
                   <div className="race-detail-card-head">
-                    <AppIcon name="psychology" className="runner-dashboard-side-link-icon" />
                     <span>{t('races.detail_coach_title')}</span>
                   </div>
                   <p>{coachInsight}</p>
@@ -1395,13 +1392,6 @@ export default function RacesDetail() {
                       <span>{elevationProfileSource || t('races.detail_course_empty_body')}</span>
                     </div>
                   )}
-                </div>
-                <div className="race-detail-course-axis">
-                  <span>{t('races.detail_course_axis_start')}</span>
-                  <span>10K</span>
-                  <span>{t('races.detail_course_axis_half')}</span>
-                  <span>30K</span>
-                  <span>{t('races.detail_course_axis_finish')}</span>
                 </div>
               </article>
 

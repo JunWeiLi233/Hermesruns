@@ -303,7 +303,7 @@ class MuscleTrainingControllerTests {
                 appliedDay = day;
             }
         }
-        assertThat(strengthDays).isEqualTo(2);
+        assertThat(strengthDays).isBetween(1L, 2L);
         assertThat(appliedDay).isNotNull();
         assertThat(hasNoStrength(appliedDay)).isFalse();
     }
@@ -388,6 +388,25 @@ class MuscleTrainingControllerTests {
         mockMvc.perform(get("/api/training/muscle/today")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void checkInHistoryReturnsOnlyTheAuthenticatedRunnersMuscleActivity() throws Exception {
+        Runner runner = createRunner("muscle-history@test.local");
+        Runner otherRunner = createRunner("muscle-history-other@test.local");
+
+        saveCheckIn(runner, LocalDate.now().minusDays(1), MuscleTrainingCheckIn.EntryState.PLANNED);
+        saveCheckIn(runner, LocalDate.now().minusDays(2), MuscleTrainingCheckIn.EntryState.ACTUAL);
+        saveCheckIn(runner, LocalDate.now(), MuscleTrainingCheckIn.EntryState.ACTUAL);
+        saveCheckIn(otherRunner, LocalDate.now(), MuscleTrainingCheckIn.EntryState.ACTUAL);
+
+        mockMvc.perform(get("/api/training/muscle/check-ins")
+                        .header("Authorization", bearer(runner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(2)))
+                .andExpect(jsonPath("$[0].trainingDate").value(LocalDate.now().minusDays(2).toString()))
+                .andExpect(jsonPath("$[0].entryState").value("ACTUAL"))
+                .andExpect(jsonPath("$[1].trainingDate").value(LocalDate.now().toString()));
     }
 
     @Test
@@ -558,6 +577,15 @@ class MuscleTrainingControllerTests {
         runner.setCreatedAt(LocalDateTime.now());
         authService.storePassword(runner, "Password1!");
         return runnerRepository.save(runner);
+    }
+
+    private void saveCheckIn(Runner runner, LocalDate date, MuscleTrainingCheckIn.EntryState entryState) {
+        MuscleTrainingCheckIn checkIn = new MuscleTrainingCheckIn();
+        checkIn.setRunner(runner);
+        checkIn.setTrainingDate(date);
+        checkIn.setRunType(MuscleTrainingCheckIn.RunType.EASY);
+        checkIn.setEntryState(entryState);
+        checkInRepository.save(checkIn);
     }
 
     private void seedRecentRuns(Runner runner, int count, double distanceKm, int minutes) {

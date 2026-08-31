@@ -1,5 +1,305 @@
 # Hermes Design Versions
 
+### Version: DV-2026-08-30-033
+Date: 2026-08-30
+Surface: Analysis low-risk coach advice localization
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/analysisInjuryCoachAdviceLocalization.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Localized the low-risk coach advice sentence so the Chinese Analysis view no longer renders the English backend response.
+Why: The advice should follow the selected interface language while retaining the original English copy for English users.
+Preserve list: Injury-risk calculations, API response contract, risk levels, other coaching advice, layout, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-30-032`
+Notes: Localization is selected from the existing `LOW` risk field; no backend risk logic changed.
+
+### Version: DV-2026-08-30-032
+Date: 2026-08-30
+Surface: Analysis soreness check-in confirmation
+Files: `frontend/src/pages/Analysis.jsx`, `frontend/src/styles/_split/analysis.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/analysisSorenessModal.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added a confirmation modal after selecting Low, Medium, or High soreness, with localized cancel and save actions.
+Why: The check-in controls should give runners a deliberate confirmation step before recording a daily soreness level.
+Preserve list: Existing soreness API behavior, optimistic selection, error handling, injury calculations, button layout, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-031`
+Notes: The modal reuses the shared `Modal` component and submits the existing `/api/injury-risk/log` payload only after confirmation.
+
+### Version: DV-2026-08-30-031
+Date: 2026-08-30
+Surface: Race-detail desktop content grid width
+Files: `frontend/src/styles/_split/races.css`, `frontend/src/pages/raceDetailGridWidth.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Increased the desktop `/races/details/:raceId` content frame cap from `1180px` to `1280px` so the hero and lower grids use more of the available width.
+Why: The race-detail grids were too narrow relative to the surrounding page canvas and left excessive side margins.
+Preserve list: Race content, card hierarchy, internal grid ratios, mobile breakpoint, responsive behavior, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-30-030`
+Notes: Desktop-only max-width adjustment; the existing mobile padding and stacking rules remain unchanged.
+
+### Version: DV-2026-08-30-030
+Date: 2026-08-30
+Surface: Add Shoes redundant browser heading
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesHeaderRemoval.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant browser kicker, selected-brand heading, and helper paragraph from `/shoes/add`.
+Why: The Step 1 and Step 2 cards already provide the brand and model context, so the extra heading duplicated the page hierarchy.
+Preserve list: Brand selection, model filtering and search, configuration form, navigation, card layout, responsive behavior, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-30-029`
+Notes: Presentation-only removal; no catalog, selection, or form behavior changed.
+
+### Version: DV-2026-08-30-029
+Date: 2026-08-30
+Surface: Add Shoes Kailas brand logo
+Files: `frontend/src/assets/brand-logos/kailas-reference.png`, `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/addShoesBrandLogoOrder.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the generated Kailas fallback badge with the supplied Kailas logo artwork.
+Why: The Kailas brand card should use the provided logo instead of the blue text-based placeholder.
+Preserve list: Logo framing, brand name, model count, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-028`
+Notes: The supplied PNG is stored unchanged and resolved through the normalized `kailas` brand key.
+
+### Version: DV-2026-08-30-028
+Date: 2026-08-30
+Surface: Add Shoes The North Face brand logo
+Files: `frontend/src/assets/brand-logos/the-north-face-reference.png`, `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/shoeBrandNorthFaceLogoSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the generated The North Face fallback badge with the supplied transparent wordmark asset.
+Why: The brand card should use the provided The North Face logo instead of a red text-based placeholder.
+Preserve list: Logo framing, brand name, model count, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-027`
+Notes: The supplied PNG is stored unchanged and resolved through the normalized `thenorthface` brand key.
+
+### Version: DV-2026-08-30-027
+Date: 2026-08-30
+Surface: Running-shoe brand catalog
+Files: `frontend/src/data/shoeCatalog.js`, `frontend/src/utils/addShoeCatalog.js`, `frontend/src/pages/shoeCatalogRemovedBrands.smoke.test.js`, `frontend/src/utils/addShoeCatalog.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `天赐之翼` and `星火力` brands from the built-in running-shoe catalog and filtered them from dynamic and cached catalog sources.
+Why: The two brands should no longer appear in the running-shoe brand picker or catalog.
+Preserve list: Remaining brands, models, selection behavior, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-026`
+Notes: Removal uses the existing centralized catalog exclusion contract and does not alter unrelated brand data.
+
+### Version: DV-2026-08-30-026
+Date: 2026-08-30
+Surface: Running-shoe brand catalog
+Files: `frontend/src/data/shoeCatalog.js`, `frontend/src/utils/addShoeCatalog.js`, `frontend/src/pages/shoeCatalogRemovedBrands.smoke.test.js`, `frontend/src/utils/addShoeCatalog.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the `轻跑者` brand from the built-in running-shoe catalog and filtered it from dynamic and cached catalog sources.
+Why: The brand should no longer appear in the running-shoe brand picker or catalog.
+Preserve list: Remaining brands, models, selection behavior, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-025`
+Notes: Removal uses the existing centralized catalog exclusion contract and does not change the Mount to Coast logo mapping.
+
+### Version: DV-2026-08-30-025
+Date: 2026-08-30
+Surface: Add Shoes R.A.D. brand logo
+Files: `frontend/src/assets/brand-logos/rad-reference.png`, `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/shoeBrandRadLogoSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the generated R.A.D. fallback badge with the supplied R.A.D. logo artwork.
+Why: The R.A.D. brand card should use the provided logo instead of a text-based placeholder.
+Preserve list: Logo framing, brand name, model count, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-024`
+Notes: The supplied PNG is stored unchanged and resolved through the normalized `rad` brand key.
+
+### Version: DV-2026-08-30-024
+Date: 2026-08-30
+Surface: Add Shoes Mount to Coast brand logo background
+Files: `frontend/src/assets/brand-logos/mount-to-coast.png`, `DESIGN_VERSIONS.md`
+What changed: Removed the light image background from the supplied Mount to Coast logo using luminance-based alpha extraction while preserving anti-aliased edges.
+Why: The logo should sit cleanly on the brand-card surface without a visible rectangular image panel.
+Preserve list: Logo artwork, brand name, model count, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-023`
+Notes: The source asset remains available in the user-provided temporary path; repository PNG is now RGBA with transparent background.
+
+### Version: DV-2026-08-30-023
+Date: 2026-08-30
+Surface: Add Shoes Mount to Coast brand card
+Files: `frontend/src/assets/brand-logos/mount-to-coast.png`, `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/addShoesBrandLogoOrder.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the Mount to Coast fallback `MTC` mark with the supplied official wordmark and mountain logo asset.
+Why: The brand card should use the provided logo instead of a generated fallback mark.
+Preserve list: Brand name, model count, card layout, ordering, responsive behavior, themes, and accessibility.
+Rollback target: `DV-2026-08-30-022`
+Notes: User-provided PNG is stored unchanged and resolved through the shared brand-logo component.
+
+### Version: DV-2026-08-30-022
+Date: 2026-08-30
+Surface: Race-detail coach insight heading icon
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/raceDetailCoachIconRemoval.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the decorative psychology icon from the race-detail `教练洞察` heading while retaining the localized label and coach card.
+Why: The icon was unnecessary visual noise after the nested panel strip was removed.
+Preserve list: Coach insight copy, outer card surface, coach identity, layout, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-021`
+Notes: Presentation-only icon removal; no coach data or interaction behavior changed.
+
+### Version: DV-2026-08-30-021
+Date: 2026-08-30
+Surface: Race-detail coach insight heading surface
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/raceDetailCoachHeaderStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the shared liquid-glass background from the nested `教练洞察` icon-and-text header.
+Why: The generic `-card` selector matched `race-detail-card-head` and created a panel strip behind the heading.
+Preserve list: Outer coach card background, icon, heading copy, coach insight content, layout, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-020`
+Notes: Presentation-only, route-scoped nested-surface correction.
+
+### Version: DV-2026-08-30-020
+Date: 2026-08-30
+Surface: Race-detail coach insight heading
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/raceDetailCoachHeaderStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the nested glass panel background from the `教练洞察` heading while preserving the outer race-detail coach card surface.
+Why: The shared card selector matched the heading wrapper's `-card` class and painted an unwanted strip behind the icon and text.
+Preserve list: Coach insight copy, icon, outer card background, card layout, prediction data, assigned coach, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-019`
+Notes: Presentation-only, route-scoped nested-surface correction.
+
+### Version: DV-2026-08-30-019
+Date: 2026-08-30
+Surface: Add Shoes brand logo arrangement
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesBrandLogoOrder.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Ordered Add Shoes brand cards by real logo availability first and fallback-only marks second, preserving model-count order within each group.
+Why: Brands with verified image logos were mixed with generated text marks, making the catalog feel visually inconsistent and harder to scan.
+Preserve list: Brand data, logo resolver precedence, model counts, selection state, expanded-brand behavior, card layout, navigation, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-018`
+Notes: Explicit backend logo URLs and bundled local logo assets count as real logos; deterministic text marks remain available below them.
+
+### Version: DV-2026-08-30-018
+Date: 2026-08-30
+Surface: Race-detail topbar on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/raceDetailTopbar.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Matched the race-detail topbar to the shared one-line runner shell treatment by removing the redundant `赛事` parent crumb while retaining the race title and account controls.
+Why: The previous two-line breadcrumb stack differed from the reference topbar and consumed unnecessary vertical emphasis.
+Preserve list: Race title, navigation behavior, notifications, settings, user menu, sidebar, hero, map, elevation chart, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-017`
+Notes: Presentation-only topbar hierarchy correction; no race data or detail-page behavior changed.
+
+### Version: DV-2026-08-30-017
+Date: 2026-08-30
+Surface: Coach Insight analysis navigation item
+Files: `frontend/src/components/AnalysisSubpageNav.jsx`, `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the Coach Insight navigation panel strip on every analysis-detail route and theme while preserving its icon, label, active color, and navigation behavior.
+Why: The previous reset only covered the active Coach Insight route in light themes, leaving the same link’s shared panel surface visible elsewhere.
+Preserve list: Analysis navigation order, routes, active state, icon and label copy, sidebar layout, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-016`
+Notes: Presentation-only route-scoped reset using the rendered navigation key.
+
+### Version: DV-2026-08-30-016
+Date: 2026-08-30
+Surface: Half-marathon prediction hero media
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/styles/prediction-profile-alignment.css`, `frontend/src/assets/generated/prediction-half-hero.png`, `frontend/src/pages/predictionHalfHeroMedia.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied Valencia 21K race image to the right side of the half-marathon prediction hero.
+Why: The half-marathon hero had an empty right column despite the same media-led composition used by the 5K and 10K prediction heroes.
+Preserve list: Forecast content, prediction calculations, actions, responsive behavior, other distance-specific hero images, localization, and accessibility.
+Rollback target: `DV-2026-08-30-015`
+Notes: The image is decorative, uses an empty alt attribute, and collapses into the stacked mobile hero layout.
+
+### Version: DV-2026-08-30-015
+Date: 2026-08-30
+Surface: Prediction trend chart for `/prediction/10k`
+Files: `frontend/src/pages/PredictionDetail.jsx`, `frontend/src/utils/predictionTrend.js`, `frontend/src/utils/predictionTrend.test.js`, `DESIGN_VERSIONS.md`
+What changed: Kept the weather-adjusted trend series visible for 10K when the VDOT correction is meaningful, even if its shorter race-time delta is under one second.
+Why: The fixed one-second display threshold hid valid 10K trend information that remains visible for the half-marathon chart.
+Preserve list: Prediction methodology, raw trend series, half-marathon behavior, chart layout, legend, tooltips, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-014`
+Notes: The primary forecast selection threshold remains unchanged; this only restores the chart's secondary information series.
+
+### Version: DV-2026-08-30-014
+Date: 2026-08-30
+Surface: Load Balance hero heading on `/analysis/load-balance`
+Files: `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/styles/analysis-load-balance-profile-alignment.css`, `frontend/src/styles/analysis-profile-visual-alignment.css`, `frontend/src/styles/loading-skeleton.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/analysisLoadBalanceHeroHeadingRemoval.smoke.test.js`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the redundant `训练负荷` / ACWR hero heading block from Load Balance while preserving the coaching decision, evidence charts, and ledger.
+Why: The standalone heading duplicated the page context and created an unnecessary first panel above the actionable load view.
+Preserve list: Load calculations, decision copy, track visual, charts, tooltips, ledger, navigation, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-013`
+Notes: Presentation-only header removal; no load data or coaching behavior changed.
+
+### Version: DV-2026-08-30-013
+Date: 2026-08-30
+Surface: Shared runner sidebar shoe icon
+Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/AnalysisInsightDetail.jsx`, `frontend/src/pages/ProfileDashboard.jsx`, `frontend/src/pages/RacesDetail.jsx`, `frontend/src/pages/ShoeCatalog.jsx`, `frontend/src/pages/shoesProfileSidebarParity.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Standardized the shared and page-specific runner sidebars on the pictured `shoe_outline` logo.
+Why: A subset of sidebars used the generic `straighten` glyph, creating inconsistent shoe branding between pages.
+Preserve list: Sidebar labels, routes, active states, layout, collapse behavior, themes, responsive behavior, localization, and accessibility.
+Rollback target: `DV-2026-08-30-012`
+Notes: Presentation-only icon parity correction; `straighten` remains available for measurement-related controls outside the sidebar.
+
+### Version: DV-2026-08-30-012
+Date: 2026-08-30
+Surface: Race-detail elevation milestone axis on `/races/details/:raceId`
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/_split/races.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/i18n/locales/en/pages.js`, `frontend/src/i18n/locales/zh-CN/pages.js`, `frontend/src/pages/raceDetailElevationAxisRemoval.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the separate `Start`, `10K`, `Half`, `30K`, and `Finish` milestone row beneath the elevation chart while preserving the chart curve, SVG markers, and hover scrubber.
+Why: The milestone row duplicated chart context and added a visual marker strip beneath the elevation profile.
+Preserve list: Elevation data, chart rendering, hover tooltip, pointer interaction, internal elevation markers, map content, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-011`
+Notes: Presentation-only cleanup; no elevation calculations or route data changed.
+
+### Version: DV-2026-08-30-011
+Date: 2026-08-30
+Surface: Coach Insight mobile navigation label
+Files: `frontend/src/styles/grid-cards-white.css`, `frontend/src/pages/analysisSubpageNav.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Explicitly cleared the active Coach Insight link's background color so the icon and `教练洞察` label remain text-first without a horizontal panel strip.
+Why: The active navigation surface retained a painted background color after the shorthand and image layers were reset.
+Preserve list: Coach Insight navigation, active-state color and rail marker, sidebar geometry, content cards, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-010`
+Notes: Presentation-only, light-theme route-scoped correction.
+
+### Version: DV-2026-08-30-010
+Date: 2026-08-30
+Surface: Race-detail elevation chart annotations
+Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/_split/races.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/pages/raceDetailCourseFootnote.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the explanatory elevation footnote text and its dead state/styles from `/races/details/:raceId` while retaining the chart, hover tooltip, and distance-axis markers.
+Why: The footnote added a redundant text strip beneath the elevation visualization.
+Preserve list: Elevation data, chart rendering, hover behavior, tooltip copy, start/10K/half/30K/finish markers, course source handling, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-009`
+Notes: Presentation-only text removal; no race data, map, or interaction behavior changed.
+
+### Version: DV-2026-08-30-009
+Date: 2026-08-30
+Surface: Muscle Training top reference card background on `/muscle-training`
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added an explicit filled card surface to the top reference grid item, preserving its existing image, content, border radius, and theme-aware palette.
+Why: The reference grid item needed a distinct card background instead of blending into the surrounding Muscle Training workbench.
+Preserve list: Reference image, exercise copy, prescription, coaching cues, target-muscle tags, interactions, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-008`
+Notes: The rule is scoped to the Muscle Training route and uses existing `--mtpa-*` surface tokens.
+
+### Version: DV-2026-08-30-008
+Date: 2026-08-30
+Surface: Muscle Training activity-map data source on `/muscle-training`
+Files: `backend/src/main/java/com/hermes/backend/MuscleTrainingController.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInService.java`, `backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInRepository.java`, `backend/src/test/java/com/hermes/backend/MuscleTrainingControllerTests.java`, `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/components/RunActivityContributionGraph.jsx`, `frontend/src/utils/runActivityContribution.js`, `frontend/src/utils/runActivityContribution.test.js`, `frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js`, `frontend/src/pages/settingsRunActivityGraph.smoke.test.js`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `DESIGN_VERSIONS.md`
+What changed: Changed the Muscle Training map to load persisted muscle check-ins from `/api/training/muscle/check-ins` instead of `/api/activities`. The shared contribution graph now supports muscle dates, completion levels, and localized muscle activity copy while Settings keeps its run-activity mode.
+Why: The map must represent the activity being recorded on the page, not unrelated running activity history.
+Preserve list: Settings run activity behavior, authenticated runner ownership, daily check-in upsert semantics, 53-week map layout, bilingual copy, responsive styling, and accessibility.
+Rollback target: `DV-2026-08-30-007`
+Notes: Only actual muscle check-ins render as completed activity cells; the map refreshes after a successful check-in and does not use run distance to determine intensity.
+
+### Version: DV-2026-08-30-007
+Date: 2026-08-30
+Surface: Muscle Training protocol workspace card surface
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Restored the white card surface around the protocol exercise grid while keeping its nested heading wrapper transparent.
+Why: The previous strip-removal rule removed the grid's intended card background instead of only removing the duplicated nested heading surface.
+Preserve list: Exercise rows, workspace copy, filter chips, typography, spacing, themes, responsive layout, localization, accessibility, and exercise interactions.
+Rollback target: `DV-2026-08-30-006`
+Notes: Presentation-only, route-scoped surface correction; no exercise data or interaction behavior changed.
+
+### Version: DV-2026-08-30-006
+Date: 2026-08-30
+Surface: Muscle Training activity check-in map on `/muscle-training`
+Files: `frontend/src/pages/MuscleTraining.jsx`, `frontend/src/components/RunActivityContributionGraph.jsx`, `frontend/src/styles/_split/muscle-training.css`, `frontend/src/styles/_split/settings.css`, `frontend/src/i18n/locales/en/components.js`, `frontend/src/i18n/locales/zh-CN/components.js`, `frontend/src/pages/muscleTrainingDailyComposer.smoke.test.js`, `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Replaced the full two-column check-in/profile control deck with the Settings-style run activity map and a localized daily check-in action. The action records an `ACTUAL` muscle check-in for today, refreshes the plan, and disables itself after a successful check-in.
+Why: The lower Muscle Training surface needed a simpler activity-first composition with a single clear daily action instead of two dense configuration panels.
+Preserve list: Existing plan generation, authenticated check-in endpoint, activity calendar behavior, settings graph usage, bilingual copy, responsive layout, theme support, and accessibility.
+Rollback target: `DV-2026-08-30-005`
+Notes: The action sends null distance and duration so planned run values are never recorded as actual completion metrics.
+
+### Version: DV-2026-08-30-005
+Date: 2026-08-30
+Surface: Muscle Training protocol workspace heading
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingVideoPanelStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the accidental nested panel background from the protocol workspace title while preserving the surrounding exercise list and controls.
+Why: The shared card selector matched the title wrapper by class name and painted a strip behind `动作协议工作台`.
+Preserve list: Workspace copy, typography, spacing, exercise rows, filter chips, card surfaces, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-004`
+Notes: Presentation-only, route-scoped surface correction; no exercise data or interaction behavior changed.
+
+### Version: DV-2026-08-30-004
+Date: 2026-08-30
+Surface: Muscle Training video heading surface
+Files: `frontend/src/styles/muscle-training-profile-alignment.css`, `frontend/src/pages/muscleTrainingVideoPanelStrip.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Removed the accidental nested panel background from the video heading and title while keeping the outer video card surface intact.
+Why: The shared card selector matched the heading wrappers by class name and painted a strip behind the labels.
+Preserve list: Video and empty states, heading copy, typography, spacing, card surface, themes, responsive layout, localization, and accessibility.
+Rollback target: `DV-2026-08-30-003`
+Notes: Presentation-only, route-scoped surface correction; no media wiring or interaction behavior changed.
+
 ### Version: DV-2026-08-30-003
 Date: 2026-08-30
 Surface: Race-detail stat and coach card surfaces
@@ -9457,112 +9757,20 @@ Preserve list: 3-step flow, brand deck and expansion, model board filters/search
 Rollback target: `DV-2026-08-28-001`
 Notes: A concurrent session briefly re-activated the retired `add-shoes-awesome-redesign.css` layer (root class + app.css import); it was removed again because its `#root`-scoped rules overrode this layout and squeezed the brand deck to ~75px columns. That session later merged the same Kinetic Editorial skin into the tail of `add-shoes-profile-alignment.css`; the merge was moved to `frontend/src/styles/add-shoes-kinetic-editorial-merged.css.disabled` because its cascade-order wins re-broke the brand deck (~50px cards at 1280px), crushed the setup form, and washed out the light-theme hero text. `add-shoes-profile-redesign` remains the sole rendered design authority for this route.
 
-### Version: DV-2026-08-29-001
-Date: 2026-08-29
-Surface: Add Shoes decorative grid on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Removed the hero's ruled background and disabled the shared page and canvas grid pseudo-elements for the Add Shoes route.
-Why: The requested Add Shoes surface should not show a page-wide or hero-level decorative grid behind the workflow.
-Preserve list: Heading card, inventory stats, catalog and setup layout grids, brand/model selection, filters, form behavior, routing, localization, themes, responsive layout, and accessibility.
+### Version: DV-2026-08-30-001
+Date: 2026-08-30
+Surface: 派燃烧 shoe-brand logo
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/assets/brand-logos/pairanshao-user.webp`, `frontend/src/components/shoeBrandLogoFallback.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied 派燃烧 logo as a lossless WebP asset and mapped it through the shared shoe-brand logo resolver.
+Why: Replace the generated fallback badge with the requested brand artwork across the shoe catalog, Add Shoes, inventory, and shoe-detail surfaces.
+Preserve list: Brand/model catalog data, logo fallback behavior for other brands, responsive layout, themes, localization, and accessibility.
 Rollback target: `DV-2026-08-28-002`
-Notes: Presentation-only decoration removal; no shoe workflow or data behavior changed.
 
-### Version: DV-2026-08-29-002
-Date: 2026-08-29
-Surface: Add Shoes editorial hero grid on `/shoes/add`
-Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Removed the entire editorial hero grid, including its headline panel and status-card rail, from the Add Shoes page.
-Why: The requested page should open directly into the shoe catalog workflow without the separate top hero grid.
-Preserve list: Catalog header, brand/model selection, filters, search, Step 3 configuration form, routing, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-001`
-Notes: Presentation-only section removal; no shoe selection, form validation, or persistence behavior changed.
-
-### Version: DV-2026-08-29-003
-Date: 2026-08-29
-Surface: Add Shoes selected-shoe summary surface on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesSelectedSummaryWhiteSurface.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Set the light-theme selected-shoe summary card to a solid white background and switched its title, copy, kicker, and pills to readable light-surface colors.
-Why: The selected-shoe configuration grid was rendering as a dark panel against the light Add Shoes workspace.
-Preserve list: Selected-shoe state, form controls, validation, submission behavior, dark themes, routing, localization, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-002`
-Notes: Presentation-only light-theme surface correction; no shoe workflow or persistence behavior changed.
-
-### Version: DV-2026-08-29-003
-Date: 2026-08-29
-Surface: Add Shoes three-step card flow on `/shoes/add`
-Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Flattened the Add Shoes catalog/setup layout into three full-width sibling cards for brand selection, model confirmation, and shoe configuration; the stage heading remains an unboxed flow intro.
-Why: Make the three-step workflow visually distinct instead of presenting steps 1 and 2 inside a shared catalog card with step 3 in a separate column.
-Preserve list: Brand/model selection, catalog loading fallback, filters/search, selected-shoe summary, form validation and submit payload, routing, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-002`
-Notes: Presentation-only structure and spacing change; the legacy stage/setup selectors remain non-painting compatibility hooks for stale markup.
-
-### Version: DV-2026-08-29-004
-Date: 2026-08-29
-Surface: Add Shoes step-card surfaces on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Set the Step 1, Step 2, and Step 3 card surfaces to solid white in light mode while preserving the existing dark-theme override.
-Why: The three workflow cards should read as clean white surfaces against the Add Shoes page background.
-Preserve list: Three-card workflow structure, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-003`
-Notes: Presentation-only surface correction; no workflow or data behavior changed.
-
-### Version: DV-2026-08-29-005
-Date: 2026-08-29
-Surface: Add Shoes catalog intro removal on `/shoes/add`
-Files: `frontend/src/pages/AddShoes.jsx`, `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Removed the standalone catalog kicker, selected-brand heading, and descriptive intro above the three-step cards.
-Why: The Add Shoes workflow should begin directly with Step 1 instead of showing a redundant catalog intro block.
-Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-004`
-Notes: Presentation-only content removal; no shoe workflow or data behavior changed.
-
-### Version: DV-2026-08-29-006
-Date: 2026-08-29
-Surface: Add Shoes legacy intro compatibility on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Added a route-scoped hide for the removed catalog intro hooks so cached older lazy chunks cannot restore the intro above the step cards.
-Why: The visible route must stay free of the removed kicker, brand heading, and descriptive copy during stale-chunk recovery.
-Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-005`
-Notes: Compatibility-only presentation guard; no shoe workflow or data behavior changed.
-
-### Version: DV-2026-08-29-007
-Date: 2026-08-29
-Surface: Add Shoes legacy white card override on `/shoes/add`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Replaced the legacy Profile-aligned warm translucent step-card background with explicit solid white color and no background image.
-Why: Older stylesheet paths were still overriding the intended white Step 1, Step 2, and Step 3 card surfaces.
-Preserve list: Three-card workflow, brand/model selection, filters/search, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-006`
-Notes: Presentation-only compatibility override; no shoe workflow or data behavior changed.
-
-### Version: DV-2026-08-29-008
-Date: 2026-08-29
-Surface: Add Shoes setup grid surface on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Set the Step 3 setup payload grid to a solid white background with no background image in both active and legacy route styles.
-Why: The Step 3 two-column grid should remain visibly white instead of inheriting the page or translucent theme surface.
-Preserve list: Three-card workflow, selected-shoe summary, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-007`
-Notes: Presentation-only grid surface correction; no shoe workflow or data behavior changed.
-
-### Version: DV-2026-08-29-009
-Date: 2026-08-29
-Surface: Add Shoes final white-surface authority on `/shoes/add`
-Files: `frontend/src/styles/style.css`, `frontend/src/pages/addShoesStepCards.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Added a final route-scoped white surface rule covering the step cards and Step 3 setup grid for legacy stylesheet consumers.
-Why: Later global design layers could otherwise reapply a warm translucent background after the card-specific white override.
-Preserve list: Three-card workflow, Step 3 setup grid, selected-shoe summary, configuration form, submission behavior, localization, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-008`
-Notes: Presentation-only cascade authority; no shoe workflow or data behavior changed.
-
-### Version: DV-2026-08-29-010
-Date: 2026-08-29
-Surface: Add Shoes search focus treatment on `/shoes/add`
-Files: `frontend/src/styles/add-shoes-profile-alignment.css`, `frontend/src/styles/style.css`, `frontend/src/pages/addShoesSearchFocus.smoke.test.js`, `DESIGN_VERSIONS.md`
-What changed: Removed the outer focus halo from the model-search wrapper and kept a compact inset focus indicator on the input.
-Why: The wrapper's coral ring created an unwanted double-highlight around the search field.
-Preserve list: Search behavior, keyboard focus visibility, model filtering, themes, responsive layout, and accessibility.
-Rollback target: `DV-2026-08-29-009`
-Notes: Presentation-only focus treatment correction; no search behavior changed.
+### Version: DV-2026-08-30-006
+Date: 2026-08-30
+Surface: 音速猫 shoe-brand logo
+Files: `frontend/src/components/ShoeBrandLogo.jsx`, `frontend/src/utils/shoeBrandLogo.js`, `frontend/src/assets/brand-logos/sonic-cat.webp`, `frontend/src/components/shoeBrandLogoFallback.smoke.test.js`, `frontend/src/utils/shoeBrandLogo.test.js`, `DESIGN_VERSIONS.md`
+What changed: Added the supplied SonicCat wordmark as a lossless WebP asset and mapped 音速猫 through the shared shoe-brand logo resolver while retaining its deterministic fallback mark.
+Why: Replace the generated fallback badge with the requested brand artwork across the shoe catalog, Add Shoes, inventory, and shoe-detail surfaces.
+Preserve list: Brand/model catalog data, fallback behavior for other brands, responsive layout, themes, localization, and accessibility.
+Rollback target: `DV-2026-08-30-005`

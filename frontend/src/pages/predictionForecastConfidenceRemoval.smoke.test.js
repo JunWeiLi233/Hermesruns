@@ -11,8 +11,8 @@ const styleSource = read('../styles/prediction-profile-alignment.css');
 
 assert.match(
   pageSource,
-  /const showConfidencePanel = distance\?\.key !== '5k' && distance\?\.key !== '10k' && distance\?\.key !== 'half';[\s\S]*?prediction-forecast-hero\$\{showConfidencePanel \? '' : ' is-confidence-removed'\}/,
-  'The 5K prediction hero should mark itself when the redundant confidence grid is removed.',
+  /const showConfidencePanel = distance\?\.key !== '5k' && distance\?\.key !== '10k' && distance\?\.key !== 'half' && distance\?\.key !== 'marathon';[\s\S]*?prediction-forecast-hero\$\{showConfidencePanel \? '' : ' is-confidence-removed'\}/,
+  'The prediction hero should mark itself when the redundant confidence grid is removed.',
 );
 assert.match(
   pageSource,

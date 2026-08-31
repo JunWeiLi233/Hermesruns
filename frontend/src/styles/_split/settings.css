@@ -5350,6 +5350,13 @@ body.theme-midnight .settings-load-back,
   text-align: right;
 }
 
+.st-activity-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .st-activity-grid-frame {
   overflow-x: auto;
   overscroll-behavior-x: contain;

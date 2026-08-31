@@ -12,10 +12,10 @@ assert.doesNotMatch(
   'Race detail should remove the bottom course footnote text block.',
 );
 
-assert.match(
+assert.doesNotMatch(
   pageSource,
   /className="race-detail-course-axis"/,
-  'Removing the footnote should preserve the elevation axis.',
+  'Race detail should remove the redundant elevation axis with the footnote cleanup.',
 );
 
 console.log('[PASS] Race detail course footnote removal guardrails passed.');

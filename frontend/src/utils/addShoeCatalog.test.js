@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { buildSeriesCatalog, mergeShoeCatalog } from './addShoeCatalog.js';
+import { buildSeriesCatalog, mergeShoeCatalog, readLocalSeriesCatalog } from './addShoeCatalog.js';
 
 const catalog = [
   {
@@ -57,3 +57,47 @@ assert.equal(merged.find((entry) => entry.brand === 'Topo Athletic').models[0].i
 assert.equal(merged.find((entry) => entry.brand === 'Nike').models.length, 1);
 
 console.log('[PASS] Shared admin and runner shoe catalog merge passed.');
+
+const removedFromCache = buildSeriesCatalog([
+  { brand: '申亚', models: [{ model: '008' }] },
+  { brand: '强风跑霸', models: [{ model: '风速' }] },
+  { brand: '赛琪', models: [{ model: '巨风' }] },
+  { brand: 'ONEMIX', models: [{ model: '劲飞爽' }] },
+  { brand: 'NNormal', models: [{ model: 'Kjerag' }] },
+  { brand: '轻跑者', models: [{ model: '锋刃' }] },
+  { brand: '天赐之翼', models: [{ model: '宙斯' }] },
+  { brand: '星火力', models: [{ model: '音速' }] },
+  { brand: 'Nike', models: [{ model: 'Pegasus' }] },
+]);
+assert.equal(removedFromCache.some((entry) => entry.brand === '申亚'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === '强风跑霸'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === '赛琪'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === 'ONEMIX'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === 'NNormal'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === '轻跑者'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === '天赐之翼'), false);
+assert.equal(removedFromCache.some((entry) => entry.brand === '星火力'), false);
+
+const cachedCatalog = readLocalSeriesCatalog({
+  getItem: () => JSON.stringify([
+    { brand: '德尔惠', models: [{ model: '裂空' }] },
+    { brand: '强风跑霸', models: [{ model: '风速' }] },
+    { brand: '赛琪', models: [{ model: '巨风' }] },
+    { brand: 'ONEMIX', models: [{ model: '劲飞爽' }] },
+    { brand: 'NNormal', models: [{ model: 'Kjerag' }] },
+    { brand: '轻跑者', models: [{ model: '锋刃' }] },
+    { brand: '天赐之翼', models: [{ model: '宙斯' }] },
+    { brand: '星火力', models: [{ model: '音速' }] },
+    { brand: 'Nike', models: [{ model: 'Pegasus' }] },
+  ]),
+});
+assert.equal(cachedCatalog.some((entry) => entry.brand === '德尔惠'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === '强风跑霸'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === '赛琪'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === 'ONEMIX'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === 'NNormal'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === '轻跑者'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === '天赐之翼'), false);
+assert.equal(cachedCatalog.some((entry) => entry.brand === '星火力'), false);
+
+console.log('[PASS] Removed shoe brands stay out of cached runner catalog data.');

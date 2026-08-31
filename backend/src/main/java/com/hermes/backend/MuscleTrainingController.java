@@ -68,6 +68,13 @@ public class MuscleTrainingController {
         return ResponseEntity.ok(todayCheckIn);
     }
 
+    @GetMapping("/check-ins")
+    public ResponseEntity<?> getCheckInHistory(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(authHeader);
+        if (runner.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Session");
+        return ResponseEntity.ok(plannerService.getCheckInHistory(runner.get()));
+    }
+
     @PutMapping("/today")
     public ResponseEntity<?> updateTodayCheckIn(
             @RequestHeader(value = "Authorization", required = false) String authHeader,

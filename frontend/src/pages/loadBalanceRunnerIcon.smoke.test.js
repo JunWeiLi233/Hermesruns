@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (relativePath) => readFileSync(path.join(here, '..', relativePath), 'utf8').replace(/\r\n/g, '\n');
 const appIconSource = read('components/AppIcon.jsx');
-const insightSource = read('pages/AnalysisInsightDetail.jsx');
+const insightSource = read('pages/AnalysisInsightDetail.jsx').replace(/\r\n/g, '\n');
 
 const runnerCase = appIconSource.match(/case 'load_balance_runner':[\s\S]*?case 'person':/);
 assert.ok(runnerCase, 'AppIcon must define the dedicated Load Balance runner icon before the person icon.');

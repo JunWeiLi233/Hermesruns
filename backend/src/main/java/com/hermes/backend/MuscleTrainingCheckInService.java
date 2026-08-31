@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,6 +21,17 @@ public class MuscleTrainingCheckInService {
         return findTodayCheckIn(runner)
                 .map(this::toTodayCheckInDto)
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TodayCheckInDto> getCheckInHistory(Runner runner) {
+        return checkInRepository.findByRunnerAndEntryStateOrderByTrainingDateAsc(
+                        runner,
+                        MuscleTrainingCheckIn.EntryState.ACTUAL
+                )
+                .stream()
+                .map(this::toTodayCheckInDto)
+                .toList();
     }
 
     @Transactional

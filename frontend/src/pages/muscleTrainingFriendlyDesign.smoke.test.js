@@ -6,15 +6,10 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
 const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training.css'), 'utf8');
+const profileAlignmentSource = readFileSync(path.join(here, '../styles/muscle-training-profile-alignment.css'), 'utf8');
 const contrastSource = readFileSync(path.join(here, '../styles/contrast-fixes.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
-const controlDeckCssMatch = cssSource.match(
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck[\s\S]*?@media \(max-width:\s*980px\)/,
-);
-assert.ok(controlDeckCssMatch, 'The strength settings control deck should keep a dedicated CSS scope.');
-const controlDeckCss = controlDeckCssMatch[0];
-
 function extractObjectBlock(source, declarationName) {
   const declarationStart = source.indexOf(`const ${declarationName} = {`);
   assert.notEqual(declarationStart, -1, `${declarationName} should be declared.`);
@@ -61,6 +56,12 @@ const videoEmbedKeys = new Set(extractTopLevelQuotedKeys(extractObjectBlock(page
 const compoundExerciseKeys = [
   ...pageSource.matchAll(/compoundLibraryExercise\(\{\s*key:\s*'([^']+)'/g),
 ].map((match) => match[1]);
+const researchedRunnerStrengthKeys = [
+  'barbell-hip-thrust',
+  'single-leg-leg-press',
+  'glute-ham-raise',
+  'squat-jump',
+];
 const runnerExerciseNames = extractTopLevelQuotedKeys(extractObjectBlock(pageSource, 'EXERCISE_LIBRARY'));
 const runnerExerciseKeys = runnerExerciseNames.map(
   slugExerciseNameForTest,
@@ -309,164 +310,14 @@ assert.match(
 
 assert.match(
   pageSource,
-  /className="card muscle-panel muscle-preference-panel muscle-profile-panel muscle-control-card"/,
-  'The lower training profile panel should use the upgraded profile-specific layout.',
-);
-
-assert.match(
-  pageSource,
-  /className="muscle-controls-grid"/,
-  'The lower settings deck should use one compact control-console grid instead of loose stacked forms.',
-);
-
-assert.match(
-  pageSource,
-  /className="card muscle-panel muscle-preference-panel muscle-checkin-panel muscle-control-card"/,
-  'The check-in panel should be one lane of the compact settings console.',
-);
-
-assert.match(
-  pageSource,
-  /className="card muscle-panel muscle-preference-panel muscle-profile-panel muscle-control-card"/,
-  'The training profile panel should be one lane of the compact settings console.',
-);
-
-assert.match(
-  pageSource,
-  /className="muscle-control-source-note"/,
-  'Plan source should move into a lightweight inline note instead of a bulky status block.',
+  /className="strength-plan-control-deck muscle-activity-deck"[\s\S]*?<RunActivityContributionGraph[\s\S]*?className="muscle-activity-checkin-btn"/,
+  'The lower controls should use the Settings-style activity map with a daily check-in action.',
 );
 
 assert.doesNotMatch(
   pageSource,
-  /className="muscle-status-source"/,
-  'The compact settings deck should not render the old bulky plan-source horizontal block.',
-);
-
-assert.match(
-  pageSource,
-  /className="muscle-profile-summary-strip muscle-profile-summary-strip--compact"/,
-  'The training profile summary should render as a compact data strip.',
-);
-
-assert.match(
-  pageSource,
-  /className="muscle-profile-impact muscle-profile-impact-strip"/,
-  'The plan-impact hints should render as a compact bottom strip.',
-);
-
-assert.match(
-  pageSource,
-  /const profileSummaryItems = useMemo/,
-  'The training profile summary should be derived from existing plan and draft data.',
-);
-
-assert.match(
-  pageSource,
-  /draft\.equipmentLevel[\s\S]*draft\.experienceLevel[\s\S]*draft\.sessionMinutes[\s\S]*draft\.preferredStrengthDays/,
-  'The tuning preview should use draft equipment, experience, duration, and preferred days before save.',
-);
-
-assert.match(
-  pageSource,
-  /const profileImpactItems = useMemo/,
-  'The training profile panel should include plan-impact copy derived from the current draft.',
-);
-
-assert.match(
-  pageSource,
-  /const profileHasUnsavedChanges = useMemo/,
-  'The tuning panel should explicitly detect unsaved profile changes.',
-);
-
-const profilePanelIndex = pageSource.indexOf('className="card muscle-panel muscle-preference-panel muscle-profile-panel muscle-control-card"');
-const profilePanelEnd = pageSource.indexOf('</section>', profilePanelIndex);
-const profilePanelSource = pageSource.slice(profilePanelIndex, profilePanelEnd);
-const checkinPanelIndex = pageSource.indexOf('className="card muscle-panel muscle-preference-panel muscle-checkin-panel muscle-control-card"');
-const checkinPanelEnd = pageSource.indexOf('</section>', checkinPanelIndex);
-const checkinPanelSource = pageSource.slice(checkinPanelIndex, checkinPanelEnd);
-
-assert.match(
-  profilePanelSource,
-  /<form onSubmit=\{handleSave\} className="muscle-pref-grid muscle-profile-form"/,
-  'The upgraded training profile must keep the existing save handler.',
-);
-
-assert.match(
-  profilePanelSource,
-  /profileHasUnsavedChanges \? copy\.profileDirty : copy\.profileSynced/,
-  'The tuning panel should show whether the visible draft is already synced.',
-);
-
-assert.match(
-  profilePanelSource,
-  /copy\.profileSummaryTitle/,
-  'The tuning preview title should stay localized instead of hardcoded.',
-);
-
-for (const hint of [
-  'profileExperienceHint',
-  'profileEquipmentHint',
-  'profileSessionMinutesHint',
-  'profileNoiseHint',
-  'profilePreferredDaysHint',
-]) {
-  assert.match(
-    profilePanelSource,
-    new RegExp(`copy\\.${hint}`),
-    `The tuning form should explain what ${hint} changes.`,
-  );
-}
-
-assert.match(
-  checkinPanelSource,
-  /copy\.checkInEffectHint/,
-  'The check-in panel should explain that saving recalculates the remaining plan.',
-);
-
-assert.match(
-  checkinPanelSource,
-  /<form onSubmit=\{handleCheckInSave\} className="muscle-pref-grid muscle-checkin-form"/,
-  'The compact check-in lane must keep the existing check-in save handler.',
-);
-
-assert.match(
-  checkinPanelSource,
-  /onClick=\{handleCheckInReset\}/,
-  'The compact check-in lane must keep the existing reset handler.',
-);
-
-for (const field of [
-  'checkInDraft.entryState',
-  'checkInDraft.runType',
-  'checkInDraft.distanceKm',
-  'checkInDraft.durationMinutes',
-]) {
-  assert.match(
-    checkinPanelSource,
-    new RegExp(field.replace('.', '\\.')),
-    `The check-in form should keep using the existing field ${field}.`,
-  );
-}
-
-for (const field of [
-  'draft.experienceLevel',
-  'draft.equipmentLevel',
-  'draft.sessionMinutes',
-  'draft.noisePreference',
-  'draft.preferredStrengthDays',
-]) {
-  assert.match(
-    profilePanelSource,
-    new RegExp(field.replace('.', '\\.')),
-    `The profile form should keep using the existing field ${field}.`,
-  );
-}
-
-assert.doesNotMatch(
-  profilePanelSource,
-  /oneRepMax|weightKg|repsOrDuration|targetRpe/,
-  'The profile panel must not add fake lifting log fields.',
+  /muscle-controls-grid|muscle-profile-panel|muscle-checkin-panel|muscle-pref-grid/,
+  'The retired two-column controls should not remain in the rendered page source.',
 );
 
 assert.match(
@@ -537,10 +388,17 @@ assert.match(
   'Muscle Training should define the frontend-only compound target exercise library.',
 );
 
+for (const key of researchedRunnerStrengthKeys) {
+  assert.ok(
+    compoundExerciseKeys.includes(key),
+    `The researched runner-strength library should include ${key}.`,
+  );
+}
+
 assert.equal(
   (pageSource.match(/compoundLibraryExercise\(\{\s*[\r\n]+\s*key:/g) || []).length,
-  24,
-  'Each of the six target areas should expose four compound-library exercises.',
+  28,
+  'The six target areas should expose 24 compound exercises plus four researched runner-strength actions.',
 );
 
 for (const [targetKey, firstExercise, lastExercise] of [
@@ -727,134 +585,26 @@ assert.match(
 
 assert.match(
   cssSource,
-  /\.muscle-profile-form\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
-  'Training profile controls should be grouped into a two-column form on desktop.',
+  /\.muscle-activity-deck\s*\{[\s\S]*padding:\s*0 !important;[\s\S]*background:\s*transparent !important;/,
+  'The activity map replacement should not leave a second control-deck surface around the map.',
 );
 
 assert.match(
   cssSource,
-  /\.muscle-profile-control select,[\s\S]*\.muscle-profile-control input\s*\{[\s\S]*min-height:\s*46px;/,
-  'Training profile controls should keep accessible touch height.',
+  /\.muscle-activity-checkin-btn\s*\{[\s\S]*min-height:\s*40px;[\s\S]*cursor:\s*pointer;/,
+  'The daily check-in action should keep a clear, accessible touch target.',
 );
 
 assert.match(
   cssSource,
-  /\.muscle-controls-grid\s*\{[\s\S]*display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.9fr\)\s*minmax\(0,\s*1\.1fr\);/,
-  'The settings console should use a desktop two-lane grid.',
-);
-
-assert.match(
-  cssSource,
-  /@media \(max-width:\s*980px\)\s*\{[\s\S]*\.muscle-controls-grid\s*\{[\s\S]*grid-template-columns:\s*1fr;/,
-  'The settings console should stack to one column on small screens.',
-);
-
-assert.match(
-  cssSource,
-  /\.muscle-profile-summary-strip--compact\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/,
-  'The training profile summary should be compact instead of a nested card grid.',
-);
-
-assert.match(
-  cssSource,
-  /\.muscle-profile-impact-strip ul\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/,
-  'The plan-impact hints should sit in a compact horizontal strip on desktop.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-preference-head p,[\s\S]*\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-control-source-note,[\s\S]*color:\s*#dce6ca !important;/,
-  'The compact settings deck should brighten muted headings and lightweight source copy.',
+  /@media \(max-width:\s*720px\)\s*\{[\s\S]*\.muscle-activity-deck \.st-activity-graph-head\s*\{[\s\S]*flex-direction:\s*column;/,
+  'The activity map header should stack cleanly on narrow screens.',
 );
 
 assert.doesNotMatch(
   pageSource,
   /className="mt-settings-summary"|className="mt-settings-disclosure"|stitchCopy\.settingsDisclosure/,
   'The unclear coach-settings disclosure button should not render on the strength settings deck.',
-);
-
-assert.match(
-  pageSource,
-  /<section id="muscle-controls" className="strength-plan-control-deck">[\s\S]*className="muscle-controls-grid"[\s\S]*className="card muscle-panel muscle-preference-panel muscle-checkin-panel muscle-control-card"[\s\S]*className="card muscle-panel muscle-preference-panel muscle-profile-panel muscle-control-card"/,
-  'Removing the settings disclosure must keep check-in and training profile panels directly available.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-profile-summary-card strong,[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Training profile summary values should beat global light-theme strong overrides.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-preference-head h2,[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Settings deck section titles should beat global light-theme heading overrides.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-profile-impact p\s*\{[\s\S]*color:\s*#dce6ca !important;/,
-  'Plan-impact copy should not use low-opacity muted text in the dark settings deck.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-pref-field :is\(input, select\),[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Training profile form controls should keep readable input and select text.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.primary-action-btn:not\(:disabled\)\s*\{[\s\S]*background:\s*linear-gradient\(135deg,\s*#ff8b74,\s*#e96651\) !important;[\s\S]*color:\s*#170807 !important;/,
-  'Enabled settings primary actions should use the red-coral treatment instead of the old lime treatment.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-preference-baseline \.muscle-pill\s*\{[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.16\) !important;[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Settings preference pills should use a readable red-coral tint.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*linear-gradient\(135deg,\s*#ff8b74,\s*#e96651\) !important;[\s\S]*color:\s*#170807 !important;/,
-  'Active settings chips must keep readable red-coral styling after light-theme overrides.',
-);
-
-assert.doesNotMatch(
-  controlDeckCss,
-  /#ccff00|204,\s*255,\s*0|var\(--mt-iron-accent\)/,
-  'The settings control deck should not keep the old acid-lime active palette.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-profile-impact-strip\s*\{[\s\S]*border-color:\s*rgba\(240,\s*117,\s*97,\s*0\.28\);[\s\S]*background:\s*rgba\(240,\s*117,\s*97,\s*0\.09\);/,
-  'The settings plan-impact strip should match the red-coral control palette.',
-);
-
-assert.match(
-  contrastSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*var\(--brand-accent,\s*#c0462b\) !important;[\s\S]*color:\s*#ffffff !important;/,
-  'White-theme final contrast guard should keep active settings chips red and readable.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#11140f !important;[\s\S]*color:\s*#f7fbe8 !important;/,
-  'Native select options should use a dark readable option palette in the settings deck.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.primary-action-btn:disabled,[\s\S]*\.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-secondary-btn:disabled\s*\{[\s\S]*color:\s*#cbd6bd !important;/,
-  'Disabled primary and secondary settings actions should remain readable.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.primary-action-btn:disabled,[\s\S]*body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-secondary-btn:disabled\s*\{[\s\S]*color:\s*#cbd6bd !important;/,
-  'Disabled settings buttons should beat global light-theme button overrides.',
 );
 
 assert.match(
@@ -1025,6 +775,46 @@ assert.match(
   'White theme should convert main cards to dark text on light surfaces.',
 );
 
+const whiteThemeSurfaceRuleIndex = profileAlignmentSource.indexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) :is(.mt-card, .mt-exercises,',
+);
+const exercisesSurfaceRuleIndex = profileAlignmentSource.lastIndexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises {',
+);
+assert.ok(
+  whiteThemeSurfaceRuleIndex >= 0 && exercisesSurfaceRuleIndex > whiteThemeSurfaceRuleIndex,
+  'The top-workbench exercise-section surface should be defined after the broad card rule so the grid keeps its card background in every theme.',
+);
+assert.match(
+  profileAlignmentSource.slice(exercisesSurfaceRuleIndex, exercisesSurfaceRuleIndex + 420),
+  /border:\s*1px\s+solid\s+var\(--mtpa-line\)\s*!important;[\s\S]*background:\s*var\(--mtpa-card\)\s*!important;[\s\S]*box-shadow:\s*var\(--mtpa-shadow-md\)\s*!important;/,
+  'The top-workbench exercise section should retain its card surface around the grid.',
+);
+const exercisesHeadingResetIndex = profileAlignmentSource.lastIndexOf(
+  '#root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-exercises-head {',
+);
+assert.ok(
+  exercisesHeadingResetIndex > exercisesSurfaceRuleIndex,
+  'The exercise heading wrapper reset should follow the section surface reset.',
+);
+assert.match(
+  profileAlignmentSource.slice(exercisesHeadingResetIndex, exercisesHeadingResetIndex + 260),
+  /background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  'The exercise heading wrapper should not retain a background strip of its own.',
+);
+
+assert.match(
+  profileAlignmentSource,
+  /\.runner-dashboard-page\[data-muscle-theme\]:has\(\.mt-top-workbench\) \.mt-top-reference-card\s*\{[\s\S]*background:\s*var\(--mtpa-card-strong\) !important;/,
+  'The top reference grid item should keep a distinct filled card background.',
+);
+
+assert.match(
+  profileAlignmentSource,
+  /\.runner-dashboard-page\[data-muscle-theme\]:has\(\.mt-top-workbench\) \.mt-top-reference\s*\{[\s\S]*padding:\s*20px;[\s\S]*background:\s*var\(--mtpa-card-strong\) !important;/,
+  'The full top reference column should connect its heading and card under one background surface.',
+);
+
 assert.match(
   cssSource,
   /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) :is\([^}]*\.mt-top-workbench \.mt-top-reference-head h2[^}]*\.mt-reference-body h3[^}]*\)\s*\{[\s\S]*color:\s*var\(--mt-white-ink\) !important;/,
@@ -1071,48 +861,6 @@ assert.match(
   cssSource,
   /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.mt-reference-steps li span\s*\{[\s\S]*color:\s*var\(--brand-accent-strong, #8f2f22\) !important;/,
   'White theme should keep Reference Dock step icons readable.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck \.muscle-day-chip\.active\s*\{[\s\S]*background:\s*var\(--brand-accent, #c0462b\) !important;[\s\S]*color:\s*#ffffff !important;/,
-  'White theme active settings chips should stay readable on the darker green active surface.',
-);
-
-assert.match(
-  cssSource,
-  /\.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#ffffff !important;[\s\S]*color:\s*#2c2f30 !important;/,
-  'White theme select options should use white surfaces with dark text.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-preference-head h2,[\s\S]*\.muscle-profile-impact-strip > strong\)\s*\{[\s\S]*color:\s*#232629 !important;/,
-  'White theme control deck headings and summary values should use explicit dark text after global light overrides.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-preference-head p,[\s\S]*\.muscle-profile-impact-strip p\)\s*\{[\s\S]*color:\s*#4d5650 !important;/,
-  'White theme control deck descriptions and helper copy should use readable muted text on light surfaces.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.muscle-pref-field input,[\s\S]*\.muscle-day-chip:not\(\.active\),[\s\S]*\.muscle-secondary-btn:not\(:disabled\)\)\s*\{[\s\S]*background:\s*#fffaf6 !important;[\s\S]*color:\s*#232629 !important;/,
-  'White theme controls, normal day chips, and secondary actions should not inherit pale dark-theme text.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck select option\s*\{[\s\S]*background:\s*#fffaf6 !important;[\s\S]*color:\s*#232629 !important;/,
-  'White theme native select options should keep a high-contrast light menu palette.',
-);
-
-assert.match(
-  cssSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.runner-dashboard-page\[data-muscle-theme="white"\]:has\(\.mt-top-workbench\) \.strength-plan-control-deck :is\(\.primary-action-btn:disabled,[\s\S]*\.muscle-secondary-btn:disabled\)\s*\{[\s\S]*color:\s*#6e625d !important;/,
-  'White theme disabled settings buttons should stay visibly disabled without becoming unreadable.',
 );
 
 assert.match(

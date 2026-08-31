@@ -35,19 +35,6 @@ body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis
   margin-top: 0;
 }
 
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
-  padding: 4px 2px 10px;
-  animation: analysis-load-profile-rise 420ms ease-out both;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading {
-  min-width: 0;
-}
-
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-back {
   display: inline-flex;
   align-items: center;
@@ -86,24 +73,6 @@ body .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 0.28em;
-  margin: 0;
-  color: var(--load-profile-ink);
-  font-family: "Manrope", var(--font-display);
-  font-size: clamp(1.8rem, 3vw, 2.45rem);
-  font-style: italic;
-  font-weight: 850;
-  letter-spacing: -0.045em;
-  line-height: 1.05;
-}
-
-.analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 strong {
-  color: var(--load-profile-accent);
 }
 
 .analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness {
@@ -800,17 +769,8 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
     gap: 14px;
   }
 
-  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-header {
-    align-items: flex-end;
-    gap: 14px;
-  }
-
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile-back {
     margin-bottom: 13px;
-  }
-
-  .analysis-insight-detail-page.is-load-balance .analysis-load-profile-heading h1 {
-    font-size: clamp(1.55rem, 8vw, 2rem);
   }
 
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile-readiness {
@@ -893,7 +853,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 @media (prefers-reduced-motion: reduce) {
   .analysis-insight-detail-page.is-load-balance .analysis-load-profile :is(
-    .analysis-load-profile-header,
     .analysis-load-profile-decision,
     .analysis-load-profile-evidence,
     .analysis-load-profile-metrics,
