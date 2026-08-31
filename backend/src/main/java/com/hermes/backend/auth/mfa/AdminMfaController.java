@@ -21,6 +21,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/auth/admin-mfa")
 public class AdminMfaController {
+    private static final String SETUP_UNAVAILABLE_MESSAGE = "Admin MFA setup is unavailable.";
     private static final Set<String> BOOTSTRAP_FIELDS = Set.of("bootstrapToken");
     private static final Set<String> CREDENTIAL_FIELDS = Set.of("credential");
     private static final Set<String> RECOVERY_FIELDS = Set.of("recoveryCode");
@@ -124,6 +125,11 @@ public class AdminMfaController {
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .header(HttpHeaders.PRAGMA, "no-cache")
                     .body(payload);
+        } catch (AdminMfaException ex) {
+            if (registration && SETUP_UNAVAILABLE_MESSAGE.equals(ex.getMessage())) {
+                return setupUnavailable(request);
+            }
+            return failure(request);
         } catch (Exception ex) {
             return failure(request);
         }
@@ -154,6 +160,14 @@ public class AdminMfaController {
                 .header(HttpHeaders.SET_COOKIE, AdminMfaChallengeCookie.clear(request))
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")
                 .body(Map.of("error", "Admin authentication failed.", "code", "ADMIN_MFA_FAILED"));
+    }
+
+    private ResponseEntity<?> setupUnavailable(HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.SET_COOKIE, AdminMfaChallengeCookie.clear(request))
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .body(Map.of("error", SETUP_UNAVAILABLE_MESSAGE, "code", "ADMIN_MFA_SETUP_UNAVAILABLE"));
     }
 
     private String selector(HttpServletRequest request) {

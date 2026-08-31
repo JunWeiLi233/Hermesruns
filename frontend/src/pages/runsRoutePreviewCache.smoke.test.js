@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, 'Runs.jsx'), 'utf8').replace(/\r\n/g, '\n');
 const runsCacheSource = readFileSync(path.join(here, 'runsCache.ts'), 'utf8').replace(/\r\n/g, '\n');
-const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8');
-const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../styles/style.generated.css'), 'utf8').replace(/\r\n/g, '\n');
+const splitRunsStyle = readFileSync(path.join(here, '../styles/_split/runs.css'), 'utf8').replace(/\r\n/g, '\n');
 
 assert.match(
   runsSource,

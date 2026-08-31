@@ -122,12 +122,12 @@ assert.match(
 
 assert.match(
   addShoesSource,
-  /onClick=\{\(\) => \{\s*setBrowserCategory\(categoryKey\);\s*setBrowserType\('all'\);\s*\}\}/,
+  /function handleCategoryFilterPick\(categoryKey\) \{\s*setBrowserCategory\(categoryKey\);\s*setBrowserType\('all'\);\s*\}/,
   'Selecting an Add Shoes category should clear any selected type filter.',
 );
 assert.match(
   addShoesSource,
-  /onClick=\{\(\) => \{\s*setBrowserType\(typeKey\);\s*setBrowserCategory\('all'\);\s*\}\}/,
+  /function handleTypeFilterPick\(typeKey\) \{\s*setBrowserType\(typeKey\);\s*setBrowserCategory\(null\);\s*\}/,
   'Selecting an Add Shoes type should clear any selected category filter.',
 );
 

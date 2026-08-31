@@ -16,6 +16,8 @@ public class MuscleTrainingPlannerService {
     private final ActivityRepository activityRepository;
     private final SorenessLogRepository sorenessLogRepository;
     private final InjuryRiskService injuryRiskService;
+    private final RunnerStrengthSignalService strengthSignalService;
+    private final PersonalizedStrengthPlanEngine strengthPlanEngine;
 
     public MuscleTrainingPlannerService(
             MuscleTrainingProfileService profileService,
@@ -24,7 +26,9 @@ public class MuscleTrainingPlannerService {
             MuscleTrainingSessionService sessionService,
             ActivityRepository activityRepository,
             SorenessLogRepository sorenessLogRepository,
-            InjuryRiskService injuryRiskService
+            InjuryRiskService injuryRiskService,
+            RunnerStrengthSignalService strengthSignalService,
+            PersonalizedStrengthPlanEngine strengthPlanEngine
     ) {
         this.profileService = profileService;
         this.checkInService = checkInService;
@@ -33,6 +37,8 @@ public class MuscleTrainingPlannerService {
         this.activityRepository = activityRepository;
         this.sorenessLogRepository = sorenessLogRepository;
         this.injuryRiskService = injuryRiskService;
+        this.strengthSignalService = strengthSignalService;
+        this.strengthPlanEngine = strengthPlanEngine;
     }
 
     @Transactional
@@ -81,13 +87,6 @@ public class MuscleTrainingPlannerService {
         );
 
         MuscleTrainingMetricsService.PlanMetrics metrics = metricsService.buildMetrics(recentRuns, coachState, preference, effectiveSchedule);
-        List<MuscleDayPlanDto> days = assignSessions(effectiveSchedule, metrics, preference, todayCheckIn);
-        List<SessionDefinitionDto> assignedSessions = assignedSessionDefinitions(days, preference, metrics);
-
-        // Today's recommended muscle-training area: derived from the plan metrics
-        // (recovery gate, load status, current focus, recent hard runs) plus today's
-        // soreness log and the injury-risk verdict. Consumes currentFocus so the
-        // area recommendation stays consistent with today's scheduled session.
         LocalDate today = LocalDate.now();
         String sorenessLevel = sorenessLogRepository.findByRunnerAndDate(runner, today)
                 .map(SorenessLog::getLevel)
@@ -98,6 +97,34 @@ public class MuscleTrainingPlannerService {
         } catch (Exception ignored) {
             // Injury-risk assessment is best-effort; never block the plan on it.
         }
+        LocalDate targetRaceDate = coachState != null && coachState.activeBlock() != null
+                ? coachState.activeBlock().targetRaceDate()
+                : null;
+        boolean recoveryDataPresent = coachState != null && coachState.readinessDataSupported();
+        RunnerStrengthSignals strengthSignals = strengthSignalService.normalize(
+                today,
+                preference,
+                metrics,
+                effectiveSchedule,
+                todayCheckIn,
+                sorenessLevel,
+                injuryRisk,
+                targetRaceDate,
+                recoveryDataPresent
+        );
+        PersonalizedStrengthPlan personalizedStrengthPlan = strengthPlanEngine.plan(strengthSignals);
+        List<AutomatedCoachService.CoachScheduledWorkoutDto> visibleSchedule = effectiveSchedule.stream()
+                .limit(7)
+                .toList();
+        List<MuscleDayPlanDto> days = assignSessions(
+                visibleSchedule,
+                metrics,
+                preference,
+                todayCheckIn,
+                personalizedStrengthPlan
+        );
+        List<SessionDefinitionDto> assignedSessions = assignedSessionDefinitions(days, preference, metrics);
+
         String todaySessionType = days.stream()
                 .filter(d -> today.equals(d.date()))
                 .map(d -> d.run() != null ? d.run().workoutType() : null)
@@ -114,7 +141,8 @@ public class MuscleTrainingPlannerService {
                 todayCheckIn,
                 resolvePlanSource(todayCheckIn),
                 recommendedArea.focus(),
-                recommendedArea.reasonCode()
+                recommendedArea.reasonCode(),
+                toStrengthCoachDecision(personalizedStrengthPlan)
         );
     }
 
@@ -151,11 +179,12 @@ public class MuscleTrainingPlannerService {
             List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule,
             MuscleTrainingMetricsService.PlanMetrics metrics,
             MuscleTrainingPreference preference,
-            TodayCheckInDto todayCheckIn
+            TodayCheckInDto todayCheckIn,
+            PersonalizedStrengthPlan personalizedStrengthPlan
     ) {
         List<MuscleDayPlanDto> days = new ArrayList<>();
-        int sessionsAssigned = 0;
-        int maxSessions = metrics.recommendedSessionsPerWeek();
+        Map<LocalDate, PersonalizedStrengthPlan.PlannedDay> strengthByDate = personalizedStrengthPlan.days().stream()
+                .collect(java.util.stream.Collectors.toMap(PersonalizedStrengthPlan.PlannedDay::date, day -> day));
 
         for (int index = 0; index < schedule.size(); index++) {
             AutomatedCoachService.CoachScheduledWorkoutDto w = schedule.get(index);
@@ -173,16 +202,12 @@ public class MuscleTrainingPlannerService {
 
             StrengthAssignmentDto strength = null;
             String noStrengthReason = placementBlockReason(index, schedule, metrics);
+            PersonalizedStrengthPlan.PlannedDay strengthDay = strengthByDate.get(w.scheduledDate());
 
-            if (noStrengthReason == null && sessionsAssigned < maxSessions) {
-                if ("REST".equals(w.workoutType()) || "EASY".equals(w.workoutType()) || "RECOVERY".equals(w.workoutType())) {
-                    strength = buildDefaultAssignment(sessionsAssigned, preference, metrics);
-                    sessionsAssigned++;
-                } else {
-                    noStrengthReason = "SKIP_KEY_RUN_DAY";
-                }
+            if (noStrengthReason == null && strengthDay != null && strengthDay.strength() != null) {
+                strength = buildPersonalizedAssignment(strengthDay.strength(), preference, metrics);
             } else if (noStrengthReason == null) {
-                noStrengthReason = "WEEKLY_CAP_REACHED";
+                noStrengthReason = mapNoStrengthReason(strengthDay != null ? strengthDay.noStrengthReasonCode() : null);
             }
 
             days.add(new MuscleDayPlanDto(w.scheduledDate(), dayLabel, run, strength, noStrengthReason));
@@ -220,13 +245,12 @@ public class MuscleTrainingPlannerService {
         return null;
     }
 
-    private StrengthAssignmentDto buildDefaultAssignment(
-            int index,
+    private StrengthAssignmentDto buildPersonalizedAssignment(
+            PersonalizedStrengthPlan.PlannedSession plannedSession,
             MuscleTrainingPreference preference,
             MuscleTrainingMetricsService.PlanMetrics metrics
     ) {
-        String sessionType = index == 0 ? "FOUNDATION_STRENGTH" : "RESILIENCE_CAPACITY";
-        SessionDefinitionDto session = sessionService.buildSessionDefinition(sessionType, preference, metrics);
+        SessionDefinitionDto session = sessionService.buildSessionDefinition(plannedSession.sessionType(), preference, metrics);
         return new StrengthAssignmentDto(
                 session.sessionType(),
                 session.title(),
@@ -234,10 +258,52 @@ public class MuscleTrainingPlannerService {
                 session.durationMinutes(),
                 session.targetRpe(),
                 session.optional(),
-                isQuietCompatible(sessionType),
-                index == 0 ? "REST_DAY_OPTIMAL" : "EASY_DAY_PAIRING",
+                isQuietCompatible(session.sessionType()),
+                plannedSession.reasonCodes().isEmpty() ? "PERSONALIZED_ENGINE" : plannedSession.reasonCodes().get(0),
                 null
         );
+    }
+
+    private String mapNoStrengthReason(String reasonCode) {
+        if (reasonCode == null || reasonCode.isBlank()) {
+            return "WEEKLY_CAP_REACHED";
+        }
+        return switch (reasonCode) {
+            case "KEY_RUN_DAY" -> "SKIP_KEY_RUN_DAY";
+            case "LONG_RUN_DAY" -> "SKIP_LONG_RUN_DAY";
+            case "KEY_RUN_BUFFER" -> "SKIP_KEY_RUN_TOMORROW";
+            case "LONG_RUN_BUFFER" -> "SKIP_LONG_RUN_TOMORROW";
+            case "SAFETY_NO_SESSION", "RACE_DAY_NO_PRIMARY_STRENGTH" -> "SKIP_WEEK";
+            default -> "WEEKLY_CAP_REACHED";
+        };
+    }
+
+    private StrengthCoachDecisionDto toStrengthCoachDecision(PersonalizedStrengthPlan plan) {
+        PersonalizedStrengthPlan.PlannedDay appliedDay = plan.days().stream()
+                .filter(day -> day.strength() != null)
+                .findFirst()
+                .orElse(null);
+        PersonalizedStrengthPlan.PlannedSession session = appliedDay != null ? appliedDay.strength() : null;
+        PersonalizedStrengthPlan.SafetyAdjustment adjustment = plan.safetyAdjustment();
+
+        return new StrengthCoachDecisionDto(
+                plan.algorithmVersion(),
+                plan.phase().name(),
+                plan.weekNumber(),
+                plan.confidence().name(),
+                plan.missingSignals(),
+                appliedDay != null ? appliedDay.date() : null,
+                enumName(session != null ? session.requestedFocus() : adjustment != null ? adjustment.requestedFocus() : null),
+                enumName(session != null ? session.requestedDose() : adjustment != null ? adjustment.requestedDose() : null),
+                enumName(session != null ? session.appliedFocus() : adjustment != null ? adjustment.appliedFocus() : null),
+                enumName(session != null ? session.appliedDose() : adjustment != null ? adjustment.appliedDose() : null),
+                enumName(session != null ? session.safetyAction() : adjustment != null ? adjustment.action() : RunnerStrengthSignals.SafetyAction.NONE),
+                session != null ? session.reasonCodes() : adjustment != null ? adjustment.reasonCodes() : List.of()
+        );
+    }
+
+    private String enumName(Enum<?> value) {
+        return value != null ? value.name() : null;
     }
 
     private List<SessionDefinitionDto> assignedSessionDefinitions(

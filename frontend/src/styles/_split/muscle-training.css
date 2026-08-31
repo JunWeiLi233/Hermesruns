@@ -5876,6 +5876,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 .mt-top-actions-card {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
   border-color: rgba(240, 117, 97, 0.42);
 }
 
@@ -5896,7 +5897,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
 .mt-top-action-list {
   display: grid;
   gap: 10px;
-  max-height: 270px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
   padding-right: 4px;
 }
@@ -7731,7 +7734,7 @@ body:has(.runner-dashboard-page .mt-top-workbench) #root {
   }
 
   .runner-dashboard-page:has(.mt-top-workbench) .mt-top-action-list {
-    max-height: 190px;
+    max-height: none;
   }
 
   .runner-dashboard-page:has(.mt-top-workbench) .mt-top-muscle-hint,

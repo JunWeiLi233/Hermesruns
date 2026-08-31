@@ -28,6 +28,11 @@ assert.match(
 assert.match(
   addShoesSource,
   /add-shoes-brand-expand-grid/,
+  'Add Shoes should expose the expandable extra-brand grid.',
+);
+assert.match(
+  addShoesSource,
+  /add-shoes-brand-expand-card/,
   'Add Shoes should expose an expandable extra-brand section for less-common brands.',
 );
 

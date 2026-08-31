@@ -56,4 +56,15 @@ assert.match(
   'The active race-detail theme cascade should force the three command cards to solid white.',
 );
 
+assert.match(
+  gridCardsWhiteSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.race-detail-page :is\(\s*\.race-detail-stat-card,\s*\.race-detail-coach-card,\s*\.race-detail-course-card,\s*\.race-detail-elevation-chart\s*\)\s*\{[\s\S]*?background:\s*#fff !important;[\s\S]*?background-image:\s*none !important;/,
+  'The final white-card cascade should pin the visible race-detail grid and elevation chart to pure white.',
+);
+
+assert.match(
+  gridCardsWhiteSource,
+  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.race-detail-page :is\([\s\S]*?\.race-detail-elevation-chart\s*\)\s*\{[\s\S]*?background:\s*#fff !important;[\s\S]*?background-image:\s*none !important;/,
+  'The final white-card cascade should pin the race-detail elevation grid to pure white.',
+);
 console.log('[PASS] Race detail white-card surface guardrails passed.');
