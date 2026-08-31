@@ -1149,9 +1149,6 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang, 
   const athleteLabel = profile?.displayName || profile?.name || t('analysisInsight.load_current_block');
 
   return {
-    heroEyebrow: t('analysisInsight.load_hero_eyebrow'),
-    heroTitle: t('analysisInsight.load_hero_title'),
-    heroAccent: t('analysisInsight.load_hero_accent'),
     statusLabel: t('analysisInsight.load_status_label'),
     statusValue: resolvedZoneLabel,
     ratioLabel: t('analysisInsight.load_ratio_label'),
@@ -1347,8 +1344,6 @@ export default function AnalysisInsightDetail() {
   }, [coachLoadChartGeometry]);
 
   const handleCoachLoadPointerLeave = useCallback(() => setCoachLoadScrubber(null), []);
-  const injuryHeroTitle = t('analysis.injury_cinematic_title');
-  const injuryHeroSubtitle = t('analysis.injury_cinematic_subtitle');
   const injuryRiskToneLabel = t(`analysis.injury_cinematic_zone_${snapshot.injury.level}`);
   const injuryCoachHeading = t(`analysis.injury_cinematic_coach_title_${snapshot.injury.level}`);
   const injuryCoachCopy = t(`analysis.injury_cinematic_coach_copy_${snapshot.injury.level}`);
@@ -1744,27 +1739,6 @@ export default function AnalysisInsightDetail() {
             </div>
           ) : insightKey === 'injury-risk' ? (
             <div className="analysis-profile-v2 analysis-profile-v2--injury">
-              <section className="analysis-cinematic-hero analysis-profile-v2-header">
-                <div className="analysis-profile-v2-heading">
-                  <span className="analysis-cinematic-kicker">{t('analysis.stitch_injury_title')}</span>
-                  <h1>{injuryHeroTitle}</h1>
-                  <p>{injuryHeroSubtitle}</p>
-                </div>
-                <aside className="analysis-profile-v2-status">
-                  <div
-                    className="analysis-profile-v2-ring"
-                    style={{ '--analysis-v2-progress': `${Math.min(100, Math.max(0, snapshot.injury.score)) * 3.6}deg` }}
-                  >
-                    <strong>{snapshot.injury.score}</strong>
-                    <small>/ 100</small>
-                  </div>
-                  <div className="analysis-profile-v2-status-copy">
-                    <span>{injuryRiskToneLabel}</span>
-                    <strong>{t(`analysis.stitch_injury_${snapshot.injury.level}`)}</strong>
-                  </div>
-                </aside>
-              </section>
-
               <article className="analysis-cinematic-card analysis-cinematic-card--coach analysis-profile-v2-focus">
                 <div className="analysis-injury-knee-art" aria-hidden="true">
                   <img src={injuryKneeAnatomy} alt="" width="647" height="474" loading="lazy" decoding="async" />
@@ -1988,16 +1962,6 @@ export default function AnalysisInsightDetail() {
             </div>
           ) : insightKey === 'load-balance' && loadDashboard ? (
             <div className="analysis-load-profile analysis-profile-v2 analysis-profile-v2--load">
-              <section className="analysis-load-profile-header analysis-profile-v2-header">
-                <div className="analysis-load-profile-heading">
-                  <span className="analysis-load-profile-kicker">{loadDashboard.heroEyebrow}</span>
-                  <h1>
-                    <span>{loadDashboard.heroTitle}</span>
-                    <strong>{loadDashboard.heroAccent}</strong>
-                  </h1>
-                </div>
-              </section>
-
               <section className="analysis-load-profile-decision analysis-profile-v2-focus">
                 <div className="analysis-load-profile-visual" aria-hidden="true">
                   <picture>

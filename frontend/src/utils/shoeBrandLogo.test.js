@@ -48,6 +48,36 @@ assert.equal(
   'The Big Catfish catalog brand should resolve to its dedicated logo asset.',
 );
 
+assert.equal(
+  getShoeBrandAssetKey('海尔斯'),
+  'haier',
+  'The Chinese Haiers catalog brand should resolve to its dedicated logo asset.',
+);
+
+assert.equal(
+  getShoeBrandAssetKey('音速猫'),
+  'soniccat',
+  'The Chinese SonicCat catalog brand should resolve to its dedicated logo asset.',
+);
+
+assert.equal(
+  getShoeBrandAssetKey('威量'),
+  'veirun',
+  'The Chinese Veirun catalog brand should resolve to its dedicated logo asset.',
+);
+
+assert.equal(
+  getShoeBrandAssetKey('伯希和'),
+  'pelliot',
+  'The Chinese Pelliot catalog brand should resolve to its dedicated logo asset.',
+);
+
+assert.equal(
+  getShoeBrandAssetKey('Tracksmith'),
+  'tracksmith',
+  'Tracksmith should resolve to its dedicated logo asset.',
+);
+
 assert.deepEqual(
   getShoeBrandFallbackSpec('Li-Ning'),
   {
@@ -78,11 +108,11 @@ assert.deepEqual(
     text: '音速猫',
     fontSize: 12,
   },
-  'Newly researched Chinese brands should resolve to a brand-specific mark when no local image asset is verified.',
+  'SonicCat should retain a deterministic fallback mark if its bundled image cannot load.',
 );
 
 for (const researchedBrand of [
-  '海尔斯', '辛逸', '弹射者', '威量', '音速猫', '星火力', '领跑梦想',
+  '海尔斯', '辛逸', '弹射者', '威量', '星火力', '领跑梦想',
   '燃动力', '天赐之翼', '双星', '双星八特', 'ONEMIX', 'FREETIE',
   '派燃烧', '强风跑霸', '申亚', '轻跑者', '喜得龙', 'R2 REALRUN',
 ]) {

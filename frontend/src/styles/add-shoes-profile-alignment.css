@@ -864,3 +864,30 @@ body:is(.theme-light, .theme-high-contrast-light) #root .add-shoes-profile-redes
   box-shadow: none !important;
 }
 
+/* Let the square BMAI asset occupy the complete logo tile instead of inheriting the generic inset. */
+.add-shoes-brand-tile:has(> .shoe-brand-logo-img--bmai),
+.add-shoes-model-art:has(> .shoe-brand-logo-img--bmai),
+#root .add-shoes-profile-redesign .add-shoes-brand-tile:has(> .shoe-brand-logo-img--bmai),
+#root .add-shoes-profile-redesign .add-shoes-model-art:has(> .shoe-brand-logo-img--bmai) {
+  box-sizing: border-box;
+  padding: 0;
+  overflow: hidden;
+}
+
+.add-shoes-brand-tile > .shoe-brand-logo-img--bmai,
+.add-shoes-model-art > .shoe-brand-logo-img--bmai,
+#root .add-shoes-profile-redesign .add-shoes-brand-tile > .shoe-brand-logo-img--bmai,
+#root .add-shoes-profile-redesign .add-shoes-model-art > .shoe-brand-logo-img--bmai {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: cover;
+  transform: none;
+}
+

@@ -1054,7 +1054,6 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-count-card span,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-stat-card span,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-head p,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-metrics span,
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-axis,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-coach-footer span,
 body:is(.theme-light, .theme-high-contrast-light) .race-detail-check-row span {
     color: rgba(89, 92, 93, 0.68);
@@ -4201,8 +4200,7 @@ body:is(.theme-light, .theme-high-contrast-light) .race-detail-elevation-tooltip
     color: var(--text-strong);
 }
 
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-elevation-tooltip span,
-body:is(.theme-light, .theme-high-contrast-light) .race-detail-course-footnote {
+body:is(.theme-light, .theme-high-contrast-light) .race-detail-elevation-tooltip span {
     color: rgba(89, 92, 93, 0.78);
 }
 
@@ -7896,8 +7894,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-stat-card span,
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-head p,
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-metrics span,
-body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-footnote,
-body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-axis {
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-metrics span {
   color: rgba(255, 248, 238, 0.72);
 }
 
@@ -7965,8 +7962,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-stat-card span,
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-head p,
 body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-metrics span,
-body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-footnote,
-body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-axis {
+body:is(.theme-midnight, .theme-high-contrast) .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-runner-design="profile-aligned"][data-route-path^="/races/details"] .race-detail-course-metrics span {
   color: rgba(255, 248, 238, 0.72);
 }
 

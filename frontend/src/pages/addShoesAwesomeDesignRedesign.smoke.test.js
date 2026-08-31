@@ -23,7 +23,7 @@ const assertIncludes = (source, snippet, label) => {
 assertIncludes(addShoesSource, 'add-shoes-page add-shoes-profile-redesign', 'Add Shoes Profile redesign hook');
 assertIncludes(addShoesSource, 'data-design-reference="profile-dashboard"', 'Add Shoes Profile reference lock');
 assertIncludes(addShoesSource, 'className="add-shoes-brand-deck-card is-active"', 'Add Shoes featured brand should share the compact brand-card class');
-assertIncludes(addShoesSource, '<ShoeBrandLogo brand={featuredBrand.brand} fallbackEmoji={featuredBrand.logo} />', 'Add Shoes featured brand should use the normal logo tile');
+assertIncludes(addShoesSource, '<ShoeBrandLogo brand={featuredBrand.brand} logoUrl={featuredBrand.logoUrl} fallbackEmoji={featuredBrand.logo} />', 'Add Shoes featured brand should use the normal logo tile');
 assert.doesNotMatch(addShoesSource, /add-shoes-brand-deck-feature/, 'Add Shoes should not render a separate oversized featured brand card.');
 assert.match(
   addShoesSource,

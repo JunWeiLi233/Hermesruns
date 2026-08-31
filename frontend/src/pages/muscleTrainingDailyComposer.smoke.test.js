@@ -5,75 +5,59 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, 'MuscleTraining.jsx'), 'utf8');
+const graphSource = readFileSync(path.join(here, '../components/RunActivityContributionGraph.jsx'), 'utf8');
 const cssSource = readFileSync(path.join(here, '../styles/_split/muscle-training.css'), 'utf8');
 const enSource = readFileSync(path.join(here, '../i18n/locales/en/components.js'), 'utf8');
 const zhSource = readFileSync(path.join(here, '../i18n/locales/zh-CN/components.js'), 'utf8');
 
 assert.match(
   pageSource,
-  /const STRENGTH_FOCUS_OPTIONS = \[[\s\S]*'LEG_DAY'[\s\S]*'MOBILITY_RESET'/,
-  'Daily composer should expose runner-specific focus options, including leg day and mobility reset.',
+  /apiJson\('\/api\/training\/muscle\/check-ins'\)[\s\S]*?setMuscleCheckIns\(checkIns \|\| \[\]\)[\s\S]*?setMuscleActivityState/,
+  'Muscle Training should load persisted muscle check-ins without blocking the plan request.',
 );
 
 assert.match(
   pageSource,
-  /const STRENGTH_DOSE_OPTIONS = \['MICRO', 'STANDARD', 'STRONG'\]/,
-  'Daily composer should expose micro, standard, and strong dose controls.',
+  /className="strength-plan-control-deck muscle-activity-deck"[\s\S]*?<RunActivityContributionGraph[\s\S]*?runs=\{muscleCheckIns\}[\s\S]*?status=\{muscleActivityState\}[\s\S]*?activityType="muscle"/,
+  'The old two-column control deck should be replaced by the reusable activity graph.',
+);
+
+assert.match(
+  graphSource,
+  /action = null[\s\S]*?st-activity-head-actions[\s\S]*?\{action\}/,
+  'The activity graph should expose an optional header action without changing Settings callers.',
 );
 
 assert.match(
   pageSource,
-  /className="muscle-pref-field muscle-checkin-field muscle-checkin-field-wide mt-strength-composer"/,
-  'Daily composer should render inside the today check-in control surface.',
+  /className="muscle-activity-checkin-btn"[\s\S]*?onClick=\{handleDailyCheckIn\}/,
+  'The activity surface should expose a dedicated daily check-in action.',
 );
 
 assert.match(
   pageSource,
-  /updateCheckInDraft\('strengthFocus', focus\)/,
-  'Focus chips should update the today check-in draft.',
+  /entryState: 'ACTUAL'[\s\S]*?distanceKm: null[\s\S]*?durationMinutes: null/,
+  'Quick check-in should record actual completion without copying planned run metrics into actual fields.',
 );
 
 assert.match(
   pageSource,
-  /updateCheckInDraft\('strengthDose', dose\)/,
-  'Dose chips should update the today check-in draft.',
+  /const \[nextPlan, nextCheckIns\] = await Promise\.all\([\s\S]*?apiJson\('\/api\/training\/muscle\/check-ins'\)[\s\S]*?setMuscleCheckIns\(nextCheckIns\)/,
+  'A successful check-in should refresh the map history so today appears without a full page reload.',
 );
 
 assert.match(
   pageSource,
-  /strengthFocus: checkInDraft\.strengthFocus/,
-  'Today check-in save payload should persist the selected strength focus.',
+  /plan\.todayCheckIn\?\.entryState === 'ACTUAL'/,
+  'The daily check-in action should become unavailable after today is recorded.',
 );
 
-assert.match(
-  pageSource,
-  /strengthDose: checkInDraft\.strengthDose/,
-  'Today check-in save payload should persist the selected strength dose.',
-);
-
-assert.match(
-  pageSource,
-  /function pickStrengthSessionLabel\(copy, sessionType/,
-  'Custom backend session codes should be mapped into localized focus and dose labels.',
-);
-
-assert.match(
-  pageSource,
-  /CUSTOM_\(\.\+\)_\(MICRO\|STANDARD\|STRONG\)/,
-  'Custom session label mapping should handle focus plus dose codes.',
-);
-
-assert.match(
-  cssSource,
-  /\.mt-strength-composer\s*\{/,
-  'Daily composer should have a dedicated styled container.',
-);
+assert.doesNotMatch(pageSource, /muscle-controls-grid|muscle-profile-panel|mt-strength-composer/);
+assert.doesNotMatch(pageSource, /apiJson\('\/api\/activities'\)/);
+assert.match(cssSource, /\.muscle-activity-checkin-btn\s*\{/);
 
 for (const [locale, source] of [['en', enSource], ['zh-CN', zhSource]]) {
-  assert.match(source, /"strength_composer_title"/, `${locale} should include the composer title.`);
-  assert.match(source, /"strength_focus_leg_day"/, `${locale} should include leg-day copy.`);
-  assert.match(source, /"strength_dose_strong"/, `${locale} should include strong-dose copy.`);
-  assert.match(source, /"rationale_r_custom_today_focus"/, `${locale} should include custom-focus rationale copy.`);
+  assert.match(source, /"check_in_done"/, `${locale} should include the completed daily check-in label.`);
 }
 
-console.log('[PASS] Muscle Training daily composer guardrails passed.');
+console.log('[PASS] Muscle Training activity check-in guardrails passed.');

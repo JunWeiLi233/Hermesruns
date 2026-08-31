@@ -52,12 +52,6 @@ assert.match(
 );
 
 assert.match(
-  racesDetailSource,
-  /hasOfficialCourseMap\s*\?\s*'races\.detail_course_route_official_source'\s*:\s*'races\.detail_course_route_source'/,
-  'RacesDetail should use official elevation source copy for official seeded course maps.',
-);
-
-assert.match(
   enPages,
   /detail_map_official_badge": "Official course route"/,
   'English race-detail copy should label official seeded courses without GPX-only wording.',

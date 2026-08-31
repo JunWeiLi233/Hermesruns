@@ -10,12 +10,6 @@ const liquidGlassSource = readFileSync(path.join(here, '../styles/all-pages-liqu
 
 assert.match(
   detailSource,
-  /className="analysis-cinematic-hero analysis-profile-v2-header"/,
-  'Injury-risk detail should keep the Profile score-header structure that the strip reset targets.',
-);
-
-assert.match(
-  detailSource,
   /className="analysis-cinematic-signal-row analysis-profile-v2-metric-strip"/,
   'Injury-risk detail should preserve its signal row while promoting it to the Profile-style metric strip.',
 );

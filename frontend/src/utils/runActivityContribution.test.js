@@ -36,4 +36,18 @@ assert.equal(futureDay?.count, 0, 'Future activities must not be rendered as com
 assert.equal(calendar.totalRuns, 2, 'Only valid, completed run activities in the displayed window should be counted.');
 assert.equal(calendar.monthLabels.some((label) => label), true, 'The graph should expose month labels for its columns.');
 
+const muscleCalendar = buildRunActivityCalendar([
+  { trainingDate: '2025-05-12', entryState: 'ACTUAL' },
+  { trainingDate: '2025-05-14', entryState: 'ACTUAL' },
+], {
+  now,
+  resolveDate: (checkIn) => new Date(`${checkIn.trainingDate}T12:00:00`),
+  resolveDistanceKm: () => 1,
+  resolveLevel: (distanceKm, count) => (count > 0 ? 4 : 0),
+});
+const mayFourteenth = muscleCalendar.weeks.flatMap((week) => week.days).find((day) => day.key === '2025-05-14');
+assert.equal(mayFourteenth?.count, 1, 'Muscle check-ins should render on their persisted training date.');
+assert.equal(mayFourteenth?.level, 4, 'Muscle check-ins should use the completed activity intensity.');
+assert.equal(muscleCalendar.totalRuns, 2, 'The shared calendar should count muscle check-ins without reading run fields.');
+
 console.log('[PASS] Run activity contribution calendar guardrails passed.');

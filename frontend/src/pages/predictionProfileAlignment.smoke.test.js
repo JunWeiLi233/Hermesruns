@@ -50,7 +50,7 @@ assert.match(
 assert.match(
   pageSource,
   /prediction-forecast-hero\$\{showConfidencePanel \? '' : ' is-confidence-removed'\}/,
-  'The prediction hero should omit the confidence panel on the 5K, 10K, and half-marathon routes.',
+  'The prediction hero should omit the confidence panel on routes that remove the redundant confidence grid.',
 );
 assert.match(
   pageSource,

@@ -77,6 +77,7 @@ export default function AnalysisSubpageNav({
             key={item.key}
             type="button"
             className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
+            data-nav-key={item.key}
             onClick={() => navigate(item.route)}
             aria-current={item.active ? 'page' : undefined}
             aria-label={item.label}

@@ -901,7 +901,6 @@ body.theme-high-contrast {
 .page-skeleton--add-shoes .page-skeleton__add-shoes-models { min-height: 1859px; }
 
 .page-skeleton--analysis-load .page-skeleton__analysis-load { display: grid; gap: 16px; height: 1719px; min-height: 1719px; overflow: hidden; }
-.page-skeleton--analysis-load .analysis-load-profile-header { height: 96px; min-height: 96px; overflow: hidden; }
 .page-skeleton--analysis-load .analysis-load-profile-decision { height: 339px; min-height: 339px; overflow: hidden; }
 .page-skeleton--analysis-load .analysis-load-profile-evidence { height: 599px; min-height: 599px; overflow: hidden; }
 .page-skeleton--analysis-load .analysis-load-profile-metrics { height: 312px; min-height: 312px; overflow: hidden; }

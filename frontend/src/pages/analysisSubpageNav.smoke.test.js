@@ -66,6 +66,7 @@ assert.match(navSource, /import \{ RACE_DISTANCES \} from '\.\.\/utils\/vdot';/)
 assert.match(navSource, /active: item\.key === activeInsightKey/);
 assert.match(navSource, /active: item\.key === activePredictionKey/);
 assert.match(navSource, /aria-current=\{item\.active \? 'page' : undefined\}/);
+assert.match(navSource, /data-nav-key=\{item\.key\}/, 'Analysis subpage links should expose their key for exact surface overrides.');
 assert.match(navSource, /analysis\.subnav_title/);
 assert.match(navSource, /analysis\.pred_open_today/);
 assert.doesNotMatch(navSource, /analysis-subnav|analysis-subnav-link|analysis-subnav-current/, 'Analysis subpages must not render the obsolete sidebar styling.');
@@ -76,7 +77,6 @@ for (const source of [insightSource, predictionSource]) {
 }
 
 for (const marker of [
-  'analysis-load-profile-header',
   'analysis-load-profile-decision',
   'analysis-load-profile-evidence',
   'analysis-load-profile-metrics',
@@ -118,9 +118,18 @@ assert.ok(
   'Coach Insight should have a final active-rail reset after the shared shell sweep.',
 );
 assert.match(
-  finalWhiteCss.slice(finalActiveRailResetIndex, finalActiveRailResetIndex + 360),
-  /border-color:\s*transparent !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  finalWhiteCss.slice(finalActiveRailResetIndex, finalActiveRailResetIndex + 480),
+  /border-color:\s*transparent !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-color:\s*var\(--coach-insight-active-background,\s*transparent\) !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
   'The Coach Insight title link should remove only its panel strip while preserving the sidebar and cards.',
+);
+const coachLinkResetIndex = finalWhiteCss.lastIndexOf(
+  '#root .analysis-insight-detail-page .runner-shell-side-link[data-nav-key="coach-insight"] {',
+);
+assert.ok(coachLinkResetIndex >= 0, 'Coach Insight should have an all-theme panel-strip reset.');
+assert.match(
+  finalWhiteCss.slice(coachLinkResetIndex, coachLinkResetIndex + 360),
+  /border:\s*0 !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-color:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
+  'Coach Insight should never render a panel strip on any analysis detail route.',
 );
 assert.match(loadBalanceCss, /prefers-reduced-motion/);
 assert.match(loadBalanceCss, /theme-midnight/);

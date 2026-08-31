@@ -4473,182 +4473,65 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page:h
   color: #170807 !important;
 }
 
-.muscle-controls-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 16px;
-  align-items: stretch;
-  min-width: 0;
-}
-
-.strength-plan-control-deck .muscle-control-card {
-  display: grid;
-  align-content: start;
-  gap: 16px;
-  min-width: 0;
-  margin-top: 0;
-  padding: 18px;
-}
-
-.strength-plan-control-deck .muscle-control-head,
-.strength-plan-control-deck .muscle-profile-head {
-  margin-bottom: 0;
-}
-
-.muscle-control-source-note {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: baseline;
-  margin: 8px 0 0;
-  max-width: 48rem;
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.muscle-control-source-note strong {
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.muscle-control-source-note span {
-  min-width: 0;
-}
-
-.muscle-control-pills {
-  justify-content: flex-end;
-  min-width: 9rem;
-}
-
-.strength-plan-control-deck .muscle-checkin-form {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.strength-plan-control-deck .muscle-profile-form {
-  gap: 12px;
-}
-
-.strength-plan-control-deck .muscle-pref-field input,
-.strength-plan-control-deck .muscle-pref-field select {
-  min-height: 46px;
-}
-
-.strength-plan-control-deck .muscle-day-chip,
-.strength-plan-control-deck .muscle-secondary-btn,
-.strength-plan-control-deck .primary-action-btn {
-  min-height: 44px;
-}
-
-.muscle-profile-summary-strip--compact {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid rgba(240, 117, 97, 0.2);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.muscle-profile-summary-strip--compact .muscle-profile-summary-card {
-  min-width: 0;
-  padding: 12px 14px;
-  border: 0;
-  border-right: 1px solid rgba(240, 117, 97, 0.16);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.muscle-profile-summary-strip--compact .muscle-profile-summary-card:last-child {
-  border-right: 0;
-}
-
-.muscle-profile-summary-strip--compact .muscle-profile-summary-card strong {
-  margin-top: 4px;
-  font-size: 1rem;
-}
-
-.muscle-profile-impact-strip {
-  padding: 12px;
-  border-radius: 8px;
-}
-
-.muscle-profile-impact-strip ul {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.muscle-profile-impact-strip li {
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 8px;
-}
-
-.muscle-profile-impact-strip li > span {
-  width: 22px;
-  height: 22px;
-}
-
-.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck {
-  padding: clamp(14px, 1.6vw, 20px) !important;
-}
-
-.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck .muscle-control-card {
-  border-color: rgba(240, 117, 97, 0.22) !important;
-  background:
-    radial-gradient(circle at 16% 0%, rgba(240, 117, 97, 0.12), transparent 22rem),
-    rgba(255, 255, 255, 0.045) !important;
-}
-
-.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck .muscle-profile-summary-strip--compact {
-  border-color: rgba(240, 117, 97, 0.22);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck .muscle-profile-summary-strip--compact .muscle-profile-summary-card {
-  border-color: rgba(240, 117, 97, 0.16) !important;
+.muscle-activity-deck {
+  padding: 0 !important;
+  border: 0 !important;
   background: transparent !important;
+  box-shadow: none !important;
 }
 
-.runner-dashboard-page:has(.mt-top-workbench) .strength-plan-control-deck .muscle-profile-impact-strip {
-  border-color: rgba(240, 117, 97, 0.28);
-  background: rgba(240, 117, 97, 0.09);
+.muscle-activity-deck .st-activity-graph {
+  margin-top: 0;
 }
 
-@media (max-width: 980px) {
-  .muscle-controls-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .muscle-profile-summary-strip--compact {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .muscle-profile-impact-strip ul {
-    grid-template-columns: 1fr;
-  }
+.muscle-activity-checkin-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 640px) {
-  .strength-plan-control-deck .muscle-checkin-form,
-  .strength-plan-control-deck .muscle-profile-form {
-    grid-template-columns: 1fr;
+.muscle-activity-checkin-btn {
+  min-height: 40px;
+  padding: 10px 16px;
+  border: 1px solid var(--brand-accent, #c0462b);
+  border-radius: 8px;
+  background: var(--brand-accent, #c0462b);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.muscle-activity-checkin-btn:hover:not(:disabled),
+.muscle-activity-checkin-btn:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(192, 70, 43, 0.2);
+}
+
+.muscle-activity-checkin-btn:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.muscle-activity-checkin-notice {
+  color: var(--brand-accent-strong, #8f2f22);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .muscle-activity-deck .st-activity-graph-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .muscle-profile-summary-strip--compact {
-    grid-template-columns: 1fr;
-  }
-
-  .strength-plan-control-deck .muscle-control-card {
-    padding: 14px;
-  }
-
-  .muscle-control-pills {
-    justify-content: flex-start;
+  .muscle-activity-deck .st-activity-head-actions {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
   }
 }
 

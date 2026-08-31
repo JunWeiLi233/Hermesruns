@@ -411,6 +411,31 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
 body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-coach-insight .runner-shell-side-link.is-active {
   border-color: transparent !important;
   background: transparent !important;
+  background-color: var(--coach-insight-active-background, transparent) !important;
   background-image: none !important;
   box-shadow: none !important;
+}
+
+/* Coach Insight stays text-first wherever the analysis rail is rendered. */
+#root .analysis-insight-detail-page .runner-shell-side-link[data-nav-key="coach-insight"] {
+  border: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* The shared glass sweep also matches this text wrapper because its class
+   contains "-card". Keep the outer coach card surface, not this heading strip. */
+#root .race-detail-page .race-detail-card-head {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }

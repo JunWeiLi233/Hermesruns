@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import adidasLogo from '../assets/brand-logos/adidas.webp';
 import erkeLogo from '../assets/brand-logos/erke.webp';
 import logo361 from '../assets/brand-logos/361.webp';
 import asicsLogo from '../assets/brand-logos/asics.webp';
 import newBalanceLogo from '../assets/brand-logos/new-balance.webp';
 import nikeLogo from '../assets/brand-logos/nike.webp';
+import pairanshaoLogo from '../assets/brand-logos/pairanshao-user.webp';
 import pumaLogo from '../assets/brand-logos/puma-reference.webp';
 import sauconyLogo from '../assets/brand-logos/saucony.webp';
 import xtepLogo from '../assets/brand-logos/xtep.webp';
@@ -23,6 +25,7 @@ import laSportivaLogo from '../assets/brand-logos/la-sportiva-user.webp';
 import merrellLogo from '../assets/brand-logos/merrell-user.webp';
 import mizunoLogo from '../assets/brand-logos/mizuno-reference.webp';
 import nordaLogo from '../assets/brand-logos/norda-user.webp';
+import mountToCoastLogo from '../assets/brand-logos/mount-to-coast.png';
 import onLogo from '../assets/brand-logos/on-background-removed.webp';
 import peakLogo from '../assets/brand-logos/peak-user.webp';
 import qiaodanLogo from '../assets/brand-logos/qiaodan-user.webp';
@@ -33,8 +36,18 @@ import topoAthleticLogo from '../assets/brand-logos/topo-athletic-user.webp';
 import underArmourLogo from '../assets/brand-logos/under-armour-reference.webp';
 import volantiLogo from '../assets/brand-logos/volanti-user.webp';
 import karhuLogo from '../assets/brand-logos/karhu-reference.webp';
-import kiprunLogo from '../assets/brand-logos/kiprun-reference.webp';
+import kiprunLogo from '../assets/brand-logos/kiprun-background-removed.png';
+import kailasLogo from '../assets/brand-logos/kailas-reference.png';
+import radLogo from '../assets/brand-logos/rad-reference.png';
+import northFaceLogo from '../assets/brand-logos/the-north-face-reference.png';
+import haierLogo from '../assets/brand-logos/haier.webp';
+import sonicCatLogo from '../assets/brand-logos/sonic-cat.webp';
+import veirunLogo from '../assets/brand-logos/veirun.webp';
+import pelliotLogo from '../assets/brand-logos/pelliot.webp';
+import tracksmithLogo from '../assets/brand-logos/tracksmith.webp';
+import tanSheZheLogo from '../assets/brand-logos/tanshezhe-user.webp';
 import { getShoeBrandAssetKey, getShoeBrandFallbackSpec } from '../utils/shoeBrandLogo';
+import removeBackground, { bgRemovedCache } from '../utils/removeBackground';
 
 const BRAND_LOGO_ASSETS = {
   '361': logo361,
@@ -63,20 +76,37 @@ const BRAND_LOGO_ASSETS = {
   mizuno: mizunoLogo,
   karhu: karhuLogo,
   kiprun: kiprunLogo,
+  kailas: kailasLogo,
+  rad: radLogo,
+  thenorthface: northFaceLogo,
   norda: nordaLogo,
+  mounttocoast: mountToCoastLogo,
   on: onLogo,
+  派燃烧: pairanshaoLogo,
   peak: peakLogo,
   qiaodan: qiaodanLogo,
   reebok: reebokLogo,
   salomon: salomonLogo,
   skechers: skechersLogo,
+  soniccat: sonicCatLogo,
   topoathletic: topoAthleticLogo,
   underarmour: underArmourLogo,
   volanti: volantiLogo,
+  haier: haierLogo,
+  veirun: veirunLogo,
+  pelliot: pelliotLogo,
+  tracksmith: tracksmithLogo,
+  弹射者: tanSheZheLogo,
 };
 
 function getBrandLogoAsset(brand) {
   return BRAND_LOGO_ASSETS[getShoeBrandAssetKey(brand)] || null;
+}
+
+export function hasShoeBrandLogo(brand) {
+  const brandName = typeof brand === 'string' ? brand : brand?.brand;
+  const explicitLogoUrl = typeof brand === 'object' ? brand?.logoUrl : '';
+  return Boolean(explicitLogoUrl || getBrandLogoAsset(brandName));
 }
 
 function buildFallbackBrandDataUrl(spec) {
@@ -102,33 +132,59 @@ export function getShoeBrandLogoBackgroundStyle(brand, cssVarName = '--add-shoes
   };
 }
 
+function BackgroundRemovedBrandLogo({ src, brand, loading }) {
+  const shouldRemoveBackground = ['lasportiva', 'skechers', 'kiprun'].includes(getShoeBrandAssetKey(brand));
+  const imageClassName = `shoe-brand-logo-svg shoe-brand-logo-img${getShoeBrandAssetKey(brand) === 'bmai' ? ' shoe-brand-logo-img--bmai' : ''}`;
+  const [processedSrc, setProcessedSrc] = useState(() => (
+    shouldRemoveBackground ? bgRemovedCache[src] || null : null
+  ));
+
+  useEffect(() => {
+    if (!shouldRemoveBackground || !src) {
+      setProcessedSrc(null);
+      return undefined;
+    }
+    if (bgRemovedCache[src]) {
+      setProcessedSrc(bgRemovedCache[src]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    removeBackground(src).then((result) => {
+      if (cancelled) return;
+      bgRemovedCache[src] = result;
+      setProcessedSrc(result);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldRemoveBackground, src]);
+
+  return (
+    <img
+      className={imageClassName}
+      src={shouldRemoveBackground ? processedSrc || src : src}
+      alt={`${brand} logo`}
+      width="256"
+      height="256"
+      loading={loading}
+      decoding="async"
+    />
+  );
+}
+
 export default function ShoeBrandLogo({ brand, fallbackEmoji, logoUrl, loading = 'lazy' }) {
   if (logoUrl) {
     return (
-      <img
-        className="shoe-brand-logo-svg shoe-brand-logo-img"
-        src={logoUrl}
-        alt={`${brand} logo`}
-        width="256"
-        height="256"
-        loading={loading}
-        decoding="async"
-      />
+      <BackgroundRemovedBrandLogo src={logoUrl} brand={brand} loading={loading} />
     );
   }
 
   const asset = getBrandLogoAsset(brand);
   if (asset) {
     return (
-      <img
-        className="shoe-brand-logo-svg shoe-brand-logo-img"
-        src={asset}
-        alt={`${brand} logo`}
-        width="256"
-        height="256"
-        loading={loading}
-        decoding="async"
-      />
+      <BackgroundRemovedBrandLogo src={asset} brand={brand} loading={loading} />
     );
   }
 

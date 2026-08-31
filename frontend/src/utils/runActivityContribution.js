@@ -44,7 +44,16 @@ function contributionLevel(distanceKm, count) {
   return 4;
 }
 
-export function buildRunActivityCalendar(runs, { now = new Date(), weeks = DEFAULT_WEEKS } = {}) {
+export function buildRunActivityCalendar(
+  runs,
+  {
+    now = new Date(),
+    weeks = DEFAULT_WEEKS,
+    resolveDate = activityDate,
+    resolveDistanceKm = activityDistanceKm,
+    resolveLevel = contributionLevel,
+  } = {},
+) {
   const today = startOfLocalDay(now) || startOfLocalDay(new Date());
   const weekCount = Math.max(1, Math.floor(Number(weeks) || DEFAULT_WEEKS));
   const currentWeekStart = startOfMondayWeek(today);
@@ -55,12 +64,12 @@ export function buildRunActivityCalendar(runs, { now = new Date(), weeks = DEFAU
   const totalsByDay = new Map();
 
   for (const run of Array.isArray(runs) ? runs : []) {
-    const date = activityDate(run);
+    const date = startOfLocalDay(resolveDate(run));
     if (!date || date < graphStart || date > today || date > graphEnd) continue;
     const key = dateKey(date);
     const totals = totalsByDay.get(key) || { count: 0, distanceKm: 0 };
     totals.count += 1;
-    totals.distanceKm += activityDistanceKm(run);
+    totals.distanceKm += resolveDistanceKm(run);
     totalsByDay.set(key, totals);
   }
 
@@ -79,7 +88,7 @@ export function buildRunActivityCalendar(runs, { now = new Date(), weeks = DEFAU
         date,
         count,
         distanceKm: totals?.distanceKm || 0,
-        level: contributionLevel(totals?.distanceKm || 0, count),
+        level: resolveLevel(totals?.distanceKm || 0, count),
         isFuture,
       };
     });

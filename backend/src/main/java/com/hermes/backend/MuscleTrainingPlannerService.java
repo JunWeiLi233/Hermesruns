@@ -50,6 +50,11 @@ public class MuscleTrainingPlannerService {
         return checkInService.getTodayCheckIn(runner);
     }
 
+    @Transactional(readOnly = true)
+    public List<TodayCheckInDto> getCheckInHistory(Runner runner) {
+        return checkInService.getCheckInHistory(runner);
+    }
+
     @Transactional
     public TodayCheckInDto updateTodayCheckIn(Runner runner, TodayCheckInUpdate update) {
         return checkInService.updateTodayCheckIn(runner, update);
