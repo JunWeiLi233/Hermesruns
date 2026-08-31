@@ -358,7 +358,7 @@ class RaceCourseMapManualAssetTests {
     }
 
     @Test
-    void listRaceCourseMapsPopulatesEveryDtoFieldFromProjectedColumns() throws Exception {
+    void listRaceCourseMapsPopulatesEveryDtoFieldFromListRow() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -480,6 +480,86 @@ class RaceCourseMapManualAssetTests {
 
         verify(repository).findAllListRows();
         verify(repository, never()).findAll();
+    }
+
+    /**
+     * The list path maps rows through dedicated twins (toListResult /
+     * buildListPreviewSnapshot) instead of the entity pipeline (toResult /
+     * buildPreviewSnapshot with the parse-elevation/materialize flags off).
+     * This pins both implementations to identical output on the SAME fixture
+     * entity, so future edits to the detected-heuristic or stored-live
+     * sanitization pipeline cannot silently diverge list rows from detail rows.
+     */
+    @Test
+    void listMappingTwinsMatchEntityMappingPipelineExactly() throws Exception {
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        SystemConfigService systemConfigService = mock(SystemConfigService.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);
+
+        ObjectMapper mapper = new ObjectMapper();
+        RaceCourseMapAsset rich = new RaceCourseMapAsset();
+        rich.setRaceId("twin-equivalence-marathon");
+        rich.setRaceName("Twin Equivalence Marathon");
+        rich.setCity("Berlin");
+        rich.setCountry("Germany");
+        rich.setLatitude(52.52);
+        rich.setLongitude(13.40);
+        rich.setDistanceKm(42.195);
+        rich.setPendingImageUrl("local-course-map:twin-equivalence.png");
+        rich.setPendingSource("admin-upload");
+        rich.setPendingConfidence(63);
+        rich.setPendingSummary("Pending twin summary.");
+        rich.setPendingOverlayBoundsJson("{\"north\":52.6,\"south\":52.4,\"east\":13.6,\"west\":13.2}");
+        rich.setPendingRoutePointsJson(mapper.writeValueAsString(java.util.List.of(
+                new RoutePoint(52.52, 13.40, "Start"),
+                new RoutePoint(52.53, 13.41, null),
+                new RoutePoint(52.54, 13.42, "Finish"))));
+        rich.setPendingAiAssisted(true);
+        rich.setPendingUpdatedAt(LocalDateTime.of(2026, 8, 1, 9, 0));
+        rich.setLiveImageUrl("https://cdn.example.com/twin-live.png");
+        rich.setLiveSource("known-official-course:twin-equivalence");
+        rich.setLiveConfidence(91);
+        rich.setLiveSummary("Live twin summary.");
+        rich.setLiveOverlayBoundsJson("{\"north\":52.7,\"south\":52.3,\"east\":13.7,\"west\":13.1}");
+        rich.setLiveRoutePointsJson(mapper.writeValueAsString(java.util.List.of(
+                new RoutePoint(52.52, 13.40, "Start"),
+                new RoutePoint(52.55, 13.45, null))));
+        rich.setLiveAiAssisted(false);
+        rich.setLiveUpdatedAt(LocalDateTime.of(2026, 8, 2, 11, 30));
+
+        // Null-everything fixture pins the empty/null text-column handling too.
+        RaceCourseMapAsset sparse = new RaceCourseMapAsset();
+        sparse.setRaceId("twin-equivalence-sparse");
+
+        for (RaceCourseMapAsset asset : List.of(rich, sparse)) {
+            for (boolean live : new boolean[]{true, false}) {
+                RaceCourseMapResult twin = ReflectionTestUtils.invokeMethod(service, "toListResult", asset, live);
+                RaceCourseMapResult original = ReflectionTestUtils.invokeMethod(service, "toResult", asset, live, false);
+                assertThat(twin).isEqualTo(original);
+            }
+            for (boolean pending : new boolean[]{true, false}) {
+                PreviewSnapshot twin = ReflectionTestUtils.invokeMethod(service, "buildListPreviewSnapshot", asset, pending);
+                PreviewSnapshot original = ReflectionTestUtils.invokeMethod(service, "buildPreviewSnapshot", asset, pending, false);
+                assertThat(twin).isEqualTo(original);
+            }
+        }
+
+        // The rich fixture must produce non-null results on both paths, so the
+        // equality above is a meaningful comparison and not a null == null pass.
+        RaceCourseMapResult richLiveResult = ReflectionTestUtils.invokeMethod(service, "toListResult", rich, true);
+        assertThat(richLiveResult).isNotNull();
+        RaceCourseMapResult richPendingResult = ReflectionTestUtils.invokeMethod(service, "toListResult", rich, false);
+        assertThat(richPendingResult).isNotNull();
+        PreviewSnapshot richLiveSnapshot = ReflectionTestUtils.invokeMethod(service, "buildListPreviewSnapshot", rich, true);
+        assertThat(richLiveSnapshot).isNotNull();
+        PreviewSnapshot richPendingSnapshot = ReflectionTestUtils.invokeMethod(service, "buildListPreviewSnapshot", rich, false);
+        assertThat(richPendingSnapshot).isNotNull();
+        // The sparse fixture must stay null on both paths (blank image + summary).
+        PreviewSnapshot sparseTwinSnapshot = ReflectionTestUtils.invokeMethod(service, "buildListPreviewSnapshot", sparse, true);
+        assertThat(sparseTwinSnapshot).isNull();
+        PreviewSnapshot sparseOriginalSnapshot = ReflectionTestUtils.invokeMethod(service, "buildPreviewSnapshot", sparse, true, false);
+        assertThat(sparseOriginalSnapshot).isNull();
     }
 
     @Test
