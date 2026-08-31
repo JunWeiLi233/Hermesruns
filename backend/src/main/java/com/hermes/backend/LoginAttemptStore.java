@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -148,7 +149,14 @@ public class LoginAttemptStore {
     @Scheduled(fixedDelay = 300_000)
     void sweepExpiredLocalAttempts() {
         Instant now = clock.instant();
-        localAttempts.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt()));
+        for (Map.Entry<String, AttemptRecord> entry : localAttempts.entrySet()) {
+            if (now.isAfter(entry.getValue().expiresAt())) {
+                // Two-arg remove: if a concurrent failure re-armed the record between the
+                // read above and this removal, the mapped value no longer matches and the
+                // fresh record is kept instead of being silently dropped.
+                localAttempts.remove(entry.getKey(), entry.getValue());
+            }
+        }
     }
 
     int localAttemptSizeForTests() {

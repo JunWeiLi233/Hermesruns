@@ -55,9 +55,10 @@ public class AdminRouteExtractionController {
 
     public static class JobStatus {
         public String jobId;
-        public JobState state;
-        public String error;
-        public MarathonRoutePipelineService.PipelineResult result;
+        // Volatile: written by worker threads, read by request threads and pruning.
+        public volatile JobState state;
+        public volatile String error;
+        public volatile MarathonRoutePipelineService.PipelineResult result;
         /** Insertion order used for pruning; package-private so it stays out of JSON responses. */
         long sequence;
     }
@@ -122,10 +123,12 @@ public class AdminRouteExtractionController {
                         "Failed to run marathon pipeline: " + e.getMessage()
                 );
             } finally {
+                // The only prune trigger: every job that reaches a terminal state
+                // trims the finished-job backlog, so the map stays bounded without
+                // a second prune call on the submit path.
                 pruneFinishedJobs();
             }
         });
-        pruneFinishedJobs();
 
         return ResponseEntity.accepted().body(Map.of("jobId", jobId));
     }
@@ -159,10 +162,12 @@ public class AdminRouteExtractionController {
 
     /**
      * Drops the oldest terminal (SUCCESS/FAILURE) job entries beyond {@link #MAX_RETAINED_JOBS}.
-     * PENDING/RUNNING jobs are never removed, and a terminal state is the last
-     * status mutation a job ever receives, so pruning cannot race with an active
-     * job's status updates. Job ids are UUIDs and never reused, so removing a
-     * mapped entry is always final.
+     * The retention cap counts only finished jobs: PENDING/RUNNING entries are never removed
+     * and do not consume retention slots, so a live job cannot be evicted by pruning and the
+     * map settles at most recent {@code MAX_RETAINED_JOBS} finished jobs plus the active set.
+     * A terminal state is the last status mutation a job ever receives, so pruning cannot
+     * race with an active job's status updates, and job ids are UUIDs and never reused, so
+     * removing a mapped entry is always final.
      */
     void pruneFinishedJobs() {
         if (jobs.size() <= MAX_RETAINED_JOBS) {
@@ -174,8 +179,11 @@ public class AdminRouteExtractionController {
                 finished.add(job);
             }
         }
+        if (finished.size() <= MAX_RETAINED_JOBS) {
+            return;
+        }
         finished.sort(Comparator.comparingLong(job -> job.sequence));
-        int excess = jobs.size() - MAX_RETAINED_JOBS;
+        int excess = finished.size() - MAX_RETAINED_JOBS;
         for (int i = 0; i < finished.size() && excess > 0; i++) {
             JobStatus job = finished.get(i);
             if (jobs.remove(job.jobId, job)) {

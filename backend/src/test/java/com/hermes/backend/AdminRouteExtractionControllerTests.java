@@ -14,7 +14,6 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -115,12 +114,60 @@ class AdminRouteExtractionControllerTests {
 
         controller.pruneFinishedJobs();
 
-        // PENDING/RUNNING jobs are never pruned, even while the map is under pressure.
+        // Only 3 jobs exist, so the map is far below the cap and prune is a no-op
+        // here; this pins the API contract only. Real cap-pressure coverage with an
+        // active job in the map lives in testPruneFinishedJobs_KeepsActiveJobWhileTerminalJobsExceedCap.
         for (String jobId : jobIds) {
             assertEquals(HttpStatus.OK, controller.getJobStatus("Bearer token", jobId).getStatusCode());
         }
 
         blockPipeline.countDown();
+    }
+
+    @Test
+    void testPruneFinishedJobs_KeepsActiveJobWhileTerminalJobsExceedCap() throws Exception {
+        Runner runner = new Runner();
+        runner.setRole("ADMIN");
+        runner.setEmail("admin@hermes.com");
+        when(authService.findByAuthorizationHeader(any())).thenReturn(Optional.of(runner));
+
+        CountDownLatch blockPipeline = new CountDownLatch(1);
+        when(pipelineService.runPipeline(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenAnswer(invocation -> {
+                    // Only the blocked-race job parks; every other job completes instantly.
+                    if ("blocked-race".equals(invocation.getArgument(1))) {
+                        blockPipeline.await();
+                    }
+                    return new MarathonRoutePipelineService.PipelineResult(null, null, null);
+                });
+
+        try {
+            String blockedJobId = submitJob("blocked-race");
+            awaitJobRunning(blockedJobId);
+
+            // 55 instantly-completing jobs push finished entries past the 50-entry
+            // retention cap, so every completion after the 50th runs prune while the
+            // blocked job is still live in the map.
+            String newestJobId = null;
+            for (int i = 0; i < 55; i++) {
+                newestJobId = submitJob("quick-race");
+            }
+
+            long deadline = System.currentTimeMillis() + 15_000;
+            while (System.currentTimeMillis() < deadline) {
+                if (controller.jobCountForTests() == 51 && isJobTerminal(newestJobId)) {
+                    break;
+                }
+                Thread.sleep(20);
+            }
+
+            // The map settles at 50 retained terminal jobs plus the one active job,
+            // proving the active entry survived every prune pass.
+            assertEquals(51, controller.jobCountForTests());
+            assertEquals(HttpStatus.OK, controller.getJobStatus("Bearer token", blockedJobId).getStatusCode());
+        } finally {
+            blockPipeline.countDown();
+        }
     }
 
     @Test
@@ -140,7 +187,8 @@ class AdminRouteExtractionControllerTests {
             jobIds.add(body.get("jobId"));
         }
 
-        // Wait until every job reached a terminal state and pruning brought the map back under the cap.
+        // Wait until every job reached a terminal state and pruning trimmed the
+        // finished backlog to the 50 newest terminal entries.
         String newestJobId = jobIds.get(jobIds.size() - 1);
         long deadline = System.currentTimeMillis() + 15_000;
         while (System.currentTimeMillis() < deadline) {
@@ -154,12 +202,48 @@ class AdminRouteExtractionControllerTests {
             Thread.sleep(20);
         }
 
-        assertTrue(controller.jobCountForTests() <= 50);
+        assertEquals(50, controller.jobCountForTests());
         assertEquals(HttpStatus.NOT_FOUND, controller.getJobStatus("Bearer token", jobIds.get(0)).getStatusCode());
         assertEquals(HttpStatus.OK, controller.getJobStatus("Bearer token", newestJobId).getStatusCode());
     }
 
+    private String submitJob(String raceId) {
+        ResponseEntity<?> response = controller.runPipeline("Bearer token", validRequest(raceId));
+        @SuppressWarnings("unchecked")
+        Map<String, String> body = (Map<String, String>) response.getBody();
+        assertNotNull(body);
+        return body.get("jobId");
+    }
+
+    private void awaitJobRunning(String jobId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 5_000;
+        while (System.currentTimeMillis() < deadline) {
+            if (getJobState(jobId) == AdminRouteExtractionController.JobState.RUNNING) {
+                return;
+            }
+            Thread.sleep(10);
+        }
+        assertEquals(AdminRouteExtractionController.JobState.RUNNING, getJobState(jobId));
+    }
+
+    private boolean isJobTerminal(String jobId) {
+        AdminRouteExtractionController.JobState state = getJobState(jobId);
+        return state == AdminRouteExtractionController.JobState.SUCCESS
+                || state == AdminRouteExtractionController.JobState.FAILURE;
+    }
+
+    private AdminRouteExtractionController.JobState getJobState(String jobId) {
+        ResponseEntity<?> response = controller.getJobStatus("Bearer token", jobId);
+        return response.getBody() instanceof AdminRouteExtractionController.JobStatus status
+                ? status.state
+                : null;
+    }
+
     private static MarathonRoutePipelineRequest validRequest() {
-        return new MarathonRoutePipelineRequest("r-1", "Name", "City", "Country", "Web", 42.2, "Path");
+        return validRequest("r-1");
+    }
+
+    private static MarathonRoutePipelineRequest validRequest(String raceId) {
+        return new MarathonRoutePipelineRequest(raceId, "Name", "City", "Country", "Web", 42.2, "Path");
     }
 }
