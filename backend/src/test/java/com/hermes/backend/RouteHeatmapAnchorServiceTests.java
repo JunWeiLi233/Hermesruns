@@ -1,10 +1,16 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class RouteHeatmapAnchorServiceTests {
 
@@ -38,6 +44,83 @@ class RouteHeatmapAnchorServiceTests {
         ));
 
         assertThat(anchor).isNull();
+    }
+
+    @Test
+    void findAnchorServesSecondCallFromCacheWithoutRequeryingEveryGpsPoint() {
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        RouteHeatmapAnchorService service = new RouteHeatmapAnchorService(activityPointRepository, cacheStore);
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.of(
+                        point(1L, 40.71241, -74.00641),
+                        point(1L, 40.71242, -74.00642),
+                        point(2L, 40.71243, -74.00643)
+                ));
+
+        RouteHeatmapAnchorService.RouteAnchor first = service.findAnchor(runner);
+        RouteHeatmapAnchorService.RouteAnchor second = service.findAnchor(runner);
+
+        assertThat(first).isNotNull();
+        assertThat(second).isNotNull();
+        assertThat(second.startLat()).isEqualTo(first.startLat());
+        assertThat(second.startLng()).isEqualTo(first.startLng());
+        assertThat(second.activityCount()).isEqualTo(first.activityCount());
+        assertThat(second.pointCount()).isEqualTo(first.pointCount());
+        // The whole-history GPS aggregation runs once; the repeat read is cache-served.
+        verify(activityPointRepository, times(1))
+                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
+    }
+
+    @Test
+    void findAnchorCacheKeysAreScopedPerRunner() {
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        RouteHeatmapAnchorService service = new RouteHeatmapAnchorService(activityPointRepository, cacheStore);
+
+        Runner runnerA = new Runner();
+        runnerA.setId(7L);
+        Runner runnerB = new Runner();
+        runnerB.setId(8L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(point(1L, 40.71241, -74.00641)));
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(8L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(point(2L, 41.81241, -87.62641)));
+
+        RouteHeatmapAnchorService.RouteAnchor firstA = service.findAnchor(runnerA);
+        RouteHeatmapAnchorService.RouteAnchor firstB = service.findAnchor(runnerB);
+        RouteHeatmapAnchorService.RouteAnchor secondA = service.findAnchor(runnerA);
+        RouteHeatmapAnchorService.RouteAnchor secondB = service.findAnchor(runnerB);
+
+        // Each runner keeps seeing their own anchor on every (cached) call.
+        assertThat(firstA.startLat()).isEqualTo(secondA.startLat()).isCloseTo(40.71241, org.assertj.core.data.Offset.offset(1e-9));
+        assertThat(firstB.startLat()).isEqualTo(secondB.startLat()).isCloseTo(41.81241, org.assertj.core.data.Offset.offset(1e-9));
+        // Two runners -> two full-history scans total, one per runner.
+        verify(activityPointRepository, times(1))
+                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
+        verify(activityPointRepository, times(1))
+                .findAllHeatmapPointsByRunnerAndType(8L, ActivityType.RUN.name());
+    }
+
+    @Test
+    void findAnchorDoesNotCacheEmptyResult() {
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        RouteHeatmapAnchorService service = new RouteHeatmapAnchorService(activityPointRepository, cacheStore);
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
+                .thenReturn(List.of());
+
+        assertThat(service.findAnchor(runner)).isNull();
+        assertThat(service.findAnchor(runner)).isNull();
+        // A null (no-data) result is not cached: every call must re-check the source.
+        verify(activityPointRepository, times(2))
+                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
     }
 
     private static Object[] point(long activityId, double latitude, double longitude) {

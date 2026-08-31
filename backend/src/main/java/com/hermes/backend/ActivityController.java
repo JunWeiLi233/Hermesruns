@@ -28,6 +28,7 @@ public class ActivityController {
     private static final int MAX_ANALYSIS_SUMMARY_LIMIT = 500;
     private static final int MAX_ROUTE_PREVIEW_BATCH_SIZE = 50;
     private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
+    private static final Duration ACTIVITY_READ_CACHE_TTL = Duration.ofMinutes(10);
 
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
@@ -297,12 +298,25 @@ public class ActivityController {
         }
 
         Runner runner = activeUser.get();
+        if (year != null && (year < 1900 || year > 2100)) {
+            // Prevent weird ranges that could stress queries or return unexpected data.
+            return err(HttpStatus.BAD_REQUEST, "INVALID_PARAM", "Invalid year.");
+        }
+
+        // This endpoint scans every GPS coordinate of every run, so the rounded
+        // coordinate list is cached per runner (+ requested year) for a short TTL.
+        String heatmapCacheKey = runner.getId() + ":" + (year == null ? "all" : year);
+        Optional<List<double[]>> cachedHeatmap = cacheStore.get(
+                "activity-heatmap",
+                heatmapCacheKey,
+                new TypeReference<>() {}
+        );
+        if (cachedHeatmap.isPresent()) {
+            return ResponseEntity.ok(cachedHeatmap.get());
+        }
+
         List<Object[]> coords;
         if (year != null) {
-            // Prevent weird ranges that could stress queries or return unexpected data.
-            if (year < 1900 || year > 2100) {
-                return err(HttpStatus.BAD_REQUEST, "INVALID_PARAM", "Invalid year.");
-            }
             java.time.LocalDateTime yearStart = java.time.LocalDateTime.of(year, 1, 1, 0, 0);
             java.time.LocalDateTime yearEnd = java.time.LocalDateTime.of(year + 1, 1, 1, 0, 0);
             coords = activityDataAccess.findHeatmapCoordsByRunnerAndYear(runner, yearStart, yearEnd, year + "%");
@@ -316,6 +330,7 @@ public class ActivityController {
                         Math.round(((Number) row[1]).doubleValue() * 1_000_000d) / 1_000_000d})
                 .toList();
 
+        cacheStore.put("activity-heatmap", heatmapCacheKey, latlngs, ACTIVITY_READ_CACHE_TTL);
         return ResponseEntity.ok(latlngs);
     }
 
@@ -456,6 +471,7 @@ public class ActivityController {
         }
 
         Activity activity = activityOpt.get();
+        String telemetryCacheKey = activeUser.get().getId() + ":" + activity.getId();
         if (!activityDataAccess.hasPoints(activity) && activity.getStravaId() != null) {
             String stravaToken = stravaStreamService.resolveRunnerStravaAccessToken(activeUser.get());
             if (stravaToken != null && !stravaToken.isBlank()) {
@@ -465,6 +481,15 @@ public class ActivityController {
                     logger.warn("Failed to hydrate telemetry stream for activity {}: {}", activity.getId(), exception.getMessage());
                 }
             }
+        }
+
+        Optional<Map<String, Object>> cachedTelemetry = cacheStore.get(
+                "activity-telemetry",
+                telemetryCacheKey,
+                new TypeReference<>() {}
+        );
+        if (cachedTelemetry.isPresent()) {
+            return ResponseEntity.ok(cachedTelemetry.get());
         }
 
         List<ActivityAnalyticsHelper.SamplePoint> pts = ActivityTelemetryResponseBuilder.buildAnalyticsSamplePoints(
@@ -477,6 +502,7 @@ public class ActivityController {
         response.put("resolution", "source_elapsed_seconds");
         response.put("series", ActivityTelemetryResponseBuilder.buildTelemetrySeries(pts));
         response.put("trainingEffect", ActivityTelemetryResponseBuilder.estimateTrainingEffect(activity, pts));
+        cacheStore.put("activity-telemetry", telemetryCacheKey, response, ACTIVITY_READ_CACHE_TTL);
         return ResponseEntity.ok(response);
     }
 
@@ -505,6 +531,16 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
 
+        String hrSamplesCacheKey = activeUser.get().getId() + ":" + activityOpt.get().getId();
+        Optional<List<Map<String, Integer>>> cachedSamples = cacheStore.get(
+                "activity-hr-samples",
+                hrSamplesCacheKey,
+                new TypeReference<>() {}
+        );
+        if (cachedSamples.isPresent()) {
+            return ResponseEntity.ok(cachedSamples.get());
+        }
+
         List<Object[]> rows = activityDataAccess.findHrSamplesByActivityId(activityOpt.get().getId());
         List<Map<String, Integer>> samples = new ArrayList<>(rows.size());
         for (Object[] row : rows) {
@@ -514,6 +550,7 @@ public class ActivityController {
             sample.put("bpm", ((Number) row[1]).intValue());
             samples.add(sample);
         }
+        cacheStore.put("activity-hr-samples", hrSamplesCacheKey, samples, ACTIVITY_READ_CACHE_TTL);
         return ResponseEntity.ok(samples);
     }
 
@@ -666,6 +703,7 @@ public class ActivityController {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(activeUser.get().getId()));
+        cacheStore.evict("activity-heatmap", activeUser.get().getId() + ":all");
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 

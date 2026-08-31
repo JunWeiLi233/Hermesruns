@@ -1,5 +1,6 @@
 package com.hermes.backend;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -8,10 +9,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -23,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -1040,5 +1045,269 @@ class ActivityControllerTests {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(cacheStore).evict("profile-heatmap", "all-points-paged-v4:42");
+        // The activities/heatmap read cache must also be invalidated on delete.
+        verify(cacheStore).evict("activity-heatmap", "42:all");
+    }
+
+    // --- TTL read caches: second identical call is served from cache ---
+
+    private static ActivityController cachedController(
+            AuthService authService,
+            ActivityPointRepository activityPointRepository,
+            TtlCacheStore cacheStore
+    ) {
+        return newController(
+                authService, mock(ActivityRepository.class), activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+    }
+
+    @Test
+    void getHeatmapServesSecondCallFromCacheWithoutRequeryingCoords() {
+        AuthService authService = mock(AuthService.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = cachedController(authService, activityPointRepository, cacheStore);
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityPointRepository.findHeatmapCoordsByRunnerAndType(runner, ActivityType.RUN)).thenReturn(List.of(
+                new Object[]{40.71281234, -74.00601234},
+                new Object[]{40.71411235, -74.00271236}
+        ));
+
+        ResponseEntity<?> first = controller.getHeatmapPoints("Bearer token", null);
+        ResponseEntity<?> second = controller.getHeatmapPoints("Bearer token", null);
+
+        assertEquals(HttpStatus.OK, first.getStatusCode());
+        assertEquals(HttpStatus.OK, second.getStatusCode());
+        List<?> firstBody = (List<?>) first.getBody();
+        List<?> secondBody = (List<?>) second.getBody();
+        assertEquals(2, firstBody.size());
+        assertEquals(firstBody.size(), secondBody.size());
+        assertArrayEquals((double[]) firstBody.get(0), (double[]) secondBody.get(0), 1e-12);
+        assertArrayEquals((double[]) firstBody.get(1), (double[]) secondBody.get(1), 1e-12);
+        // The full-history coordinate scan runs once; the repeat read is cache-served.
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndType(runner, ActivityType.RUN);
+    }
+
+    @Test
+    void getHeatmapCacheKeysAreScopedPerRunner() {
+        AuthService authService = mock(AuthService.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = cachedController(authService, activityPointRepository, cacheStore);
+
+        Runner runnerA = new Runner();
+        runnerA.setId(7L);
+        Runner runnerB = new Runner();
+        runnerB.setId(8L);
+        when(authService.findByAuthorizationHeader("Bearer token-a")).thenReturn(Optional.of(runnerA));
+        when(authService.findByAuthorizationHeader("Bearer token-b")).thenReturn(Optional.of(runnerB));
+        when(activityPointRepository.findHeatmapCoordsByRunnerAndType(runnerA, ActivityType.RUN))
+                .thenReturn(List.<Object[]>of(new Object[]{40.7, -74.0}));
+        when(activityPointRepository.findHeatmapCoordsByRunnerAndType(runnerB, ActivityType.RUN))
+                .thenReturn(List.<Object[]>of(new Object[]{41.8, -87.6}));
+
+        ResponseEntity<?> firstA = controller.getHeatmapPoints("Bearer token-a", null);
+        ResponseEntity<?> firstB = controller.getHeatmapPoints("Bearer token-b", null);
+        ResponseEntity<?> secondA = controller.getHeatmapPoints("Bearer token-a", null);
+        ResponseEntity<?> secondB = controller.getHeatmapPoints("Bearer token-b", null);
+
+        assertEquals(HttpStatus.OK, firstA.getStatusCode());
+        assertEquals(HttpStatus.OK, firstB.getStatusCode());
+        // Each runner keeps seeing their own coordinates on every (cached) call.
+        for (ResponseEntity<?> response : List.of(firstA, secondA)) {
+            assertArrayEquals(new double[]{40.7, -74.0}, (double[]) ((List<?>) response.getBody()).get(0), 1e-12);
+        }
+        for (ResponseEntity<?> response : List.of(firstB, secondB)) {
+            assertArrayEquals(new double[]{41.8, -87.6}, (double[]) ((List<?>) response.getBody()).get(0), 1e-12);
+        }
+        // Two runners -> two coordinate scans total, one per runner.
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndType(runnerA, ActivityType.RUN);
+        verify(activityPointRepository, times(1)).findHeatmapCoordsByRunnerAndType(runnerB, ActivityType.RUN);
+    }
+
+    @Test
+    void getActivityTelemetryServesSecondCallFromCacheWithoutRequeryingSamples() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+        activity.setMaxHeartRate(184.0);
+        activity.setMovingTimeSeconds(3);
+
+        List<Object[]> samples = new java.util.ArrayList<>();
+        for (int second = 0; second < 3; second += 1) {
+            samples.add(new Object[]{
+                    40.7000 + second * 0.00001,
+                    -73.9000 - second * 0.00001,
+                    second,
+                    second * 3.0,
+                    8.0 + second * 0.2,
+                    142 + second,
+                    174,
+                    null,
+                    8.5 + second * 0.2,
+                    240.0 + second,
+                    82.0 + second * 0.5
+            });
+        }
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(activityPointRepository.existsByActivity(activity)).thenReturn(true);
+        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(51L)).thenReturn(samples);
+
+        ResponseEntity<?> first = controller.getActivityTelemetry(51L, "Bearer token");
+        ResponseEntity<?> second = controller.getActivityTelemetry(51L, "Bearer token");
+
+        assertEquals(HttpStatus.OK, first.getStatusCode());
+        assertEquals(HttpStatus.OK, second.getStatusCode());
+        Map<?, ?> firstBody = (Map<?, ?>) first.getBody();
+        Map<?, ?> secondBody = (Map<?, ?>) second.getBody();
+        assertEquals(firstBody.get("sampleCount"), secondBody.get("sampleCount"));
+        assertEquals(firstBody.get("resolution"), secondBody.get("resolution"));
+        Map<?, ?> firstSeries = (Map<?, ?>) firstBody.get("series");
+        Map<?, ?> secondSeries = (Map<?, ?>) secondBody.get("series");
+        List<?> firstHr = (List<?>) ((Map<?, ?>) firstSeries.get("heartRate")).get("samples");
+        List<?> secondHr = (List<?>) ((Map<?, ?>) secondSeries.get("heartRate")).get("samples");
+        assertEquals(firstHr.size(), secondHr.size());
+        assertEquals(
+                ((Map<?, ?>) firstHr.get(0)).get("value"),
+                ((Map<?, ?>) secondHr.get(0)).get("value"));
+        // The sample rebuild runs once; the repeat read is cache-served.
+        verify(activityPointRepository, times(1)).findAnalyticsSamplesByActivityIdOrdered(51L);
+    }
+
+    @Test
+    void getActivityTelemetryRejectsForeignActivityBeforeServingCachedEntry() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        // Poison the cache with the payload a key-collision-before-auth bug would serve.
+        cacheStore.put(
+                "activity-telemetry",
+                "7:99",
+                Map.of("sampleCount", 999, "resolution", "poisoned"),
+                Duration.ofMinutes(10)
+        );
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        // Runner 7 asks for an activity they do not own.
+        when(activityRepository.findByIdAndRunner(99L, runner)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getActivityTelemetry(99L, "Bearer token");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(activityPointRepository, never()).findAnalyticsSamplesByActivityIdOrdered(99L);
+    }
+
+    @Test
+    void getHeartRateSamplesServesSecondCallFromCacheWithoutRequeryingSamples() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        Activity activity = new Activity();
+        activity.setId(51L);
+        activity.setRunner(runner);
+        activity.setActivityType(ActivityType.RUN);
+
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(51L, runner)).thenReturn(Optional.of(activity));
+        when(activityPointRepository.findHrSamplesByActivityIdOrdered(51L)).thenReturn(List.of(
+                new Object[]{0, 120},
+                new Object[]{1, 122},
+                new Object[]{2, 125}
+        ));
+
+        ResponseEntity<?> first = controller.getHeartRateSamples(51L, "Bearer token");
+        ResponseEntity<?> second = controller.getHeartRateSamples(51L, "Bearer token");
+
+        assertEquals(HttpStatus.OK, first.getStatusCode());
+        assertEquals(HttpStatus.OK, second.getStatusCode());
+        List<?> firstBody = (List<?>) first.getBody();
+        List<?> secondBody = (List<?>) second.getBody();
+        assertEquals(3, firstBody.size());
+        assertEquals(firstBody.size(), secondBody.size());
+        assertEquals(
+                ((Map<?, ?>) firstBody.get(0)).get("bpm"),
+                ((Map<?, ?>) secondBody.get(0)).get("bpm"));
+        assertEquals(
+                ((Map<?, ?>) firstBody.get(2)).get("t"),
+                ((Map<?, ?>) secondBody.get(2)).get("t"));
+        // The per-second sample scan runs once; the repeat read is cache-served.
+        verify(activityPointRepository, times(1)).findHrSamplesByActivityIdOrdered(51L);
+    }
+
+    @Test
+    void getHeartRateSamplesRejectsForeignActivityBeforeServingCachedEntry() {
+        AuthService authService = mock(AuthService.class);
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        TtlCacheStore cacheStore = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        // Poison the cache with the payload a key-collision-before-auth bug would serve.
+        cacheStore.put(
+                "activity-hr-samples",
+                "7:99",
+                List.of(Map.of("t", 0, "bpm", 999)),
+                Duration.ofMinutes(10)
+        );
+        ActivityController controller = newController(
+                authService, activityRepository, activityPointRepository,
+                mock(RunnerRepository.class), mock(SecretEncryptionService.class),
+                mock(ElevationCorrectionService.class), mock(AcclimatizationService.class),
+                mock(ReadinessService.class), mock(RestTemplate.class),
+                mock(org.springframework.jdbc.core.JdbcTemplate.class), cacheStore
+        );
+
+        Runner runner = new Runner();
+        runner.setId(7L);
+        when(authService.findByAuthorizationHeader("Bearer token")).thenReturn(Optional.of(runner));
+        when(activityRepository.findByIdAndRunner(99L, runner)).thenReturn(Optional.empty());
+
+        ResponseEntity<?> response = controller.getHeartRateSamples(99L, "Bearer token");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        verify(activityPointRepository, never()).findHrSamplesByActivityIdOrdered(99L);
     }
 }
