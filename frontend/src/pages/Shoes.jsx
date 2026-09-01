@@ -1565,7 +1565,7 @@ const Shoes = memo(function Shoes() {
       <Modal
         isOpen={scanOpen}
         onClose={() => setScanOpen(false)}
-        title={t('shoes.scan_title')}
+        title={scanStatus === 'done' ? t('shoes.scan_confirm') : t('shoes.scan_title')}
         shellClassName="shoe-scan-modal-shell"
         cardClassName="shoe-scan-modal-card"
       >

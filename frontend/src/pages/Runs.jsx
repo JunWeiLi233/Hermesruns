@@ -13,7 +13,6 @@ import PageSkeleton from '../components/PageSkeleton';
 import FooterNavLinks from '../components/FooterNavLinks';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../utils/format';
 import HermesLogo from '../components/HermesLogo';
-import ImportDataGuide from '../components/ImportDataGuide';
 import Modal from '../components/Modal';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import TopbarNotifications from '../components/TopbarNotifications';
@@ -1193,11 +1192,12 @@ const Runs = memo(function Runs() {
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         title={t('profile.import_modal_title')}
+        icon={<AppIcon name="upload_file" className="profile-import-modal-icon" />}
+        closeLabel={t('profile.close')}
         shellClassName="profile-import-modal-shell"
         cardClassName="profile-import-modal-card"
       >
         <form className="profile-import-modal-form" onSubmit={handleImport}>
-          <ImportDataGuide />
           <header className="import-upload-heading">
             <span>{t('profile.import_upload_kicker')}</span>
             <h3>{t('profile.import_upload_title')}</h3>
@@ -1210,8 +1210,8 @@ const Runs = memo(function Runs() {
               ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
             ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
               <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
-                <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                 <div className="import-source-header">
+                  <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
                   <div className="import-source-copy">
                     <span className="import-source-title">{t(titleKey)}</span>
                     <span className="import-source-hint">{t(hintKey)}</span>
@@ -1671,7 +1671,7 @@ const Runs = memo(function Runs() {
         isOpen={!!deleteTarget}
         onClose={closeDeleteModal}
         title={t('runs.delete_title')}
-        icon={<AppIcon name="delete_sweep" className="runs-delete-modal-icon" />}
+        closeLabel={t('profile.close')}
         shellClassName="runs-delete-modal-shell"
         cardClassName="runs-delete-modal-card"
       >
@@ -1683,7 +1683,7 @@ const Runs = memo(function Runs() {
           <button type="button" className="btn-secondary" onClick={closeDeleteModal} disabled={deleting}>
             {t('runs.delete_cancel')}
           </button>
-          <button type="button" className="btn-primary runs-delete-modal-confirm" onClick={handleDeleteRun} disabled={deleting}>
+          <button type="button" className="runs-delete-modal-confirm" onClick={handleDeleteRun} disabled={deleting}>
             {deleting ? t('runs.delete_in_progress') : t('runs.delete_confirm_button')}
           </button>
         </div>

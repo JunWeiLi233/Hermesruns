@@ -10,6 +10,8 @@ const modalSource = readFileSync(path.join(here, '../components/Modal.jsx'), 'ut
 const guideSource = readFileSync(path.join(here, '../components/ImportDataGuide.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, '../styles/all-pages-liquid-glass.css'), 'utf8');
 const analysisReferenceStyles = styleSource.slice(styleSource.indexOf('/* Analysis import modal reference surface.'));
+const runsReferenceStart = styleSource.indexOf('/* Runs import modal reference surface.');
+const runsReferenceStyles = styleSource.slice(runsReferenceStart);
 
 for (const [name, source] of [['Analysis', analysisSource], ['Runs', runsSource]]) {
   assert.match(source, /shellClassName="profile-import-modal-shell"/, `${name} should opt into the Profile import overlay.`);
@@ -17,6 +19,11 @@ for (const [name, source] of [['Analysis', analysisSource], ['Runs', runsSource]
   assert.match(source, /<form className="profile-import-modal-form" onSubmit=\{handleImport\}>/, `${name} should scope the import layout without changing its submit handler.`);
   assert.match(source, /className="import-upload-heading"/, `${name} should introduce the upload controls after the shared guide.`);
   assert.match(source, /className="import-source-index"/, `${name} should keep source-card numbering aligned with the shared grid.`);
+  assert.match(
+    source,
+    /<div className="import-source-header">\s*<span className="import-source-index"/,
+    `${name} source-card badges should share the horizontal header grid with the title and tag.`,
+  );
 }
 
 assert.match(
@@ -81,15 +88,25 @@ assert.match(
 
 assert.doesNotMatch(
   analysisSource,
-  /eyebrow=\{t\('profile\.import_guide_kicker'\)\}/,
-  'Analysis should keep the three-step kicker inside the guide instead of the modal header.',
+  /import ImportDataGuide from '\.\.\/components\/ImportDataGuide';|<ImportDataGuide \/>/,
+  'Analysis import modal should remove the guide section from the focused upload task.',
 );
 
-assert.match(
-  analysisSource,
-  /<ImportDataGuide \/>/,
-  'Analysis should render the guide kicker below its title.',
+assert.doesNotMatch(
+  runsSource,
+  /import ImportDataGuide from '\.\.\/components\/ImportDataGuide';|<ImportDataGuide \/>/,
+  'Runs import modal should remove the guide section from the focused upload task.',
 );
+
+const focusedImportStart = styleSource.indexOf('/* Focused import modal without guide */');
+assert.ok(focusedImportStart >= 0, 'The import modal should define a guide-free focused layout.');
+const focusedImportStyles = styleSource.slice(focusedImportStart);
+assert.match(
+  focusedImportStyles,
+  /#root \.profile-import-modal-form\s*\{[\s\S]*grid-template-areas:[\s\S]*"help"[\s\S]*"sources"[\s\S]*"summary"[\s\S]*"status"[\s\S]*"actions"/,
+  'The focused import modal should start with file-source content after removing the guide.',
+);
+assert.doesNotMatch(focusedImportStyles, /"guide"/, 'The focused import modal should not retain an empty guide grid area.');
 
 assert.doesNotMatch(
   modalSource,
@@ -97,10 +114,42 @@ assert.doesNotMatch(
   'The shared modal should not own the guide kicker layout.',
 );
 
-assert.doesNotMatch(
+assert.match(
   runsSource,
-  /title=\{t\('profile\.import_modal_title'\)\}[\s\S]*profile-import-modal-icon/,
-  'The Analysis-only upload icon should not change the shared Runs import modal.',
+  /title=\{t\('profile\.import_modal_title'\)\}[\s\S]*icon=\{<AppIcon name="upload_file" className="profile-import-modal-icon" \/>\}/,
+  'Runs should use the upload icon in the reference import modal header.',
+);
+
+assert.ok(runsReferenceStart >= 0, 'Runs should define a route-scoped reference import modal surface.');
+
+assert.match(
+  runsReferenceStyles,
+  /#root \.runs-dashboard-page \.profile-import-modal-card\s*\{[\s\S]*width:\s*min\(760px,[\s\S]*border-radius:\s*30px[\s\S]*background:\s*#ffffff !important/,
+  'Runs should use the white 760px reference sheet with a 30px radius.',
+);
+
+assert.match(
+  runsReferenceStyles,
+  /#root \.runs-dashboard-page \.profile-import-modal-card \.modal-header-icon\s*\{[\s\S]*width:\s*56px[\s\S]*height:\s*56px[\s\S]*background:\s*#f17b68/,
+  'Runs should place a coral circular upload badge in the modal header.',
+);
+
+assert.match(
+  runsReferenceStyles,
+  /#root \.runs-dashboard-page \.profile-import-modal-form \.import-source-index\s*\{[\s\S]*background:\s*#000000 !important[\s\S]*color:\s*#ffffff !important/,
+  'Runs source numbering should use black badges with white text.',
+);
+
+assert.match(
+  runsReferenceStyles,
+  /#root \.runs-dashboard-page \.profile-import-modal-form input\[type="file"\]::file-selector-button\s*\{[\s\S]*background:\s*#000000 !important[\s\S]*color:\s*#ffffff !important/,
+  'Runs file chooser buttons should use the black reference treatment.',
+);
+
+assert.match(
+  runsReferenceStyles,
+  /#root \.runs-dashboard-page \.profile-import-modal-form \.modal-actions\s*\{[\s\S]*display:\s*grid[\s\S]*grid-template-columns:\s*1fr 1fr/,
+  'Runs import actions should use the rounded two-column footer from the reference.',
 );
 
 assert.match(

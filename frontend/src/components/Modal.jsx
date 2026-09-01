@@ -5,7 +5,7 @@ function joinClasses(...values) {
   return values.filter(Boolean).join(' ');
 }
 
-export default function Modal({ isOpen, onClose, title, children, icon = null, shellClassName = '', cardClassName = '', portalToBody = false, adminDashboard = false }) {
+export default function Modal({ isOpen, onClose, title, children, icon = null, headerContent = null, closeLabel = 'Close', shellClassName = '', cardClassName = '', portalToBody = false, adminDashboard = false }) {
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -36,9 +36,18 @@ export default function Modal({ isOpen, onClose, title, children, icon = null, s
     <div className={joinClasses('modal-shell', adminDashboard && 'admin-dashboard-modal-shell', shellClassName)} onClick={handleOverlayClick} role="presentation">
       <div className={joinClasses('modal-card', adminDashboard && 'admin-dashboard-modal-card', cardClassName)} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-header">
-          {icon ? <div className="modal-header-icon" aria-hidden="true">{icon}</div> : null}
-          <h3>{title}</h3>
-          <button type="button" className="modal-close" onClick={onClose}>
+          {headerContent ? (
+            <div className="modal-header-main">
+              {headerContent}
+              <h3>{title}</h3>
+            </div>
+          ) : (
+            <>
+              {icon ? <div className="modal-header-icon" aria-hidden="true">{icon}</div> : null}
+              <h3>{title}</h3>
+            </>
+          )}
+          <button type="button" className="modal-close" onClick={onClose} aria-label={closeLabel}>
             &times;
           </button>
         </div>

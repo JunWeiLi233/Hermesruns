@@ -50,6 +50,18 @@ assert.match(
   'Each topbar notification message should expose a delete button.'
 );
 
+assert.match(
+  componentSource,
+  /runner-shell-notification-heading-icon/,
+  'The notification header should provide a compact visual anchor.'
+);
+
+assert.match(
+  componentSource,
+  /runner-shell-notification-card-icon/,
+  'Each notification row should provide a contextual leading icon.'
+);
+
 assert.doesNotMatch(
   componentSource,
   /runner-shell-notification-delete-label/,
@@ -64,8 +76,8 @@ assert.match(
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 34px;[\s\S]*border-radius:\s*0;[\s\S]*box-shadow:\s*none !important;/,
-  'Training messages should use compact Profile-style list rows instead of oversized nested cards.'
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*34px minmax\(0, 1fr\) 28px;[\s\S]*border-radius:\s*16px;[\s\S]*box-shadow:\s*none !important;/,
+  'Training messages should use compact icon-led rows instead of oversized nested cards.'
 );
 
 assert.match(
@@ -82,8 +94,20 @@ assert.doesNotMatch(
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-delete\s*\{[\s\S]*width:\s*34px;[\s\S]*border-radius:\s*999px;[\s\S]*var\(--runner-profile-flame\) 10%, transparent\) !important;/,
-  'Delete actions should be compact circular Profile controls with a clear destructive accent.'
+  /\.runner-shell-page \.runner-shell-notification-delete\s*\{[\s\S]*width:\s*28px;[\s\S]*border-radius:\s*999px;[\s\S]*background:\s*transparent !important;[\s\S]*var\(--runner-profile-muted\) !important;/,
+  'Delete actions should be quiet circular controls that reveal the destructive accent on interaction.'
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*backdrop-filter:\s*blur\(26px\) saturate\(135%\);[\s\S]*animation:\s*runner-shell-notification-in/,
+  'The notification sheet should use the shared material treatment with a restrained entrance.'
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*runner-shell-notification-popover[\s\S]*animation:\s*none;/,
+  'Notification motion should be disabled for reduced-motion preferences.'
 );
 
 assert.match(
