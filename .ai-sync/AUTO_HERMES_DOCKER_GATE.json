@@ -1,22 +1,12 @@
 {
-  "generatedAt": "2026-09-01T06:43:27.057Z",
+  "generatedAt": "2026-09-01T06:51:33.366Z",
   "passed": true,
-  "gitHead": "414690386094c97e4e8f61dc9bc3678fe27822e3",
-  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\nM  DESIGN_VERSIONS.md\nM  docs/architecture/saas-architecture.html\nM  docs/architecture/saas-architecture.svg\nM  frontend/src/App.jsx\nM  frontend/src/components/AuthenticatedPageChrome.jsx\nM  frontend/src/components/SettingsAtlasLayout.jsx\nM  frontend/src/pages/GarminImportSettings.jsx\nM  frontend/src/pages/Settings.jsx\nM  frontend/src/pages/garminImportRoute.smoke.test.js\nM  frontend/src/styles/settings-fullwidth.css\nM  frontend/src/utils/routePreload.js",
+  "gitHead": "b1c40e8f13bd06a603cd9e1bc2bd1d7b5f3211e1",
+  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\n M frontend/src/pages/loadingSkeleton.smoke.test.js",
   "changedPaths": [
     ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
-    "DESIGN_VERSIONS.md",
     "ai-sync/AUTO_HERMES_DOCKER_GATE.json",
-    "docs/architecture/saas-architecture.html",
-    "docs/architecture/saas-architecture.svg",
-    "frontend/src/App.jsx",
-    "frontend/src/components/AuthenticatedPageChrome.jsx",
-    "frontend/src/components/SettingsAtlasLayout.jsx",
-    "frontend/src/pages/GarminImportSettings.jsx",
-    "frontend/src/pages/Settings.jsx",
-    "frontend/src/pages/garminImportRoute.smoke.test.js",
-    "frontend/src/styles/settings-fullwidth.css",
-    "frontend/src/utils/routePreload.js"
+    "frontend/src/pages/loadingSkeleton.smoke.test.js"
   ],
   "command": "docker build -f C:\\Users\\Junwei\\.codex\\worktrees\\2912\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
