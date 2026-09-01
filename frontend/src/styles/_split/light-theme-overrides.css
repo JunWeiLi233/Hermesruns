@@ -3500,7 +3500,6 @@ body:is(.theme-light, .theme-high-contrast-light) .settings-atlas-service-metric
 body:is(.theme-light, .theme-high-contrast-light) .garmin-import-metric,
 body:is(.theme-light, .theme-high-contrast-light) .garmin-import-visual,
 body:is(.theme-light, .theme-high-contrast-light) .garmin-import-panel,
-body:is(.theme-light, .theme-high-contrast-light) .garmin-import-field--limit,
 body:is(.theme-light, .theme-high-contrast-light) .garmin-import-secondary {
   background: rgba(255, 255, 255, 0.72);
   box-shadow:

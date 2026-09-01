@@ -6378,3 +6378,384 @@ body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-mod
     transition: none;
   }
 }
+
+/* Scan modal Apple reference surface */
+.shoe-scan-modal-shell {
+  align-items: center;
+  padding: clamp(20px, 4vw, 64px);
+  background: rgba(243, 244, 246, 0.78);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.modal-card.shoe-scan-modal-card {
+  width: min(980px, calc(100vw - 32px));
+  max-width: 980px;
+  max-height: min(768px, calc(100vh - 32px));
+  max-height: min(768px, calc(100dvh - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 32px;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.14);
+  color: #202124;
+}
+
+.modal-card.shoe-scan-modal-card .modal-header {
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
+  display: flex;
+  align-items: flex-start;
+  padding: clamp(36px, 4.3vw, 66px) clamp(32px, 4.6vw, 70px) 0;
+  border: 0;
+  background: transparent;
+}
+
+.modal-card.shoe-scan-modal-card .modal-header h3 {
+  position: static;
+  display: block;
+  width: auto;
+  height: auto;
+  padding: 0 48px 0 0;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  border: 0;
+  color: #202124;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(3rem, 4vw, 3.75rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1.08;
+  transform: none;
+}
+
+.modal-card.shoe-scan-modal-card .modal-close {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  display: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #5f6368;
+  font-size: 1.4rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .modal-close:hover {
+  background: #e9eaed;
+  color: #202124;
+}
+
+.modal-card.shoe-scan-modal-card .modal-form {
+  max-height: min(768px, calc(100vh - 32px));
+  max-height: min(768px, calc(100dvh - 32px));
+  padding: clamp(22px, 2.3vw, 36px) clamp(32px, 4.6vw, 70px) clamp(32px, 3.8vw, 58px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-visual {
+  display: none !important;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-panel {
+  min-width: 0;
+  padding: 0;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-stack {
+  min-height: 0;
+  gap: clamp(24px, 3.4vw, 52px);
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-copy {
+  display: grid;
+  gap: 0;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-copy h4 {
+  display: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-copy p {
+  max-width: 62ch;
+  margin: 0;
+  color: #5f6368;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.1rem, 1.65vw, 1.6rem);
+  font-weight: 400;
+  line-height: 1.72;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-note,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-status,
+.modal-card.shoe-scan-modal-card .shoe-scan-result-card,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upgrade-card,
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-quota-after {
+  border: 1px solid #e3e5e8;
+  border-radius: 16px;
+  background: #fafbfc;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload {
+  display: grid;
+  gap: clamp(16px, 1.6vw, 24px);
+  padding: clamp(24px, 2vw, 32px);
+  border: 1px dashed #34373b;
+  border-radius: 22px;
+  outline: none;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload:hover {
+  background: #fafbfc;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload > span:first-child {
+  display: block;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #b64638;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.15rem, 1.7vw, 1.7rem);
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input {
+  width: 100%;
+  min-width: 0;
+  min-height: clamp(60px, 5.7vw, 88px);
+  padding: 10px 16px;
+  border: 1px solid #e3e5e8;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #202124;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1rem, 1.5vw, 1.3rem);
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input::file-selector-button {
+  min-height: clamp(38px, 3.2vw, 50px);
+  margin-right: 18px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #f1f2f4;
+  color: #202124;
+  font: 700 clamp(1rem, 1.35vw, 1.2rem) "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  cursor: pointer;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-upload small {
+  margin: 0;
+  color: #6b7076;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(0.85rem, 1.2vw, 1.15rem);
+  line-height: 1.45;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2.2vw, 34px);
+  margin-top: 0;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions :is(.shoe-scan-modal-secondary, .shoe-scan-modal-primary) {
+  min-height: clamp(56px, 5.6vw, 86px);
+  padding: 0 20px;
+  border: 1px solid #dfe1e5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #303236;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.1rem, 1.55vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+  box-shadow: none;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-secondary:hover {
+  border-color: #c9cdd2;
+  background: #f7f8f9;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary {
+  border-color: #bd4a3c;
+  background: #c45244;
+  color: #ffffff;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary:hover:not(:disabled) {
+  border-color: #a93f33;
+  background: #b64638;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary:disabled {
+  border-color: #e4e5e8;
+  background: #f1f1f3;
+  color: #a2a4a8;
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+
+.modal-card.shoe-scan-modal-card :is(.modal-close, .shoe-scan-modal-upload input, .shoe-scan-modal-secondary, .shoe-scan-modal-primary):focus-visible {
+  outline: 3px solid rgba(49, 90, 132, 0.32);
+  outline-offset: 3px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .shoe-scan-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) .shoe-scan-modal-shell {
+  background: rgba(7, 10, 14, 0.56);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card {
+  border-color: #3a4148;
+  background: #1f2327;
+  box-shadow: 0 30px 76px rgba(0, 0, 0, 0.4);
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .modal-header h3,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .modal-header h3 {
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .modal-close {
+  background: #30363d;
+  color: #dfe5ea;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-copy p,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-copy p {
+  color: #c7cdd3;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload {
+  border-color: #c4cbd2;
+  background: #252a2f;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input {
+  border-color: #454d55;
+  background: #1a1e22;
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input::file-selector-button,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload input::file-selector-button {
+  background: #353c43;
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload small,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-upload small {
+  color: #aeb7c0;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions :is(.shoe-scan-modal-secondary, .shoe-scan-modal-primary),
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions :is(.shoe-scan-modal-secondary, .shoe-scan-modal-primary) {
+  border-color: #4a535b;
+  background: #252a2f;
+  color: #eef1f4;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary {
+  border-color: #d26456;
+  background: #c45244;
+  color: #ffffff;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary:disabled,
+body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions .shoe-scan-modal-primary:disabled {
+  border-color: #41484f;
+  background: #30363d;
+  color: #8c969f;
+}
+
+@media (max-width: 640px) {
+  .modal-card.shoe-scan-modal-card {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px;
+  }
+
+  .modal-card.shoe-scan-modal-card .modal-header {
+    padding: 30px 24px 0;
+  }
+
+  .modal-card.shoe-scan-modal-card .modal-header h3 {
+    padding-right: 40px;
+    font-size: clamp(1.8rem, 9vw, 2.4rem);
+  }
+
+  .modal-card.shoe-scan-modal-card .modal-close {
+    top: 16px;
+    right: 16px;
+  }
+
+  .modal-card.shoe-scan-modal-card .modal-form {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 20px 24px 28px;
+  }
+
+  .modal-card.shoe-scan-modal-card .shoe-scan-modal-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-card.shoe-scan-modal-card :is(.modal-close, .shoe-scan-modal-upload, .shoe-scan-modal-secondary, .shoe-scan-modal-primary) {
+    transition: none;
+  }
+}
+
+/* Shoes scan modal full-track guard */
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.modal-card.shoe-scan-modal-card .shoe-scan-modal-panel {
+  grid-column: 1 / -1;
+  width: 100%;
+}

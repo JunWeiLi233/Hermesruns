@@ -1,5 +1,15 @@
 # Hermes Design Versions
 
+### Version: DV-2026-09-01-002
+Date: 2026-09-01
+Surface: Shared modal reference alignment across runner surfaces
+Files: `frontend/src/components/Modal.jsx`, `frontend/src/components/TopbarNotifications.jsx`, `frontend/src/pages/Analysis.jsx`, `frontend/src/pages/Runs.jsx`, `frontend/src/pages/Shoes.jsx`, `frontend/src/styles/all-pages-liquid-glass.css`, `frontend/src/styles/_split/analysis.css`, `frontend/src/styles/_split/integrations.css`, `frontend/src/styles/_split/light-theme-overrides.css`, `frontend/src/styles/_split/shoes.css`, focused smoke tests, `DESIGN_VERSIONS.md`
+What changed: Integrated the user-authored backup modal system into current master: opt-in header content and localized close labels, an icon-led notification sheet, focused workout-file import dialogs, a compact soreness confirmation, a reference-aligned Runs delete confirmation, and a full-track shoe scan upload sheet.
+Why: Preserve the completed modal design work from `D:\Hermesruns-backup` while keeping the latest Garmin modal and repository changes already present on master.
+Preserve list: Existing API calls, upload and delete handlers, notification persistence, bilingual copy, overlay and Escape dismissal, keyboard focus behavior, dark/light themes, responsive layouts, and unrelated routes.
+Rollback target: `DV-2026-09-01-001`
+Notes: Generated backend static assets and duplicate iterative backup log entries were intentionally excluded; production assets must be regenerated from source.
+
 ### Version: DV-2026-09-01-001
 Date: 2026-09-01
 Surface: Embedded Garmin Connect import modal

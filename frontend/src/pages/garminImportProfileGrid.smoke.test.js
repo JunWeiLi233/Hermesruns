@@ -45,6 +45,18 @@ assert.match(
 
 assert.match(
   styleSource,
+  /\.garmin-profile-form-card \.garmin-import-field--limit\s*\{[\s\S]*?background:\s*transparent;/,
+  'The maximum-activity field should not render a second card background around its control.',
+);
+
+assert.match(
+  styleSource,
+  /\.garmin-profile-form-card \.garmin-import-field--limit\s*\{[\s\S]*?padding:\s*16px\s+0;/,
+  'The maximum-activity field should share the email field column alignment.',
+);
+
+assert.match(
+  styleSource,
   /@media \(max-width:\s*960px\)\s*\{[\s\S]*?\.garmin-profile-main-grid,[\s\S]*?\.garmin-profile-metric-strip\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/,
   'Garmin grids should collapse before the authenticated top navigation makes the columns cramped.',
 );

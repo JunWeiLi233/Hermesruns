@@ -6,7 +6,6 @@ import { useUnit } from '../contexts/UnitContext';
 import { apiFetch, apiJson } from '../api';
 import { cachedApiJson, invalidateResourceCache } from '../api/resourceCache';
 import Modal from '../components/Modal';
-import ImportDataGuide from '../components/ImportDataGuide';
 import AppIcon from '../components/AppIcon';
 import CoachIdentityBadge from '../components/CoachIdentityBadge';
 import FooterNavLinks from '../components/FooterNavLinks';
@@ -989,15 +988,15 @@ export default function Analysis() {
         isOpen={Boolean(sorenessModalLevel)}
         onClose={() => setSorenessModalLevel(null)}
         title={t('analysis.stitch_injury_prevention_soreness_modal_title')}
+        headerContent={sorenessModalLevel ? (
+          <div className={cx('analysis-soreness-modal-level', `is-${sorenessModalLevel}`)}>
+            {t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`)}
+          </div>
+        ) : null}
         shellClassName="analysis-soreness-modal-shell"
         cardClassName="analysis-soreness-modal-card"
       >
         <div className="analysis-soreness-modal-content">
-          <div className={cx('analysis-soreness-modal-level', `is-${sorenessModalLevel || 'low'}`)}>
-            {sorenessModalLevel
-              ? t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`)
-              : ''}
-          </div>
           <p className="analysis-soreness-modal-copy">
             {sorenessModalLevel
               ? t('analysis.stitch_injury_prevention_soreness_modal_copy', {
@@ -1027,7 +1026,6 @@ export default function Analysis() {
         cardClassName="profile-import-modal-card"
       >
         <form className="profile-import-modal-form" onSubmit={handleImport}>
-          <ImportDataGuide />
           <header className="import-upload-heading">
             <span>{t('profile.import_upload_kicker')}</span>
             <h3>{t('profile.import_upload_title')}</h3>
@@ -1035,8 +1033,8 @@ export default function Analysis() {
           </header>
           <div className="import-source-grid">
             <section className={`import-source-card${fitExportFiles?.length ? ' is-selected' : ''}`}>
-              <span className="import-source-index" aria-hidden="true">01</span>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">01</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
                   <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
@@ -1062,8 +1060,8 @@ export default function Analysis() {
               </p>
             </section>
             <section className={`import-source-card${corosFiles?.length ? ' is-selected' : ''}`}>
-              <span className="import-source-index" aria-hidden="true">02</span>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">02</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.coros_source_title')}</span>
                   <span className="import-source-hint">{t('profile.coros_source_hint')}</span>
@@ -1089,8 +1087,8 @@ export default function Analysis() {
               </p>
             </section>
             <section className={`import-source-card${huaweiFiles?.length ? ' is-selected' : ''}`}>
-              <span className="import-source-index" aria-hidden="true">03</span>
               <div className="import-source-header">
+                <span className="import-source-index" aria-hidden="true">03</span>
                 <div className="import-source-copy">
                   <span className="import-source-title">{t('profile.huawei_source_title')}</span>
                   <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>

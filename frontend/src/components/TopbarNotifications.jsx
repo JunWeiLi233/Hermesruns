@@ -18,18 +18,21 @@ function buildNotificationCopy(lang) {
       items: [
         {
           id: 'coach-load',
+          icon: 'load_balance_runner',
           eyebrow: '今日教练',
           title: '训练负荷保持稳定',
           body: '最近几次训练已经同步完成，今天更适合按计划推进，而不是临时加量。',
         },
         {
           id: 'gps-samples',
+          icon: 'map',
           eyebrow: '路线同步',
           title: 'GPS 采样点已刷新',
           body: '热力图现在会用全部跑步的 GPS 采样点显示总量，地图仍然保留轻量渲染。',
         },
         {
           id: 'connection-health',
+          icon: 'sync',
           eyebrow: '连接状态',
           title: '导入通道处于健康状态',
           body: 'Strava 或 Garmin 连接正常时，新的路线和训练消息会继续自动进入 Hermes。',
@@ -49,18 +52,21 @@ function buildNotificationCopy(lang) {
     items: [
       {
         id: 'coach-load',
+        icon: 'load_balance_runner',
         eyebrow: 'Coach note',
         title: 'Your load is staying controlled',
         body: 'Recent sessions are synced and your current pattern looks steady enough to keep the plan on track.',
       },
       {
         id: 'gps-samples',
+        icon: 'map',
         eyebrow: 'Route sync',
         title: 'GPS sample totals are refreshed',
         body: 'Heatmap totals now read from all-run GPS samples while the map keeps a lighter render budget.',
       },
       {
         id: 'connection-health',
+        icon: 'sync',
         eyebrow: 'Connection',
         title: 'Import channels look healthy',
         body: 'When Strava or Garmin stays connected, new routes and coach cues will keep flowing into Hermes.',
@@ -148,9 +154,14 @@ export default function TopbarNotifications({ onOpenRuns }) {
       {isOpen ? (
         <div className={lang === 'zh-CN' ? 'runner-shell-notification-popover is-zh' : 'runner-shell-notification-popover'} role="dialog" aria-label={copy.title}>
           <div className="runner-shell-notification-head">
-            <div>
-              <strong>{copy.title}</strong>
-              <p>{copy.subtitle}</p>
+            <div className="runner-shell-notification-heading">
+              <span className="runner-shell-notification-heading-icon" aria-hidden="true">
+                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
+              </span>
+              <div className="runner-shell-notification-head-copy">
+                <strong>{copy.title}</strong>
+                <p>{copy.subtitle}</p>
+              </div>
             </div>
             <button
               type="button"
@@ -165,6 +176,9 @@ export default function TopbarNotifications({ onOpenRuns }) {
           <div className="runner-shell-notification-list">
             {visibleItems.length > 0 ? visibleItems.map((item) => (
               <article key={item.id} className="runner-shell-notification-card">
+                <span className="runner-shell-notification-card-icon" aria-hidden="true">
+                  <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+                </span>
                 <div className="runner-shell-notification-card-copy">
                   <div className="runner-shell-notification-eyebrow">{item.eyebrow}</div>
                   <strong>{item.title}</strong>
@@ -181,8 +195,13 @@ export default function TopbarNotifications({ onOpenRuns }) {
               </article>
             )) : (
               <div className="runner-shell-notification-empty" role="status">
-                <strong>{copy.emptyTitle}</strong>
-                <p>{copy.emptyBody}</p>
+                <span className="runner-shell-notification-empty-icon" aria-hidden="true">
+                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
+                </span>
+                <div>
+                  <strong>{copy.emptyTitle}</strong>
+                  <p>{copy.emptyBody}</p>
+                </div>
               </div>
             )}
           </div>

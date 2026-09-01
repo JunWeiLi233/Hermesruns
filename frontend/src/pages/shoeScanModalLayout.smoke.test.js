@@ -11,81 +11,90 @@ const sources = [
   ['split shoes.css', path.join(here, '../styles/_split/shoes.css')],
 ];
 
-const activeShoesStyles = readFileSync(path.join(here, '../styles/_split/shoes.css'), 'utf8').replace(/\r\n/g, '\n');
-
 const assertContains = (source, expected, label) => {
   assert.ok(source.includes(expected), `${label} should include ${expected}`);
 };
 
 assertContains(shoesSource, 'className="shoe-scan-modal-preview-upload"', 'Shoes scan modal preview upload control');
 assertContains(shoesSource, '<input type="file" accept="image/*" multiple onChange={onScanFilesSelected} />', 'Shoes scan modal preview file input');
-assert.doesNotMatch(
+assert.match(
   shoesSource,
-  /shoe-scan-modal-preview-overlay" aria-hidden="true"/,
-  'The visible scan preview controls must not be hidden from interaction.',
+  /title=\{scanStatus === 'done' \? t\('shoes\.scan_confirm'\) : t\('shoes\.scan_title'\)\}/,
+  'The shared modal title should represent the active scan state.',
 );
-
-assert.doesNotMatch(shoesSource, /shoe-scan-modal-scan-line/, 'The minimal scan preview should not render a decorative scan line.');
-assert.doesNotMatch(shoesSource, /shoe-scan-modal-chip is-live/, 'The minimal scan preview should not duplicate status copy in a floating chip.');
-
-assert.match(
-  activeShoesStyles,
-  /\.modal-card\.shoe-scan-modal-card\s*\{[\s\S]*?width: min\(1080px, calc\(100vw - 32px\)\);[\s\S]*?max-width: 1080px;[\s\S]*?padding: 0;/,
-  'The active scan card must outrank the shared 500px modal width and padding rules.',
-);
-const minimalPreviewStyles = activeShoesStyles.slice(activeShoesStyles.indexOf('/* Minimal shoe scan preview */'));
-assertContains(minimalPreviewStyles, 'border: 1px solid var(--runner-profile-line);', 'Minimal scan preview border');
-assertContains(minimalPreviewStyles, 'border-radius: 16px;', 'Minimal scan preview radius');
-assertContains(minimalPreviewStyles, 'font-size: clamp(1.2rem, 2vw, 1.45rem);', 'Minimal scan preview heading');
-assert.match(
-  minimalPreviewStyles,
-  /\.modal-card\.shoe-scan-modal-card \.shoe-scan-modal-kicker-row\s*\{[\s\S]*?background:\s*transparent;/,
-  'The scan-import label must not render a background strip behind its text.',
-);
-assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-overlay::before,', 'Minimal scan preview decorative reset');
-assertContains(minimalPreviewStyles, 'content: none;', 'Minimal scan preview decorative reset');
-assertContains(minimalPreviewStyles, '.shoe-scan-modal-preview-upload,', 'Minimal scan preview action');
-assertContains(minimalPreviewStyles, 'border-radius: 8px;', 'Minimal scan preview action radius');
 
 for (const [label, filePath] of sources) {
   const source = readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
-  const sourceMinimalPreviewStyles = source.slice(source.indexOf('/* Minimal shoe scan preview */'));
-
-  assertContains(source, '/* Shoe scan import compact repair */', label);
-  assertContains(source, 'width: min(960px, calc(100vw - 32px));', label);
-  assertContains(source, 'overflow-x: hidden;', label);
-  assertContains(source, 'grid-template-columns: minmax(0, 1fr);', label);
-  assertContains(source, '.shoe-scan-modal-preview-upload input {', label);
-  assertContains(source, 'pointer-events: auto;', label);
-  assertContains(source, '.shoe-scan-modal-upload::after {\n  content: none;\n}', label);
-  assertContains(source, '@media (min-width: 981px)', label);
-  assertContains(source, '@media (max-width: 640px)', label);
-  assertContains(source, '/* Shoe scan narrow viewport hard stop: keep only the functional import form. */', label);
-  assertContains(source, '.shoe-scan-modal-visual {\n    display: none !important;\n  }', label);
-  assertContains(source, 'width: min(520px, calc(100vw - 24px));', label);
-  assert.match(
-    sourceMinimalPreviewStyles,
-    /\.modal-card\.shoe-scan-modal-card \.shoe-scan-modal-kicker-row\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?background-image:\s*none;/,
-    `${label} should not render a background strip behind the scan-import label.`,
-  );
-
-  assert.doesNotMatch(
-    source,
-    /\/\* Shoe scan import compact repair \*\/[\s\S]*?\.shoe-scan-modal-layout \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) minmax\(340px, 0\.82fr\);/,
-    `${label} should not default to a two-column scan layout, because it squeezes narrow modals.`,
-  );
+  const referenceStylesStart = source.indexOf('/* Scan modal Apple reference surface */');
+  assert.ok(referenceStylesStart >= 0, `${label} should define the approved scan modal reference surface.`);
+  const nextSourceMarker = source.indexOf('\n/* Source:', referenceStylesStart + 1);
+  const referenceStyles = source.slice(referenceStylesStart, nextSourceMarker >= 0 ? nextSourceMarker : undefined);
 
   assert.match(
-    source,
-    /@media \(min-width: 981px\) \{[\s\S]*?\.shoe-scan-modal-layout \{\s*grid-template-columns: minmax\(0, 1fr\) minmax\(340px, 0\.82fr\);\s*\}/,
-    `${label} should only use the two-column scan layout on desktop-width viewports.`,
+    referenceStyles,
+    /\.modal-card\.shoe-scan-modal-card\s*\{[\s\S]*?width: min\(980px, calc\(100vw - 32px\)\);[\s\S]*?max-width: 980px;[\s\S]*?border-radius: 32px;[\s\S]*?background: #ffffff;/,
+    `${label} should use the wide opaque white scan modal card from the supplied reference.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-layout\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);/,
+    `${label} should keep the scan form in one column.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-visual\s*\{[\s\S]*?display: none !important;/,
+    `${label} should remove the preview and metrics column from the focused scan modal.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-card \.modal-header h3\s*\{[\s\S]*?display: block;[\s\S]*?font-style: normal;[\s\S]*?font-size:/,
+    `${label} should show the upright shared modal title instead of duplicating it in the form.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-card \.modal-close\s*\{[\s\S]*?display: none;/,
+    `${label} should omit the extra close chrome shown absent in the supplied reference.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-copy h4\s*\{[\s\S]*?display: none;/,
+    `${label} should hide the duplicate state heading.`,
+  );
+  assert.doesNotMatch(referenceStyles, /linear-gradient\(/, `${label} should not use gradients in the approved modal surface.`);
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-upload\s*\{[\s\S]*?border: 1px dashed #/,
+    `${label} should use a restrained dashed upload boundary.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-primary:disabled\s*\{[\s\S]*?background: #f1f1f3;[\s\S]*?opacity: 1;/,
+    `${label} should make the unavailable confirming action visibly disabled without opacity washout.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-actions\s*\{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);[\s\S]*?gap: clamp\(12px, 2\.2vw, 34px\);/,
+    `${label} should keep the wide equal action pills from the supplied reference.`,
+  );
+  assert.match(
+    referenceStyles,
+    /\.shoe-scan-modal-card \.shoe-scan-modal-actions :is\(\.shoe-scan-modal-secondary, \.shoe-scan-modal-primary\)\s*\{[\s\S]*?min-height: clamp\(56px, 5\.6vw, 86px\);/,
+    `${label} should size the action pills to the supplied reference proportions.`,
   );
 
+  const fullTrackGuardrailStart = source.indexOf('/* Shoes scan modal full-track guard */');
+  assert.ok(fullTrackGuardrailStart >= 0, `${label} should define a final full-track scan layout guard.`);
+  const fullTrackGuardrails = source.slice(fullTrackGuardrailStart);
   assert.match(
-    source,
-    /@media \(max-width: 640px\) \{[\s\S]*?\.shoe-scan-modal-actions,[\s\S]*?\.shoe-scan-result-actions \{\s*grid-template-columns: 1fr;\s*\}/,
-    `${label} should keep scan actions usable on phones.`,
+    fullTrackGuardrails,
+    /\.shoe-scan-modal-layout\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) !important;/,
+    `${label} should override the earlier important desktop columns when the preview is hidden.`,
+  );
+  assert.match(
+    fullTrackGuardrails,
+    /\.shoe-scan-modal-panel\s*\{[\s\S]*?grid-column: 1 \/ -1;[\s\S]*?width: 100%;/,
+    `${label} should make the scan panel consume the full modal width.`,
   );
 }
 
-console.log('[PASS] shoe scan modal compact repair guardrails passed.');
+console.log('[PASS] shoe scan modal Apple reference guardrails passed.');
