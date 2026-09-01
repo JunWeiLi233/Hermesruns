@@ -36,13 +36,12 @@ const PredictionDetail = React.lazy(routeParamPreloaders['/prediction/:distKey']
 const MuscleTraining = React.lazy(routePreloaders['/muscle-training']);
 const Rewards = React.lazy(routePreloaders['/rewards']);
 const Settings = React.lazy(routePreloaders['/settings']);
-const GarminImportSettings = React.lazy(() => import('./pages/GarminImportSettings'));
 const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
 
 const SKELETON_PREVIEW_VARIANTS = new Set([
   'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
-  'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data',
+  'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'import-data',
   'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule',
   'muscle-training', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'legal',
 ]);
@@ -118,7 +117,6 @@ function RouteLoading() {
   else if (pathname === '/today-run') variant = 'today-run';
   else if (pathname === '/rewards') variant = 'rewards';
   else if (pathname === '/settings') variant = 'settings';
-  else if (pathname === '/settings/garmin-import') variant = 'garmin';
   else if (pathname === '/settings/import-data') variant = 'import-data';
   else if (pathname === '/shoes') variant = 'shoes';
   else if (pathname === '/shoes/add' || pathname === '/add-shoes') variant = 'add-shoes';
@@ -235,7 +233,6 @@ function App() {
                   <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
                   <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
                   <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
-                  <Route path="/settings/garmin-import" element={<UserOnlyRoute><GarminImportSettings /></UserOnlyRoute>} />
                   <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
                   <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />
                   <Route path="/shoes/add" element={<UserOnlyRoute><AddShoes /></UserOnlyRoute>} />

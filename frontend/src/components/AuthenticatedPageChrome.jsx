@@ -14,7 +14,6 @@ function joinClasses(...values) {
 
 function resolveShellTitle(pathname, t) {
   if (pathname === '/settings/import-data') return t('profile.import_data');
-  if (pathname === '/settings/garmin-import') return t('profile.garmin_connect_modal_title');
   return t('settings.heading');
 }
 

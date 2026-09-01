@@ -29,7 +29,6 @@ const routeVariants = {
   '/today-run': 'today-run',
   '/rewards': 'rewards',
   '/settings': 'settings',
-  '/settings/garmin-import': 'garmin',
   '/settings/import-data': 'import-data',
   '/shoes': 'shoes',
   '/shoes/add': 'add-shoes',

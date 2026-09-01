@@ -26,7 +26,6 @@ export const routePreloaders = {
   '/today-run': () => import('../pages/TodayRun.jsx'),
   '/rewards': () => import('../pages/Rewards.jsx'),
   '/settings': () => import('../pages/Settings.jsx'),
-  '/settings/garmin-import': () => import('../pages/GarminImportSettings.jsx'),
   '/settings/import-data': () => import('../pages/ImportDataSettings.jsx'),
   '/shoes': () => import('../pages/Shoes.jsx'),
   '/shoes/add': () => import('../pages/AddShoes.jsx'),
@@ -64,8 +63,7 @@ function hasPreloader(map, key) {
 
 function resolveBaseRouteKey(path) {
   const segments = path.slice(1).split('/');
-  // Longest static prefix wins so nested routes like /settings/garmin-import
-  // beat their /settings parent.
+  // Longest static prefix wins so nested routes beat their parent.
   for (let depth = segments.length; depth >= 1; depth -= 1) {
     const candidate = `/${segments.slice(0, depth).join('/')}`;
     if (hasPreloader(routePreloaders, candidate)) return candidate;
@@ -77,7 +75,7 @@ function resolveBaseRouteKey(path) {
  * Normalizes an href to the key of the lazy chunk that renders it, or null
  * when the href is not a preloadable same-origin app route. Deep links prefer
  * their param pattern (`/runs/123` -> `/runs/:id`); other paths resolve to
- * their longest static base (`/settings/garmin-import` -> itself). Pure helper.
+ * their longest static base. Pure helper.
  */
 export function resolvePreloadablePath(href) {
   const path = normalizeHref(href);
