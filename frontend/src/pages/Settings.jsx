@@ -7,6 +7,7 @@ import PageSkeleton from '../components/PageSkeleton';
 import RunnerShellTopNav from '../components/RunnerShellTopNav';
 import SettingsAtlasLayout from '../components/SettingsAtlasLayout';
 import TopbarNotifications from '../components/TopbarNotifications';
+import GarminImportModal from './GarminImportSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../contexts/I18nContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -84,6 +85,7 @@ export default function Settings() {
   const [wellnessSourcePreferences, setWellnessSourcePreferences] = useState(null);
   const [runActivities, setRunActivities] = useState([]);
   const [runActivityState, setRunActivityState] = useState('loading');
+  const [garminImportModalOpen, setGarminImportModalOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -504,6 +506,7 @@ export default function Settings() {
           syncHealthItems={syncHealthItems}
           wellnessRows={wellnessRows}
           garminLane={garminLane}
+          onOpenGarminImport={() => setGarminImportModalOpen(true)}
           setupChecklist={setupChecklist}
           runActivities={runActivities}
           runActivityState={runActivityState}
@@ -513,7 +516,10 @@ export default function Settings() {
           onAvatarUpload={uploadAvatar}
           onAvatarRemove={removeAvatar}
         />
-
+        <GarminImportModal
+          embedded={garminImportModalOpen}
+          onClose={() => setGarminImportModalOpen(false)}
+        />
       </main>
     </div>
   );

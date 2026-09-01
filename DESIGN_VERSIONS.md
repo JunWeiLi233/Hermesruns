@@ -1,5 +1,15 @@
 # Hermes Design Versions
 
+### Version: DV-2026-09-01-001
+Date: 2026-09-01
+Surface: Embedded Garmin Connect import modal
+Files: `frontend/src/pages/GarminImportSettings.jsx`, `frontend/src/styles/settings-fullwidth.css`, `frontend/src/pages/garminImportRoute.smoke.test.js`, `DESIGN_VERSIONS.md`
+What changed: Reworked the Garmin import flow into an in-place reference-aligned modal with a white sheet, stacked credential and wellness sections, compact horizontal actions, and tighter title spacing.
+Why: The previous presentation was oversized, scroll-bound, and visually inconsistent with the approved Garmin reference.
+Preserve list: Garmin import and credential-save handlers, wellness sync controls, exact localized copy, field ids and values, modal dismissal, Settings ownership, themes, responsive behavior, and accessibility.
+Rollback target: `DV-2026-08-30-033`
+Notes: Presentation-only change; no Garmin API, persistence, or authentication contract changed.
+
 ### Version: DV-2026-08-30-033
 Date: 2026-08-30
 Surface: Analysis low-risk coach advice localization
