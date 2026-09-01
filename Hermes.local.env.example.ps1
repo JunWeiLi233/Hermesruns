@@ -133,6 +133,10 @@ $env:STRAVA_WEBHOOK_VERIFY_TOKEN = "your-strava-webhook-token"
 # Background Strava sync interval in milliseconds (default: 600000 = 10 minutes).
 $env:STRAVA_SYNC_INTERVAL_MS = "600000"
 
+# Bootstrap lookback for scheduled/app-open recent sync when a legacy runner
+# has no persisted Strava list cursor. Full OAuth/link/manual sync is unaffected.
+$env:STRAVA_SYNC_BOOTSTRAP_LOOKBACK_DAYS = "14"
+
 # -----------------------------------------------------------------------------
 # Stripe Billing (Pro Subscription)
 # -----------------------------------------------------------------------------

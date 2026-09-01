@@ -1,10 +1,13 @@
 {
-  "generatedAt": "2026-09-01T07:43:52.692Z",
+  "generatedAt": "2026-09-01T08:40:15.911Z",
   "passed": true,
-  "gitHead": "44be7de4ce6b19a959dddf877d469b175de26861",
-  "statusSnapshot": "",
-  "changedPaths": [],
-  "command": "docker build -f D:\\Hermesruns\\.worktrees\\backup-modal-integration\\Dockerfile -t hermes-autohermes-gate:local .",
+  "gitHead": "764e0c92715deec64cfb777bcfcd6d29ebb7ec5e",
+  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+  "changedPaths": [
+    ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+    "ai-sync/AUTO_HERMES_DOCKER_GATE.json"
+  ],
+  "command": "docker build -f D:\\Hermesruns\\.worktrees\\railway-cost-publish\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
   "output": ""
 }
