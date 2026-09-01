@@ -1,24 +1,40 @@
 package com.hermes.backend;
 
+import jakarta.annotation.PreDestroy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
 @RequestMapping("/api/admin/marathon-pipeline")
 public class AdminRouteExtractionController {
+    /** Terminal job statuses are pruned oldest-first beyond this count so the map cannot grow forever. */
+    private static final int MAX_RETAINED_JOBS = 50;
+
     private final AuthService authService;
     private final MarathonRoutePipelineService pipelineService;
     private final AdminAuditService adminAuditService;
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = Executors.newFixedThreadPool(
+            2,
+            r -> {
+                Thread t = new Thread(r, "marathon-pipeline-worker");
+                t.setDaemon(true);
+                return t;
+            }
+    );
     private final Map<String, JobStatus> jobs = new ConcurrentHashMap<>();
+    private final AtomicLong jobSequence = new AtomicLong();
 
     public AdminRouteExtractionController(
             AuthService authService,
@@ -30,13 +46,21 @@ public class AdminRouteExtractionController {
         this.adminAuditService = adminAuditService;
     }
 
+    @PreDestroy
+    void shutdown() {
+        executorService.shutdownNow();
+    }
+
     public enum JobState { PENDING, RUNNING, SUCCESS, FAILURE }
 
     public static class JobStatus {
         public String jobId;
-        public JobState state;
-        public String error;
-        public MarathonRoutePipelineService.PipelineResult result;
+        // Volatile: written by worker threads, read by request threads and pruning.
+        public volatile JobState state;
+        public volatile String error;
+        public volatile MarathonRoutePipelineService.PipelineResult result;
+        /** Insertion order used for pruning; package-private so it stays out of JSON responses. */
+        long sequence;
     }
 
     @PostMapping("/run")
@@ -58,6 +82,7 @@ public class AdminRouteExtractionController {
         JobStatus status = new JobStatus();
         status.jobId = jobId;
         status.state = JobState.PENDING;
+        status.sequence = jobSequence.incrementAndGet();
         jobs.put(jobId, status);
 
         executorService.submit(() -> {
@@ -97,6 +122,11 @@ public class AdminRouteExtractionController {
                         request.raceId(),
                         "Failed to run marathon pipeline: " + e.getMessage()
                 );
+            } finally {
+                // The only prune trigger: every job that reaches a terminal state
+                // trims the finished-job backlog, so the map stays bounded without
+                // a second prune call on the submit path.
+                pruneFinishedJobs();
             }
         });
 
@@ -128,6 +158,42 @@ public class AdminRouteExtractionController {
         if (request.country() == null || request.country().isBlank()) return new ValidationResult(false, "country is required.");
         if (request.imageFilePath() == null || request.imageFilePath().isBlank()) return new ValidationResult(false, "imageFilePath is required.");
         return new ValidationResult(true, null);
+    }
+
+    /**
+     * Drops the oldest terminal (SUCCESS/FAILURE) job entries beyond {@link #MAX_RETAINED_JOBS}.
+     * The retention cap counts only finished jobs: PENDING/RUNNING entries are never removed
+     * and do not consume retention slots, so a live job cannot be evicted by pruning and the
+     * map settles at most recent {@code MAX_RETAINED_JOBS} finished jobs plus the active set.
+     * A terminal state is the last status mutation a job ever receives, so pruning cannot
+     * race with an active job's status updates, and job ids are UUIDs and never reused, so
+     * removing a mapped entry is always final.
+     */
+    void pruneFinishedJobs() {
+        if (jobs.size() <= MAX_RETAINED_JOBS) {
+            return;
+        }
+        List<JobStatus> finished = new ArrayList<>();
+        for (JobStatus job : jobs.values()) {
+            if (job.state == JobState.SUCCESS || job.state == JobState.FAILURE) {
+                finished.add(job);
+            }
+        }
+        if (finished.size() <= MAX_RETAINED_JOBS) {
+            return;
+        }
+        finished.sort(Comparator.comparingLong(job -> job.sequence));
+        int excess = finished.size() - MAX_RETAINED_JOBS;
+        for (int i = 0; i < finished.size() && excess > 0; i++) {
+            JobStatus job = finished.get(i);
+            if (jobs.remove(job.jobId, job)) {
+                excess--;
+            }
+        }
+    }
+
+    int jobCountForTests() {
+        return jobs.size();
     }
 
     private record ValidationResult(boolean valid, String message) {}

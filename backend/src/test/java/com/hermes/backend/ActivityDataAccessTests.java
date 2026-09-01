@@ -1,10 +1,14 @@
 package com.hermes.backend;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ParameterizedPreparedStatementSetter;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.lang.reflect.Method;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -12,11 +16,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -115,5 +121,92 @@ class ActivityDataAccessTests {
         activityDataAccess.savePoints(points);
 
         verify(jdbcTemplate).batchUpdate(anyString(), eq(points), eq(500), any());
+    }
+
+    @Test
+    void updatePointElevationsBatchesAtFixedSizeAndBindsOnlyElevationColumns() throws Exception {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(
+                activityRepository,
+                activityPointRepository,
+                jdbcTemplate
+        );
+
+        ActivityPoint point = new ActivityPoint();
+        point.setId(101L);
+        point.setElevationRawMeters(10.0);
+        point.setElevationCorrectedMeters(12.5);
+        // A point whose raw elevation stayed null (no barometric profile, no
+        // backfill source) must bind SQL NULL, exactly like the old saveAll.
+        ActivityPoint missingRawPoint = new ActivityPoint();
+        missingRawPoint.setId(102L);
+        missingRawPoint.setElevationCorrectedMeters(13.5);
+        List<ActivityPoint> points = List.of(point, missingRawPoint);
+
+        activityDataAccess.updatePointElevations(19L, points);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ParameterizedPreparedStatementSetter<ActivityPoint>> setterCaptor = ArgumentCaptor
+                .forClass(ParameterizedPreparedStatementSetter.class);
+        verify(jdbcTemplate).batchUpdate(
+                contains("update activity_points"), eq(points), eq(500), setterCaptor.capture());
+
+        PreparedStatement preparedStatement = mock(PreparedStatement.class);
+        setterCaptor.getValue().setValues(preparedStatement, point);
+        verify(preparedStatement).setDouble(1, 10.0);
+        verify(preparedStatement).setDouble(2, 12.5);
+        verify(preparedStatement).setLong(3, 19L);
+        verify(preparedStatement).setLong(4, 101L);
+
+        PreparedStatement missingRawStatement = mock(PreparedStatement.class);
+        setterCaptor.getValue().setValues(missingRawStatement, missingRawPoint);
+        verify(missingRawStatement).setNull(1, Types.DOUBLE);
+        verify(missingRawStatement).setDouble(2, 13.5);
+        verify(missingRawStatement).setLong(3, 19L);
+        verify(missingRawStatement).setLong(4, 102L);
+    }
+
+    @Test
+    void updatePointElevationsSkipsBatchWhenActivityIdMissing() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(
+                activityRepository,
+                activityPointRepository,
+                jdbcTemplate
+        );
+
+        activityDataAccess.updatePointElevations(null, List.of(new ActivityPoint()));
+
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), anyList(), anyInt(), any());
+    }
+
+    @Test
+    void updatePointElevationsBinderRejectsUnpersistedPoint() throws Exception {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        ActivityDataAccess activityDataAccess = new ActivityDataAccess(
+                activityRepository,
+                activityPointRepository,
+                jdbcTemplate
+        );
+
+        ActivityPoint point = new ActivityPoint();
+        point.setId(101L);
+        List<ActivityPoint> points = List.of(point);
+
+        activityDataAccess.updatePointElevations(19L, points);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<ParameterizedPreparedStatementSetter<ActivityPoint>> setterCaptor = ArgumentCaptor
+                .forClass(ParameterizedPreparedStatementSetter.class);
+        verify(jdbcTemplate).batchUpdate(anyString(), eq(points), eq(500), setterCaptor.capture());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> setterCaptor.getValue().setValues(mock(PreparedStatement.class), new ActivityPoint()));
     }
 }

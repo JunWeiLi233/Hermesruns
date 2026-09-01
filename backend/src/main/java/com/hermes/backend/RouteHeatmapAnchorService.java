@@ -2,6 +2,7 @@ package com.hermes.backend;
 
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,22 +12,38 @@ import java.util.Set;
 @Service
 public class RouteHeatmapAnchorService {
 
+    private static final Duration ANCHOR_CACHE_TTL = Duration.ofMinutes(15);
+    private static final String ANCHOR_CACHE_NAMESPACE = "route-anchor";
+
     private static final double CELL_DEGREES = 0.001;
 
     private final ActivityPointRepository activityPointRepository;
+    private final TtlCacheStore cacheStore;
 
-    public RouteHeatmapAnchorService(ActivityPointRepository activityPointRepository) {
+    public RouteHeatmapAnchorService(ActivityPointRepository activityPointRepository, TtlCacheStore cacheStore) {
         this.activityPointRepository = activityPointRepository;
+        this.cacheStore = cacheStore;
     }
 
     public RouteAnchor findAnchor(Runner runner) {
         if (runner == null || runner.getId() == null) {
             return null;
         }
-        return selectAnchor(activityPointRepository.findAllHeatmapPointsByRunnerAndType(
+        // findAnchor aggregates every GPS point of every run into grid cells, so
+        // the selected anchor is cached per runner and activity type for a short TTL.
+        String cacheKey = runner.getId() + ":" + ActivityType.RUN.name();
+        RouteAnchor cached = cacheStore.get(ANCHOR_CACHE_NAMESPACE, cacheKey, RouteAnchor.class).orElse(null);
+        if (cached != null) {
+            return cached;
+        }
+        RouteAnchor anchor = selectAnchor(activityPointRepository.findAllHeatmapPointsByRunnerAndType(
                 runner.getId(),
                 ActivityType.RUN.name()
         ));
+        if (anchor != null) {
+            cacheStore.put(ANCHOR_CACHE_NAMESPACE, cacheKey, anchor, ANCHOR_CACHE_TTL);
+        }
+        return anchor;
     }
 
     static RouteAnchor selectAnchor(List<Object[]> pointRows) {

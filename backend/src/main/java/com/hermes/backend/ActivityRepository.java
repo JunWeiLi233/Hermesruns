@@ -1,10 +1,11 @@
 package com.hermes.backend;
 
+import org.springframework.data.domain.Limit;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
@@ -59,6 +60,14 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<Activity> findByRunnerOrderByIdDesc(Runner runner);
 
     List<Activity> findByRunnerAndActivityTypeOrderByIdDesc(Runner runner, ActivityType activityType);
+
+    /**
+     * Limit-parameterized twin of {@link #findByRunnerAndActivityTypeOrderByIdDesc(Runner, ActivityType)}.
+     * Pushes the row cap into the query so a limited feed load materializes only the
+     * requested most-recent N run entities instead of the runner's entire history.
+     * Callers pass an already clamped positive limit (1..500) — the cap is not re-applied here.
+     */
+    List<Activity> findByRunnerAndActivityTypeOrderByIdDesc(Runner runner, ActivityType activityType, Limit limit);
 
     @Query(value = """
             select a.id

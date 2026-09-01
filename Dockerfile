@@ -46,6 +46,12 @@ RUN addgroup -S hermes \
 
 COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar
 
+# The race-course bulk seeder and admin bulk scans resolve the race catalog at
+# <workdir>/frontend/src/data/worldRaceCatalog.json when the repo-relative path
+# is absent; without this copy production silently skips official-course
+# seeding (boot log: "catalog unavailable").
+COPY --chown=hermes:hermes frontend/src/data/worldRaceCatalog.json ./frontend/src/data/worldRaceCatalog.json
+
 USER hermes
 
 # Lean JVM footprint for small containers. Without these flags the JVM sizes

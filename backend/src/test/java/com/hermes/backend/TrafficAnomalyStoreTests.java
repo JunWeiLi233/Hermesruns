@@ -41,6 +41,42 @@ class TrafficAnomalyStoreTests {
         assertThat(nextWindow.s5xx()).isEqualTo(1);
     }
 
+    @Test
+    void staleCountersAreEvictedWhileLiveCountersAreKept() {
+        MutableClock clock = new MutableClock();
+        TrafficAnomalyStore store = TrafficAnomalyStore.inMemoryForTests(clock);
+
+        store.record("10.0.0.1", 400, Duration.ofSeconds(30), 2, 10, 10);
+        clock.advance(Duration.ofSeconds(31));
+        store.record("10.0.0.2", 400, Duration.ofSeconds(30), 2, 10, 10);
+
+        store.evictStaleCounters(Duration.ofSeconds(30));
+
+        assertThat(store.localCounterCountForTests()).isEqualTo(1);
+
+        // The live counter keeps its window and still warns when the threshold is crossed.
+        TrafficAnomalyStore.Snapshot snapshot = store.record("10.0.0.2", 404, Duration.ofSeconds(30), 2, 10, 10);
+        assertThat(snapshot.s4xx()).isEqualTo(2);
+        assertThat(snapshot.warning()).isTrue();
+    }
+
+    @Test
+    void exceedingLocalCounterCapEvictsStaleEntriesOnWrite() {
+        MutableClock clock = new MutableClock();
+        TrafficAnomalyStore store = TrafficAnomalyStore.inMemoryForTests(clock);
+
+        // Fill past the 50_000-entry cap with counters that all go stale together.
+        for (int i = 0; i <= 50_000; i++) {
+            store.record("10.1." + (i / 256 % 256) + "." + (i % 256), 200, Duration.ofSeconds(30), 10, 10, 10);
+        }
+        assertThat(store.localCounterCountForTests()).isEqualTo(50_001);
+
+        clock.advance(Duration.ofSeconds(31));
+        store.record("10.0.0.1", 200, Duration.ofSeconds(30), 10, 10, 10);
+
+        assertThat(store.localCounterCountForTests()).isEqualTo(1);
+    }
+
     private static final class MutableClock extends Clock {
         private Instant now = Instant.parse("2026-04-29T12:00:00Z");
 

@@ -31,6 +31,7 @@ public class GarminConnectImportService {
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
+    private final ActivityDataAccess activityDataAccess;
     private final FitActivityFileParser fitParser;
     private final ObjectMapper objectMapper;
     private final ConcurrentMap<Long, GarminSyncTracker> syncStates = new ConcurrentHashMap<>();
@@ -47,11 +48,13 @@ public class GarminConnectImportService {
     public GarminConnectImportService(
             ActivityRepository activityRepository,
             ActivityPointRepository activityPointRepository,
+            ActivityDataAccess activityDataAccess,
             FitActivityFileParser fitParser,
             ObjectMapper objectMapper
     ) {
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
+        this.activityDataAccess = activityDataAccess;
         this.fitParser = fitParser;
         this.objectMapper = objectMapper;
     }
@@ -230,16 +233,19 @@ public class GarminConnectImportService {
                 kept++;
 
                 if (batch.size() >= POINTS_BATCH_SIZE) {
-                    activityPointRepository.saveAll(batch);
-                    activityPointRepository.flush();
+                    // Batched raw-JDBC insert (ActivityDataAccess): ActivityPoint uses an
+                    // IDENTITY id, so repository saveAll here costs one INSERT round trip
+                    // per point. Duplicates are already rejected at the activity level
+                    // above, so this is an unconditional insert for a fresh activity —
+                    // same contract as the FIT import path.
+                    activityDataAccess.savePoints(batch);
                     batch.clear();
                 }
             }
         }
 
         if (!batch.isEmpty()) {
-            activityPointRepository.saveAll(batch);
-            activityPointRepository.flush();
+            activityDataAccess.savePoints(batch);
         }
 
         tracker.addImported(1, kept);

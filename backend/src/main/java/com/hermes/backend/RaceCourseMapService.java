@@ -732,7 +732,7 @@ public class RaceCourseMapService {
         if (cached != null && System.currentTimeMillis() - cachedListRowsAtMillis < LIST_ROWS_CACHE_TTL_MS) {
             return cached;
         }
-        List<RaceCourseMapAdminRow> rows = raceCourseMapAssetRepository.findAll().stream()
+        List<RaceCourseMapAdminRow> rows = raceCourseMapAssetRepository.findAllListRows().stream()
                 .map(this::toAdminRow)
                 .toList();
         synchronized (listRowsCacheLock) {
@@ -2678,8 +2678,71 @@ public class RaceCourseMapService {
         return live ? sanitizeStoredLiveResult(asset, result) : result;
     }
 
-    private RaceCourseMapAdminRow toAdminRow(RaceCourseMapAsset asset) {
-        return new RaceCourseMapAdminRow(asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(), buildPreviewSnapshot(asset, false, false), buildPreviewSnapshot(asset, true, false), asset.getUpdatedAt() == null ? null : asset.getUpdatedAt().toString(), asset.getPendingImageUrl() != null && !asset.getPendingImageUrl().isBlank());
+    private RaceCourseMapAdminRow toAdminRow(RaceCourseMapAssetListFields asset) {
+        return new RaceCourseMapAdminRow(asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(), buildListPreviewSnapshot(asset, false), buildListPreviewSnapshot(asset, true), asset.getUpdatedAt() == null ? null : asset.getUpdatedAt().toString(), asset.getPendingImageUrl() != null && !asset.getPendingImageUrl().isBlank());
+    }
+
+    /**
+     * List-mode twin of {@link #toResult(RaceCourseMapAsset, boolean)}: the same
+     * stored-field reading, sanitization, and stored-live plausibility handling,
+     * but sourced from the column projection and never touching the per-row
+     * elevation JSON the admin list does not ship. Must stay behavior-identical
+     * to {@code toResult(asset, live, false)}.
+     */
+    private RaceCourseMapResult toListResult(RaceCourseMapAssetListFields asset, boolean live) {
+        String imageUrl = live ? asset.getLiveImageUrl() : asset.getPendingImageUrl();
+        String source = live ? asset.getLiveSource() : asset.getPendingSource();
+        Integer confidence = live ? asset.getLiveConfidence() : asset.getPendingConfidence();
+        String summary = sanitizeStoredCourseMapSummary(live ? asset.getLiveSummary() : asset.getPendingSummary());
+        String overlayBoundsJson = live ? asset.getLiveOverlayBoundsJson() : asset.getPendingOverlayBoundsJson();
+        String routePointsJson = live ? asset.getLiveRoutePointsJson() : asset.getPendingRoutePointsJson();
+        Boolean aiAssisted = live ? asset.getLiveAiAssisted() : asset.getPendingAiAssisted();
+        OverlayBounds overlayBounds = readJson(overlayBoundsJson, new TypeReference<OverlayBounds>() {}, null);
+        List<RoutePoint> routePoints = readJson(routePointsJson, new TypeReference<List<RoutePoint>>() {}, List.of());
+        boolean detected = !routePoints.isEmpty()
+                || (overlayBounds != null
+                && routePoints.isEmpty()
+                && confidence != null
+                && confidence >= MIN_ADMIN_PREVIEW_ALIGNMENT_CONFIDENCE
+                && Boolean.TRUE.equals(aiAssisted)
+                && isCityLevelReferenceSummary(summary));
+        RaceCourseMapResult result = new RaceCourseMapResult(
+                imageUrl == null ? "" : imageUrl, source == null ? "" : source, detected,
+                confidence == null ? 0 : confidence, summary == null ? "" : summary,
+                overlayBounds,
+                routePoints,
+                List.of(),
+                null, Boolean.TRUE.equals(aiAssisted)
+        );
+        return live ? sanitizeStoredLiveResult(asset, result) : result;
+    }
+
+    /**
+     * List-mode twin of {@link #buildPreviewSnapshot(RaceCourseMapAsset, boolean, boolean)}
+     * with materializeImage=false: no materialized preview image URL, coarse route
+     * polyline, and no elevation payload. Must stay behavior-identical to
+     * {@code buildPreviewSnapshot(asset, pending, false)}.
+     */
+    private PreviewSnapshot buildListPreviewSnapshot(RaceCourseMapAssetListFields asset, boolean pending) {
+        RaceCourseMapResult result = toListResult(asset, !pending);
+        String updatedAt = pending ? (asset.getPendingUpdatedAt() == null ? null : asset.getPendingUpdatedAt().toString()) : (asset.getLiveUpdatedAt() == null ? null : asset.getLiveUpdatedAt().toString());
+        if ((result.imageUrl() == null || result.imageUrl().isBlank()) && (result.summary() == null || result.summary().isBlank())) return null;
+        List<RoutePoint> routePoints = result.routePoints() == null ? List.of() : result.routePoints();
+        routePoints = downsampleRoutePoints(routePoints, LIST_ROUTE_POINT_LIMIT);
+        return new PreviewSnapshot(
+                result.imageUrl(),
+                null,
+                result.source(),
+                result.summary(),
+                result.confidence(),
+                updatedAt,
+                result.overlayBounds(),
+                routePoints,
+                List.of(),
+                null,
+                result.aiAssisted(),
+                result.courseMapDetected()
+        );
     }
 
     private PreviewSnapshot buildPreviewSnapshot(RaceCourseMapAsset asset, boolean pending) {
@@ -2732,7 +2795,7 @@ public class RaceCourseMapService {
         return sampled;
     }
 
-    private RaceCourseMapResult sanitizeStoredLiveResult(RaceCourseMapAsset asset, RaceCourseMapResult liveResult) {
+    private RaceCourseMapResult sanitizeStoredLiveResult(RaceCourseMapAssetListFields asset, RaceCourseMapResult liveResult) {
         if (asset == null || liveResult == null || liveResult.routePoints() == null || liveResult.routePoints().size() < 2) {
             return liveResult;
         }
@@ -2806,7 +2869,7 @@ public class RaceCourseMapService {
                 .formatted(routeDistanceKm, minimumDistanceKm, maximumDistanceKm, distanceKm);
     }
 
-    private RaceCourseMapResult buildStoredLiveCityLevelFallback(RaceCourseMapAsset asset, RaceCourseMapResult liveResult, String invalidReason) {
+    private RaceCourseMapResult buildStoredLiveCityLevelFallback(RaceCourseMapAssetListFields asset, RaceCourseMapResult liveResult, String invalidReason) {
         if (asset == null || liveResult == null) return null;
         if (liveResult.imageUrl() == null || liveResult.imageUrl().isBlank()) return null;
         if (!isStandardCityRoadMarathonCandidate(asset.getRaceName(), asset.getCity(), asset.getCountry(), asset.getDistanceKm())) return null;

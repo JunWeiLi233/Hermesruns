@@ -1,5 +1,7 @@
 package com.hermes.backend;
 
+import jakarta.persistence.EntityManager;
+
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
@@ -11,23 +13,35 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ElevationCorrectionService {
     private static final double DISCREPANCY_THRESHOLD = 0.25;
     private static final int DEM_CHUNK = 100;
     private static final int STATUS_DEM_SAMPLE_LIMIT = 96;
+    private static final int STATUS_CACHE_MAX_ENTRIES = 256;
 
     private final ActivityPointRepository activityPointRepository;
+    private final ActivityDataAccess activityDataAccess;
+    private final EntityManager entityManager;
     private final RestTemplate restTemplate;
-    private final Map<Long, ElevationStatus> statusCache = new ConcurrentHashMap<>();
+    // Bounded LRU cache: without the cap this map grew monotonically (one entry
+    // per activity ever status-checked; entries only left on recalibrate).
+    // Eviction only forces a status recompute on the next request.
+    private final BoundedStatusCache statusCache = new BoundedStatusCache(STATUS_CACHE_MAX_ENTRIES);
 
-    public ElevationCorrectionService(ActivityPointRepository activityPointRepository, RestTemplate restTemplate) {
+    public ElevationCorrectionService(
+            ActivityPointRepository activityPointRepository,
+            ActivityDataAccess activityDataAccess,
+            EntityManager entityManager,
+            RestTemplate restTemplate) {
         this.activityPointRepository = activityPointRepository;
+        this.activityDataAccess = activityDataAccess;
+        this.entityManager = entityManager;
         this.restTemplate = restTemplate;
     }
 
@@ -107,7 +121,16 @@ public class ElevationCorrectionService {
             p.setElevationCorrectedMeters(demElev.get(i));
             corrected.add(demElev.get(i));
         }
-        activityPointRepository.saveAll(points);
+        // Batched raw-JDBC update of exactly the two elevation columns mutated
+        // above — repository saveAll issues one UPDATE per point. The points are
+        // managed entities, so detach them after the batched write; otherwise the
+        // commit-time flush would dirty-check them and re-issue a per-entity
+        // UPDATE on top of the batched statement. The detached in-memory values
+        // still feed the returned result below.
+        activityDataAccess.updatePointElevations(activity.getId(), points);
+        for (ActivityPoint point : points) {
+            entityManager.detach(point);
+        }
         if (activity.getId() != null) {
             statusCache.remove(activity.getId());
         }
@@ -248,6 +271,45 @@ public class ElevationCorrectionService {
         if (a == null || b == null) return 0.0;
         double base = Math.max(1.0, Math.max(Math.abs(a), Math.abs(b)));
         return Math.abs(a - b) / base;
+    }
+
+    int statusCacheSizeForTests() {
+        return statusCache.size();
+    }
+
+    /**
+     * Access-ordered LRU with a hard entry cap, mirroring TtlCacheStore's local
+     * fallback. Synchronized is enough here: operations are short map mutations
+     * on immutable status records.
+     */
+    private static final class BoundedStatusCache {
+        private final int maxEntries;
+        private final LinkedHashMap<Long, ElevationStatus> entries;
+
+        BoundedStatusCache(int maxEntries) {
+            this.maxEntries = maxEntries;
+            this.entries = new LinkedHashMap<>(16, 0.75f, true);
+        }
+
+        synchronized ElevationStatus get(Long activityId) {
+            return entries.get(activityId);
+        }
+
+        synchronized void put(Long activityId, ElevationStatus status) {
+            entries.put(activityId, status);
+            while (entries.size() > maxEntries) {
+                var oldest = entries.keySet().iterator().next();
+                entries.remove(oldest);
+            }
+        }
+
+        synchronized void remove(Long activityId) {
+            entries.remove(activityId);
+        }
+
+        synchronized int size() {
+            return entries.size();
+        }
     }
 
     public record LatLng(double latitude, double longitude) {}

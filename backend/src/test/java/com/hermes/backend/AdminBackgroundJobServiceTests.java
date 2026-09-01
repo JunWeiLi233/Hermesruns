@@ -132,6 +132,19 @@ class AdminBackgroundJobServiceTests {
     }
 
     @Test
+    void courseMapScanQueuePollStaysSlowToAvoidQueryStorm() {
+        // The scan executor is single-threaded and holds the fair lock while
+        // waiting, so at most one worker polls; a fast poll (the old 250ms)
+        // burns a constant stream of queries from that worker. FIFO ordering
+        // comes from the shared lock and claim query, not from poll speed.
+        Long pollMillis = (Long) ReflectionTestUtils.getField(
+                AdminBackgroundJobService.class,
+                "COURSE_MAP_SCAN_QUEUE_POLL_MILLIS");
+
+        assertThat(pollMillis).isEqualTo(1500L);
+    }
+
+    @Test
     void runCourseMapScanAsyncProcessesCourseMapsOneAtATimeInFifoOrder() throws Exception {
         AdminBackgroundJobRepository repository = mock(AdminBackgroundJobRepository.class);
         when(repository.save(any(AdminBackgroundJob.class))).thenAnswer(invocation -> invocation.getArgument(0));

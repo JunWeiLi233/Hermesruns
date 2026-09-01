@@ -5,12 +5,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -18,7 +20,7 @@ import java.util.function.Supplier;
 public class LoginAttemptStore {
     private static final Logger log = LoggerFactory.getLogger(LoginAttemptStore.class);
 
-    private record AttemptRecord(int count, Instant lockedUntil) {}
+    private record AttemptRecord(int count, Instant lockedUntil, Instant expiresAt) {}
 
     private final AppRedisProperties redisProperties;
     private final Supplier<StringRedisTemplate> redisTemplateSupplier;
@@ -133,11 +135,32 @@ public class LoginAttemptStore {
     }
 
     private void recordFailureLocal(String namespace, String key, int maxAttempts, Duration lockout) {
+        Instant now = clock.instant();
         localAttempts.compute(localKey(namespace, key), (ignored, existing) -> {
             int count = existing == null ? 1 : existing.count() + 1;
-            Instant lockedUntil = count >= maxAttempts ? clock.instant().plus(lockout) : null;
-            return new AttemptRecord(count, lockedUntil);
+            Instant lockedUntil = count >= maxAttempts ? now.plus(lockout) : null;
+            // Mirrors the Redis fallback, which re-arms the count-key TTL on every
+            // failure: an entry untouched for a full lockout is stale and may be
+            // swept so the local map cannot grow without bound.
+            return new AttemptRecord(count, lockedUntil, now.plus(lockout));
         });
+    }
+
+    @Scheduled(fixedDelay = 300_000)
+    void sweepExpiredLocalAttempts() {
+        Instant now = clock.instant();
+        for (Map.Entry<String, AttemptRecord> entry : localAttempts.entrySet()) {
+            if (now.isAfter(entry.getValue().expiresAt())) {
+                // Two-arg remove: if a concurrent failure re-armed the record between the
+                // read above and this removal, the mapped value no longer matches and the
+                // fresh record is kept instead of being silently dropped.
+                localAttempts.remove(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    int localAttemptSizeForTests() {
+        return localAttempts.size();
     }
 
     private StringRedisTemplate redisTemplate() {
