@@ -34,3 +34,531 @@
     position: static;
   }
 }
+
+/* Garmin modal Apple reference surface */
+.settings-garmin-import-modal-shell {
+  align-items: center;
+  padding: clamp(20px, 4vw, 64px);
+  background: #f7f7f8;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+#root .settings-garmin-import-modal-card {
+  display: flex;
+  flex-direction: column;
+  width: min(1010px, 72.2vw);
+  max-width: 1010px;
+  height: min(1008px, 75vw, 90.5vh);
+  max-height: min(1008px, calc(100dvh - 32px));
+  border: 1px solid rgba(28, 31, 36, 0.1);
+  border-radius: 28px;
+  background: #ffffff !important;
+  color: #202124;
+  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.16);
+}
+
+#root .settings-garmin-import-modal-card .modal-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  padding: clamp(20px, 2.6vw, 38px) clamp(32px, 4.4vw, 62px) 0;
+}
+
+#root .settings-garmin-import-modal-card .modal-header h3 {
+  padding-right: 48px;
+  color: #202124;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.9rem, 3.2vw, 2.8rem);
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 1.08;
+  transform: none;
+}
+
+#root .settings-garmin-import-modal-card .modal-close {
+  top: clamp(22px, 2.4vw, 34px);
+  right: clamp(24px, 2.85vw, 40px);
+  display: grid;
+  width: clamp(36px, 3.6vw, 50px);
+  height: clamp(36px, 3.6vw, 50px);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #5f6368;
+  font-size: 1.6rem;
+  line-height: 1;
+  text-align: center;
+  box-shadow: none;
+}
+
+#root .settings-garmin-import-modal-card .modal-close:hover {
+  background: #e9eaed;
+  color: #202124;
+}
+
+#root .settings-garmin-import-modal-card .modal-form {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+#root .settings-garmin-import-modal-summary {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: clamp(24px, 2.45vw, 34px) clamp(32px, 3.45vw, 48px) 0;
+}
+
+#root .settings-garmin-import-modal-mark {
+  width: clamp(42px, 4.15vw, 58px);
+  height: clamp(42px, 4.15vw, 58px);
+  border-radius: clamp(12px, 1.15vw, 16px);
+  background: #e8f7f8;
+  color: #237987;
+}
+
+#root .settings-garmin-import-modal-summary > div:nth-child(2) > span {
+  color: #626a70;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+#root .settings-garmin-import-modal-summary p {
+  max-width: 62ch;
+  margin: 5px 0 0;
+  color: #5f666d;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+#root .settings-garmin-import-modal-card .garmin-import-pill {
+  padding: 8px 13px;
+  border: 1px solid #b9e0e5;
+  border-radius: 999px;
+  background: #effafb;
+  color: #237987;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+#root .settings-garmin-import-modal-content {
+  padding: clamp(20px, 2vw, 28px) clamp(32px, 3.45vw, 48px) clamp(36px, 3.6vw, 50px);
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-main-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 16px;
+}
+
+#root .settings-garmin-import-modal-content :is(.garmin-profile-form-card, .garmin-profile-wellness-card) {
+  padding: clamp(20px, 2vw, 28px);
+  border: 1px solid #e3e5e8 !important;
+  border-radius: 18px;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  color: #202124;
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-card-head,
+#root .settings-garmin-import-modal-content .garmin-import-page-section-head {
+  gap: 16px;
+}
+
+#root .settings-garmin-import-modal-content :is(.garmin-profile-card-head, .garmin-profile-card-title) {
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-card-title > span,
+#root .settings-garmin-import-modal-content .garmin-import-page-section-head > div > span {
+  color: #70777d;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-card-title strong,
+#root .settings-garmin-import-modal-content .garmin-import-page-section-head strong {
+  margin-top: 7px;
+  color: #202124;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-card-title p {
+  max-width: 62ch;
+  margin: 9px 0 0;
+  color: #687078;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-field-grid {
+  gap: clamp(16px, 1.6vw, 22px);
+  margin-top: clamp(18px, 1.85vw, 26px);
+}
+
+#root .settings-garmin-import-modal-content .modal-label {
+  margin-bottom: 8px;
+  color: #30363b;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+
+#root .settings-garmin-import-modal-content :is(input, select) {
+  min-height: clamp(44px, 3.85vw, 54px);
+  padding: 0 14px;
+  border: 1px solid #d7dce1 !important;
+  border-radius: 12px;
+  background: #ffffff !important;
+  color: #202124 !important;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.95rem;
+  box-shadow: none !important;
+}
+
+#root .settings-garmin-import-modal-content :is(input, select):hover {
+  border-color: #bdc5cc !important;
+}
+
+#root .settings-garmin-import-modal-content :is(input, select):focus {
+  border-color: #55aeb8 !important;
+  box-shadow: 0 0 0 3px rgba(85, 174, 184, 0.16) !important;
+  outline: 0;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-field--limit {
+  margin-top: clamp(18px, 1.7vw, 24px);
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-field-meta {
+  color: #687078;
+  font-family: "Manrope", "Noto Sans SC", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1fr) !important;
+  gap: clamp(14px, 1.45vw, 20px);
+  width: 100%;
+  max-width: clamp(300px, 30.3vw, 424px);
+  margin-top: clamp(20px, 1.85vw, 26px);
+  margin-left: auto;
+  padding-top: clamp(18px, 1.7vw, 24px);
+  border-top: 1px solid #e1e4e7;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions :is(.btn-secondary, .btn-primary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0;
+  min-height: clamp(44px, 3.85vw, 54px);
+  margin: 0 !important;
+  padding: 0 18px !important;
+  border-radius: 12px;
+  clip-path: none !important;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.95rem;
+  font-style: normal !important;
+  font-weight: 750;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+  transform: none !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions .btn-secondary {
+  border: 1px solid #d8dde2 !important;
+  background: #ffffff !important;
+  color: #315a84 !important;
+  box-shadow: none !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions .btn-secondary:hover {
+  border-color: #bdc5cc !important;
+  background: #f7f8f9 !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions .btn-primary {
+  border: 1px solid #db5d4d !important;
+  background: #ed6958 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions .btn-primary:hover:not(:disabled) {
+  border-color: #c84e40 !important;
+  background: #df5b4c !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-profile-wellness-card {
+  background: #ffffff !important;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-section {
+  gap: 18px;
+  margin-top: 22px;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-page-copy {
+  max-width: 72ch;
+  color: #616a72;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-row {
+  min-height: 32px;
+  color: #30363b;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.9rem;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-row .is-inline {
+  color: #737c84;
+  font-size: 0.82rem;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-toggle {
+  position: relative;
+  appearance: none;
+  width: 48px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #d5dce1;
+  box-shadow: none;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-toggle::after {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  content: "";
+  transition: transform 160ms ease;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-toggle--active {
+  background: #55aeb8;
+}
+
+#root .settings-garmin-import-modal-content .garmin-wellness-toggle--active::after {
+  transform: translateX(20px);
+}
+
+#root .settings-garmin-import-modal-content :is(.garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn) {
+  min-height: 42px;
+  border: 1px solid #d8dde2;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #315a84;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+#root .settings-garmin-import-modal-content :is(.garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn):hover:not(:disabled) {
+  border-color: #bdc5cc;
+  background: #f7f8f9;
+}
+
+#root .settings-garmin-import-modal-card :is(.modal-close, .garmin-import-actions button, .garmin-wellness-toggle, .garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn):focus-visible {
+  outline: 3px solid rgba(49, 90, 132, 0.28);
+  outline-offset: 3px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .settings-garmin-import-modal-shell,
+body:not(.theme-light):not(.theme-high-contrast-light) .settings-garmin-import-modal-shell {
+  background: rgba(7, 10, 14, 0.56);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-card,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-card {
+  border-color: #3a4148;
+  background: #1f2327 !important;
+  color: #f3f5f7;
+  box-shadow: 0 30px 76px rgba(0, 0, 0, 0.4);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-card .modal-header h3,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-card .modal-header h3 {
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-card .modal-close,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-card .modal-close {
+  background: #30363d;
+  color: #dfe5ea;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-summary p,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-summary p,
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-profile-card-title p,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-profile-card-title p,
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-import-page-copy,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-import-page-copy {
+  color: #c7cdd3;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content :is(.garmin-profile-form-card, .garmin-profile-wellness-card),
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content :is(.garmin-profile-form-card, .garmin-profile-wellness-card) {
+  border-color: #41484f !important;
+  background: #252a2f !important;
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-profile-card-title strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-profile-card-title strong,
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-import-page-section-head strong,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-import-page-section-head strong {
+  color: #f3f5f7;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content :is(input, select),
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content :is(input, select) {
+  border-color: #454d55 !important;
+  background: #1a1e22 !important;
+  color: #f3f5f7 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-wellness-toggle,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-wellness-toggle {
+  background: #4a535b;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-wellness-toggle--active,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-wellness-toggle--active {
+  background: #55aeb8;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content :is(.garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn),
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content :is(.garmin-wellness-sync-btn, .garmin-wellness-save-credentials-btn) {
+  border-color: #4a535b;
+  background: #252a2f;
+  color: #d9e5ed;
+}
+
+@media (max-width: 760px) {
+  #root .settings-garmin-import-modal-card {
+    width: calc(100vw - 24px);
+    height: auto;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 20px;
+  }
+
+  #root .settings-garmin-import-modal-card .modal-header {
+    padding: 22px 24px 0;
+  }
+
+  #root .settings-garmin-import-modal-card .modal-close {
+    top: 16px;
+    right: 16px;
+  }
+
+  #root .settings-garmin-import-modal-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 22px 24px 0;
+  }
+
+  #root .settings-garmin-import-modal-summary > .garmin-import-pill {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  #root .settings-garmin-import-modal-content {
+    padding: 22px 24px 28px;
+  }
+
+  #root .settings-garmin-import-modal-content :is(.garmin-profile-form-card, .garmin-profile-wellness-card) {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  #root .settings-garmin-import-modal-content .garmin-import-field-grid,
+  #root .settings-garmin-import-modal-content .garmin-import-actions,
+  #root .settings-garmin-import-modal-content .garmin-import-page-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .settings-garmin-import-modal-content .garmin-import-actions {
+    max-width: none;
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .settings-garmin-import-modal-content .garmin-wellness-toggle::after {
+    transition: none;
+  }
+}
+
+/* Garmin modal full-length action divider */
+#root .settings-garmin-import-modal-content .garmin-import-actions {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  border-top: 0;
+  grid-template-columns: minmax(140px, 170px) minmax(160px, 220px) !important;
+  justify-content: end;
+}
+
+#root .settings-garmin-import-modal-content .garmin-import-actions::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e1e4e7;
+  content: "";
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-content .garmin-import-actions::before,
+body:not(.theme-light):not(.theme-high-contrast-light) #root .settings-garmin-import-modal-content .garmin-import-actions::before {
+  background: #414a52;
+}
+
+@media (max-width: 760px) {
+  #root .settings-garmin-import-modal-content .garmin-import-actions {
+    grid-template-columns: minmax(0, 1fr) !important;
+    margin-left: 0;
+  }
+}

@@ -37,6 +37,7 @@ export default function SettingsAtlasLayout({
   syncHealthItems,
   wellnessRows = [],
   garminLane,
+  onOpenGarminImport,
   setupChecklist,
   runActivities = [],
   runActivityState = 'loading',
@@ -354,7 +355,7 @@ export default function SettingsAtlasLayout({
               <button
                 type="button"
                 className="st-service-btn is-connect"
-                onClick={() => navigate('/settings/garmin-import')}
+                onClick={onOpenGarminImport}
               >
                 {garminLane.primaryAction}
               </button>
