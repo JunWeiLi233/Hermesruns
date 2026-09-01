@@ -80,7 +80,7 @@ assert(
     && skeletonSource.includes('page-skeleton__profile-training-grid')
     && skeletonSource.includes('page-skeleton__profile-progression')
     && skeletonSource.includes('page-skeleton__profile-rewards')
-    && skeletonSource.includes('page-skeleton__shoes-signal')
+    && skeletonSource.includes('page-skeleton__shoes-workspace-head')
     && skeletonSource.includes('page-skeleton__shoes-inventory-grid')
     && skeletonSource.includes('page-skeleton__heatmap-map-shell')
     && skeletonSource.includes('page-skeleton__heatmap-utility-divider')
@@ -90,18 +90,18 @@ assert(
     && skeletonSource.includes('page-skeleton__schedule-command-metric')
     && skeletonSource.includes('page-skeleton__schedule-coach-card')
     && skeletonSource.includes('page-skeleton__today-coaching')
-    && skeletonSource.includes('page-skeleton__rewards-achievements')
+    && skeletonSource.includes('page-skeleton__rewards-hero-card')
     && skeletonSource.includes('page-skeleton__settings-identity-hero')
     && skeletonSource.includes('page-skeleton__settings-content-grid')
     && skeletonSource.includes('page-skeleton__settings-preferences')
     && skeletonSource.includes('page-skeleton__settings-checklist')
     && skeletonSource.includes('page-skeleton__settings-weekly')
     && skeletonSource.includes('page-skeleton__settings-services-grid')
-    && skeletonSource.includes('page-skeleton__settings-health')
+    && skeletonSource.includes('page-skeleton__settings-services-inner')
     && skeletonSource.includes('page-skeleton__muscle-above-fold')
     && skeletonSource.includes('page-skeleton__muscle-selector')
     && skeletonSource.includes('page-skeleton__muscle-reference')
-    && skeletonSource.includes('page-skeleton__run-detail-main-grid')
+    && skeletonSource.includes('page-skeleton__run-detail-content-grid')
     && skeletonSource.includes('page-skeleton__insight-command-grid')
     && skeletonSource.includes('page-skeleton__prediction-command-grid')
     && skeletonSource.includes('page-skeleton__admin-layout')
@@ -219,7 +219,7 @@ assert(
     '.page-skeleton__settings-grid',
     '.page-skeleton__garmin-panel',
     '.page-skeleton__import-panel',
-    '.page-skeleton__import-sources',
+    '.page-skeleton__import-lanes',
     '.page-skeleton__admin-layout',
     '.page-skeleton__admin-sidebar',
     '.page-skeleton__profile-editorial-hero',
@@ -230,7 +230,7 @@ assert(
     '.page-skeleton__profile-progression',
     '.page-skeleton__profile-bottom-grid',
     '.page-skeleton__profile-rewards',
-    '.page-skeleton__shoes-signal',
+    '.page-skeleton__shoes-workspace-head',
     '.page-skeleton__shoes-stage',
     '.page-skeleton__shoes-inventory-grid',
     '.page-skeleton__heatmap-map-shell',
@@ -238,11 +238,10 @@ assert(
     '.page-skeleton__schedule-week-grid',
     '.page-skeleton__schedule-bottom-grid',
     '.page-skeleton__today-coaching',
-    '.page-skeleton__today-middle-grid',
     '.page-skeleton__today-coach',
     '.page-skeleton__muscle-above-fold',
     '.page-skeleton__muscle-workbench-grid',
-    '.page-skeleton__rewards-achievements',
+    '.page-skeleton__rewards-hero-card',
     '.page-skeleton__rewards-catalog-grid',
     '.page-skeleton__settings-content-grid',
     '.page-skeleton__settings-bottom-grid',
@@ -251,13 +250,13 @@ assert(
     '.page-skeleton__settings-checklist',
     '.page-skeleton__settings-weekly',
     '.page-skeleton__settings-services-grid',
-    '.page-skeleton__settings-health',
-    '.page-skeleton__run-detail-main-grid',
+    '.page-skeleton__settings-services-inner',
+    '.page-skeleton__run-detail-content-grid',
     '.page-skeleton__run-detail-telemetry',
     '.page-skeleton__insight-command-grid',
     '.page-skeleton__prediction-command-grid',
     '.page-skeleton__garmin-content-grid',
-    '.page-skeleton__import-workbench',
+    '.page-skeleton__import-lanes',
     '.page-skeleton__add-shoes-content-grid',
     '.page-skeleton__analysis-cockpit',
     '.page-skeleton__analysis-reference-grid',
@@ -319,7 +318,7 @@ assert(
 );
 
 assert(
-  styleSource.includes('--hermes-admin-skeleton-rail-width: 240px')
+  styleSource.includes('--hermes-admin-skeleton-rail-width: 304px')
     && styleSource.includes('--hermes-admin-skeleton-topbar-height: 80px')
     && styleSource.includes('.page-skeleton__admin-sidebar {')
     && styleSource.includes('position: fixed;')
