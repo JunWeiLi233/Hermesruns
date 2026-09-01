@@ -1,14 +1,31 @@
 {
-  "generatedAt": "2026-09-01T06:51:33.366Z",
+  "generatedAt": "2026-09-01T07:42:03.849Z",
   "passed": true,
-  "gitHead": "b1c40e8f13bd06a603cd9e1bc2bd1d7b5f3211e1",
-  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\n M frontend/src/pages/loadingSkeleton.smoke.test.js",
+  "gitHead": "90ae41af949f92df53d51a84f936434af5aab75b",
+  "statusSnapshot": "M .ai-sync/AUTO_HERMES_DOCKER_GATE.json\n M .ai-sync/AUTO_HERMES_DOCKER_GATE.md\n M DESIGN_VERSIONS.md\n M frontend/src/components/Modal.jsx\n M frontend/src/components/TopbarNotifications.jsx\n M frontend/src/components/topbarNotifications.smoke.test.js\n M frontend/src/pages/Analysis.jsx\n M frontend/src/pages/Runs.jsx\n M frontend/src/pages/Shoes.jsx\n M frontend/src/pages/analysisSorenessModal.smoke.test.js\n M frontend/src/pages/garminImportProfileGrid.smoke.test.js\n M frontend/src/pages/loadingSkeleton.smoke.test.js\n M frontend/src/pages/profileImportModalDesign.smoke.test.js\n M frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js\n M frontend/src/pages/shoeScanModalLayout.smoke.test.js\n M frontend/src/styles/_split/analysis.css\n M frontend/src/styles/_split/integrations.css\n M frontend/src/styles/_split/light-theme-overrides.css\n M frontend/src/styles/_split/shoes.css\n M frontend/src/styles/all-pages-liquid-glass.css",
   "changedPaths": [
     ".ai-sync/AUTO_HERMES_DOCKER_GATE.md",
+    "DESIGN_VERSIONS.md",
     "ai-sync/AUTO_HERMES_DOCKER_GATE.json",
-    "frontend/src/pages/loadingSkeleton.smoke.test.js"
+    "frontend/src/components/Modal.jsx",
+    "frontend/src/components/TopbarNotifications.jsx",
+    "frontend/src/components/topbarNotifications.smoke.test.js",
+    "frontend/src/pages/Analysis.jsx",
+    "frontend/src/pages/Runs.jsx",
+    "frontend/src/pages/Shoes.jsx",
+    "frontend/src/pages/analysisSorenessModal.smoke.test.js",
+    "frontend/src/pages/garminImportProfileGrid.smoke.test.js",
+    "frontend/src/pages/loadingSkeleton.smoke.test.js",
+    "frontend/src/pages/profileImportModalDesign.smoke.test.js",
+    "frontend/src/pages/runsDeleteModalReferenceStyle.smoke.test.js",
+    "frontend/src/pages/shoeScanModalLayout.smoke.test.js",
+    "frontend/src/styles/_split/analysis.css",
+    "frontend/src/styles/_split/integrations.css",
+    "frontend/src/styles/_split/light-theme-overrides.css",
+    "frontend/src/styles/_split/shoes.css",
+    "frontend/src/styles/all-pages-liquid-glass.css"
   ],
-  "command": "docker build -f C:\\Users\\Junwei\\.codex\\worktrees\\2912\\Hermesruns\\Dockerfile -t hermes-autohermes-gate:local .",
+  "command": "docker build -f D:\\Hermesruns\\.worktrees\\backup-modal-integration\\Dockerfile -t hermes-autohermes-gate:local .",
   "reason": "Docker publish gate passed for the current working tree.",
   "output": ""
 }
