@@ -1880,63 +1880,91 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-soreness-modal-shell {
-  background: rgba(18, 24, 35, 0.46);
-  backdrop-filter: blur(14px);
+  align-items: center;
+  padding: clamp(20px, 4vw, 64px);
+  background: rgba(242, 243, 245, 0.78);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .analysis-soreness-modal-card {
-  width: min(100%, 430px);
+  width: min(1370px, 84.5vw);
+  max-width: 1370px;
+  height: min(742px, 78.5vh);
+  max-height: min(742px, calc(100vh - 32px));
+  max-height: min(742px, calc(100dvh - 32px));
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgba(91, 74, 64, 0.14);
-  border-radius: 24px;
+  border: 1px solid rgba(31, 35, 40, 0.1);
+  border-radius: 28px;
   background: #ffffff;
-  box-shadow: 0 28px 80px rgba(18, 24, 35, 0.22);
-  color: var(--text-strong);
+  box-shadow: 0 24px 64px rgba(16, 24, 40, 0.14);
+  color: #202124;
 }
 
 .analysis-soreness-modal-card .modal-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding: 24px 28px 16px;
+  gap: 20px;
+  padding: clamp(36px, 6vw, 96px) clamp(32px, 5.45vw, 90px) 0;
   background: transparent;
 }
 
 .analysis-soreness-modal-card .modal-header h3 {
   margin: 0;
-  color: var(--text-strong);
-  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  color: #202124;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(2.2rem, 4.4vw, 4.5rem);
+  font-style: normal;
   font-weight: 800;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.06em;
+  line-height: 1.08;
+  transform: none;
 }
 
 .analysis-soreness-modal-card .modal-close {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  background: rgba(18, 24, 35, 0.06);
-  color: var(--text-muted);
-  font-size: 1.5rem;
+  width: clamp(40px, 6.3vw, 102px);
+  height: clamp(40px, 6.3vw, 102px);
+  flex: 0 0 clamp(40px, 6.3vw, 102px);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f0f1f3;
+  color: #5f6368;
+  font-size: clamp(1.5rem, 2.3vw, 2.2rem);
+  line-height: 1;
+  margin-top: -12px;
 }
 
 .analysis-soreness-modal-card .modal-close:hover {
-  background: rgba(18, 24, 35, 0.1);
-  color: var(--text-strong);
+  background: #e6e7e9;
+  color: #202124;
 }
 
 .analysis-soreness-modal-card .modal-form {
-  padding: 0 28px 28px;
+  max-height: min(780px, calc(100vh - 32px));
+  max-height: min(780px, calc(100dvh - 32px));
+  padding: clamp(26px, 3.4vw, 56px) clamp(32px, 5.45vw, 90px) clamp(32px, 5vw, 82px);
+  overflow-y: auto;
+}
+
+.analysis-soreness-modal-content {
+  display: grid;
+  gap: clamp(22px, 3.7vw, 60px);
 }
 
 .analysis-soreness-modal-level {
-  width: fit-content;
-  min-width: 84px;
-  padding: 9px 16px;
-  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(116px, 15vw, 244px);
+  min-width: 0;
+  min-height: clamp(50px, 6.9vw, 112px);
+  padding: 0 24px;
+  border: 1px solid rgba(56, 163, 94, 0.3);
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: clamp(1rem, 2.4vw, 2.3rem);
   font-weight: 800;
   text-align: center;
 }
@@ -1960,22 +1988,62 @@ body.theme-midnight .vdot-badge,
 }
 
 .analysis-soreness-modal-copy {
-  margin: 18px 0 24px;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
+  margin: 0;
+  color: #5f6368;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.15rem, 2.3vw, 2.3rem);
+  line-height: 1.45;
 }
 
 .analysis-soreness-modal-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2.4vw, 38px);
+  margin-top: 6px;
   margin: 0;
 }
 
 .analysis-soreness-modal-actions .modal-button {
-  min-height: 44px;
-  margin: 0;
+  min-height: clamp(54px, 8.6vw, 140px) !important;
+  margin: 0 !important;
+  padding: 0 20px !important;
+  border: 1px solid #dfe1e5 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #5f6368 !important;
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Manrope", sans-serif;
+  font-size: clamp(1.2rem, 2.2vw, 2.35rem) !important;
+  font-style: normal !important;
+  font-weight: 700;
+  letter-spacing: 0 !important;
+  line-height: 1;
+  text-transform: none !important;
+  clip-path: none !important;
+  box-shadow: 0 8px 16px rgba(16, 24, 40, 0.06) !important;
+  transform: none !important;
+}
+
+.analysis-soreness-modal-actions .modal-button.btn-secondary:hover {
+  border-color: #c9cdd2 !important;
+  background: #f7f8f9 !important;
+  color: #202124 !important;
+}
+
+.analysis-soreness-modal-actions .modal-button.btn-primary {
+  border-color: #202124 !important;
+  background: #202124 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(16, 24, 40, 0.12) !important;
+}
+
+.analysis-soreness-modal-actions .modal-button.btn-primary:hover:not(:disabled) {
+  border-color: #000000 !important;
+  background: #000000 !important;
+}
+
+.analysis-soreness-modal-card :is(.modal-close, .analysis-soreness-modal-actions .modal-button):focus-visible {
+  outline: 3px solid rgba(49, 90, 132, 0.32);
+  outline-offset: 3px;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-card {
@@ -1988,25 +2056,54 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-card .mo
   color: #f8fafc;
 }
 
+body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-card .analysis-soreness-modal-copy {
+  color: #c7cdd3;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions .modal-button {
+  border-color: #4a535b !important;
+  background: #252a2f !important;
+  color: #eef1f4 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions .modal-button.btn-primary {
+  border-color: #f3f5f7 !important;
+  background: #f3f5f7 !important;
+  color: #202124 !important;
+}
+
 @media (max-width: 540px) {
   .analysis-soreness-modal-shell {
-    align-items: flex-start;
-    padding: 10px;
+    align-items: center;
+    padding: 16px;
   }
 
   .analysis-soreness-modal-card {
-    width: calc(100vw - 20px);
-    margin-top: 18vh;
+    width: calc(100vw - 32px);
     border-radius: 20px;
   }
 
   .analysis-soreness-modal-card .modal-header {
-    padding: 20px 20px 14px;
+    padding: 36px 24px 0;
+  }
+
+  .analysis-soreness-modal-card .modal-header h3 {
+    padding-right: 12px;
+    font-size: clamp(2rem, 9vw, 2.8rem);
+  }
+
+  .analysis-soreness-modal-card .modal-close {
+    margin-top: 0;
   }
 
   .analysis-soreness-modal-card .modal-form {
-    padding: 0 20px 20px;
+    padding: 24px 24px 28px;
   }
+
+  .analysis-soreness-modal-content {
+    gap: 22px;
+  }
+
 }
 
 .analysis-injury-prevention-status-error {
@@ -10107,4 +10204,280 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > strong {
   color: #1c1917;
+}
+
+/* Soreness modal ideal wide-sheet guardrails */
+.analysis-soreness-modal-card {
+  box-sizing: border-box;
+  width: min(1370px, 84.5vw) !important;
+  max-width: 1370px !important;
+  height: min(742px, 78.5vh) !important;
+  min-height: 0 !important;
+  max-height: min(742px, calc(100dvh - 32px)) !important;
+}
+
+.analysis-soreness-modal-card .modal-header {
+  min-width: 0;
+}
+
+.analysis-soreness-modal-card .modal-header h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.analysis-soreness-modal-card .modal-close {
+  position: static;
+  width: clamp(44px, 6.3vw, 102px);
+  height: clamp(44px, 6.3vw, 102px);
+  flex: 0 0 clamp(44px, 6.3vw, 102px);
+}
+
+.analysis-soreness-modal-copy {
+  white-space: nowrap;
+}
+
+.analysis-soreness-modal-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  width: 100% !important;
+}
+
+.analysis-soreness-modal-actions .modal-button {
+  width: 100% !important;
+  min-width: 0;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .analysis-soreness-modal-shell {
+  background: #f7f7f8 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .analysis-soreness-modal-card,
+body:is(.theme-light, .theme-high-contrast-light) .analysis-soreness-modal-card .modal-form {
+  background: #ffffff !important;
+}
+
+@media (max-width: 540px) {
+  .analysis-soreness-modal-card {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: calc(100dvh - 32px) !important;
+    min-height: 0;
+  }
+
+  .analysis-soreness-modal-card .modal-header h3 {
+    flex: 1 1 auto;
+    font-size: clamp(1.35rem, 7vw, 2rem);
+    white-space: nowrap;
+  }
+
+  .analysis-soreness-modal-card .modal-close {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .analysis-soreness-modal-copy {
+    white-space: normal;
+  }
+}
+
+/* Soreness modal compact scale */
+.analysis-soreness-modal-card {
+  width: min(1080px, 78vw) !important;
+  max-width: 1080px !important;
+  height: min(620px, 72vh) !important;
+  max-height: min(620px, calc(100dvh - 32px)) !important;
+}
+
+.analysis-soreness-modal-card .modal-header {
+  gap: 16px;
+  padding: clamp(24px, 3.6vw, 52px) clamp(24px, 4vw, 56px) 0;
+}
+
+.analysis-soreness-modal-card .modal-header h3 {
+  font-size: clamp(1.75rem, 3.3vw, 3.3rem);
+}
+
+.analysis-soreness-modal-card .modal-close {
+  width: clamp(44px, 4.6vw, 72px);
+  height: clamp(44px, 4.6vw, 72px);
+  flex-basis: clamp(44px, 4.6vw, 72px);
+  margin-top: -4px;
+  font-size: clamp(1.35rem, 1.8vw, 1.8rem);
+}
+
+.analysis-soreness-modal-card .modal-form {
+  max-height: min(620px, calc(100dvh - 32px));
+  padding: clamp(22px, 2.4vw, 34px) clamp(24px, 4vw, 56px) clamp(24px, 3vw, 40px);
+}
+
+.analysis-soreness-modal-content {
+  gap: clamp(18px, 2.5vw, 32px);
+}
+
+.analysis-soreness-modal-level {
+  width: clamp(110px, 13vw, 190px);
+  min-height: clamp(48px, 5.5vw, 78px);
+  padding: 0 18px;
+  font-size: clamp(1rem, 2vw, 1.8rem);
+}
+
+.analysis-soreness-modal-copy {
+  font-size: clamp(1rem, 1.9vw, 1.9rem);
+  line-height: 1.35;
+}
+
+.analysis-soreness-modal-actions {
+  gap: clamp(12px, 1.7vw, 24px);
+}
+
+.analysis-soreness-modal-actions .modal-button {
+  min-height: clamp(52px, 5vw, 72px) !important;
+  font-size: clamp(1rem, 1.5vw, 1.4rem) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 540px) {
+  .analysis-soreness-modal-card {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+    height: auto !important;
+  }
+
+  .analysis-soreness-modal-card .modal-header {
+    padding: 26px 24px 0;
+  }
+
+  .analysis-soreness-modal-card .modal-header h3 {
+    font-size: clamp(1.35rem, 7vw, 2rem);
+  }
+
+  .analysis-soreness-modal-card .modal-form {
+    padding: 22px 24px 28px;
+  }
+
+  .analysis-soreness-modal-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Soreness modal level above title */
+.analysis-soreness-modal-card .modal-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px;
+}
+
+.analysis-soreness-modal-card .modal-header-main {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+}
+
+.analysis-soreness-modal-card .modal-header-main h3 {
+  min-width: 0;
+}
+
+.analysis-soreness-modal-card .modal-header-main .analysis-soreness-modal-level {
+  justify-self: start;
+}
+
+.analysis-soreness-modal-card .modal-close {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  margin-top: 0;
+}
+
+@media (max-width: 540px) {
+  .analysis-soreness-modal-card .modal-header {
+    gap: 14px;
+  }
+
+  .analysis-soreness-modal-card .modal-header-main {
+    gap: 14px;
+  }
+}
+
+/* Soreness modal proper compact scale */
+.analysis-soreness-modal-card {
+  width: min(760px, calc(100vw - 32px)) !important;
+  max-width: 760px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(560px, calc(100dvh - 32px)) !important;
+}
+
+.analysis-soreness-modal-card .modal-header {
+  gap: 14px;
+  padding: 28px 40px 0;
+}
+
+.analysis-soreness-modal-card .modal-header h3 {
+  font-size: clamp(1.6rem, 4vw, 2.7rem);
+}
+
+.analysis-soreness-modal-card .modal-close {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  margin-top: 0;
+  font-size: 1.5rem;
+}
+
+.analysis-soreness-modal-card .modal-form {
+  max-height: min(560px, calc(100dvh - 32px));
+  padding: 22px 40px 30px;
+}
+
+.analysis-soreness-modal-content {
+  gap: 24px;
+}
+
+.analysis-soreness-modal-level {
+  width: clamp(110px, 16vw, 160px);
+  min-height: clamp(48px, 6vw, 64px);
+  padding: 0 16px;
+  font-size: clamp(1rem, 2.3vw, 1.5rem);
+}
+
+.analysis-soreness-modal-copy {
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  line-height: 1.4;
+}
+
+.analysis-soreness-modal-actions {
+  gap: 14px;
+}
+
+.analysis-soreness-modal-actions .modal-button {
+  min-height: 60px !important;
+  font-size: 1.1rem !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 540px) {
+  .analysis-soreness-modal-card {
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+  }
+
+  .analysis-soreness-modal-card .modal-header {
+    padding: 24px 20px 0;
+  }
+
+  .analysis-soreness-modal-card .modal-header h3 {
+    font-size: clamp(1.25rem, 6.5vw, 1.8rem);
+  }
+
+  .analysis-soreness-modal-card .modal-form {
+    padding: 20px 20px 24px;
+  }
+
+  .analysis-soreness-modal-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
