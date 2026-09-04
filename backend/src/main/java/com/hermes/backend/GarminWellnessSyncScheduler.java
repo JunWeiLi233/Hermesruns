@@ -24,6 +24,9 @@ public class GarminWellnessSyncScheduler {
     @Value("${garmin.wellness.sync.enabled:true}")
     private boolean syncEnabled;
 
+    @Value("${app.background.polling.enabled:true}")
+    private boolean scheduledPollingEnabled = true;
+
     public GarminWellnessSyncScheduler(
             RunnerRepository runnerRepository,
             GarminWellnessImportService wellnessImportService,
@@ -38,6 +41,9 @@ public class GarminWellnessSyncScheduler {
 
     @Scheduled(fixedDelayString = "${garmin.wellness.sync.interval-ms:1800000}", initialDelay = 180_000)
     public void syncAllGarminWellnessRunners() {
+        if (!scheduledPollingEnabled) {
+            return;
+        }
         runSyncJob(null, "scheduler");
     }
 
@@ -106,7 +112,12 @@ public class GarminWellnessSyncScheduler {
                     continue;
                 }
 
-                int daysBack = runner.getGarminWellnessLastSyncedAt() == null ? 90 : 7;
+                // A slept service may miss more than a week. Keep the existing 90-day
+                // bootstrap bound, but cover the persisted gap when resuming.
+                int daysBack = runner.getGarminWellnessLastSyncedAt() == null ? 90
+                        : (int) Math.min(90, Math.max(7, java.time.temporal.ChronoUnit.DAYS.between(
+                                runner.getGarminWellnessLastSyncedAt().toLocalDate(),
+                                java.time.LocalDate.now()) + 1));
 
                 boolean started = wellnessImportService.startWellnessImport(runner, email, decryptedPassword, daysBack);
                 if (started) {

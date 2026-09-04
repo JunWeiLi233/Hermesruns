@@ -38,6 +38,9 @@ public class StravaAutoSyncScheduler {
     @Value("${strava.sync.enabled:true}")
     private boolean syncEnabled;
 
+    @Value("${app.background.polling.enabled:true}")
+    private boolean scheduledPollingEnabled = true;
+
     @Value("${strava.sync.interval-ms:600000}")
     private long baseIntervalMs;
 
@@ -73,6 +76,9 @@ public class StravaAutoSyncScheduler {
      */
     @Scheduled(fixedDelayString = "${strava.sync.interval-ms:600000}", initialDelay = 120_000)
     public void syncAllStravaRunners() {
+        if (!scheduledPollingEnabled) {
+            return;
+        }
         if (!syncEnabled) {
             log.debug("Strava auto-sync: scheduled sync disabled");
             return;
