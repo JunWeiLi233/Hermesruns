@@ -89,13 +89,22 @@ public class GarminWellnessImportService {
         return tracker.snapshot();
     }
 
+    /** Blocking completion path for background schedulers; HTTP callers keep using startWellnessImport. */
+    public boolean importWellnessNow(Runner runner, String email, String password, int daysBack) {
+        WellnessSyncTracker tracker = syncStates.computeIfAbsent(runner.getId(), ignored -> new WellnessSyncTracker());
+        if (!tracker.tryBegin()) {
+            return false;
+        }
+        return runImport(runner, email, password, Math.min(Math.max(1, daysBack), 365), tracker);
+    }
+
     public long getRateLimitRetryAfterSeconds(Long runnerId) {
         WellnessSyncTracker tracker = syncStates.get(runnerId);
         return tracker == null ? 0 : tracker.retryAfterSeconds();
     }
 
     @SuppressWarnings("unchecked")
-    private void runImport(Runner runner, String email, String password, int daysBack, WellnessSyncTracker tracker) {
+    private boolean runImport(Runner runner, String email, String password, int daysBack, WellnessSyncTracker tracker) {
         Path tempDir = null;
         try {
             tempDir = Files.createTempDirectory("hermes-garmin-wellness-");
@@ -108,13 +117,13 @@ public class GarminWellnessImportService {
             if (!Boolean.TRUE.equals(success)) {
                 String error = (String) result.get("error");
                 markDownloadFailure(tracker, error != null ? error : "Garmin wellness download failed.", result);
-                return;
+                return false;
             }
 
             List<Map<String, Object>> days = (List<Map<String, Object>>) result.get("days");
             if (days == null || days.isEmpty()) {
                 tracker.markCompleted("No wellness data found on Garmin Connect.");
-                return;
+                return true;
             }
 
             tracker.addDaysFetched(days.size());
@@ -259,9 +268,15 @@ public class GarminWellnessImportService {
 
             updateCoachFromWellness(runner);
 
+            if (daysPersisted != days.size()) {
+                tracker.markFailed("Some wellness days could not be saved; the next sync will retry the gap.");
+                return false;
+            }
             tracker.markCompleted(null);
+            return true;
         } catch (Exception e) {
             markDownloadFailure(tracker, "Wellness import failed: " + safeMessage(e), Map.of());
+            return false;
         } finally {
             if (tempDir != null) {
                 deleteTempDir(tempDir);
@@ -339,7 +354,7 @@ public class GarminWellnessImportService {
         coachRunnerStateRepository.save(coachRunnerState);
     }
 
-    private Map<String, Object> callPythonWellnessDownloader(String email, String password, LocalDate startDate, LocalDate endDate) throws IOException, InterruptedException {
+    Map<String, Object> callPythonWellnessDownloader(String email, String password, LocalDate startDate, LocalDate endDate) throws IOException, InterruptedException {
         Path scriptPath = resolveWellnessScript();
 
         ProcessBuilder pb = new ProcessBuilder("python", scriptPath.toString());

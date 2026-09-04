@@ -174,6 +174,18 @@ const normalizeRemoteUrlForTest = (value) => String(value || "")
 
 console.log("PASS auto-hermes-push-main");
 {
+  const policy = fs.readFileSync(path.resolve(".tools/auto-commit.ps1"), "utf8");
+  const block = policy.match(/\$publishableRegexes = @\(([\s\S]*?)\n\s*\)/);
+  assert.ok(block, "the explicit product-file allowlist must exist");
+  const patterns = [...block[1].matchAll(/'([^']+)'/g)].map((match) => new RegExp(match[1]));
+  const allowed = (file) => patterns.some((pattern) => pattern.test(file));
+  assert.equal(allowed(".tools/garmin_wellness_download.py"), true,
+    "the tracked Garmin runtime downloader is application code");
+  for (const file of [".tools/garmin_wellness_download.py.local", ".tools/garmin_credentials.json", ".tools/unknown.py"]) {
+    assert.equal(allowed(file), false, `runtime script approval must not allow ${file}`);
+  }
+}
+{
   const launcher = fs.readFileSync(path.resolve("start_hermes.bat"), "utf8");
   const noListenerStart = launcher.indexOf('"if ($listenerPids.Count -eq 0) {"');
   const liveListenerStart = launcher.indexOf('"$owner = $null;"', noListenerStart);

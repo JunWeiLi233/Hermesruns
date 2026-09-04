@@ -24,6 +24,9 @@ public class GarminWellnessSyncScheduler {
     @Value("${garmin.wellness.sync.enabled:true}")
     private boolean syncEnabled;
 
+    @Value("${app.background.polling.enabled:true}")
+    private boolean scheduledPollingEnabled = true;
+
     public GarminWellnessSyncScheduler(
             RunnerRepository runnerRepository,
             GarminWellnessImportService wellnessImportService,
@@ -38,6 +41,9 @@ public class GarminWellnessSyncScheduler {
 
     @Scheduled(fixedDelayString = "${garmin.wellness.sync.interval-ms:1800000}", initialDelay = 180_000)
     public void syncAllGarminWellnessRunners() {
+        if (!scheduledPollingEnabled) {
+            return;
+        }
         runSyncJob(null, "scheduler");
     }
 
@@ -46,6 +52,15 @@ public class GarminWellnessSyncScheduler {
     }
 
     private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource) {
+        return runSyncJob(actor, triggerSource, false);
+    }
+
+    /** Runs on the dedicated wake worker instead of dispatching another worker. */
+    public boolean syncOnWake() {
+        return AdminBackgroundJob.STATUS_COMPLETED.equals(runSyncJob(null, "wake_catchup", true).getStatus());
+    }
+
+    private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource, boolean waitForCompletion) {
         if (!syncEnabled) {
             AdminBackgroundJob job = adminBackgroundJobService.createJob(
                     "GARMIN_WELLNESS_SYNC",
@@ -74,7 +89,12 @@ public class GarminWellnessSyncScheduler {
             return job;
         }
 
-        adminBackgroundJobService.runAsync(job, runners.size(), () -> executeSync(job, runners));
+        if (waitForCompletion) {
+            adminBackgroundJobService.markRunning(job, runners.size());
+            executeSync(job, runners);
+        } else {
+            adminBackgroundJobService.runAsync(job, runners.size(), () -> executeSync(job, runners));
+        }
         return job;
     }
 
@@ -106,16 +126,22 @@ public class GarminWellnessSyncScheduler {
                     continue;
                 }
 
-                int daysBack = runner.getGarminWellnessLastSyncedAt() == null ? 90 : 7;
+                // A slept service may miss more than a week. Keep the existing 90-day
+                // bootstrap bound, but cover the persisted gap when resuming.
+                int daysBack = runner.getGarminWellnessLastSyncedAt() == null ? 90
+                        : (int) Math.min(90, Math.max(7, java.time.temporal.ChronoUnit.DAYS.between(
+                                runner.getGarminWellnessLastSyncedAt().toLocalDate(),
+                                java.time.LocalDate.now()) + 1));
 
-                boolean started = wellnessImportService.startWellnessImport(runner, email, decryptedPassword, daysBack);
-                if (started) {
-                    runner.setGarminWellnessLastSyncedAt(LocalDateTime.now());
-                    runnerRepository.save(runner);
+                LocalDateTime syncStartedAt = LocalDateTime.now();
+                boolean completed = wellnessImportService.importWellnessNow(runner, email, decryptedPassword, daysBack);
+                if (completed) {
+                    // Never merge this detached runner over a concurrently refreshed provider token.
+                    runnerRepository.recordGarminWellnessSyncSuccess(runner.getId(), syncStartedAt);
                     synced++;
                 } else {
                     failed++;
-                    failures.add(failureRecord(runner, "Import already running or failed to start"));
+                    failures.add(failureRecord(runner, "Import already running or did not complete successfully"));
                 }
             } catch (Exception e) {
                 log.warn("Garmin wellness auto-sync: failed for runner {}: {}", runner.getId(), e.getMessage());
