@@ -14,7 +14,8 @@ class SleepWakeCatchUpTests {
         List<Runnable> queue = new ArrayList<>();
         AtomicInteger runs = new AtomicInteger();
         SleepWakeCatchUp catchUp = new SleepWakeCatchUp(queue::add,
-                runs::incrementAndGet, runs::incrementAndGet, runs::incrementAndGet);
+                () -> { runs.incrementAndGet(); return true; },
+                () -> { runs.incrementAndGet(); return true; }, runs::incrementAndGet);
 
         catchUp.afterStartup();
         catchUp.afterStartup();
@@ -28,17 +29,17 @@ class SleepWakeCatchUpTests {
     }
 
     @Test
-    void failedIntegrationDoesNotPreventOtherCatchUpsOrRetryForever() {
+    void failedIntegrationStillRunsTheOtherProviderButDefersCoachWithoutPolling() {
         AtomicInteger garminRuns = new AtomicInteger();
         AtomicInteger coachRuns = new AtomicInteger();
         SleepWakeCatchUp catchUp = new SleepWakeCatchUp(Runnable::run,
                 () -> { throw new IllegalStateException("test provider unavailable"); },
-                garminRuns::incrementAndGet, coachRuns::incrementAndGet);
+                () -> { garminRuns.incrementAndGet(); return true; }, coachRuns::incrementAndGet);
 
         catchUp.afterStartup();
         catchUp.afterStartup();
 
         assertThat(garminRuns).hasValue(1);
-        assertThat(coachRuns).hasValue(1);
+        assertThat(coachRuns).hasValue(0);
     }
 }

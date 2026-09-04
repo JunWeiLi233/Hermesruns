@@ -7,17 +7,18 @@ import org.springframework.context.event.EventListener;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
-/** One non-blocking catch-up dispatch per cold start, never an idle polling loop. */
+/** One sequential catch-up pass off the readiness thread, never an idle polling loop. */
 public final class SleepWakeCatchUp {
     private static final Logger log = LoggerFactory.getLogger(SleepWakeCatchUp.class);
     private final Executor executor;
-    private final Runnable strava;
-    private final Runnable garmin;
+    private final BooleanSupplier strava;
+    private final BooleanSupplier garmin;
     private final Runnable coach;
     private final AtomicBoolean started = new AtomicBoolean();
 
-    public SleepWakeCatchUp(Executor executor, Runnable strava, Runnable garmin, Runnable coach) {
+    public SleepWakeCatchUp(Executor executor, BooleanSupplier strava, BooleanSupplier garmin, Runnable coach) {
         this.executor = executor;
         this.strava = strava;
         this.garmin = garmin;
@@ -31,20 +32,25 @@ public final class SleepWakeCatchUp {
         }
         executor.execute(() -> {
             log.info("Sleep mode: starting one wake catch-up pass");
-            runStep("Strava", strava);
-            runStep("Garmin", garmin);
-            runStep("Coach", coach);
-            log.info("Sleep mode: wake catch-up dispatch complete; recurring network polling is disabled");
+            boolean stravaReady = runStep("Strava", strava);
+            boolean garminReady = runStep("Garmin", garmin);
+            if (stravaReady && garminReady) {
+                runStep("Coach", () -> { coach.run(); return true; });
+            } else {
+                log.info("Sleep mode: coach audit deferred because a provider is busy or failed; no polling retry");
+            }
+            log.info("Sleep mode: wake catch-up pass complete; recurring network polling is disabled");
         });
     }
 
-    private static void runStep(String name, Runnable step) {
+    private static boolean runStep(String name, BooleanSupplier step) {
         try {
-            step.run();
+            return step.getAsBoolean();
         } catch (RuntimeException error) {
             // Provider exceptions can contain URLs or credentials; log only the error type.
             log.warn("Sleep mode: {} wake step failed ({}); other steps will continue",
                     name, error.getClass().getSimpleName());
+            return false;
         }
     }
 }

@@ -200,6 +200,7 @@ function Get-PathPolicy {
         '^backend/(src|pom\.xml|mvnw(\.cmd)?|\.mvn/)',
         '^\.tools/(auto-commit\.ps1|agent-sync\.mjs|verify-frontend-runtime-sync\.mjs|verify-backend-runtime-sync\.mjs|run-backend\.cmd|import-shoe-catalog\.mjs|auto-hermes-(docker-gate|finish|issues|pull-main|push-main|security|tech-debt)\.(mjs|test\.mjs)|auto-hermes-browser\.mjs|auto-hermes-playwright\.mjs|frontend-source-map-security\.smoke\.test\.mjs|hermes-repository\.mjs|maven-wrapper-windows\.smoke\.test\.mjs|public-seo-files\.smoke\.test\.mjs|railway-deployment-contract\.smoke\.test\.mjs|refresh-architecture-diagrams\.(mjs|test\.mjs))$',
         '^\.tools/audit-marathon-coursemaps\.mjs$',
+        '^\.tools/garmin_wellness_download\.py$',
         '^\.tools/(auto-hermes-browser|auto-hermes-playwright|auto-hermes-tools\.test|auto-hermes-finish|auto-hermes-finish\.test)\.mjs$',
         '^docs/(ADMIN_SECURITY_DEPLOYMENT\.md|PROJECT_MAP\.md)$',
         '^docs/deployment/',

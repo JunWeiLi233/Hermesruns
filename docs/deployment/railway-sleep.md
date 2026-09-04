@@ -13,11 +13,19 @@ The default `production` profile retains the existing always-on behavior.
   or admin job records are accessed. Manual sync, OAuth, app-open sync, and
   webhook handlers remain enabled and preserve their existing protections.
 - The nightly cron is disabled, but its coach audit runs once after cold-start
-  readiness. A bounded asynchronous executor dispatches a single wake catch-up
-  pass using the existing Strava and Garmin manual paths. Disabled integrations
-  remain disabled. A failing dispatch does not suppress the other integrations.
+  readiness. A bounded asynchronous executor runs a single sequential wake pass:
+  Strava completes, then Garmin completes, then coaching audits the imported data.
+  HTTP readiness does not wait for this pass. Disabled integrations remain disabled;
+  a failed integration does not suppress the other provider. If either provider is
+  busy or fails, coaching is deferred rather than planning from incomplete data.
+  There is no polling retry; the next wake can retry, and normal request-driven
+  coaching remains available. Manual sync stays async.
+  Multiweek coaching gaps align the calendar without compounding unverified load
+  increases; normal single-week progression and completed workouts are preserved.
 - Strava continues from its persisted cursor. Garmin catches up from the last
-  sync date, with the existing minimum 7-day and maximum 90-day bootstrap bound.
+  successful sync date, with the existing minimum 7-day and maximum 90-day bootstrap bound.
+  Failed or partially persisted Garmin imports retain the previous watermark.
+  The timestamp update touches only that field, not detached provider credentials.
   Gaps beyond 90 days require an explicit longer manual import.
 - Cache expiry, login-attempt cleanup, and stale tracker cleanup remain enabled;
   these are in-memory operations and do not intentionally create network traffic.
@@ -29,6 +37,12 @@ The default `production` profile retains the existing always-on behavior.
 
 Run `SleepPollingTests`, `SleepProfileTests`, `SleepWakeCatchUpTests`, and
 `SleepModeConfigurationTests`, plus the existing Strava/OAuth/webhook tests.
+Also run `GarminWellnessCompletionTests`, `GarminWellnessWatermarkTests`, and
+`AutomatedCoachServiceTests`; the offline downloader checks are
+`python -m unittest discover -s backend/src/test/python -p 'test_garmin_wellness_download.py'`.
+Live Garmin imports still require the existing Python/garth runtime and script;
+this profile does not install them. Missing dependencies fail without advancing
+the successful-sync watermark.
 The real Hikari test waits for zero idle connections and then executes a query
 through a newly established connection; allow up to 100 seconds for that test.
 

@@ -106,6 +106,15 @@ public class StravaAutoSyncScheduler {
     }
 
     private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource) {
+        return runSyncJob(actor, triggerSource, false);
+    }
+
+    /** Runs on the dedicated wake worker, so later providers see completed imports. */
+    public boolean syncOnWake() {
+        return AdminBackgroundJob.STATUS_COMPLETED.equals(runSyncJob(null, "wake_catchup", true).getStatus());
+    }
+
+    private AdminBackgroundJob runSyncJob(Runner actor, String triggerSource, boolean waitForCompletion) {
         if (!syncEnabled) {
             AdminBackgroundJob job = adminBackgroundJobService.createJob(
                     "STRAVA_GLOBAL_SYNC",
@@ -147,7 +156,12 @@ public class StravaAutoSyncScheduler {
         }
 
         final long tickStartMs = System.currentTimeMillis();
-        adminBackgroundJobService.runAsync(job, stravaRunners.size(), () -> executeSync(job, stravaRunners, tickStartMs));
+        if (waitForCompletion) {
+            adminBackgroundJobService.markRunning(job, stravaRunners.size());
+            executeSync(job, stravaRunners, tickStartMs);
+        } else {
+            adminBackgroundJobService.runAsync(job, stravaRunners.size(), () -> executeSync(job, stravaRunners, tickStartMs));
+        }
         return job;
     }
 

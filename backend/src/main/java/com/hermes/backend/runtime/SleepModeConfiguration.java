@@ -37,8 +37,8 @@ public class SleepModeConfiguration {
             @Value("${strava.sync.enabled:true}") boolean stravaEnabled,
             @Value("${garmin.wellness.sync.enabled:true}") boolean garminEnabled) {
         return new SleepWakeCatchUp(executor,
-                () -> { if (stravaEnabled) strava.triggerAdminSync(null, "wake_catchup"); },
-                () -> { if (garminEnabled) garmin.triggerAdminSync(null, "wake_catchup"); },
+                () -> !stravaEnabled || strava.syncOnWake(),
+                () -> !garminEnabled || garmin.syncOnWake(),
                 () -> coach.ifAvailable(Coach8020NightlyScheduler::nightlyCoachAudit));
     }
 }

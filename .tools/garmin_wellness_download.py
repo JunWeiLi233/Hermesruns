@@ -37,26 +37,43 @@ def _safe_int(val, default=None):
         return default
 
 
-def _fetch_wellness(client, day_str):
-    try:
-        from garth.data import DailySummary
-        summary = DailySummary.get(client, day_str)
-        if summary is None:
-            return None
-        attrs = vars(summary) if hasattr(summary, '__dict__') else {}
-        all_attrs = {}
-        if hasattr(summary, '__dict__'):
-            all_attrs.update(summary.__dict__)
-        if hasattr(summary, '_json'):
-            all_attrs.update(summary._json if isinstance(summary._json, dict) else {})
-        if hasattr(summary, 'json') and callable(summary.json):
-            try:
-                all_attrs.update(summary.json())
-            except Exception:
-                pass
-        return all_attrs
-    except Exception:
+def _model_attributes(entry):
+    if entry is None:
         return None
+    attrs = {}
+    if hasattr(entry, '__dict__'):
+        attrs.update(entry.__dict__)
+    if hasattr(entry, '_json'):
+        attrs.update(entry._json if isinstance(entry._json, dict) else {})
+    if hasattr(entry, 'json') and callable(entry.json):
+        attrs.update(entry.json())
+    return attrs
+
+
+def _failure_result(exc, message):
+    # Inspect provider details for classification only; never emit their text or URLs.
+    for error in (exc, exc.__cause__, exc.__context__):
+        if error is None:
+            continue
+        response = getattr(error, "response", None)
+        text = str(error).lower()
+        if (getattr(response, "status_code", None) == 429
+                or getattr(error, "status_code", None) == 429
+                or any(marker in text for marker in ("429", "too many requests", "rate limit"))):
+            headers = getattr(response, "headers", None) or {}
+            retry_after = _safe_int(headers.get("Retry-After", headers.get("retry-after")), 900)
+            return {
+                "success": False,
+                "error": "Garmin is temporarily rate limiting requests. Please retry later.",
+                "errorCode": "GARMIN_RATE_LIMITED",
+                "retryAfterSeconds": max(60, min(3600, retry_after)),
+            }
+    return {"success": False, "error": message}
+
+
+def _fetch_wellness(client, day_str):
+    from garth.data import DailySummary
+    return _model_attributes(DailySummary.get(client, day_str))
 
 
 def _build_wellness(summary_data):
@@ -84,24 +101,8 @@ def _build_wellness(summary_data):
 
 
 def _fetch_sleep(client, day_str):
-    try:
-        from garth.data import SleepData
-        sleep = SleepData.get(client, day_str)
-        if sleep is None:
-            return None
-        attrs = {}
-        if hasattr(sleep, '__dict__'):
-            attrs.update(sleep.__dict__)
-        if hasattr(sleep, '_json'):
-            attrs.update(sleep._json if isinstance(sleep._json, dict) else {})
-        if hasattr(sleep, 'json') and callable(sleep.json):
-            try:
-                attrs.update(sleep.json())
-            except Exception:
-                pass
-        return attrs
-    except Exception:
-        return None
+    from garth.data import SleepData
+    return _model_attributes(SleepData.get(client, day_str))
 
 
 def _build_sleep(sleep_data):
@@ -124,24 +125,8 @@ def _build_sleep(sleep_data):
 
 
 def _fetch_hrv(client, day_str):
-    try:
-        from garth.data import HRVData
-        hrv = HRVData.get(client, day_str)
-        if hrv is None:
-            return None
-        attrs = {}
-        if hasattr(hrv, '__dict__'):
-            attrs.update(hrv.__dict__)
-        if hasattr(hrv, '_json'):
-            attrs.update(hrv._json if isinstance(hrv._json, dict) else {})
-        if hasattr(hrv, 'json') and callable(hrv.json):
-            try:
-                attrs.update(hrv.json())
-            except Exception:
-                pass
-        return attrs
-    except Exception:
-        return None
+    from garth.data import HRVData
+    return _model_attributes(HRVData.get(client, day_str))
 
 
 def _build_hrv(hrv_data):
@@ -160,24 +145,8 @@ def _build_hrv(hrv_data):
 
 
 def _fetch_stress(client, day_str):
-    try:
-        from garth.stats import DailyStress
-        stress = DailyStress.get(client, day_str)
-        if stress is None:
-            return None
-        attrs = {}
-        if hasattr(stress, '__dict__'):
-            attrs.update(stress.__dict__)
-        if hasattr(stress, '_json'):
-            attrs.update(stress._json if isinstance(stress._json, dict) else {})
-        if hasattr(stress, 'json') and callable(stress.json):
-            try:
-                attrs.update(stress.json())
-            except Exception:
-                pass
-        return attrs
-    except Exception:
-        return None
+    from garth.stats import DailyStress
+    return _model_attributes(DailyStress.get(client, day_str))
 
 
 def _build_stress(stress_data):
@@ -194,24 +163,11 @@ def _build_stress(stress_data):
 
 def _fetch_body(client, day_str):
     from garth.data import WeightData
-    try:
-        weights = WeightData.list(client, day_str)
-        if not weights:
-            return None
-        entry = weights[0] if isinstance(weights, list) else weights
-        attrs = {}
-        if hasattr(entry, '__dict__'):
-            attrs.update(entry.__dict__)
-        if hasattr(entry, '_json'):
-            attrs.update(entry._json if isinstance(entry._json, dict) else {})
-        if hasattr(entry, 'json') and callable(entry.json):
-            try:
-                attrs.update(entry.json())
-            except Exception:
-                pass
-        return attrs
-    except Exception:
+    weights = WeightData.list(client, day_str)
+    if not weights:
         return None
+    entry = weights[0] if isinstance(weights, list) else weights
+    return _model_attributes(entry)
 
 
 def _build_body(body_data):
@@ -249,10 +205,7 @@ def main():
     try:
         garth.login(email, password)
     except Exception as exc:
-        json.dump(
-            {"success": False, "error": f"Garmin login failed: {exc}"},
-            sys.stdout,
-        )
+        json.dump(_failure_result(exc, "Garmin login failed."), sys.stdout)
         return
 
     start = date.fromisoformat(start_date_str)
@@ -260,27 +213,31 @@ def main():
     client = garth.client
 
     days = []
-    for d in _date_range(start, end):
-        day_str = d.isoformat()
+    try:
+        for d in _date_range(start, end):
+            day_str = d.isoformat()
 
-        summary_data = _fetch_wellness(client, day_str)
-        sleep_data = _fetch_sleep(client, day_str)
-        hrv_data = _fetch_hrv(client, day_str)
-        stress_data = _fetch_stress(client, day_str)
-        body_data = _fetch_body(client, day_str)
+            summary_data = _fetch_wellness(client, day_str)
+            sleep_data = _fetch_sleep(client, day_str)
+            hrv_data = _fetch_hrv(client, day_str)
+            stress_data = _fetch_stress(client, day_str)
+            body_data = _fetch_body(client, day_str)
 
-        has_any = any(v is not None for v in [summary_data, sleep_data, hrv_data, stress_data, body_data])
-        if not has_any:
-            continue
+            has_any = any(v is not None for v in [summary_data, sleep_data, hrv_data, stress_data, body_data])
+            if not has_any:
+                continue
 
-        days.append({
-            "date": day_str,
-            "wellness": _build_wellness(summary_data),
-            "sleep": _build_sleep(sleep_data),
-            "hrv": _build_hrv(hrv_data),
-            "stress": _build_stress(stress_data),
-            "body": _build_body(body_data),
-        })
+            days.append({
+                "date": day_str,
+                "wellness": _build_wellness(summary_data),
+                "sleep": _build_sleep(sleep_data),
+                "hrv": _build_hrv(hrv_data),
+                "stress": _build_stress(stress_data),
+                "body": _build_body(body_data),
+            })
+    except Exception as exc:
+        json.dump(_failure_result(exc, "Garmin wellness download failed."), sys.stdout)
+        return
 
     result = {
         "success": True,

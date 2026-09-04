@@ -44,20 +44,38 @@ class SleepModeConfigurationTests {
     }
 
     @Test
-    void dispatchUsesExistingManualPathsAndRespectsDisabledIntegrations() {
+    void dispatchUsesCompletionPathsInOrderAndRespectsDisabledIntegrations() {
         StaticListableBeanFactory beans = new StaticListableBeanFactory();
         beans.addBean("coach", coach);
         SleepModeConfiguration config = new SleepModeConfiguration();
+        when(strava.syncOnWake()).thenReturn(true);
+        when(garmin.syncOnWake()).thenReturn(true);
         config.sleepWakeCatchUp(Runnable::run, strava, garmin,
                 beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true).afterStartup();
-        verify(strava).triggerAdminSync(null, "wake_catchup");
-        verify(garmin).triggerAdminSync(null, "wake_catchup");
-        verify(coach).nightlyCoachAudit();
+        var order = inOrder(strava, garmin, coach);
+        order.verify(strava).syncOnWake();
+        order.verify(garmin).syncOnWake();
+        order.verify(coach).nightlyCoachAudit();
+        verify(strava, never()).triggerAdminSync(any(), any());
+        verify(garmin, never()).triggerAdminSync(any(), any());
 
         clearInvocations(strava, garmin, coach);
         config.sleepWakeCatchUp(Runnable::run, strava, garmin,
                 new StaticListableBeanFactory().getBeanProvider(Coach8020NightlyScheduler.class),
                 false, false).afterStartup();
         verifyNoInteractions(strava, garmin, coach);
+    }
+
+    @Test
+    void busyProviderDefersCoachButStillRunsTheOtherProvider() {
+        StaticListableBeanFactory beans = new StaticListableBeanFactory();
+        beans.addBean("coach", coach);
+        when(strava.syncOnWake()).thenReturn(false);
+        when(garmin.syncOnWake()).thenReturn(true);
+        new SleepModeConfiguration().sleepWakeCatchUp(Runnable::run, strava, garmin,
+                beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true).afterStartup();
+        verify(strava).syncOnWake();
+        verify(garmin).syncOnWake();
+        verifyNoInteractions(coach);
     }
 }
