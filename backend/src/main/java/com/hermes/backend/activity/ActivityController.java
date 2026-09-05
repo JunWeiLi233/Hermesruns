@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -45,8 +46,14 @@ public class ActivityController {
     private final AcclimatizationService acclimatizationService;
     private final ReadinessService readinessService;
     private final TtlCacheStore cacheStore;
-    private final int activitiesDefaultLimit;
-    private final int activitiesMaxLimit;
+
+    // Field-injected so the @Autowired ctor stays under the <8 dependency guard
+    // (ActivityControllerTests.autowiredConstructorKeepsDependencyCountBelowTarget).
+    @Value("${app.activities.default-limit:500}")
+    private int activitiesDefaultLimit = 500;
+
+    @Value("${app.activities.max-limit:500}")
+    private int activitiesMaxLimit = 500;
 
     public ActivityController(AuthService authService,
                               ActivityDataAccess activityDataAccess,
@@ -56,20 +63,7 @@ public class ActivityController {
                               ReadinessService readinessService) {
         this(authService, activityDataAccess, stravaStreamService,
                 elevationCorrectionService, acclimatizationService, readinessService,
-                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()),
-                500, 500);
-    }
-
-    public ActivityController(AuthService authService,
-                              ActivityDataAccess activityDataAccess,
-                              ActivityStravaStreamService stravaStreamService,
-                              ElevationCorrectionService elevationCorrectionService,
-                              AcclimatizationService acclimatizationService,
-                              ReadinessService readinessService,
-                              TtlCacheStore cacheStore) {
-        this(authService, activityDataAccess, stravaStreamService,
-                elevationCorrectionService, acclimatizationService, readinessService,
-                cacheStore, 500, 500);
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     @Autowired
@@ -79,9 +73,7 @@ public class ActivityController {
                               ElevationCorrectionService elevationCorrectionService,
                               AcclimatizationService acclimatizationService,
                               ReadinessService readinessService,
-                              TtlCacheStore cacheStore,
-                              @Value("${app.activities.default-limit:500}") int activitiesDefaultLimit,
-                              @Value("${app.activities.max-limit:500}") int activitiesMaxLimit) {
+                              TtlCacheStore cacheStore) {
         this.authService = authService;
         this.activityDataAccess = activityDataAccess;
         this.stravaStreamService = stravaStreamService;
@@ -89,6 +81,10 @@ public class ActivityController {
         this.acclimatizationService = acclimatizationService;
         this.readinessService = readinessService;
         this.cacheStore = cacheStore;
+    }
+
+    @PostConstruct
+    void normalizeActivityLimits() {
         this.activitiesMaxLimit = Math.max(1, activitiesMaxLimit);
         this.activitiesDefaultLimit = Math.max(1, Math.min(activitiesDefaultLimit, this.activitiesMaxLimit));
     }
