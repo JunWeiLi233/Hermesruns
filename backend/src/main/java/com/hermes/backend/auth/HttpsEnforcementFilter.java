@@ -9,6 +9,8 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +32,14 @@ public class HttpsEnforcementFilter implements Filter {
     @Value("${app.security.force-https:false}")
     private boolean forceHttps;
 
+    /**
+     * Canonical public origin used for HTTPS upgrade redirects. Never trust the
+     * request Host / serverName for Location ? containers commonly mirror the
+     * client Host header into getServerName().
+     */
+    @Value("${app.public-base-url:}")
+    private String publicBaseUrl;
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
@@ -38,11 +48,6 @@ public class HttpsEnforcementFilter implements Filter {
             return;
         }
 
-        // Railway probes the container over its private HTTP network before
-        // exposing a deployment. The existing service probes `/` with the
-        // dedicated healthcheck host, while newer installs can use the explicit
-        // endpoint. Answer only these data-free GETs locally; a public request
-        // for `/` still follows normal HTTPS enforcement and application routing.
         boolean explicitHealthEndpoint = "/internal/health".equals(req.getRequestURI());
         boolean railwayRootProbe = "/".equals(req.getRequestURI())
                 && "healthcheck.railway.app".equalsIgnoreCase(req.getServerName());
@@ -66,45 +71,124 @@ public class HttpsEnforcementFilter implements Filter {
         }
 
         String method = req.getMethod();
-        // Build the redirect target from the request's own server name rather
-        // than the client-supplied `Host` header. The `Host` header is fully
-        // attacker-controlled, so echoing it into the `Location` response
-        // header created an open redirect (`https://evil.com/...`). The server
-        // name reflects the host the container actually served the request on,
-        // which is the only destination the redirect should ever target.
-        String serverName = req.getServerName();
-        int serverPort = req.getServerPort();
-        String uri = req.getRequestURI();
-        String qs = req.getQueryString();
-        String authority = buildAuthority(serverName, serverPort);
-        String target = "https://" + authority + uri + (qs == null ? "" : "?" + qs);
         String ip = RequestIpResolver.clientIp(req);
+        String uri = req.getRequestURI();
 
-        // For idempotent GET/HEAD, redirect to HTTPS.
         if ("GET".equalsIgnoreCase(method) || "HEAD".equalsIgnoreCase(method)) {
-            log.warn("Blocked non-HTTPS request (redirecting) ip={} method={} host={} uri={}", ip, method, serverName, uri);
+            String target = buildHttpsRedirectTarget(req);
+            if (target == null) {
+                log.warn("Blocked non-HTTPS request with unsafe redirect inputs ip={} method={} uri={}",
+                        ip, method, uri);
+                res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                res.setContentType("application/json");
+                res.getWriter().write("{\"error\":\"HTTPS required\"}");
+                return;
+            }
+            log.warn("Blocked non-HTTPS request (redirecting) ip={} method={} uri={} location={}",
+                    ip, method, uri, target);
             res.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
             res.setHeader("Location", target);
             return;
         }
 
-        // For non-idempotent methods, do not redirect (avoid replay); reject.
-        log.warn("Blocked non-HTTPS request ip={} method={} host={} uri={}", ip, method, serverName, uri);
+        log.warn("Blocked non-HTTPS request ip={} method={} uri={}", ip, method, uri);
         res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         res.setContentType("application/json");
         res.getWriter().write("{\"error\":\"HTTPS required\"}");
     }
 
     /**
-     * Reconstruct the host[:port] authority for the redirect target, omitting
-     * the port when it is the default for HTTPS (443) so the redirect stays
-     * clean. Only hostnames and IPv4/IPv6 literals produced by the servlet
-     * container are accepted — never the raw client header.
+     * Build a same-site HTTPS Location from the configured public base URL plus a
+     * validated local path/query. Request Host / serverName are never used for
+     * the redirect authority (CodeQL java/unvalidated-url-redirection).
      */
-    private static String buildAuthority(String serverName, int serverPort) {
-        if (serverName == null || serverName.isBlank()) {
-            return "";
+    String buildHttpsRedirectTarget(HttpServletRequest req) {
+        URI publicOrigin = resolvePublicOrigin();
+        if (publicOrigin == null || publicOrigin.getHost() == null || publicOrigin.getHost().isBlank()) {
+            return null;
         }
+        String path = sanitizeLocalPath(req.getRequestURI());
+        String query = sanitizeQuery(req.getQueryString());
+        int port = publicOrigin.getPort();
+        String authority = buildAuthority(publicOrigin.getHost(), port > 0 ? port : 443);
+        try {
+            return new URI("https", authority, path, query, null).toASCIIString();
+        } catch (URISyntaxException ex) {
+            try {
+                return new URI("https", authority, "/", null, null).toASCIIString();
+            } catch (URISyntaxException ignored) {
+                return null;
+            }
+        }
+    }
+
+    private URI resolvePublicOrigin() {
+        if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
+            return null;
+        }
+        try {
+            URI configured = URI.create(publicBaseUrl.trim());
+            if (configured.getHost() == null || configured.getHost().isBlank()) {
+                return null;
+            }
+            String host = sanitizeServerName(configured.getHost());
+            if (host == null) {
+                return null;
+            }
+            int port = configured.getPort();
+            return new URI("https", buildAuthority(host, port > 0 ? port : -1), "/", null, null);
+        } catch (IllegalArgumentException | URISyntaxException ex) {
+            return null;
+        }
+    }
+
+    static String sanitizeServerName(String serverName) {
+        if (serverName == null) {
+            return null;
+        }
+        String host = serverName.trim();
+        if (host.isEmpty() || host.length() > 253) {
+            return null;
+        }
+        boolean ipv6Literal = host.startsWith("[") && host.endsWith("]") && host.indexOf(':') > 0;
+        if (!ipv6Literal && (host.indexOf('/') >= 0 || host.indexOf('\\') >= 0 || host.indexOf('@') >= 0
+                || host.indexOf(' ') >= 0 || host.indexOf(':') >= 0
+                || host.indexOf('\r') >= 0 || host.indexOf('\n') >= 0)) {
+            return null;
+        }
+        if (ipv6Literal && (host.indexOf('/') >= 0 || host.indexOf('\\') >= 0 || host.indexOf('@') >= 0
+                || host.indexOf(' ') >= 0 || host.indexOf('\r') >= 0 || host.indexOf('\n') >= 0)) {
+            return null;
+        }
+        if (host.contains("://")) {
+            return null;
+        }
+        return host;
+    }
+
+    static String sanitizeLocalPath(String requestUri) {
+        if (requestUri == null || requestUri.isEmpty()) {
+            return "/";
+        }
+        if (!requestUri.startsWith("/") || requestUri.startsWith("//")
+                || requestUri.indexOf('\r') >= 0 || requestUri.indexOf('\n') >= 0
+                || requestUri.contains("://")) {
+            return "/";
+        }
+        return requestUri;
+    }
+
+    static String sanitizeQuery(String queryString) {
+        if (queryString == null || queryString.isEmpty()) {
+            return null;
+        }
+        if (queryString.indexOf('\r') >= 0 || queryString.indexOf('\n') >= 0) {
+            return null;
+        }
+        return queryString;
+    }
+
+    private static String buildAuthority(String serverName, int serverPort) {
         if (serverPort <= 0 || serverPort == 443) {
             return serverName;
         }
