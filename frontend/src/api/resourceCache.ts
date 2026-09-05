@@ -19,7 +19,7 @@ import { apiJson } from '../api.ts';
 
 const EMAIL_STORAGE_KEY = 'hermes_email';
 
-export const ACTIVITIES_TTL_MS = 60 * 1000;
+export const ACTIVITIES_TTL_MS = 120 * 1000;
 export const PROFILE_TTL_MS = 15 * 1000;
 
 // Prefix -> TTL. Order matters if prefixes overlap (first match wins).
@@ -29,7 +29,7 @@ export const PROFILE_TTL_MS = 15 * 1000;
 // its write sites span Shoes/AddShoes/RunDetail/admin flows that cannot all
 // be covered by invalidation, so /api/shoes must remain uncached.
 const TTL_BY_PREFIX: ReadonlyArray<readonly [prefix: string, ttlMs: number]> = [
-  ['/api/activities', ACTIVITIES_TTL_MS],
+  ['/api/activities', ACTIVITIES_TTL_MS], // covers /api/activities/analysis
   ['/api/profile/me', PROFILE_TTL_MS],
 ];
 

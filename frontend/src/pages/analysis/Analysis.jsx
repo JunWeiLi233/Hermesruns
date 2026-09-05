@@ -238,7 +238,7 @@ export default function Analysis() {
     async function loadRuns() {
       setRunsState('loading');
       try {
-        const activitiesData = await apiJson('/api/activities/analysis');
+        const activitiesData = await cachedApiJson('/api/activities/analysis');
         if (!isCurrentLoad()) return;
         startTransition(() => {
           setRuns(Array.isArray(activitiesData) ? activitiesData : []);
@@ -361,7 +361,7 @@ export default function Analysis() {
     setImportModalOpen(false);
     setRunsState('loading');
     try {
-      const activitiesData = await apiJson('/api/activities/analysis');
+      const activitiesData = await cachedApiJson('/api/activities/analysis');
       const list = Array.isArray(activitiesData) ? activitiesData : [];
       startTransition(() => {
         setRuns(list);
