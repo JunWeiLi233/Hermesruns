@@ -21,9 +21,9 @@ class RuntimeFootprintConfigContractTests {
     void boundsDefaultConnectionPool() {
         Properties properties = loadMain("application.properties");
         assertThat(properties.getProperty("spring.datasource.hikari.maximumPoolSize"))
-                .isEqualTo("${APP_DB_POOL_MAX:6}");
+                .isEqualTo("${APP_DB_POOL_MAX:4}");
         assertThat(properties.getProperty("spring.datasource.hikari.minimumIdle"))
-                .isEqualTo("${APP_DB_POOL_MIN_IDLE:2}");
+                .isEqualTo("${APP_DB_POOL_MIN_IDLE:1}");
         assertThat(properties.getProperty("spring.datasource.hikari.maxLifetime")).isEqualTo("900000");
         assertThat(properties.getProperty("spring.datasource.hikari.keepaliveTime")).isEqualTo("300000");
     }
@@ -31,7 +31,7 @@ class RuntimeFootprintConfigContractTests {
     @Test
     void boundsTomcatThreadsAndShutsDownGracefully() {
         Properties properties = loadMain("application.properties");
-        assertThat(properties.getProperty("server.tomcat.threads.max")).isEqualTo("${APP_TOMCAT_MAX_THREADS:24}");
+        assertThat(properties.getProperty("server.tomcat.threads.max")).isEqualTo("${APP_TOMCAT_MAX_THREADS:16}");
         assertThat(properties.getProperty("server.tomcat.threads.min-spare")).isEqualTo("4");
         assertThat(properties.getProperty("server.shutdown")).isEqualTo("graceful");
         assertThat(properties.getProperty("spring.lifecycle.timeout-per-shutdown-phase")).isEqualTo("10s");
