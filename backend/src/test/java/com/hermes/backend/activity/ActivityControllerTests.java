@@ -196,7 +196,11 @@ class ActivityControllerTests {
         activity.setRoutePreviewFinishY(12.0);
 
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner),
+                eq(ActivityType.RUN),
+                argThat(bounded -> bounded != null && bounded.max() == 500)))
+                .thenReturn(List.of(activity));
 
         ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", null, null);
 
@@ -216,9 +220,10 @@ class ActivityControllerTests {
         assertEquals("M 12.00 88.00 L 88.00 12.00", routePreview.get("path"));
         assertEquals(12.0, routePreview.get("startX"));
         assertEquals(12.0, routePreview.get("finishY"));
-        // Without ?limit= the whole-history overload stays the one and only read path.
-        verify(activityRepository, times(1)).findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
-        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class), any());
+        // Missing ?limit= defaults to app.activities.default-limit (500) via the bounded query.
+        verify(activityRepository, times(1)).findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner), eq(ActivityType.RUN), argThat(bounded -> bounded != null && bounded.max() == 500));
+        verify(activityRepository, never()).findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class));
         verifyNoInteractions(activityPointRepository);
     }
 
@@ -261,7 +266,11 @@ class ActivityControllerTests {
         activity.setStartDate("2026-04-20");
 
         when(authService.findByAuthorizationHeader("Bearer session-token")).thenReturn(Optional.of(runner));
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN)).thenReturn(List.of(activity));
+        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(
+                eq(runner),
+                eq(ActivityType.RUN),
+                argThat(bounded -> bounded != null && bounded.max() == 500)))
+                .thenReturn(List.of(activity));
 
         ResponseEntity<?> response = controller.getUserRuns("Bearer session-token", null, null);
 

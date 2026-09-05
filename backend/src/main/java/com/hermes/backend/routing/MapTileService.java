@@ -31,8 +31,9 @@ public class MapTileService {
     private static final long IN_FLIGHT_WAIT_SECONDS = 35;
     // Raw tile bytes retained per process. Unbounded before, this map held every
     // tile ever served for the process lifetime and was the single largest
-    // steady-state heap retainer on Railway.
-    private static final long MAX_CACHED_TILE_BYTES = 64L * 1024 * 1024;
+    // steady-state heap retainer on Railway. Default 24MB (RFC-005); override via
+    // APP_MAP_TILE_LOCAL_MAX_BYTES / app.map-tile.local-max-bytes.
+    private static final long DEFAULT_MAX_CACHED_TILE_BYTES = 24L * 1024 * 1024;
     private static final String CARTO_BASEMAPS_HOST = "https://basemaps.cartocdn.com/rastertiles/";
     // Esri's tile path is /tile/{z}/{y}/{x} with no file extension.
     private static final String ESDI_DARK_GRAY_HOST = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/";
@@ -57,9 +58,23 @@ public class MapTileService {
         RestTemplate restTemplate,
         @Value("${app.billing.public-base-url:http://localhost:8080}") String publicBaseUrl,
         @Value("${app.carto-basemaps-api-key:}") String cartoBasemapsApiKey,
+        TtlCacheStore cacheStore,
+        @Value("${app.map-tile.local-max-bytes:25165824}") long maxTileCacheBytes
+    ) {
+        this(restTemplate, publicBaseUrl, cartoBasemapsApiKey, cacheStore,
+                maxTileCacheBytes > 0 ? maxTileCacheBytes : DEFAULT_MAX_CACHED_TILE_BYTES,
+                Clock.systemUTC());
+    }
+
+    /** Test / manual wiring helper — uses the RFC-005 24 MiB default. */
+    public MapTileService(
+        RestTemplate restTemplate,
+        String publicBaseUrl,
+        String cartoBasemapsApiKey,
         TtlCacheStore cacheStore
     ) {
-        this(restTemplate, publicBaseUrl, cartoBasemapsApiKey, cacheStore, MAX_CACHED_TILE_BYTES, Clock.systemUTC());
+        this(restTemplate, publicBaseUrl, cartoBasemapsApiKey, cacheStore,
+                DEFAULT_MAX_CACHED_TILE_BYTES, Clock.systemUTC());
     }
 
     public MapTileService(

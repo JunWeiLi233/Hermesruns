@@ -23,6 +23,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,23 +45,8 @@ public class ActivityController {
     private final AcclimatizationService acclimatizationService;
     private final ReadinessService readinessService;
     private final TtlCacheStore cacheStore;
-
-    @Autowired
-    public ActivityController(AuthService authService,
-                              ActivityDataAccess activityDataAccess,
-                              ActivityStravaStreamService stravaStreamService,
-                              ElevationCorrectionService elevationCorrectionService,
-                              AcclimatizationService acclimatizationService,
-                              ReadinessService readinessService,
-                              TtlCacheStore cacheStore) {
-        this.authService = authService;
-        this.activityDataAccess = activityDataAccess;
-        this.stravaStreamService = stravaStreamService;
-        this.elevationCorrectionService = elevationCorrectionService;
-        this.acclimatizationService = acclimatizationService;
-        this.readinessService = readinessService;
-        this.cacheStore = cacheStore;
-    }
+    private final int activitiesDefaultLimit;
+    private final int activitiesMaxLimit;
 
     public ActivityController(AuthService authService,
                               ActivityDataAccess activityDataAccess,
@@ -70,7 +56,41 @@ public class ActivityController {
                               ReadinessService readinessService) {
         this(authService, activityDataAccess, stravaStreamService,
                 elevationCorrectionService, acclimatizationService, readinessService,
-                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()),
+                500, 500);
+    }
+
+    public ActivityController(AuthService authService,
+                              ActivityDataAccess activityDataAccess,
+                              ActivityStravaStreamService stravaStreamService,
+                              ElevationCorrectionService elevationCorrectionService,
+                              AcclimatizationService acclimatizationService,
+                              ReadinessService readinessService,
+                              TtlCacheStore cacheStore) {
+        this(authService, activityDataAccess, stravaStreamService,
+                elevationCorrectionService, acclimatizationService, readinessService,
+                cacheStore, 500, 500);
+    }
+
+    @Autowired
+    public ActivityController(AuthService authService,
+                              ActivityDataAccess activityDataAccess,
+                              ActivityStravaStreamService stravaStreamService,
+                              ElevationCorrectionService elevationCorrectionService,
+                              AcclimatizationService acclimatizationService,
+                              ReadinessService readinessService,
+                              TtlCacheStore cacheStore,
+                              @Value("${app.activities.default-limit:500}") int activitiesDefaultLimit,
+                              @Value("${app.activities.max-limit:500}") int activitiesMaxLimit) {
+        this.authService = authService;
+        this.activityDataAccess = activityDataAccess;
+        this.stravaStreamService = stravaStreamService;
+        this.elevationCorrectionService = elevationCorrectionService;
+        this.acclimatizationService = acclimatizationService;
+        this.readinessService = readinessService;
+        this.cacheStore = cacheStore;
+        this.activitiesMaxLimit = Math.max(1, activitiesMaxLimit);
+        this.activitiesDefaultLimit = Math.max(1, Math.min(activitiesDefaultLimit, this.activitiesMaxLimit));
     }
 
     @GetMapping
@@ -93,13 +113,13 @@ public class ActivityController {
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 
-        // Runs come back newest-first, so a limit serves the most recent N.
-        // Consumers that need the whole history (the Runs list) omit it.
-        // The clamped limit goes into the query itself, so a limited feed load
-        // materializes only N run entities instead of the runner's full history.
-        List<Activity> runs = limit == null
-                ? activityDataAccess.findRunsForRunner(activeUser.get())
-                : activityDataAccess.findRunsForRunner(activeUser.get(), Math.max(1, Math.min(limit, 500)));
+        // Runs come back newest-first. Missing limit defaults to
+        // app.activities.default-limit (500); explicit values are clamped to
+        // app.activities.max-limit (also 500 until cursor pagination exists).
+        // The bound goes into the query so we never materialize full history here.
+        int requested = limit == null ? activitiesDefaultLimit : limit;
+        int bounded = Math.max(1, Math.min(requested, activitiesMaxLimit));
+        List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
         return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
     }
 
