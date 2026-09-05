@@ -1,4 +1,4 @@
-﻿# Stage 1 - Build frontend
+# Stage 1 - Build frontend
 FROM node:26-alpine AS frontend-build
 WORKDIR /frontend
 
@@ -61,7 +61,7 @@ USER hermes
 # the devtools-driven metaspace headroom); the free-ratio pair makes the JVM
 # uncommit heap after spikes. Deployments can override JAVA_OPTS without
 # rebuilding the image.
-ENV JAVA_OPTS="-Xms64m -Xmx512m -XX:+UseSerialGC \
+ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
     -XX:MaxMetaspaceSize=192m \
     -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 \
     -XX:+ExitOnOutOfMemoryError"

@@ -81,7 +81,7 @@ assert.equal(javaOptions.length, 1, 'Keep one overridable JAVA_OPTS default in t
 const flags = JSON.parse(javaOptions[0].slice('ENV JAVA_OPTS='.length)).split(/\s+/)
 assert.deepEqual(flags, [
   '-Xms64m',
-  '-Xmx512m',
+  '-Xmx640m',
   '-XX:+UseSerialGC',
   '-XX:MaxMetaspaceSize=192m',
   '-XX:MinHeapFreeRatio=20',
