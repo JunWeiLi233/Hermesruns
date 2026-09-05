@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * SessionStart hook for Hermes.
- * 1. Regenerates .ai-codex/ index files
+ * 1. Regenerates .workspace/codex/ index files
  * 2. Generates optimized agent context brief
  * 3. Detects repeated prompts and auto-extracts them into skills
  * 4. Injects a context summary into the session
@@ -20,7 +20,7 @@ const LOG_PATH   = path.join(ROOT, '.claude', 'prompt-log.jsonl');
 // ── 1. Regenerate codex index ─────────────────────────────────────────────────
 let codexStatus = '';
 try {
-  execSync('node .tools/generate-codex.js', { cwd: ROOT, stdio: 'pipe', timeout: 15000 });
+  execSync('node tools/generate-codex.js', { cwd: ROOT, stdio: 'pipe', timeout: 15000 });
   codexStatus = 'refreshed';
 } catch (e) {
   codexStatus = 'skipped (error: ' + (e.message || '').split('\n')[0] + ')';
@@ -30,10 +30,10 @@ try {
 let optimizedStatus = '';
 try {
   execSync(
-    'node .tools/optimize-agent-context.mjs --agent claude --tasks TASKS.md --guide CLAUDE.md --queue-mode first --write',
+    'node tools/optimize-agent-context.mjs --agent claude --tasks TASKS.md --guide CLAUDE.md --queue-mode first --write',
     { cwd: ROOT, stdio: 'pipe', timeout: 15000 }
   );
-  optimizedStatus = 'ready — read .ai-codex/optimized-claude.md for queue status before rereading TASKS.md';
+  optimizedStatus = 'ready — read .workspace/codex/optimized-claude.md for queue status before rereading TASKS.md';
 } catch {
   optimizedStatus = 'skipped — read TASKS.md directly';
 }
@@ -124,15 +124,15 @@ const skillNotice = autoSkillsCreated.length
 const context = `
 ## Hermes Session Tools (auto-loaded)
 
-### Codebase Index (.ai-codex/) — ${codexStatus}
+### Codebase Index (.workspace/codex/) — ${codexStatus}
 Full structured index available. Reference these files before scanning source:
-- .ai-codex/routes.md     — Spring Boot REST endpoints
-- .ai-codex/pages.md      — React pages + feature tags
-- .ai-codex/lib.md        — Frontend utility exports
-- .ai-codex/schema.md     — JPA entities + relations
-- .ai-codex/components.md — React components + props
+- .workspace/codex/routes.md     — Spring Boot REST endpoints
+- .workspace/codex/pages.md      — React pages + feature tags
+- .workspace/codex/lib.md        — Frontend utility exports
+- .workspace/codex/schema.md     — JPA entities + relations
+- .workspace/codex/components.md — React components + props
 
-Regenerate after structural changes: node .tools/generate-codex.js
+Regenerate after structural changes: node tools/generate-codex.js
 
 ### Optimized context brief — ${optimizedStatus}
 

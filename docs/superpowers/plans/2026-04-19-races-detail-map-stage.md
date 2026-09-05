@@ -13,8 +13,8 @@
 ### Task 1: Lock The New DOM And Layout Contract In Tests
 
 **Files:**
-- Modify: `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
-- Test: `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+- Modify: `frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
+- Test: `frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -46,7 +46,7 @@ assert.doesNotMatch(
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+Run: `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 Expected: FAIL with a message about the missing `race-detail-map-stage` or `race-detail-lower-stack` structure.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -67,20 +67,20 @@ Expected: FAIL with a message about the missing `race-detail-map-stage` or `race
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+Run: `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js frontend/src/pages/RacesDetail.jsx
+git add frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js frontend/src/pages/races/RacesDetail.jsx
 git commit -m "test: lock race detail map stage contract"
 ```
 
 ### Task 2: Rewrite The Lower Race Map Block Into A Full-Width Leaflet Stage
 
 **Files:**
-- Modify: `frontend/src/pages/RacesDetail.jsx`
+- Modify: `frontend/src/pages/races/RacesDetail.jsx`
 - Test: `frontend/src/utils/raceDetailMapLifecycle.smoke.test.js`
 
 - [ ] **Step 1: Write the failing test**
@@ -147,7 +147,7 @@ applyRouteMapViewport({ force: true });
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+Run: `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 Expected: PASS
 
 Run: `node frontend/src/utils/raceDetailMapLifecycle.smoke.test.js`
@@ -156,7 +156,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/src/pages/RacesDetail.jsx frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js frontend/src/utils/raceDetailMapLifecycle.smoke.test.js
+git add frontend/src/pages/races/RacesDetail.jsx frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js frontend/src/utils/raceDetailMapLifecycle.smoke.test.js
 git commit -m "feat: redesign races detail map stage"
 ```
 
@@ -164,7 +164,7 @@ git commit -m "feat: redesign races detail map stage"
 
 **Files:**
 - Modify: `frontend/src/styles/style.css`
-- Test: `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+- Test: `frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -190,7 +190,7 @@ assert.match(
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+Run: `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 Expected: FAIL with a message about missing `.race-detail-map-stage`, `.race-detail-lower-stack`, or `.race-detail-map-hud` styles.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -243,7 +243,7 @@ Expected: FAIL with a message about missing `.race-detail-map-stage`, `.race-det
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+Run: `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 Expected: PASS
 
 Run: `cmd /c "cd /d frontend && npm run lint"`
@@ -252,13 +252,13 @@ Expected: PASS
 Run: `cmd /c "cd /d frontend && node scripts/run-vite-build.mjs"`
 Expected: PASS
 
-Run: `node .tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/RacesDetail.jsx||frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"`
+Run: `node tools/verify-frontend-runtime-sync.mjs --files "frontend/src/pages/races/RacesDetail.jsx||frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js||frontend/src/styles/style.css"`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add frontend/src/styles/style.css frontend/src/pages/RacesDetail.jsx frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js
+git add frontend/src/styles/style.css frontend/src/pages/races/RacesDetail.jsx frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js
 git commit -m "style: finalize races detail map stage"
 ```
 
@@ -266,8 +266,8 @@ git commit -m "style: finalize races detail map stage"
 
 **Files:**
 - Modify: `DESIGN_VERSIONS.md`
-- Modify: `.ai-sync/CONTEXT_LEDGER.md`
-- Modify: `.ai-sync/AGENT_SYNC.md`
+- Modify: `.workspace/state/CONTEXT_LEDGER.md`
+- Modify: `.workspace/state/AGENT_SYNC.md`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -277,7 +277,7 @@ No executable test file is required for this documentation task, but the task sh
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `Select-String -Path DESIGN_VERSIONS.md,.ai-sync/CONTEXT_LEDGER.md,.ai-sync/AGENT_SYNC.md -Pattern "static tile fallback|image overlay|side-by-side lower grid"`
+Run: `Select-String -Path DESIGN_VERSIONS.md,.workspace/state/CONTEXT_LEDGER.md,.workspace/state/AGENT_SYNC.md -Pattern "static tile fallback|image overlay|side-by-side lower grid"`
 Expected: Existing stale references still appear and must be updated.
 
 - [ ] **Step 3: Write minimal implementation**
@@ -286,7 +286,7 @@ Expected: Existing stale references still appear and must be updated.
 ### Version: DV-2026-04-19-02
 Date: 2026-04-19
 Surface: Race Detail map stage on `/races/details/:raceId`
-Files: `frontend/src/pages/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
+Files: `frontend/src/pages/races/RacesDetail.jsx`, `frontend/src/styles/style.css`, `frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`, `DESIGN_VERSIONS.md`
 What changed: Rebuilt the lower race-detail map area into a single dominant full-width Leaflet world-map stage and reduced the AI rendering to the georeferenced route line plus lightweight HUD, with readiness content moved below.
 Why: The previous lower block no longer read as a reliably interactive map surface.
 Rollback target: `DV-2026-04-19-01`
@@ -295,12 +295,12 @@ Notes: The runner-facing map stage is route-only and does not paint the scanned 
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `Select-String -Path DESIGN_VERSIONS.md,.ai-sync/CONTEXT_LEDGER.md,.ai-sync/AGENT_SYNC.md -Pattern "dominant full-width|route-only|Leaflet"`
+Run: `Select-String -Path DESIGN_VERSIONS.md,.workspace/state/CONTEXT_LEDGER.md,.workspace/state/AGENT_SYNC.md -Pattern "dominant full-width|route-only|Leaflet"`
 Expected: Updated records describe the new baseline.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add DESIGN_VERSIONS.md .ai-sync/CONTEXT_LEDGER.md .ai-sync/AGENT_SYNC.md
+git add DESIGN_VERSIONS.md .workspace/state/CONTEXT_LEDGER.md .workspace/state/AGENT_SYNC.md
 git commit -m "docs: record races detail map stage redesign"
 ```

@@ -1,11 +1,9 @@
 package com.hermes.backend.rewards;
 
-import com.hermes.backend.Activity;
-import com.hermes.backend.Runner;
-import com.hermes.backend.Shoe;
-
+import com.hermes.backend.activity.Activity;
+import com.hermes.backend.runner.Runner;
+import com.hermes.backend.shoes.Shoe;
 import jakarta.persistence.*;
-
 import java.time.LocalDateTime;
 
 @Entity

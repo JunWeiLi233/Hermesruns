@@ -8,22 +8,22 @@ const srcRoot = path.resolve(here, '..');
 const read = (relativePath) => readFileSync(path.join(srcRoot, relativePath), 'utf8');
 const unifiedStylePath = 'styles/runner-shell-workout-button.css';
 const pageFiles = [
-  'pages/AddShoes.jsx',
-  'pages/Analysis.jsx',
-  'pages/MuscleTraining.jsx',
-  'pages/ProfileDashboard.jsx',
-  'pages/Races.jsx',
-  'pages/Rewards.jsx',
-  'pages/Runs.jsx',
-  'pages/Schedule.jsx',
-  'pages/Settings.jsx',
-  'pages/Shoes.jsx',
-  'pages/ShoeCatalog.jsx',
-  'pages/TodayRun.jsx',
-  'pages/WeatherEngine.jsx',
+  'pages/shoes/AddShoes.jsx',
+  'pages/analysis/Analysis.jsx',
+  'pages/muscle-training/MuscleTraining.jsx',
+  'pages/profile/ProfileDashboard.jsx',
+  'pages/races/Races.jsx',
+  'pages/rewards/Rewards.jsx',
+  'pages/runs/Runs.jsx',
+  'pages/schedule/Schedule.jsx',
+  'pages/settings/Settings.jsx',
+  'pages/shoes/Shoes.jsx',
+  'pages/shoes/ShoeCatalog.jsx',
+  'pages/today-run/TodayRun.jsx',
+  'pages/weather/WeatherEngine.jsx',
 ];
 
-const indexSource = read('index.css');
+const indexSource = read('./index.css');
 const unifiedStyleSource = existsSync(path.join(srcRoot, unifiedStylePath))
   ? read(unifiedStylePath)
   : '';

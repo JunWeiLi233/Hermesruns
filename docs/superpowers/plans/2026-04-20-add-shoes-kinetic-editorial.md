@@ -13,8 +13,8 @@
 ### Task 1: Add the Add Shoes smoke contract
 
 **Files:**
-- Create: `frontend/src/pages/addShoesKineticEditorial.smoke.test.js`
-- Read: `frontend/src/pages/AddShoes.jsx`
+- Create: `frontend/src/pages/shoes/__tests__/addShoesKineticEditorial.smoke.test.js`
+- Read: `frontend/src/pages/shoes/AddShoes.jsx`
 - Read: `frontend/src/styles/style.css`
 
 - [ ] **Step 1: Write the failing smoke test**
@@ -29,14 +29,14 @@ Assert that `style.css` contains matching class definitions.
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `node frontend/src/pages/addShoesKineticEditorial.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesKineticEditorial.smoke.test.js`
 
 Expected: FAIL because the new class names do not exist yet.
 
 ### Task 2: Reshape the Add Shoes page structure
 
 **Files:**
-- Modify: `frontend/src/pages/AddShoes.jsx`
+- Modify: `frontend/src/pages/shoes/AddShoes.jsx`
 
 - [ ] **Step 1: Replace the current hero shell with the new editorial top fold**
 
@@ -115,7 +115,7 @@ Avoid gratuitous translation churn.
 
 - [ ] **Step 1: Re-run the focused Add Shoes smoke test**
 
-Run: `node frontend/src/pages/addShoesKineticEditorial.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesKineticEditorial.smoke.test.js`
 
 Expected: PASS.
 

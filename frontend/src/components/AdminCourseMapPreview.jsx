@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { getBackendBaseUrl } from '../api';
 import { buildCourseMapStaticGeometry } from '../utils/courseMapStaticGeometry.js';
+import { normalizeOverlayBounds } from '../utils/races/courseMapGeometry.js';
 
 const ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM = 19;
 const ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM = 14;
@@ -10,17 +11,6 @@ const ADMIN_REVIEW_PREVIEW_TILE_FALLBACK_MS = 1600;
 function asFiniteNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function normalizeOverlayBounds(rawBounds) {
-  if (!rawBounds || typeof rawBounds !== 'object') return null;
-  const north = asFiniteNumber(rawBounds.north);
-  const south = asFiniteNumber(rawBounds.south);
-  const east = asFiniteNumber(rawBounds.east);
-  const west = asFiniteNumber(rawBounds.west);
-  if (north == null || south == null || east == null || west == null) return null;
-  if (north <= south || east <= west) return null;
-  return { north, south, east, west };
 }
 
 function normalizeRoutePoints(rawPoints) {

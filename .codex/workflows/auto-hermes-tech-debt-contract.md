@@ -33,8 +33,8 @@ Before task writeback, read:
 
 - `AGENTS.md`
 - `docs/auto-hermes/index.md` when present
-- `.ai-sync/AGENT_SYNC.md`
-- `.ai-sync/CONTEXT_LEDGER.md`
+- `.workspace/state/AGENT_SYNC.md`
+- `.workspace/state/CONTEXT_LEDGER.md`
 - `TASKS.md`
 
 The command is one-shot, not a self-loop.
@@ -56,7 +56,7 @@ Initial heuristics are intentionally deterministic:
 
 2. `missing-focused-tests`
    - backend production files without matching focused tests
-   - `.tools` scripts without matching focused tests
+   - `tools` scripts without matching focused tests
 
 3. `oversized-file`
    - files that exceed category thresholds and are likely resisting bounded edits
@@ -119,7 +119,7 @@ Do not add a debt task when:
 
 Preferred engine:
 
-`node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write`
+`node tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write`
 
 Recommended arguments:
 
@@ -131,4 +131,4 @@ Recommended arguments:
 
 Focused verification:
 
-`node .tools/auto-hermes-tech-debt.test.mjs`
+`node tools/auto-hermes-tech-debt.test.mjs`

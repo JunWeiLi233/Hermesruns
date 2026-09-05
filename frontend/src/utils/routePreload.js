@@ -6,41 +6,41 @@
 // template-built paths would defeat Vite's static analysis and break
 // route-level code splitting.
 
-const legalPageLoader = () => import('../pages/LegalPage.jsx');
+const legalPageLoader = () => import('../pages/legal/LegalPage.jsx');
 
 // Static app paths -> chunk loader. Param-only routes live in
 // routeParamPreloaders below so keys here stay real navigable paths.
 export const routePreloaders = {
-  '/': () => import('../pages/Landing.jsx'),
-  '/login': () => import('../pages/Login.jsx'),
-  '/signup': () => import('../pages/Signup.jsx'),
-  '/forgot-password': () => import('../pages/ForgotPassword.jsx'),
+  '/': () => import('../pages/landing/Landing.jsx'),
+  '/login': () => import('../pages/auth/Login.jsx'),
+  '/signup': () => import('../pages/auth/Signup.jsx'),
+  '/forgot-password': () => import('../pages/auth/ForgotPassword.jsx'),
   '/terms': legalPageLoader,
   '/privacy': legalPageLoader,
-  '/dashboard': () => import('../pages/Dashboard.jsx'),
-  '/profile': () => import('../pages/Profile.jsx'),
-  '/runs': () => import('../pages/Runs.jsx'),
-  '/analysis': () => import('../pages/Analysis.jsx'),
-  '/heatmap': () => import('../pages/Heatmap.jsx'),
-  '/weather': () => import('../pages/WeatherEngine.jsx'),
-  '/today-run': () => import('../pages/TodayRun.jsx'),
-  '/rewards': () => import('../pages/Rewards.jsx'),
-  '/settings': () => import('../pages/Settings.jsx'),
-  '/settings/import-data': () => import('../pages/ImportDataSettings.jsx'),
-  '/shoes': () => import('../pages/Shoes.jsx'),
-  '/shoes/add': () => import('../pages/AddShoes.jsx'),
-  '/shoe-catalog': () => import('../pages/ShoeCatalog.jsx'),
-  '/races': () => import('../pages/Races.jsx'),
-  '/schedule': () => import('../pages/Schedule.jsx'),
-  '/muscle-training': () => import('../pages/MuscleTraining.jsx'),
+  '/dashboard': () => import('../pages/admin/Dashboard.jsx'),
+  '/profile': () => import('../pages/profile/Profile.jsx'),
+  '/runs': () => import('../pages/runs/Runs.jsx'),
+  '/analysis': () => import('../pages/analysis/Analysis.jsx'),
+  '/heatmap': () => import('../pages/heatmap/Heatmap.jsx'),
+  '/weather': () => import('../pages/weather/WeatherEngine.jsx'),
+  '/today-run': () => import('../pages/today-run/TodayRun.jsx'),
+  '/rewards': () => import('../pages/rewards/Rewards.jsx'),
+  '/settings': () => import('../pages/settings/Settings.jsx'),
+  '/settings/import-data': () => import('../pages/settings/ImportDataSettings.jsx'),
+  '/shoes': () => import('../pages/shoes/Shoes.jsx'),
+  '/shoes/add': () => import('../pages/shoes/AddShoes.jsx'),
+  '/shoe-catalog': () => import('../pages/shoes/ShoeCatalog.jsx'),
+  '/races': () => import('../pages/races/Races.jsx'),
+  '/schedule': () => import('../pages/schedule/Schedule.jsx'),
+  '/muscle-training': () => import('../pages/muscle-training/MuscleTraining.jsx'),
 };
 
 // Param routes keyed by their App.jsx route pattern.
 export const routeParamPreloaders = {
-  '/runs/:id': () => import('../pages/RunDetail.jsx'),
-  '/analysis/:insightKey': () => import('../pages/AnalysisInsightDetail.jsx'),
-  '/prediction/:distKey': () => import('../pages/PredictionDetail.jsx'),
-  '/races/details/:raceId': () => import('../pages/RacesDetail.jsx'),
+  '/runs/:id': () => import('../pages/runs/RunDetail.jsx'),
+  '/analysis/:insightKey': () => import('../pages/analysis/AnalysisInsightDetail.jsx'),
+  '/prediction/:distKey': () => import('../pages/prediction/PredictionDetail.jsx'),
+  '/races/details/:raceId': () => import('../pages/races/RacesDetail.jsx'),
 };
 
 function normalizeHref(href) {

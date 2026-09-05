@@ -10,11 +10,11 @@ This file is a map, not an exhaustive manual.
    Policy plane: truthfulness, runtime proof, task discipline, safety, and repo rules.
 2. `docs/auto-hermes/index.md`
    Record-system map: where `/auto-hermes` stores durable workflow truth.
-3. `.ai-codex/optimized-codex.md`
+3. `.workspace/codex/optimized-codex.md`
    Session-scale compressed queue and repo brief.
-4. `.ai-sync/CONTEXT_LEDGER.md`
+4. `.workspace/state/CONTEXT_LEDGER.md`
    Surface-level durable intent and preservation rules.
-5. `.ai-sync/AGENT_SYNC.md`
+5. `.workspace/state/AGENT_SYNC.md`
    Live claims, recently completed work, and reclaim safety.
 6. Deeper owners only when the current round actually needs them.
 
@@ -27,19 +27,19 @@ This file is a map, not an exhaustive manual.
 | Control plane | `.codex/workflows/auto-hermes-architecture.md` | Defines the bounded round model and authority boundaries |
 | Delegation plane | `.codex/workflows/hermes-multi-agent.md` | Defines when work stays local vs. becomes specialist or parallel work |
 | Promotion plane | `HERMES_SELF_EVOLVING_ENGINE.md` | Owns self-generated continuation and promotion gates |
-| Structure steering | `.tools/auto-hermes-structure-update.mjs` | Emits bounded structure-fix suggestions plus the next-round steering brief for `/auto-hermes` |
-| Deterministic routing | `.tools/auto-hermes-controller.mjs` | Selects the current work unit and emits the routing brief |
-| Loop ownership | `.tools/auto-hermes-loop.mjs` | Owns worker/coordinator prompts and loop-state truth |
-| Ralph self-loop ownership | `.tools/auto-hermes-self-loop.mjs` | Owns the true Ralph indefinite self-loop variant of `/auto-hermes` |
-| Max loop ownership | `.tools/auto-hermes-max-loop.mjs` | Owns parent `/auto-hermes-max` re-entry, Ralph-backed iteration posture, and parent-loop truth |
-| Round writeback | `.tools/auto-hermes-round-close.mjs` | Refreshes audit, promotion, and finish state after a verified round |
-| Finish action | `.tools/auto-hermes-finish.mjs` | Generates deterministic finish/commit briefs |
+| Structure steering | `tools/auto-hermes-structure-update.mjs` | Emits bounded structure-fix suggestions plus the next-round steering brief for `/auto-hermes` |
+| Deterministic routing | `tools/auto-hermes-controller.mjs` | Selects the current work unit and emits the routing brief |
+| Loop ownership | `tools/auto-hermes-loop.mjs` | Owns worker/coordinator prompts and loop-state truth |
+| Ralph self-loop ownership | `tools/auto-hermes-self-loop.mjs` | Owns the true Ralph indefinite self-loop variant of `/auto-hermes` |
+| Max loop ownership | `tools/auto-hermes-max-loop.mjs` | Owns parent `/auto-hermes-max` re-entry, Ralph-backed iteration posture, and parent-loop truth |
+| Round writeback | `tools/auto-hermes-round-close.mjs` | Refreshes audit, promotion, and finish state after a verified round |
+| Finish action | `tools/auto-hermes-finish.mjs` | Generates deterministic finish/commit briefs |
 
 ## Progressive Disclosure Rules
 
 - Start from this map and the controller brief instead of broad repo scans.
 - Read the smallest file that owns the question before opening neighboring workflow files.
-- Treat `.ai-sync/AUTO_HERMES_CONTROLLER.*` and `.ai-sync/AUTO_HERMES_COORDINATOR.*` as the active round briefs, not as permanent policy.
+- Treat `.workspace/state/AUTO_HERMES_CONTROLLER.*` and `.workspace/state/AUTO_HERMES_COORDINATOR.*` as the active round briefs, not as permanent policy.
 - When a helper output and a durable owner disagree, prefer the durable owner first, then update the helper in code.
 
 ## Record-System Rules
@@ -48,7 +48,7 @@ This file is a map, not an exhaustive manual.
 - Durable `/auto-hermes` decisions should live in the smallest owning workflow doc or helper script, then be discoverable from this map.
 - If a fact only exists in chat, it does not count as durable `/auto-hermes` knowledge.
 - Plans, promotion outputs, controller briefs, and finish briefs are first-class repo artifacts when they change agent behavior.
-- Structure-update briefs at `.ai-sync/AUTO_HERMES_STRUCTURE_UPDATE.*` are first-class repo artifacts when they steer the next eligible `/auto-hermes` round.
+- Structure-update briefs at `.workspace/state/AUTO_HERMES_STRUCTURE_UPDATE.*` are first-class repo artifacts when they steer the next eligible `/auto-hermes` round.
 
 ## Doc-Gardening Rules
 

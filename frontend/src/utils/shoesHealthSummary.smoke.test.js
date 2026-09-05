@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const shoesSource = readFileSync(path.join(here, '..', 'pages', 'Shoes.jsx'), 'utf8');
+const shoesSource = readFileSync(path.join(here, "../pages/shoes/Shoes.jsx"), 'utf8');
 
 assert.match(
   shoesSource,

@@ -17,14 +17,14 @@ Full detail in `PRODUCT.md` — read before every task. Key rules:
 - AI: Gemini 2.5 Flash (shoe image scanning / mileage extraction)
 
 ## Codebase Index
-Pre-built index in `.ai-codex/` — reference before scanning manually:
-- `.ai-codex/routes.md` — 100+ Spring Boot REST endpoints
-- `.ai-codex/pages.md` — React pages with feature tags
-- `.ai-codex/lib.md` — frontend utility and API function exports
-- `.ai-codex/schema.md` — JPA entities with key fields and relations
-- `.ai-codex/components.md` — React components with prop hints
+Pre-built index in `.workspace/codex/` — reference before scanning manually:
+- `.workspace/codex/routes.md` — 100+ Spring Boot REST endpoints
+- `.workspace/codex/pages.md` — React pages with feature tags
+- `.workspace/codex/lib.md` — frontend utility and API function exports
+- `.workspace/codex/schema.md` — JPA entities with key fields and relations
+- `.workspace/codex/components.md` — React components with prop hints
 
-Regenerate after structural changes: `node .tools/generate-codex.js`
+Regenerate after structural changes: `node tools/generate-codex.js`
 
 ## Commands
 ```bash
@@ -39,7 +39,7 @@ cd frontend && npm run build
 cd frontend && npm run lint
 
 # Translation parity
-node .tools/check-translations.mjs
+node tools/check-translations.mjs
 ```
 
 ## Hermes Workflow: /auto-hermes and /auto-hermes-max
@@ -51,9 +51,9 @@ node .tools/check-translations.mjs
 
 ### Session Start
 Run once in order:
-1. Read `.ai-sync/HUMAN_LOOP.md` — if it says `pause`, `stop`, or `must-ask`, stop immediately
-2. Read `.ai-codex/optimized-codex.md` for queue status
-3. Read `AGENTS.md`, `.ai-sync/AGENT_SYNC.md`, `.ai-sync/CONTEXT_LEDGER.md`
+1. Read `.workspace/state/HUMAN_LOOP.md` — if it says `pause`, `stop`, or `must-ask`, stop immediately
+2. Read `.workspace/codex/optimized-codex.md` for queue status
+3. Read `AGENTS.md`, `.workspace/state/AGENT_SYNC.md`, `.workspace/state/CONTEXT_LEDGER.md`
 
 ### /auto-hermes Round Shape
 Shared lifecycle rules in `.codex/workflows/auto-hermes-shared-contract.md`.
@@ -96,8 +96,8 @@ Active Tasks → Suggested → Tech Debt → Self-Generation → Stop.
 - Source edits are NOT proof of a live change
 
 ## Runtime Proof Gates
-- Frontend: `node frontend/scripts/run-vite-build.mjs` then `node .tools/verify-frontend-runtime-sync.mjs --files "..."`
-- Backend: `node .tools/verify-backend-runtime-sync.mjs --files "..."`
+- Frontend: `node frontend/scripts/run-vite-build.mjs` then `node tools/verify-frontend-runtime-sync.mjs --files "..."`
+- Backend: `node tools/verify-backend-runtime-sync.mjs --files "..."`
 - Do not claim the website or runtime changed unless the proof gate passes
 
 ## Truth Rules

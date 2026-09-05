@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const componentSource = readFileSync(path.join(here, 'AuthenticatedPageChrome.jsx'), 'utf8');
-const garminSource = readFileSync(path.join(here, '..', 'pages', 'GarminImportSettings.jsx'), 'utf8');
-const importDataSource = readFileSync(path.join(here, '..', 'pages', 'ImportDataSettings.jsx'), 'utf8');
+const garminSource = readFileSync(path.join(here, "../pages/settings/GarminImportSettings.jsx"), 'utf8');
+const importDataSource = readFileSync(path.join(here, "../pages/settings/ImportDataSettings.jsx"), 'utf8');
 
 for (const snippet of [
   "import RunnerShellTopNav from './RunnerShellTopNav';",

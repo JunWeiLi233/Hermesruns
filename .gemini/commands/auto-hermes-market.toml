@@ -1,4 +1,4 @@
-# GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs.
+# GENERATED FILE: edit .codex/commands and run node tools/generate-runtime-commands.mjs.
 
 [command]
 description = "Hermes workflow: /auto-hermes-market"
@@ -33,8 +33,8 @@ Codex implementation note for the market research pipeline.
 
 ## Session Start
 
-1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
-2. Create `.ai-sync/market/` directory if absent
+1. Check `.workspace/state/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+2. Create `.workspace/state/market/` directory if absent
 3. If no scope: read first 40 lines of `PRODUCT.md` and extract target market
 
 ---
@@ -47,12 +47,12 @@ Launch all 5 core research agents simultaneously. When the scope is consumer-sea
 
 | Agent | Output file | Primary search queries |
 |---|---|---|
-| Market Analyst | `.ai-sync/market/market-analyst.json` | `"<scope>" market size 2024`, `"<scope>" TAM billion` |
-| Competitor Hunter | `.ai-sync/market/competitor-hunter.json` | `best <scope> apps 2024`, `<scope> alternatives site:reddit.com` |
-| Pricing Engineer | `.ai-sync/market/pricing-engineer.json` | `<competitor>/pricing` for each verified competitor |
-| Social Signal | `.ai-sync/market/social-signal.json` | `site:reddit.com "<scope>"`, `"<scope>" "worth paying for"` |
-| Trend Validator | `.ai-sync/market/trend-validator.json` | `"<scope>" funding 2024 site:techcrunch.com`, `"<scope>" trend growing` |
-| SEO Agent (optional) | `.ai-sync/market/seo-agent.json` | `best <scope>`, `<scope> alternatives`, `<scope> vs`, `<scope> guide` |
+| Market Analyst | `.workspace/state/market/market-analyst.json` | `"<scope>" market size 2024`, `"<scope>" TAM billion` |
+| Competitor Hunter | `.workspace/state/market/competitor-hunter.json` | `best <scope> apps 2024`, `<scope> alternatives site:reddit.com` |
+| Pricing Engineer | `.workspace/state/market/pricing-engineer.json` | `<competitor>/pricing` for each verified competitor |
+| Social Signal | `.workspace/state/market/social-signal.json` | `site:reddit.com "<scope>"`, `"<scope>" "worth paying for"` |
+| Trend Validator | `.workspace/state/market/trend-validator.json` | `"<scope>" funding 2024 site:techcrunch.com`, `"<scope>" trend growing` |
+| SEO Agent (optional) | `.workspace/state/market/seo-agent.json` | `best <scope>`, `<scope> alternatives`, `<scope> vs`, `<scope> guide` |
 
 Full agent brief for each: see `.claude/commands/auto-hermes-market.md` → Agent Briefs section. The SEO lane should use `.codex/agents/seo-agent.md` as its Codex-side support identity.
 
@@ -68,15 +68,15 @@ Insert scored opportunities (≥ 6/10) as concrete tasks into `TASKS.md` `## Sug
 
 ### Phase 4 — Reset runaway counter
 
-Write `{"count": 0}` to `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json`.
+Write `{"count": 0}` to `.workspace/state/AUTO_HERMES_MAX_RUNAWAY.json`.
 
 ---
 
 ## Codex-Specific Notes
 
-- Use the Ralph executor for parallel agent launch when the core market agents are independent. The SEO lane should be added only when the scope is consumer-searchable and should still keep its write scope isolated to `.ai-sync/market/seo-agent.json`.
+- Use the Ralph executor for parallel agent launch when the core market agents are independent. The SEO lane should be added only when the scope is consumer-searchable and should still keep its write scope isolated to `.workspace/state/market/seo-agent.json`.
 - If the executor is unavailable, run the 5 phases sequentially with no other behavioral change.
-- Do not use `.tools/auto-hermes-supervisor.mjs` for this command — market research is a one-shot pipeline, not a loop.
+- Do not use `tools/auto-hermes-supervisor.mjs` for this command — market research is a one-shot pipeline, not a loop.
 - After tasks are written, optionally hand off to `/auto-hermes-max` for execution.
 
 ---

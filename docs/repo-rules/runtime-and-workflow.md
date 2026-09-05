@@ -7,20 +7,20 @@ This file owns detailed runtime, queue, and workflow rules.
 Before broad work or implementation, run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js
-& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
-powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
-& 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js
+& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
+powershell -ExecutionPolicy Bypass -File tools/mempalace/auto-session-sync.ps1 -Quiet
+& 'C:\Program Files\nodejs\node.exe' tools/omx-auto-hermes-bridge.mjs
 ```
 
-Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+Exception: for `/auto-hermes-self`, skip `tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
 
 Then read:
 
-- `.ai-codex/optimized-codex.md`
-- `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md`
-- `.ai-sync/AGENT_SYNC.md`
-- `.ai-sync/CONTEXT_LEDGER.md`
+- `.workspace/codex/optimized-codex.md`
+- `.workspace/state/OMX_AUTO_HERMES_BRIDGE.md`
+- `.workspace/state/AGENT_SYNC.md`
+- `.workspace/state/CONTEXT_LEDGER.md`
 
 ## Task Execution
 
@@ -32,9 +32,9 @@ Then read:
 
 ## Shared Context Files
 
-- `.ai-sync/CONTEXT_LEDGER.md`: durable surface intent and preservation rules
-- `.ai-sync/AGENT_SYNC.md`: active claims, recently completed work, must-fix handoff state
-- `.ai-codex/CODEX_CHECKPOINT.md`: Codex resume checkpoint for long work
+- `.workspace/state/CONTEXT_LEDGER.md`: durable surface intent and preservation rules
+- `.workspace/state/AGENT_SYNC.md`: active claims, recently completed work, must-fix handoff state
+- `.workspace/codex/CODEX_CHECKPOINT.md`: Codex resume checkpoint for long work
 
 Use them before reclaiming a surface or resuming interrupted work.
 
@@ -43,13 +43,13 @@ Use them before reclaiming a surface or resuming interrupted work.
 ### Frontend / website-facing changes
 
 - Build with `cd frontend && node scripts/run-vite-build.mjs`
-- Verify with `.tools/verify-frontend-runtime-sync.mjs`
+- Verify with `tools/verify-frontend-runtime-sync.mjs`
 - Do not claim the website changed until the runtime proof passes
 
 ### Backend / local API changes
 
 - Compile with `cd backend && ./mvnw -q -DskipTests compile`
-- Verify with `.tools/verify-backend-runtime-sync.mjs`
+- Verify with `tools/verify-backend-runtime-sync.mjs`
 - Do not claim the local Hermes backend changed until runtime proof passes and `http://localhost:8080` returns `200`
 
 If source changed but sync did not run, report: `source changed, live website not synced yet`.
@@ -64,7 +64,7 @@ Working boundaries:
 - `.codex/workflows/auto-hermes-architecture.md` = control plane
 - `.codex/workflows/hermes-multi-agent.md` = delegation plane
 - `HERMES_SELF_EVOLVING_ENGINE.md` = promotion plane
-- `TASKS.md` + `.ai-sync/*` = state plane
+- `TASKS.md` + `.workspace/state/*` = state plane
 
 For deep `/auto-hermes` behavior, read the owning workflow/helper instead of inflating `AGENTS.md`.
 

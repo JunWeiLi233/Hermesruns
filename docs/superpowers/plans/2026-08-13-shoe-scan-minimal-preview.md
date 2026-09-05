@@ -13,17 +13,17 @@
 ### Task 1: Guard The Minimal Preview Contract
 
 **Files:**
-- Modify: `frontend/src/pages/shoeScanModalLayout.smoke.test.js`
-- Test: `frontend/src/pages/shoeScanModalLayout.smoke.test.js`
+- Modify: `frontend/src/pages/shoes/__tests__/shoeScanModalLayout.smoke.test.js`
+- Test: `frontend/src/pages/shoes/__tests__/shoeScanModalLayout.smoke.test.js`
 
 - [x] Add assertions rejecting `shoe-scan-modal-scan-line` and the `is-live` preview chip in `Shoes.jsx`.
 - [x] Add an assertion requiring the `/* Minimal shoe scan preview */` CSS block, flat surface, compact heading scale, disabled overlay pseudo-elements, and rectangular preview action.
-- [x] Run `node frontend/src/pages/shoeScanModalLayout.smoke.test.js` and confirm it fails on the new minimal-preview assertion.
+- [x] Run `node frontend/src/pages/shoes/__tests__/shoeScanModalLayout.smoke.test.js` and confirm it fails on the new minimal-preview assertion.
 
 ### Task 2: Implement The Minimal Preview
 
 **Files:**
-- Modify: `frontend/src/pages/Shoes.jsx`
+- Modify: `frontend/src/pages/shoes/Shoes.jsx`
 - Modify: `frontend/src/styles/_split/shoes.css`
 
 - [x] Remove the decorative scan line and duplicate live-status chip from the preview overlay while retaining the interactive file input and fallback count chip.
@@ -38,4 +38,4 @@
 - [x] Add the next design version with the preview preserve list and rollback target.
 - [x] Run the scan, edit-shoe, and Profile import modal smoke tests.
 - [x] Run `cd frontend && npm run lint` and `cd frontend && node scripts/run-vite-build.mjs`.
-- [x] Run `node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/Shoes.jsx frontend/src/styles/_split/shoes.css frontend/src/pages/shoeScanModalLayout.smoke.test.js` and confirm `/shoes` returns HTTP 200.
+- [x] Run `node tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/shoes/Shoes.jsx frontend/src/styles/_split/shoes.css frontend/src/pages/shoes/__tests__/shoeScanModalLayout.smoke.test.js` and confirm `/shoes` returns HTTP 200.

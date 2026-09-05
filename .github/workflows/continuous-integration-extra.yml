@@ -35,7 +35,9 @@ jobs:
       - name: Install root tooling dependencies
         run: npm ci
       - name: Check translation parity and missing usage
-        run: node .tools/check-translations.mjs --full
+        run: node tools/check-translations.mjs --full
+      - name: Check generated command adapters
+        run: node tools/generate-runtime-commands.mjs --check
 
   frontend-build:
     name: frontend-build
@@ -63,25 +65,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci
+      - name: Install frontend tooling for architecture checks
+        run: npm --prefix frontend ci
       - name: Run repository tooling tests
-        run: |
-          for test_file in \
-            .tools/auto-hermes-architecture-diagrams.test.mjs \
-            .tools/auto-hermes-console-aware-flow.test.mjs \
-            .tools/auto-hermes-console-gate.test.mjs \
-            .tools/auto-hermes-finish.test.mjs \
-            .tools/auto-hermes-prompt-compact.test.mjs \
-            .tools/auto-hermes-push-main.test.mjs \
-            .tools/auto-hermes-security.test.mjs \
-            .tools/check-functionality-direction-tree.test.mjs \
-            .tools/ci-workflow-hygiene.test.mjs \
-            .tools/dependabot-config.test.mjs \
-            .tools/coderabbit-config.test.mjs \
-            .tools/codeant-config.test.mjs
-          do
-            echo "Running ${test_file}"
-            node "${test_file}" || exit 1
-          done
+        run: npm run test:tooling
 
   backend-compile:
     name: backend-compile

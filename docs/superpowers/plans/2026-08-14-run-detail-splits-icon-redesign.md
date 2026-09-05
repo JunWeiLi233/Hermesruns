@@ -13,7 +13,7 @@
 ### Task 1: Guard the dedicated splits icon contract
 
 **Files:**
-- Modify: `frontend/src/pages/runsSubpageNav.smoke.test.js`
+- Modify: `frontend/src/pages/runs/__tests__/runsSubpageNav.smoke.test.js`
 
 - [x] **Step 1: Write the failing test**
 
@@ -26,7 +26,7 @@ assert.match(appIconSource, /case 'splits':[\s\S]*?<ellipse cx="12" cy="12" rx="
 
 - [x] **Step 2: Run the test and confirm it fails**
 
-Run: `node frontend/src/pages/runsSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/runs/__tests__/runsSubpageNav.smoke.test.js`
 
 Expected: FAIL because `run-detail-splits` still uses `distance` and `AppIcon` has no `splits` case.
 
@@ -56,7 +56,7 @@ Change the `run-detail-splits` item from `icon: 'distance'` to `icon: 'splits'`.
 
 - [x] **Step 3: Run targeted and build verification**
 
-Run: `node frontend/src/pages/runsSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/runs/__tests__/runsSubpageNav.smoke.test.js`
 
 Expected: PASS with `[PASS] Runs subpage navigation guard passed.`
 

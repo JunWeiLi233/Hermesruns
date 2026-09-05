@@ -1,12 +1,11 @@
 package com.hermes.backend.auth.mfa;
 
-import com.hermes.backend.AuthService;
-import com.hermes.backend.Runner;
-import com.hermes.backend.RunnerRepository;
-import org.junit.jupiter.api.Test;
-
+import com.hermes.backend.auth.AuthService;
+import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;

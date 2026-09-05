@@ -7,7 +7,7 @@ Redesign `/shoes/add` into a darker kinetic-editorial “performance footwear”
 ## Surface
 
 - Route: `/shoes/add`
-- Owner file: `frontend/src/pages/AddShoes.jsx`
+- Owner file: `frontend/src/pages/shoes/AddShoes.jsx`
 - Shared styling: `frontend/src/styles/style.css`
 - Shared copy: `frontend/src/i18n/translations.js`
 

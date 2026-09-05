@@ -14,7 +14,7 @@ export default async function hermesPlugin(input) {
         execute: async (args) => {
           const cmdArgs = [
             "node",
-            ".tools/auto-hermes-structure-update.mjs",
+            "tools/auto-hermes-structure-update.mjs",
           ];
 
           if (args.write) cmdArgs.push("--write");
@@ -34,7 +34,7 @@ export default async function hermesPlugin(input) {
         execute: async (args) => {
           const cmdArgs = [
             "node",
-            ".tools/auto-hermes-tech-debt.mjs",
+            "tools/auto-hermes-tech-debt.mjs",
             "--command-name",
             "auto-hermes-tech-debt",
             "--max",
@@ -57,17 +57,17 @@ export default async function hermesPlugin(input) {
         execute: async (args, context) => {
           const { worktree } = context;
 
-          const humanLoopResult = await $`cd ${worktree} && cat .ai-sync/HUMAN_LOOP.md 2>/dev/null || echo "Status: active"`;
+          const humanLoopResult = await $`cd ${worktree} && cat .workspace/state/HUMAN_LOOP.md 2>/dev/null || echo "Status: active"`;
           if (humanLoopResult.stdout.includes("pause") || humanLoopResult.stdout.includes("stop") || humanLoopResult.stdout.includes("must-ask")) {
             return "HUMAN_LOOP.md indicates pause/stop/must-ask. Aborting.";
           }
 
           // /auto-hermes-self must not run generate-codex.js; the self-loop helper only writes state and briefs.
-          await $`cd ${worktree} && node .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write`;
+          await $`cd ${worktree} && node tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write`;
 
           const cmdArgs = [
             "node",
-            ".tools/auto-hermes-self-loop.mjs",
+            "tools/auto-hermes-self-loop.mjs",
             "--write",
             "--runtime",
             "opencode",
@@ -76,9 +76,9 @@ export default async function hermesPlugin(input) {
           try {
             const result = await $`cd ${worktree} && ${cmdArgs}`;
             const scopeLine = args.scope ? `\n\nScope hint: ${args.scope}` : "";
-            return `${result.stdout}${scopeLine}\n\nExecute the emitted work unit from .ai-sync/AUTO_HERMES_SELF_NEXT_PROMPT.md, then re-run /auto-hermes-self until a real stop gate fires.`;
+            return `${result.stdout}${scopeLine}\n\nExecute the emitted work unit from .workspace/state/AUTO_HERMES_SELF_NEXT_PROMPT.md, then re-run /auto-hermes-self until a real stop gate fires.`;
           } catch (error) {
-            return `Auto-Hermes self-loop owner failed: ${error.message}\n\nRun manually: node .tools/auto-hermes-self-loop.mjs --write --runtime opencode`;
+            return `Auto-Hermes self-loop owner failed: ${error.message}\n\nRun manually: node tools/auto-hermes-self-loop.mjs --write --runtime opencode`;
           }
         },
       }),

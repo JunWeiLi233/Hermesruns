@@ -32,7 +32,7 @@ Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，
 
 打开 `http://localhost:8080`，邮箱注册即可使用 — 无需配置数据库、API 密钥。更多命令见 [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md)。生产部署（PostgreSQL、OAuth、Stripe）见 [docs/setup.md](docs/setup.md)。
 
-原生 iOS 客户端：请参阅 [ios/README.md](ios/README.md) 了解 SwiftUI 应用和 Xcode 设置。
+开发时可打开 [Hermes.code-workspace](Hermes.code-workspace)，分别浏览前端、后端、文档和工具；集成配置在独立分区中。目录说明见 [repository-layout.md](docs/architecture/repository-layout.md)。
 
 ## 功能亮点
 

@@ -4,7 +4,7 @@
 
 **Goal:** Build a repo-local `/auto-hermes-tech-debt` audit command that scans Hermes for bounded tech debt and writes step-by-step tasks into `TASKS.md`.
 
-**Architecture:** Use one shared `.tools` engine plus a shared workflow contract, then keep each runtime surface as a thin adapter that points at the same engine and truth rules. The engine owns scanning, ranking, reporting, and `TASKS.md` writeback so command docs stay aligned instead of drifting.
+**Architecture:** Use one shared `tools` engine plus a shared workflow contract, then keep each runtime surface as a thin adapter that points at the same engine and truth rules. The engine owns scanning, ranking, reporting, and `TASKS.md` writeback so command docs stay aligned instead of drifting.
 
 **Tech Stack:** Node.js `.mjs` tooling, Markdown/TOML command docs, PowerShell installer updates, OpenCode plugin registration, `node:test`-style assertions.
 
@@ -45,7 +45,7 @@ Run a manual consistency pass so the design doc, plan, and shared contract agree
 ### Task 2: Write The Failing Engine Tests
 
 **Files:**
-- Create: `.tools/auto-hermes-tech-debt.test.mjs`
+- Create: `tools/auto-hermes-tech-debt.test.mjs`
 
 - [ ] **Step 1: Add a fixture builder**
 
@@ -53,7 +53,7 @@ The fixture should create:
 - a minimal `TASKS.md` with `## Tech Debt Tasks`
 - one oversized frontend file
 - one backend file without a matching test
-- one `.tools` file with a `TODO` marker
+- one `tools` file with a `TODO` marker
 
 - [ ] **Step 2: Write the candidate-collection assertion**
 
@@ -86,28 +86,28 @@ Assert the repo contains and wires:
 
 - [ ] **Step 5: Run the test to verify it fails**
 
-Run: `node --test .tools/auto-hermes-tech-debt.test.mjs`
+Run: `node --test tools/auto-hermes-tech-debt.test.mjs`
 
 Expected: FAIL because the engine module, shared contract, and runtime command files do not exist yet.
 
 ### Task 3: Implement The Shared Engine
 
 **Files:**
-- Create: `.tools/auto-hermes-tech-debt.mjs`
+- Create: `tools/auto-hermes-tech-debt.mjs`
 
 - [ ] **Step 1: Implement repo scanning**
 
 Cover these roots when present:
 - `frontend/src`
 - `backend/src`
-- `.tools`
+- `tools`
 - `.codex`
 - `.claude`
 - `.opencode`
 - `.gemini`
 - `docs`
 
-Ignore obvious non-source folders like `.git`, `node_modules`, `target`, `dist`, and `.ai-sync`.
+Ignore obvious non-source folders like `.git`, `node_modules`, `target`, `dist`, and `.workspace/state`.
 
 - [ ] **Step 2: Implement heuristic collectors**
 
@@ -141,7 +141,7 @@ and print a human-readable summary when `--json` is false.
 
 - [ ] **Step 6: Run the test to verify it passes**
 
-Run: `node --test .tools/auto-hermes-tech-debt.test.mjs`
+Run: `node --test tools/auto-hermes-tech-debt.test.mjs`
 
 Expected: still FAIL because runtime adapter files are not wired yet, but engine-specific assertions should now pass.
 
@@ -154,7 +154,7 @@ Expected: still FAIL because runtime adapter files are not wired yet, but engine
 - Create: `.gemini/commands/auto-hermes-tech-debt.toml`
 - Modify: `.claude/agents/antigravity.md`
 - Modify: `.opencode/hermes-plugin.ts`
-- Modify: `.tools/install-hermes-codex-commands.ps1`
+- Modify: `tools/install-hermes-codex-commands.ps1`
 - Modify: `.codex/plugins/hermes-workflows/README.md`
 - Modify: `.codex/plugins/hermes-workflows/.codex-plugin/plugin.json`
 - Create: `.codex/plugins/hermes-workflows/commands/auto-hermes-tech-debt.md`
@@ -185,7 +185,7 @@ Document how Antigravity should run the same shared engine in sequential coordin
 
 - [ ] **Step 5: Re-run the test to verify it passes**
 
-Run: `node --test .tools/auto-hermes-tech-debt.test.mjs`
+Run: `node --test tools/auto-hermes-tech-debt.test.mjs`
 
 Expected: PASS.
 
@@ -196,7 +196,7 @@ Expected: PASS.
 
 - [ ] **Step 1: Run the full tech-debt test**
 
-Run: `node --test .tools/auto-hermes-tech-debt.test.mjs`
+Run: `node --test tools/auto-hermes-tech-debt.test.mjs`
 
 Expected: PASS.
 

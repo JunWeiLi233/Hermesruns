@@ -22,7 +22,7 @@ Identify evidence-backed organic search opportunities when the researched market
 
 ## Output
 
-Write `.ai-sync/market/seo-agent.json` with:
+Write `.workspace/state/market/seo-agent.json` with:
 
 - `scope`
 - `triggerReason`

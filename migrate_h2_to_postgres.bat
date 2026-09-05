@@ -34,7 +34,7 @@ if "%PG_JAR%"=="" (
 set "CP=%H2_JAR%;%PG_JAR%;."
 
 echo Migrating Hermes data from H2 to PostgreSQL...
-java --class-path "%CP%" .tools\H2ToPostgresMigrator.java "%H2_URL%" "%APP_DB_URL%" "%APP_DB_USERNAME%" "%APP_DB_PASSWORD%" --truncate
+java --class-path "%CP%" tools\H2ToPostgresMigrator.java "%H2_URL%" "%APP_DB_URL%" "%APP_DB_USERNAME%" "%APP_DB_PASSWORD%" --truncate
 
 if errorlevel 1 (
   echo Migration failed.

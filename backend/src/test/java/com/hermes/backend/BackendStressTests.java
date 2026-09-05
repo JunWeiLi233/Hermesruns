@@ -1,24 +1,47 @@
 package com.hermes.backend;
 
+import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityPointRepository;
+import com.hermes.backend.activity.ActivityRepository;
+import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.auth.ApiRateLimiter;
+import com.hermes.backend.billing.AiUsageService;
+import com.hermes.backend.coaching.AutomatedCoachService;
+import com.hermes.backend.coaching.CoachFeedbackAlertRepository;
+import com.hermes.backend.coaching.CoachRouteService;
+import com.hermes.backend.coaching.CoachRunnerState;
+import com.hermes.backend.coaching.CoachRunnerStateRepository;
+import com.hermes.backend.coaching.CoachScheduledWorkout;
+import com.hermes.backend.coaching.CoachScheduledWorkoutRepository;
+import com.hermes.backend.coaching.CoachTrainingBlockRepository;
+import com.hermes.backend.coaching.CoachWorkoutType;
+import com.hermes.backend.coaching.InjuryRiskService;
+import com.hermes.backend.coaching.PersonalizedRunningPlanner;
+import com.hermes.backend.coaching.ReadinessService;
+import com.hermes.backend.races.RaceEventRepository;
 import com.hermes.backend.rewards.DigitalCosmeticDropRepository;
 import com.hermes.backend.rewards.DigitalCosmeticsService;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.Field;
+import com.hermes.backend.runner.PersonalRecordService;
+import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
+import com.hermes.backend.shoes.ShoeRepository;
+import com.hermes.backend.shoes.ShoeTrackerService;
+import com.hermes.backend.strength.MuscleTrainingMetricsService;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -32,8 +55,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import org.springframework.dao.DataIntegrityViolationException;
 
 class BackendStressTests {
 

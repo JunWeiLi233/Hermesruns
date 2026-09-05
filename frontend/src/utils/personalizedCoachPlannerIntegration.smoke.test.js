@@ -7,10 +7,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (relativePath) => readFileSync(path.join(here, relativePath), 'utf8');
 
 const todayRun = read('./todayRun.js');
-const todayPage = read('../pages/TodayRun.jsx');
-const schedulePage = read('../pages/Schedule.jsx');
-const profilePage = read('../pages/ProfileDashboard.jsx');
-const coachInsightPage = read('../pages/AnalysisInsightDetail.jsx');
+const todayPage = read('../pages/today-run/TodayRun.jsx');
+const schedulePage = read('../pages/schedule/Schedule.jsx');
+const profilePage = read('../pages/profile/ProfileDashboard.jsx');
+const coachInsightPage = read('../pages/analysis/AnalysisInsightDetail.jsx');
 const en = read('../i18n/locales/en/pages.js');
 const zh = read('../i18n/locales/zh-CN/pages.js');
 

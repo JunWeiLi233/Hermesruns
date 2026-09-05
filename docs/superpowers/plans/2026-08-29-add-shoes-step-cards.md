@@ -13,19 +13,19 @@
 ### Task 1: Add the structural regression guard
 
 **Files:**
-- Create: `frontend/src/pages/addShoesStepCards.smoke.test.js`
-- Test: `frontend/src/pages/addShoesStepCards.smoke.test.js`
+- Create: `frontend/src/pages/shoes/__tests__/addShoesStepCards.smoke.test.js`
+- Test: `frontend/src/pages/shoes/__tests__/addShoesStepCards.smoke.test.js`
 
 - [x] **Step 1: Add a failing assertion for three sibling cards**
 
-Read `pages/AddShoes.jsx` and `styles/add-shoes-profile-alignment.css`, then assert that the source contains exactly three `add-shoes-step-card` sections, with the first two carrying `add-shoes-catalog-step` and the third carrying `add-shoes-setup-payload`. Also assert that the source no longer contains `add-shoes-setup-panel`, the workspace CSS uses one column, the legacy stage hook is non-painting, and the old step divider is absent.
+Read `pages/shoes/AddShoes.jsx` and `styles/add-shoes-profile-alignment.css`, then assert that the source contains exactly three `add-shoes-step-card` sections, with the first two carrying `add-shoes-catalog-step` and the third carrying `add-shoes-setup-payload`. Also assert that the source no longer contains `add-shoes-setup-panel`, the workspace CSS uses one column, the legacy stage hook is non-painting, and the old step divider is absent.
 
 - [x] **Step 2: Run the focused test and verify it fails**
 
 Run:
 
 ```powershell
-node frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js
+node frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js
 ```
 
 Expected: the new sibling-card assertion fails against the current shared-stage/aside structure.
@@ -33,7 +33,7 @@ Expected: the new sibling-card assertion fails against the current shared-stage/
 ### Task 2: Flatten the Add Shoes JSX structure
 
 **Files:**
-- Modify: `frontend/src/pages/AddShoes.jsx`
+- Modify: `frontend/src/pages/shoes/AddShoes.jsx`
 
 - [x] **Step 1: Move the stage heading to the workspace flow**
 
@@ -74,9 +74,9 @@ Use the existing `.add-shoes-step-card` visual language for all three cards. Kee
 Run:
 
 ```powershell
-node frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js
-node frontend/src/pages/addShoesKineticEditorial.smoke.test.js
-node frontend/src/pages/addShoesStepCards.smoke.test.js
+node frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js
+node frontend/src/pages/shoes/__tests__/addShoesKineticEditorial.smoke.test.js
+node frontend/src/pages/shoes/__tests__/addShoesStepCards.smoke.test.js
 ```
 
 Expected: all three commands exit with code 0.
@@ -98,7 +98,7 @@ Expected: lint and build exit with code 0.
 Run:
 
 ```powershell
-node .tools/verify-frontend-runtime-sync.mjs
+node tools/verify-frontend-runtime-sync.mjs
 ```
 
 If the helper is absent on this checkout, report runtime proof as unverified without fabricating a result.

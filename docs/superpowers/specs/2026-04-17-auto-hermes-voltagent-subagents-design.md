@@ -33,7 +33,7 @@ Success means:
 
 ### 1. Catalog bridge
 
-Add a small repo-local helper under `.tools/` that can sync the VoltAgent repository into a local cache directory and install selected `.toml` files into `.codex/agents/`.
+Add a small repo-local helper under `tools/` that can sync the VoltAgent repository into a local cache directory and install selected `.toml` files into `.codex/agents/`.
 
 The helper should also write a small manifest describing:
 - source repo
@@ -87,18 +87,18 @@ Add focused tests proving:
 ## Files
 
 Primary implementation targets:
-- `.tools/auto-hermes-controller.mjs`
-- `.tools/auto-hermes-loop.mjs`
-- `.tools/auto-hermes-tools.test.mjs`
-- new `.tools/auto-hermes-subagent-catalog.mjs`
-- new `.tools/install-voltagent-codex-subagents.mjs`
+- `tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-loop.mjs`
+- `tools/auto-hermes-tools.test.mjs`
+- new `tools/auto-hermes-subagent-catalog.mjs`
+- new `tools/install-voltagent-codex-subagents.mjs`
 
 Repo-local install target:
 - `.codex/agents/`
 
 Manifest/cache targets:
-- `.ai-sync/AUTO_HERMES_SUBAGENT_CATALOG.json`
-- `.ai-sync/voltagent-codex-subagents/`
+- `.workspace/state/AUTO_HERMES_SUBAGENT_CATALOG.json`
+- `.workspace/state/voltagent-codex-subagents/`
 
 ## Non-Goals
 

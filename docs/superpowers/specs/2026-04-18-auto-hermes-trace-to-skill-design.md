@@ -20,7 +20,7 @@ Stage 2 can later harden that signal into a stricter promotion gate after enough
 
 ### 1. Trace packets
 
-Every meaningful `/auto-hermes` round should leave behind a compact packet under `.ai-sync/trace-to-skill/rounds/`.
+Every meaningful `/auto-hermes` round should leave behind a compact packet under `.workspace/state/trace-to-skill/rounds/`.
 
 Each packet should capture only durable evidence needed for workflow evolution:
 - task, surface, files, problem class, route shape
@@ -64,9 +64,9 @@ This must not block normal product execution yet.
 ## Owners
 
 Smallest owner files for this stage:
-- `.tools/auto-hermes-round-close.mjs`
-- new `.tools/auto-hermes-trace-to-skill.mjs`
-- `.tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-round-close.mjs`
+- new `tools/auto-hermes-trace-to-skill.mjs`
+- `tools/auto-hermes-controller.mjs`
 - `HERMES_SELF_EVOLVING_ENGINE.md`
 - `.codex/workflows/auto-hermes-architecture.md`
 

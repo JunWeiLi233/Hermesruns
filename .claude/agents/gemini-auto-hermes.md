@@ -21,10 +21,10 @@ You are running the Hermes `/auto-hermes` workflow for a Spring Boot + React run
 ## Session Start
 
 Run once, in order, before any task work:
-1. Check `.ai-sync/HUMAN_LOOP.md` — if it says `pause`, `stop`, or `must-ask`, stop immediately
-2. Read `.ai-codex/optimized-claude.md` for queue status (or `TASKS.md` directly if not generated)
-3. Read `.ai-sync/AGENT_SYNC.md` then `.ai-sync/CONTEXT_LEDGER.md`; note any `## Active Claims` for use in the concurrent agent scan below
-4. Read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` (or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json`) and treat it as a `soft-signal` only for workflow/process evolution. It is evidence-backed guidance, not a hard stop on normal execution.
+1. Check `.workspace/state/HUMAN_LOOP.md` — if it says `pause`, `stop`, or `must-ask`, stop immediately
+2. Read `.workspace/codex/optimized-claude.md` for queue status (or `TASKS.md` directly if not generated)
+3. Read `docs/ai/CONTEXT_SNAPSHOT.md`; inspect only `## Active Claims` and search the relevant surface in `.workspace/state/AGENT_SYNC.md` and `.workspace/state/CONTEXT_LEDGER.md` for concurrent work and preservation constraints. Do not preload the full archives.
+4. Read `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.md` (or `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json`) and treat it as a `soft-signal` only for workflow/process evolution. It is evidence-backed guidance, not a hard stop on normal execution.
 
 ## Mode Switch
 
@@ -53,7 +53,7 @@ Execute one bounded task at a time. Do not reorder the steps:
 3. PM step: scope the round; for non-trivial frontend, lock surface/visual goal/preserve list/round type/reference source
 4. Builder step: implement only the chosen work unit
 5. Verify: run task verification plus any runtime proof gate
-6. Translation sync: only if user-visible JSX strings changed — run `node .tools/check-translations.mjs`; exit 0 required
+6. Translation sync: only if user-visible JSX strings changed — run `node tools/check-translations.mjs`; exit 0 required
 7. Code-review pass: full pipeline only
 8. Customer pass: runner-facing surfaces only, full pipeline only
 9. Reviewer: emit exactly one verdict: `approve-next-round` / `must-fix-before-next-round` / `reverse-recommended`
@@ -74,7 +74,7 @@ Reference: `.codex/workflows/auto-hermes-shared-contract.md`
 When Gemini is selecting or validating frontend work, use the same frontend error/design signals the repo helpers currently emit instead of reducing everything to generic visual polish.
 
 High-signal frontend detections include:
-- local browser console errors from `.ai-sync/LOCAL_CONSOLE_ERRORS.json` / `.md`
+- local browser console errors from `.workspace/state/LOCAL_CONSOLE_ERRORS.json` / `.md`
 - missing empty states
 - missing loading states
 - design shell drift on premium runner surfaces
@@ -83,14 +83,14 @@ High-signal frontend detections include:
 - translation bypasses or raw translation keys leaking into visible UI
 
 Use these repo helpers as the current authority for those signals:
-- `.tools/suggest-tasks.mjs`
-- `.tools/auto-hermes-self-check.mjs`
-- `.tools/auto-hermes-controller.mjs`
+- `tools/suggest-tasks.mjs`
+- `tools/auto-hermes-self-check.mjs`
+- `tools/auto-hermes-controller.mjs`
 
 If a frontend round changes `frontend/src/**`, run the self-check on the touched files before accepting a pass verdict:
 
 ```bash
-node .tools/auto-hermes-self-check.mjs --json --files "frontend/src/path/a.jsx||frontend/src/path/b.css" --surface "<surface>" --task "<task>"
+node tools/auto-hermes-self-check.mjs --json --files "frontend/src/path/a.jsx||frontend/src/path/b.css" --surface "<surface>" --task "<task>"
 ```
 
 If self-check reports findings, downgrade the round to `must-fix-before-next-round`.
@@ -102,9 +102,9 @@ Gemini CLI has no native skill system. Apply these as inline workflow rules:
 | Trigger | Behavior |
 |---|---|
 | Vague argument | Sharpen scope manually; note if deep-interview would help but is unavailable |
-| New feature/component/page | Produce 3 options, pick strongest by Evidence Gate; log rejected options to `.ai-sync/CONTEXT_LEDGER.md` |
+| New feature/component/page | Produce 3 options, pick strongest by Evidence Gate; log rejected options to `.workspace/state/CONTEXT_LEDGER.md` |
 | Frontend round touching layout/hierarchy/states | Apply frontend design-review gate before Builder; route `full-pipeline` |
-| Translation change | Run `node .tools/check-translations.mjs`; exit 0 required before commit |
+| Translation change | Run `node tools/check-translations.mjs`; exit 0 required before commit |
 | Verification failure | Diagnose root cause first; fix in-round if cheap; otherwise write must-fix task |
 
 ## Self-Loop Engine
@@ -122,7 +122,7 @@ Promote first item with `Files:`, `Done when:`, `Verify:`, bounded to one work u
 If none → Level 4.
 
 ### Level 4 — Self-Generation
-Read `.ai-sync/RUNAWAY_COUNTER.json` as `{ "count": N }` (create with count 0 if absent). If count ≥ 3, fire Runaway Guard — stop and report. Read `PRODUCT.md` and `.ai-sync/CONTEXT_LEDGER.md`. Identify 1 concrete improvement. Apply Evidence Gate + Task Quality Rubric (4 of 5 strong) + Tier Gate. If passes: write to `## Active Tasks`, reset counter to 0, go to Level 1. If fails: increment counter, go to Level 5.
+Read `.workspace/state/RUNAWAY_COUNTER.json` as `{ "count": N }` (create with count 0 if absent). If count ≥ 3, fire Runaway Guard — stop and report. Use `docs/ai/CONTEXT_SNAPSHOT.md` for product context and query only the candidate surface in the ledger. Identify 1 concrete improvement. Apply Evidence Gate + Task Quality Rubric (4 of 5 strong) + Tier Gate. If passes: write to `## Active Tasks`, reset counter to 0, go to Level 1. If fails: increment counter, go to Level 5.
 
 ### Website-Audit Exhaustion Fallback
 Before final stop on an empty queue, run the website-audit explorer and try to emit exactly one bounded `add`, `improve`, `revise`, `fix`, or `test` task from current website/product signals.
@@ -143,13 +143,13 @@ Run auto-commit finish action if product source files changed. Report: "loop com
 ```bash
 # Frontend — after any UI change
 & 'C:\Program Files\nodejs\node.exe' frontend\scripts\run-vite-build.mjs
-& 'C:\Program Files\nodejs\node.exe' .tools\verify-frontend-runtime-sync.mjs --files "frontend/src/path/a.jsx||frontend/src/path/b.css"
+& 'C:\Program Files\nodejs\node.exe' tools\verify-frontend-runtime-sync.mjs --files "frontend/src/path/a.jsx||frontend/src/path/b.css"
 
 # Backend — after any backend runtime change
 cd backend && ./mvnw -q -DskipTests compile
 
 # Translation parity
-node .tools/check-translations.mjs
+node tools/check-translations.mjs
 ```
 
 ## Frontend Design Review Rule
@@ -177,14 +177,14 @@ Reference: `.codex/workflows/auto-hermes-claim-taxonomy.md`
 - Do not claim live website changed unless frontend proof gate passes
 - Do not claim backend runtime changed unless compile proof gate passes
 - If source changed but runtime sync not done: report "source changed, live site not synced yet"
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json` / `.md` is a `soft-signal` only in this stage. Use it to justify workflow changes, not to block ordinary product work.
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json` / `.md` is a `soft-signal` only in this stage. Use it to justify workflow changes, not to block ordinary product work.
 
 ## Concurrent Agent Resilience
 
 Other agents (Codex, Claude, etc.) may write to the same repo while you're running. Never stop because of it — absorb, synthesize, and continue.
 
 ### Pre-task sync check
-Before picking each task, run `git log --oneline -5`. If a non-self commit appears, re-read `.ai-sync/AGENT_SYNC.md`:
+Before picking each task, run `git log --oneline -5`. If a non-self commit appears, inspect the active-claim and relevant recently-completed sections of `.workspace/state/AGENT_SYNC.md`:
 - Another agent **completed** work on your target surface → read their changed files first; build on top.
 - Another agent **claims** your target surface → skip it; pick the next unowned surface.
 - Different surface → ignore and proceed.
@@ -206,7 +206,7 @@ Before writing a file: `git diff HEAD -- <file>`. If it changed externally, re-r
 ## Human Gate
 
 Ask the human only when:
-- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
 - Verification failed and next move is risky or irreversible
 - `reverse-recommended` revert cannot be done automatically
 
@@ -217,7 +217,7 @@ Stop only when:
 - All promotion levels exhausted (Level 5)
 - Verification fails with unresolvable blocker
 - `reverse-recommended` revert needs human input
-- `.ai-sync/HUMAN_LOOP.md` says `pause/stop/must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause/stop/must-ask`
 - Runaway Guard fires (3 consecutive self-generation rounds with no accepted work)
 - Repeated no-candidate website-audit rounds reach the configured limit
 
@@ -236,9 +236,9 @@ Reference: `.codex/workflows/auto-hermes-shared-contract.md` → Finish Action
 - Commit when commit gates pass; local commit is default
 - Push only when real publish need exists and push gates pass
 - Push or “submit to main repository” requires a fresh passing Docker gate artifact for the current working tree:
-  `node .tools/auto-hermes-docker-gate.mjs --write`
+  `node tools/auto-hermes-docker-gate.mjs --write`
 - The Docker gate blocks publish paths only. It does not block normal local auto-commit.
-- Stage only product files — never `.claude/`, `.codex/`, `.ai-sync/`, `TASKS.md`, `AGENTS.md`, `PRODUCT.md`, `task-images/`
+- Stage only product files — never `.claude/`, `.codex/`, `.workspace/state/`, `TASKS.md`, `AGENTS.md`, `PRODUCT.md`, `task-images/`
 
 ## Key Conventions
 
@@ -257,14 +257,14 @@ Gemini CLI does NOT have native agent spawning. Apply **Sequential Coordinator M
 Reference: `.codex/commands/auto-hermes-max.md` for the full parallel protocol.
 
 ### Session Start
-1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
-2. Read `.ai-sync/CONTEXT_LEDGER.md` and `.ai-sync/AGENT_SYNC.md`; note `## Active Claims` for concurrent scan
+1. Check `.workspace/state/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+2. Read `docs/ai/CONTEXT_SNAPSHOT.md`; inspect only `## Active Claims` and query the relevant surface in the ledger/sync archives for the concurrent scan.
 
 **Concurrent agent scan (before every iteration):** Run `git log --oneline -10`. Exclude surfaces under active claims from lane scopes. Read recently-completed `changedFiles` before writing lane briefs.
 
 ### Mode Switch
 - **With scope argument**: Use provided scope as parent goal. Skip Explorer. Go to Lane Planning.
-- **No argument**: Act as own Explorer. Read TASKS.md, PRODUCT.md, .ai-sync/CONTEXT_LEDGER.md, .ai-codex/pages.md, .ai-codex/routes.md. Identify single highest-value task. Run one full /auto-hermes round. Write Explorer Report to `.ai-sync/AUTO_HERMES_MAX_EXPLORER.json`.
+- **No argument**: Act as own Explorer. Use the compact snapshot and active TASKS.md block, then query only the relevant ledger/page/route entries. Identify single highest-value task. Run one full /auto-hermes round. Write Explorer Report to `.workspace/state/AUTO_HERMES_MAX_EXPLORER.json`.
 
 ### Sequential Lane Execution
 Split the goal into lanes with disjoint file ownership. Execute each lane sequentially:
@@ -272,7 +272,7 @@ Split the goal into lanes with disjoint file ownership. Execute each lane sequen
 2. Run full /auto-hermes round within owned files only
 3. Before writing each file: `git diff HEAD -- <file>` — if changed externally, re-read and synthesize (apply Concurrent Agent Resilience rules above)
 4. Verify: lint/compile/test as appropriate
-5. Write result packet to `.ai-sync/auto-hermes-max-results/lane-<id>-result.json`
+5. Write result packet to `.workspace/state/auto-hermes-max-results/lane-<id>-result.json`
 6. Move to next lane
 
 Never edit a file declared by a different lane. If conflict detected mid-lane, stop that lane, mark it `must-fix`, continue with remaining lanes.
@@ -282,7 +282,7 @@ Never edit a file declared by a different lane. If conflict detected mid-lane, s
 Run all gates in order. Reference: `.codex/commands/auto-hermes-max.md` → Max Merge Gate (now 10 gates including Concurrent-Work Absorption at gate 6).
 Never ask the user to confirm a gate.
 
-After `approve-merge`: update `.ai-sync/CONTEXT_LEDGER.md`, update `TASKS.md`, run auto-commit finish action.
+After `approve-merge`: update `.workspace/state/CONTEXT_LEDGER.md`, update `TASKS.md`, run auto-commit finish action.
 
 ### Dynamic Reassessment (must loop back)
 
@@ -298,7 +298,7 @@ The loop does NOT stop after one iteration.
 ### Stop Rules
 - Dynamic Reassessment finds 0 promotable items
 - Unresolvable blocker in a lane or merge gate
-- `.ai-sync/HUMAN_LOOP.md` says `pause/stop/must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause/stop/must-ask`
 - Runaway Guard fires (3 consecutive Explorer re-runs with no parallel work)
 - Repeated no-candidate website-audit rounds reach the configured limit
 
@@ -311,9 +311,9 @@ Gemini CLI does NOT have native agent spawning. Run all 5 research phases sequen
 **Canonical command**: `.claude/commands/auto-hermes-market.md` — full protocol, agent schemas, output files, anti-hallucination gate.
 
 ### Session Start
-1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+1. Check `.workspace/state/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
 2. If no scope argument: read `PRODUCT.md` lines 1–40, extract North Star market
-3. Create `.ai-sync/market/` directory if absent
+3. Create `.workspace/state/market/` directory if absent
 
 ### Sequential Phase Execution
 
@@ -324,34 +324,34 @@ Run phases 1–5 in order. Announce each phase before starting. Write the JSON f
 #### Phase 1 — Market Analyst
 Search: `"<scope>" market size 2024 2025` · `"<scope>" TAM billion analyst report`
 Fetch result pages containing dollar figures. Extract number + year + source.
-Output: `.ai-sync/market/market-analyst.json`
+Output: `.workspace/state/market/market-analyst.json`
 
 #### Phase 2 — Competitor Hunter
 Search: `best <scope> apps 2024` · `<scope> alternatives site:reddit.com`
 Fetch each candidate homepage. Verify live product + user evidence.
 Only `verified[]` entries have `userEvidenceUrl`. Rest → `unconfirmed[]`.
-Output: `.ai-sync/market/competitor-hunter.json`
+Output: `.workspace/state/market/competitor-hunter.json`
 
 #### Phase 3 — Pricing Engineer
 Fetch `<competitor>/pricing` for each verified competitor.
 Search: `<scope> pricing Reddit` · `"<scope>" subscription price "per month"`
-Output: `.ai-sync/market/pricing-engineer.json`
+Output: `.workspace/state/market/pricing-engineer.json`
 
 #### Phase 4 — Social Signal
 Search: `site:reddit.com "<scope>" app` — fetch top 3–5 threads.
 Search: `"<scope>" "would pay for" site:reddit.com` · `"<competitor>" 1 star reviews`
 Only pain points with 2+ mentions → `painPoints[]`. Single mentions → `weakSignals[]`.
-Output: `.ai-sync/market/social-signal.json`
+Output: `.workspace/state/market/social-signal.json`
 
 #### Phase 5 — Trend Validator
 Search: `"<scope>" trend 2024 growing` · `"<scope>" funding 2024 site:techcrunch.com`
 Score momentum 1–10 per rubric in `.claude/commands/auto-hermes-market.md` → Scoring methodology.
-Output: `.ai-sync/market/trend-validator.json`
+Output: `.workspace/state/market/trend-validator.json`
 
 ### Synthesis
 
 After all 5 files exist: read them, score each opportunity (0–10), map to Hermes tiers, run the Anti-Hallucination Gate.
-Write `.ai-sync/market/MARKET_INTELLIGENCE.json` + `.ai-sync/market/MARKET_INTELLIGENCE.md`.
+Write `.workspace/state/market/MARKET_INTELLIGENCE.json` + `.workspace/state/market/MARKET_INTELLIGENCE.md`.
 Full synthesis schema: see `.claude/commands/auto-hermes-market.md` → Synthesis Step.
 
 ### Task Generation
@@ -360,11 +360,11 @@ Insert opportunities scoring ≥ 6/10 as concrete tasks into `TASKS.md` `## Sugg
 
 ### Reset + Report
 
-Write `{"count": 0}` to `.ai-sync/AUTO_HERMES_MAX_RUNAWAY.json`.
+Write `{"count": 0}` to `.workspace/state/AUTO_HERMES_MAX_RUNAWAY.json`.
 Emit the Market Intelligence Summary per `.claude/commands/auto-hermes-market.md` → Coordinator Reply Rules.
 
 ### Stop Rules
-- `.ai-sync/HUMAN_LOOP.md` says `pause/stop/must-ask` → stop before Phase 1
+- `.workspace/state/HUMAN_LOOP.md` says `pause/stop/must-ask` → stop before Phase 1
 - All 5 phases fail → stop, report "research failed — no search access"
 - Never stop because a single phase returned `partial` — continue with remaining phases
 - Sequential execution only — never claim parallel phase execution for Gemini CLI

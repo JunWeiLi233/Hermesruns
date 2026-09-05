@@ -25,5 +25,5 @@ Use this skill for Hermes requests that should follow the `/auto-hermes-self` wo
 - Treat `.codex/commands/auto-hermes-self.md` as the canonical Codex-side execution note.
 - Do not treat a single bounded round as completion.
 - Preserve the loop-owner, re-entry, and real-stop-gate behavior.
-- For Codex execution, do not run repo agent-generation helpers such as `.tools/generate-codex.js`, `.tools/auto-hermes-loop.mjs` helper-generated agent paths, or external generators; spawn native Codex subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+- For Codex execution, do not run repo agent-generation helpers such as `tools/generate-codex.js`, `tools/auto-hermes-loop.mjs` helper-generated agent paths, or external generators; spawn native Codex subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
 - Keep all round-close, verification, and runtime-proof gates intact.

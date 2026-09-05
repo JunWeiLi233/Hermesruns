@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const shoesFilePath = path.join(__dirname, '..', 'pages', 'Shoes.jsx');
+const shoesFilePath = path.join(__dirname, "../pages/shoes/Shoes.jsx");
 const shoesContent = fs.readFileSync(shoesFilePath, 'utf8');
 
 const expectedKeys = [

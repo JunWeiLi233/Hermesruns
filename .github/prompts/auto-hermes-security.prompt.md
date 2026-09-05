@@ -9,12 +9,12 @@ Before starting:
 
 1. Read [AGENTS.md](../../AGENTS.md).
 2. Read [Codex command note](../../.codex/commands/auto-hermes-security.md).
-3. Inspect the audit engine at [`.tools/auto-hermes-security.mjs`](../../.tools/auto-hermes-security.mjs).
+3. Inspect the audit engine at [`tools/auto-hermes-security.mjs`](../../tools/auto-hermes-security.mjs).
 
 Then execute the workflow with these rules:
 
 - Prefer the documented engine:
-  `node .tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-security --write`
+  `node tools/auto-hermes-security.mjs --mode audit --command-name auto-hermes-security --write`
 - Add `--runtime-base-url http://localhost:8080` only when a local/dev runtime is actually reachable.
 - Run static/code-config checks even if runtime probing is unavailable.
 - Do not claim production exploitability from static heuristics alone.

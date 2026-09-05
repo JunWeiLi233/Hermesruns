@@ -1,7 +1,7 @@
 # Dashboard Users Command Center Design
 
 Date: 2026-04-19
-Surface: `frontend/src/pages/Dashboard.jsx` -> `/dashboard/users`
+Surface: `frontend/src/pages/admin/Dashboard.jsx` -> `/dashboard/users`
 Status: approved in chat, implementation in progress
 
 ## Goal

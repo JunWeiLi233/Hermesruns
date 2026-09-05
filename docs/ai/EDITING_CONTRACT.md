@@ -35,14 +35,13 @@ receive generated adapters.
 
 ## Formatting
 
-Format only files touched by the change:
+Keep the existing style and limit formatting to the files in the change. This
+checkout does not configure `format:write` or Spotless tasks. Verify whitespace
+with `git diff --check`, JavaScript with the frontend lint command, and Java with
+the backend compiler. These commands are checks, not automatic formatters.
 
-- JavaScript, JSX, JSON, CSS, and Markdown: `cd frontend && npm run format:write -- <files>`.
-- Java: `cd backend && ./mvnw -q spotless:apply -DspotlessFiles=<comma-separated-files>`.
-
-The CI formatting gate checks changed application files. A future dedicated
-formatting migration may normalize the full codebase; do not turn ordinary
-feature work into a repository-wide reformat.
+A repository-wide formatting migration must be a deliberate cleanup change;
+ordinary feature work should not reformat unrelated files.
 
 ## Verification
 
@@ -51,7 +50,7 @@ it:
 
 - Frontend source: `cd frontend && npm run lint && npm test && npm run build`.
 - Backend source: `cd backend && ./mvnw -q test`.
-- User-facing copy: `node .tools/check-translations.mjs`.
+- User-facing copy: `node tools/check-translations.mjs`.
 - Website-facing work: run the relevant runtime proof gate before claiming the
   local website changed.
 

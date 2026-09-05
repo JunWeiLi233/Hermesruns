@@ -12,16 +12,16 @@
 
 ## File Map
 
-- Modify `frontend/src/pages/AnalysisInsightDetail.jsx`: reorder the existing Load Balance content into header, decision, evidence, metrics, ledger, and methodology sections.
+- Modify `frontend/src/pages/analysis/AnalysisInsightDetail.jsx`: reorder the existing Load Balance content into header, decision, evidence, metrics, ledger, and methodology sections.
 - Create `frontend/src/styles/analysis-load-balance-profile-alignment.css`: own all route-scoped Profile-aligned presentation, themes, focus, motion, and responsive behavior.
 - Modify `frontend/src/index.css`: import the new route stylesheet after current Analysis alignment styles.
-- Modify `frontend/src/pages/analysisSubpageNav.smoke.test.js`: guard section order, chart interaction, routes, and stylesheet registration.
+- Modify `frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`: guard section order, chart interaction, routes, and stylesheet registration.
 - Modify `DESIGN_VERSIONS.md`: record the meaningful UI revision and proof gates.
 
 ### Task 1: Add The Decision-First Contract Guard
 
 **Files:**
-- Modify: `frontend/src/pages/analysisSubpageNav.smoke.test.js`
+- Modify: `frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 - [ ] **Step 1: Write assertions that initially fail**
 
@@ -61,14 +61,14 @@ assert.match(loadBalanceCss, /theme-midnight/);
 
 - [ ] **Step 2: Run the guard and verify failure**
 
-Run: `node frontend/src/pages/analysisSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 Expected: FAIL because the new stylesheet and `analysis-load-profile-*` structure do not exist.
 
 ### Task 2: Recompose Load Balance Around The Coaching Decision
 
 **Files:**
-- Modify: `frontend/src/pages/AnalysisInsightDetail.jsx:1849-2095`
+- Modify: `frontend/src/pages/analysis/AnalysisInsightDetail.jsx:1849-2095`
 
 - [ ] **Step 1: Replace the oversized hero with a compact Profile-style header**
 
@@ -116,7 +116,7 @@ Keep all existing model fields and click handlers, but order sections as:
 
 - [ ] **Step 5: Run the smoke guard**
 
-Run: `node frontend/src/pages/analysisSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 Expected: still FAIL only for the missing stylesheet/import.
 
@@ -152,7 +152,7 @@ Add to `frontend/src/index.css`:
 
 - [ ] **Step 6: Run the smoke guard**
 
-Run: `node frontend/src/pages/analysisSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 Expected: `[PASS] Analysis subpage navigation guard passed.`
 
@@ -173,7 +173,7 @@ Expected: successful Vite build copied into backend static resources.
 
 - [ ] **Step 3: Verify runtime synchronization**
 
-Run: `node .tools/verify-frontend-runtime-sync.mjs`
+Run: `node tools/verify-frontend-runtime-sync.mjs`
 
 Expected: source, built static state, and live runtime report synchronized.
 
@@ -187,6 +187,6 @@ Resize to approximately `390x844`. Confirm the content stacks, no horizontal ove
 
 - [ ] **Step 6: Inspect the final diff**
 
-Run: `git diff --check -- frontend/src/pages/AnalysisInsightDetail.jsx frontend/src/styles/analysis-load-balance-profile-alignment.css frontend/src/index.css frontend/src/pages/analysisSubpageNav.smoke.test.js DESIGN_VERSIONS.md`
+Run: `git diff --check -- frontend/src/pages/analysis/AnalysisInsightDetail.jsx frontend/src/styles/analysis-load-balance-profile-alignment.css frontend/src/index.css frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js DESIGN_VERSIONS.md`
 
 Expected: no whitespace errors. Verify unrelated staged or working-tree changes remain untouched.

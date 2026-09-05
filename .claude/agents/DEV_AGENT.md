@@ -55,7 +55,7 @@ Read only:
 - the approved round brief or ticket
 - the owned files
 - at most 2 directly related support files
-- `.ai-sync/CONTEXT_LEDGER.md` if this surface was recently touched
+- `.workspace/state/CONTEXT_LEDGER.md` if this surface was recently touched
 
 Do not broad-scan the repository unless the round explicitly says discovery is required.
 

@@ -17,7 +17,7 @@ Run a bounded, whole-project tech-debt review that:
 
 ## Command Notes
 
-- Preferred engine: `node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8`
+- Preferred engine: `node tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8`
 - Shared contract: `.codex/workflows/auto-hermes-tech-debt-contract.md`
 - Writeback target: repo-standard `TASKS.md` under `## Tech Debt Tasks`
 - Use `--json` when another tool or runtime wants machine-readable output

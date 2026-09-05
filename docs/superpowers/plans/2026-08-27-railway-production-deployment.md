@@ -22,7 +22,7 @@
 ### Task 1: Lock the deployment contract
 
 **Files:**
-- Create: `.tools/railway-deployment-contract.smoke.test.mjs`
+- Create: `tools/railway-deployment-contract.smoke.test.mjs`
 - Modify: `Dockerfile`
 - Modify: `.dockerignore`
 - Modify: `backend/src/main/resources/application.properties`
@@ -33,7 +33,7 @@
 - [ ] Build the frontend with `VITE_SOURCEMAP=false` and package the backend with Java 17.
 - [ ] Run the application as a dedicated unprivileged runtime user.
 - [ ] Add current Railway Infrastructure-as-Code health-check metadata and retain Railway's `ON_FAILURE` restart policy.
-- [ ] Run `node .tools/railway-deployment-contract.smoke.test.mjs` and expect `PASS`.
+- [ ] Run `node tools/railway-deployment-contract.smoke.test.mjs` and expect `PASS`.
 
 ### Task 2: Prove the deployable image locally
 

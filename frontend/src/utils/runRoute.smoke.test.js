@@ -14,10 +14,10 @@ assert.match(appSource, /<Route path="\/runs\/:id"/, 'The router should mount ru
 assert.equal(appSource.includes('path="/run/:id"'), false, 'The router must not mount run details under /run/:runId.');
 
 for (const page of [
-  '../pages/Runs.jsx',
-  '../pages/RunDetail.jsx',
-  '../pages/AnalysisInsightDetail.jsx',
-  '../pages/ProfileDashboard.jsx',
+  "../pages/runs/Runs.jsx",
+  "../pages/runs/RunDetail.jsx",
+  "../pages/analysis/AnalysisInsightDetail.jsx",
+  "../pages/profile/ProfileDashboard.jsx",
 ]) {
   const source = readFileSync(path.join(here, page), 'utf8');
   assert.match(source, /buildRunDetailPath/, page + ' should use the canonical run-detail route helper.');

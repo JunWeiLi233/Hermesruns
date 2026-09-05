@@ -22,8 +22,8 @@ and `GEMINI.md`; each routes to the same shared contract.
 
 1. Edit the matching file in `.codex/commands/`.
 2. Update `runtime-command-manifest.json` if the command is added or removed.
-3. Run `node .tools/generate-runtime-commands.mjs`.
-4. Run `node .tools/generate-runtime-commands.mjs --check` (or the companion
+3. Run `node tools/generate-runtime-commands.mjs`.
+4. Run `node tools/generate-runtime-commands.mjs --check` (or the companion
    test) before committing.
 
 Do not directly edit generated command files under `.claude/commands/`,
@@ -31,15 +31,11 @@ Do not directly edit generated command files under `.claude/commands/`,
 
 ## Formatting policy
 
-Only changed application files are formatted during normal work:
+Follow the [editing contract's formatting policy](EDITING_CONTRACT.md#formatting).
+Preserve existing style, check whitespace with `git diff --check`, and use the
+configured lint/compiler gates. Automatic formatter tasks are not configured in
+this checkout. A full-repository formatting pass requires a planned cleanup.
 
-- Frontend: `cd frontend && npm run format:write -- <changed-files>`
-- Backend: `cd backend && ./mvnw -q spotless:apply -DspotlessFiles=<changed-files>`
-
-CI checks generated-command drift and formats only the application files
-changed in the PR. A full-repository formatting pass requires its own planned
-cleanup change.
-
-Run `node .tools/check-ai-context-budget.mjs` after changing an AI entrypoint,
+Run `node tools/check-ai-context-budget.mjs` after changing an AI entrypoint,
 editing contract, or context document. Historical logs remain searchable but
 must not be added to the bootstrap list.

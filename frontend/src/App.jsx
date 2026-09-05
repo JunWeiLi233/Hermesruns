@@ -36,7 +36,7 @@ const PredictionDetail = React.lazy(routeParamPreloaders['/prediction/:distKey']
 const MuscleTraining = React.lazy(routePreloaders['/muscle-training']);
 const Rewards = React.lazy(routePreloaders['/rewards']);
 const Settings = React.lazy(routePreloaders['/settings']);
-const ImportDataSettings = React.lazy(() => import('./pages/ImportDataSettings'));
+const ImportDataSettings = React.lazy(() => import('./pages/settings/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
 
 const SKELETON_PREVIEW_VARIANTS = new Set([

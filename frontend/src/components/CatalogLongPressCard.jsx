@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { getCatalogTargetKey, useCatalogLongPress } from '../utils/catalogLongPress.js';
+import { getCatalogTargetKey, useCatalogLongPress } from '../hooks/useCatalogLongPress.js';
 
 export default function CatalogLongPressCard({
   target,

@@ -4,16 +4,16 @@
 
 **Goal:** Add a staged trace-to-skill pipeline so `/auto-hermes` can derive workflow-evolution signals from real round traces.
 
-**Architecture:** Round-close writes compact trace packets into `.ai-sync/trace-to-skill/rounds/`. A new deterministic helper analyzes those packets through four analyst-style passes and merges repeated evidence into soft workflow candidates. Controller and owner docs expose that evidence as advisory input, not a hard gate.
+**Architecture:** Round-close writes compact trace packets into `.workspace/state/trace-to-skill/rounds/`. A new deterministic helper analyzes those packets through four analyst-style passes and merges repeated evidence into soft workflow candidates. Controller and owner docs expose that evidence as advisory input, not a hard gate.
 
-**Tech Stack:** Node.js `.mjs` tooling, markdown/json artifacts, existing `.tools/auto-hermes-tools.test.mjs` harness
+**Tech Stack:** Node.js `.mjs` tooling, markdown/json artifacts, existing `tools/auto-hermes-tools.test.mjs` harness
 
 ---
 
 ### Task 1: Add Red Tests For Trace-To-Skill Behavior
 
 **Files:**
-- Modify: `.tools/auto-hermes-tools.test.mjs`
+- Modify: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -24,13 +24,13 @@ Add tests that expect:
 
 - [ ] **Step 2: Run the targeted test file to verify it fails**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: FAIL on missing trace-to-skill exports / missing controller evidence field
 
 ### Task 2: Implement Trace-To-Skill Helper
 
 **Files:**
-- Create: `.tools/auto-hermes-trace-to-skill.mjs`
+- Create: `tools/auto-hermes-trace-to-skill.mjs`
 
 - [ ] **Step 1: Implement packet normalization and analyst passes**
 
@@ -42,22 +42,22 @@ Create exported helpers for:
 - [ ] **Step 2: Add markdown/json rendering**
 
 Emit:
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json`
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md`
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json`
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.md`
 
 - [ ] **Step 3: Run the targeted tests**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: packet-analysis tests move closer to green
 
 ### Task 3: Integrate Round-Close Trace Emission
 
 **Files:**
-- Modify: `.tools/auto-hermes-round-close.mjs`
+- Modify: `tools/auto-hermes-round-close.mjs`
 
 - [ ] **Step 1: Write packet creation integration**
 
-Round-close should build a compact trace packet from the finished round and write it into `.ai-sync/trace-to-skill/rounds/`, then refresh the merged trace-to-skill outputs.
+Round-close should build a compact trace packet from the finished round and write it into `.workspace/state/trace-to-skill/rounds/`, then refresh the merged trace-to-skill outputs.
 
 - [ ] **Step 2: Keep the integration soft and deterministic**
 
@@ -65,13 +65,13 @@ Failures in trace synthesis must not block normal queue/state writeback.
 
 - [ ] **Step 3: Run the targeted tests**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: round-close trace test passes
 
 ### Task 4: Surface Soft Evidence In Controller And Docs
 
 **Files:**
-- Modify: `.tools/auto-hermes-controller.mjs`
+- Modify: `tools/auto-hermes-controller.mjs`
 - Modify: `HERMES_SELF_EVOLVING_ENGINE.md`
 - Modify: `.codex/workflows/auto-hermes-architecture.md`
 
@@ -85,12 +85,12 @@ Document that workflow-evolution changes should prefer trace-backed evidence and
 
 - [ ] **Step 3: Run verification**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: PASS for the new trace-to-skill tests and no regressions in existing helper tests
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/superpowers/specs/2026-04-18-auto-hermes-trace-to-skill-design.md docs/superpowers/plans/2026-04-18-auto-hermes-trace-to-skill.md .tools/auto-hermes-tools.test.mjs .tools/auto-hermes-trace-to-skill.mjs .tools/auto-hermes-round-close.mjs .tools/auto-hermes-controller.mjs HERMES_SELF_EVOLVING_ENGINE.md .codex/workflows/auto-hermes-architecture.md
+git add docs/superpowers/specs/2026-04-18-auto-hermes-trace-to-skill-design.md docs/superpowers/plans/2026-04-18-auto-hermes-trace-to-skill.md tools/auto-hermes-tools.test.mjs tools/auto-hermes-trace-to-skill.mjs tools/auto-hermes-round-close.mjs tools/auto-hermes-controller.mjs HERMES_SELF_EVOLVING_ENGINE.md .codex/workflows/auto-hermes-architecture.md
 git commit -m "Add trace-to-skill signals for auto-hermes"
 ```

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rewardBadgesSource = readFileSync(path.join(here, 'rewardBadges.jsx'), 'utf8');
-const rewardsPageSource = readFileSync(path.join(here, '..', 'pages', 'Rewards.jsx'), 'utf8');
+const rewardsPageSource = readFileSync(path.join(here, "../pages/rewards/Rewards.jsx"), 'utf8');
 
 assert.match(
   rewardBadgesSource,

@@ -10,4 +10,4 @@ Required command surfaces:
 - `.gemini/commands/auto-hermes-structure-update.toml`
 - `.github/prompts/auto-hermes-structure-update.prompt.md`
 
-The implementation owner is `.tools/auto-hermes-structure-update.mjs`.
+The implementation owner is `tools/auto-hermes-structure-update.mjs`.

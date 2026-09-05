@@ -13,13 +13,13 @@ import path from 'node:path';
 import { formatDistance } from './format.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const todayRunSource = readFileSync(path.join(here, '..', 'pages', 'TodayRun.jsx'), 'utf8');
+const todayRunSource = readFileSync(path.join(here, "../pages/today-run/TodayRun.jsx"), 'utf8');
 
 // 1. TodayRun must import formatDistance from the shared util
 assert.match(
   todayRunSource,
-  /import \{[^}]*formatDistance[^}]*\} from ['"]\.\.\/utils\/format['"]/,
-  'TodayRun.jsx should import formatDistance from ../utils/format'
+  /import \{[^}]*formatDistance[^}]*\} from ['"]\.\.\/\.\.\/utils\/format['"]/,
+  'TodayRun.jsx should import formatDistance from ../../utils/format'
 );
 
 // 2. TodayRun must use formatDistance for coachPlannedDistance

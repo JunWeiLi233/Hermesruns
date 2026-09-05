@@ -13,8 +13,8 @@
 ### Task 1: Lock catalog coverage with a failing contract
 
 **Files:**
-- Modify: `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
-- Test: `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
+- Modify: `frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
+- Test: `frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
 
 - [ ] **Step 1: Add expected researched keys**
 
@@ -22,15 +22,15 @@ Add an array containing `barbell-hip-thrust`, `single-leg-leg-press`, `glute-ham
 
 - [ ] **Step 2: Run the test and verify RED**
 
-Run: `node frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
+Run: `node frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
 
 Expected: FAIL because `barbell-hip-thrust` is not yet present.
 
 ### Task 2: Add complete optional-library records
 
 **Files:**
-- Modify: `frontend/src/pages/MuscleTraining.jsx`
-- Test: `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
+- Modify: `frontend/src/pages/muscle-training/MuscleTraining.jsx`
+- Test: `frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
 
 - [ ] **Step 1: Add media mappings**
 
@@ -46,19 +46,19 @@ Map hip thrust and glute-ham raise to posterior-chain slugs, single-leg leg pres
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
-Run: `node frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
+Run: `node frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
 
 Expected: PASS with all 28 optional-library actions covered by media and anatomy contracts.
 
 ### Task 3: Verify the frontend artifact
 
 **Files:**
-- Verify: `frontend/src/pages/MuscleTraining.jsx`
-- Verify: `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js`
+- Verify: `frontend/src/pages/muscle-training/MuscleTraining.jsx`
+- Verify: `frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js`
 
 - [ ] **Step 1: Run adjacent video coverage**
 
-Run: `node frontend/src/pages/muscleTrainingPlanVideoMapping.smoke.test.js`
+Run: `node frontend/src/pages/muscle-training/__tests__/muscleTrainingPlanVideoMapping.smoke.test.js`
 
 Expected: PASS.
 
@@ -76,4 +76,4 @@ Expected: exit code 0 with a completed Vite production build.
 
 - [ ] **Step 4: Check runtime-sync availability**
 
-Run `.tools/verify-frontend-runtime-sync.mjs` only if it exists. If absent, report `source changed, live website not synced yet`.
+Run `tools/verify-frontend-runtime-sync.mjs` only if it exists. If absent, report `source changed, live website not synced yet`.

@@ -7,13 +7,13 @@ Use this skill whenever the task is in the Hermes repository or clearly about He
 
 Core workflow
 - Read `AGENTS.md` first and only read `CLAUDE.md` when stack, command, or environment details are needed.
-- Exception for `/auto-hermes-self`: do not run `.tools/generate-codex.js`; execute through the command's parent-Codex workflow and spawn Codex-native subagents with `multi_agent_v1.spawn_agent` from the active session when delegation is needed.
+- Exception for `/auto-hermes-self`: do not run `tools/generate-codex.js`; execute through the command's parent-Codex workflow and spawn Codex-native subagents with `multi_agent_v1.spawn_agent` from the active session when delegation is needed.
 - At session start, before broad queued work or implementation, run:
-  - `& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js`
-  - `& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write`
-  - `powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet`
-- Read `.ai-sync/AGENT_SYNC.md` before reclaiming queue work or a user-visible surface.
-- Read `.ai-codex/optimized-codex.md` before broad scanning.
+  - `& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js`
+  - `& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write`
+  - `powershell -ExecutionPolicy Bypass -File tools/mempalace/auto-session-sync.ps1 -Quiet`
+- Read `.workspace/state/AGENT_SYNC.md` before reclaiming queue work or a user-visible surface.
+- Read `.workspace/codex/optimized-codex.md` before broad scanning.
 - If `TASKS.md` exists and the user is asking for execution, read only the first unchecked task plus its nearby note lines.
 - Match existing patterns before introducing new abstractions.
 - Keep frontend and backend contracts in sync in the same task.

@@ -13,8 +13,8 @@
 ### Task 1: Add the redesign contract
 
 **Files:**
-- Modify: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
-- Test: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
+- Modify: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
+- Test: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 - [x] **Step 1: Write the failing test**
 
@@ -22,14 +22,14 @@ Read `styles/run-detail-profile-minimal.css` and assert the new root hook, style
 
 - [x] **Step 2: Run test to verify it fails**
 
-Run: `cd frontend; node src/pages/runDetailProfileCockpit.smoke.test.js`
+Run: `cd frontend; node src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 Expected: FAIL because `styles/run-detail-profile-minimal.css` and `run-detail-profile-minimal` do not exist.
 
 ### Task 2: Implement the Profile-aligned structure
 
 **Files:**
-- Modify: `frontend/src/pages/RunDetail.jsx`
+- Modify: `frontend/src/pages/runs/RunDetail.jsx`
 
 - [x] **Step 1: Add the minimal loaded-state hook**
 
@@ -59,7 +59,7 @@ Add `@import './styles/run-detail-profile-minimal.css';` after shared page treat
 
 - [x] **Step 4: Run test to verify it passes**
 
-Run: `cd frontend; node src/pages/runDetailProfileCockpit.smoke.test.js`
+Run: `cd frontend; node src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 Expected: `[PASS] Run Detail profile cockpit guardrails passed.`
 
@@ -74,7 +74,7 @@ Append the scope, Profile reference, preserve list, structural changes, and proo
 
 - [x] **Step 2: Run focused and adjacent tests**
 
-Run: `cd frontend; node src/pages/runDetailProfileCockpit.smoke.test.js; node src/pages/loadingSkeleton.smoke.test.js`
+Run: `cd frontend; node src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js; node src/test/contracts/loadingSkeleton.smoke.test.js`
 
 Expected: both tests pass.
 
@@ -82,7 +82,7 @@ Expected: both tests pass.
 
 Run: `cd frontend; node scripts/run-vite-build.mjs`
 
-Run: `node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/RunDetail.jsx frontend/src/pages/runDetailProfileCockpit.smoke.test.js frontend/src/styles/run-detail-profile-minimal.css frontend/src/index.css`
+Run: `node tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/runs/RunDetail.jsx frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js frontend/src/styles/run-detail-profile-minimal.css frontend/src/index.css`
 
 Run: `Invoke-WebRequest -UseBasicParsing http://localhost:8080/run/1680 | Select-Object StatusCode`
 

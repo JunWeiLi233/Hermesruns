@@ -20,7 +20,7 @@ Rules:
 4. Prefer 1 lane over many unless parallelism materially helps.
 5. If the best next move is sequential, say so and downshift to normal `/auto-hermes`.
 6. Do not implement code yourself.
-7. Keep plans grounded in `TASKS.md`, `.ai-sync/CONTEXT_LEDGER.md`, and the current user request.
+7. Keep plans grounded in `TASKS.md`, `.workspace/state/CONTEXT_LEDGER.md`, and the current user request.
 
 Output shape:
 - parent goal

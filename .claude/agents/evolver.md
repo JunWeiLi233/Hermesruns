@@ -26,7 +26,7 @@ You receive a task summary: what was done, which files changed, which surface wa
 
 ## Step 1 — Score the round
 
-Read the task result, the changed files, `.ai-sync/QUALITY_AUDIT.md` (metrics + latest verdict), and `.ai-sync/AGENT_SYNC.md`. Then score the round on 5 dimensions (1–10):
+Read the task result, the changed files, `.workspace/state/QUALITY_AUDIT.md` (metrics + latest verdict), and `.workspace/state/AGENT_SYNC.md`. Then score the round on 5 dimensions (1–10):
 
 ```
 [EvolverScore]
@@ -50,7 +50,7 @@ Penalize `real_feature_shipping` if the UI task shipped without passing the chec
 
 ## Step 2 — Record the score
 
-Append the score block to `.ai-sync/QUALITY_AUDIT.md` under `## Evolver Scores`, replacing the previous entry (keep only the latest 3):
+Append the score block to `.workspace/state/QUALITY_AUDIT.md` under `## Evolver Scores`, replacing the previous entry (keep only the latest 3):
 
 ```
 ### Round YYYY-MM-DD HH:MM — [task title]
@@ -65,7 +65,7 @@ weakness: [which dimension scored lowest and why, one line]
 
 ## Step 3 — Update metrics
 
-Increment `rounds_completed` in `.ai-sync/QUALITY_AUDIT.md` `## Metrics`. Update other counters if applicable (must_fix_count, reversal_count, same_surface_revisits). Recalculate `promotion_hit_rate`.
+Increment `rounds_completed` in `.workspace/state/QUALITY_AUDIT.md` `## Metrics`. Update other counters if applicable (must_fix_count, reversal_count, same_surface_revisits). Recalculate `promotion_hit_rate`.
 
 ## Step 4 — Decide: evolve or pass
 
@@ -85,7 +85,7 @@ Read `HERMES_SELF_EVOLVING_ENGINE.md` and the relevant mechanism file for the we
 - Fix: the smallest rule change that addresses the root cause
 - Risk: what could break if this patch is wrong
 
-Write the patch directly. Then log it in `.ai-sync/SELF_EVOLVING_AUDIT.md`:
+Write the patch directly. Then log it in `.workspace/state/SELF_EVOLVING_AUDIT.md`:
 ```
 YYYY-MM-DD | evolver | [file] | [what changed] | [which dimension improved] | scores: [before avg] → [expected avg]
 ```

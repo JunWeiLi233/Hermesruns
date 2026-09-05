@@ -13,23 +13,23 @@
 ## File Structure Map
 
 **Modify**
-- `backend/src/main/java/com/hermes/backend/RouteParametersDTO.java`
+- `backend/src/main/java/com/hermes/backend/races/RouteParametersDTO.java`
   Owns the route-parameter contract returned by Gemini before Python extraction and georeferencing.
 - `backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java`
   Owns poster-vs-cartographic prompt classification and the route-parameter JSON contract.
 - `backend/src/main/java/com/hermes/backend/GeminiAnchorPixelClient.java`
   Owns anchor-pixel lookup. Must stop pretending every poster has 4 strong anchors.
-- `backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java`
+- `backend/src/main/java/com/hermes/backend/races/MarathonRouteGeoreferencingService.java`
   Owns the decision of whether affine georeferencing is trustworthy enough to use.
-- `backend/src/main/java/com/hermes/backend/AffineTransformEstimator.java`
+- `backend/src/main/java/com/hermes/backend/races/AffineTransformEstimator.java`
   Owns transform fitting and projected route generation from anchor pairs.
-- `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`
+- `backend/src/main/java/com/hermes/backend/races/RaceCourseMapService.java`
   Owns the stored/admin/live course-map decision path and should reject weak poster alignments before they become runner-visible.
 - `backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java`
   Verifies the new prompt/JSON contract.
-- `backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java`
+- `backend/src/test/java/com/hermes/backend/races/MarathonRouteGeoreferencingServiceTests.java`
   Verifies quality-gated georeferencing and poster fallback behavior.
-- `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
   Verifies the service no longer accepts bad poster overlays and preserves safe fallback states.
 
 **Create**
@@ -47,8 +47,8 @@
 ### Task 1: Add Failing Tests For Poster Misalignment Rejection
 
 **Files:**
-- Modify: `backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java`
-- Modify: `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/MarathonRouteGeoreferencingServiceTests.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
 
 - [ ] **Step 1: Add a failing georeference test for a poster-style route with weak anchors**
 
@@ -139,7 +139,7 @@ Expected: FAIL because `RouteParametersDTO` has no style field yet and the servi
 - [ ] **Step 4: Commit the red tests**
 
 ```bash
-git add backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java
+git add backend/src/test/java/com/hermes/backend/races/MarathonRouteGeoreferencingServiceTests.java backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java
 git commit -m "test: capture poster georeference misalignment failures"
 ```
 
@@ -147,7 +147,7 @@ git commit -m "test: capture poster georeference misalignment failures"
 
 **Files:**
 - Create: `backend/src/main/java/com/hermes/backend/RouteMapStyle.java`
-- Modify: `backend/src/main/java/com/hermes/backend/RouteParametersDTO.java`
+- Modify: `backend/src/main/java/com/hermes/backend/races/RouteParametersDTO.java`
 - Modify: `backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java`
 - Modify: `backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java`
 
@@ -253,7 +253,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit the contract change**
 
 ```bash
-git add backend/src/main/java/com/hermes/backend/RouteMapStyle.java backend/src/main/java/com/hermes/backend/RouteParametersDTO.java backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java
+git add backend/src/main/java/com/hermes/backend/RouteMapStyle.java backend/src/main/java/com/hermes/backend/races/RouteParametersDTO.java backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java
 git commit -m "feat: classify poster-style route images in route parameter extraction"
 ```
 
@@ -261,9 +261,9 @@ git commit -m "feat: classify poster-style route images in route parameter extra
 
 **Files:**
 - Create: `backend/src/main/java/com/hermes/backend/GeoreferenceQualityReport.java`
-- Modify: `backend/src/main/java/com/hermes/backend/AffineTransformEstimator.java`
-- Modify: `backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java`
-- Modify: `backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java`
+- Modify: `backend/src/main/java/com/hermes/backend/races/AffineTransformEstimator.java`
+- Modify: `backend/src/main/java/com/hermes/backend/races/MarathonRouteGeoreferencingService.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/MarathonRouteGeoreferencingServiceTests.java`
 
 - [ ] **Step 1: Add the quality report record**
 
@@ -325,7 +325,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit the quality gate**
 
 ```bash
-git add backend/src/main/java/com/hermes/backend/GeoreferenceQualityReport.java backend/src/main/java/com/hermes/backend/AffineTransformEstimator.java backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java backend/src/test/java/com/hermes/backend/MarathonRouteGeoreferencingServiceTests.java
+git add backend/src/main/java/com/hermes/backend/GeoreferenceQualityReport.java backend/src/main/java/com/hermes/backend/races/AffineTransformEstimator.java backend/src/main/java/com/hermes/backend/races/MarathonRouteGeoreferencingService.java backend/src/test/java/com/hermes/backend/races/MarathonRouteGeoreferencingServiceTests.java
 git commit -m "feat: reject low-quality poster georeference fits"
 ```
 
@@ -334,8 +334,8 @@ git commit -m "feat: reject low-quality poster georeference fits"
 **Files:**
 - Create: `backend/src/main/java/com/hermes/backend/PosterRouteAlignmentService.java`
 - Create: `backend/src/test/java/com/hermes/backend/PosterRouteAlignmentServiceTests.java`
-- Modify: `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`
-- Modify: `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- Modify: `backend/src/main/java/com/hermes/backend/races/RaceCourseMapService.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
 
 - [ ] **Step 1: Add a focused poster fallback service shell**
 
@@ -426,7 +426,7 @@ Expected: PASS.
 - [ ] **Step 6: Commit the fail-safe path**
 
 ```bash
-git add backend/src/main/java/com/hermes/backend/PosterRouteAlignmentService.java backend/src/test/java/com/hermes/backend/PosterRouteAlignmentServiceTests.java backend/src/main/java/com/hermes/backend/RaceCourseMapService.java backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java
+git add backend/src/main/java/com/hermes/backend/PosterRouteAlignmentService.java backend/src/test/java/com/hermes/backend/PosterRouteAlignmentServiceTests.java backend/src/main/java/com/hermes/backend/races/RaceCourseMapService.java backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java
 git commit -m "feat: fail safe on untrusted poster route alignment"
 ```
 

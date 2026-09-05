@@ -1,104 +1,99 @@
-<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- GENERATED FILE: edit .codex/commands/runtime-adapters/opencode/auto-hermes-self.md and run node tools/generate-runtime-commands.mjs. -->
 <!-- Runtime: opencode; command: /auto-hermes-self; contract: docs/ai/EDITING_CONTRACT.md -->
 
 ---
 name: auto-hermes-self
-description: Use when you need the Ralph-style indefinite self-loop variant of auto-hermes to continue until a real stop condition.
+description: Run the Ralph self-loop with OpenCode as the active executor until a real stop gate fires.
 ---
 
-# Auto-Hermes Self
+# Auto-Hermes Self For OpenCode
 
-Codex active execution playbook for the true Ralph self-loop version of `/auto-hermes`.
+This is the canonical OpenCode execution adapter for `/auto-hermes-self`.
+`docs/ai/runtime-command-manifest.json` selects it when generating
+`.opencode/commands/auto-hermes-self.md`. The shared lifecycle, verification,
+claim, stop, and finish rules remain in
+`.codex/workflows/auto-hermes-shared-contract.md` and
+`.codex/workflows/auto-hermes-architecture.md`; apply
+`docs/ai/EDITING_CONTRACT.md` to every change.
 
-This mirrors the stronger Claude Code contract, adapted for Codex: `/auto-hermes-self` is not a prepare-and-wait note. Codex owns the full cycle when invoked here: initialize, select work, execute or delegate authorized lanes, verify, close the round, and re-enter until a real stop gate fires.
+## Executor And Loop Entry
 
-## Continuity Rules
+1. Check `.workspace/state/HUMAN_LOOP.md` for pause, stop, or must-ask. Read the active claims in `.workspace/state/AGENT_SYNC.md` and preserve concurrent work before choosing a bounded task.
+2. Run `node tools/auto-hermes-self-loop.mjs --write --json --runtime opencode`.
+3. Read `.workspace/state/AUTO_HERMES_SELF_LOOP.json`, `.workspace/state/AUTO_HERMES_SELF_COORDINATOR.md`, `.workspace/state/AUTO_HERMES_SELF_CONTROLLER.json`, and `.workspace/state/AUTO_HERMES_SELF_NEXT_PROMPT.md` for the current work unit, scope, route, and verification contract.
+4. Verify `runtime: "opencode"` and `selfExecutionContract: "native-runtime-owned"`. An `opencode-awaiting-worker-round` status means OpenCode must execute the emitted work unit now; generating the brief is not evidence of execution or completion.
 
-- Empty queue does not immediately stop.
-- If there is a promotable task, execute the next bounded round.
-- If there is no promotable task, use the standard find-the-task path before stopping.
-- Website-audit explorer is the final bounded fallback inside that discovery path.
-- Repeated no-candidate audit rounds are the true stop condition.
-- Supervisor is the preferred continuity layer for long-running runs.
+OpenCode is the executor. Use its current model/session and OpenCode-native
+parallel agents only for disjoint lanes; if those agents are unavailable,
+execute the same specialist responsibilities sequentially in the active
+OpenCode session. The helper prepares state and briefs and does not launch a
+worker for this runtime. Do not invoke Codex, `multi_agent_v1.spawn_agent`,
+`tools/generate-codex.js`, or an external Codex executor as a fallback. Do not
+switch the helper to `--runtime codex` or `--runtime codex-live`.
 
-## Command Notes
+## Bounded Round And Evidence
 
-- Use `.tools/auto-hermes-self-loop.mjs` for Ralph-native self-loop state, coordinator briefs, and round-close continuity only; do not let it spawn or generate external agents for Codex rounds.
-- Invoke it as `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-self-loop.mjs --write --json --runtime codex` to refresh self-loop state and briefs; Codex execution remains in the parent session and uses native Codex subagents when delegation is needed.
-- The Codex execution path must stay non-interactive inside this session: do not run repo agent-generation helpers such as `.tools/generate-codex.js` for `/auto-hermes-self` execution, and do not rely on `.tools/auto-hermes-loop.mjs` to spawn helper-generated agents. Spawn Codex-native subagents with `multi_agent_v1.spawn_agent` for disjoint lanes, or execute locally when the lane is not safely separable.
-- Do not use `--runtime codex-live` as the Codex default. `codex-live` is a coordinator-awaiting mode when no executor is configured, so it can emit `codex-live-awaiting-coordinator` instead of self-executing work. If that status appears, rerun with `--runtime codex` or configure a real executor before claiming `/auto-hermes-self` executed.
-- `/auto-hermes-self` is the true Ralph self-loop version of `/auto-hermes`: it keeps iterating until a real stop gate fires instead of treating a single bounded round as the finish state.
-- When delegation is needed, spawn Codex-native subagents from the parent Codex session with `multi_agent_v1.spawn_agent`. Use the default inherited model unless the user explicitly asks for another model; when explicitly using `codex-live`, Codex-native subagent delegation for this command should use `GPT-5.5` with medium reasoning effort.
-- Keep the same Hermes queue, verification, runtime-proof, and finish contracts as `/auto-hermes`; only the loop ownership contract changes.
-- Self-executing means Codex owns the bounded round in this session: the helper refreshes loop state, Codex executes locally or through native Codex subagents, then Codex writes round-close evidence and re-enters after empty-queue `continue` decisions.
-- The self-loop owner must normalize Ralph runtime defaults itself: same-work-unit no-progress limit, executor retries, retry backoff, and dedicated self-loop claim/artifact paths must not fall through to empty values.
-- Do not manually stop after one empty-queue observation. If `.ai-sync/AUTO_HERMES_SELF_LOOP.json` shows `supervisorState.stop: false`, `supervisorState.decision: "continue"`, and no work unit, the self-loop helper should already have re-entered; if `selfReentryLimitReached` is true, inspect the loop state before raising `--max-self-reentries`.
-- Every emitted self-loop artifact should carry the strict Ralph gate policy: fresh verification, runtime proof when needed, architect approval, deslop or explicit skip, regression re-verification, and round-close writeback.
-- When the same bounded work unit repeats, carry forward the last round-result evidence and keep iterating if the result packet shows meaningful progress; reserve the repeated-task stop gate for no-progress loops.
-- If the controller reports no promotable work, use the standard Hermes discovery path first: promote existing queue candidates when present, otherwise seed suggestions, then use website-audit fallback before allowing stop.
-- If Human Requests define a course-map extraction mission, synthesize a `human-mission` work unit instead of stopping on an empty queue. Stop only after a standard city road marathon course-map candidate produces live non-empty `routePoints` and the runner OpenStreetMap renders the extracted route; city-level-only references are not success.
+Execute exactly the emitted work unit within its owned files. Before a round
+that follows changes to loop-critical files, run `node --check
+tools/auto-hermes-self-loop.mjs` and `node --check tools/auto-hermes-loop.mjs`,
+then run `node tools/auto-hermes-self-loop.mjs --write --runtime opencode
+--dry-run` and verify the OpenCode runtime and native ownership contract in
+the self-loop state. A dry run proves preparation only. Repair a broken
+integrity gate before new product work and record the repair in round evidence.
 
-## Active Execution Playbook
+Require fresh verification from the task's `Verify:` command, runtime proof
+when a live frontend or backend surface changes, architect approval, deslop
+or an explicit justified skip, and regression re-verification after cleanup.
+Keep an explicit review verdict: `approve-next-round`,
+`must-fix-before-next-round`, or `reverse-recommended`.
 
-When `/auto-hermes-self` is invoked in Codex, execute this playbook. Do not stop after emitting artifacts, and do not ask the user to continue after a normal successful round.
+Record round-close writeback through `tools/auto-hermes-round-close.mjs` with
+`--write --agent opencode`, the actual task, surface, owner, changed files,
+verification command, evidence, and gate verdicts. Pass these state arguments
+so the next self-loop invocation consumes this round's results rather than
+the ordinary bounded loop's result packet:
 
-### Loop Entry
+```text
+--loop-state-json .workspace/state/AUTO_HERMES_SELF_LOOP_STATE.json
+--controller-json .workspace/state/AUTO_HERMES_SELF_CONTROLLER.json
+--controller-md .workspace/state/AUTO_HERMES_SELF_CONTROLLER.md
+--promotion-json .workspace/state/AUTO_HERMES_SELF_PROMOTION.json
+--promotion-md .workspace/state/AUTO_HERMES_SELF_PROMOTION.md
+--trace-to-skill-json .workspace/state/AUTO_HERMES_SELF_TRACE_TO_SKILL.json
+--trace-to-skill-md .workspace/state/AUTO_HERMES_SELF_TRACE_TO_SKILL.md
+--round-result-json .workspace/state/AUTO_HERMES_SELF_ROUND_RESULT.json
+--round-result-md .workspace/state/AUTO_HERMES_SELF_ROUND_RESULT.md
+--no-refresh-loop-briefs
+--no-refresh-finish
+```
 
-1. Scan GitHub issues for actionable work:
-   `node .tools/auto-hermes-issues.mjs --task-format`
-   If actionable issues exist, they become active tasks with `Source: GitHub issue #N` and take priority.
-2. Run the Codex self-loop owner:
-   `node .tools/auto-hermes-self-loop.mjs --write --json --runtime codex`
-3. Read `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md`.
-4. If `Next Action` is `stop`, report the stop reason, run finish actions when eligible, and stop.
-5. If `Next Action` is `loop-owner-execute-round`, treat the loop owner as the brief/state owner only. The parent Codex session executes the bounded round directly, spawning Codex-native subagents for disjoint lanes instead of relying on helper-generated agents.
-6. If `Next Action` is `codex-coordinator-execute-round`, the parent Codex session executes the bounded round directly from the coordinator/controller brief, again using native Codex subagents only when delegation is justified.
+Use `--verify-result pass --architect-verdict approved --deslop-pass pass
+--regression-pass pass --verdict pass` only after those gates actually pass;
+include `--runtime-proof pass` only when verified. Record failures with
+`--verdict fail --blocker "<observed reason>"` and the actual failing gate
+values. A prepared result packet or a helper's zero exit code is not proof.
 
-### Pre-Round Codex Integrity Gate
+## Re-Entry And Stop Gates
 
-Before every Codex-executed round, verify the self-loop can still execute:
+After round-close, re-run `node tools/auto-hermes-self-loop.mjs --write --json
+--runtime opencode` and read the refreshed coordinator. If OpenCode has another
+work unit, execute it immediately. A single successful bounded round is not
+the natural completion condition of this self-loop.
 
-- Check whether the previous round touched loop-critical files: `.codex/commands/auto-hermes-self.md`, `.claude/commands/auto-hermes-self.md`, `.tools/auto-hermes-self-loop.mjs`, or `.tools/auto-hermes-loop.mjs`.
-- Run `node --check .tools/auto-hermes-self-loop.mjs` and `node --check .tools/auto-hermes-loop.mjs`.
-- Run `node .tools/auto-hermes-self-loop.mjs --write --runtime codex --dry-run` and verify `.ai-sync/AUTO_HERMES_SELF_LOOP.json` has `selfExecutionContract: "parent-codex-native-subagents"`.
-- Verify `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` contains `Codex Self-Loop Protocol (Active Execution)`.
-- If any check fails, fix the loop mechanism before executing new product work. Record that repair in round-close evidence as `ralph-integrity-fix: <what changed>`.
+- Empty queue does not immediately stop. Promote existing candidates, seed suggestions when needed, and use the website-audit explorer before exhaustion. Repeated no-candidate audit rounds are the true stop condition, subject to the configured supervisor limit.
+- Supervisor is the preferred continuity layer for long-running runs. Respect its authored decision and human stop gates; a configured state file alone does not prove a live supervisor process.
+- Preserve the helper's same-work-unit no-progress limit, executor retries, retry backoff, and dedicated self-loop claim/artifact paths. Carry forward the previous round-result evidence; changed evidence can justify progress, while repetition without progress must reach the stop gate. Native OpenCode execution remains owned by the session; retry settings do not imply the helper launches an executor.
+- If the helper returns `supervisorState.stop: false` and `decision: "continue"` without a work unit, inspect the self-reentry history. If `selfReentryLimitReached` is true, diagnose the bounded reentry limit before raising `--max-self-reentries`; do not silently declare exhaustion or spin without new evidence.
+- Honor human pause/stop/must-ask, repeated audit exhaustion, same-task no-progress, executor unavailability after configured retries, and unsafe recovery gates. For a course-map extraction mission, success requires live non-empty `routePoints` rendered on runner OpenStreetMap; city-level references are not completion evidence.
+- Use `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json` or `.md` as a `soft-signal` for workflow evolution. Keep fresh task and runtime evidence as the completion authority.
 
-### Round Execution
+## Finish
 
-1. Read `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md` for the current work unit.
-2. Read `.ai-sync/AUTO_HERMES_SELF_CONTROLLER.json` for the subagent plan, route, knowledge pack, files, and verification contract.
-3. Execute the bounded round in the parent Codex session. If the controller has disjoint lanes, spawn Codex-native subagents with `multi_agent_v1.spawn_agent` and give each subagent a self-contained task and disjoint write scope; otherwise execute locally with the same specialist responsibilities. Do not run `.tools/generate-codex.js`, external agent generators, or helper-generated agent execution paths for this step.
-4. Run the required verification command from the task's `Verify:` field.
-5. Run runtime proof gates when source changes affect a live frontend or backend surface.
-6. Run the merge/review gate. Reviewer verdict must be explicit: `approve-next-round`, `must-fix-before-next-round`, or `reverse-recommended`.
-7. Run round-close with real evidence:
-   `node .tools/auto-hermes-round-close.mjs --write --agent codex --task "<title>" --surface "<surface>" --owner "<owner>" --files "<f1>||<f2>" --verify "<verify-command>" --verify-result pass --architect-verdict approved --deslop-pass pass --regression-pass pass --verdict pass`
-8. If verification fails, round-close with `--verdict fail --blocker "<reason>"`, then re-enter so the must-fix is picked up.
-9. If the task came from a GitHub issue, close it after verified completion with `.tools/auto-hermes-issues.mjs` and include `(closes #N)` in the commit message when committing.
-
-### Re-Enter Or Stop
-
-After every round:
-
-1. Run `node .tools/auto-hermes-self-loop.mjs --write --json --runtime codex`.
-2. Read `.ai-sync/AUTO_HERMES_SELF_COORDINATOR.md`.
-3. If `Next Action` is `loop-owner-execute-round` or `codex-coordinator-execute-round`, go directly into the next parent-Codex-executed round. Spawn native Codex subagents with `multi_agent_v1.spawn_agent` for separable lanes as needed; do not wait for the user.
-4. If `Next Action` is `stop`, route through the configured finish behavior and report the stop reason.
-
-### Auto-Publish On Stop
-
-On a true clean stop, use the configured Hermes finish path rather than ad-hoc Git commands:
-
-- Run `.tools/auto-hermes-finish.mjs` or the current finish helper emitted by the coordinator.
-- Auto-commit only when the finish helper says product files changed and proof gates passed.
-- Auto-push only when the repo policy allows it: unpublished local commits, current branch, and `origin` still equals `https://github.com/JunWeiLi233/Hermesruns.git`.
-- If no product files changed, report `Loop stopped - no product changes to publish.`
-- If publish is blocked by security, compile, auth, or dirty-state gates, report the blocker and stop.
-
-## Ralph Strength Gates
-
-- A single successful bounded round is never the natural completion condition for `/auto-hermes-self`.
-- Count a round as complete only after `.tools/auto-hermes-round-close.mjs` records real gate evidence.
-- Stop only on a real gate: human pause/stop/must-ask, repeated website-audit exhaustion, same-task no-progress loop, executor unavailable after configured retries, or unsafe recovery needing human input.
-- For the course-map extraction mission, the real stop gate is live extracted route geometry on runner OpenStreetMap with non-empty `routePoints`; keep diagnosing and repairing Qwen/CV/georeference/publish failures until that proof exists.
+On a true clean stop, use `tools/auto-hermes-finish.mjs` under the shared finish
+contract and the user's authorized scope. Preserve privacy, commit gates,
+unrelated dirty work, and publication authorization. Before push or
+main-repository submission, require a fresh passing
+`node tools/auto-hermes-docker-gate.mjs --write` result for the current working
+tree. The Docker gate blocks publish paths only and does not block normal
+local auto-commit when its own gates pass. If a finish gate fails, report the
+blocker without claiming publication.

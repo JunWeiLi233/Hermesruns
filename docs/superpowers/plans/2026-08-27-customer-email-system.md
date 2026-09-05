@@ -24,13 +24,13 @@
 
 **Files:**
 
-- Create: `backend/src/main/java/com/hermes/backend/TransactionalMailMessage.java`
-- Create: `backend/src/main/java/com/hermes/backend/MailDeliveryReceipt.java`
-- Create: `backend/src/main/java/com/hermes/backend/MailDeliveryException.java`
-- Create: `backend/src/main/java/com/hermes/backend/TransactionalMailSender.java`
-- Create: `backend/src/main/java/com/hermes/backend/DisabledTransactionalMailSender.java`
-- Create: `backend/src/main/java/com/hermes/backend/TransactionalMailConfiguration.java`
-- Create: `backend/src/test/java/com/hermes/backend/TransactionalMailConfigurationTests.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailMessage.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryReceipt.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryException.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailSender.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/DisabledTransactionalMailSender.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfiguration.java`
+- Create: `backend/src/test/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfigurationTests.java`
 
 - [ ] **Step 1: Write a failing configuration test**
 
@@ -113,7 +113,7 @@ Expected: exit code 0 and one configured `TransactionalMailSender` bean in the t
 - [ ] **Step 6: Commit only the contract files**
 
 ```powershell
-git add -- backend/src/main/java/com/hermes/backend/TransactionalMailMessage.java backend/src/main/java/com/hermes/backend/MailDeliveryReceipt.java backend/src/main/java/com/hermes/backend/MailDeliveryException.java backend/src/main/java/com/hermes/backend/TransactionalMailSender.java backend/src/main/java/com/hermes/backend/DisabledTransactionalMailSender.java backend/src/main/java/com/hermes/backend/TransactionalMailConfiguration.java backend/src/test/java/com/hermes/backend/TransactionalMailConfigurationTests.java
+git add -- backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailMessage.java backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryReceipt.java backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryException.java backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailSender.java backend/src/main/java/com/hermes/backend/infrastructure/mail/DisabledTransactionalMailSender.java backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfiguration.java backend/src/test/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfigurationTests.java
 git diff --cached --name-only
 git commit -m "feat: add transactional mail contract"
 ```
@@ -124,9 +124,9 @@ Expected staged-name output: exactly the seven files above.
 
 **Files:**
 
-- Create: `backend/src/main/java/com/hermes/backend/ResendTransactionalMailSender.java`
-- Modify: `backend/src/main/java/com/hermes/backend/TransactionalMailConfiguration.java`
-- Create: `backend/src/test/java/com/hermes/backend/ResendTransactionalMailSenderTests.java`
+- Create: `backend/src/main/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailSender.java`
+- Modify: `backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfiguration.java`
+- Create: `backend/src/test/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailSenderTests.java`
 
 - [ ] **Step 1: Write adapter tests against a local HTTP server**
 
@@ -205,7 +205,7 @@ Expected: exit code 0; retry tests report exactly two captured requests, while 4
 - [ ] **Step 7: Commit only the adapter slice**
 
 ```powershell
-git add -- backend/src/main/java/com/hermes/backend/ResendTransactionalMailSender.java backend/src/main/java/com/hermes/backend/TransactionalMailConfiguration.java backend/src/test/java/com/hermes/backend/ResendTransactionalMailSenderTests.java
+git add -- backend/src/main/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailSender.java backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfiguration.java backend/src/test/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailSenderTests.java
 git diff --cached --name-only
 git commit -m "feat: send transactional email through resend"
 ```
@@ -214,14 +214,14 @@ git commit -m "feat: send transactional email through resend"
 
 **Files:**
 
-- Modify: `backend/src/main/java/com/hermes/backend/EmailVerificationService.java`
-- Modify: `backend/src/main/java/com/hermes/backend/PasswordResetService.java`
-- Create: `backend/src/test/java/com/hermes/backend/EmailVerificationServiceTests.java`
-- Create: `backend/src/test/java/com/hermes/backend/PasswordResetServiceTests.java`
-- Verify: `backend/src/test/java/com/hermes/backend/EmailValidationServiceTests.java`
-- Verify: `backend/src/test/java/com/hermes/backend/LoginControllerSecurityTests.java`
-- Verify: `backend/src/test/java/com/hermes/backend/LoginControllerTests.java`
-- Verify: `backend/src/test/java/com/hermes/backend/PasswordResetEnumerationTests.java`
+- Modify: `backend/src/main/java/com/hermes/backend/auth/EmailVerificationService.java`
+- Modify: `backend/src/main/java/com/hermes/backend/auth/PasswordResetService.java`
+- Create: `backend/src/test/java/com/hermes/backend/auth/EmailVerificationServiceTests.java`
+- Create: `backend/src/test/java/com/hermes/backend/auth/PasswordResetServiceTests.java`
+- Verify: `backend/src/test/java/com/hermes/backend/auth/EmailValidationServiceTests.java`
+- Verify: `backend/src/test/java/com/hermes/backend/auth/LoginControllerSecurityTests.java`
+- Verify: `backend/src/test/java/com/hermes/backend/auth/LoginControllerTests.java`
+- Verify: `backend/src/test/java/com/hermes/backend/auth/PasswordResetEnumerationTests.java`
 
 - [ ] **Step 1: Write verification-service regression tests**
 
@@ -294,7 +294,7 @@ Expected: exit code 0. Existing enumeration tests still return identical respons
 - [ ] **Step 7: Commit only the service refactor**
 
 ```powershell
-git add -- backend/src/main/java/com/hermes/backend/EmailVerificationService.java backend/src/main/java/com/hermes/backend/PasswordResetService.java backend/src/test/java/com/hermes/backend/EmailVerificationServiceTests.java backend/src/test/java/com/hermes/backend/PasswordResetServiceTests.java
+git add -- backend/src/main/java/com/hermes/backend/auth/EmailVerificationService.java backend/src/main/java/com/hermes/backend/auth/PasswordResetService.java backend/src/test/java/com/hermes/backend/auth/EmailVerificationServiceTests.java backend/src/test/java/com/hermes/backend/auth/PasswordResetServiceTests.java
 git diff --cached --name-only
 git commit -m "refactor: route account email through transactional sender"
 ```
@@ -304,9 +304,9 @@ git commit -m "refactor: route account email through transactional sender"
 **Files:**
 
 - Modify: `backend/src/main/resources/application.properties`
-- Modify: `backend/src/main/java/com/hermes/backend/ProductionSecurityValidator.java`
-- Modify: `backend/src/test/java/com/hermes/backend/ProductionSecurityValidatorTests.java`
-- Modify: `backend/src/main/java/com/hermes/backend/SecurityDiagnosticsInitializer.java`
+- Modify: `backend/src/main/java/com/hermes/backend/auth/ProductionSecurityValidator.java`
+- Modify: `backend/src/test/java/com/hermes/backend/auth/ProductionSecurityValidatorTests.java`
+- Modify: `backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/SecurityDiagnosticsInitializer.java`
 - Modify: `backend/pom.xml`
 
 - [ ] **Step 1: Add failing production validation tests**
@@ -386,7 +386,7 @@ Expected: both commands exit 0.
 - [ ] **Step 8: Commit only production configuration changes**
 
 ```powershell
-git add -- backend/src/main/resources/application.properties backend/src/main/java/com/hermes/backend/ProductionSecurityValidator.java backend/src/test/java/com/hermes/backend/ProductionSecurityValidatorTests.java backend/src/main/java/com/hermes/backend/SecurityDiagnosticsInitializer.java backend/pom.xml
+git add -- backend/src/main/resources/application.properties backend/src/main/java/com/hermes/backend/auth/ProductionSecurityValidator.java backend/src/test/java/com/hermes/backend/auth/ProductionSecurityValidatorTests.java backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/SecurityDiagnosticsInitializer.java backend/pom.xml
 git diff --cached --name-only
 git commit -m "security: require transactional mail in production"
 ```

@@ -34,8 +34,8 @@ Each action includes bilingual names, target muscles, three concise steps, train
 
 ## Files and boundaries
 
-- Modify `frontend/src/pages/MuscleTraining.jsx` for catalog entries and media/anatomy mappings.
-- Modify `frontend/src/pages/muscleTrainingFriendlyDesign.smoke.test.js` for catalog coverage.
+- Modify `frontend/src/pages/muscle-training/MuscleTraining.jsx` for catalog entries and media/anatomy mappings.
+- Modify `frontend/src/pages/muscle-training/__tests__/muscleTrainingFriendlyDesign.smoke.test.js` for catalog coverage.
 - Do not change backend services, API payloads, CSS, route structure, or locale-wide page labels.
 
 ## Verification

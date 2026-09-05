@@ -14,7 +14,7 @@ Checkpoint contents
 - any pending README, translation, or git gate
 - for general Claude retries, write or refresh `.claude/CLAUDE_CHECKPOINT.md`
 - for Antigravity retries, write or refresh `.claude/checkpoints/ANTIGRAVITY_CHECKPOINT.md`
-- prefer the shared helper: `& 'C:\Program Files\nodejs\node.exe' .tools/write-agent-checkpoint.mjs --agent claude ...` or `--agent antigravity ...`
+- prefer the shared helper: `& 'C:\Program Files\nodejs\node.exe' tools/write-agent-checkpoint.mjs --agent claude ...` or `--agent antigravity ...`
 
 Low-token rules
 - Write only durable next-step information.

@@ -48,7 +48,7 @@ fi
 CP="$H2_JAR:$PG_JAR:."
 
 echo "Migrating Hermes data from H2 to PostgreSQL..."
-( cd "$ROOT" && java --class-path "$CP" .tools/H2ToPostgresMigrator.java \
+( cd "$ROOT" && java --class-path "$CP" tools/H2ToPostgresMigrator.java \
   "$H2_URL" "$APP_DB_URL" "$APP_DB_USERNAME" "${APP_DB_PASSWORD:-}" --truncate ) || {
   echo "Migration failed."
   exit 1

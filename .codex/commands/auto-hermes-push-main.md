@@ -24,17 +24,17 @@ The workflow:
 
 Dry-run (validates gates without pushing or creating PR):
 ```bash
-node .tools/auto-hermes-push-main.mjs --write
+node tools/auto-hermes-push-main.mjs --write
 ```
 
 Execute (pushes branch and creates PR):
 ```bash
-node .tools/auto-hermes-push-main.mjs --execute --draft --write --message "publish: <summary>"
+node tools/auto-hermes-push-main.mjs --execute --draft --write --message "publish: <summary>"
 ```
 
 Custom PR title and body:
 ```bash
-node .tools/auto-hermes-push-main.mjs --execute --write \
+node tools/auto-hermes-push-main.mjs --execute --write \
   --message "publish: fix session expiry redirect" \
   --pr-title "fix: session expiry redirects to login with return path" \
   --pr-body "Closes #123. Gates passed: security, lint, compile."
@@ -62,9 +62,9 @@ The helper stops before creating the PR when any gate fails:
 
 ## Outputs
 
-- `.ai-sync/AUTO_HERMES_PUSH_MAIN.json`
-- `.ai-sync/AUTO_HERMES_PUSH_MAIN.md`
-- `.ai-sync/security-reports/*` from the security scan
+- `.workspace/state/AUTO_HERMES_PUSH_MAIN.json`
+- `.workspace/state/AUTO_HERMES_PUSH_MAIN.md`
+- `.workspace/state/security-reports/*` from the security scan
 - Updated `README.md`
 - Updated `docs/architecture/*.svg` / `*.html`
 - PR URL printed to stdout
@@ -131,7 +131,7 @@ The README directs every contributor — human or AI agent — to use this comma
 - **Cite runtime proof for runtime claims.** If you claim "fixes the territory disappearance", paste the path to the verifying screenshot or `verify-frontend-runtime-sync.mjs` output. Without proof, downgrade the claim to "expected to fix" in the body.
 - **Cite the gates you actually ran.** Don't say "all tests pass"; say which test class or which lint scope you actually ran. The PR template's Test plan is a *checklist of what you did*, not a wish list.
 - **Cite concurrent-agent bundling.** When the working tree includes uncommitted work from another agent and you choose to push it together, add `## Concurrent-agent bundling` listing each non-self-authored surface and the agent name (e.g. `Territory page redesign in Territory.jsx — by codex-runner`). The reviewer needs to know which sections you can't speak to.
-- **Cite the security scan result.** Reference the `.ai-sync/security-reports/*` artifact the command produced. If you sanitized a finding (deleted a local file, added a gitignore rule), say what you did and why it was legitimate — never just "false positive".
+- **Cite the security scan result.** Reference the `.workspace/state/security-reports/*` artifact the command produced. If you sanitized a finding (deleted a local file, added a gitignore rule), say what you did and why it was legitimate — never just "false positive".
 - **Never claim ownership of code you didn't touch.** If the diff includes a file you didn't write, the Summary bullet says so ("Bundled from working tree: …").
 
 ### Anti-patterns the command and reviewers reject

@@ -16,7 +16,7 @@ Before doing anything substantial:
 Then execute the workflow with these rules:
 
 - Treat `/auto-hermes-self` as a repo-local Ralph self-loop command, not a native Copilot feature.
-- Use [.tools/auto-hermes-self-loop.mjs](../../.tools/auto-hermes-self-loop.mjs) as the true loop owner.
+- Use [tools/auto-hermes-self-loop.mjs](../../tools/auto-hermes-self-loop.mjs) as the true loop owner.
 - Keep iterating until a real stop gate fires.
 - If a promotable task exists, execute the next bounded round.
 - If no promotable task exists, use the standard Hermes find-the-task path before stopping: promote queue candidates when present, otherwise seed suggestions, then use website-audit fallback.

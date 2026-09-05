@@ -8,7 +8,7 @@ This file owns commit, push, privacy, and pre-publish rules.
 - Do not push by default.
 - Push only when the user explicitly wants publication or there is a real agreed publish need.
 - The only approved auto-push target is `origin = https://github.com/JunWeiLi233/Hermesruns.git`.
-- **The only supported path to open a PR into `main` is `/auto-hermes-push-main`** (driver: `.tools/auto-hermes-push-main.mjs`). Direct `git push origin main`, manual `gh pr create`, cherry-picks, rebases onto main, force-pushes, and history rewrites are forbidden. The helper enforces every required gate (security scan, lint, compile, Docker, identity) and writes an auditable artifact at `.ai-sync/AUTO_HERMES_PUSH_MAIN.{md,json}`. See the full spec and citation rules in [`.codex/commands/auto-hermes-push-main.md`](../../.codex/commands/auto-hermes-push-main.md).
+- **The only supported path to open a PR into `main` is `/auto-hermes-push-main`** (driver: `tools/auto-hermes-push-main.mjs`). Direct `git push origin main`, manual `gh pr create`, cherry-picks, rebases onto main, force-pushes, and history rewrites are forbidden. The helper enforces every required gate (security scan, lint, compile, Docker, identity) and writes an auditable artifact at `.workspace/state/AUTO_HERMES_PUSH_MAIN.{md,json}`. See the full spec and citation rules in [`.codex/commands/auto-hermes-push-main.md`](../../.codex/commands/auto-hermes-push-main.md).
 
 ## Never Push When
 
@@ -42,10 +42,10 @@ Before any push or “submit to main repository” action:
 1. run the Docker publish gate helper:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-docker-gate.mjs --write
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-docker-gate.mjs --write
 ```
 
-2. require a fresh passing `.ai-sync/AUTO_HERMES_DOCKER_GATE.json`
+2. require a fresh passing `.workspace/state/AUTO_HERMES_DOCKER_GATE.json`
 3. if the working tree changes after the Docker gate runs, rerun the helper before pushing
 
 This gate does **not** block normal local auto-commit. It blocks only push/mainline submission.
@@ -72,15 +72,15 @@ Before every push/main-repository submission:
 ```bash
 cd frontend && npm run lint
 cd backend && ./mvnw -q -DskipTests compile
-node .tools/auto-hermes-docker-gate.mjs --write
+node tools/auto-hermes-docker-gate.mjs --write
 ```
 
 ## Auto-Commit
 
 For `/auto-hermes` finish behavior, the canonical helper is:
 
-- `.tools/auto-commit.ps1`
-- `.tools/auto-hermes-finish.mjs`
+- `tools/auto-commit.ps1`
+- `tools/auto-hermes-finish.mjs`
 
 `needed` means the run hit a true clean stop and there are publishable product files left after policy filtering.
 For `/auto-hermes` and `/auto-hermes-max`, `needed` for auto-push means the run reached a true clean stop and is already producing a publishable product commit.

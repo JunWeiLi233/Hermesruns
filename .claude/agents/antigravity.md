@@ -22,12 +22,12 @@ Antigravity has: **no Agent tool, no native parallel spawn, no native loop.** Al
 ## Session Start
 
 Run once, in order, before any task work:
-1. Run `& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js`
-2. Run `& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent antigravity --tasks TASKS.md --guide .claude/agents/antigravity.md --queue-mode ui --write`
-3. Read `.ai-codex/optimized-antigravity.md` for queue status
-4. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
-5. Read `.ai-sync/AGENT_SYNC.md` then `.ai-sync/CONTEXT_LEDGER.md`; note any `## Active Claims` for use in the concurrent agent scan below
-6. Read `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md` (or `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json` when needed). Treat it as a `soft-signal` for workflow evolution only: repeated evidence, not a hard blocker in sequential coordinator mode.
+1. Run `& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js`
+2. Run `& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent antigravity --tasks TASKS.md --guide .claude/agents/antigravity.md --queue-mode ui --write`
+3. Read `.workspace/codex/optimized-antigravity.md` for queue status
+4. Check `.workspace/state/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+5. Read `docs/ai/CONTEXT_SNAPSHOT.md`; inspect only `## Active Claims` and search the relevant surface in `.workspace/state/AGENT_SYNC.md` and `.workspace/state/CONTEXT_LEDGER.md` for concurrent work and preservation constraints. Do not preload the full archives.
+6. Read `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.md` (or `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json` when needed). Treat it as a `soft-signal` for workflow evolution only: repeated evidence, not a hard blocker in sequential coordinator mode.
 
 ## Mode Switch
 
@@ -48,9 +48,9 @@ Antigravity has no native skill dispatch. Apply these as inline workflow rules:
 | Trigger | Behavior |
 |---|---|
 | Vague argument | Sharpen scope manually; note if deep-interview would help but is unavailable |
-| New feature/component/page | Produce 3 options internally; pick strongest by Evidence Gate; log rejected to `.ai-sync/CONTEXT_LEDGER.md` |
+| New feature/component/page | Produce 3 options internally; pick strongest by Evidence Gate; log rejected to `.workspace/state/CONTEXT_LEDGER.md` |
 | Frontend round touching layout/hierarchy/states | Apply frontend design-review gate before Builder; route `full-pipeline` if non-trivial |
-| Translation change | Run `node .tools/check-translations.mjs`; exit 0 required before commit |
+| Translation change | Run `node tools/check-translations.mjs`; exit 0 required before commit |
 | Verification failure | Diagnose root cause first via `systematic-debugging` discipline; fix in-round if cheap; otherwise write must-fix task |
 | UI/UX task | Auto-apply `.claude/skills/ui-ux-pro-max/SKILL.md` when the task involves UI structure, visual design, or interaction patterns |
 | Loop/queue work | Auto-apply `.claude/skills/loop-mode/SKILL.md` |
@@ -94,7 +94,7 @@ Promote first item with `Files:`, `Done when:`, `Verify:`, bounded to one work u
 If none → Level 4.
 
 ### Level 4 — Self-Generation
-Read `.ai-sync/RUNAWAY_COUNTER.json` as `{ "count": N }` (create with count 0 if absent). If count ≥ 3, fire Runaway Guard — stop and report. Read `PRODUCT.md` and `.ai-sync/CONTEXT_LEDGER.md`. Identify 1 concrete improvement. Apply Evidence Gate + Task Quality Rubric (4 of 5 strong) + Tier Gate. If passes: write to `## Active Tasks`, reset counter to 0. If fails: increment counter, go to Level 5.
+Read `.workspace/state/RUNAWAY_COUNTER.json` as `{ "count": N }` (create with count 0 if absent). If count ≥ 3, fire Runaway Guard — stop and report. Use `docs/ai/CONTEXT_SNAPSHOT.md` for product context and query only the candidate surface in the ledger. Identify 1 concrete improvement. Apply Evidence Gate + Task Quality Rubric (4 of 5 strong) + Tier Gate. If passes: write to `## Active Tasks`, reset counter to 0. If fails: increment counter, go to Level 5.
 
 ### Level 5 — Stop
 Run auto-commit finish action if product source files changed. Report: "loop complete — no promotable work remains."
@@ -104,13 +104,13 @@ Run auto-commit finish action if product source files changed. Report: "loop com
 ```bash
 # Frontend
 & 'C:\Program Files\nodejs\node.exe' frontend\scripts\run-vite-build.mjs
-& 'C:\Program Files\nodejs\node.exe' .tools\verify-frontend-runtime-sync.mjs --files "frontend/src/path/a.jsx||frontend/src/path/b.css"
+& 'C:\Program Files\nodejs\node.exe' tools\verify-frontend-runtime-sync.mjs --files "frontend/src/path/a.jsx||frontend/src/path/b.css"
 
 # Backend
 cd backend && ./mvnw -q -DskipTests compile
 
 # Translation parity
-node .tools/check-translations.mjs
+node tools/check-translations.mjs
 ```
 
 ## Runtime Truth Rules
@@ -120,7 +120,7 @@ Reference: `.codex/workflows/auto-hermes-claim-taxonomy.md`
 - Do not claim live website changed unless frontend proof gate passes
 - Do not claim backend runtime changed unless compile proof gate passes
 - If source changed but runtime sync not done: report "source changed, live site not synced yet"
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json` / `.md` is a `soft-signal` only. Use it to prefer evidence-backed workflow adjustments, not to block ordinary product rounds.
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json` / `.md` is a `soft-signal` only. Use it to prefer evidence-backed workflow adjustments, not to block ordinary product rounds.
 
 ## Autonomous Decision Contract
 
@@ -135,7 +135,7 @@ Reference: `.codex/workflows/auto-hermes-shared-contract.md` → Autonomous Deci
 Other agents (Codex, Claude, Gemini, etc.) may write to the same repo while you're running. Never stop because of it — absorb, synthesize, and continue.
 
 ### Pre-task sync check
-Before picking each task, run `git log --oneline -5`. If a non-self commit appears, re-read `.ai-sync/AGENT_SYNC.md`:
+Before picking each task, run `git log --oneline -5`. If a non-self commit appears, inspect the active-claim and relevant recently-completed sections of `.workspace/state/AGENT_SYNC.md`:
 - Another agent **completed** work on your target surface → read their changed files first; build on top.
 - Another agent **claims** your target surface → skip it; pick the next unowned surface.
 - Different surface → ignore and proceed.
@@ -157,7 +157,7 @@ Before writing a file: `git diff HEAD -- <file>`. If it changed externally, re-r
 ## Human Gate
 
 Ask the human only when:
-- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
 - Verification failed and next move is risky or irreversible
 - `reverse-recommended` revert cannot be done automatically
 - Product fork has non-obvious consequences
@@ -170,7 +170,7 @@ Stop only when:
 - All promotion levels exhausted (Level 5)
 - Verification fails with unresolvable blocker
 - `reverse-recommended` revert needs human input
-- `.ai-sync/HUMAN_LOOP.md` says `pause/stop/must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause/stop/must-ask`
 - Runaway Guard fires (3 consecutive self-generation rounds with no accepted work)
 
 `## Active Tasks` being empty is NOT a stop condition.
@@ -181,9 +181,9 @@ Reference: `.codex/workflows/auto-hermes-shared-contract.md` → Finish Action
 - Commit when commit gates pass; local commit is default
 - Push only when real publish need exists and push gates pass
 - Push or “submit to main repository” requires a fresh passing Docker gate artifact for the current working tree:
-  `node .tools/auto-hermes-docker-gate.mjs --write`
+  `node tools/auto-hermes-docker-gate.mjs --write`
 - The Docker gate blocks publish paths only. It does not block normal local auto-commit.
-- Stage only product files — never `.claude/`, `.codex/`, `.ai-sync/`, `TASKS.md`, `AGENTS.md`, `PRODUCT.md`, `task-images/`
+- Stage only product files — never `.claude/`, `.codex/`, `.workspace/state/`, `TASKS.md`, `AGENTS.md`, `PRODUCT.md`, `task-images/`
 
 ## Key Conventions
 
@@ -197,11 +197,11 @@ Reference: `.codex/workflows/auto-hermes-shared-contract.md` → Finish Action
 
 Use `.claude/checkpoints/ANTIGRAVITY_CHECKPOINT.md` for long work. Write/refresh with:
 ```
-& 'C:\Program Files\nodejs\node.exe' .tools/write-agent-checkpoint.mjs --agent antigravity ...
+& 'C:\Program Files\nodejs\node.exe' tools/write-agent-checkpoint.mjs --agent antigravity ...
 ```
 Clear when task is fully verified:
 ```
-& 'C:\Program Files\nodejs\node.exe' .tools/write-agent-checkpoint.mjs --agent antigravity --status clear
+& 'C:\Program Files\nodejs\node.exe' tools/write-agent-checkpoint.mjs --agent antigravity --status clear
 ```
 
 ---
@@ -213,14 +213,14 @@ Antigravity does NOT have native agent spawning. Apply **Sequential Coordinator 
 Reference: `.codex/commands/auto-hermes-max.md` for the full parallel protocol.
 
 ### Session Start
-1. Check `.ai-sync/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
-2. Read `.ai-sync/CONTEXT_LEDGER.md` and `.ai-sync/AGENT_SYNC.md`; note `## Active Claims` for concurrent scan
+1. Check `.workspace/state/HUMAN_LOOP.md` — if `pause/stop/must-ask`, stop immediately
+2. Read `docs/ai/CONTEXT_SNAPSHOT.md`; inspect only `## Active Claims` and query the relevant surface in the ledger/sync archives for the concurrent scan.
 
 **Concurrent agent scan (before every iteration):** Run `git log --oneline -10`. Exclude surfaces under active claims from lane scopes. Read recently-completed `changedFiles` before writing lane briefs.
 
 ### Mode Switch
 - **With scope argument**: Use provided scope as parent goal. Skip Explorer. Go to Lane Planning.
-- **No argument**: Act as own Explorer. Run one /auto-hermes round. Write Explorer Report to `.ai-sync/AUTO_HERMES_MAX_EXPLORER.json`.
+- **No argument**: Act as own Explorer. Run one /auto-hermes round. Write Explorer Report to `.workspace/state/AUTO_HERMES_MAX_EXPLORER.json`.
 
 ### Sequential Lane Execution
 Split goal into lanes with disjoint file ownership. Execute each lane sequentially:
@@ -228,7 +228,7 @@ Split goal into lanes with disjoint file ownership. Execute each lane sequential
 2. Run full /auto-hermes round within owned files only
 3. Before writing each file: `git diff HEAD -- <file>` — if changed externally, re-read and synthesize (apply Concurrent Agent Resilience rules above)
 4. Verify: lint/compile/test as appropriate
-5. Write result packet to `.ai-sync/auto-hermes-max-results/lane-<id>-result.json`
+5. Write result packet to `.workspace/state/auto-hermes-max-results/lane-<id>-result.json`
 6. Move to next lane
 
 Never edit a file declared by a different lane. If conflict mid-lane, stop that lane, mark `must-fix`, continue with remaining lanes.
@@ -238,7 +238,7 @@ Never edit a file declared by a different lane. If conflict mid-lane, stop that 
 Run all gates in order. Reference: `.codex/commands/auto-hermes-max.md` → Max Merge Gate (now 10 gates including Concurrent-Work Absorption at gate 6).
 Never ask the user to confirm a gate.
 
-After `approve-merge`: update `.ai-sync/CONTEXT_LEDGER.md`, update `TASKS.md`, run auto-commit finish action.
+After `approve-merge`: update `.workspace/state/CONTEXT_LEDGER.md`, update `TASKS.md`, run auto-commit finish action.
 
 ### Dynamic Reassessment (must loop back)
 
@@ -254,7 +254,7 @@ The loop does NOT stop after one iteration.
 ### Stop Rules
 - Dynamic Reassessment finds 0 promotable items
 - Unresolvable blocker in a lane or merge gate
-- `.ai-sync/HUMAN_LOOP.md` says `pause/stop/must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause/stop/must-ask`
 - Runaway Guard fires (3 consecutive Explorer re-runs with no parallel work)
 
 ---
@@ -264,7 +264,7 @@ The loop does NOT stop after one iteration.
 Antigravity can run `/auto-hermes-tech-debt` as a sequential one-shot audit.
 
 Runtime rules:
-- shared engine: `.tools/auto-hermes-tech-debt.mjs`
+- shared engine: `tools/auto-hermes-tech-debt.mjs`
 - shared contract: `.codex/workflows/auto-hermes-tech-debt-contract.md`
 - writeback target: `TASKS.md`
 - no native subagents or loop ownership
@@ -287,7 +287,7 @@ Debt categories detected (10 kinds, spread across categories for variety):
 Preferred invocation:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write --max 8
 ```
 
 Truth rules:
@@ -302,9 +302,9 @@ Truth rules:
 Antigravity can run `/auto-hermes-attack` as a sequential one-shot attack simulation.
 
 Runtime rules:
-- shared engine: `.tools/auto-hermes-security.mjs --mode attack`
+- shared engine: `tools/auto-hermes-security.mjs --mode attack`
 - safety gate: blocks non-local/non-dev targets
-- writeback target: `.ai-sync/security-reports/` and optionally `TASKS.md`
+- writeback target: `.workspace/state/security-reports/` and optionally `TASKS.md`
 - no native subagents or loop ownership
 - controlled mutation only: tagged test state, no persistent damage
 
@@ -327,13 +327,13 @@ Attack probes (11 categories):
 Preferred invocation:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --write
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --write
 ```
 
 With task writeback:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --write --write-tasks
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --runtime-base-url http://localhost:8080 --write --write-tasks
 ```
 
 Truth rules:

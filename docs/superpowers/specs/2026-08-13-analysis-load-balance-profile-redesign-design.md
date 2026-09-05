@@ -7,7 +7,7 @@ Approved direction: decision-first Profile alignment.
 ## Surface
 
 - Route: `/analysis/load-balance`
-- Component: `frontend/src/pages/AnalysisInsightDetail.jsx`
+- Component: `frontend/src/pages/analysis/AnalysisInsightDetail.jsx`
 - Visual reference: authenticated `/profile` dashboard in light mode
 - Scope: Load Balance content only; the Analysis-specific Profile-style sidebar remains unchanged
 

@@ -14,7 +14,7 @@ This is not a literal clone of any single runner page. It is a shared editorial 
 ## Surface
 
 - Route family: `/dashboard`, `/dashboard/users`, `/dashboard/course-maps`, `/dashboard/shoes`, `/dashboard/jobs`, `/dashboard/audit`, `/dashboard/settings`
-- Primary owner file: `frontend/src/pages/Dashboard.jsx`
+- Primary owner file: `frontend/src/pages/admin/Dashboard.jsx`
 - Shared styling owner: `frontend/src/styles/style.css`
 - Shared copy owner: `frontend/src/i18n/translations.js`
 

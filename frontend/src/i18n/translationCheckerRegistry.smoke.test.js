@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const checker = readFileSync(path.resolve(here, '../../../.tools/check-translations.mjs'), 'utf8');
+const checker = readFileSync(path.resolve(here, '../../../tools/check-translations.mjs'), 'utf8');
 
 assert.match(checker, /localeRegistry\.js/);
 assert.match(checker, /SUPPORTED_LOCALES/);

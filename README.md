@@ -4,6 +4,14 @@ A local-first personal running coach. **React** frontend, **Spring Boot** backen
 
 📖 **[Wiki](https://github.com/JunWeiLi233/Hermesruns/wiki)** · Setup guides, architecture docs, and more.
 
+**For developers:** [Find the files for a browser page](frontend/src/pages/README.md)
+lists each URL, frontend entry, stylesheet, backend owner and feature test command.
+See also the [frontend guide](frontend/README.md) and [backend package guide](docs/architecture/backend-package-migration.md).
+
+Open [Hermes.code-workspace](Hermes.code-workspace) for separate Frontend, Backend,
+Documentation and Repository Tools sections; integration setup stays in its own
+section. See the [repository layout](docs/architecture/repository-layout.md).
+
 ## Activity
 
 [![Hermes GitHub commit activity](docs/github-commit-activity.svg)](https://github.com/JunWeiLi233/Hermesruns/graphs/commit-activity)
@@ -33,8 +41,6 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 ```
 
 Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. More commands: [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
-
-Native iOS client: see [ios/README.md](ios/README.md) for the SwiftUI app and Xcode setup.
 
 ## Feature Highlights
 

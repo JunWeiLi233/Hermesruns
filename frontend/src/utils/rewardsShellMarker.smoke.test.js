@@ -5,10 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const requiredPages = [
-  'Analysis.jsx',
-  'PredictionDetail.jsx',
-  'Rewards.jsx',
-  'Schedule.jsx',
+  "analysis/Analysis.jsx",
+  "prediction/PredictionDetail.jsx",
+  "rewards/Rewards.jsx",
+  "schedule/Schedule.jsx",
 ];
 
 for (const page of requiredPages) {

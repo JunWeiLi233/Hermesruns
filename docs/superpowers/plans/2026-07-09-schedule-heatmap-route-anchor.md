@@ -13,8 +13,8 @@
 ### Task 1: Heatmap Hotspot Selector
 
 **Files:**
-- Create: `backend/src/main/java/com/hermes/backend/RouteHeatmapAnchorService.java`
-- Create: `backend/src/test/java/com/hermes/backend/RouteHeatmapAnchorServiceTests.java`
+- Create: `backend/src/main/java/com/hermes/backend/routing/RouteHeatmapAnchorService.java`
+- Create: `backend/src/test/java/com/hermes/backend/routing/RouteHeatmapAnchorServiceTests.java`
 
 - [ ] **Step 1: Write the failing selector tests**
 
@@ -64,8 +64,8 @@ Expected: PASS.
 ### Task 2: Route API And Persistence Contract
 
 **Files:**
-- Modify: `backend/src/main/java/com/hermes/backend/RoutePlannerController.java`
-- Modify: `backend/src/main/java/com/hermes/backend/PlannedRoute.java`
+- Modify: `backend/src/main/java/com/hermes/backend/routing/RoutePlannerController.java`
+- Modify: `backend/src/main/java/com/hermes/backend/routing/PlannedRoute.java`
 
 - [ ] **Step 1: Add failing API contract coverage**
 
@@ -98,8 +98,8 @@ Expected: PASS.
 ### Task 3: Schedule Anchor Resolution
 
 **Files:**
-- Modify: `frontend/src/pages/Schedule.jsx`
-- Modify: `frontend/src/pages/scheduleRoutePlanner.smoke.test.js`
+- Modify: `frontend/src/pages/schedule/Schedule.jsx`
+- Modify: `frontend/src/pages/schedule/__tests__/scheduleRoutePlanner.smoke.test.js`
 - Modify: `frontend/src/i18n/locales/en/pages.js`
 - Modify: `frontend/src/i18n/locales/zh-CN/pages.js`
 
@@ -113,7 +113,7 @@ assert.match(scheduleSource, /source: 'recent-run'/);
 
 - [ ] **Step 2: Run the smoke test to verify it fails**
 
-Run: `node frontend/src/pages/scheduleRoutePlanner.smoke.test.js`
+Run: `node frontend/src/pages/schedule/__tests__/scheduleRoutePlanner.smoke.test.js`
 
 Expected: assertion failure because Schedule has no heatmap-anchor request.
 
@@ -131,7 +131,7 @@ Persist `anchorSource: pt.source` in the generated route state. Require `heatmap
 
 - [ ] **Step 4: Run the smoke test to verify it passes**
 
-Run: `node frontend/src/pages/scheduleRoutePlanner.smoke.test.js`
+Run: `node frontend/src/pages/schedule/__tests__/scheduleRoutePlanner.smoke.test.js`
 
 Expected: PASS.
 
@@ -148,12 +148,12 @@ Expected: both commands exit 0.
 
 - [ ] **Step 2: Run frontend checks**
 
-Run: `node frontend/src/pages/scheduleRoutePlanner.smoke.test.js`, `cd frontend && npm run lint`, and `cd frontend && node scripts/run-vite-build.mjs`
+Run: `node frontend/src/pages/schedule/__tests__/scheduleRoutePlanner.smoke.test.js`, `cd frontend && npm run lint`, and `cd frontend && node scripts/run-vite-build.mjs`
 
 Expected: all commands exit 0.
 
 - [ ] **Step 3: Verify the served frontend bundle**
 
-Run: `node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/Schedule.jsx frontend/src/pages/scheduleRoutePlanner.smoke.test.js frontend/src/i18n/locales/en/pages.js frontend/src/i18n/locales/zh-CN/pages.js`
+Run: `node tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/schedule/Schedule.jsx frontend/src/pages/schedule/__tests__/scheduleRoutePlanner.smoke.test.js frontend/src/i18n/locales/en/pages.js frontend/src/i18n/locales/zh-CN/pages.js`
 
 Expected: `PASS` and the local backend serves the current frontend static assets.

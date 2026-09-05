@@ -1,5 +1,9 @@
 # Self-Evolving Auto-Hermes Design
 
+Maintenance note (2026-09-04): proposed config-history storage below is not wired
+into the current tools. Its empty JSON placeholder was removed; live routing and
+human-loop configuration remain intact.
+
 **Date:** 2026-04-16
 **Status:** Approved
 **Approach:** Layered Evolution (Reliability → Observation → Adaptation → Discovery)
@@ -90,7 +94,7 @@ Runs at every loop startup:
 2. Referential integrity — active claims in AGENT_SYNC reference tasks in TASKS
 3. Freshness check — context capsules older than 7 days get flagged
 4. Auto-healing — minor corruption (missing sections, stale writebacks) gets silently repaired
-5. Backup — before repair, write broken state to `.ai-sync/backups/` with timestamp
+5. Backup — before repair, write broken state to `.workspace/state/backups/` with timestamp
 6. Major corruption — write diagnostic to `SELF_EVOLVING_AUDIT.md` and pause with structured error
 
 **New files:** `auto-hermes-health-check.mjs`

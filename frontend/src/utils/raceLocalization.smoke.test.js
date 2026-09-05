@@ -18,11 +18,11 @@ import {
 } from './raceLocalization.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const racesSource = readFileSync(path.join(here, '..', 'pages', 'Races.jsx'), 'utf8');
+const racesSource = readFileSync(path.join(here, "../pages/races/Races.jsx"), 'utf8');
 
 assert.match(
   racesSource,
-  /from ['"]\.\.\/utils\/raceLocalization['"]/,
+  /from ['"]\.\.\/\.\.\/utils\/raceLocalization['"]/,
   'Races.jsx should import the shared raceLocalization utility.'
 );
 assert.doesNotMatch(

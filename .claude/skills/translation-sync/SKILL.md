@@ -14,7 +14,7 @@ Rules
 
 Verification (mandatory before marking task done)
 ```bash
-node .tools/check-translations.mjs
+node tools/check-translations.mjs
 ```
 - Exit 0: clean. Safe to commit.
 - Exit 1: key parity gap. Fix missing keys before committing — do NOT leave as follow-up.
