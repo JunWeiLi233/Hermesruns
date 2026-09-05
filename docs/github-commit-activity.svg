@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300" role="img" aria-labelledby="title desc">
-  <title id="title">Hermes commit activity from 2026-06-27 to 2026-08-10</title>
-  <desc id="desc">A 45-day commit activity chart generated from this repository's Git history. Total commits: 79. Dates are shown as ISO calendar dates.</desc>
+  <title id="title">Hermes commit activity from 2026-07-23 to 2026-09-05</title>
+  <desc id="desc">A 45-day commit activity chart generated from this repository's Git history. Total commits: 96. Dates are shown as ISO calendar dates.</desc>
   <style>
     text { fill: #64748b; font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .title { fill: #334155; font: 600 16px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -14,67 +14,67 @@
   </style>
   <rect width="100%" height="100%" fill="#ffffff" />
   <text x="450" y="24" text-anchor="middle" class="title">Hermes GitHub Commit Activity</text>
-  <text x="450" y="42" text-anchor="middle" class="subtitle">2026-06-27 to 2026-08-10 | 79 commits from repository history</text>
+  <text x="450" y="42" text-anchor="middle" class="subtitle">2026-07-23 to 2026-09-05 | 96 commits from repository history</text>
   <g>
       <line x1="56" x2="868" y1="232.00" y2="232.00" class="grid" />
       <text x="46" y="236.00" text-anchor="end">0</text>
-      <line x1="56" x2="868" y1="143.00" y2="143.00" class="grid" />
-      <text x="46" y="147.00" text-anchor="end">9</text>
+      <line x1="56" x2="868" y1="140.59" y2="140.59" class="grid" />
+      <text x="46" y="144.59" text-anchor="end">19</text>
       <line x1="56" x2="868" y1="54.00" y2="54.00" class="grid" />
-      <text x="46" y="58.00" text-anchor="end">18</text>
+      <text x="46" y="58.00" text-anchor="end">37</text>
       <line x1="56" x2="56" y1="54" y2="232" class="axis" />
       <line x1="56" x2="868" y1="232" y2="232" class="axis" />
-      <path d="M 56.00 212.22 L 74.45 232.00 L 92.91 232.00 L 111.36 232.00 L 129.82 222.11 L 148.27 222.11 L 166.73 222.11 L 185.18 222.11 L 203.64 212.22 L 222.09 222.11 L 240.55 222.11 L 259.00 202.33 L 277.45 212.22 L 295.91 222.11 L 314.36 222.11 L 332.82 222.11 L 351.27 222.11 L 369.73 222.11 L 388.18 222.11 L 406.64 222.11 L 425.09 222.11 L 443.55 222.11 L 462.00 222.11 L 480.45 222.11 L 498.91 222.11 L 517.36 222.11 L 535.82 54.00 L 554.27 232.00 L 572.73 123.22 L 591.18 232.00 L 609.64 232.00 L 628.09 232.00 L 646.55 232.00 L 665.00 232.00 L 683.45 232.00 L 701.91 133.11 L 720.36 133.11 L 738.82 232.00 L 757.27 232.00 L 775.73 212.22 L 794.18 232.00 L 812.64 232.00 L 831.09 232.00 L 849.55 232.00 L 868.00 232.00 L 868 232 L 56 232 Z" class="area" />
-      <path d="M 56.00 212.22 L 74.45 232.00 L 92.91 232.00 L 111.36 232.00 L 129.82 222.11 L 148.27 222.11 L 166.73 222.11 L 185.18 222.11 L 203.64 212.22 L 222.09 222.11 L 240.55 222.11 L 259.00 202.33 L 277.45 212.22 L 295.91 222.11 L 314.36 222.11 L 332.82 222.11 L 351.27 222.11 L 369.73 222.11 L 388.18 222.11 L 406.64 222.11 L 425.09 222.11 L 443.55 222.11 L 462.00 222.11 L 480.45 222.11 L 498.91 222.11 L 517.36 222.11 L 535.82 54.00 L 554.27 232.00 L 572.73 123.22 L 591.18 232.00 L 609.64 232.00 L 628.09 232.00 L 646.55 232.00 L 665.00 232.00 L 683.45 232.00 L 701.91 133.11 L 720.36 133.11 L 738.82 232.00 L 757.27 232.00 L 775.73 212.22 L 794.18 232.00 L 812.64 232.00 L 831.09 232.00 L 849.55 232.00 L 868.00 232.00" class="line" />
-      <circle cx="56.00" cy="212.22" r="3.5"><title>2026-06-27: 2 commits</title></circle>
-      <circle cx="74.45" cy="232.00" r="3.5"><title>2026-06-28: 0 commits</title></circle>
-      <circle cx="92.91" cy="232.00" r="3.5"><title>2026-06-29: 0 commits</title></circle>
-      <circle cx="111.36" cy="232.00" r="3.5"><title>2026-06-30: 0 commits</title></circle>
-      <circle cx="129.82" cy="222.11" r="3.5"><title>2026-07-01: 1 commits</title></circle>
-      <circle cx="148.27" cy="222.11" r="3.5"><title>2026-07-02: 1 commits</title></circle>
-      <circle cx="166.73" cy="222.11" r="3.5"><title>2026-07-03: 1 commits</title></circle>
-      <circle cx="185.18" cy="222.11" r="3.5"><title>2026-07-04: 1 commits</title></circle>
-      <circle cx="203.64" cy="212.22" r="3.5"><title>2026-07-05: 2 commits</title></circle>
-      <circle cx="222.09" cy="222.11" r="3.5"><title>2026-07-06: 1 commits</title></circle>
-      <circle cx="240.55" cy="222.11" r="3.5"><title>2026-07-07: 1 commits</title></circle>
-      <circle cx="259.00" cy="202.33" r="3.5"><title>2026-07-08: 3 commits</title></circle>
-      <circle cx="277.45" cy="212.22" r="3.5"><title>2026-07-09: 2 commits</title></circle>
-      <circle cx="295.91" cy="222.11" r="3.5"><title>2026-07-10: 1 commits</title></circle>
-      <circle cx="314.36" cy="222.11" r="3.5"><title>2026-07-11: 1 commits</title></circle>
-      <circle cx="332.82" cy="222.11" r="3.5"><title>2026-07-12: 1 commits</title></circle>
-      <circle cx="351.27" cy="222.11" r="3.5"><title>2026-07-13: 1 commits</title></circle>
-      <circle cx="369.73" cy="222.11" r="3.5"><title>2026-07-14: 1 commits</title></circle>
-      <circle cx="388.18" cy="222.11" r="3.5"><title>2026-07-15: 1 commits</title></circle>
-      <circle cx="406.64" cy="222.11" r="3.5"><title>2026-07-16: 1 commits</title></circle>
-      <circle cx="425.09" cy="222.11" r="3.5"><title>2026-07-17: 1 commits</title></circle>
-      <circle cx="443.55" cy="222.11" r="3.5"><title>2026-07-18: 1 commits</title></circle>
-      <circle cx="462.00" cy="222.11" r="3.5"><title>2026-07-19: 1 commits</title></circle>
-      <circle cx="480.45" cy="222.11" r="3.5"><title>2026-07-20: 1 commits</title></circle>
-      <circle cx="498.91" cy="222.11" r="3.5"><title>2026-07-21: 1 commits</title></circle>
-      <circle cx="517.36" cy="222.11" r="3.5"><title>2026-07-22: 1 commits</title></circle>
-      <circle cx="535.82" cy="54.00" r="3.5"><title>2026-07-23: 18 commits</title></circle>
-      <circle cx="554.27" cy="232.00" r="3.5"><title>2026-07-24: 0 commits</title></circle>
-      <circle cx="572.73" cy="123.22" r="3.5"><title>2026-07-25: 11 commits</title></circle>
-      <circle cx="591.18" cy="232.00" r="3.5"><title>2026-07-26: 0 commits</title></circle>
-      <circle cx="609.64" cy="232.00" r="3.5"><title>2026-07-27: 0 commits</title></circle>
-      <circle cx="628.09" cy="232.00" r="3.5"><title>2026-07-28: 0 commits</title></circle>
-      <circle cx="646.55" cy="232.00" r="3.5"><title>2026-07-29: 0 commits</title></circle>
-      <circle cx="665.00" cy="232.00" r="3.5"><title>2026-07-30: 0 commits</title></circle>
-      <circle cx="683.45" cy="232.00" r="3.5"><title>2026-07-31: 0 commits</title></circle>
-      <circle cx="701.91" cy="133.11" r="3.5"><title>2026-08-01: 10 commits</title></circle>
-      <circle cx="720.36" cy="133.11" r="3.5"><title>2026-08-02: 10 commits</title></circle>
-      <circle cx="738.82" cy="232.00" r="3.5"><title>2026-08-03: 0 commits</title></circle>
-      <circle cx="757.27" cy="232.00" r="3.5"><title>2026-08-04: 0 commits</title></circle>
-      <circle cx="775.73" cy="212.22" r="3.5"><title>2026-08-05: 2 commits</title></circle>
-      <circle cx="794.18" cy="232.00" r="3.5"><title>2026-08-06: 0 commits</title></circle>
-      <circle cx="812.64" cy="232.00" r="3.5"><title>2026-08-07: 0 commits</title></circle>
-      <circle cx="831.09" cy="232.00" r="3.5"><title>2026-08-08: 0 commits</title></circle>
-      <circle cx="849.55" cy="232.00" r="3.5"><title>2026-08-09: 0 commits</title></circle>
-      <circle cx="868.00" cy="232.00" r="3.5"><title>2026-08-10: 0 commits</title></circle>
-      <text x="56.00" y="276" text-anchor="start">2026-06-27</text>
-      <text x="259.00" y="276" text-anchor="middle">2026-07-08</text>
-      <text x="462.00" y="276" text-anchor="middle">2026-07-19</text>
-      <text x="665.00" y="276" text-anchor="middle">2026-07-30</text>
-      <text x="868.00" y="276" text-anchor="end">2026-08-10</text>
+      <path d="M 56.00 227.19 L 74.45 232.00 L 92.91 227.19 L 111.36 232.00 L 129.82 232.00 L 148.27 232.00 L 166.73 232.00 L 185.18 232.00 L 203.64 232.00 L 222.09 227.19 L 240.55 227.19 L 259.00 232.00 L 277.45 232.00 L 295.91 227.19 L 314.36 232.00 L 332.82 232.00 L 351.27 232.00 L 369.73 232.00 L 388.18 232.00 L 406.64 222.38 L 425.09 232.00 L 443.55 222.38 L 462.00 222.38 L 480.45 232.00 L 498.91 232.00 L 517.36 222.38 L 535.82 232.00 L 554.27 232.00 L 572.73 232.00 L 591.18 232.00 L 609.64 222.38 L 628.09 232.00 L 646.55 232.00 L 665.00 232.00 L 683.45 232.00 L 701.91 222.38 L 720.36 54.00 L 738.82 169.46 L 757.27 135.78 L 775.73 217.57 L 794.18 212.76 L 812.64 232.00 L 831.09 232.00 L 849.55 222.38 L 868.00 232.00 L 868 232 L 56 232 Z" class="area" />
+      <path d="M 56.00 227.19 L 74.45 232.00 L 92.91 227.19 L 111.36 232.00 L 129.82 232.00 L 148.27 232.00 L 166.73 232.00 L 185.18 232.00 L 203.64 232.00 L 222.09 227.19 L 240.55 227.19 L 259.00 232.00 L 277.45 232.00 L 295.91 227.19 L 314.36 232.00 L 332.82 232.00 L 351.27 232.00 L 369.73 232.00 L 388.18 232.00 L 406.64 222.38 L 425.09 232.00 L 443.55 222.38 L 462.00 222.38 L 480.45 232.00 L 498.91 232.00 L 517.36 222.38 L 535.82 232.00 L 554.27 232.00 L 572.73 232.00 L 591.18 232.00 L 609.64 222.38 L 628.09 232.00 L 646.55 232.00 L 665.00 232.00 L 683.45 232.00 L 701.91 222.38 L 720.36 54.00 L 738.82 169.46 L 757.27 135.78 L 775.73 217.57 L 794.18 212.76 L 812.64 232.00 L 831.09 232.00 L 849.55 222.38 L 868.00 232.00" class="line" />
+      <circle cx="56.00" cy="227.19" r="3.5"><title>2026-07-23: 1 commits</title></circle>
+      <circle cx="74.45" cy="232.00" r="3.5"><title>2026-07-24: 0 commits</title></circle>
+      <circle cx="92.91" cy="227.19" r="3.5"><title>2026-07-25: 1 commits</title></circle>
+      <circle cx="111.36" cy="232.00" r="3.5"><title>2026-07-26: 0 commits</title></circle>
+      <circle cx="129.82" cy="232.00" r="3.5"><title>2026-07-27: 0 commits</title></circle>
+      <circle cx="148.27" cy="232.00" r="3.5"><title>2026-07-28: 0 commits</title></circle>
+      <circle cx="166.73" cy="232.00" r="3.5"><title>2026-07-29: 0 commits</title></circle>
+      <circle cx="185.18" cy="232.00" r="3.5"><title>2026-07-30: 0 commits</title></circle>
+      <circle cx="203.64" cy="232.00" r="3.5"><title>2026-07-31: 0 commits</title></circle>
+      <circle cx="222.09" cy="227.19" r="3.5"><title>2026-08-01: 1 commits</title></circle>
+      <circle cx="240.55" cy="227.19" r="3.5"><title>2026-08-02: 1 commits</title></circle>
+      <circle cx="259.00" cy="232.00" r="3.5"><title>2026-08-03: 0 commits</title></circle>
+      <circle cx="277.45" cy="232.00" r="3.5"><title>2026-08-04: 0 commits</title></circle>
+      <circle cx="295.91" cy="227.19" r="3.5"><title>2026-08-05: 1 commits</title></circle>
+      <circle cx="314.36" cy="232.00" r="3.5"><title>2026-08-06: 0 commits</title></circle>
+      <circle cx="332.82" cy="232.00" r="3.5"><title>2026-08-07: 0 commits</title></circle>
+      <circle cx="351.27" cy="232.00" r="3.5"><title>2026-08-08: 0 commits</title></circle>
+      <circle cx="369.73" cy="232.00" r="3.5"><title>2026-08-09: 0 commits</title></circle>
+      <circle cx="388.18" cy="232.00" r="3.5"><title>2026-08-10: 0 commits</title></circle>
+      <circle cx="406.64" cy="222.38" r="3.5"><title>2026-08-11: 2 commits</title></circle>
+      <circle cx="425.09" cy="232.00" r="3.5"><title>2026-08-12: 0 commits</title></circle>
+      <circle cx="443.55" cy="222.38" r="3.5"><title>2026-08-13: 2 commits</title></circle>
+      <circle cx="462.00" cy="222.38" r="3.5"><title>2026-08-14: 2 commits</title></circle>
+      <circle cx="480.45" cy="232.00" r="3.5"><title>2026-08-15: 0 commits</title></circle>
+      <circle cx="498.91" cy="232.00" r="3.5"><title>2026-08-16: 0 commits</title></circle>
+      <circle cx="517.36" cy="222.38" r="3.5"><title>2026-08-17: 2 commits</title></circle>
+      <circle cx="535.82" cy="232.00" r="3.5"><title>2026-08-18: 0 commits</title></circle>
+      <circle cx="554.27" cy="232.00" r="3.5"><title>2026-08-19: 0 commits</title></circle>
+      <circle cx="572.73" cy="232.00" r="3.5"><title>2026-08-20: 0 commits</title></circle>
+      <circle cx="591.18" cy="232.00" r="3.5"><title>2026-08-21: 0 commits</title></circle>
+      <circle cx="609.64" cy="222.38" r="3.5"><title>2026-08-22: 2 commits</title></circle>
+      <circle cx="628.09" cy="232.00" r="3.5"><title>2026-08-23: 0 commits</title></circle>
+      <circle cx="646.55" cy="232.00" r="3.5"><title>2026-08-24: 0 commits</title></circle>
+      <circle cx="665.00" cy="232.00" r="3.5"><title>2026-08-25: 0 commits</title></circle>
+      <circle cx="683.45" cy="232.00" r="3.5"><title>2026-08-26: 0 commits</title></circle>
+      <circle cx="701.91" cy="222.38" r="3.5"><title>2026-08-27: 2 commits</title></circle>
+      <circle cx="720.36" cy="54.00" r="3.5"><title>2026-08-28: 37 commits</title></circle>
+      <circle cx="738.82" cy="169.46" r="3.5"><title>2026-08-29: 13 commits</title></circle>
+      <circle cx="757.27" cy="135.78" r="3.5"><title>2026-08-30: 20 commits</title></circle>
+      <circle cx="775.73" cy="217.57" r="3.5"><title>2026-08-31: 3 commits</title></circle>
+      <circle cx="794.18" cy="212.76" r="3.5"><title>2026-09-01: 4 commits</title></circle>
+      <circle cx="812.64" cy="232.00" r="3.5"><title>2026-09-02: 0 commits</title></circle>
+      <circle cx="831.09" cy="232.00" r="3.5"><title>2026-09-03: 0 commits</title></circle>
+      <circle cx="849.55" cy="222.38" r="3.5"><title>2026-09-04: 2 commits</title></circle>
+      <circle cx="868.00" cy="232.00" r="3.5"><title>2026-09-05: 0 commits</title></circle>
+      <text x="56.00" y="276" text-anchor="start">2026-07-23</text>
+      <text x="259.00" y="276" text-anchor="middle">2026-08-03</text>
+      <text x="462.00" y="276" text-anchor="middle">2026-08-14</text>
+      <text x="665.00" y="276" text-anchor="middle">2026-08-25</text>
+      <text x="868.00" y="276" text-anchor="end">2026-09-05</text>
   </g>
 </svg>
