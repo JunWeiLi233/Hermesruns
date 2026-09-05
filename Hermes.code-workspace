@@ -1,0 +1,26 @@
+{
+  "folders": [
+    { "name": "Frontend", "path": "frontend" },
+    { "name": "Backend", "path": "backend" },
+    { "name": "Documentation", "path": "docs" },
+    { "name": "Repository Tools", "path": "tools" },
+    { "name": "Repository & Integrations", "path": "." }
+  ],
+  "settings": {
+    "explorer.compactFolders": false,
+    "files.exclude": {
+      "frontend": true,
+      "backend": true,
+      "docs": true,
+      "tools": true,
+      "**/node_modules": true,
+      "**/target": true
+    },
+    "search.exclude": {
+      "**/.workspace": true,
+      "**/.omx": true,
+      "**/node_modules": true,
+      "**/target": true
+    }
+  }
+}

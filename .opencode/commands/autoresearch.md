@@ -1,4 +1,4 @@
-<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- GENERATED FILE: edit .codex/commands and run node tools/generate-runtime-commands.mjs. -->
 <!-- Runtime: opencode; command: /autoresearch; contract: docs/ai/EDITING_CONTRACT.md -->
 
 ---

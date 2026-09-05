@@ -14,7 +14,7 @@
 
 **Files:**
 - Create: `docs/superpowers/plans/2026-04-17-marathon-route-extraction-phase1.md`
-- Modify: `.ai-sync/AGENT_SYNC.md`
+- Modify: `.workspace/state/AGENT_SYNC.md`
 
 - [ ] **Step 1: Record the active implementation plan**
 
@@ -22,18 +22,18 @@ Create this plan file with the scoped Phase 1 architecture, bounded tasks, and v
 
 - [ ] **Step 2: Claim the work unit**
 
-Add an `Active Claims` entry to `.ai-sync/AGENT_SYNC.md` for the marathon route extraction Phase 1 scaffold and list the owned files/modules.
+Add an `Active Claims` entry to `.workspace/state/AGENT_SYNC.md` for the marathon route extraction Phase 1 scaffold and list the owned files/modules.
 
 ### Task 2: Step 1 Gemini Route Parameters
 
 **Files:**
-- Create: `backend/src/main/java/com/hermes/backend/RouteParametersDTO.java`
-- Create: `backend/src/main/java/com/hermes/backend/RoutePixelPointDTO.java`
-- Create: `backend/src/main/java/com/hermes/backend/RoutePathExtractionResultDTO.java`
+- Create: `backend/src/main/java/com/hermes/backend/races/RouteParametersDTO.java`
+- Create: `backend/src/main/java/com/hermes/backend/races/RoutePixelPointDTO.java`
+- Create: `backend/src/main/java/com/hermes/backend/races/RoutePathExtractionResultDTO.java`
 - Create: `backend/src/main/java/com/hermes/backend/GeminiRouteParameterClient.java`
-- Create: `backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java`
+- Create: `backend/src/main/java/com/hermes/backend/races/MarathonRouteExtractionService.java`
 - Test: `backend/src/test/java/com/hermes/backend/GeminiRouteParameterClientTests.java`
-- Test: `backend/src/test/java/com/hermes/backend/MarathonRouteExtractionServiceTests.java`
+- Test: `backend/src/test/java/com/hermes/backend/races/MarathonRouteExtractionServiceTests.java`
 
 - [ ] **Step 1: Write the failing Gemini client test**
 
@@ -116,7 +116,7 @@ Expected: PASS when OpenCV and scikit-image are installed; otherwise fail with m
 ### Task 4: Focused Verification
 
 **Files:**
-- Modify: `.ai-sync/AGENT_SYNC.md`
+- Modify: `.workspace/state/AGENT_SYNC.md`
 
 - [ ] **Step 1: Run the focused backend test suite**
 

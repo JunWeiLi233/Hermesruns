@@ -1,4 +1,4 @@
-<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- GENERATED FILE: edit .codex/commands and run node tools/generate-runtime-commands.mjs. -->
 <!-- Runtime: opencode; command: /auto-hermes-find-shoe; contract: docs/ai/EDITING_CONTRACT.md -->
 
 # /auto-hermes-find-shoe

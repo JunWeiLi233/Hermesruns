@@ -5,7 +5,7 @@ This file owns Hermes UI and design rules.
 ## Design Authority
 
 - `design.md` is the default visual source of truth for meaningful Hermes UI work.
-- For `/auto-hermes`, `node .tools/auto-hermes-skills.mjs --json` is the durable frontend design skill manifest.
+- For `/auto-hermes`, `node tools/auto-hermes-skills.mjs --json` is the durable frontend design skill manifest.
 - Combine `design.md`, the current user request, any supplied reference image/mockup/export, and any explicitly selected external `DESIGN.md` reference.
 - `VoltAgent/awesome-design-md` (`https://github.com/VoltAgent/awesome-design-md`) is an approved optional external `DESIGN.md` reference library, not a replacement for Hermes design authority.
 - Preserve product behavior, routing, auth, and real data wiring unless the task explicitly changes them.
@@ -110,4 +110,4 @@ The gate must answer:
 - Does the page feel useful and enjoyable enough for daily use?
 - Are loading, empty, error, focus, label, and contrast basics acceptable?
 
-Use `.tools/customer-playtest-gate.mjs` to write the round artifact, then fill it with real Browser observations and customer feedback. A round should not pass if navigation clarity or daily-use enjoyment is below 4/5, or if either persona hits a must-fix blocker.
+Use `tools/customer-playtest-gate.mjs` to write the round artifact, then fill it with real Browser observations and customer feedback. A round should not pass if navigation clarity or daily-use enjoyment is below 4/5, or if either persona hits a must-fix blocker.

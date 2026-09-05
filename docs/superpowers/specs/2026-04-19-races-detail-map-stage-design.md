@@ -253,11 +253,11 @@ Update smoke tests to assert the new design contract:
 
 For implementation completion:
 
-- `node frontend/src/pages/raceDetailCourseMapOverlay.smoke.test.js`
+- `node frontend/src/pages/races/__tests__/raceDetailCourseMapOverlay.smoke.test.js`
 - any related map lifecycle/trust smoke tests
 - `cd frontend && npm run lint`
 - `cd frontend && node scripts/run-vite-build.mjs`
-- `node .tools/verify-frontend-runtime-sync.mjs --files "..."`
+- `node tools/verify-frontend-runtime-sync.mjs --files "..."`
 
 If practical during implementation, also manually verify:
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const signupPath = path.join(here, '../pages/Signup.jsx');
+const signupPath = path.join(here, "../pages/auth/Signup.jsx");
 const utilityPath = path.join(here, 'passwordRules.js');
 const signupSource = readFileSync(signupPath, 'utf8');
 
@@ -56,7 +56,7 @@ assert.deepStrictEqual(
 
 assert.match(
   signupSource,
-  /from '\.\.\/utils\/passwordRules'/,
+  /from '\.\.\/\.\.\/utils\/passwordRules'/,
   'Signup should import the shared passwordRules utility.',
 );
 

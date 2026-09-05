@@ -16,7 +16,7 @@ Add an optional SEO support lane to `/auto-hermes-market` for consumer-searchabl
   - comparison pages
   - public landing-page businesses
 - It produces an opportunity map, not a low-level technical SEO audit.
-- It writes `.ai-sync/market/seo-agent.json`.
+- It writes `.workspace/state/market/seo-agent.json`.
 - It runs as an independent parallel lane and hands off to synthesis.
 
 ## SEO Agent Role
@@ -32,7 +32,7 @@ It must not invent keyword volume, rankings, or traffic.
 
 ## Output Contract
 
-Write `.ai-sync/market/seo-agent.json` with:
+Write `.workspace/state/market/seo-agent.json` with:
 
 - `scope`
 - `triggerReason`

@@ -9,8 +9,8 @@ const projectRoot = path.resolve(frontendDir, '..')
 const backendStaticDir = path.resolve(projectRoot, '../backend/src/main/resources/static')
 const backendLiveStaticDir = path.resolve(projectRoot, '../backend/target/classes/static')
 const backendAssetsDir = path.join(backendStaticDir, 'assets')
-const buildOutputDir = path.resolve(projectRoot, '../.tmp/frontend-static-build')
-const backupAssetsDir = path.resolve(projectRoot, '../.tmp/backend-static-assets-backup')
+const buildOutputDir = path.resolve(projectRoot, '../.workspace/cache/frontend-static-build')
+const backupAssetsDir = path.resolve(projectRoot, '../.workspace/cache/backend-static-assets-backup')
 
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
@@ -274,7 +274,7 @@ function loadRetainedGenerations(keepBuilds) {
 // files that devtools and antivirus then have to re-scan. A fingerprint of all
 // build inputs lets identical re-runs skip straight to success.
 
-const fingerprintFile = path.resolve(projectRoot, '../.tmp/frontend-build-fingerprint.json')
+const fingerprintFile = path.resolve(projectRoot, '../.workspace/cache/frontend-build-fingerprint.json')
 
 function collectFingerprintEntries(dir, prefix = '') {
   const entries = []

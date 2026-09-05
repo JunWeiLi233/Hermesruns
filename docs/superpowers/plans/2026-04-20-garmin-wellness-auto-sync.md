@@ -4,7 +4,7 @@
 
 **Goal:** Import full wellness data from Garmin Connect (sleep, HRV, stress, SpO2, body composition, steps, training readiness) and auto-sync daily, feeding the coaching engine.
 
-**Architecture:** Extend the existing Python bridge pattern. New `.tools/garmin_wellness_download.py` uses garth's data modules to fetch daily wellness data. New `GarminWellnessImportService.java` calls it, persists to 5 new JPA entities, and updates `CoachRunnerState`. New `GarminWellnessSyncScheduler` runs periodic auto-sync. Runner entity stores encrypted Garmin credentials for scheduled sync. Frontend Settings page gets wellness sync controls.
+**Architecture:** Extend the existing Python bridge pattern. New `tools/garmin_wellness_download.py` uses garth's data modules to fetch daily wellness data. New `GarminWellnessImportService.java` calls it, persists to 5 new JPA entities, and updates `CoachRunnerState`. New `GarminWellnessSyncScheduler` runs periodic auto-sync. Runner entity stores encrypted Garmin credentials for scheduled sync. Frontend Settings page gets wellness sync controls.
 
 **Tech Stack:** Java/Spring (JPA entities, services, scheduler), Python/garth (wellness fetch), React/i18n (frontend)
 
@@ -13,27 +13,27 @@
 ## File Structure
 
 ### New Files
-- `.tools/garmin_wellness_download.py` — Python wellness data fetcher using garth
-- `backend/src/main/java/com/hermes/backend/DailyWellnessSummary.java` — JPA entity
-- `backend/src/main/java/com/hermes/backend/DailySleepData.java` — JPA entity
-- `backend/src/main/java/com/hermes/backend/DailyHRVData.java` — JPA entity
-- `backend/src/main/java/com/hermes/backend/DailyStressData.java` — JPA entity
-- `backend/src/main/java/com/hermes/backend/BodyCompositionData.java` — JPA entity
-- `backend/src/main/java/com/hermes/backend/DailyWellnessSummaryRepository.java`
-- `backend/src/main/java/com/hermes/backend/DailySleepDataRepository.java`
-- `backend/src/main/java/com/hermes/backend/DailyHRVDataRepository.java`
-- `backend/src/main/java/com/hermes/backend/DailyStressDataRepository.java`
-- `backend/src/main/java/com/hermes/backend/BodyCompositionDataRepository.java`
-- `backend/src/main/java/com/hermes/backend/GarminWellnessImportService.java`
-- `backend/src/main/java/com/hermes/backend/GarminWellnessSyncScheduler.java`
+- `tools/garmin_wellness_download.py` — Python wellness data fetcher using garth
+- `backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummary.java` — JPA entity
+- `backend/src/main/java/com/hermes/backend/coaching/DailySleepData.java` — JPA entity
+- `backend/src/main/java/com/hermes/backend/coaching/DailyHRVData.java` — JPA entity
+- `backend/src/main/java/com/hermes/backend/coaching/DailyStressData.java` — JPA entity
+- `backend/src/main/java/com/hermes/backend/coaching/BodyCompositionData.java` — JPA entity
+- `backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummaryRepository.java`
+- `backend/src/main/java/com/hermes/backend/coaching/DailySleepDataRepository.java`
+- `backend/src/main/java/com/hermes/backend/coaching/DailyHRVDataRepository.java`
+- `backend/src/main/java/com/hermes/backend/coaching/DailyStressDataRepository.java`
+- `backend/src/main/java/com/hermes/backend/coaching/BodyCompositionDataRepository.java`
+- `backend/src/main/java/com/hermes/backend/imports/GarminWellnessImportService.java`
+- `backend/src/main/java/com/hermes/backend/imports/GarminWellnessSyncScheduler.java`
 
 ### Modified Files
-- `backend/src/main/java/com/hermes/backend/Runner.java` — add Garmin credential fields
-- `backend/src/main/java/com/hermes/backend/RunnerRepository.java` — add Garmin query methods
-- `backend/src/main/java/com/hermes/backend/GarminConnectController.java` — add wellness endpoints
+- `backend/src/main/java/com/hermes/backend/runner/Runner.java` — add Garmin credential fields
+- `backend/src/main/java/com/hermes/backend/runner/RunnerRepository.java` — add Garmin query methods
+- `backend/src/main/java/com/hermes/backend/imports/GarminConnectController.java` — add wellness endpoints
 - `backend/src/main/resources/application.properties` — add Garmin wellness config
-- `.tools/requirements-garmin.txt` — pin garth version
-- `frontend/src/pages/Settings.jsx` — add wellness sync UI
+- `tools/requirements-garmin.txt` — pin garth version
+- `frontend/src/pages/settings/Settings.jsx` — add wellness sync UI
 - `frontend/src/i18n/translations.js` — add i18n keys
 - `frontend/src/styles/style.css` — add wellness sync styles
 
@@ -42,16 +42,16 @@
 ## Task 1: Create JPA Entities and Repositories
 
 **Files:**
-- Create: `backend/src/main/java/com/hermes/backend/DailyWellnessSummary.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailySleepData.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailyHRVData.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailyStressData.java`
-- Create: `backend/src/main/java/com/hermes/backend/BodyCompositionData.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailyWellnessSummaryRepository.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailySleepDataRepository.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailyHRVDataRepository.java`
-- Create: `backend/src/main/java/com/hermes/backend/DailyStressDataRepository.java`
-- Create: `backend/src/main/java/com/hermes/backend/BodyCompositionDataRepository.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummary.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailySleepData.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyHRVData.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyStressData.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/BodyCompositionData.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummaryRepository.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailySleepDataRepository.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyHRVDataRepository.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/DailyStressDataRepository.java`
+- Create: `backend/src/main/java/com/hermes/backend/coaching/BodyCompositionDataRepository.java`
 
 - [ ] **Step 1:** Create the 5 JPA entities following the project's entity patterns (see `Activity.java` for style). Each entity has: `id` (Long PK), `runner` (FK to Runner), `date` (LocalDate), `provider` (ImportProvider), `sourceChecksum` (String), plus the specific metric fields from the design. Each has a unique constraint on `(runner_id, provider, date)`. Use Jakarta persistence annotations. Follow the existing getter/setter pattern.
 
@@ -64,8 +64,8 @@
 ## Task 2: Add Garmin Credential Fields to Runner Entity
 
 **Files:**
-- Modify: `backend/src/main/java/com/hermes/backend/Runner.java`
-- Modify: `backend/src/main/java/com/hermes/backend/RunnerRepository.java`
+- Modify: `backend/src/main/java/com/hermes/backend/runner/Runner.java`
+- Modify: `backend/src/main/java/com/hermes/backend/runner/RunnerRepository.java`
 
 - [ ] **Step 1:** Add to Runner.java: `garminConnectEmail` (String), `garminConnectPasswordEncrypted` (String, @JsonProperty WRITE_ONLY), `garminConnectTokenEncrypted` (String, @JsonProperty WRITE_ONLY), `garminWellnessSyncEnabled` (Boolean, @ColumnDefault("false")), `garminWellnessLastSyncedAt` (LocalDateTime). Add getters/setters. The `garminConnectPasswordEncrypted` stores the garth session token encrypted via SecretEncryptionService.
 
@@ -80,26 +80,26 @@
 ## Task 3: Create Python Wellness Download Script
 
 **Files:**
-- Create: `.tools/garmin_wellness_download.py`
-- Modify: `.tools/requirements-garmin.txt`
+- Create: `tools/garmin_wellness_download.py`
+- Modify: `tools/requirements-garmin.txt`
 
-- [ ] **Step 1:** Create `.tools/garmin_wellness_download.py` following the pattern of the existing `garmin_connect_download.py`. The script accepts JSON on stdin with `{email, password, start_date, end_date}`. Uses garth to authenticate, then fetches: daily summaries, sleep data, HRV data, stress data, and body composition data for each day in the date range. Returns JSON on stdout with `{success: true, days: [{date, wellness: {}, sleep: {}, hrv: {}, stress: {}, body: {}}, ...]}`. Use garth's `data` modules: `DailySummary`, `SleepData`/`DailySleepData`, `HRVData`/`DailyHRV`, stress via `DailySummary` stress fields, weight via `WeightData.list()`. Handle individual day failures gracefully (skip the day, continue).
+- [ ] **Step 1:** Create `tools/garmin_wellness_download.py` following the pattern of the existing `garmin_connect_download.py`. The script accepts JSON on stdin with `{email, password, start_date, end_date}`. Uses garth to authenticate, then fetches: daily summaries, sleep data, HRV data, stress data, and body composition data for each day in the date range. Returns JSON on stdout with `{success: true, days: [{date, wellness: {}, sleep: {}, hrv: {}, stress: {}, body: {}}, ...]}`. Use garth's `data` modules: `DailySummary`, `SleepData`/`DailySleepData`, `HRVData`/`DailyHRV`, stress via `DailySummary` stress fields, weight via `WeightData.list()`. Handle individual day failures gracefully (skip the day, continue).
 
-- [ ] **Step 2:** Update `.tools/requirements-garmin.txt` to `garth>=0.6.0` (ensure the wellness data modules are available).
+- [ ] **Step 2:** Update `tools/requirements-garmin.txt` to `garth>=0.6.0` (ensure the wellness data modules are available).
 
-- [ ] **Step 3:** Test the Python script manually (or at least verify it imports and has correct structure): `cd .tools && python -c "import garmin_wellness_download"` to check for syntax errors.
+- [ ] **Step 3:** Test the Python script manually (or at least verify it imports and has correct structure): `cd tools && python -c "import garmin_wellness_download"` to check for syntax errors.
 
 ---
 
 ## Task 4: Create GarminWellnessImportService
 
 **Files:**
-- Create: `backend/src/main/java/com/hermes/backend/GarminWellnessImportService.java`
+- Create: `backend/src/main/java/com/hermes/backend/imports/GarminWellnessImportService.java`
 
 - [ ] **Step 1:** Create `GarminWellnessImportService.java` modeled on `GarminConnectImportService.java`. It should:
   - Accept `Runner`, `String email`, `String password`, `int daysBack` params
   - Use a per-runner `ConcurrentHashMap<Long, WellnessSyncTracker>` for status tracking (same pattern as `GarminSyncTracker`)
-  - Call `.tools/garmin_wellness_download.py` via `callPythonWellnessDownloader(email, password, startDate, endDate)`
+  - Call `tools/garmin_wellness_download.py` via `callPythonWellnessDownloader(email, password, startDate, endDate)`
   - Parse the JSON response and upsert into the 5 wellness entities using the repository `findByRunnerAndProviderAndDate()` pattern (update if exists, create if not)
   - After persisting, call `updateCoachRunnerStateFromWellness(runner, latestDay)` to update `CoachRunnerState.lastNightRestingHr`, `lastSleepScore`, `lastHrvMs` from the most recent day's data
   - Use `SecretEncryptionService` to encrypt/decrypt the garth session token on the Runner entity
@@ -114,7 +114,7 @@
 ## Task 5: Create GarminWellnessSyncScheduler
 
 **Files:**
-- Create: `backend/src/main/java/com/hermes/backend/GarminWellnessSyncScheduler.java`
+- Create: `backend/src/main/java/com/hermes/backend/imports/GarminWellnessSyncScheduler.java`
 
 - [ ] **Step 1:** Create `GarminWellnessSyncScheduler.java` following `StravaAutoSyncScheduler.java`. It should:
   - Use `@Scheduled(fixedDelayString = "${garmin.wellness.sync.interval-ms:1800000}", initialDelay = 180_000)` — default 30 minutes, 3-minute startup delay
@@ -131,7 +131,7 @@
 ## Task 6: Add Wellness Endpoints to GarminConnectController
 
 **Files:**
-- Modify: `backend/src/main/java/com/hermes/backend/GarminConnectController.java`
+- Modify: `backend/src/main/java/com/hermes/backend/imports/GarminConnectController.java`
 
 - [ ] **Step 1:** Add 3 endpoints to `GarminConnectController`:
   1. `POST /api/garmin/connect/wellness/import` — accepts `{daysBack: 7}` (default 7, max 365). Authenticates via Authorization header. Decrypts Runner's stored Garmin credentials. Starts async wellness import via `GarminWellnessImportService`. Returns 409 if import already running. Also stores/saves Garmin credentials if the request includes `garminEmail`/`garminPassword` (first-time setup or credential update).
@@ -149,7 +149,7 @@
 ## Task 7: Frontend — Wellness Sync UI in Settings
 
 **Files:**
-- Modify: `frontend/src/pages/Settings.jsx`
+- Modify: `frontend/src/pages/settings/Settings.jsx`
 - Modify: `frontend/src/i18n/translations.js`
 - Modify: `frontend/src/styles/style.css`
 

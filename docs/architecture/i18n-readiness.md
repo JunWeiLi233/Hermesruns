@@ -1,6 +1,6 @@
 # Internationalization Readiness
 
-Hermes currently supports `en` and `zh-CN`. `frontend/src/i18n/localeRegistry.js` is the authority for supported locale identifiers, HTML language tags, and `Intl` locales. Translation bundles must match that registry and pass `node .tools/check-translations.mjs --full`.
+Hermes currently supports `en` and `zh-CN`. `frontend/src/i18n/localeRegistry.js` is the authority for supported locale identifiers, HTML language tags, and `Intl` locales. Translation bundles must match that registry and pass `node tools/check-translations.mjs --full`.
 
 ## Third-Locale Gate
 

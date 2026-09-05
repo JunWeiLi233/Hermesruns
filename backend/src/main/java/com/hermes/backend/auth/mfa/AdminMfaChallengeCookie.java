@@ -2,10 +2,9 @@ package com.hermes.backend.auth.mfa;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.ResponseCookie;
-
 import java.time.Duration;
 import java.util.Optional;
+import org.springframework.http.ResponseCookie;
 
 public final class AdminMfaChallengeCookie {
     public static final String NAME = "hermes_admin_mfa";

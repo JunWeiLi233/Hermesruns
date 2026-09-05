@@ -25,15 +25,22 @@ For behavior-led tasks without an obvious owner, read
 ## Where to look next
 
 - Frontend routes and providers: `frontend/src/App.jsx`; API client:
-  `frontend/src/api.js`; runtime stylesheet entrypoint: `frontend/src/index.css`.
+  `frontend/src/api.ts`; runtime stylesheet entrypoint: `frontend/src/index.css`.
 - Backend entrypoint: `backend/src/main/java/com/hermes/backend/BackendApplication.java`.
+- Backend product code belongs to domain packages; HTTP/cache/mail/configuration
+  infrastructure belongs to named `infrastructure/` packages. Controllers call
+  services, services use repositories/clients, and shared models do not depend on
+  their orchestrators. See `docs/architecture/backend-package-migration.md`.
+- Admin view sections and presentation models: `frontend/src/pages/admin/`.
+- Architecture checks: `npm run check:architecture`; after a fresh backend compile,
+  add `-- --classes backend/target/classes` for compiled dependency checks.
 - User-facing copy: `frontend/src/i18n/translations.js` and localized modules.
 - Visual work: `design.md`; current design history is searchable in
   `DESIGN_VERSIONS.md`.
 
 ## Historical and coordinated work
 
-`README.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/AGENT_SYNC.md`, and
+`README.md`, `.workspace/state/CONTEXT_LEDGER.md`, `.workspace/state/AGENT_SYNC.md`, and
 `DESIGN_VERSIONS.md` are searchable archives, not bootstrap context. Consult a
 specific matching section only when a task needs its prior decision, handoff,
 or visual history. Prefer `rg -n -C 3 '<surface or task key>' <file>` over

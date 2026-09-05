@@ -13,7 +13,7 @@
 ### Task 1: Lock The Profile Hierarchy
 
 **Files:**
-- Create: `frontend/src/pages/predictionProfileAlignment.smoke.test.js`
+- Create: `frontend/src/pages/prediction/__tests__/predictionProfileAlignment.smoke.test.js`
 
 - [ ] **Step 1: Write the failing smoke test**
 
@@ -21,14 +21,14 @@ Assert that `PredictionDetail.jsx` contains `prediction-profile-content`, `predi
 
 - [ ] **Step 2: Run the test and verify it fails**
 
-Run: `node frontend/src/pages/predictionProfileAlignment.smoke.test.js`
+Run: `node frontend/src/pages/prediction/__tests__/predictionProfileAlignment.smoke.test.js`
 
 Expected: FAIL because the new wrapper, layout markers, and stylesheet do not exist yet.
 
 ### Task 2: Reorder Existing Prediction Content
 
 **Files:**
-- Modify: `frontend/src/pages/PredictionDetail.jsx`
+- Modify: `frontend/src/pages/prediction/PredictionDetail.jsx`
 
 - [ ] **Step 1: Add the route content boundary**
 
@@ -89,15 +89,15 @@ Collapse the prediction metric and training grids at the same breakpoints as the
 
 - [ ] **Step 1: Run the focused smoke test**
 
-Run: `node frontend/src/pages/predictionProfileAlignment.smoke.test.js`
+Run: `node frontend/src/pages/prediction/__tests__/predictionProfileAlignment.smoke.test.js`
 
 Expected: PASS with the Profile hierarchy message.
 
 - [ ] **Step 2: Run the related navigation and skeleton tests**
 
-Run: `node frontend/src/pages/analysisSubpageNav.smoke.test.js`
+Run: `node frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
-Run: `node frontend/src/pages/loadingSkeleton.smoke.test.js`
+Run: `node frontend/src/test/contracts/loadingSkeleton.smoke.test.js`
 
 Expected: both PASS.
 
@@ -105,7 +105,7 @@ Expected: both PASS.
 
 Run: `cd frontend; node scripts/run-vite-build.mjs`
 
-Run: `node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/PredictionDetail.jsx frontend/src/styles/prediction-profile-alignment.css frontend/src/components/PageSkeleton.jsx frontend/src/styles/loading-skeleton.css frontend/src/index.css`
+Run: `node tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/prediction/PredictionDetail.jsx frontend/src/styles/prediction-profile-alignment.css frontend/src/components/PageSkeleton.jsx frontend/src/styles/loading-skeleton.css frontend/src/index.css`
 
 Expected: build and runtime sync PASS.
 
@@ -115,6 +115,6 @@ Add a newest-first `DV-2026-08-13-02` entry describing the Profile-aligned predi
 
 - [ ] **Step 5: Check the scoped diff**
 
-Run: `git diff --check -- frontend/src/pages/PredictionDetail.jsx frontend/src/styles/prediction-profile-alignment.css frontend/src/components/PageSkeleton.jsx frontend/src/styles/loading-skeleton.css frontend/src/index.css frontend/src/pages/predictionProfileAlignment.smoke.test.js DESIGN_VERSIONS.md`
+Run: `git diff --check -- frontend/src/pages/prediction/PredictionDetail.jsx frontend/src/styles/prediction-profile-alignment.css frontend/src/components/PageSkeleton.jsx frontend/src/styles/loading-skeleton.css frontend/src/index.css frontend/src/pages/prediction/__tests__/predictionProfileAlignment.smoke.test.js DESIGN_VERSIONS.md`
 
 Expected: no whitespace errors.

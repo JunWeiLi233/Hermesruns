@@ -14,13 +14,13 @@ Before doing anything substantial:
 Then run the helper in dry-run mode first:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-push-main.mjs --write --message "${input:message:Publish message}"
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-push-main.mjs --write --message "${input:message:Publish message}"
 ```
 
 If the dry-run plan is correct and the user explicitly wants publication, execute:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-push-main.mjs --execute --write --message "${input:message:Publish message}"
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-push-main.mjs --execute --write --message "${input:message:Publish message}"
 ```
 
 Rules:

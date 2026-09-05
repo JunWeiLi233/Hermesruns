@@ -13,8 +13,8 @@
 ### Task 1: Lock the Profile-aligned visual contract
 
 **Files:**
-- Modify: `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
-- Test: `frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
+- Modify: `frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
+- Test: `frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
 
 - [ ] **Step 1: Write the failing guard**
 
@@ -22,14 +22,14 @@ Assert that `AddShoes.jsx` exposes `add-shoes-profile-redesign` and `data-design
 
 - [ ] **Step 2: Run the guard and confirm RED**
 
-Run: `node frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
 
 Expected: FAIL because the Profile redesign hook and stylesheet import do not exist yet.
 
 ### Task 2: Implement the Profile-aligned route layer
 
 **Files:**
-- Modify: `frontend/src/pages/AddShoes.jsx`
+- Modify: `frontend/src/pages/shoes/AddShoes.jsx`
 - Modify: `frontend/src/index.css`
 - Create: `frontend/src/styles/add-shoes-profile-alignment.css`
 
@@ -47,7 +47,7 @@ Load `add-shoes-profile-alignment.css` after the existing shared and route layer
 
 - [ ] **Step 4: Run the guard and confirm GREEN**
 
-Run: `node frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
 
 Expected: `[PASS] Add Shoes profile redesign guardrails passed.`
 
@@ -62,17 +62,17 @@ Append a Profile-aligned Add Shoes entry with the preserve list covering catalog
 
 - [ ] **Step 2: Run targeted checks**
 
-Run: `node frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
 
-Run: `node frontend/src/pages/addShoesKineticEditorial.smoke.test.js`
+Run: `node frontend/src/pages/shoes/__tests__/addShoesKineticEditorial.smoke.test.js`
 
-Run: `git diff --check -- frontend/src/pages/AddShoes.jsx frontend/src/index.css frontend/src/styles/add-shoes-profile-alignment.css frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js DESIGN_VERSIONS.md`
+Run: `git diff --check -- frontend/src/pages/shoes/AddShoes.jsx frontend/src/index.css frontend/src/styles/add-shoes-profile-alignment.css frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js DESIGN_VERSIONS.md`
 
 - [ ] **Step 3: Build and sync**
 
 Run from `frontend`: `node scripts/run-vite-build.mjs`
 
-Run from repository root: `node .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/AddShoes.jsx frontend/src/index.css frontend/src/styles/add-shoes-profile-alignment.css frontend/src/pages/addShoesAwesomeDesignRedesign.smoke.test.js`
+Run from repository root: `node tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/shoes/AddShoes.jsx frontend/src/index.css frontend/src/styles/add-shoes-profile-alignment.css frontend/src/pages/shoes/__tests__/addShoesAwesomeDesignRedesign.smoke.test.js`
 
 Expected: production build and runtime sync both pass.
 

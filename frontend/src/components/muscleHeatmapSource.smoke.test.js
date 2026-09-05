@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const componentSource = readFileSync(path.join(here, 'MuscleHeatmap.jsx'), 'utf8');
-const pageSource = readFileSync(path.join(here, '../pages/MuscleTraining.jsx'), 'utf8');
+const pageSource = readFileSync(path.join(here, "../pages/muscle-training/MuscleTraining.jsx"), 'utf8');
 const cssSource = readFileSync(path.join(here, '../styles/muscle-training-hermes-redesign.css'), 'utf8');
 
 assert.match(

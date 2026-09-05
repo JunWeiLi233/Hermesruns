@@ -20,7 +20,7 @@ The new command should:
 In scope:
 
 - a shared tech-debt contract
-- a shared `.tools/auto-hermes-tech-debt.mjs` engine
+- a shared `tools/auto-hermes-tech-debt.mjs` engine
 - runtime command entrypoints for Codex, Claude Code, OpenCode, Gemini CLI, and Antigravity guidance
 - OpenCode plugin registration
 - deterministic writeback into `TASKS.md`
@@ -42,8 +42,8 @@ Required behavior:
 1. Read the Hermes record-system surfaces needed for truthful queue writeback:
    - `AGENTS.md`
    - `docs/auto-hermes/index.md` when present
-   - `.ai-sync/AGENT_SYNC.md`
-   - `.ai-sync/CONTEXT_LEDGER.md`
+   - `.workspace/state/AGENT_SYNC.md`
+   - `.workspace/state/CONTEXT_LEDGER.md`
    - `TASKS.md`
 2. Scan the repo in slices:
    - frontend
@@ -66,7 +66,7 @@ Initial finding types:
    - Why: explicit debt markers are the most honest debt source available in-repo.
 
 2. `missing-focused-tests`
-   - Trigger: backend production files or `.tools` scripts that do not have matching focused tests.
+   - Trigger: backend production files or `tools` scripts that do not have matching focused tests.
    - Why: Hermes relies heavily on workflow scripts and backend guards; missing focused coverage is real trust debt.
 
 3. `oversized-file`
@@ -123,7 +123,7 @@ Example shape:
 Shared owner files:
 
 - `.codex/workflows/auto-hermes-tech-debt-contract.md`
-- `.tools/auto-hermes-tech-debt.mjs`
+- `tools/auto-hermes-tech-debt.mjs`
 
 Runtime entrypoints:
 
@@ -136,7 +136,7 @@ Runtime entrypoints:
 Supporting surfaces:
 
 - `.opencode/hermes-plugin.ts`
-- `.tools/install-hermes-codex-commands.ps1`
+- `tools/install-hermes-codex-commands.ps1`
 - `.codex/plugins/hermes-workflows/README.md`
 - command readmes / indexes where appropriate
 
@@ -152,7 +152,7 @@ Supporting surfaces:
 
 Focused verification:
 
-- `node --test .tools/auto-hermes-tech-debt.test.mjs`
+- `node --test tools/auto-hermes-tech-debt.test.mjs`
 
 The test suite should prove:
 

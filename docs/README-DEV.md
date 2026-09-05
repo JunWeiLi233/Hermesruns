@@ -92,7 +92,7 @@ Territory accounts are enabled the same way with `APP_LOCAL_TERRITORY_RIVAL_*`, 
 
 ### For AI-agent contributors
 
-The auto-hermes verification scripts use this account to check auth-walled pages without needing real Strava credentials. Scripts like `.tools/one-shot-muscle-inspect.mjs` and `.tools/one-shot-shoes-add-inspect.mjs` log in as `strava+140971747@hermes.local` via Playwright — this is how the auto-hermes lanes verify that a page works end-to-end after a change.
+Use `tools/auto-hermes-browser.mjs` for an existing authorized browser session, or `tools/auto-hermes-playwright.mjs` for a dedicated persistent QA browser state. When local mock accounts are enabled, sign in through the normal login flow before inspecting auth-walled pages. These shared helpers support route navigation, DOM inspection and screenshots; successful script execution alone is not end-to-end verification.
 
 ## Project Tour: Where Lives What?
 
@@ -100,11 +100,12 @@ The full tree lives in [docs/PROJECT_MAP.md §3 (Directory map)](../docs/PROJECT
 
 | Question | Answer |
 |---|---|
-| Where do I add a new page? | `frontend/src/pages/NewPage.jsx` + register the route in `frontend/src/App.jsx` |
+| Where do I fix a page? | Find its browser URL in [the page guide](../frontend/src/pages/README.md); open `frontend/src/pages/<feature>/` and its `__tests__/` directory. |
+| Where do I add a new page? | Put it in its feature directory under `frontend/src/pages/`, then register the route in `frontend/src/App.jsx` and loader in `frontend/src/utils/routePreload.js`. |
 | Where do I change a button label? | Copy lives in `frontend/src/i18n/locales/en/` and `frontend/src/i18n/locales/zh-CN/` — edit the same key in both. (`frontend/src/i18n/translations.js` is only a re-export shim.) |
-| Where do I add a new REST endpoint? | `backend/src/main/java/com/hermes/backend/` — the backend is **flattened**: controllers, services, entities, repositories, and DTOs share the root package. Only `billing/` and `rewards/` subpackages remain. |
-| Where does the database schema live? | JPA entities in `backend/src/main/java/com/hermes/backend/` (auto-migrate on start) |
-| Where is the main CSS file? | `frontend/src/styles/style.css` (legacy) with newer split CSS in `frontend/src/styles/_split/` |
+| Where do I add a new REST endpoint? | The owning product-domain package under `backend/src/main/java/com/hermes/backend/`; put business operations in its service and queries in its repository. See `docs/architecture/backend-package-migration.md`. |
+| Where does the database schema live? | JPA entities in the owning backend domain; schema behavior remains controlled by the existing Spring configuration |
+| Where is the main CSS file? | Active imports in `frontend/src/index.css` and `styles/app.css`; `styles/style.css` is a frozen test-referenced legacy file |
 | Where do I find the app config? | `backend/src/main/resources/application.properties` |
 
 ## How to Make Your First Code Change
@@ -132,7 +133,7 @@ Open `http://localhost:3000/profile` and confirm the new label appears in both l
 **Step 4 — Check translations parity.**
 
 ```bash
-node .tools/check-translations.mjs
+node tools/check-translations.mjs
 ```
 
 This script verifies that every key in `en` also exists in `zh-CN` and vice versa. It must exit 0 before any commit involving copy changes.
@@ -148,24 +149,11 @@ npm run lint
 
 **Step 1 — Find the controller.**
 
-Open `backend/src/main/java/com/hermes/backend/ProfileController.java` (note: the backend is flattened — there is no `controller/` subfolder). Find the method that handles `GET /api/profile/me` (`@GetMapping("/profile/me")`). It returns the nested `ProfileResponse` record declared in the same file.
+Open `backend/src/main/java/com/hermes/backend/runner/ProfileController.java` and find `GET /api/profile/me`. It calls `ProfileApplicationService.profile(Runner)`; shared response records belong to `runner/ProfileModels.java`.
 
 **Step 2 — Add the field to the response.**
 
-```java
-// backend/src/main/java/com/hermes/backend/ProfileController.java
-public record ProfileResponse(
-        String email,
-        String displayName,
-        String avatarUrl,
-        boolean stravaLinked,
-        boolean showLanguageSettingsHint,
-        String newField   // ← add this
-) {
-}
-```
-
-Then populate it in the private `toProfileResponse(Runner runner)` helper.
+Add the field to the existing `ProfileModels.ProfileResponse` record and populate it in `ProfileApplicationService.profile`. Keep database lookups and profile calculations in the service. Update the corresponding behavior tests and frontend contract/adapter when the response changes.
 
 **Step 3 — Compile to catch errors.**
 
@@ -193,17 +181,17 @@ You should see `newField` in the JSON response.
 
 **Step 5 — Connect it in the frontend (optional).**
 
-The frontend calls this endpoint from `frontend/src/pages/Profile.jsx` (or via the shared API client in `frontend/src/api.js`), then uses the new field in the JSX.
+The frontend consumes this endpoint in `frontend/src/pages/profile/ProfileDashboard.jsx` and other runner surfaces through `frontend/src/api.ts`. Update the relevant consumer and contract when adding a field.
 
 ## How to Submit Your Change
 
 > **`/auto-hermes-push-main` is the only supported way to open a PR into `main`.**
-> Do not `git push origin main` directly, do not run `gh pr create` by hand, do not cherry-pick, rebase, force-push, or merge through any other path. The command runs every required gate (security scan, lint, backend compile, Docker, identity), blocks on real failures, pushes the current branch, opens the PR, and writes an auditable artifact at `.ai-sync/AUTO_HERMES_PUSH_MAIN.{md,json}`. Bypassing it skips those gates.
+> Do not `git push origin main` directly, do not run `gh pr create` by hand, do not cherry-pick, rebase, force-push, or merge through any other path. The command runs every required gate (security scan, lint, backend compile, Docker, identity), blocks on real failures, pushes the current branch, opens the PR, and writes an auditable artifact at `.workspace/state/AUTO_HERMES_PUSH_MAIN.{md,json}`. Bypassing it skips those gates.
 
 Run it from the repo root:
 
 ```bash
-node .tools/auto-hermes-push-main.mjs --execute --write --message "<type>: <one-line summary>"
+node tools/auto-hermes-push-main.mjs --execute --write --message "<type>: <one-line summary>"
 ```
 
 Or invoke it as a slash command in Claude Code / Codex / Gemini CLI: `/auto-hermes-push-main`.
@@ -219,12 +207,12 @@ Full policy, the pre-push safety pass, and the Docker gate live in [docs/repo-ru
 
 ```bash
 # Dry-run first — shows what would change, never touches the tree.
-node .tools/auto-hermes-pull-main.mjs
+node tools/auto-hermes-pull-main.mjs
 
 # Then pull. Auto-stashes dirty work, fast-forwards on `main`, merges (or
 # rebases with --strategy rebase) on a feature branch, and writes an audit
-# artifact to `.ai-sync/AUTO_HERMES_PULL_MAIN.{md,json}`.
-node .tools/auto-hermes-pull-main.mjs --execute --write
+# artifact to `.workspace/state/AUTO_HERMES_PULL_MAIN.{md,json}`.
+node tools/auto-hermes-pull-main.mjs --execute --write
 ```
 
 Or invoke it as a slash command: `/auto-hermes-pull-main`.
@@ -252,11 +240,11 @@ Run after changes to auth, import, upload, or third-party integrations.
 | Problem | Fix |
 |---|---|
 | `ERR_CONNECTION_REFUSED` | Windows: `.\start_hermes.bat`; macOS/Linux: `./start_hermes.sh` (or `cd backend && ./mvnw spring-boot:run`) |
-| Port 8080 stuck / stale process | Windows: `.\stop_hermes.bat`; macOS/Linux: `./stop_hermes.sh` |
+| Port 8080 stuck / stale process | Windows: `.\stop_hermes.cmd`; macOS/Linux: `./stop_hermes.sh` |
 | `java` not found | Install Java 17 from [adoptium.net](https://adoptium.net) |
 | OAuth callback fails | Backend must run on `localhost:8080`, redirect URIs must match exactly |
 | Frontend changes not showing | Run `npm run build` in `frontend/`, then refresh |
-| Translation check fails | Run `node .tools/check-translations.mjs`, add the missing keys to both `locales/en/` and `locales/zh-CN/` |
+| Translation check fails | Run `node tools/check-translations.mjs`, add the missing keys to both `locales/en/` and `locales/zh-CN/` |
 
 ## Related Docs
 

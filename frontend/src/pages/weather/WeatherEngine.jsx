@@ -1,0 +1,807 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import AppIcon from '../../components/AppIcon';
+import FooterNavLinks from '../../components/FooterNavLinks';
+import HermesLogo from '../../components/HermesLogo';
+import PageSkeleton from '../../components/PageSkeleton';
+import RunnerShellTopNav from '../../components/RunnerShellTopNav';
+import TopbarNotifications from '../../components/TopbarNotifications';
+import { WeatherGlyph } from '../../components/WeatherGlyph';
+import { apiJson } from '../../api';
+import { useAuth } from '../../contexts/AuthContext';
+import { useI18n } from '../../contexts/I18nContext';
+import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
+import {
+  normalizeWeatherCoordinates,
+  toFiniteNumber,
+} from '../../utils/weatherLocation';
+
+const WEATHER_PAGE_COPY = {
+  'zh-CN': {
+    loading: '正在加载天气与热适应判断...',
+    load_error: '天气页面暂时不可用。',
+    page_name: '天气',
+    page_kicker: '环境判断',
+    page_title: '先读天气，再锁定今天的配速。',
+    page_copy: '把当前温度、未来 12 小时走势和 Hermes 热适应判断放在同一块决策面板里，让你先看环境压力，再决定今天是推进还是保守。',
+    hero_status_ready: '引擎在线',
+    hero_status_fallback: '等待天气数据',
+    hero_condition: '当前体感',
+    apparent_temp: '体感温度',
+    dew_point: '露点',
+    pace_penalty: '配速修正',
+    current_weather: '当前天气',
+    current_temp: '当前温度',
+    humidity: '湿度',
+    wind: '风速',
+    no_weather: '天气数据暂时不可用',
+    weather_unavailable_copy: '当前拿不到实时天气，但页面结构会继续保留热适应判断入口。',
+    adaptation_unavailable: '热适应基线暂时不可用',
+    adaptation_unavailable_copy: '实时预报已经可用，但 14 天历史露点基线暂时无法计算，因此不会把未知的配速修正显示为零。',
+    adaptation_message_unavailable: '14 天历史基线暂时不可用，因此尚未计算适应状态或配速修正。',
+    heat_engine_title: '热适应引擎',
+    heat_engine_copy: '保留 Hermes 原本的热适应逻辑，用 14 天露点基线、当天冲击值和适应进度来判断今天是否需要保守配速。',
+    engine_baseline: '14 天基线',
+    engine_current: '当前露点',
+    engine_delta: '冲击差值',
+    engine_penalty: '配速修正',
+    engine_day: '适应天数',
+    engine_factor: '惩罚系数',
+    engine_status: '适应状态',
+    engine_status_day_1_3: '第 1-3 天：高冲击窗口',
+    engine_status_day_4_9: '第 4-9 天：正在建立适应',
+    engine_status_day_10_14: '第 10-14 天：趋于稳定',
+    engine_message: '引擎提示',
+    engine_message_heat: '检测到极端热应激。Hermes 已把今天的目标配速放慢 +{penalty} sec/km，用来抵消湿度带来的额外成本。这样既能守住强度区间，也能让身体把适应做完。等热适应跟上，惩罚会逐步淡出。',
+    no_penalty: '无需修正',
+    no_day: '未开始',
+    no_message: '当前没有额外热风险提醒。',
+    coach_title: '教练判断',
+    coach_quote_cold: '今天的环境读数很干净。冷空气和较低露点让有氧执行成本更低，这一页应该给你“可以放心跑”的信号，而不是制造噪音。',
+    coach_quote_heat: '热适应引擎已经亮灯。今天先把稳定完成放在前面，用更保守的配速保护训练连续性，而不是和环境硬碰硬。',
+    coach_quote_neutral: '环境没有明显惩罚，但也不值得逞强。把这一页当成判断窗口，先看未来几小时，再决定今天的训练时机。',
+    coach_quote_baseline_missing: '实时天气已经上线，但 14 天热适应基线暂时缺失。先按当前温湿度选择更稳的开跑窗口，不把未知的惩罚值当成零。',
+    coach_decision: '今日判断',
+    coach_decision_clear: '可以按计划推进',
+    coach_decision_adjust: '今天更适合保守一点',
+    coach_decision_watch: '继续观察窗口',
+    coach_decision_baseline_missing: '等待适应基线',
+    coach_decision_note_clear: '没有热适应惩罚，重点放回节奏与执行质量。',
+    coach_decision_note_adjust: '热应激正在拉高成本，优先守住输出稳定和恢复边界。',
+    coach_decision_note_watch: '当前读数偏中性，选择更舒服的开跑时段会更稳。',
+    coach_decision_note_baseline_missing: '预报可用；适应状态与配速修正暂不作结论。',
+    coach_cta_primary: '打开今日训练',
+    coach_cta_secondary: '查看本周计划',
+    humidity_label: '湿度',
+    wind_label: '风向风速',
+    pipeline_now: '现在',
+    forecast_empty: '暂无逐小时预报',
+    north_flow: '北向气流',
+  },
+  en: {
+    loading: 'Loading weather and heat adaptation...',
+    load_error: 'The Weather page is unavailable right now.',
+    page_name: 'Weather',
+    page_kicker: 'Environment Read',
+    page_title: "Read the weather first, then lock today's pace.",
+    page_copy: 'Bring live temperature, the next 12 hours, and Hermes heat-adaptation judgment into one decision surface so runners can assess environmental stress before choosing how hard to push.',
+    hero_status_ready: 'Engine online',
+    hero_status_fallback: 'Waiting on weather',
+    hero_condition: 'Current condition',
+    apparent_temp: 'Feels like',
+    dew_point: 'Dew point',
+    pace_penalty: 'Pace adjustment',
+    current_weather: 'Current weather',
+    current_temp: 'Current temperature',
+    humidity: 'Humidity',
+    wind: 'Wind speed',
+    no_weather: 'Weather data unavailable',
+    weather_unavailable_copy: 'Live weather is missing right now, but the page still holds the adaptation and planning structure.',
+    adaptation_unavailable: 'Heat-adaptation baseline unavailable',
+    adaptation_unavailable_copy: 'The live forecast is available, but the 14-day dew-point baseline cannot be calculated right now, so an unknown pace adjustment is not shown as zero.',
+    adaptation_message_unavailable: 'The 14-day historical baseline is unavailable, so adaptation status and pace adjustment have not been calculated.',
+    heat_engine_title: 'Heat Adaptation Engine',
+    heat_engine_copy: "Keep the existing Hermes heat logic intact: compare the 14-day dew-point baseline, today's shock delta, and acclimatization progress before deciding whether pace should ease off.",
+    engine_baseline: '14-day baseline',
+    engine_current: 'Current dew point',
+    engine_delta: 'Shock delta',
+    engine_penalty: 'Pace adjustment',
+    engine_day: 'Acclimation day',
+    engine_factor: 'Penalty factor',
+    engine_status: 'Status',
+    engine_status_day_1_3: 'Days 1-3: shock window',
+    engine_status_day_4_9: 'Days 4-9: adapting',
+    engine_status_day_10_14: 'Days 10-14: stabilized',
+    engine_message: 'Engine note',
+    engine_message_heat: "Extreme heat detected. We've adjusted your target pace by +{penalty} sec/km today to account for humidity. This keeps the session inside the right intensity zone. The adjustment will fade as your acclimatization improves.",
+    no_penalty: 'No penalty',
+    no_day: 'Not started',
+    no_message: 'No extra heat warning is active right now.',
+    coach_title: 'Coach Judgment',
+    coach_quote_cold: 'The engine is running clean. Dense cold air and a low dew point make this feel like a confidence surface, not a warning surface, so the runner can commit to the plan with less hesitation.',
+    coach_quote_heat: 'The heat engine is lit. Today is about protecting continuity first, easing the pace enough to keep the work absorbable instead of fighting the environment for a headline session.',
+    coach_quote_neutral: 'Conditions are mostly neutral. Use this page as a timing board: read the next few hours, then choose the cleaner window instead of forcing the first available slot.',
+    coach_quote_baseline_missing: 'Live weather is online, but the 14-day heat-adaptation baseline is missing. Choose the steadier window from current conditions instead of treating an unknown penalty as zero.',
+    coach_decision: "Today's call",
+    coach_decision_clear: 'Proceed as planned',
+    coach_decision_adjust: 'Bias toward control today',
+    coach_decision_watch: 'Keep watching the window',
+    coach_decision_baseline_missing: 'Await adaptation baseline',
+    coach_decision_note_clear: 'No heat penalty is active, so execution quality matters more than weather management.',
+    coach_decision_note_adjust: 'Environmental cost is rising. Keep the session sustainable and protect the next training day.',
+    coach_decision_note_watch: 'The reading is neutral, so choosing the cleaner time block is still worth it.',
+    coach_decision_note_baseline_missing: 'Forecast is available; adaptation status and pace adjustment remain undetermined.',
+    coach_cta_primary: "Open today's run",
+    coach_cta_secondary: 'Open weekly schedule',
+    humidity_label: 'Humidity',
+    wind_label: 'Wind',
+    pipeline_now: 'Now',
+    forecast_empty: 'No hourly forecast available',
+    north_flow: 'North flow',
+  },
+};
+
+const ADAPTATION_BAR_LEVELS = [46, 62, 74, 54, 68, 100, 78, 56, 38, 28];
+const WEATHER_PAGE_REQUEST_TIMEOUT_MS = 10000;
+const WEATHER_FORECAST_REQUEST_TIMEOUT_MS = 15000;
+// Geolocation is a location refinement, never a gate: the page paints from
+// the server-side location immediately and re-fetches when device
+// coordinates arrive. A stale answer is worth more than a slow prompt.
+const WEATHER_GEOLOCATION_TIMEOUT_MS = 3500;
+
+function pageText(lang, key) {
+  const copy = WEATHER_PAGE_COPY[lang] || WEATHER_PAGE_COPY.en;
+  return copy[key] || WEATHER_PAGE_COPY.en[key] || key;
+}
+
+function formatTemperature(value) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)}°C`;
+}
+
+function formatSignedTemperature(value) {
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) return '--';
+  return `${numeric > 0 ? '+' : ''}${numeric.toFixed(1)}°C`;
+}
+
+function formatDecimal(value, digits = 1) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : numeric.toFixed(digits);
+}
+
+function formatPenalty(value, wt) {
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) return '--';
+  return numeric > 0 ? `+${Math.round(numeric)} sec/km` : wt('no_penalty');
+}
+
+function formatHumidity(value) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)}%`;
+}
+
+function formatWind(value) {
+  const numeric = toFiniteNumber(value);
+  return numeric === null ? '--' : `${Math.round(numeric)} km/h`;
+}
+
+function getBrowserCoordinates() {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let timeoutId;
+    const finish = (coordinates) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve(coordinates);
+    };
+    timeoutId = window.setTimeout(
+      () => finish(null),
+      WEATHER_GEOLOCATION_TIMEOUT_MS,
+    );
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (position) => finish(normalizeWeatherCoordinates(position?.coords?.latitude, position?.coords?.longitude)),
+        () => finish(null),
+        {
+          enableHighAccuracy: false,
+          maximumAge: 5 * 60 * 1000,
+          timeout: WEATHER_GEOLOCATION_TIMEOUT_MS,
+        },
+      );
+    } catch {
+      finish(null);
+    }
+  });
+}
+
+function formatCardinalDirection(degrees, t) {
+  const numeric = toFiniteNumber(degrees);
+  if (numeric === null) return t('weather_engine.northFlow');
+  const dirKeys = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const index = Math.round(numeric / 45) % 8;
+  return t(`weather_engine.cardinalDirection.${dirKeys[index]}`);
+}
+
+// Server-side `weatherContext.message` is English-only. Re-compose from the
+// structured `pacePenaltySecPerKm` so zh-CN runners see the same advice in
+// Chinese without round-tripping a translation through the backend.
+function localizeEngineMessage(weatherContext, wt) {
+  if (weatherContext && !weatherContext.available) return wt('adaptation_message_unavailable');
+  const penalty = toFiniteNumber(weatherContext?.pacePenaltySecPerKm);
+  if (penalty !== null && penalty > 0) {
+    return wt('engine_message_heat').replace('{penalty}', String(Math.round(penalty)));
+  }
+  return weatherContext?.message || wt('no_message');
+}
+
+function statusLabel(status, wt) {
+  if (!status) return '--';
+  const labels = {
+    day_1_3: wt('engine_status_day_1_3'),
+    day_4_9: wt('engine_status_day_4_9'),
+    day_10_14: wt('engine_status_day_10_14'),
+  };
+  return labels[status] || status;
+}
+
+function getDisplayName(profile, fallback) {
+  const displayName = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+  const emailName = typeof profile?.email === 'string' ? profile.email.split('@')[0] : '';
+  const raw = displayName || emailName || String(fallback || '');
+  return raw.replace(/^./, (char) => char.toUpperCase());
+}
+
+function describeWeatherCode(code, t) {
+  const value = toFiniteNumber(code);
+  if (value === null) return t('weather_engine.weatherCode.pending');
+  if (value === 0) return t('weather_engine.weatherCode.clear');
+  if ([1, 2].includes(value)) return t('weather_engine.weatherCode.lightCloud');
+  if (value === 3) return t('weather_engine.weatherCode.overcast');
+  if ([45, 48].includes(value)) return t('weather_engine.weatherCode.fog');
+  if ((value >= 51 && value <= 67) || (value >= 80 && value <= 82)) return t('weather_engine.weatherCode.rain');
+  if (value >= 71 && value <= 77) return t('weather_engine.weatherCode.snow');
+  if (value >= 95) return t('weather_engine.weatherCode.storm');
+  return t('weather_engine.weatherCode.variable');
+}
+
+function buildHourlyForecast(response, lang, t) {
+  const hourly = response?.hourly;
+  if (!hourly) return [];
+  const times = Array.isArray(hourly.time) ? hourly.time : [];
+  const temps = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m : [];
+  const codes = Array.isArray(hourly.weather_code) ? hourly.weather_code : [];
+  const current = response?.current || null;
+
+  // Open-Meteo returns hourly slots from 00:00 of forecast_days; slice from the
+  // current hour so the "现在 / Now" slot is genuinely upcoming, not midnight.
+  const nowMs = Date.now();
+  let startIndex = times.findIndex((value) => {
+    const ms = new Date(value).getTime();
+    return Number.isFinite(ms) && ms + 60 * 60 * 1000 > nowMs;
+  });
+  if (startIndex < 0) startIndex = 0;
+
+  const windowTimes = times.slice(startIndex, startIndex + 12);
+
+  return windowTimes.map((time, offset) => {
+    const index = startIndex + offset;
+    const date = new Date(time);
+    const label = Number.isNaN(date.getTime())
+      ? '--'
+      : offset === 0
+        ? pageText(lang, 'pipeline_now')
+        : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Bind the first ("现在") slot to the live observation so the timeline value
+    // matches the hero "实时环境状态" reading; later slots stay on the hourly
+    // forecast series.
+    const liveCurrent = offset === 0 && current ? current : null;
+    const liveTemperature = liveCurrent ? toFiniteNumber(liveCurrent.temperature_2m) : null;
+    const temperature = liveTemperature !== null
+      ? liveTemperature
+      : temps[index];
+    const liveWeatherCode = liveCurrent ? toFiniteNumber(liveCurrent.weather_code) : null;
+    const weatherCode = liveWeatherCode !== null
+      ? liveWeatherCode
+      : codes[index];
+    return {
+      key: `${time}-${offset}`,
+      label,
+      temperature,
+      weatherCode,
+      summary: describeWeatherCode(weatherCode, t),
+    };
+  });
+}
+
+function buildCoachJudgment({ weatherContext, liveWeather, lang }) {
+  const wt = (key) => pageText(lang, key);
+  const penalty = toFiniteNumber(weatherContext?.pacePenaltySecPerKm) ?? 0;
+  const dewPoint = toFiniteNumber(weatherContext?.currentDewPointC)
+    ?? toFiniteNumber(liveWeather?.dew_point_2m);
+  const liveTemperature = toFiniteNumber(liveWeather?.temperature_2m);
+  const isColdAdvantage = dewPoint !== null && dewPoint <= 2 && penalty <= 0;
+  const isPenaltyDay = penalty > 0;
+
+  if (!weatherContext?.available && liveWeather) {
+    return {
+      quote: wt('coach_quote_baseline_missing'),
+      decision: wt('coach_decision_baseline_missing'),
+      note: wt('coach_decision_note_baseline_missing'),
+    };
+  }
+
+  if (isPenaltyDay) {
+    return {
+      quote: wt('coach_quote_heat'),
+      decision: wt('coach_decision_adjust'),
+      note: wt('coach_decision_note_adjust'),
+    };
+  }
+
+  if (isColdAdvantage || (liveTemperature !== null && liveTemperature <= 6)) {
+    return {
+      quote: wt('coach_quote_cold'),
+      decision: wt('coach_decision_clear'),
+      note: wt('coach_decision_note_clear'),
+    };
+  }
+
+  return {
+    quote: wt('coach_quote_neutral'),
+    decision: wt('coach_decision_watch'),
+    note: wt('coach_decision_note_watch'),
+  };
+}
+
+export default function WeatherEngine() {
+  const { isAuthenticated } = useAuth();
+  const { t, lang } = useI18n();
+  const navigate = useNavigate();
+  const wt = (key) => pageText(lang, key);
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [weatherContext, setWeatherContext] = useState(null);
+  const [liveWeather, setLiveWeather] = useState(null);
+  const [forecast, setForecast] = useState([]);
+  const [forecastState, setForecastState] = useState('loading');
+  const [loadState, setLoadState] = useState('loading');
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    let cancelled = false;
+    const contextController = new AbortController();
+    const forecastController = new AbortController();
+    const contextTimeout = window.setTimeout(
+      () => contextController.abort(),
+      WEATHER_PAGE_REQUEST_TIMEOUT_MS,
+    );
+
+    async function loadPage() {
+      setLoadState('loading');
+      setForecastState('loading');
+      try {
+        // Profile only gates the first paint; geolocation is a background
+        // refinement so an unanswered permission prompt can never hold the
+        // page on its skeleton.
+        const profileData = await apiJson('/api/profile/me', { signal: contextController.signal }).catch(() => null);
+        const contextPromise = apiJson('/api/v1/weather/context', { signal: contextController.signal }).catch(() => null);
+
+        if (cancelled) return;
+        setProfile(profileData && typeof profileData === 'object' ? profileData : null);
+        setLoadState('ready');
+
+        const fetchForecast = async (coordinates) => {
+          const forecastTimeout = window.setTimeout(
+            () => forecastController.abort(),
+            WEATHER_FORECAST_REQUEST_TIMEOUT_MS,
+          );
+          const forecastParams = new URLSearchParams({
+            latitude: String(coordinates.latitude),
+            longitude: String(coordinates.longitude),
+          });
+          try {
+            return await apiJson(
+              `/api/v1/weather/forecast?${forecastParams.toString()}`,
+              { signal: forecastController.signal },
+            );
+          } finally {
+            window.clearTimeout(forecastTimeout);
+          }
+        };
+
+        const applyForecast = async (coordinates) => {
+          try {
+            const payload = await fetchForecast(coordinates);
+            if (cancelled) return;
+            setLiveWeather(payload?.current || null);
+            setForecast(buildHourlyForecast(payload, lang, t));
+            setForecastState('ready');
+          } catch {
+            if (!cancelled) {
+              setLiveWeather(null);
+              setForecast([]);
+              setForecastState('error');
+            }
+          }
+        };
+
+        // Paint immediately from the server-side location (the runner's
+        // history), then refine with device coordinates if geolocation
+        // resolves in time.
+        const weatherData = await contextPromise;
+        if (cancelled) return;
+        window.clearTimeout(contextTimeout);
+        const ctx = weatherData && typeof weatherData === 'object' ? weatherData : null;
+        setWeatherContext(ctx);
+
+        const fallbackCoordinates = normalizeWeatherCoordinates(ctx?.latitude, ctx?.longitude);
+        if (fallbackCoordinates) {
+          void applyForecast(fallbackCoordinates);
+        } else {
+          setLiveWeather(null);
+          setForecast([]);
+          setForecastState('empty');
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          getBrowserCoordinates().then((browserCoordinates) => {
+            if (cancelled || !browserCoordinates) return;
+            setWeatherContext((prev) => (prev == null ? prev : { ...prev, ...browserCoordinates }));
+            void applyForecast(browserCoordinates);
+            // Refine the heat-adaptation context with the device location so
+            // the engine reads the runner's actual environment.
+            const contextParams = new URLSearchParams({
+              latitude: String(browserCoordinates.latitude),
+              longitude: String(browserCoordinates.longitude),
+            });
+            apiJson(`/api/v1/weather/context?${contextParams.toString()}`, { signal: contextController.signal })
+              .then((refined) => {
+                if (!cancelled && refined && typeof refined === 'object') setWeatherContext(refined);
+              })
+              .catch(() => null);
+          });
+        }
+      } catch {
+        window.clearTimeout(contextTimeout);
+        if (!cancelled) setLoadState('error');
+      }
+    }
+
+    loadPage();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(contextTimeout);
+      contextController.abort();
+      forecastController.abort();
+    };
+  }, [isAuthenticated, lang, navigate, t]);
+
+  const initials = getDisplayName(profile, t('profile.default_name')).slice(0, 1).toUpperCase();
+  const navItems = useMemo(
+    () => getRunnerShellNavItems({ t, lang, activeKey: 'weather_engine' }),
+    [lang, t],
+  );
+
+  const currentWeatherCards = !liveWeather
+    ? [
+        {
+          key: 'humidity',
+          label: wt('humidity_label'),
+          value: '--',
+          accent: '0%',
+          note: wt('weather_unavailable_copy'),
+          icon: 'water_drop',
+        },
+        {
+          key: 'wind',
+          label: wt('wind_label'),
+          value: '--',
+          accent: '--',
+          note: wt('weather_unavailable_copy'),
+          icon: 'air',
+        },
+      ]
+    : [
+        {
+          key: 'humidity',
+          label: wt('humidity_label'),
+          value: formatHumidity(liveWeather.relative_humidity_2m),
+          accent: Number.isFinite(Number(liveWeather.relative_humidity_2m))
+            ? `${Math.max(0, Math.min(100, Math.round(Number(liveWeather.relative_humidity_2m))))}%`
+            : '0%',
+          note: wt('current_weather'),
+          icon: 'water_drop',
+        },
+        {
+          key: 'wind',
+          label: wt('wind_label'),
+          value: formatWind(liveWeather.wind_speed_10m),
+          accent: formatCardinalDirection(liveWeather.wind_direction_10m, t),
+          note: wt('north_flow'),
+          icon: 'air',
+        },
+      ];
+
+  const coachJudgment = buildCoachJudgment({ weatherContext, liveWeather, lang });
+
+  const heroStatus = liveWeather ? wt('hero_status_ready') : wt('hero_status_fallback');
+  const heroTemperature = formatTemperature(liveWeather?.temperature_2m);
+  const heroCondition = describeWeatherCode(liveWeather?.weather_code, t);
+  const currentDewPoint = toFiniteNumber(weatherContext?.currentDewPointC)
+    ?? toFiniteNumber(liveWeather?.dew_point_2m);
+
+  if (loadState === 'loading') {
+    return <PageSkeleton variant="weather" />;
+  }
+
+  if (loadState === 'error') {
+    return (
+      <div className="runner-shell-page runner-shell-page--loading">
+        <div className="runner-shell-loading">{wt('load_error')}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`runner-shell-page weather-engine-page runner-dashboard-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <aside className="runner-shell-sidebar">
+        <div className="runner-shell-brand runner-dashboard-brand">
+          <div className="runner-dashboard-brand-copy">
+            <HermesLogo dark />
+            <span>{wt('page_name')}</span>
+          </div>
+          <button
+            type="button"
+            className="runner-dashboard-sidebar-toggle"
+            onClick={() => setIsSidebarCollapsed((current) => !current)}
+            aria-label={t(isSidebarCollapsed ? 'profile.sidebar_expand' : 'profile.sidebar_collapse')}
+            aria-pressed={isSidebarCollapsed}
+          >
+            <span className="runner-dashboard-toggle-glyph" aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
+          </button>
+        </div>
+
+        <nav className="runner-shell-side-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
+              onClick={() => navigate(item.route)}
+            >
+              <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+              <span className="runner-dashboard-side-link-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="runner-shell-sidebar-footer">
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+            <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
+            <span className="runner-dashboard-workout-btn-label">{wt('coach_cta_primary')}</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="runner-shell-main">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+          <div className="runner-shell-topbar-left">
+            <RunnerShellTopNav
+              navItems={navItems}
+              activeLabel={wt('page_name')}
+              navigate={navigate}
+            />
+          </div>
+          <div className="runner-shell-topbar-actions">
+            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
+              <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+                <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
+              </button>
+              <button type="button" className="runner-shell-avatar" aria-label={getDisplayName(profile, t('profile.default_name'))} onClick={() => navigate('/profile')}>
+                {initials}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="runner-shell-canvas weather-engine-canvas">
+          <section className="weather-engine-hero-shell">
+            <div className="weather-engine-hero">
+              <div className="weather-engine-hero-primary">
+                <div className="weather-engine-temp-row">
+                  <div className="weather-engine-temp-display">{heroTemperature}</div>
+                  <div className="weather-engine-temp-context">
+                    <div className="weather-engine-temp-context-label">{heroStatus}</div>
+                    <p>{heroCondition}</p>
+                  </div>
+                </div>
+                <div className="weather-engine-pill-row">
+                  <span className="weather-engine-data-pill">
+                    <strong>{wt('apparent_temp')}</strong>
+                    <span>{formatTemperature(liveWeather?.apparent_temperature)}</span>
+                  </span>
+                  <span className="weather-engine-data-pill">
+                    <strong>{wt('dew_point')}</strong>
+                    <span>{formatSignedTemperature(currentDewPoint)}</span>
+                  </span>
+                  <span className="weather-engine-data-pill">
+                    <strong>{wt('pace_penalty')}</strong>
+                    <span>
+                      {weatherContext?.available
+                        ? formatPenalty(weatherContext.pacePenaltySecPerKm, wt)
+                        : '--'}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="weather-engine-hero-secondary">
+                {currentWeatherCards.map((card) => (
+                  <article key={card.key} className="weather-engine-hud-card">
+                    <div className="weather-engine-hud-head">
+                      <AppIcon name={card.icon} className="weather-engine-hud-icon" />
+                      <span>{card.label}</span>
+                    </div>
+                    <div className="weather-engine-hud-value">{card.value}</div>
+                    <div className="weather-engine-hud-foot">
+                      <span>{card.note}</span>
+                      {card.key === 'humidity' ? (
+                        <div className="weather-engine-meter-track" aria-hidden="true">
+                          <div className="weather-engine-meter-fill" style={{ width: card.accent }} />
+                        </div>
+                      ) : (
+                        <strong>{card.accent}</strong>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="weather-engine-forecast-panel">
+            <div className="weather-engine-panel-head">
+              <div>
+                <h2>{wt('page_name')}</h2>
+              </div>
+            </div>
+            <div className="weather-engine-forecast-strip">
+              {forecastState === 'loading' ? (
+                <div className="weather-engine-forecast-empty weather-engine-forecast-empty--loading">{wt('loading')}</div>
+              ) : forecast.length ? (
+                forecast.map((slot, index) => (
+                  <article key={slot.key} className={`weather-engine-forecast-slot${index === 0 ? ' is-now' : ''}`}>
+                    <span className="weather-engine-forecast-hour">{slot.label}</span>
+                    <span className="weather-engine-forecast-icon">
+                      <WeatherGlyph code={slot.weatherCode} title={slot.summary} />
+                    </span>
+                    <strong>{formatTemperature(slot.temperature)}</strong>
+                    <span className="weather-engine-forecast-summary">{slot.summary}</span>
+                  </article>
+                ))
+              ) : (
+                <div className="weather-engine-forecast-empty">{wt('forecast_empty')}</div>
+              )}
+            </div>
+          </section>
+
+          <section className="weather-engine-analysis-grid">
+            <article className="weather-engine-card weather-engine-card--engine">
+              <div className="weather-engine-card-head">
+                <div>
+                  <h2>{wt('heat_engine_title')}</h2>
+                </div>
+                <div className="weather-engine-engine-icon">
+                  <AppIcon name="heat_adaptation" />
+                </div>
+              </div>
+              <p className="weather-engine-engine-copy">{wt('heat_engine_copy')}</p>
+
+              {weatherContext?.available ? (
+                <>
+                  <div className="weather-engine-engine-grid">
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_baseline')}</span>
+                      <strong>{formatDecimal(weatherContext.baselineDewPoint14dC)}°C</strong>
+                    </article>
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_current')}</span>
+                      <strong>{formatDecimal(weatherContext.currentDewPointC)}°C</strong>
+                    </article>
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_delta')}</span>
+                      <strong>{formatSignedTemperature(weatherContext.climateShockDeltaC)}</strong>
+                    </article>
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_penalty')}</span>
+                      <strong>{formatPenalty(weatherContext.pacePenaltySecPerKm, wt)}</strong>
+                    </article>
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_day')}</span>
+                      <strong>{weatherContext.acclimatizationDay ?? wt('no_day')}</strong>
+                    </article>
+                    <article className="weather-engine-engine-stat">
+                      <span>{wt('engine_factor')}</span>
+                      <strong>{formatDecimal(weatherContext.penaltyFactor, 2)}</strong>
+                    </article>
+                  </div>
+
+                  <div className="weather-engine-adaptation-bars" aria-hidden="true">
+                    {ADAPTATION_BAR_LEVELS.map((height, index) => (
+                      <span
+                        key={`bar-${height}-${index}`}
+                        className={`weather-engine-adaptation-bar${index === 5 ? ' is-accent' : ''}${index === 4 ? ' is-warmup' : ''}`}
+                        style={{ height: `${height}%` }}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="weather-engine-empty">
+                  <strong>{liveWeather ? wt('adaptation_unavailable') : wt('no_weather')}</strong>
+                  <p>{liveWeather ? wt('adaptation_unavailable_copy') : wt('weather_unavailable_copy')}</p>
+                </div>
+              )}
+            </article>
+
+            <aside className="weather-engine-card weather-engine-card--judgment">
+              <div className="weather-engine-card-head weather-engine-card-head--judgment">
+                <div>
+                  <h2>{wt('coach_title')}</h2>
+                </div>
+                <div className="weather-engine-judge-mark">
+                  <AppIcon name="insights" />
+                </div>
+              </div>
+
+              <p className="weather-engine-coach-quote">"{coachJudgment.quote}"</p>
+
+              <div className="weather-engine-judgment-callout">
+                <span>{wt('coach_decision')}</span>
+                <strong>{coachJudgment.decision}</strong>
+                <p>{coachJudgment.note}</p>
+              </div>
+
+              <div className="weather-engine-judgment-foot">
+                <div className="weather-engine-judgment-meta">
+                  <span>{wt('engine_status')}</span>
+                  <strong>{statusLabel(weatherContext?.acclimatizationStatus, wt)}</strong>
+                </div>
+                <div className="weather-engine-judgment-meta">
+                  <span>{wt('engine_message')}</span>
+                  <p>{localizeEngineMessage(weatherContext, wt)}</p>
+                </div>
+              </div>
+
+              <div className="weather-engine-judgment-actions">
+                <button type="button" className="today-run-stitch-primary-btn weather-engine-btn" onClick={() => navigate('/today-run')}>
+                  {wt('coach_cta_primary')}
+                </button>
+                <button type="button" className="today-run-stitch-secondary-btn weather-engine-btn" onClick={() => navigate('/schedule')}>
+                  {wt('coach_cta_secondary')}
+                </button>
+              </div>
+            </aside>
+          </section>
+
+          <footer className="runner-shell-footer runner-dashboard-footer">
+            <FooterNavLinks />
+          </footer>
+        </div>
+      </main>
+    </div>
+  );
+}

@@ -30,16 +30,16 @@ External DESIGN.md reference intake:
 - Adapt any external reference into Hermes runner value, real data, bilingual copy discipline, accessibility, auth/routing preservation, and the Kinetic Editorial system in this file.
 
 Auto-Hermes command integration:
-- `.tools/auto-hermes-skills.mjs --json` is the durable manifest for the frontend design skill stack.
-- `.tools/auto-hermes-controller.mjs` must include that manifest in `designContext` for frontend `design-review` rounds.
-- `.tools/auto-hermes-loop.mjs` must carry the selected skill stack into the worker prompt before UI implementation.
+- `tools/auto-hermes-skills.mjs --json` is the durable manifest for the frontend design skill stack.
+- `tools/auto-hermes-controller.mjs` must include that manifest in `designContext` for frontend `design-review` rounds.
+- `tools/auto-hermes-loop.mjs` must carry the selected skill stack into the worker prompt before UI implementation.
 - If a listed skill is unavailable in the active runtime, the worker must say so plainly and use the nearest verified fallback, never pretend the skill ran.
 
 Conflict order for frontend design rounds:
 1. explicit user request and supplied reference
 2. verified live runtime state and browser evidence
 3. `design.md`
-4. surface memory in `.ai-sync/CONTEXT_LEDGER.md`
+4. surface memory in `.workspace/state/CONTEXT_LEDGER.md`
 5. installed frontend design skills
 6. generic design taste or model preference
 
@@ -73,7 +73,7 @@ Use this order:
 1. explicit user request
 2. the active runtime theme on the touched surface
 3. the visual mode implied by the provided mockup or screenshot
-4. the existing approved surface baseline from `.ai-sync/CONTEXT_LEDGER.md`
+4. the existing approved surface baseline from `.workspace/state/CONTEXT_LEDGER.md`
 5. fallback to both-mode-safe styling when the change is shared infrastructure
 
 Default when no signal is present: **light mode** (§5 Aerodynamic Gallery) is the Hermes default for new product surfaces and the public landing. The one exception is the explicit Minimalist Black Grid treatment (§10) — apply it only when the user requests a minimalist / black / dark-grid look or points at a dark bento reference, and then follow §10 exactly instead of guessing dark tones.
@@ -382,7 +382,7 @@ Before implementation, `/auto-hermes` must lock and carry forward:
 - preserve list
 - round type: `visual-bug`, `interaction-bug`, `structural-redesign`, or `mimic-implementation`
 - reference source: user reference, `design.md`, current approved live surface, selected `awesome-design-md` `DESIGN.md`, or generated reference
-- active frontend skill stack from `.tools/auto-hermes-skills.mjs`
+- active frontend skill stack from `tools/auto-hermes-skills.mjs`
 
 If the round is `dark` or `light` only, the reviewer must still ask:
 - did this break readability in the opposite mode if the selector is shared?
@@ -446,7 +446,7 @@ References that anchor this treatment (verified 2026-07):
 Apply Minimalist Black Grid when any of these is true:
 - the user explicitly requests a minimalist, black, or dark-grid look
 - the target surface is a landing, marketing, or editorial surface where the user supplied a dark bento/grid reference
-- the existing approved surface baseline in `.ai-sync/CONTEXT_LEDGER.md` is already this treatment
+- the existing approved surface baseline in `.workspace/state/CONTEXT_LEDGER.md` is already this treatment
 
 Do not apply it to the logged-in product dashboard, charts, or data surfaces unless the user explicitly asks — those stay on the mode-aware §4/§5 system.
 

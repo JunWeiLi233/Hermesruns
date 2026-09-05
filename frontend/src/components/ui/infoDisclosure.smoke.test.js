@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const infoDisclosureSource = readFileSync(path.join(here, 'InfoDisclosure.jsx'), 'utf8');
-const todayRunSource = readFileSync(path.join(here, '../../pages/TodayRun.jsx'), 'utf8');
+const todayRunSource = readFileSync(path.join(here, "../../pages/today-run/TodayRun.jsx"), 'utf8');
 
 assert.match(
   infoDisclosureSource,

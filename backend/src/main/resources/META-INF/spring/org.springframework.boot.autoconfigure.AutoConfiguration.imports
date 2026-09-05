@@ -1,2 +1,2 @@
-com.hermes.backend.ResendTransactionalMailConfiguration
-com.hermes.backend.TransactionalMailConfiguration
+com.hermes.backend.infrastructure.mail.ResendTransactionalMailConfiguration
+com.hermes.backend.infrastructure.mail.TransactionalMailConfiguration

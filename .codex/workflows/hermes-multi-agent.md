@@ -13,8 +13,8 @@ Architecture boundary:
 Treat `/auto-hermes` as one bounded execution loop, not a giant swarm.
 
 Per round:
-1. Read `TASKS.md`, `.ai-sync/AGENT_SYNC.md`, and `.ai-sync/CONTEXT_LEDGER.md`.
-2. Read `.ai-sync/HUMAN_LOOP.md` before any self-generated continuation.
+1. Read `TASKS.md`, `.workspace/state/AGENT_SYNC.md`, and `.workspace/state/CONTEXT_LEDGER.md`.
+2. Read `.workspace/state/HUMAN_LOOP.md` before any self-generated continuation.
 3. Choose exactly one bounded work unit.
 4. Use the lightest useful shape:
    - `single-agent` for small local work
@@ -38,7 +38,7 @@ Guardrails:
 - when they run together on a frontend-heavy round, `backend-agent` should default to a concise support lane rather than a co-equal product-design lane
 - even with paired builders, keep one PM/reviewer envelope and reunify verification before claiming the round done
 - do not force planning, review, or delegation when a direct local fix is cheaper and safer
-- human approval is not required every round; ask only when `.ai-sync/HUMAN_LOOP.md` says so or the product fork/risk is non-obvious
+- human approval is not required every round; ask only when `.workspace/state/HUMAN_LOOP.md` says so or the product fork/risk is non-obvious
 
 ## Codex Subagent Runtime
 
@@ -49,8 +49,8 @@ Visibility rule:
 - this is a visibility preference, not permission to spawn extra agents without value
 
 Dispatch rule:
-- `.tools/auto-hermes-controller.mjs` should emit the Codex subagent dispatch plan for the current bounded round
-- `.tools/auto-hermes-loop.mjs` should carry that dispatch plan into the generated worker prompt and coordinator brief
+- `tools/auto-hermes-controller.mjs` should emit the Codex subagent dispatch plan for the current bounded round
+- `tools/auto-hermes-loop.mjs` should carry that dispatch plan into the generated worker prompt and coordinator brief
 - when the dispatch plan says `useCodexSubagents: true`, the live Codex coordinator should actually spawn the named lanes when the tool/runtime allows it instead of treating them as prose-only roles
 - after merge/integration, the coordinator must re-enter controller -> round-close -> controller again in the same `/auto-hermes` invocation until a stop gate fires
 
@@ -116,10 +116,10 @@ Rules:
 - every lane must return a compact result packet for merge review
 - every lane must have a durable correlation id and result file path so long-running parent rounds can reunify later
 - every multi-lane parent round should require `isolation: "worktree"` in the lane packet so child execution stays merge-safe
-- child lanes defer `TASKS.md` and `.ai-sync/CONTEXT_LEDGER.md` writes to the parent coordinator; queue/context writeback happens only after merge review
+- child lanes defer `TASKS.md` and `.workspace/state/CONTEXT_LEDGER.md` writes to the parent coordinator; queue/context writeback happens only after merge review
 - the coordinator must run the command's merge gate before accepting the combined outcome
-- `.tools/auto-hermes-max.mjs` should write the launcher brief, lane briefs, durable result-file paths, and merge brief before the live Codex coordinator spawns the child lanes
-- `.tools/auto-hermes-max-merge.mjs` should refresh merge state from durable lane result packets when the child runs are long-lived or finish at different times
+- `tools/auto-hermes-max.mjs` should write the launcher brief, lane briefs, durable result-file paths, and merge brief before the live Codex coordinator spawns the child lanes
+- `tools/auto-hermes-max-merge.mjs` should refresh merge state from durable lane result packets when the child runs are long-lived or finish at different times
 
 Use `/auto-hermes-max` only when:
 - the parent round already decomposes into 2 to 5 bounded units
@@ -127,7 +127,7 @@ Use `/auto-hermes-max` only when:
 - there is a clear reason the final result must be reunited in one merged verdict
 
 Launcher rule:
-- `.tools/auto-hermes-max.mjs` may downshift the launch count below the candidate lane count when effort is tiny, coordination cost is high, merge complexity is high, or the planner explicitly recommends fewer lanes
+- `tools/auto-hermes-max.mjs` may downshift the launch count below the candidate lane count when effort is tiny, coordination cost is high, merge complexity is high, or the planner explicitly recommends fewer lanes
 - the launcher output should make that decision auditable per lane instead of only reporting one top-line rationale
 - if only 1 lane is selected, keep the `/auto-hermes-max` merge/truth contract but run it as a single child `/auto-hermes` worker instead of theater-spawning extras
 - if 2 or more lanes are selected, require canonical lane result statuses only: `approved`, `must-fix`, `blocked`; any alias should be treated as blocked during merge
@@ -375,7 +375,7 @@ Use this exact shape for each new finding:
 - Backend should not invent UI copy or layout.
 - Debugger should not widen scope beyond the reviewed bug unless verification proves a direct dependency.
 - Do not force a PM ticket, feature branch, or human merge ritual for every local Hermes round.
-- All agents should reuse Hermes rules from `AGENTS.md`, `TASKS.md`, and the `.ai-codex/` index instead of rescanning the repo.
+- All agents should reuse Hermes rules from `AGENTS.md`, `TASKS.md`, and the `.workspace/codex/` index instead of rescanning the repo.
 - Codex-side frontend work should read `design.md`, follow the current task/reference direction, avoid generic SaaS layouts, and prioritize runner usefulness over decoration.
 - Do not describe repo shortcuts or skill triggers as native Codex app features unless that was verified separately.
 - Do not describe memory recall as confirmed unless it came from MemPalace retrieval, a cited file, or the current diff/history.

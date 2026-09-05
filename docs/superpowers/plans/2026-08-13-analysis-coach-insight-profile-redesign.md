@@ -13,8 +13,8 @@
 ## Task 1: Add A Failing Redesign Contract
 
 **Files:**
-- Create: `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`
-- Read: `frontend/src/pages/AnalysisInsightDetail.jsx`
+- Create: `frontend/src/pages/analysis/__tests__/analysisCoachInsightProfileRedesign.smoke.test.js`
+- Read: `frontend/src/pages/analysis/AnalysisInsightDetail.jsx`
 - Read: `frontend/src/styles/_split/analysis.css`
 
 - [x] Add a Node smoke test that isolates the `coach-insight` JSX branch.
@@ -22,13 +22,13 @@
 - [x] Assert the branch still binds readiness, forecast, key workout, performance, recent-run, phase, focus, and reason data.
 - [x] Assert navigation to `/analysis`, `/run/${row.id}`, and `/today-run` remains present.
 - [x] Assert the new CSS is route scoped and contains desktop, tablet, and mobile layout rules.
-- [x] Run `node src/pages/analysisCoachInsightProfileRedesign.smoke.test.js` from `frontend` and confirm it fails because the new structure is not implemented yet.
+- [x] Run `node src/pages/analysis/__tests__/analysisCoachInsightProfileRedesign.smoke.test.js` from `frontend` and confirm it fails because the new structure is not implemented yet.
 
 ## Task 2: Refactor The Coach Insight Markup
 
 **Files:**
-- Modify: `frontend/src/pages/AnalysisInsightDetail.jsx`
-- Test: `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`
+- Modify: `frontend/src/pages/analysis/AnalysisInsightDetail.jsx`
+- Test: `frontend/src/pages/analysis/__tests__/analysisCoachInsightProfileRedesign.smoke.test.js`
 
 - [x] Replace only the `insightKey === 'coach-insight'` presentation branch with an `analysis-coach-profile` wrapper.
 - [x] Build a dark editorial hero containing the back action, live-cycle context, coach identity, coaching judgment, narrative, and readiness score.
@@ -41,7 +41,7 @@
 
 **Files:**
 - Modify: `frontend/src/styles/_split/analysis.css`
-- Test: `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`
+- Test: `frontend/src/pages/analysis/__tests__/analysisCoachInsightProfileRedesign.smoke.test.js`
 
 - [x] Add locally scoped warm-paper, ink, coral, border, and shadow tokens under `.analysis-coach-profile`.
 - [x] Style the hero as the single dark feature surface with editorial typography and a prominent readiness dial.
@@ -53,15 +53,15 @@
 ## Task 4: Verify The Surface
 
 **Files:**
-- Verify: `frontend/src/pages/AnalysisInsightDetail.jsx`
+- Verify: `frontend/src/pages/analysis/AnalysisInsightDetail.jsx`
 - Verify: `frontend/src/styles/_split/analysis.css`
-- Verify: `frontend/src/pages/analysisCoachInsightProfileRedesign.smoke.test.js`
+- Verify: `frontend/src/pages/analysis/__tests__/analysisCoachInsightProfileRedesign.smoke.test.js`
 
 - [x] Run the focused redesign smoke test.
 - [x] Run relevant Analysis navigation and visual contract smoke tests.
 - [x] Run frontend lint and report any pre-existing warnings separately.
 - [x] Run `node scripts/run-vite-build.mjs` from `frontend`.
-- [x] Run `.tools/verify-frontend-runtime-sync.mjs` from the repository root.
+- [x] Run `tools/verify-frontend-runtime-sync.mjs` from the repository root.
 - [x] Run `git diff --check` for the changed files.
 - [x] Inspect the live route in a browser when the local runtime is available; otherwise report that visual runtime proof was unavailable.
 - [x] Run the full frontend test command and distinguish known unrelated failures from redesign regressions.

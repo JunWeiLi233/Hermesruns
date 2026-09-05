@@ -9,9 +9,9 @@ Use this file as the short entrypoint for work in this repository.
 3. `docs/ai/FUNCTIONALITY_DIRECTION_TREE.md` when the request names a broken behavior but not its owner
 4. `docs/auto-hermes/index.md`
 5. `docs/repo-rules/index.md`
-6. `.ai-codex/optimized-codex.md`
-7. `.ai-sync/CONTEXT_LEDGER.md`
-8. `.ai-sync/AGENT_SYNC.md`
+6. `.workspace/codex/optimized-codex.md`
+7. `.workspace/state/CONTEXT_LEDGER.md`
+8. `.workspace/state/AGENT_SYNC.md`
 9. Read deeper owners only when needed.
 
 ## Core Policy
@@ -62,23 +62,23 @@ If still uncertain, say `unverified` or `not confirmed here`.
 Before broad work or implementation, run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js
-& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
-powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
-& 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js
+& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
+powershell -ExecutionPolicy Bypass -File tools/mempalace/auto-session-sync.ps1 -Quiet
+& 'C:\Program Files\nodejs\node.exe' tools/omx-auto-hermes-bridge.mjs
 ```
 
-Exception: for `/auto-hermes-self`, skip `.tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+Exception: for `/auto-hermes-self`, skip `tools/generate-codex.js`; the self command/skill must run through the parent Codex session and spawn native subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
 
-Platform note: the Session Start and Runtime Proof commands above are written for the author's Windows host (`C:\Program Files\nodejs\node.exe`, PowerShell). On macOS/Linux use the plain `node` binary (`/opt/homebrew/bin/node` on this darwin checkout) and the equivalent POSIX shell invocation. Some referenced files are gitignored machine-local helpers and are absent on other hosts — on this checkout `generate-codex.js`, `optimize-agent-context.mjs`, `omx-auto-hermes-bridge.mjs`, `verify-frontend-runtime-sync.mjs`, `verify-backend-runtime-sync.mjs`, `.ai-codex/optimized-codex.md`, and `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md` do not exist and `.ai-codex/` is absent entirely. If a Session Start helper is missing, skip it and say `unverified` for that step rather than failing; do not fabricate the file. Backend compile also requires a JDK (`java`/`JAVA_HOME`) that is not installed on this host — install one before running `./mvnw`.
+Platform note: these examples use Windows paths and PowerShell. On macOS/Linux use `node` and the equivalent POSIX shell invocation. Some helpers are gitignored and machine-local; check their existence in this checkout before running them. If a helper is missing, skip it and report that step as `unverified`; do not fabricate it. Backend compilation requires an available JDK through `java` or `JAVA_HOME`.
 
 Then read:
 
 - `docs/PROJECT_MAP.md`
-- `.ai-codex/optimized-codex.md`
-- `.ai-sync/OMX_AUTO_HERMES_BRIDGE.md`
-- `.ai-sync/CONTEXT_LEDGER.md`
-- `.ai-sync/AGENT_SYNC.md`
+- `.workspace/codex/optimized-codex.md`
+- `.workspace/state/OMX_AUTO_HERMES_BRIDGE.md`
+- `.workspace/state/CONTEXT_LEDGER.md`
+- `.workspace/state/AGENT_SYNC.md`
 
 Use RTK-wrapped shell reads/searches/status commands when RTK is available, but never treat RTK as proof of success.
 
@@ -96,12 +96,12 @@ Use RTK-wrapped shell reads/searches/status commands when RTK is available, but 
 For website-facing frontend changes:
 
 - build with `cd frontend && node scripts/run-vite-build.mjs`
-- verify with `.tools/verify-frontend-runtime-sync.mjs`
+- verify with `tools/verify-frontend-runtime-sync.mjs`
 
 For backend/runtime changes:
 
 - compile with `cd backend && ./mvnw -q -DskipTests compile`
-- verify with `.tools/verify-backend-runtime-sync.mjs`
+- verify with `tools/verify-backend-runtime-sync.mjs`
 - require `http://localhost:8080` to return `200` before claiming the local runtime changed
 
 If source changed but sync did not run, report:
@@ -120,7 +120,7 @@ If source changed but sync did not run, report:
 
 - Prefer MemPalace for prior decisions, old regressions, and unfinished historical work when available.
 - Use `memory.md` only as a tiny fallback for stable preferences or workflow invariants.
-- Use `.ai-codex/CODEX_CHECKPOINT.md` as the active resume file for long-running work.
+- Use `.workspace/codex/CODEX_CHECKPOINT.md` as the active resume file for long-running work.
 
 ## Git And Publish
 
@@ -148,9 +148,9 @@ Use these authority boundaries:
 - `.codex/workflows/auto-hermes-architecture.md` = control plane
 - `.codex/workflows/hermes-multi-agent.md` = delegation plane
 - `HERMES_SELF_EVOLVING_ENGINE.md` = promotion plane
-- `TASKS.md` plus `.ai-sync/*` = state plane
-- `.tools/auto-hermes-controller.mjs` = deterministic routing brief
-- `.tools/auto-hermes-loop.mjs` = loop owner / worker-coordinator prompt truth
-- `.tools/auto-hermes-round-close.mjs` = round writeback and promotion refresh
+- `TASKS.md` plus `.workspace/state/*` = state plane
+- `tools/auto-hermes-controller.mjs` = deterministic routing brief
+- `tools/auto-hermes-loop.mjs` = loop owner / worker-coordinator prompt truth
+- `tools/auto-hermes-round-close.mjs` = round writeback and promotion refresh
 
 If a rule changes enduring `/auto-hermes` behavior, update the smallest owning file instead of growing `AGENTS.md`.

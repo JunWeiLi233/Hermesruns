@@ -94,27 +94,27 @@ assert(
 });
 
 const runnerPages = [
-  'AddShoes.jsx',
-  'Analysis.jsx',
-  'AnalysisInsightDetail.jsx',
-  'MuscleTraining.jsx',
-  'PredictionDetail.jsx',
-  'ProfileDashboard.jsx',
-  'Races.jsx',
-  'RacesDetail.jsx',
-  'Rewards.jsx',
-  'Runs.jsx',
-  'Schedule.jsx',
-  'Settings.jsx',
-  'Shoes.jsx',
-  'TodayRun.jsx',
-  'WeatherEngine.jsx',
+  "shoes/AddShoes.jsx",
+  "analysis/Analysis.jsx",
+  "analysis/AnalysisInsightDetail.jsx",
+  "muscle-training/MuscleTraining.jsx",
+  "prediction/PredictionDetail.jsx",
+  "profile/ProfileDashboard.jsx",
+  "races/Races.jsx",
+  "races/RacesDetail.jsx",
+  "rewards/Rewards.jsx",
+  "runs/Runs.jsx",
+  "schedule/Schedule.jsx",
+  "settings/Settings.jsx",
+  "shoes/Shoes.jsx",
+  "today-run/TodayRun.jsx",
+  "weather/WeatherEngine.jsx",
 ];
 
 runnerPages.forEach((fileName) => {
   const source = readFileSync(path.join(pageRoot, fileName), 'utf8');
   assert(
-    source.includes("import RunnerShellTopNav from '../components/RunnerShellTopNav';"),
+    source.includes("import RunnerShellTopNav from '../../components/RunnerShellTopNav';"),
     `${fileName} should import the shared RunnerShellTopNav component.`,
   );
   assert(

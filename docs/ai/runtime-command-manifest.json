@@ -6,7 +6,13 @@
   "runtimes": {
     "claude": { "directory": ".claude/commands", "extension": ".md" },
     "gemini": { "directory": ".gemini/commands", "extension": ".toml" },
-    "opencode": { "directory": ".opencode/commands", "extension": ".md" }
+    "opencode": {
+      "directory": ".opencode/commands",
+      "extension": ".md",
+      "commandSources": {
+        "auto-hermes-self": ".codex/commands/runtime-adapters/opencode/auto-hermes-self.md"
+      }
+    }
   },
   "commands": [
     "auto-hermes",

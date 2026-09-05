@@ -1,16 +1,12 @@
 package com.hermes.backend.auth.mfa;
 
-import com.hermes.backend.AuthService;
-import com.hermes.backend.Runner;
-import com.hermes.backend.RunnerRepository;
+import com.hermes.backend.auth.AuthService;
+import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
 import com.yubico.webauthn.AssertionRequest;
 import com.yubico.webauthn.AssertionResult;
 import com.yubico.webauthn.RegistrationResult;
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -18,6 +14,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminMfaService {

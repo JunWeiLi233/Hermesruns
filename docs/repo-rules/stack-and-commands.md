@@ -4,7 +4,8 @@ This file owns stack facts, commands, env vars, coding conventions, and terminal
 
 ## Stack
 
-- Backend: Spring Boot 4.0.3, Java 17, Maven, JPA/Hibernate
+- Backend: Spring Boot 4.1.1, Java 17 source target, Maven, JPA/Hibernate
+- Container toolchains: Node 26 and Java 25, pinned in `Dockerfile`; local Java 17 remains supported by `backend/pom.xml`.
 - Frontend: React 19, Vite, React Router 8, incremental TypeScript, Vitest/React Testing Library, Chart.js, Leaflet
 - Database: H2 in dev, PostgreSQL in prod
 - Auth: Google OAuth 2.0, Strava OAuth 2.0, password + email verification
@@ -12,6 +13,29 @@ This file owns stack facts, commands, env vars, coding conventions, and terminal
 - AI: Gemini 2.5 Flash for shoe image scanning / mileage extraction
 
 ## Core Commands
+
+Root aliases for portable verification:
+
+```bash
+npm run lint:frontend
+npm run typecheck:frontend
+npm run test:frontend:unit
+npm run test:frontend:contracts
+npm run build:frontend
+npm run test:backend
+npm run test:tooling
+npm run check:architecture
+npm run check:architecture -- --classes backend/target/classes
+```
+
+Install frontend dependencies before the frontend/architecture checks. The optional
+`--classes` check requires a fresh backend compile and `jdeps` from the JDK; without
+it the architecture command reports source checks only. This repository contains
+the web application; the unrelated native iOS client has been removed.
+
+Build the frontend before packaging the backend: Spring serves generated output
+under `backend/src/main/resources/static/`, whose source is `frontend/src/` and
+`frontend/public/`. Docker builds and copies this output in its own stages.
 
 ```bash
 # Backend

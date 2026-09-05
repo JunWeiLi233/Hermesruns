@@ -57,7 +57,7 @@ USER hermes
 # Lean JVM footprint for small containers. Without these flags the JVM sizes
 # its heap from container ergonomics, grows toward that ceiling, and never
 # returns RSS — Railway reported 1.6 GB for this app. The heap/GC/metaspace
-# settings follow the locally proven profile (.tools/run-backend.*, without
+# settings follow the locally proven profile (tools/run-backend.*, without
 # the devtools-driven metaspace headroom); the free-ratio pair makes the JVM
 # uncommit heap after spikes. Deployments can override JAVA_OPTS without
 # rebuilding the image.

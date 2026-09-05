@@ -1,0 +1,1784 @@
+{
+  "description": "Planned backend source moves; matching subject tests move with their owner. This manifest is a migration record, not a runtime registry.",
+  "retainedRoot": [
+    "BackendApplication",
+    "StartupPhaseDiagnosticsLogger"
+  ],
+  "moves": [
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AbstractXmlActivityFileParser.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/AbstractXmlActivityFileParser.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityFileParser.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ActivityFileParser.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ActivityImportService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityNormalizationService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ActivityNormalizationService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityStravaStreamService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ActivityStravaStreamService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AppleHealthImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/AppleHealthImportService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/FitActivityFileParser.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/FitActivityFileParser.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GarminConnectController.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GarminConnectController.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GarminConnectImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GarminConnectImportService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GarminRateLimitSupport.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GarminRateLimitSupport.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GarminWellnessImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GarminWellnessImportService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GarminWellnessSyncScheduler.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GarminWellnessSyncScheduler.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GoogleHealthImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GoogleHealthImportService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GpxActivityFileParser.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/GpxActivityFileParser.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ImportController.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ImportController.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ImportResult.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ImportResult.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ParsedActivityData.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ParsedActivityData.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ParsedTrackPoint.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/ParsedTrackPoint.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StravaAutoSyncScheduler.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/StravaAutoSyncScheduler.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StravaSyncService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/StravaSyncService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StravaTokenService.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/StravaTokenService.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StravaWebhookController.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/StravaWebhookController.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TcxActivityFileParser.java",
+      "to": "backend/src/main/java/com/hermes/backend/imports/TcxActivityFileParser.java",
+      "reason": "Owned by imports; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AcclimatizationService.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/AcclimatizationService.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/NationalWeatherServiceForecastClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/NationalWeatherServiceForecastClient.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OpenMeteoRateLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/OpenMeteoRateLimiter.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeatherAdjustedFitnessService.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/WeatherAdjustedFitnessService.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeatherContextController.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/WeatherContextController.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeatherForecastService.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/WeatherForecastService.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeatherProviderRateLimitedException.java",
+      "to": "backend/src/main/java/com/hermes/backend/weather/WeatherProviderRateLimitedException.java",
+      "reason": "Owned by weather; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/Activity.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/Activity.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityAnalyticsHelper.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityAnalyticsHelper.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityController.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityController.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityCoreFields.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityCoreFields.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityDataAccess.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityDataAccess.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityImprovementMetric.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityImprovementMetric.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityIngestedEvent.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityIngestedEvent.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityLap.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityLap.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityMetricFields.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityMetricFields.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityMetrics.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityMetrics.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityPoint.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityPoint.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityPointRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityPointRepository.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityRelationshipFields.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityRelationshipFields.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityRepository.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityRoutePreviewHelper.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityRoutePreviewHelper.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityRunSummary.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityRunSummary.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityTelemetryResponseBuilder.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityTelemetryResponseBuilder.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityType.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityType.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityTypeResolver.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityTypeResolver.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityWeatherCorrection.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ActivityWeatherCorrection.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ElevationCorrectionService.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ElevationCorrectionService.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/HeatmapCacheKey.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/HeatmapCacheKey.java",
+      "reason": "Runner profile heatmap cache namespace; activity mutations share this key for invalidation"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ImportProvider.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/ImportProvider.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunMetricsProjection.java",
+      "to": "backend/src/main/java/com/hermes/backend/activity/RunMetricsProjection.java",
+      "reason": "Owned by activity; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ActivityIngestedEventListenerComponent.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/ActivityIngestedEventListenerComponent.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AutomatedCoachService.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/AutomatedCoachService.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BodyCompositionData.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/BodyCompositionData.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BodyCompositionDataRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/BodyCompositionDataRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/Coach8020NightlyScheduler.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/Coach8020NightlyScheduler.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachController.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachController.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachFeedbackAlert.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachFeedbackAlert.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachFeedbackAlertRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachFeedbackAlertRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachHrBand.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachHrBand.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachHrZoneClassifier.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachHrZoneClassifier.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRoutePreviewDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRoutePreviewDto.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRouteRecommendationDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRouteRecommendationDto.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRouteService.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRouteService.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRouteWaypointDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRouteWaypointDto.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRunnerState.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRunnerState.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachRunnerStateRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachRunnerStateRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachScheduledWorkout.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachScheduledWorkout.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachScheduledWorkoutRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachScheduledWorkoutRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachTrainingBlock.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachTrainingBlock.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachTrainingBlockRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachTrainingBlockRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CoachWorkoutType.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/CoachWorkoutType.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyHRVData.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyHRVData.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyHRVDataRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyHRVDataRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailySleepData.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailySleepData.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailySleepDataRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailySleepDataRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyStressData.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyStressData.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyStressDataRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyStressDataRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyWellnessSummary.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummary.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DailyWellnessSummaryRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/DailyWellnessSummaryRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/InjuryRiskController.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/InjuryRiskController.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/InjuryRiskService.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/InjuryRiskService.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LettaAgentClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/LettaAgentClient.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PersonalizedRunningPlanner.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/PersonalizedRunningPlanner.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ReadinessService.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/ReadinessService.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SorenessLog.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/SorenessLog.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SorenessLogRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/SorenessLogRepository.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TrainingLoadAnalyzer.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/TrainingLoadAnalyzer.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WellnessController.java",
+      "to": "backend/src/main/java/com/hermes/backend/coaching/WellnessController.java",
+      "reason": "Owned by coaching; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminAccessGateway.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/AdminAccessGateway.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminPortalSessionCookie.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/AdminPortalSessionCookie.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminSecurityFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/AdminSecurityFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ApiRateLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/ApiRateLimiter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ApiRateLimitFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/ApiRateLimitFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AuthService.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/AuthService.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/EmailValidationService.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/EmailValidationService.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/EmailVerificationService.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/EmailVerificationService.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/HttpsEnforcementFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/HttpsEnforcementFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/JwtAuthenticationFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/JwtAuthenticationFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LoginAttemptStore.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/LoginAttemptStore.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LoginController.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/LoginController.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LoginRateLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/LoginRateLimiter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OAuthController.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/OAuthController.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PasswordHasher.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/PasswordHasher.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PasswordResetLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/PasswordResetLimiter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PasswordResetService.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/PasswordResetService.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PasswordStrengthChecker.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/PasswordStrengthChecker.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ProductionSecurityValidator.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/ProductionSecurityValidator.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RecaptchaConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/RecaptchaConfiguration.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RecaptchaVerifier.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/RecaptchaVerifier.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SecretEncryptionService.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/SecretEncryptionService.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SecurityConfig.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/SecurityConfig.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SecurityHeadersFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/SecurityHeadersFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TrafficAnomalyMonitorFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/TrafficAnomalyMonitorFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TrafficAnomalyStore.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/TrafficAnomalyStore.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/VerificationResendLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/VerificationResendLimiter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WebhookRateLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/WebhookRateLimiter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WebhookRateLimitFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/auth/WebhookRateLimitFilter.java",
+      "reason": "Owned by auth; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminApiError.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminApiError.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminApiResponses.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminApiResponses.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminAuditLog.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminAuditLog.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminAuditLogRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminAuditLogRepository.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminAuditPortalController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminAuditPortalController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminAuditService.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminAuditService.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminBackgroundJob.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminBackgroundJob.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminBackgroundJobRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminBackgroundJobRepository.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminBackgroundJobService.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminBackgroundJobService.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminBootstrapConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminBootstrapConfiguration.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminPagedResponse.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminPagedResponse.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminPortalController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminPortalController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminPortalService.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminPortalService.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminRacePortalController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminRacePortalController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminRouteExtractionController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminRouteExtractionController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminSavedFilter.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminSavedFilter.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminSavedFilterRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminSavedFilterRepository.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminShoeCatalogImageController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminShoeCatalogImageController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminShoeImageController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminShoeImageController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminShoePortalController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminShoePortalController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AdminUserPortalController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AdminUserPortalController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AuditDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/AuditDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BulkSelection.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/BulkSelection.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ConfigStatusController.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/ConfigStatusController.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/JobDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/JobDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/NoteDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/NoteDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunnerAdminNote.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/RunnerAdminNote.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunnerAdminNoteRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/RunnerAdminNoteRepository.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SavedFilterDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/SavedFilterDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeAdminDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/ShoeAdminDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/UserAdminDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/admin/UserAdminDto.java",
+      "reason": "Owned by admin; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AffineTransformCoefficientsDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/AffineTransformCoefficientsDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AffineTransformEstimator.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/AffineTransformEstimator.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AmsterdamMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/AmsterdamMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AthensMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/AthensMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BergenCityMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/BergenCityMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BerlinMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/BerlinMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BostonMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/BostonMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BusanMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/BusanMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ChicagoMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/ChicagoMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ChongqingMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/ChongqingMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CopenhagenMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/CopenhagenMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CourseMapBulkScanCommand.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/CourseMapBulkScanCommand.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CourseMapScanStep.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/CourseMapScanStep.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/CourseMapScanWatcher.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/CourseMapScanWatcher.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DalianMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/DalianMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DohaMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/DohaMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DubaiMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/DubaiMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GeneratedRaceGpxAsset.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GeneratedRaceGpxAsset.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GeneratedRaceGpxAssetRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GeneratedRaceGpxAssetRepository.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GeneratedRaceGpxPersistenceService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GeneratedRaceGpxPersistenceService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GeocodedAnchorPointDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GeocodedAnchorPointDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GoogleGeocodingClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GoogleGeocodingClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/GpxExportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/GpxExportService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/HelsinkiMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/HelsinkiMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/IstanbulMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/IstanbulMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/JakartaMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/JakartaMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/JerusalemMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/JerusalemMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/KualaLumpurMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/KualaLumpurMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LisbonMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/LisbonMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LondonMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/LondonMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LosAngelesMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/LosAngelesMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ManchesterMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/ManchesterMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonOfficialLandmarkCourseCatalog.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonOfficialLandmarkCourseCatalog.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonRouteExtractionService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonRouteExtractionService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonRouteGeoreferencingService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonRouteGeoreferencingService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonRouteMatchAndExportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonRouteMatchAndExportService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonRoutePipelineRequest.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonRoutePipelineRequest.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarathonRoutePipelineService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarathonRoutePipelineService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarineCorpsMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarineCorpsMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MarrakechMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MarrakechMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MatchedBreadcrumbPointDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MatchedBreadcrumbPointDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MexicoCityMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MexicoCityMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MilanMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MilanMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MumbaiMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MumbaiMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MunichMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/MunichMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/NairobiCityMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/NairobiCityMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/NiceCannesMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/NiceCannesMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/NycMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/NycMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OfficialCourseStartupSeedConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/OfficialCourseStartupSeedConfiguration.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OsakaMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/OsakaMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OsrmMapMatchingClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/OsrmMapMatchingClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OverlayBounds.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/OverlayBounds.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ParisMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/ParisMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PortoMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/PortoMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PragueMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/PragueMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PreviewSnapshot.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/PreviewSnapshot.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PythonVenvResolver.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/PythonVenvResolver.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QingdaoMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QingdaoMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QueenstownMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QueenstownMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenAnchorPixelClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenAnchorPixelClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenCourseMapAlignmentClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenCourseMapAlignmentClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenImagePreprocessor.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenImagePreprocessor.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenPersistentWorkerClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenPersistentWorkerClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenProcessResult.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenProcessResult.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenProcessRunner.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenProcessRunner.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QwenRouteParameterClient.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/QwenRouteParameterClient.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceController.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceController.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAdminDetail.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAdminDetail.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAdminRow.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAdminRow.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAiService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAiService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAsset.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAsset.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAssetListFields.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAssetListFields.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAssetListRow.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAssetListRow.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapAssetRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapAssetRepository.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedCommand.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapBulkSeedCommand.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapBulkSeedService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapBulkSeedService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapGeometryService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapGeometryService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapImageService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapImageService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapPromptBuilder.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapPromptBuilder.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapResult.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapResult.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapSchemaInitializer.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapSchemaInitializer.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapSearchService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapSearchService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceCourseMapService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceCourseMapService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceElevationProfileService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceElevationProfileService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceEvent.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceEvent.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceEventRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceEventRepository.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceKnownOrderedCourseCatalog.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceKnownOrderedCourseCatalog.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceOfficialImageService.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceOfficialImageService.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RaceRegistrationStatus.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RaceRegistrationStatus.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RawBreadcrumbPointDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RawBreadcrumbPointDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RomeMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RomeMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RouteAnchorPixelPointDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RouteAnchorPixelPointDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RouteParametersDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RouteParametersDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RoutePathExtractionResultDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RoutePathExtractionResultDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RoutePixelPointDTO.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/RoutePixelPointDTO.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StandardCharteredNairobiMarathonKnownCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/StandardCharteredNairobiMarathonKnownCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SupplementalMarathonKnownCourses.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/SupplementalMarathonKnownCourses.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TokyoMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/TokyoMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WuxiMarathonOfficialCourse.java",
+      "to": "backend/src/main/java/com/hermes/backend/races/WuxiMarathonOfficialCourse.java",
+      "reason": "Owned by races; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AiProviderException.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/AiProviderException.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AiShoeScanService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/AiShoeScanService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BingImageScraper.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/BingImageScraper.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/OfficialShoeCatalogImportService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/OfficialShoeCatalogImportService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/Shoe.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/Shoe.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeAdminAggregateService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeAdminAggregateService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeCatalogBrand.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeCatalogBrand.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeCatalogBrandRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeCatalogBrandRepository.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeCatalogController.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeCatalogController.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeCatalogModel.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeCatalogModel.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeCatalogModelRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeCatalogModelRepository.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeController.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeController.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeIdentityService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeIdentityService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeImageAsset.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeImageAsset.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeImageAssetRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeImageAssetRepository.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeImageAssetService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeImageAssetService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeImageController.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeImageController.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeImagePixelAnalyzer.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeImagePixelAnalyzer.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeMetadataDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeMetadataDto.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationController.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeQueryNormalizationController.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeQueryNormalizationService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeQueryNormalizationService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeRenderSourceService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeRenderSourceService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeRepository.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeScanImageValidator.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeScanImageValidator.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeScanUsageStatusService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeScanUsageStatusService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ShoeTrackerService.java",
+      "to": "backend/src/main/java/com/hermes/backend/shoes/ShoeTrackerService.java",
+      "reason": "Owned by shoes; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AiUsageService.java",
+      "to": "backend/src/main/java/com/hermes/backend/billing/AiUsageService.java",
+      "reason": "Owned by billing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/QuotaService.java",
+      "to": "backend/src/main/java/com/hermes/backend/billing/QuotaService.java",
+      "reason": "Owned by billing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ApiExceptionLoggingAdvice.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/ApiExceptionLoggingAdvice.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AppCorsConfig.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/AppCorsConfig.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/HtmlScanLimiter.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/HtmlScanLimiter.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/InputSanitizer.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/InputSanitizer.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RequestBodyValidator.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/RequestBodyValidator.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RequestIpResolver.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/RequestIpResolver.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SafeTempFileGuard.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/SafeTempFileGuard.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SafeUrlExecutor.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/SafeUrlExecutor.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SafeUrlValidator.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/SafeUrlValidator.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SpaForwardingController.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/SpaForwardingController.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StaticAssetCacheConfig.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/StaticAssetCacheConfig.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WebConfig.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/web/WebConfig.java",
+      "reason": "Owned by infrastructure.web; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/AppRedisProperties.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/cache/AppRedisProperties.java",
+      "reason": "Owned by infrastructure.cache; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/FixedWindowRateLimitStore.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/cache/FixedWindowRateLimitStore.java",
+      "reason": "Owned by infrastructure.cache; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RedisKeySupport.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/cache/RedisKeySupport.java",
+      "reason": "Owned by infrastructure.cache; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TtlCacheStore.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/cache/TtlCacheStore.java",
+      "reason": "Owned by infrastructure.cache; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BlockDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/BlockDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ExerciseDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/ExerciseDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleDayPlanDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleDayPlanDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MusclePlanDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MusclePlanDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleProfileDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleProfileDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleProfileUpdate.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleProfileUpdate.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckIn.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingCheckIn.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingCheckInRepository.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingCheckInService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingCheckInService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingController.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingController.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingMetricsService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingMetricsService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingPlannerService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingPlannerService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingPreference.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingPreference.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingPreferenceRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingPreferenceRepository.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingProfileService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingProfileService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleTrainingSessionService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleTrainingSessionService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MuscleWeekContextDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/MuscleWeekContextDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PersonalizedStrengthPlan.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/PersonalizedStrengthPlan.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PersonalizedStrengthPlanEngine.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/PersonalizedStrengthPlanEngine.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunnerStrengthSignals.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/RunnerStrengthSignals.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunnerStrengthSignalService.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/RunnerStrengthSignalService.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunPlanDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/RunPlanDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SessionDefinitionDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/SessionDefinitionDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StrengthAssignmentDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/StrengthAssignmentDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/StrengthCoachDecisionDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/StrengthCoachDecisionDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TodayCheckInDto.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/TodayCheckInDto.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TodayCheckInUpdate.java",
+      "to": "backend/src/main/java/com/hermes/backend/strength/TodayCheckInUpdate.java",
+      "reason": "Owned by strength; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DatabaseDiagnosticsInitializer.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/DatabaseDiagnosticsInitializer.java",
+      "reason": "Owned by infrastructure.diagnostics; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LocalConsoleErrorController.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/LocalConsoleErrorController.java",
+      "reason": "Owned by infrastructure.diagnostics; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LocalConsoleErrorReport.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/LocalConsoleErrorReport.java",
+      "reason": "Owned by infrastructure.diagnostics; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LocalConsoleErrorService.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/LocalConsoleErrorService.java",
+      "reason": "Owned by infrastructure.diagnostics; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SecurityDiagnosticsInitializer.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/diagnostics/SecurityDiagnosticsInitializer.java",
+      "reason": "Owned by infrastructure.diagnostics; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/JacksonConfig.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/config/JacksonConfig.java",
+      "reason": "Owned by infrastructure.config; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/SystemConfigService.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/config/SystemConfigService.java",
+      "reason": "Owned by infrastructure.config; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/bootstrap/LocalSharedRunnerBootstrapConfiguration.java",
+      "reason": "Owned by infrastructure.bootstrap; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/LocalSharedRunnerBootstrapService.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/bootstrap/LocalSharedRunnerBootstrapService.java",
+      "reason": "Owned by infrastructure.bootstrap; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MapTileController.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/MapTileController.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PlannedRoute.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/PlannedRoute.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PlannedRouteRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/PlannedRouteRepository.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RouteHeatmapAnchorService.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/RouteHeatmapAnchorService.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RoutePlannerController.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/RoutePlannerController.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RoutePlannerService.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/RoutePlannerService.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RoutePoint.java",
+      "to": "backend/src/main/java/com/hermes/backend/routing/RoutePoint.java",
+      "reason": "Owned by routing; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/PersonalRecordService.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/PersonalRecordService.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ProfileController.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/ProfileController.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/Runner.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/Runner.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/RunnerRepository.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/RunnerRepository.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeeklyDigestController.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/WeeklyDigestController.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/WeeklyDigestService.java",
+      "to": "backend/src/main/java/com/hermes/backend/runner/WeeklyDigestService.java",
+      "reason": "Owned by runner; preserve class, bean and persistence behavior"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/BoundedBodySubscriber.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/BoundedBodySubscriber.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/DisabledTransactionalMailSender.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/DisabledTransactionalMailSender.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MailDeliveryException.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryException.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/MailDeliveryReceipt.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/MailDeliveryReceipt.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ResendAttemptState.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/ResendAttemptState.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ResendTransactionalMailConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailConfiguration.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/ResendTransactionalMailSender.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/ResendTransactionalMailSender.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TransactionalMailConfiguration.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailConfiguration.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TransactionalMailMessage.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailMessage.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    },
+    {
+      "from": "backend/src/main/java/com/hermes/backend/TransactionalMailSender.java",
+      "to": "backend/src/main/java/com/hermes/backend/infrastructure/mail/TransactionalMailSender.java",
+      "reason": "Transactional mail transport, registration and bounded delivery helpers share one ownership boundary"
+    }
+  ]
+}

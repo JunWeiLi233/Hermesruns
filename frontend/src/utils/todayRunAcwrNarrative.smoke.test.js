@@ -4,11 +4,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const todayRunSource = readFileSync(path.join(here, '..', 'pages', 'TodayRun.jsx'), 'utf8');
+const todayRunSource = readFileSync(path.join(here, "../pages/today-run/TodayRun.jsx"), 'utf8');
 
 assert.match(
   todayRunSource,
-  /import \{ getTodayRunAcwrInsight \} from ['"]\.\.\/utils\/todayRunAcwrInsight['"]/,
+  /import \{ getTodayRunAcwrInsight \} from ['"]\.\.\/\.\.\/utils\/todayRunAcwrInsight['"]/,
   'TodayRun.jsx should import the ACWR coach-narrative helper from the dedicated insight module'
 );
 

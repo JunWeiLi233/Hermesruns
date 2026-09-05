@@ -58,7 +58,7 @@ Use one shared security engine with two thin command entrypoints.
 
 ### Shared engine
 
-- `.tools/auto-hermes-security.mjs`
+- `tools/auto-hermes-security.mjs`
 
 This script should own:
 
@@ -181,8 +181,8 @@ Checks:
 
 Every run should write:
 
-- a Markdown report in `.ai-sync/security-reports/`
-- a JSON summary in `.ai-sync/security-reports/`
+- a Markdown report in `.workspace/state/security-reports/`
+- a JSON summary in `.workspace/state/security-reports/`
 
 Suggested naming:
 

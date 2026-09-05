@@ -14,7 +14,7 @@ name: auto-hermes-self
 # What it runs:
 #   1. Checks out the repo (full history) and configures git identity.
 #   2. Installs Node 20, Java 17, Maven cache, and Playwright Chromium so the
-#      Hermes wrappers (.tools/auto-hermes-self-loop.mjs, run-vite-build.mjs,
+#      Hermes wrappers (tools/auto-hermes-self-loop.mjs, run-vite-build.mjs,
 #      auto-hermes-playwright.mjs) all work headless without the user's Chrome.
 #   3. Refreshes the self-loop coordinator brief and reads queue state.
 #   4. Hands the bounded prompt to anthropics/claude-code-action so Claude
@@ -125,13 +125,13 @@ jobs:
         run: |
           npm install --no-save @playwright/test
           npx playwright install --with-deps chromium
-          node .tools/auto-hermes-playwright.mjs doctor
+          node tools/auto-hermes-playwright.mjs doctor
 
       - name: Refresh /auto-hermes-self coordinator brief
         run: |
-          node .tools/auto-hermes-self-loop.mjs --write --runtime claude
+          node tools/auto-hermes-self-loop.mjs --write --runtime claude
           echo '--- AUTO_HERMES_SELF_COORDINATOR.md (head) ---'
-          head -60 .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md || true
+          head -60 .workspace/state/AUTO_HERMES_SELF_COORDINATOR.md || true
 
       - name: Run /auto-hermes-self via Claude Code action
         id: claude
@@ -149,7 +149,7 @@ jobs:
             Honour the **CI Mode** section of `/auto-hermes-self` strictly:
               * Hard cap rounds at $AHS_MAX_ROUNDS (currently ${{ inputs.max_rounds }}).
               * Hard cap wall-clock at $AHS_MAX_MINUTES minutes (currently ${{ inputs.max_minutes }}).
-              * Use `.tools/auto-hermes-playwright.mjs` exclusively for browser proof.
+              * Use `tools/auto-hermes-playwright.mjs` exclusively for browser proof.
               * Do NOT call ScheduleWakeup — this is a single non-interactive invocation.
               * Treat any HUMAN_LOOP gate as a hard stop, not a pause.
               * When `$AHS_DRY_RUN == 'true'`, skip Auto-Publish entirely.
@@ -166,9 +166,9 @@ jobs:
       - name: Show TEAMWORK.md after the run
         if: always()
         run: |
-          if [ -f .ai-sync/TEAMWORK.md ]; then
-            echo '--- .ai-sync/TEAMWORK.md ---'
-            cat .ai-sync/TEAMWORK.md
+          if [ -f .workspace/state/TEAMWORK.md ]; then
+            echo '--- .workspace/state/TEAMWORK.md ---'
+            cat .workspace/state/TEAMWORK.md
           else
             echo 'No TEAMWORK.md present.'
           fi
@@ -181,12 +181,12 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
           path: |
-            .ai-sync/TEAMWORK.md
-            .ai-sync/AUTO_HERMES_SELF_COORDINATOR.md
-            .ai-sync/AUTO_HERMES_SELF_COORDINATOR.json
-            .ai-sync/AUTO_HERMES_SELF_LOOP.json
-            .ai-sync/AUTO_HERMES_SELF_ROUND_RESULT.json
-            .ai-sync/AUTO_HERMES_CONTROLLER.json
-            .ai-sync/auto-hermes-max-results/
-            .ai-sync/playwright-state/
+            .workspace/state/TEAMWORK.md
+            .workspace/state/AUTO_HERMES_SELF_COORDINATOR.md
+            .workspace/state/AUTO_HERMES_SELF_COORDINATOR.json
+            .workspace/state/AUTO_HERMES_SELF_LOOP.json
+            .workspace/state/AUTO_HERMES_SELF_ROUND_RESULT.json
+            .workspace/state/AUTO_HERMES_CONTROLLER.json
+            .workspace/state/auto-hermes-max-results/
+            .workspace/state/playwright-state/
             task-images/

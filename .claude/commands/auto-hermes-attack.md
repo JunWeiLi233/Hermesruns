@@ -1,4 +1,4 @@
-<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- GENERATED FILE: edit .codex/commands and run node tools/generate-runtime-commands.mjs. -->
 <!-- Runtime: claude; command: /auto-hermes-attack; contract: docs/ai/EDITING_CONTRACT.md -->
 
 ---
@@ -13,14 +13,14 @@ Repo-local Hermes active attack-simulation command.
 
 Run controlled local/dev-only attack simulation that:
 
-- reuses the shared security inventory from `.tools/auto-hermes-security.mjs`
+- reuses the shared security inventory from `tools/auto-hermes-security.mjs`
 - exercises auth, input, leak, and config attack paths against local/dev Hermes
 - supports a stronger `--aggressive` mode without changing the local/dev-only rule
-- writes a Markdown report and JSON summary under `.ai-sync/security-reports/`
+- writes a Markdown report and JSON summary under `.workspace/state/security-reports/`
 
 ## Command Notes
 
-- Preferred engine: `node .tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --write --runtime-base-url http://localhost:8080`
+- Preferred engine: `node tools/auto-hermes-security.mjs --mode attack --command-name auto-hermes-attack --write --runtime-base-url http://localhost:8080`
 - Aggressive mode: add `--aggressive`
 - This command must block non-local/non-dev runtime targets.
 - Controlled mutation only: tagged test state is allowed in local/dev, but cleanup must remain part of the command contract.

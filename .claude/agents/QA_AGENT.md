@@ -28,7 +28,7 @@ Review against:
 - declared ownership
 - `Done when:`
 - `Verify:`
-- `.ai-sync/CONTEXT_LEDGER.md` for approved baselines on that surface
+- `.workspace/state/CONTEXT_LEDGER.md` for approved baselines on that surface
 - the worker result packet
 
 If the review is for `/auto-hermes-max`, review the merged workspace state plus the lane packets, not chat claims alone.

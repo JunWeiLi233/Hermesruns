@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_URL="http://localhost:8080"
 HEALTH_URL="http://localhost:8080"
 BACKEND_LOG="$ROOT/backend_log.txt"
-SYNC_CONFIG="$ROOT/.tools/hermes_sync_config.json"
+SYNC_CONFIG="$ROOT/tools/hermes_sync_config.json"
 PYTHON_EXE=""
 
 echo "=========================================="
@@ -61,22 +61,22 @@ echo "[1/5] Building frontend static assets..."
 
 # 2. Check backend requirements before opening any windows
 echo "[2/5] Checking Spring Boot requirements..."
-"$ROOT/.tools/run-backend.sh" --check-only || startup_failed
+"$ROOT/tools/run-backend.sh" --check-only || startup_failed
 
 # 3. Launch the backend in the background, writing logs to backend_log.txt
 echo "[2/4] Waking up Spring Boot (Java)..."
 : > "$BACKEND_LOG"
-"$ROOT/.tools/run-backend.sh" >>"$BACKEND_LOG" 2>&1 &
+"$ROOT/tools/run-backend.sh" >>"$BACKEND_LOG" 2>&1 &
 BACKEND_PID=$!
 
 # 4. Start the Python auto-import watcher when a local virtualenv is available
 if [ -n "$PYTHON_EXE" ]; then
   if [ -f "$SYNC_CONFIG" ]; then
     echo "[3/4] Waking up Hermes auto-import watcher..."
-    "$PYTHON_EXE" "$ROOT/.tools/hermes_auto_sync.py" "$SYNC_CONFIG" >/dev/null 2>&1 &
+    "$PYTHON_EXE" "$ROOT/tools/hermes_auto_sync.py" "$SYNC_CONFIG" >/dev/null 2>&1 &
   else
     echo "[3/4] Auto-import watcher not started."
-    echo "      To enable: cp .tools/hermes_sync_config.example.json .tools/hermes_sync_config.json"
+    echo "      To enable: cp tools/hermes_sync_config.example.json tools/hermes_sync_config.json"
     echo "      then set auth email/password and import folders. See README \"Garmin / COROS Auto-Import\"."
   fi
 else
@@ -99,7 +99,7 @@ wait_for_backend() {
 retry_backend() {
   echo "[2/4] Waking up Spring Boot (Java)..."
   : > "$BACKEND_LOG"
-  "$ROOT/.tools/run-backend.sh" >>"$BACKEND_LOG" 2>&1 &
+  "$ROOT/tools/run-backend.sh" >>"$BACKEND_LOG" 2>&1 &
   BACKEND_PID=$!
 }
 

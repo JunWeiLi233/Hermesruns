@@ -164,7 +164,7 @@
 <text x="290" y="452" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">1 · ApiRateLimitFilter — /api abuse guard, webhooks exempt</text>
 <text x="290" y="466" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">2 · WebhookRateLimitFilter — strava + stripe burst control</text>
 <text x="290" y="480" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">3 · SecurityHeadersFilter — baseline response headers</text>
-<text x="290" y="494" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">4 · JwtAuthenticationFilter — Bearer JWT → principal</text>
+<text x="290" y="494" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">4 · JwtAuthenticationFilter — Bearer token → principal</text>
 <text x="290" y="508" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">5 · SecurityConfig — STATELESS · CSRF off (token-based)</text>
     </g>
   
@@ -195,7 +195,7 @@
       <rect x="844" y="560" width="232" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="844" y="560" width="232" height="104" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
       <text x="858" y="582" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Runner · authenticated</text>
-<text x="858" y="596" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">any /api/** with JWT</text>
+<text x="858" y="596" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">authenticated /api/**</text>
 <text x="858" y="610" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">activities · shoes · races</text>
 <text x="858" y="624" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">coach · wellness · weather</text>
 <text x="858" y="638" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">imports · profile · maps</text>
@@ -205,7 +205,7 @@
     <g>
       <rect x="276" y="736" width="300" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="276" y="736" width="300" height="104" rx="8" fill="rgba(6, 78, 59, 0.42)" stroke="#34d399" stroke-width="1.5"></rect>
-      <text x="290" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">REST Controllers (31)</text>
+      <text x="290" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">REST Controllers</text>
 <text x="290" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">auth · activities · shoes</text>
 <text x="290" y="786" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">races · coach · wellness</text>
 <text x="290" y="800" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">imports · weather · maps</text>
@@ -226,7 +226,7 @@
       <rect x="956" y="736" width="300" height="104" rx="8" fill="#0f172a" opacity="0.92"></rect>
       <rect x="956" y="736" width="300" height="104" rx="8" fill="rgba(76, 29, 149, 0.38)" stroke="#a78bfa" stroke-width="1.5"></rect>
       <text x="970" y="758" fill="#e2e8f0" font-size="12" font-weight="600" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA Repositories</text>
-<text x="970" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">27 entities · H2 / PostgreSQL</text>
+<text x="970" y="772" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">domain entities · H2 / PostgreSQL</text>
 <text x="970" y="786" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">audit trail + job store</text>
 <text x="970" y="800" fill="#94a3b8" font-size="9" font-weight="400" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">JPA / Hibernate</text>
     </g>
@@ -345,7 +345,7 @@
     <article class="card">
       <h3>Filter Order</h3>
       <ul>
-        <li>Rate limits guard /api first (webhook paths exempt), then security headers, then the JWT filter.</li><li>SecurityConfig matchers route each request into the public, admin, or runner tier.</li><li>Admin surfaces need ROLE_ADMIN plus the short-lived portal cookie for /dashboard documents.</li>
+        <li>Rate limits guard /api first (webhook paths exempt), then security headers, then the session-token filter.</li><li>SecurityConfig matchers route each request into the public, admin, or runner tier.</li><li>Admin surfaces need ROLE_ADMIN plus the short-lived portal cookie for /dashboard documents.</li>
       </ul>
     </article>
   
@@ -353,7 +353,7 @@
     <article class="card">
       <h3>Downstream Plane</h3>
       <ul>
-        <li>31 REST controllers under /api map to stateless domain services.</li><li>JPA repositories persist 27 entities on H2 (dev) or PostgreSQL (production).</li><li>Stripe and Strava webhooks re-enter through permitAll controllers with their own rate limiter.</li>
+        <li>REST controllers under /api delegate to domain services.</li><li>JPA repositories persist domain entities on H2 (dev) or PostgreSQL (production).</li><li>Webhook entry points retain their provider-specific validation and rate limits.</li>
       </ul>
     </article>
   

@@ -6,15 +6,15 @@
 
 **Architecture:** Build one small catalog helper that knows what external agents are installed, one installer/sync helper that refreshes the repo-local catalog, then extend the controller and loop to consume that manifest and emit truthful external specialist recommendations. Keep Hermes-first routing and add focused tests around discovery and recommendation.
 
-**Tech Stack:** Node.js `.mjs` scripts, local JSON manifest files, repo-local `.codex/agents/*.toml`, focused node-based tests in `.tools/auto-hermes-tools.test.mjs`
+**Tech Stack:** Node.js `.mjs` scripts, local JSON manifest files, repo-local `.codex/agents/*.toml`, focused node-based tests in `tools/auto-hermes-tools.test.mjs`
 
 ---
 
 ### Task 1: Add repo-local catalog discovery
 
 **Files:**
-- Create: `.tools/auto-hermes-subagent-catalog.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Create: `tools/auto-hermes-subagent-catalog.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -22,55 +22,55 @@ Add a test proving the catalog helper returns Hermes-safe defaults when no manif
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: FAIL because the catalog helper does not exist yet.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Create `.tools/auto-hermes-subagent-catalog.mjs` with helpers to:
-- read `.ai-sync/AUTO_HERMES_SUBAGENT_CATALOG.json`
+Create `tools/auto-hermes-subagent-catalog.mjs` with helpers to:
+- read `.workspace/state/AUTO_HERMES_SUBAGENT_CATALOG.json`
 - scan `.codex/agents/*.toml`
 - expose installed external agent names
 - expose small category helpers like backend/frontend/review/research/orchestration
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: PASS for the new catalog discovery tests.
 
 ### Task 2: Add repo-local installer/sync helper
 
 **Files:**
-- Create: `.tools/install-voltagent-codex-subagents.mjs`
-- Modify: `.tools/auto-hermes-subagent-catalog.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Create: `tools/install-voltagent-codex-subagents.mjs`
+- Modify: `tools/auto-hermes-subagent-catalog.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Write the failing test**
 
-Add a test proving the installer writes a manifest in repo-local `.ai-sync`, uses repo-local `.codex/agents`, and records `repo-local-codex-only` mode.
+Add a test proving the installer writes a manifest in repo-local `.workspace/state`, uses repo-local `.codex/agents`, and records `repo-local-codex-only` mode.
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: FAIL because the installer helper and manifest write path do not exist yet.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Create `.tools/install-voltagent-codex-subagents.mjs` to:
-- clone or refresh the VoltAgent repo into `.ai-sync/voltagent-codex-subagents/`
+Create `tools/install-voltagent-codex-subagents.mjs` to:
+- clone or refresh the VoltAgent repo into `.workspace/state/voltagent-codex-subagents/`
 - install selected `.toml` files into `.codex/agents/`
-- write `.ai-sync/AUTO_HERMES_SUBAGENT_CATALOG.json`
+- write `.workspace/state/AUTO_HERMES_SUBAGENT_CATALOG.json`
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: PASS for manifest/install-mode assertions.
 
 ### Task 3: Extend controller routing with optional external specialists
 
 **Files:**
-- Modify: `.tools/auto-hermes-controller.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Modify: `tools/auto-hermes-controller.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -83,12 +83,12 @@ Add tests that classify Hermes rounds and expect:
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: FAIL because controller routing is still fixed to Hermes-only agents.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Patch `.tools/auto-hermes-controller.mjs` to:
+Patch `tools/auto-hermes-controller.mjs` to:
 - load the external catalog helper
 - derive optional external specialists from current task classification
 - keep Hermes aliases in `recommendedAgents`
@@ -96,14 +96,14 @@ Patch `.tools/auto-hermes-controller.mjs` to:
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: PASS for external specialist routing tests.
 
 ### Task 4: Extend loop/coordinator brief rendering
 
 **Files:**
-- Modify: `.tools/auto-hermes-loop.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Modify: `tools/auto-hermes-loop.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -111,19 +111,19 @@ Add a test proving the worker prompt/coordinator brief renders installed externa
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: FAIL because loop prompts do not yet mention external specialist availability.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Patch `.tools/auto-hermes-loop.mjs` to render:
+Patch `tools/auto-hermes-loop.mjs` to render:
 - installed external specialists
 - optional external recommendations for the round
 - truthful wording that these are repo-local installed Codex agents, not guaranteed native auto-spawn behavior
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs`
+Run: `& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs`
 Expected: PASS for prompt rendering assertions.
 
 ### Task 5: Verify end to end
@@ -135,9 +135,9 @@ Expected: PASS for prompt rendering assertions.
 
 Run:
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-controller.mjs --json
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-loop.mjs --dry-run --max-rounds 1 --json
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-controller.mjs --json
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-loop.mjs --dry-run --max-rounds 1 --json
 ```
 
 Expected:

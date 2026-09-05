@@ -2,9 +2,12 @@ package com.hermes.backend.auth.mfa;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hermes.backend.AdminPortalSessionCookie;
-import com.hermes.backend.Runner;
+import com.hermes.backend.auth.AdminPortalSessionCookie;
+import com.hermes.backend.runner.Runner;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,10 +16,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/auth/admin-mfa")

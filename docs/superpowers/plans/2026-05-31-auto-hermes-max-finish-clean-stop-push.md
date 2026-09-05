@@ -4,17 +4,17 @@
 
 **Goal:** Make the live `/auto-hermes` and `/auto-hermes-max` finish helper honor the documented clean-stop auto-push case when the tree is clean but the current branch still has unpublished local commits.
 
-**Architecture:** Keep the fix centered in `.tools/auto-hermes-finish.mjs` so round-close and max-loop callers inherit the behavior automatically. Separate `commit-needed` from `push-needed` evaluation, then allow a push-only execution path when repo/remote/docker gates pass and the branch is ahead of its published origin state.
+**Architecture:** Keep the fix centered in `tools/auto-hermes-finish.mjs` so round-close and max-loop callers inherit the behavior automatically. Separate `commit-needed` from `push-needed` evaluation, then allow a push-only execution path when repo/remote/docker gates pass and the branch is ahead of its published origin state.
 
-**Tech Stack:** Node.js ESM tooling, PowerShell/git helpers, existing `.tools` test harness.
+**Tech Stack:** Node.js ESM tooling, PowerShell/git helpers, existing `tools` test harness.
 
 ---
 
 ### Task 1: Capture the regression in finish-helper tests
 
 **Files:**
-- Modify: `.tools/auto-hermes-tools.test.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Modify: `tools/auto-hermes-tools.test.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Add a failing regression test for clean-tree unpublished commits**
 
@@ -29,14 +29,14 @@ Expected before the fix: finish result is not eligible or does not emit a push-o
 
 - [ ] **Step 2: Run the focused test and confirm the RED failure**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: FAIL on the new clean-tree unpublished-commit auto-push assertion.
 
 ### Task 2: Implement push-only clean-stop eligibility
 
 **Files:**
-- Modify: `.tools/auto-hermes-finish.mjs`
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Modify: `tools/auto-hermes-finish.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Add branch publication detection helpers**
 
@@ -57,12 +57,12 @@ Keep commit eligibility based on publishable changed files, but add push-only el
 
 When commit is not needed but push is needed:
 - render a direct `git push origin <branch>` command in the finish artifact
-- execute that push path instead of calling `.tools/auto-commit.ps1`
+- execute that push path instead of calling `tools/auto-commit.ps1`
 
 - [ ] **Step 4: Re-run the focused test and confirm GREEN**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
-Expected: PASS for the new regression case and all existing `.tools` helper assertions.
+Run: `node tools/auto-hermes-tools.test.mjs`
+Expected: PASS for the new regression case and all existing `tools` helper assertions.
 
 ### Task 3: Refresh ownership docs only if implementation wording still drifts
 
@@ -81,11 +81,11 @@ Clarify that the finish helper may push an already-committed current branch on a
 ### Task 4: Final verification
 
 **Files:**
-- Test: `.tools/auto-hermes-tools.test.mjs`
+- Test: `tools/auto-hermes-tools.test.mjs`
 
 - [ ] **Step 1: Run the focused verification command**
 
-Run: `node .tools/auto-hermes-tools.test.mjs`
+Run: `node tools/auto-hermes-tools.test.mjs`
 Expected: PASS
 
 - [ ] **Step 2: Inspect the changed finish-helper behavior**

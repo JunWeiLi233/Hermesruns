@@ -9,8 +9,8 @@
   ],
   "searchOnlyArchives": [
     "README.md",
-    ".ai-sync/CONTEXT_LEDGER.md",
-    ".ai-sync/AGENT_SYNC.md",
+    ".workspace/state/CONTEXT_LEDGER.md",
+    ".workspace/state/AGENT_SYNC.md",
     "DESIGN_VERSIONS.md"
   ],
   "guardedInstructionPaths": [

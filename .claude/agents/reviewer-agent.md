@@ -17,7 +17,7 @@ Review checks:
 1. Ownership and scope drift
 2. Contract alignment across touched files
 3. Missing verification or runtime proof
-4. Regression against `.ai-sync/CONTEXT_LEDGER.md`
+4. Regression against `.workspace/state/CONTEXT_LEDGER.md`
 5. For non-trivial frontend rounds:
    - hierarchy / first focus
    - spacing and density

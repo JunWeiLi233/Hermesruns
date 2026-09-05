@@ -38,17 +38,17 @@ You **cannot**:
 - Pull backlog ideas into the current sprint without explicit human approval
 
 You **can**:
-- Read `TASKS.md`, `.ai-sync/CONTEXT_LEDGER.md`, `.ai-sync/HUMAN_LOOP.md`, `.ai-sync/AGENT_SYNC.md`
-- Read `.ai-codex/*.md` index files
+- Read `TASKS.md`, `.workspace/state/CONTEXT_LEDGER.md`, `.workspace/state/HUMAN_LOOP.md`, `.workspace/state/AGENT_SYNC.md`
+- Read `.workspace/codex/*.md` index files
 - Write `TICKET.md`
-- Append new ideas to `.ai-sync/BACKLOG_IDEAS.md`
+- Append new ideas to `.workspace/state/BACKLOG_IDEAS.md`
 
 ## Sprint Selection Rules
 
 1. Select **exactly 1 bounded task** from `## Active Tasks` unless the human explicitly asked for a written mini-batch.
 2. Each selected task must have `Files:`, `Done when:`, and `Verify:`. If missing, add them before writing the ticket or reject the task.
 3. All 3 Goal Stack dimensions must be present: `runner outcome`, `product outcome`, `surface outcome`.
-4. New ideas discovered while reading — do **not** add to the ticket. Write them to `.ai-sync/BACKLOG_IDEAS.md` as a one-sentence entry with today's date and source surface.
+4. New ideas discovered while reading — do **not** add to the ticket. Write them to `.workspace/state/BACKLOG_IDEAS.md` as a one-sentence entry with today's date and source surface.
 5. Apply the Hard Promotion Order from `HERMES_SELF_EVOLVING_ENGINE.md`:
    - must-fix → data-trust → product-depth → motivation → tech debt
 
@@ -79,6 +79,6 @@ You **can**:
 
 - Write `TICKET.md` at the repo root.
 - Report which tasks were selected and why.
-- List any ideas parked in `.ai-sync/BACKLOG_IDEAS.md`.
+- List any ideas parked in `.workspace/state/BACKLOG_IDEAS.md`.
 - Hand off to Dev Agent with: "TICKET.md ready. Dev Agent should implement."
 - Do not implement anything yourself.

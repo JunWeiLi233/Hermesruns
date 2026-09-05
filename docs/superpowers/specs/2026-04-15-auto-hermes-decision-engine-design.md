@@ -18,10 +18,10 @@ The engine must produce a recommendation every successful round unless a real st
 
 Today, Auto-Hermes decision-making is split across several helpers:
 
-- `.tools/auto-hermes-controller.mjs`
-- `.tools/auto-hermes-round-close.mjs`
-- `.tools/suggest-tasks.mjs`
-- `.tools/auto-hermes-max.mjs`
+- `tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-round-close.mjs`
+- `tools/suggest-tasks.mjs`
+- `tools/auto-hermes-max.mjs`
 
 That split creates drift:
 
@@ -100,7 +100,7 @@ Low confidence does not mean “stop.” It means “choose the safest winner an
 
 Add one new shared helper:
 
-- `.tools/auto-hermes-decision-engine.mjs`
+- `tools/auto-hermes-decision-engine.mjs`
 
 This helper becomes the single authority for:
 
@@ -113,9 +113,9 @@ This helper becomes the single authority for:
 
 These existing tools consume the decision engine instead of re-deciding locally:
 
-- `.tools/auto-hermes-controller.mjs`
-- `.tools/auto-hermes-round-close.mjs`
-- `.tools/auto-hermes-max.mjs`
+- `tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-round-close.mjs`
+- `tools/auto-hermes-max.mjs`
 
 ### Outputs
 
@@ -170,7 +170,7 @@ The engine should evaluate candidates in this order:
 1. open `## Active Tasks`
 2. promotable `## Suggested Next Tasks`
 3. promotable `## Tech Debt Tasks`
-4. analyzer output from `.tools/suggest-tasks.mjs`
+4. analyzer output from `tools/suggest-tasks.mjs`
 5. generated fallback candidate from the just-finished surface if the first four are empty
 
 The generated fallback should be bounded, concrete, and derived from:
@@ -267,14 +267,14 @@ This preserves autonomy while staying truthful.
 
 ### Create
 
-- `.tools/auto-hermes-decision-engine.mjs`
+- `tools/auto-hermes-decision-engine.mjs`
 
 ### Modify
 
-- `.tools/auto-hermes-controller.mjs`
-- `.tools/auto-hermes-round-close.mjs`
-- `.tools/auto-hermes-max.mjs`
-- `.tools/auto-hermes-tools.test.mjs`
+- `tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-round-close.mjs`
+- `tools/auto-hermes-max.mjs`
+- `tools/auto-hermes-tools.test.mjs`
 
 Possibly:
 

@@ -13,8 +13,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview",
-    "codex": "node ../.tools/generate-codex.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -51,7 +51,7 @@ Reviewer rollback contract
   - commit hash, if available
   - design version from `DESIGN_VERSIONS.md`, if relevant
   - otherwise the explicit owned surface/files to restore
-- Record rollback awareness in `.ai-sync/AGENT_SYNC.md` when handing off a must-fix or approving a round.
+- Record rollback awareness in `.workspace/state/AGENT_SYNC.md` when handing off a must-fix or approving a round.
 - If no safe rollback anchor can be identified, escalate that risk in the review output.
 
 Quality bar for every task

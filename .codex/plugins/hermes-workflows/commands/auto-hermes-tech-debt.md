@@ -12,6 +12,6 @@ Run the shared Hermes debt-audit engine and write step-by-step debt tasks into `
 
 ## Command Notes
 
-- Shared engine: `node .tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write`
+- Shared engine: `node tools/auto-hermes-tech-debt.mjs --command-name auto-hermes-tech-debt --write`
 - Shared contract: `.codex/workflows/auto-hermes-tech-debt-contract.md`
-- Report artifacts land under `.ai-sync/tech-debt/`
+- Report artifacts land under `.workspace/state/tech-debt/`

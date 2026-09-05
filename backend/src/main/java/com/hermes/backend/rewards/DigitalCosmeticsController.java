@@ -1,18 +1,16 @@
 package com.hermes.backend.rewards;
 
-import com.hermes.backend.AuthService;
-import com.hermes.backend.Runner;
-
+import com.hermes.backend.auth.AuthService;
+import com.hermes.backend.runner.Runner;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cosmetics")

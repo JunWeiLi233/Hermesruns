@@ -13,8 +13,8 @@
 ### Task 1: Lock the map-background contract
 
 **Files:**
-- Modify: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
-- Test: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
+- Modify: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
+- Test: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 - [x] **Step 1: Add failing source and CSS assertions**
 
@@ -52,7 +52,7 @@ assert(
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runDetailProfileCockpit.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js
 ```
 
 Expected: FAIL on the first new map-background assertion because `RunDetail.jsx` still renders `#route-map` inside `.run-detail-profile-map`.
@@ -60,8 +60,8 @@ Expected: FAIL on the first new map-background assertion because `RunDetail.jsx`
 ### Task 2: Move the existing Leaflet mount into the background plane
 
 **Files:**
-- Modify: `frontend/src/pages/RunDetail.jsx`
-- Test: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
+- Modify: `frontend/src/pages/runs/RunDetail.jsx`
+- Test: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 - [x] **Step 1: Add route-state geometry and resize handling**
 
@@ -125,7 +125,7 @@ return () => {
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runDetailProfileCockpit.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js
 ```
 
 Expected: the source-structure assertions pass; CSS assertions remain RED until Task 3.
@@ -134,7 +134,7 @@ Expected: the source-structure assertions pass; CSS assertions remain RED until 
 
 **Files:**
 - Modify: `frontend/src/styles/run-detail-profile-minimal.css`
-- Test: `frontend/src/pages/runDetailProfileCockpit.smoke.test.js`
+- Test: `frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js`
 
 - [x] **Step 1: Add desktop map and foreground layering**
 
@@ -257,7 +257,7 @@ Add the shared shell-breakpoint override:
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runDetailProfileCockpit.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js
 & 'C:\Program Files\nodejs\node.exe' frontend/src/pages/runnerShellSidebarRedesign.smoke.test.js
 ```
 
@@ -267,7 +267,7 @@ Expected: both commands print `[PASS]` and exit 0.
 
 **Files:**
 - Modify: `DESIGN_VERSIONS.md`
-- Verify: `frontend/src/pages/RunDetail.jsx`
+- Verify: `frontend/src/pages/runs/RunDetail.jsx`
 - Verify: `frontend/src/styles/run-detail-profile-minimal.css`
 
 - [x] **Step 1: Append the design-version entry**
@@ -291,7 +291,7 @@ Expected: Vite exits 0 and copies the built frontend into backend static resourc
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/RunDetail.jsx frontend/src/styles/run-detail-profile-minimal.css frontend/src/pages/runDetailProfileCockpit.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' tools/verify-frontend-runtime-sync.mjs --files frontend/src/pages/runs/RunDetail.jsx frontend/src/styles/run-detail-profile-minimal.css frontend/src/pages/runs/__tests__/runDetailProfileCockpit.smoke.test.js
 ```
 
 Expected: runtime sync reports the changed source represented in built static state.

@@ -24,7 +24,7 @@ Do not own
 Required workflow
 1. Read the active task or handoff note first.
 2. Read `design.md` as the default Hermes visual core, then extract the page-specific direction from the current task, user brief, and any provided reference.
-3. Read `.ai-sync/CONTEXT_LEDGER.md` for the owned surface before major redesign or structure changes.
+3. Read `.workspace/state/CONTEXT_LEDGER.md` for the owned surface before major redesign or structure changes.
 4. If MemPalace is available, search the frontend or design memory first when the task touches a previously changed surface, recurring translation trap, or known UX decision.
 5. Read only the smallest relevant frontend surface.
 6. Keep copy in coach voice and update both languages for any user-visible text change.
@@ -50,7 +50,7 @@ Design guardrails
 Verification bar
 - Check the touched UI at mobile and desktop widths when layout changes.
 - Run frontend lint for touched frontend files.
-- Run `node .tools/check-translations.mjs` after any copy or translation-key change and treat exit `1` as a blocker.
+- Run `node tools/check-translations.mjs` after any copy or translation-key change and treat exit `1` as a blocker.
 - If website-facing frontend code changed, sync the live bundle before claiming the site changed.
 
 Output contract

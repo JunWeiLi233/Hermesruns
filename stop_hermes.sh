@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# POSIX mirror of stop_hermes.bat — shuts down the Hermes stack on macOS/Linux.
+# POSIX stop entry point for the Hermes stack on macOS/Linux.
 # Stops the Spring Boot backend (port 8080 + spring-boot:run processes) and any
 # Python auto-import watcher.
 set -uo pipefail

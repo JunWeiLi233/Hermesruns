@@ -14,17 +14,17 @@ Use this guide for everyday local operation of the Hermes autonomous loops.
 
 Use when you want one continuous bounded improvement loop that can pull work from the queue and, when needed, fall back to website audit.
 
-This guide is for standard `/auto-hermes`. For `/auto-hermes-self`, do not run `.tools/generate-codex.js`; use the self command/skill and spawn parent-session Codex subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
+This guide is for standard `/auto-hermes`. For `/auto-hermes-self`, do not run `tools/generate-codex.js`; use the self command/skill and spawn parent-session Codex subagents with `multi_agent_v1.spawn_agent` when delegation is needed.
 
 Typical operator flow:
 
 1. Refresh repo context:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js
-& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
-powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
-& 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js
+& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
+powershell -ExecutionPolicy Bypass -File tools/mempalace/auto-session-sync.ps1 -Quiet
+& 'C:\Program Files\nodejs\node.exe' tools/omx-auto-hermes-bridge.mjs
 ```
 
 2. Start the standard loop:
@@ -61,16 +61,16 @@ This is the exact high-level flow for a no-argument run:
 1. Session bootstrap:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/generate-codex.js
-& 'C:\Program Files\nodejs\node.exe' .tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
-powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 -Quiet
-& 'C:\Program Files\nodejs\node.exe' .tools/omx-auto-hermes-bridge.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/generate-codex.js
+& 'C:\Program Files\nodejs\node.exe' tools/optimize-agent-context.mjs --agent codex --tasks TASKS.md --guide AGENTS.md --queue-mode first --write
+powershell -ExecutionPolicy Bypass -File tools/mempalace/auto-session-sync.ps1 -Quiet
+& 'C:\Program Files\nodejs\node.exe' tools/omx-auto-hermes-bridge.mjs
 ```
 
 2. Parent planner:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-max.mjs --write --runtime codex-live
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-max.mjs --write --runtime codex-live
 ```
 
 3. If queue work exists:
@@ -84,64 +84,64 @@ powershell -ExecutionPolicy Bypass -File .tools/mempalace/auto-session-sync.ps1 
 5. Parent iteration helper:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-max-loop.mjs --write --runtime codex-live --dry-run
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-max-loop.mjs --write --runtime codex-live --dry-run
 ```
 
 6. Merge/reassessment:
 - after child lane execution, merge state is refreshed and the parent reassesses whether another bounded round exists
 
-## Expected `.ai-sync` Artifacts
+## Expected `.workspace/state` Artifacts
 
 For one sample `/auto-hermes-max` run, expect these artifacts:
 
 ### Queue / controller
 
-- `.ai-sync/AUTO_HERMES_CONTROLLER.json`
-- `.ai-sync/AUTO_HERMES_CONTROLLER.md`
-- `.ai-sync/AUTO_HERMES_PROMOTION.json`
-- `.ai-sync/AUTO_HERMES_PROMOTION.md`
+- `.workspace/state/AUTO_HERMES_CONTROLLER.json`
+- `.workspace/state/AUTO_HERMES_CONTROLLER.md`
+- `.workspace/state/AUTO_HERMES_PROMOTION.json`
+- `.workspace/state/AUTO_HERMES_PROMOTION.md`
 
 ### Standard loop
 
-- `.ai-sync/AUTO_HERMES_LOOP.json`
-- `.ai-sync/AUTO_HERMES_LOOP.md`
-- `.ai-sync/AUTO_HERMES_LOOP_STATE.json`
-- `.ai-sync/AUTO_HERMES_COORDINATOR.json`
-- `.ai-sync/AUTO_HERMES_COORDINATOR.md`
+- `.workspace/state/AUTO_HERMES_LOOP.json`
+- `.workspace/state/AUTO_HERMES_LOOP.md`
+- `.workspace/state/AUTO_HERMES_LOOP_STATE.json`
+- `.workspace/state/AUTO_HERMES_COORDINATOR.json`
+- `.workspace/state/AUTO_HERMES_COORDINATOR.md`
 
 ### Max parent loop
 
-- `.ai-sync/AUTO_HERMES_MAX.json`
-- `.ai-sync/AUTO_HERMES_MAX.md`
-- `.ai-sync/AUTO_HERMES_MAX_COORDINATOR.json`
-- `.ai-sync/AUTO_HERMES_MAX_COORDINATOR.md`
-- `.ai-sync/AUTO_HERMES_MAX_LOOP.json`
-- `.ai-sync/AUTO_HERMES_MAX_LOOP.md`
-- `.ai-sync/AUTO_HERMES_MAX_LOOP_BRIEF.json`
-- `.ai-sync/AUTO_HERMES_MAX_LOOP_BRIEF.md`
-- `.ai-sync/AUTO_HERMES_MAX_MERGE.json`
-- `.ai-sync/AUTO_HERMES_MAX_MERGE.md`
-- `.ai-sync/AUTO_HERMES_MAX_EXPLORER.json`
-- `.ai-sync/AUTO_HERMES_MAX_EXPLORER.md`
+- `.workspace/state/AUTO_HERMES_MAX.json`
+- `.workspace/state/AUTO_HERMES_MAX.md`
+- `.workspace/state/AUTO_HERMES_MAX_COORDINATOR.json`
+- `.workspace/state/AUTO_HERMES_MAX_COORDINATOR.md`
+- `.workspace/state/AUTO_HERMES_MAX_LOOP.json`
+- `.workspace/state/AUTO_HERMES_MAX_LOOP.md`
+- `.workspace/state/AUTO_HERMES_MAX_LOOP_BRIEF.json`
+- `.workspace/state/AUTO_HERMES_MAX_LOOP_BRIEF.md`
+- `.workspace/state/AUTO_HERMES_MAX_MERGE.json`
+- `.workspace/state/AUTO_HERMES_MAX_MERGE.md`
+- `.workspace/state/AUTO_HERMES_MAX_EXPLORER.json`
+- `.workspace/state/AUTO_HERMES_MAX_EXPLORER.md`
 
 ### Website audit
 
-- `.ai-sync/AUTO_HERMES_WEBSITE_AUDIT.json`
-- `.ai-sync/AUTO_HERMES_WEBSITE_AUDIT.md`
+- `.workspace/state/AUTO_HERMES_WEBSITE_AUDIT.json`
+- `.workspace/state/AUTO_HERMES_WEBSITE_AUDIT.md`
 
 These appear when queue exhaustion hands off to website audit and a bounded fallback candidate is evaluated.
 
 ### Run-state / continuity
 
-- `.ai-sync/auto-hermes-run-state/*.json`
+- `.workspace/state/auto-hermes-run-state/*.json`
 
 These are the durable run records used by the new run-state helper.
 
 ### Trace / learning
 
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.json`
-- `.ai-sync/AUTO_HERMES_TRACE_TO_SKILL.md`
-- `.ai-sync/trace-to-skill/rounds/*.json`
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.json`
+- `.workspace/state/AUTO_HERMES_TRACE_TO_SKILL.md`
+- `.workspace/state/trace-to-skill/rounds/*.json`
 - `.codex/skills/auto-hermes-evolved/SKILL.md`
 - `.codex/skills/auto-hermes-evolved/references/edge-cases.md`
 
@@ -153,7 +153,7 @@ The evolved trace skill is refreshed automatically from repo-side round evidence
 - Website audit is now the first fallback for both standard and max loops.
 - Non-empty queue situations like claim contention must not be counted as website-audit exhaustion.
 - The supervisor file exists as a bounded continuity skeleton:
-  - `.tools/auto-hermes-supervisor.mjs`
+  - `tools/auto-hermes-supervisor.mjs`
 - It models the intended long-running continuity layer, but the live max path is not yet fully routed through it.
 
 ## Fast Verification
@@ -161,7 +161,7 @@ The evolved trace skill is refreshed automatically from repo-side round evidence
 Run this from the repo root after copying/updating the local helper surfaces:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' .tools/auto-hermes-tools.test.mjs
+& 'C:\Program Files\nodejs\node.exe' tools/auto-hermes-tools.test.mjs
 ```
 
 Expected:

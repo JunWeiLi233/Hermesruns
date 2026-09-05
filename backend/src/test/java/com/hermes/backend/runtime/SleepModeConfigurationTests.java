@@ -1,8 +1,8 @@
 package com.hermes.backend.runtime;
 
-import com.hermes.backend.Coach8020NightlyScheduler;
-import com.hermes.backend.GarminWellnessSyncScheduler;
-import com.hermes.backend.StravaAutoSyncScheduler;
+import com.hermes.backend.coaching.Coach8020NightlyScheduler;
+import com.hermes.backend.imports.GarminWellnessSyncScheduler;
+import com.hermes.backend.imports.StravaAutoSyncScheduler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

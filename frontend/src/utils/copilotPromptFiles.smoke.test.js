@@ -17,7 +17,7 @@ const promptFiles = [
   {
     file: '.github/prompts/auto-hermes-self.prompt.md',
     command: '/auto-hermes-self',
-    references: ['.codex/commands/auto-hermes-self.md', '.tools/auto-hermes-self-loop.mjs'],
+    references: ['.codex/commands/auto-hermes-self.md', 'tools/auto-hermes-self-loop.mjs'],
   },
   {
     file: '.github/prompts/auto-hermes-max.prompt.md',
@@ -32,12 +32,12 @@ const promptFiles = [
   {
     file: '.github/prompts/auto-hermes-attack.prompt.md',
     command: '/auto-hermes-attack',
-    references: ['.codex/commands/auto-hermes-attack.md', '.tools/auto-hermes-security.mjs'],
+    references: ['.codex/commands/auto-hermes-attack.md', 'tools/auto-hermes-security.mjs'],
   },
   {
     file: '.github/prompts/auto-hermes-security.prompt.md',
     command: '/auto-hermes-security',
-    references: ['.codex/commands/auto-hermes-security.md', '.tools/auto-hermes-security.mjs'],
+    references: ['.codex/commands/auto-hermes-security.md', 'tools/auto-hermes-security.mjs'],
   },
   {
     file: '.github/prompts/auto-hermes-tech-debt.prompt.md',

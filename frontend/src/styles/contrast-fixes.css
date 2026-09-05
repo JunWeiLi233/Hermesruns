@@ -1,6 +1,6 @@
 /* ============================================================================
    Cross-surface contrast fixes — WCAG-AA pass for low-ratio text discovered by
-   `.tools/one-shot-contrast-audit.mjs`. Loaded LAST from index.css so it wins
+   `tools/one-shot-contrast-audit.mjs`. Loaded LAST from index.css so it wins
    the cascade. All overrides anchored on `#root` so they beat the page-scoped
    `:is(...) :is(...) :is(...)` rules whose multi-class arguments push their
    specificity to (0, 5, 0) — that's the same trap that hid the insight-card

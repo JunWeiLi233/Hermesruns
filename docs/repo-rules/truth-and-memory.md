@@ -55,4 +55,4 @@ Do not write back scratch notes, temporary TODOs, or trivial copy edits.
 
 - Prefer MemPalace for long-term memory when available.
 - Treat `memory.md` as a tiny fallback for stable preferences or workflow invariants only.
-- Treat `.ai-codex/CODEX_CHECKPOINT.md` as the active progress-resume file, not as durable knowledge.
+- Treat `.workspace/codex/CODEX_CHECKPOINT.md` as the active progress-resume file, not as durable knowledge.

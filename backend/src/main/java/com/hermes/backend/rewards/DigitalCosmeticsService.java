@@ -1,17 +1,22 @@
 package com.hermes.backend.rewards;
 
-import com.hermes.backend.Activity;
-import com.hermes.backend.ActivityPointRepository;
-import com.hermes.backend.ActivityRepository;
-import com.hermes.backend.ActivityType;
-import com.hermes.backend.CoachScheduledWorkout;
-import com.hermes.backend.CoachScheduledWorkoutRepository;
-import com.hermes.backend.CoachWorkoutType;
-import com.hermes.backend.Runner;
-import com.hermes.backend.RunnerRepository;
-import com.hermes.backend.Shoe;
-import com.hermes.backend.ShoeRepository;
-
+import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityPointRepository;
+import com.hermes.backend.activity.ActivityRepository;
+import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.coaching.CoachScheduledWorkout;
+import com.hermes.backend.coaching.CoachScheduledWorkoutRepository;
+import com.hermes.backend.coaching.CoachWorkoutType;
+import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
+import com.hermes.backend.shoes.Shoe;
+import com.hermes.backend.shoes.ShoeRepository;
+import java.net.URI;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
@@ -20,13 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.net.URI;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class DigitalCosmeticsService {

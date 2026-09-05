@@ -13,7 +13,7 @@
 ### Task 1: Add failing tests for the new discovery and prompt rules
 
 **Files:**
-- Modify: `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
 
 - [ ] **Step 1: Add a failing test for the richer alignment prompt**
 - [ ] **Step 2: Add a failing test for the expanded search queries and official URL patterns**
@@ -24,7 +24,7 @@ Run: `cd backend && ./mvnw test -Dtest=RaceCourseMapServiceTests`
 ### Task 2: Add failing tests for PDF paging, adaptive confidence, and centroid tightening
 
 **Files:**
-- Modify: `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
 
 - [ ] **Step 1: Add a failing test proving later PDF pages can be used**
 - [ ] **Step 2: Add a failing test for the 55+ confidence adaptive retry path**
@@ -36,7 +36,7 @@ Run: `cd backend && ./mvnw test -Dtest=RaceCourseMapServiceTests`
 ### Task 3: Add failing tests for OSRM snapping
 
 **Files:**
-- Modify: `backend/src/test/java/com/hermes/backend/RaceCourseMapServiceTests.java`
+- Modify: `backend/src/test/java/com/hermes/backend/races/RaceCourseMapServiceTests.java`
 
 - [ ] **Step 1: Add a failing test that the resolved route uses snapped coordinates when OSRM succeeds**
 - [ ] **Step 2: Add a failing test that the service falls back to unsnapped points if OSRM throws**
@@ -47,7 +47,7 @@ Run: `cd backend && ./mvnw test -Dtest=RaceCourseMapServiceTests`
 ### Task 4: Implement the RaceCourseMapService upgrades
 
 **Files:**
-- Modify: `backend/src/main/java/com/hermes/backend/RaceCourseMapService.java`
+- Modify: `backend/src/main/java/com/hermes/backend/races/RaceCourseMapService.java`
 
 - [ ] **Step 1: Expand candidate discovery and scoring**
 - [ ] **Step 2: Enrich the alignment prompt with race-specific context from the fields that actually exist in Hermes**

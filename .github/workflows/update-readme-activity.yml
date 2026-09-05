@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: "20"
       - name: Generate README activity graph
-        run: node .tools/update-readme-activity.mjs
+        run: node tools/update-readme-activity.mjs
       - name: Publish updated graph branch
         env:
           ACTIVITY_BRANCH: automation/readme-activity

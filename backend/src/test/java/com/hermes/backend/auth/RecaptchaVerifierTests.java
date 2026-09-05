@@ -1,0 +1,23 @@
+package com.hermes.backend.auth;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class RecaptchaVerifierTests {
+
+    @Test
+    void normalizeRemovesWrappingQuotesFromRailwayCopiedValues() {
+        assertThat(RecaptchaConfiguration.normalize("  \"secret-value\"  ")).isEqualTo("secret-value");
+        assertThat(RecaptchaConfiguration.normalize("'site-value'")).isEqualTo("site-value");
+    }
+
+    @Test
+    void verifyAllowsSignupWhenRecaptchaSecretIsNotConfigured() {
+        RecaptchaVerifier verifier = new RecaptchaVerifier();
+        ReflectionTestUtils.setField(verifier, "secretKey", "");
+
+        assertThat(verifier.verify("", "signup")).isTrue();
+    }
+}

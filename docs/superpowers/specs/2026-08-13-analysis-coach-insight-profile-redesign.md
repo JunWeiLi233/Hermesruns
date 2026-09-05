@@ -126,7 +126,7 @@ Required verification:
 - Locale syntax checks if copy changes.
 - `npm run lint` with no new errors.
 - `node scripts/run-vite-build.mjs`.
-- `.tools/verify-frontend-runtime-sync.mjs` for the edited frontend files.
+- `tools/verify-frontend-runtime-sync.mjs` for the edited frontend files.
 - Browser or equivalent live visual proof when `http://localhost:8080` is available; otherwise report that live proof is pending.
 
 ## Non-Goals

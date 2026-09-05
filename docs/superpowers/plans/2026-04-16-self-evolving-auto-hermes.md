@@ -1,5 +1,11 @@
 # Self-Evolving Auto-Hermes Implementation Plan
 
+Maintenance note (2026-09-04): the empty `tools/auto-hermes-config-history.json`
+placeholder mentioned below was removed after confirming no current tool consumes
+it. The history/evolution sections remain a historical proposal, not a runnable
+description of config-history support. The live config and human-loop JSON inputs
+remain in use by the controller.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Transform auto-hermes into a fully autonomous, self-evolving system that never crashes without recovery, measures its own performance, tunes its own parameters, and discovers problems without human intervention.
@@ -16,26 +22,26 @@
 
 | File | Layer | Responsibility |
 |------|-------|----------------|
-| `.ai-sync/AUTO_HERMES_LOOP_STATE.json` | 1 | Persistent loop state for crash recovery and resume |
-| `.tools/auto-hermes-health-check.mjs` | 1 | State file validation, schema checks, auto-repair |
-| `.tools/auto-hermes-rollback.mjs` | 1 | Safe automated rollback for bad rounds |
-| `.tools/auto-hermes-human-loop.json` | 1 | Autonomous-first human gate config |
-| `.ai-sync/AUTO_HERMES_TELEMETRY.json` | 2 | Per-round measurements and moving averages |
-| `.tools/auto-hermes-config.json` | 3 | All tunable parameters in one place |
-| `.tools/auto-hermes-config-history.json` | 3 | Rollback safety for config changes |
-| `.tools/auto-hermes-evolve.mjs` | 3 | Adaptation kernel: observe 鈫?diagnose 鈫?propose 鈫?apply 鈫?verify |
-| `.ai-sync/AUTO_HERMES_ROUTING_STATS.json` | 3 | Per-shape success rates for adaptive routing |
-| `.tools/auto-hermes-discover.mjs` | 4 | Dynamic problem discovery from 6 sources |
-| `.tools/auto-hermes-health-monitor.mjs` | 4 | Continuous health monitoring dashboard |
+| `.workspace/state/AUTO_HERMES_LOOP_STATE.json` | 1 | Persistent loop state for crash recovery and resume |
+| `tools/auto-hermes-health-check.mjs` | 1 | State file validation, schema checks, auto-repair |
+| `tools/auto-hermes-rollback.mjs` | 1 | Safe automated rollback for bad rounds |
+| `tools/auto-hermes-human-loop.json` | 1 | Autonomous-first human gate config |
+| `.workspace/state/AUTO_HERMES_TELEMETRY.json` | 2 | Per-round measurements and moving averages |
+| `tools/auto-hermes-config.json` | 3 | All tunable parameters in one place |
+| `tools/auto-hermes-config-history.json` | 3 | Rollback safety for config changes |
+| `tools/auto-hermes-evolve.mjs` | 3 | Adaptation kernel: observe 鈫?diagnose 鈫?propose 鈫?apply 鈫?verify |
+| `.workspace/state/AUTO_HERMES_ROUTING_STATS.json` | 3 | Per-shape success rates for adaptive routing |
+| `tools/auto-hermes-discover.mjs` | 4 | Dynamic problem discovery from 6 sources |
+| `tools/auto-hermes-health-monitor.mjs` | 4 | Continuous health monitoring dashboard |
 
 ### Modified Files
 
 | File | Layer | Changes |
 |------|-------|---------|
-| `.tools/auto-hermes-loop.mjs` | 1,2,3 | Persistent state read/write, crash recovery, executor retry, health check integration, telemetry read |
-| `.tools/auto-hermes-controller.mjs` | 1,3 | Read human-loop JSON first (fallback to MD), read config instead of hardcoded values, routing from config |
-| `.tools/auto-hermes-round-close.mjs` | 1,2,3 | Write observations to audit, numeric scorecards, telemetry append, trigger evolve, rollback integration |
-| `.tools/suggest-tasks.mjs` | 2,4 | Dynamic screen discovery, integrate test/lint/git sources |
+| `tools/auto-hermes-loop.mjs` | 1,2,3 | Persistent state read/write, crash recovery, executor retry, health check integration, telemetry read |
+| `tools/auto-hermes-controller.mjs` | 1,3 | Read human-loop JSON first (fallback to MD), read config instead of hardcoded values, routing from config |
+| `tools/auto-hermes-round-close.mjs` | 1,2,3 | Write observations to audit, numeric scorecards, telemetry append, trigger evolve, rollback integration |
+| `tools/suggest-tasks.mjs` | 2,4 | Dynamic screen discovery, integrate test/lint/git sources |
 | `HERMES_SELF_EVOLVING_ENGINE.md` | 3 | Reference config file instead of hardcoded rules, document evolution engine |
 | `AGENTS.md` | 1 | Update human gate references, document autonomous-first mode |
 | `.codex/workflows/auto-hermes-architecture.md` | 1 | Document resilience layer, persistent state, crash recovery |
@@ -47,12 +53,12 @@
 ### Task 1.1: Create persistent loop state schema and read/write utilities
 
 **Files:**
-- Create: `.tools/auto-hermes-loop-state.json`
-- Modify: `.tools/auto-hermes-loop.mjs`
+- Create: `tools/auto-hermes-loop-state.json`
+- Modify: `tools/auto-hermes-loop.mjs`
 
 - [ ] **Step 1: Write the initial loop state schema**
 
-Create `.tools/auto-hermes-loop-state.json` with default values:
+Create `tools/auto-hermes-loop-state.json` with default values:
 
 ```json
 {
@@ -76,11 +82,11 @@ Create `.tools/auto-hermes-loop-state.json` with default values:
 
 - [ ] **Step 2: Add persistent state read/write functions to auto-hermes-loop.mjs**
 
-In `.tools/auto-hermes-loop.mjs`, add these functions after the existing `readOptional` function:
+In `tools/auto-hermes-loop.mjs`, add these functions after the existing `readOptional` function:
 
 ```js
 function loadLoopState(args) {
-  const statePath = resolveFromRoot(args.loopStateJson || '.ai-sync/AUTO_HERMES_LOOP_STATE.json');
+  const statePath = resolveFromRoot(args.loopStateJson || '.workspace/state/AUTO_HERMES_LOOP_STATE.json');
   const fallback = {
     loopId: '',
     currentRound: 0,
@@ -102,7 +108,7 @@ function loadLoopState(args) {
 }
 
 function writeLoopState(args, state) {
-  const statePath = resolveFromRoot(args.loopStateJson || '.ai-sync/AUTO_HERMES_LOOP_STATE.json');
+  const statePath = resolveFromRoot(args.loopStateJson || '.workspace/state/AUTO_HERMES_LOOP_STATE.json');
   state.lastCheckpoint = new Date().toISOString();
   try {
     fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf-8');
@@ -115,7 +121,7 @@ function writeLoopState(args, state) {
 
 Add to `parseArgs` defaults:
 ```js
-loopStateJson: '.ai-sync/AUTO_HERMES_LOOP_STATE.json',
+loopStateJson: '.workspace/state/AUTO_HERMES_LOOP_STATE.json',
 ```
 
 - [ ] **Step 3: Integrate loop state into the main loop function**
@@ -161,15 +167,15 @@ Call this at the start of each round to set `persistedState.preRoundCommit`.
 
 Run:
 ```bash
-cd .tools && node auto-hermes-loop.mjs --dry-run --max-rounds 1
+cd tools && node auto-hermes-loop.mjs --dry-run --max-rounds 1
 ```
 
-Expected: `.ai-sync/AUTO_HERMES_LOOP_STATE.json` is created with `status: "idle"` or status reflecting the dry-run result. Run a second time and verify `currentRound` and `roundHistory` persist from the first run.
+Expected: `.workspace/state/AUTO_HERMES_LOOP_STATE.json` is created with `status: "idle"` or status reflecting the dry-run result. Run a second time and verify `currentRound` and `roundHistory` persist from the first run.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add .tools/auto-hermes-loop-state.json .tools/auto-hermes-loop.mjs
+git add tools/auto-hermes-loop-state.json tools/auto-hermes-loop.mjs
 git commit -m "feat(auto-hermes): add persistent loop state for crash recovery"
 ```
 
@@ -178,7 +184,7 @@ git commit -m "feat(auto-hermes): add persistent loop state for crash recovery"
 ### Task 1.2: Add executor crash recovery with retry logic
 
 **Files:**
-- Modify: `.tools/auto-hermes-loop.mjs`
+- Modify: `tools/auto-hermes-loop.mjs`
 
 - [ ] **Step 1: Add retry configuration to parseArgs defaults**
 
@@ -238,7 +244,7 @@ if (!execResult.success) {
 
 Run with an intentionally bad executor:
 ```bash
-cd .tools && node auto-hermes-loop.mjs --dry-run --max-rounds 1 --executor-command "exit 1"
+cd tools && node auto-hermes-loop.mjs --dry-run --max-rounds 1 --executor-command "exit 1"
 ```
 
 Expected: Loop state shows `status: "executor-unavailable"`, not a crash. Loop attempts re-promotion of the next task.
@@ -246,7 +252,7 @@ Expected: Loop state shows `status: "executor-unavailable"`, not a crash. Loop a
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .tools/auto-hermes-loop.mjs
+git add tools/auto-hermes-loop.mjs
 git commit -m "feat(auto-hermes): add executor crash recovery with retry and graceful degradation"
 ```
 
@@ -255,18 +261,18 @@ git commit -m "feat(auto-hermes): add executor crash recovery with retry and gra
 ### Task 1.3: Create state file health check utility
 
 **Files:**
-- Create: `.tools/auto-hermes-health-check.mjs`
+- Create: `tools/auto-hermes-health-check.mjs`
 
 - [ ] **Step 1: Write the health check script**
 
-Create `.tools/auto-hermes-health-check.mjs`:
+Create `tools/auto-hermes-health-check.mjs`:
 
 ```js
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..');
-const AI_SYNC = join(ROOT, '.ai-sync');
+const AI_SYNC = join(ROOT, '.workspace/state');
 const BACKUP_DIR = join(AI_SYNC, 'backups');
 
 function resolve(relPath) {
@@ -308,25 +314,25 @@ const STATE_FILES = {
     description: 'Task queue',
   },
   AGENT_SYNC_MD: {
-    path: '.ai-sync/AGENT_SYNC.md',
+    path: '.workspace/state/AGENT_SYNC.md',
     type: 'markdown',
     requiredSections: ['## Active Claims', '## Recently Completed'],
     description: 'Agent coordination board',
   },
   CONTEXT_LEDGER_MD: {
-    path: '.ai-sync/CONTEXT_LEDGER.md',
+    path: '.workspace/state/CONTEXT_LEDGER.md',
     type: 'markdown',
     requiredSections: ['## Goal Stack', '## Surface Capsules'],
     description: 'Context ledger',
   },
   LOOP_STATE_MD: {
-    path: '.ai-sync/LOOP_STATE.md',
+    path: '.workspace/state/LOOP_STATE.md',
     type: 'markdown',
     requiredSections: [],
     description: 'Loop state',
   },
   LOOP_STATE_JSON: {
-    path: '.ai-sync/AUTO_HERMES_LOOP_STATE.json',
+    path: '.workspace/state/AUTO_HERMES_LOOP_STATE.json',
     type: 'json',
     schema: {
       loopId: 'string',
@@ -337,7 +343,7 @@ const STATE_FILES = {
     description: 'Loop state (JSON)',
   },
   HUMAN_LOOP_MD: {
-    path: '.ai-sync/HUMAN_LOOP.md',
+    path: '.workspace/state/HUMAN_LOOP.md',
     type: 'markdown',
     requiredSections: [],
     description: 'Human gate',
@@ -383,7 +389,7 @@ function checkJsonFile(entry) {
 function checkReferentialIntegrity() {
   const issues = [];
   const tasksText = readFile('TASKS.md');
-  const agentSyncText = readFile('.ai-sync/AGENT_SYNC.md');
+  const agentSyncText = readFile('.workspace/state/AGENT_SYNC.md');
   if (!tasksText || !agentSyncText) return issues;
 
   const activeTaskMatches = tasksText.match(/- \[ \] .+/g) || [];
@@ -395,7 +401,7 @@ function checkReferentialIntegrity() {
     if (!found) {
       issues.push({
         severity: 'warning',
-        file: '.ai-sync/AGENT_SYNC.md',
+        file: '.workspace/state/AGENT_SYNC.md',
         issue: `active claim references task not in Active Tasks: "${claimTask.substring(0, 50)}"`,
         action: 'review',
       });
@@ -486,7 +492,7 @@ export function runHealthCheck({ repair = false, write = false } = {}) {
   }
 
   if (write) {
-    const outputPath = resolve('.ai-sync/AUTO_HERMES_HEALTH_CHECK.json');
+    const outputPath = resolve('.workspace/state/AUTO_HERMES_HEALTH_CHECK.json');
     writeFileSync(outputPath, JSON.stringify(results, null, 2), 'utf-8');
   }
 
@@ -506,7 +512,7 @@ process.exit(results.healthy ? 0 : 1);
 
 - [ ] **Step 3: Write the corresponding markdown helper**
 
-Create `.tools/auto-hermes-health-check.mjs` also exports a markdown renderer (add to the file):
+Create `tools/auto-hermes-health-check.mjs` also exports a markdown renderer (add to the file):
 
 ```js
 export function renderHealthCheckMarkdown(results) {
@@ -556,8 +562,8 @@ if (!healthResult.healthy) {
 
 Run:
 ```bash
-node .tools/auto-hermes-health-check.mjs --write
-cat .ai-sync/AUTO_HERMES_HEALTH_CHECK.json
+node tools/auto-hermes-health-check.mjs --write
+cat .workspace/state/AUTO_HERMES_HEALTH_CHECK.json
 ```
 
 Expected: JSON health check output listing all state files and their status. Verify missing sections get flagged.
@@ -566,15 +572,15 @@ Expected: JSON health check output listing all state files and their status. Ver
 
 Run:
 ```bash
-node .tools/auto-hermes-health-check.mjs --repair --write
+node tools/auto-hermes-health-check.mjs --repair --write
 ```
 
-Expected: Minor issues are auto-repaired, backups created in `.ai-sync/backups/`.
+Expected: Minor issues are auto-repaired, backups created in `.workspace/state/backups/`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add .tools/auto-hermes-health-check.mjs .tools/auto-hermes-loop.mjs
+git add tools/auto-hermes-health-check.mjs tools/auto-hermes-loop.mjs
 git commit -m "feat(auto-hermes): add state file health check with auto-repair"
 ```
 
@@ -583,11 +589,11 @@ git commit -m "feat(auto-hermes): add state file health check with auto-repair"
 ### Task 1.4: Create automatic rollback utility
 
 **Files:**
-- Create: `.tools/auto-hermes-rollback.mjs`
+- Create: `tools/auto-hermes-rollback.mjs`
 
 - [ ] **Step 1: Write the rollback script**
 
-Create `.tools/auto-hermes-rollback.mjs`:
+Create `tools/auto-hermes-rollback.mjs`:
 
 ```js
 import { execFileSync } from 'node:child_process';
@@ -706,14 +712,14 @@ if (write && evaluation.canAutoRevert && !dryRun) {
 
 - [ ] **Step 2: Integrate rollback into round-close**
 
-In `.tools/auto-hermes-round-close.mjs`, add rollback evaluation after verdict processing:
+In `tools/auto-hermes-round-close.mjs`, add rollback evaluation after verdict processing:
 
 ```js
 import { evaluateRollback, executeRollback } from './auto-hermes-rollback.mjs';
 
 // After verdict is determined, before queue updates:
 if ((verdict === 'must-fix' || verdict === 'reverse-recommended') && args.rollback !== 'false') {
-  const loopState = loadJsonFile(args.loopStateJson || '.ai-sync/AUTO_HERMES_LOOP_STATE.json', {});
+  const loopState = loadJsonFile(args.loopStateJson || '.workspace/state/AUTO_HERMES_LOOP_STATE.json', {});
   const preRoundCommit = loopState.preRoundCommit || args.preRoundCommit;
   if (preRoundCommit) {
     const evaluation = evaluateRollback(preRoundCommit, {
@@ -742,7 +748,7 @@ preRoundCommit: '',
 - [ ] **Step 3: Test rollback evaluation on current repo**
 
 ```bash
-node .tools/auto-hermes-rollback.mjs --from=HEAD~1 --dry-run
+node tools/auto-hermes-rollback.mjs --from=HEAD~1 --dry-run
 ```
 
 Expected: JSON output showing evaluation of changes between HEAD~1 and HEAD. If changes are within limits, `canAutoRevert: true`.
@@ -750,7 +756,7 @@ Expected: JSON output showing evaluation of changes between HEAD~1 and HEAD. If 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .tools/auto-hermes-rollback.mjs .tools/auto-hermes-round-close.mjs
+git add tools/auto-hermes-rollback.mjs tools/auto-hermes-round-close.mjs
 git commit -m "feat(auto-hermes): add automatic rollback for must-fix and reverse-recommended rounds"
 ```
 
@@ -759,12 +765,12 @@ git commit -m "feat(auto-hermes): add automatic rollback for must-fix and revers
 ### Task 1.5: Create autonomous-first HUMAN_LOOP configuration
 
 **Files:**
-- Create: `.tools/auto-hermes-human-loop.json`
-- Modify: `.tools/auto-hermes-controller.mjs`
+- Create: `tools/auto-hermes-human-loop.json`
+- Modify: `tools/auto-hermes-controller.mjs`
 
 - [ ] **Step 1: Write the default autonomous human loop config**
 
-Create `.tools/auto-hermes-human-loop.json`:
+Create `tools/auto-hermes-human-loop.json`:
 
 ```json
 {
@@ -787,7 +793,7 @@ Create `.tools/auto-hermes-human-loop.json`:
 
 - [ ] **Step 2: Add JSON human loop reader to auto-hermes-controller.mjs**
 
-In `.tools/auto-hermes-controller.mjs`, modify the `parseHumanLoop` function to read the JSON config first:
+In `tools/auto-hermes-controller.mjs`, modify the `parseHumanLoop` function to read the JSON config first:
 
 ```js
 function parseHumanLoopJson(text) {
@@ -823,7 +829,7 @@ Update the `chooseWorkUnit` function to check JSON first:
 
 ```js
 // Replace the existing human loop reading logic:
-const humanLoopJsonPath = resolveFromRoot(args.humanLoopJson || '.tools/auto-hermes-human-loop.json');
+const humanLoopJsonPath = resolveFromRoot(args.humanLoopJson || 'tools/auto-hermes-human-loop.json');
 const humanLoopJsonText = readOptional(humanLoopJsonPath);
 let humanLoop;
 
@@ -893,7 +899,7 @@ result.irreversible = irreversibleKeywords.some(kw => taskTextLower.includes(kw)
 - [ ] **Step 5: Add parseArgs entry for humanLoopJson**
 
 ```js
-humanLoopJson: '.tools/auto-hermes-human-loop.json',
+humanLoopJson: 'tools/auto-hermes-human-loop.json',
 ```
 
 - [ ] **Step 6: Test autonomous mode**
@@ -901,7 +907,7 @@ humanLoopJson: '.tools/auto-hermes-human-loop.json',
 Create a test HUMAN_LOOP.json with `"mode": "pause"` and verify the controller still pauses:
 
 ```bash
-node .tools/auto-hermes-controller.mjs --dry-run --human-loop-json .tools/auto-hermes-human-loop.json
+node tools/auto-hermes-controller.mjs --dry-run --human-loop-json tools/auto-hermes-human-loop.json
 ```
 
 Expected: Controller respects the JSON config. With `mode: "autonomous"`, no pause. With `mode: "pause"`, shape returns "paused".
@@ -909,7 +915,7 @@ Expected: Controller respects the JSON config. With `mode: "autonomous"`, no pau
 - [ ] **Step 7: Commit**
 
 ```bash
-git add .tools/auto-hermes-human-loop.json .tools/auto-hermes-controller.mjs
+git add tools/auto-hermes-human-loop.json tools/auto-hermes-controller.mjs
 git commit -m "feat(auto-hermes): add autonomous-first HUMAN_LOOP with safety brakes"
 ```
 
@@ -931,11 +937,11 @@ Add reference to the new resilience tools and persistent state:
 
 Auto-hermes now includes a resilience layer that ensures the loop never dies without recovery:
 
-- **Persistent Loop State** (`.ai-sync/AUTO_HERMES_LOOP_STATE.json`): Loop state checkpoints after every round. On crash, the next run resumes from the last checkpoint.
+- **Persistent Loop State** (`.workspace/state/AUTO_HERMES_LOOP_STATE.json`): Loop state checkpoints after every round. On crash, the next run resumes from the last checkpoint.
 - **Executor Crash Recovery**: On executor failure, retry with exponential backoff (0s, 30s, 120s, max 3 attempts). If all retries fail, mark round as `executor-unavailable` and continue with the next promotable task.
-- **State File Health Checks** (`.tools/auto-hermes-health-check.mjs`): Validates all state files at loop startup. Auto-repairs minor corruption, backs up before repair, and pauses on major corruption.
-- **Automatic Rollback** (`.tools/auto-hermes-rollback.mjs`): On `must-fix` or `reverse-recommended` verdicts, evaluates whether safe auto-revert is possible. Reverts product-only changes 鈮? files automatically; emits rollback brief for larger changes.
-- **Autonomous-First HUMAN_LOOP** (`.tools/auto-hermes-human-loop.json`): Default mode is autonomous. Only destructive/irreversible actions require human confirmation. `must-ask` is no longer a default loop-stopper.
+- **State File Health Checks** (`tools/auto-hermes-health-check.mjs`): Validates all state files at loop startup. Auto-repairs minor corruption, backs up before repair, and pauses on major corruption.
+- **Automatic Rollback** (`tools/auto-hermes-rollback.mjs`): On `must-fix` or `reverse-recommended` verdicts, evaluates whether safe auto-revert is possible. Reverts product-only changes 鈮? files automatically; emits rollback brief for larger changes.
+- **Autonomous-First HUMAN_LOOP** (`tools/auto-hermes-human-loop.json`): Default mode is autonomous. Only destructive/irreversible actions require human confirmation. `must-ask` is no longer a default loop-stopper.
 ```
 
 - [ ] **Step 2: Update auto-hermes-architecture.md**
@@ -943,9 +949,9 @@ Auto-hermes now includes a resilience layer that ensures the loop never dies wit
 Add to the "Canonical Round Lifecycle" section:
 
 ```markdown
-0a. Health check: Run `.tools/auto-hermes-health-check.mjs --repair` to validate state files.
-0b. Resume check: If `.ai-sync/AUTO_HERMES_LOOP_STATE.json` has `status: executing` and `resumable: true`, resume from checkpoint.
-0c. Rollback evaluation: If the previous round had a `must-fix` or `reverse-recommended` verdict, evaluate rollback using `.tools/auto-hermes-rollback.mjs`.
+0a. Health check: Run `tools/auto-hermes-health-check.mjs --repair` to validate state files.
+0b. Resume check: If `.workspace/state/AUTO_HERMES_LOOP_STATE.json` has `status: executing` and `resumable: true`, resume from checkpoint.
+0c. Rollback evaluation: If the previous round had a `must-fix` or `reverse-recommended` verdict, evaluate rollback using `tools/auto-hermes-rollback.mjs`.
 ```
 
 Add to "Non-Negotiable Invariants":
@@ -970,15 +976,15 @@ Auto-hermes includes built-in resilience:
 - Executor crash recovery retries with exponential backoff before marking a round as `executor-unavailable`.
 - State file health checks run at every loop startup, auto-repairing minor corruption and flagging major issues.
 - Automatic rollback evaluates and executes safe reverts for `must-fix` and `reverse-recommended` verdicts.
-- HUMAN_LOOP defaults to `autonomous` mode with explicit safety brakes for destructive and irreversible actions. Use `.tools/auto-hermes-human-loop.json` for configuration. The existing `.ai-sync/HUMAN_LOOP.md` markdown format remains available as a fallback; JSON takes precedence when present.
+- HUMAN_LOOP defaults to `autonomous` mode with explicit safety brakes for destructive and irreversible actions. Use `tools/auto-hermes-human-loop.json` for configuration. The existing `.workspace/state/HUMAN_LOOP.md` markdown format remains available as a fallback; JSON takes precedence when present.
 ```
 
 - [ ] **Step 4: Verify documentation changes**
 
 Run:
 ```bash
-node .tools/auto-hermes-health-check.mjs --dry-run
-node .tools/auto-hermes-rollback.mjs --from=HEAD --dry-run
+node tools/auto-hermes-health-check.mjs --dry-run
+node tools/auto-hermes-rollback.mjs --from=HEAD --dry-run
 ```
 
 Expected: Both commands execute without errors and produce expected output.
@@ -1000,7 +1006,7 @@ git commit -m "docs(auto-hermes): document Layer 1 resilience features"
 - [ ] **Step 1: Run full loop with resilience features**
 
 ```bash
-node .tools/auto-hermes-loop.mjs --dry-run --max-rounds 2 --write
+node tools/auto-hermes-loop.mjs --dry-run --max-rounds 2 --write
 ```
 
 Expected: Loop state file created, health check passes, no errors in output.
@@ -1008,11 +1014,11 @@ Expected: Loop state file created, health check passes, no errors in output.
 - [ ] **Step 2: Simulate crash recovery**
 
 ```bash
-node .tools/auto-hermes-loop.mjs --dry-run --max-rounds 1 --write
+node tools/auto-hermes-loop.mjs --dry-run --max-rounds 1 --write
 # Manually set status to "executing" in loop state
-node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.ai-sync/AUTO_HERMES_LOOP_STATE.json','utf-8')); s.status='executing'; s.currentRound=1; s.resumable=true; fs.writeFileSync('.ai-sync/AUTO_HERMES_LOOP_STATE.json',JSON.stringify(s,null,2))"
+node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('.workspace/state/AUTO_HERMES_LOOP_STATE.json','utf-8')); s.status='executing'; s.currentRound=1; s.resumable=true; fs.writeFileSync('.workspace/state/AUTO_HERMES_LOOP_STATE.json',JSON.stringify(s,null,2))"
 # Re-run, should resume from round 2
-node .tools/auto-hermes-loop.mjs --dry-run --max-rounds 3 --write
+node tools/auto-hermes-loop.mjs --dry-run --max-rounds 3 --write
 ```
 
 Expected: Loop detects existing state with `status: executing` and `resumable: true`, resumes from round 2.
@@ -1020,7 +1026,7 @@ Expected: Loop detects existing state with `status: executing` and `resumable: t
 - [ ] **Step 3: Run rollback evaluation**
 
 ```bash
-node .tools/auto-hermes-rollback.mjs --from=HEAD --dry-run
+node tools/auto-hermes-rollback.mjs --from=HEAD --dry-run
 ```
 
 Expected: JSON output showing `canAutoRevert: false` (since HEAD has no changes from HEAD) or `changedFiles: []`.
@@ -1028,8 +1034,8 @@ Expected: JSON output showing `canAutoRevert: false` (since HEAD has no changes 
 - [ ] **Step 4: Run health check with repair**
 
 ```bash
-node .tools/auto-hermes-health-check.mjs --repair --write
-cat .ai-sync/AUTO_HERMES_HEALTH_CHECK.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('Healthy:', d.healthy); console.log('Checks:', Object.keys(d.checks).length)"
+node tools/auto-hermes-health-check.mjs --repair --write
+cat .workspace/state/AUTO_HERMES_HEALTH_CHECK.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf-8')); console.log('Healthy:', d.healthy); console.log('Checks:', Object.keys(d.checks).length)"
 ```
 
 Expected: Health check runs, reports status for all state files. Output shows `Healthy: true` or `Healthy: false` with specific issues listed.
@@ -1038,7 +1044,7 @@ Expected: Health check runs, reports status for all state files. Output shows `H
 
 ```bash
 node -e "process.argv=['','']"
-node .tools/auto-hermes-controller.mjs --dry-run
+node tools/auto-hermes-controller.mjs --dry-run
 ```
 
 Expected: Controller runs in autonomous mode by default, not pausing on non-destructive tasks.
@@ -1050,16 +1056,16 @@ Expected: Controller runs in autonomous mode by default, not pausing on non-dest
 ### Task 2.1: Activate SELF_EVOLVING_AUDIT and write per-round observations
 
 **Files:**
-- Modify: `.tools/auto-hermes-round-close.mjs`
-- Modify: `.ai-sync/SELF_EVOLVING_AUDIT.md`
+- Modify: `tools/auto-hermes-round-close.mjs`
+- Modify: `.workspace/state/SELF_EVOLVING_AUDIT.md`
 
 - [ ] **Step 1: Add observation writing to round-close**
 
-In `.tools/auto-hermes-round-close.mjs`, after the scorecard building, add observation writing:
+In `tools/auto-hermes-round-close.mjs`, after the scorecard building, add observation writing:
 
 ```js
 function writeObservation(args, scorecard, promotion, classification) {
-  const auditPath = resolveFromRoot(args.selfEvolvingAudit || '.ai-sync/SELF_EVOLVING_AUDIT.md');
+  const auditPath = resolveFromRoot(args.selfEvolvingAudit || '.workspace/state/SELF_EVOLVING_AUDIT.md');
   const timestamp = new Date().toISOString().split('T')[0];
   const taskTitle = promotion.title || args.title || 'unknown';
 
@@ -1088,8 +1094,8 @@ function writeObservation(args, scorecard, promotion, classification) {
 
 Run round-close in dry-run mode:
 ```bash
-node .tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "test-task" --round 1
-cat .ai-sync/SELF_EVOLVING_AUDIT.md
+node tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "test-task" --round 1
+cat .workspace/state/SELF_EVOLVING_AUDIT.md
 ```
 
 Expected: Audit file contains a new round observation with task title, verdict, and timestamp.
@@ -1097,7 +1103,7 @@ Expected: Audit file contains a new round observation with task title, verdict, 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .tools/auto-hermes-round-close.mjs .ai-sync/SELF_EVOLVING_AUDIT.md
+git add tools/auto-hermes-round-close.mjs .workspace/state/SELF_EVOLVING_AUDIT.md
 git commit -m "feat(auto-hermes): activate SELF_EVOLVING_AUDIT with per-round observations"
 ```
 
@@ -1106,7 +1112,7 @@ git commit -m "feat(auto-hermes): activate SELF_EVOLVING_AUDIT with per-round ob
 ### Task 2.2: Replace keyword scorecards with numeric measurements
 
 **Files:**
-- Modify: `.tools/auto-hermes-round-close.mjs`
+- Modify: `tools/auto-hermes-round-close.mjs`
 
 - [ ] **Step 1: Replace buildRoundScorecard with numeric scores**
 
@@ -1183,7 +1189,7 @@ The existing `detectRoundCapabilities` should remain but the scorecard now uses 
 
 Run round-close in dry-run:
 ```bash
-node .tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "score-test" --round 2
+node tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "score-test" --round 2
 ```
 
 Expected: Quality audit entry contains numeric scores (0-100) alongside letter grades.
@@ -1191,7 +1197,7 @@ Expected: Quality audit entry contains numeric scores (0-100) alongside letter g
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .tools/auto-hermes-round-close.mjs
+git add tools/auto-hermes-round-close.mjs
 git commit -m "feat(auto-hermes): replace keyword scorecards with numeric measurements"
 ```
 
@@ -1200,12 +1206,12 @@ git commit -m "feat(auto-hermes): replace keyword scorecards with numeric measur
 ### Task 2.3: Create per-round telemetry
 
 **Files:**
-- Create: `.tools/auto-hermes-telemetry.json`
-- Modify: `.tools/auto-hermes-round-close.mjs`
+- Create: `tools/auto-hermes-telemetry.json`
+- Modify: `tools/auto-hermes-round-close.mjs`
 
 - [ ] **Step 1: Create initial telemetry schema**
 
-Create `.tools/auto-hermes-telemetry.json`:
+Create `tools/auto-hermes-telemetry.json`:
 
 ```json
 {
@@ -1217,11 +1223,11 @@ Create `.tools/auto-hermes-telemetry.json`:
 
 - [ ] **Step 2: Add telemetry writing to round-close**
 
-In `.tools/auto-hermes-round-close.mjs`, add telemetry collection:
+In `tools/auto-hermes-round-close.mjs`, add telemetry collection:
 
 ```js
 function appendTelemetry(args, promotion, classification, route, startTime) {
-  const telPath = resolveFromRoot(args.telemetryJson || '.ai-sync/AUTO_HERMES_TELEMETRY.json');
+  const telPath = resolveFromRoot(args.telemetryJson || '.workspace/state/AUTO_HERMES_TELEMETRY.json');
   let telemetry = { rounds: [], moving_averages: {}, lastUpdated: '' };
   try {
     const existing = readFileSync(telPath, 'utf-8');
@@ -1272,7 +1278,7 @@ function appendTelemetry(args, promotion, classification, route, startTime) {
 
 Add to `parseArgs` defaults:
 ```js
-telemetryJson: '.ai-sync/AUTO_HERMES_TELEMETRY.json',
+telemetryJson: '.workspace/state/AUTO_HERMES_TELEMETRY.json',
 ```
 
 Call `appendTelemetry` at the end of the main flow, after all other state updates.
@@ -1281,9 +1287,9 @@ Call `appendTelemetry` at the end of the main flow, after all other state update
 
 Run two rounds:
 ```bash
-node .tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "tel-test-1" --round 1 --files "frontend/src/test.jsx" --write
-node .tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "tel-test-2" --round 2 --files "backend/src/test.java" --write
-cat .ai-sync/AUTO_HERMES_TELEMETRY.json
+node tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "tel-test-1" --round 1 --files "frontend/src/test.jsx" --write
+node tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "tel-test-2" --round 2 --files "backend/src/test.java" --write
+cat .workspace/state/AUTO_HERMES_TELEMETRY.json
 ```
 
 Expected: Telemetry file contains 2 round entries and moving averages by problem class.
@@ -1291,7 +1297,7 @@ Expected: Telemetry file contains 2 round entries and moving averages by problem
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .ai-sync/AUTO_HERMES_TELEMETRY.json .tools/auto-hermes-round-close.mjs
+git add .workspace/state/AUTO_HERMES_TELEMETRY.json tools/auto-hermes-round-close.mjs
 git commit -m "feat(auto-hermes): add per-round telemetry with moving averages"
 ```
 
@@ -1300,11 +1306,11 @@ git commit -m "feat(auto-hermes): add per-round telemetry with moving averages"
 ### Task 2.4: Add dynamic screen discovery seed to suggest-tasks
 
 **Files:**
-- Modify: `.tools/suggest-tasks.mjs`
+- Modify: `tools/suggest-tasks.mjs`
 
 - [ ] **Step 1: Add route-based screen discovery**
 
-In `.tools/suggest-tasks.mjs`, add a function that parses `App.jsx` to discover routes:
+In `tools/suggest-tasks.mjs`, add a function that parses `App.jsx` to discover routes:
 
 ```js
 function discoverScreensDynamically() {
@@ -1430,7 +1436,7 @@ allIssues.push(...dynamicScreenIssues, ...testFailureIssues, ...lintWarningIssue
 - [ ] **Step 6: Verify dynamic discovery works**
 
 ```bash
-node .tools/suggest-tasks.mjs --max 3
+node tools/suggest-tasks.mjs --max 3
 ```
 
 Expected: Output includes dynamically discovered screens from `App.jsx`, plus any test failures or lint warnings.
@@ -1438,7 +1444,7 @@ Expected: Output includes dynamically discovered screens from `App.jsx`, plus an
 - [ ] **Step 7: Commit**
 
 ```bash
-git add .tools/suggest-tasks.mjs
+git add tools/suggest-tasks.mjs
 git commit -m "feat(auto-hermes): add dynamic screen discovery and test/lint gap detection"
 ```
 
@@ -1449,13 +1455,13 @@ git commit -m "feat(auto-hermes): add dynamic screen discovery and test/lint gap
 ### Task 3.1: Create configurable gate parameters
 
 **Files:**
-- Create: `.tools/auto-hermes-config.json`
-- Create: `.tools/auto-hermes-config-history.json`
-- Modify: `.tools/auto-hermes-controller.mjs`
+- Create: `tools/auto-hermes-config.json`
+- Create: `tools/auto-hermes-config-history.json`
+- Modify: `tools/auto-hermes-controller.mjs`
 
 - [ ] **Step 1: Create config file with sensible defaults**
 
-Create `.tools/auto-hermes-config.json` (initial values matching current hardcoded behavior):
+Create `tools/auto-hermes-config.json` (initial values matching current hardcoded behavior):
 
 ```json
 {
@@ -1506,7 +1512,7 @@ Create `.tools/auto-hermes-config.json` (initial values matching current hardcod
 }
 ```
 
-Create `.tools/auto-hermes-config-history.json`:
+Create `tools/auto-hermes-config-history.json`:
 
 ```json
 {
@@ -1518,7 +1524,7 @@ Create `.tools/auto-hermes-config-history.json`:
 
 ```js
 function loadConfig(args) {
-  const configPath = resolveFromRoot(args.configJson || '.tools/auto-hermes-config.json');
+  const configPath = resolveFromRoot(args.configJson || 'tools/auto-hermes-config.json');
   const defaults = {
     gates: {
       minor_fix: { required: ['EG', 'SP', 'tiny_QA'], complexity_threshold: 2 },
@@ -1550,7 +1556,7 @@ function loadConfig(args) {
 
 Add to `parseArgs`:
 ```js
-configJson: '.tools/auto-hermes-config.json',
+configJson: 'tools/auto-hermes-config.json',
 ```
 
 - [ ] **Step 3: Replace hardcoded values in classifyRound and routeRound**
@@ -1579,7 +1585,7 @@ if (classification.tiny || classification.complexity <= config.routing.single_ag
 - [ ] **Step 4: Verify config loading works**
 
 ```bash
-node .tools/auto-hermes-controller.mjs --dry-run
+node tools/auto-hermes-controller.mjs --dry-run
 ```
 
 Expected: Controller runs using values from `auto-hermes-config.json`. No errors.
@@ -1587,7 +1593,7 @@ Expected: Controller runs using values from `auto-hermes-config.json`. No errors
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .tools/auto-hermes-config.json .tools/auto-hermes-config-history.json .tools/auto-hermes-controller.mjs
+git add tools/auto-hermes-config.json tools/auto-hermes-config-history.json tools/auto-hermes-controller.mjs
 git commit -m "feat(auto-hermes): add configurable gate parameters replacing hardcoded values"
 ```
 
@@ -1596,12 +1602,12 @@ git commit -m "feat(auto-hermes): add configurable gate parameters replacing har
 ### Task 3.2: Create evolution engine
 
 **Files:**
-- Create: `.tools/auto-hermes-evolve.mjs`
-- Modify: `.tools/auto-hermes-round-close.mjs`
+- Create: `tools/auto-hermes-evolve.mjs`
+- Modify: `tools/auto-hermes-round-close.mjs`
 
 - [ ] **Step 1: Write the evolution engine**
 
-Create `.tools/auto-hermes-evolve.mjs` 鈥?the full observe 鈫?diagnose 鈫?propose 鈫?apply 鈫?verify 鈫?record cycle:
+Create `tools/auto-hermes-evolve.mjs` 鈥?the full observe 鈫?diagnose 鈫?propose 鈫?apply 鈫?verify 鈫?record cycle:
 
 ```js
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -1716,7 +1722,7 @@ function verify(proposal, telemetry) {
   return { verdict: 'neutral', improvement };
 }
 
-export function runEvolve({ configPath = '.tools/auto-hermes-config.json', historyPath = '.tools/auto-hermes-config-history.json', telemetryPath = '.ai-sync/AUTO_HERMES_TELEMETRY.json', auditPath = '.ai-sync/SELF_EVOLVING_AUDIT.md', dryRun = false } = {}) {
+export function runEvolve({ configPath = 'tools/auto-hermes-config.json', historyPath = 'tools/auto-hermes-config-history.json', telemetryPath = '.workspace/state/AUTO_HERMES_TELEMETRY.json', auditPath = '.workspace/state/SELF_EVOLVING_AUDIT.md', dryRun = false } = {}) {
   const config = loadJson(configPath) || {};
   const telemetry = loadJson(telemetryPath) || { rounds: [], moving_averages: {} };
 
@@ -1763,20 +1769,20 @@ console.log(JSON.stringify(result, null, 2));
 
 - [ ] **Step 2: Trigger evolve every 5 rounds in round-close**
 
-In `.tools/auto-hermes-round-close.mjs`, add at the end of the main flow:
+In `tools/auto-hermes-round-close.mjs`, add at the end of the main flow:
 
 ```js
 // Trigger evolve every N rounds (default: 5)
 const config = loadConfig(args);
 const evolveInterval = config.loop?.evolve_interval || 5;
-const telemetry = loadJsonFile(args.telemetryJson || '.ai-sync/AUTO_HERMES_TELEMETRY.json', { rounds: [] });
+const telemetry = loadJsonFile(args.telemetryJson || '.workspace/state/AUTO_HERMES_TELEMETRY.json', { rounds: [] });
 const completedRounds = (telemetry.rounds || []).length;
 
 if (completedRounds > 0 && completedRounds % evolveInterval === 0 && args.evolve !== 'false') {
   const { runEvolve } = await import('./auto-hermes-evolve.mjs');
   const evolveResult = runEvolve({
-    configPath: args.configJson || '.tools/auto-hermes-config.json',
-    telemetryPath: args.telemetryJson || '.ai-sync/AUTO_HERMES_TELEMETRY.json',
+    configPath: args.configJson || 'tools/auto-hermes-config.json',
+    telemetryPath: args.telemetryJson || '.workspace/state/AUTO_HERMES_TELEMETRY.json',
   });
   if (evolveResult.status === 'applied') {
     console.log('[evolve] Configuration adjusted:', evolveResult.proposal?.changes?.map(c => `${c.path}: ${c.from} 鈫?${c.to}`).join(', '));
@@ -1787,13 +1793,13 @@ if (completedRounds > 0 && completedRounds % evolveInterval === 0 && args.evolve
 Add to `parseArgs`:
 ```js
 evolve: 'true',
-configJson: '.tools/auto-hermes-config.json',
+configJson: 'tools/auto-hermes-config.json',
 ```
 
 - [ ] **Step 3: Test evolution engine in dry-run**
 
 ```bash
-node .tools/auto-hermes-evolve.mjs --dry-run
+node tools/auto-hermes-evolve.mjs --dry-run
 ```
 
 Expected: Output showing `skipped` (not enough rounds yet) or `dry-run` with proposal details.
@@ -1801,7 +1807,7 @@ Expected: Output showing `skipped` (not enough rounds yet) or `dry-run` with pro
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .tools/auto-hermes-evolve.mjs .tools/auto-hermes-round-close.mjs
+git add tools/auto-hermes-evolve.mjs tools/auto-hermes-round-close.mjs
 git commit -m "feat(auto-hermes): add evolution engine with observe-diagnose-propose-apply-verify cycle"
 ```
 
@@ -1812,11 +1818,11 @@ git commit -m "feat(auto-hermes): add evolution engine with observe-diagnose-pro
 ### Task 4.1: Create dynamic problem discovery
 
 **Files:**
-- Create: `.tools/auto-hermes-discover.mjs`
+- Create: `tools/auto-hermes-discover.mjs`
 
 - [ ] **Step 1: Write the discovery engine**
 
-Create `.tools/auto-hermes-discover.mjs` with the 6 discovery sources (route-based, test failure, lint/compile, git-blotch, dead-code, dependency drift). Full implementation follows the same pattern as the suggest-tasks check functions, but scanning dynamically rather than from a hardcoded list.
+Create `tools/auto-hermes-discover.mjs` with the 6 discovery sources (route-based, test failure, lint/compile, git-blotch, dead-code, dependency drift). Full implementation follows the same pattern as the suggest-tasks check functions, but scanning dynamically rather than from a hardcoded list.
 
 This is implemented by extending the `discoverScreensDynamically`, `discoverTestFailures`, and `discoverLintWarnings` functions already added to `suggest-tasks.mjs` in Task 2.4, plus adding:
 
@@ -1848,7 +1854,7 @@ allIssues.push(...discoveries);
 - [ ] **Step 3: Test discovery on current repo**
 
 ```bash
-node .tools/suggest-tasks.mjs --max 5
+node tools/suggest-tasks.mjs --max 5
 ```
 
 Expected: Output includes dynamically discovered screens, plus any test failures, lint warnings, git hotspots, dead code, or dependency drift issues found in the current repo.
@@ -1856,7 +1862,7 @@ Expected: Output includes dynamically discovered screens, plus any test failures
 - [ ] **Step 4: Commit**
 
 ```bash
-git add .tools/auto-hermes-discover.mjs .tools/suggest-tasks.mjs
+git add tools/auto-hermes-discover.mjs tools/suggest-tasks.mjs
 git commit -m "feat(auto-hermes): add dynamic problem discovery engine with 6 sources"
 ```
 
@@ -1865,11 +1871,11 @@ git commit -m "feat(auto-hermes): add dynamic problem discovery engine with 6 so
 ### Task 4.2: Create continuous health monitor
 
 **Files:**
-- Create: `.tools/auto-hermes-health-monitor.mjs`
+- Create: `tools/auto-hermes-health-monitor.mjs`
 
 - [ ] **Step 1: Write the health monitor**
 
-Create `.tools/auto-hermes-health-monitor.mjs` 鈥?runs alongside the loop, checks state files, git repo, test suite, lint, loop state, and config drift:
+Create `tools/auto-hermes-health-monitor.mjs` 鈥?runs alongside the loop, checks state files, git repo, test suite, lint, loop state, and config drift:
 
 ```js
 import { execFileSync } from 'node:child_process';
@@ -1889,7 +1895,7 @@ export function runHealthMonitor({ write = false } = {}) {
   };
 
   // State files check
-  const loopState = loadJson('.ai-sync/AUTO_HERMES_LOOP_STATE.json');
+  const loopState = loadJson('.workspace/state/AUTO_HERMES_LOOP_STATE.json');
   result.checks.state_files = loopState ? (loopState.status === 'executing' && loopState.resumable ? 'healthy' : 'idle') : 'missing';
 
   // Git repo check
@@ -1910,17 +1916,17 @@ export function runHealthMonitor({ write = false } = {}) {
   }
 
   // Config drift check
-  const configCurrent = loadJson('.tools/auto-hermes-config.json');
-  const configHistory = loadJson('.tools/auto-hermes-config-history.json');
+  const configCurrent = loadJson('tools/auto-hermes-config.json');
+  const configHistory = loadJson('tools/auto-hermes-config-history.json');
   result.checks.config_drift = configHistory?.history?.length > 0 ? (configHistory.history[configHistory.history.length - 1].changes?.length > 0 ? 'adjusted' : 'default') : 'default';
 
   // Generate alerts
   if (result.checks.state_files === 'missing') {
-    result.alerts.push({ type: 'state_corruption', severity: 'high', source: '.ai-sync/', auto_fixable: true });
+    result.alerts.push({ type: 'state_corruption', severity: 'high', source: '.workspace/state/', auto_fixable: true });
   }
 
   if (write) {
-    writeFileSync(resolve('.ai-sync/AUTO_HERMES_HEALTH_MONITOR.json'), JSON.stringify(result, null, 2), 'utf-8');
+    writeFileSync(resolve('.workspace/state/AUTO_HERMES_HEALTH_MONITOR.json'), JSON.stringify(result, null, 2), 'utf-8');
   }
 
   return result;
@@ -1937,8 +1943,8 @@ if (!process.argv.includes('--quiet')) {
 - [ ] **Step 2: Test health monitor**
 
 ```bash
-node .tools/auto-hermes-health-monitor.mjs --write
-cat .ai-sync/AUTO_HERMES_HEALTH_MONITOR.json
+node tools/auto-hermes-health-monitor.mjs --write
+cat .workspace/state/AUTO_HERMES_HEALTH_MONITOR.json
 ```
 
 Expected: JSON output showing check status for state files, git repo, test suite, loop state, and config drift.
@@ -1946,7 +1952,7 @@ Expected: JSON output showing check status for state files, git repo, test suite
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .tools/auto-hermes-health-monitor.mjs
+git add tools/auto-hermes-health-monitor.mjs
 git commit -m "feat(auto-hermes): add continuous health monitor"
 ```
 
@@ -2000,8 +2006,8 @@ These tasks fill gaps identified in the plan self-review. They should be impleme
 ### Task 3.3: Enforce safety constraints in config and evolution engine
 
 **Files:**
-- Modify: `.tools/auto-hermes-evolve.mjs`
-- Modify: `.tools/auto-hermes-config.json`
+- Modify: `tools/auto-hermes-evolve.mjs`
+- Modify: `tools/auto-hermes-config.json`
 
 - [ ] **Step 1: Add constraint validation to auto-hermes-evolve.mjs**
 
@@ -2077,14 +2083,14 @@ Hard rules:
 ```bash
 # Edit auto-hermes-config.json to set max_rounds to 100 (above max of 48)
 # Run evolve in dry-run mode
-node .tools/auto-hermes-evolve.mjs --dry-run
+node tools/auto-hermes-evolve.mjs --dry-run
 # Verify that the proposal is rejected for exceeding max
 ```
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .tools/auto-hermes-evolve.mjs .tools/auto-hermes-config.json HERMES_SELF_EVOLVING_ENGINE.md
+git add tools/auto-hermes-evolve.mjs tools/auto-hermes-config.json HERMES_SELF_EVOLVING_ENGINE.md
 git commit -m "feat(auto-hermes): enforce safety constraints in evolution engine"
 ```
 
@@ -2093,13 +2099,13 @@ git commit -m "feat(auto-hermes): enforce safety constraints in evolution engine
 ### Task 3.4: Create adaptive routing statistics and threshold evolution
 
 **Files:**
-- Create: `.ai-sync/AUTO_HERMES_ROUTING_STATS.json`
-- Modify: `.tools/auto-hermes-controller.mjs`
-- Modify: `.tools/auto-hermes-evolve.mjs`
+- Create: `.workspace/state/AUTO_HERMES_ROUTING_STATS.json`
+- Modify: `tools/auto-hermes-controller.mjs`
+- Modify: `tools/auto-hermes-evolve.mjs`
 
 - [ ] **Step 1: Create routing stats schema**
 
-Create `.ai-sync/AUTO_HERMES_ROUTING_STATS.json`:
+Create `.workspace/state/AUTO_HERMES_ROUTING_STATS.json`:
 
 ```json
 {
@@ -2129,11 +2135,11 @@ Create `.ai-sync/AUTO_HERMES_ROUTING_STATS.json`:
 
 - [ ] **Step 2: Add routing stats collection to round-close**
 
-In `.tools/auto-hermes-round-close.mjs`, after telemetry append, add routing stats update:
+In `tools/auto-hermes-round-close.mjs`, after telemetry append, add routing stats update:
 
 ```js
 function updateRoutingStats(args, classification, route, verdict) {
-  const statsPath = resolveFromRoot(args.routingStatsJson || '.ai-sync/AUTO_HERMES_ROUTING_STATS.json');
+  const statsPath = resolveFromRoot(args.routingStatsJson || '.workspace/state/AUTO_HERMES_ROUTING_STATS.json');
   let stats; try { stats = JSON.parse(readFileSync(statsPath, 'utf-8')); } catch { stats = { shapes: {}, lastUpdated: '' }; }
 
   const shape = route?.shape || 'single-agent';
@@ -2150,11 +2156,11 @@ function updateRoutingStats(args, classification, route, verdict) {
 }
 ```
 
-Add to `parseArgs`: `routingStatsJson: '.ai-sync/AUTO_HERMES_ROUTING_STATS.json'`.
+Add to `parseArgs`: `routingStatsJson: '.workspace/state/AUTO_HERMES_ROUTING_STATS.json'`.
 
 - [ ] **Step 3: Add routing adaptation to evolution engine**
 
-In `.tools/auto-hermes-evolve.mjs`, add a `diagnoseRouting` function:
+In `tools/auto-hermes-evolve.mjs`, add a `diagnoseRouting` function:
 
 ```js
 function diagnoseRouting(stats, config) {
@@ -2192,8 +2198,8 @@ Call `diagnoseRouting` alongside the existing `diagnose` function in `runEvolve`
 
 ```bash
 # Round-close should update routing stats
-node .tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "routing-test" --round 3 --write
-cat .ai-sync/AUTO_HERMES_ROUTING_STATS.json
+node tools/auto-hermes-round-close.mjs --dry-run --verdict pass --title "routing-test" --round 3 --write
+cat .workspace/state/AUTO_HERMES_ROUTING_STATS.json
 ```
 
 Expected: Routing stats show updated counts for the shape and problem class used.
@@ -2201,7 +2207,7 @@ Expected: Routing stats show updated counts for the shape and problem class used
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .ai-sync/AUTO_HERMES_ROUTING_STATS.json .tools/auto-hermes-round-close.mjs .tools/auto-hermes-evolve.mjs
+git add .workspace/state/AUTO_HERMES_ROUTING_STATS.json tools/auto-hermes-round-close.mjs tools/auto-hermes-evolve.mjs
 git commit -m "feat(auto-hermes): add adaptive routing statistics and threshold evolution"
 ```
 
@@ -2210,11 +2216,11 @@ git commit -m "feat(auto-hermes): add adaptive routing statistics and threshold 
 ### Task 4.2: Implement semantic gap detection
 
 **Files:**
-- Modify: `.tools/suggest-tasks.mjs`
+- Modify: `tools/suggest-tasks.mjs`
 
 - [ ] **Step 1: Add API contract gap detection**
 
-In `.tools/suggest-tasks.mjs`, add a new check function:
+In `tools/suggest-tasks.mjs`, add a new check function:
 
 ```js
 function checkApiContractGaps() {
@@ -2300,7 +2306,7 @@ allIssues.push(...apiContractIssues, ...featureCoverageIssues);
 - [ ] **Step 4: Test semantic gap detection**
 
 ```bash
-node .tools/suggest-tasks.mjs --max 5
+node tools/suggest-tasks.mjs --max 5
 ```
 
 Expected: Output includes API contract gaps (orphaned endpoints, missing error handling) and feature coverage gaps (missing states).
@@ -2308,7 +2314,7 @@ Expected: Output includes API contract gaps (orphaned endpoints, missing error h
 - [ ] **Step 5: Commit**
 
 ```bash
-git add .tools/suggest-tasks.mjs
+git add tools/suggest-tasks.mjs
 git commit -m "feat(auto-hermes): add semantic gap detection for API contracts and feature coverage"
 ```
 
@@ -2317,12 +2323,12 @@ git commit -m "feat(auto-hermes): add semantic gap detection for API contracts a
 ### Task 4.3: Implement self-healing problem resolution
 
 **Files:**
-- Create: `.tools/auto-hermes-auto-fix.mjs`
-- Modify: `.tools/auto-hermes-round-close.mjs`
+- Create: `tools/auto-hermes-auto-fix.mjs`
+- Modify: `tools/auto-hermes-round-close.mjs`
 
 - [ ] **Step 1: Create the auto-fix categorizer**
 
-Create `.tools/auto-hermes-auto-fix.mjs`:
+Create `tools/auto-hermes-auto-fix.mjs`:
 
 ```js
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -2441,7 +2447,7 @@ if (args.includes('--categorize')) {
 
 - [ ] **Step 2: Integrate auto-fix into suggest-tasks**
 
-In `.tools/suggest-tasks.mjs`, after collecting all issues and before scoring, add:
+In `tools/suggest-tasks.mjs`, after collecting all issues and before scoring, add:
 
 ```js
 import { categorizeIssue } from './auto-hermes-auto-fix.mjs';
@@ -2468,7 +2474,7 @@ if (task.resolution && task.resolution.autoFixable) {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add .tools/auto-hermes-auto-fix.mjs .tools/suggest-tasks.mjs
+git add tools/auto-hermes-auto-fix.mjs tools/suggest-tasks.mjs
 git commit -m "feat(auto-hermes): add self-healing problem resolution with confidence/severity categorization"
 ```
 
@@ -2491,5 +2497,5 @@ git commit -m "feat(auto-hermes): add self-healing problem resolution with confi
 11. **Duplicate Step 3 in Task 1.3** 鈥?The "Write the corresponding markdown helper" step should be Step 3 and "Integrate health check" should be Step 4
 12. **Scorecard dimensions** 鈥?Plan adds `self_looping`, `self_evolving`; spec defines `promotion_accuracy`, `time_efficiency`. Both should be included.
 13. **Loop state `roundHistory[].promoted_to`** 鈥?Should be tracked in the `appendTelemetry` function
-14. **Health check `.ai-sync/LOOP_STATE.md`** 鈥?This file should be removed from `STATE_FILES` since the JSON version replaces it
+14. **Health check `.workspace/state/LOOP_STATE.md`** 鈥?This file should be removed from `STATE_FILES` since the JSON version replaces it
 15. **Health monitor `checks.lint`** 鈥?Should be added to match the spec

@@ -11,7 +11,7 @@ import fs from 'node:fs'
 const frontendDir = fileURLToPath(new URL('.', import.meta.url))
 const projectRoot = path.resolve(frontendDir, '..')
 const srcDir = path.join(projectRoot, 'src')
-const styleBundleGenerator = path.resolve(projectRoot, '../.tools/generate-legacy-style-bundle.mjs')
+const styleBundleGenerator = path.resolve(projectRoot, '../tools/generate-legacy-style-bundle.mjs')
 
 const styleBundleResult = spawnSync(process.execPath, [styleBundleGenerator], {
   cwd: path.resolve(projectRoot, '..'),
@@ -35,10 +35,27 @@ function walk(dir, files = []) {
   return files
 }
 
-const testFiles = walk(srcDir).sort()
+const selections = process.argv.slice(2)
+const allTestFiles = walk(srcDir).sort()
+const selectedRoots = selections.map((selection) => {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(selection)) {
+    throw new Error(`Invalid test feature: ${selection}. Use a directory name such as runs or today-run.`)
+  }
+  const selected = selection === 'shared'
+    ? path.join(srcDir, 'test', 'contracts')
+    : path.resolve(srcDir, 'pages', selection)
+  const relative = path.relative(srcDir, selected)
+  if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(selected)) {
+    throw new Error(`Unknown test feature: ${selection}. Use a directory under src/pages/ or shared.`)
+  }
+  return selected
+})
+const testFiles = selectedRoots.length
+  ? allTestFiles.filter((file) => selectedRoots.some((selected) => file.startsWith(selected + path.sep)))
+  : allTestFiles
 
 if (testFiles.length === 0) {
-  console.error('[hermes-tests] No *.test.js files found under src/.')
+  console.error(`[hermes-tests] No *.test.js files found for ${selections.join(', ') || 'src/'}.`)
   process.exit(1)
 }
 

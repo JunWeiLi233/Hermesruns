@@ -44,7 +44,7 @@ Never collapse these states in prose or generated briefs.
 Rules:
 - `AGENTS.md` is the policy plane and top-level map, not the long-form storage location for every workflow detail.
 - `docs/auto-hermes/index.md` is the stable record-system entrypoint for `/auto-hermes` when it exists.
-- Durable workflow knowledge must live in versioned repo artifacts: workflow docs, helper scripts, plans, and `.ai-sync` state with a clear owner.
+- Durable workflow knowledge must live in versioned repo artifacts: workflow docs, helper scripts, plans, and `.workspace/state` state with a clear owner.
 - Controller and loop outputs should emit a minimal knowledge pack for the current round instead of instructing broad repo scans.
 - If a round discovers that durable guidance is stale or missing, update the smallest owning doc/script in the same round when bounded; otherwise write a concrete doc-gardening follow-up or must-fix.
 
@@ -140,7 +140,7 @@ Before implementation, the controller/loop pair should emit a minimal round-spec
 ### Frontend Design Decision Rule
 
 When a round enters the frontend `design-review` branch:
-- load the frontend design skill manifest with `node .tools/auto-hermes-skills.mjs --json`
+- load the frontend design skill manifest with `node tools/auto-hermes-skills.mjs --json`
 - treat `design.md` as the final Hermes visual authority and the skill manifest as execution guidance
 - explore 2-3 candidate directions internally when that improves the decision
 - choose the strongest direction autonomously from:
@@ -203,7 +203,7 @@ If Reviewer emits `reverse-recommended`:
 - For self-loop, subagent, coordinator, executor, ECC, and RTK claims: use the shared claim taxonomy instead of raw yes/no wording.
 - Prefer executor-backed loop ownership over prompt-only continuation whenever an executor path is configured.
 - In the default Codex executor-backed path for standard `/auto-hermes`, worker agents run in YOLO/full-permission mode: OMX Ralph uses `--madmax`, and the Codex fallback prefers the installed `codex` CLI with `--dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust` when supported before falling back to bundled `codex-local`.
-- `/auto-hermes-self` is the exception: the self-loop helper owns state and briefs only, while the parent Codex session executes locally or spawns native subagents with `multi_agent_v1.spawn_agent`; do not use `.tools/generate-codex.js` or helper-generated agent spawning for Codex self rounds.
+- `/auto-hermes-self` is the exception: the self-loop helper owns state and briefs only, while the parent Codex session executes locally or spawns native subagents with `multi_agent_v1.spawn_agent`; do not use `tools/generate-codex.js` or helper-generated agent spawning for Codex self rounds.
 - Generated coordinator and worker briefs for workflows that use generated workers must expose the executor permission mode so full-permission agent spawning is visible as configuration, not claimed as proof that a child agent already executed.
 
 ## Autonomous Decision Contract
@@ -235,7 +235,7 @@ When verification fails:
 ## Human Gate
 
 Ask the human only when:
-- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
 - verification failed and the next move is risky or irreversible
 - a `reverse-recommended` revert cannot be performed automatically
 - a product fork has non-obvious consequences
@@ -248,7 +248,7 @@ Stop only when:
 - all promotion levels are exhausted
 - verification fails with a real unresolvable blocker
 - a required revert cannot be completed safely
-- `.ai-sync/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
+- `.workspace/state/HUMAN_LOOP.md` says `pause`, `stop`, or `must-ask`
 - runaway guard fires
 
 `## Active Tasks` being empty is not a stop condition by itself.

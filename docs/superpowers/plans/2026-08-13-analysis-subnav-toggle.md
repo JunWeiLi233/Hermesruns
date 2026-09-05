@@ -13,8 +13,8 @@
 ### Task 1: Lock the placement contract
 
 **Files:**
-- Modify: `frontend/src/pages/analysisSubpageNav.smoke.test.js`
-- Test: `frontend/src/pages/analysisSubpageNav.smoke.test.js`
+- Modify: `frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
+- Test: `frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 - [ ] **Step 1: Write the failing source-level assertions**
 
@@ -48,7 +48,7 @@ assert.match(
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/analysisSubpageNav.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js
 ```
 
 Expected: FAIL on the first new header-grid assertion because the Analysis header does not yet define a fixed toggle column.
@@ -57,7 +57,7 @@ Expected: FAIL on the first new header-grid assertion because the Analysis heade
 
 **Files:**
 - Modify: `frontend/src/styles/analysis-subnav.css`
-- Test: `frontend/src/pages/analysisSubpageNav.smoke.test.js`
+- Test: `frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js`
 
 - [ ] **Step 1: Add the expanded and collapsed control styles**
 
@@ -127,8 +127,8 @@ Extend the header styles with the following focused rules:
 Run:
 
 ```powershell
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/analysisSubpageNav.smoke.test.js
-& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/predictionProfileAlignment.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' frontend/src/pages/prediction/__tests__/predictionProfileAlignment.smoke.test.js
 ```
 
 Expected: both commands print `[PASS]` and exit 0.
@@ -141,7 +141,7 @@ Run:
 Set-Location frontend
 & 'C:\Program Files\nodejs\node.exe' scripts/run-vite-build.mjs
 Set-Location ..
-& 'C:\Program Files\nodejs\node.exe' .tools/verify-frontend-runtime-sync.mjs --changed-file frontend/src/styles/analysis-subnav.css --changed-file frontend/src/pages/analysisSubpageNav.smoke.test.js
+& 'C:\Program Files\nodejs\node.exe' tools/verify-frontend-runtime-sync.mjs --changed-file frontend/src/styles/analysis-subnav.css --changed-file frontend/src/pages/analysis/__tests__/analysisSubpageNav.smoke.test.js
 ```
 
 Expected: Vite build exits 0 and runtime sync reports the changed frontend source is represented in the built static state.

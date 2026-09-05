@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../api';
-import { invalidateHeatmapCache } from '../pages/heatmapCache';
+import { invalidateHeatmapCache } from '../utils/heatmap/cache.js';
 import {
   STRAVA_SYNC_FINISHED_EVENT,
   clearStravaOauthPendingFlag,

@@ -1,4 +1,4 @@
-<!-- GENERATED FILE: edit .codex/commands and run node .tools/generate-runtime-commands.mjs. -->
+<!-- GENERATED FILE: edit .codex/commands and run node tools/generate-runtime-commands.mjs. -->
 <!-- Runtime: opencode; command: /auto-hermes-pull-main; contract: docs/ai/EDITING_CONTRACT.md -->
 
 # Auto-Hermes Pull Main
@@ -28,19 +28,19 @@ Or from CLI:
 
 ```bash
 # Dry-run (default): inspect, never touch the tree.
-node .tools/auto-hermes-pull-main.mjs
+node tools/auto-hermes-pull-main.mjs
 
 # Execute: pull, auto-stashing dirty work first.
-node .tools/auto-hermes-pull-main.mjs --execute --write
+node tools/auto-hermes-pull-main.mjs --execute --write
 
 # Rebase your feature branch on top of main instead of merging.
-node .tools/auto-hermes-pull-main.mjs --execute --write --strategy rebase
+node tools/auto-hermes-pull-main.mjs --execute --write --strategy rebase
 
 # Pull a non-default target branch.
-node .tools/auto-hermes-pull-main.mjs --execute --write --target-branch main
+node tools/auto-hermes-pull-main.mjs --execute --write --target-branch main
 
 # Refuse to run if tree is dirty (instead of auto-stashing).
-node .tools/auto-hermes-pull-main.mjs --execute --write --no-stash
+node tools/auto-hermes-pull-main.mjs --execute --write --no-stash
 ```
 
 ## What it runs, in order
@@ -59,7 +59,7 @@ node .tools/auto-hermes-pull-main.mjs --execute --write --no-stash
    conflicted for manual resolution.
 9. Clean path: `git stash pop` (if stash was used). If `pop` itself conflicts,
    leave the stash on the stack and exit non-zero with that conflict list.
-10. With `--write`: emit `.ai-sync/AUTO_HERMES_PULL_MAIN.{json,md}` with
+10. With `--write`: emit `.workspace/state/AUTO_HERMES_PULL_MAIN.{json,md}` with
     before/after SHAs, commits pulled, files changed, conflict list, strategy
     used, and whether the stash dance happened.
 

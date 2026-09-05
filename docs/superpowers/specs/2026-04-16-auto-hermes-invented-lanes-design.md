@@ -47,7 +47,7 @@ The controller may invent two classes of lanes:
 
 ### 1. Controller-Owned Invention
 
-File: `.tools/auto-hermes-controller.mjs`
+File: `tools/auto-hermes-controller.mjs`
 
 Add a deterministic invention step after base task classification and before final route/subagent-plan emission.
 
@@ -59,7 +59,7 @@ Inputs:
 - explicit file list
 - inferred stack ownership
 - same-task live claim state
-- currently active claims from `.ai-sync/AGENT_SYNC.*`
+- currently active claims from `.workspace/state/AGENT_SYNC.*`
 
 Outputs:
 - `inventedLanePlan`
@@ -71,7 +71,7 @@ The controller should only invent lanes when confidence is high. If confidence i
 
 ### 2. Loop Consumption
 
-File: `.tools/auto-hermes-loop.mjs`
+File: `tools/auto-hermes-loop.mjs`
 
 The loop helper should surface the invented-lane plan in:
 - worker prompt
@@ -82,7 +82,7 @@ The loop helper must not invent lanes itself. It only reflects controller decisi
 
 ### 3. Max Launcher Consumption
 
-File: `.tools/auto-hermes-max.mjs`
+File: `tools/auto-hermes-max.mjs`
 
 The max launcher should consume controller-approved invented candidate lanes and include them in the candidate set only when:
 - ownership is explicit
@@ -163,7 +163,7 @@ Invent `reviewer-agent` when any of these are true:
 - `problemClass = backend-logic` and the task touches auth, validation, contract, response shape, persistence, or scheduler logic
 - `problemClass = frontend-design`
 - the task is marked review-sensitive
-- a recent same-surface regression appears in `.ai-sync/AGENT_SYNC.md` or `.ai-sync/CONTEXT_LEDGER.md`
+- a recent same-surface regression appears in `.workspace/state/AGENT_SYNC.md` or `.workspace/state/CONTEXT_LEDGER.md`
 
 ### Rule B: Debugger Invention
 
@@ -201,7 +201,7 @@ If any of those checks fail, do not invent the extra lane.
 
 ## Claiming and Concurrency
 
-Existing same-task claim leasing under `.ai-sync/auto-hermes-claims/` remains the first concurrency guard.
+Existing same-task claim leasing under `.workspace/state/auto-hermes-claims/` remains the first concurrency guard.
 
 Invented-lane behavior must also obey:
 - if another thread already owns the same parent task, do not invent additional lanes for that same task in the losing thread
@@ -257,7 +257,7 @@ Expose:
 
 ### Tests
 
-File: `.tools/auto-hermes-tools.test.mjs`
+File: `tools/auto-hermes-tools.test.mjs`
 
 Add focused cases for:
 
@@ -271,20 +271,20 @@ Add focused cases for:
 
 ### Smoke Checks
 
-- `node .tools/auto-hermes-tools.test.mjs`
-- `node .tools/auto-hermes-controller.mjs --json`
-- `node .tools/auto-hermes-max.mjs --write --runtime codex-live --json`
+- `node tools/auto-hermes-tools.test.mjs`
+- `node tools/auto-hermes-controller.mjs --json`
+- `node tools/auto-hermes-max.mjs --write --runtime codex-live --json`
 
 ## Files To Change
 
 Primary code:
-- `.tools/auto-hermes-controller.mjs`
-- `.tools/auto-hermes-loop.mjs`
-- `.tools/auto-hermes-max.mjs`
-- `.tools/auto-hermes-tools.test.mjs`
+- `tools/auto-hermes-controller.mjs`
+- `tools/auto-hermes-loop.mjs`
+- `tools/auto-hermes-max.mjs`
+- `tools/auto-hermes-tools.test.mjs`
 
 Potential helper extraction if needed:
-- `.tools/auto-hermes-lane-invention.mjs`
+- `tools/auto-hermes-lane-invention.mjs`
 
 Docs:
 - `.codex/commands/auto-hermes.md`

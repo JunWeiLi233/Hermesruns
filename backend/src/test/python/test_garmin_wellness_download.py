@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 
-SCRIPT = Path(__file__).resolve().parents[4] / ".tools" / "garmin_wellness_download.py"
+SCRIPT = Path(__file__).resolve().parents[4] / "tools" / "garmin_wellness_download.py"
 SPEC = importlib.util.spec_from_file_location("garmin_wellness_download_under_test", SCRIPT)
 downloader = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(downloader)

@@ -11,7 +11,7 @@ does not depend on a live image OCR result at request time.
   Woolwich, Greenwich, Cutty Sark, Tower Bridge, Canary Wharf, Tower Hill,
   Westminster, Birdcage Walk, Buckingham Palace, and The Mall.
 - The ordered polyline is stored in
-  `backend/src/main/java/com/hermes/backend/LondonMarathonKnownCourse.java` as
+  `backend/src/main/java/com/hermes/backend/races/LondonMarathonKnownCourse.java` as
   an encoded polyline. It is labelled `Start - Greenwich` and
   `Finish - The Mall` and is promoted by the bulk seeder with a
   `known-official-course:london-marathon` source tag.
@@ -20,7 +20,7 @@ does not depend on a live image OCR result at request time.
 
 Several organizers publish a route map or landmark description without a
 downloadable GPX track. These races use the checked landmark catalog in
-`backend/src/main/java/com/hermes/backend/MarathonOfficialLandmarkCourseCatalog.java`.
+`backend/src/main/java/com/hermes/backend/races/MarathonOfficialLandmarkCourseCatalog.java`.
 Each consecutive landmark pair is routed through pedestrian OSRM; when the
 public router is unavailable, the same pair is retained as a straight corridor
 between the official landmarks. The persisted source is
@@ -63,7 +63,7 @@ GPX/GeoJSON track when the organizer publishes one.
 - Organizer programme and stadium start/finish reference:
   <https://www.tcsamsterdammarathon.nl/programma>
 - The checked route is stored in
-  `backend/src/main/java/com/hermes/backend/AmsterdamMarathonOfficialCourse.java`.
+  `backend/src/main/java/com/hermes/backend/races/AmsterdamMarathonOfficialCourse.java`.
   It follows the Olympic Stadium, Vondelpark, Rijksmuseum, Zuidas, Amstel /
   Ouderkerk, Science Park, Zeeburgerdijk, Wibautstraat, and stadium-return
   corridors. The route is deterministic at seed time and does not depend on a
