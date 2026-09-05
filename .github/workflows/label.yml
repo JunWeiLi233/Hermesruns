@@ -28,7 +28,7 @@ jobs:
           echo "Labeler configuration is not present; skipping labeling."
           echo "configured=false" >> "$GITHUB_OUTPUT"
         fi
-    - uses: actions/labeler@v4
+    - uses: actions/labeler@v7
       if: steps.labeler-config.outputs.configured == 'true'
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
