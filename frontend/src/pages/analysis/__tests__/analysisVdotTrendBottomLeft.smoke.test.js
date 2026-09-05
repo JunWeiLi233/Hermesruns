@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styleSource = readFileSync(path.join(here, '../../styles/analysis-summary.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../../../styles/analysis-summary.css'), 'utf8');
 const positioningBlock = styleSource.slice(styleSource.indexOf('Analysis VDOT / fitness card: mirror load-balance grid'));
 
 assert.match(

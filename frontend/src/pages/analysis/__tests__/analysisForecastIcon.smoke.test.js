@@ -4,18 +4,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const srcRoot = path.resolve(here, '..');
+const srcRoot = path.resolve(here, '../../..');
 const analysisSource = readFileSync(path.join(here, '../Analysis.jsx'), 'utf8');
 const analysisStyle = readFileSync(path.join(srcRoot, 'styles/analysis-summary.css'), 'utf8');
 
 assert.ok(
-  existsSync(path.join(srcRoot, 'assets/performance-forecast-icon.png')),
+  existsSync(path.join(srcRoot, 'assets/performance-forecast-icon.webp')),
   'The generated performance-forecast icon should be stored in the frontend asset tree.',
 );
 
 assert.match(
   analysisSource,
-  /import performanceForecastIcon from ['"]\.\.\/assets\/performance-forecast-icon\.png['"];?/,
+  /import performanceForecastIcon from ['"]\.\.\/\.\.\/assets\/performance-forecast-icon\.webp['"];?/,
   'Analysis should import the generated performance-forecast icon.',
 );
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const styleSource = readFileSync(path.join(here, '../../styles/_split/analysis.css'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../../../styles/_split/analysis.css'), 'utf8');
 const typographyBlock = styleSource.slice(styleSource.indexOf('Analysis load-balance typography parity'));
 
 assert.match(

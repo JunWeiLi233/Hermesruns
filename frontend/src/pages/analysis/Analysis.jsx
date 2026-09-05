@@ -21,11 +21,11 @@ import { computeVdotTrend } from '../../utils/vdot';
 import { buildAnalysisSnapshot, normalizeAnalysisList } from '../../utils/analysisInsights';
 import PageSkeleton from '../../components/PageSkeleton';
 import '../../styles/analysis-summary.css';
-import fitnessTrendIcon from '../../assets/fitness-trend-icon-green.png';
-import injuryRiskIcon from '../../assets/injury-risk-icon.png';
-import coachAdviceIcon from '../../assets/coach-advice-icon.png';
-import intensityDistributionCardIcon from '../../assets/intensity-distribution-card-icon.png';
-import performanceForecastIcon from '../../assets/performance-forecast-icon.png';
+import fitnessTrendIcon from '../../assets/fitness-trend-icon-green.webp';
+import injuryRiskIcon from '../../assets/injury-risk-icon.webp';
+import coachAdviceIcon from '../../assets/coach-advice-icon.webp';
+import intensityDistributionCardIcon from '../../assets/intensity-distribution-card-icon.webp';
+import performanceForecastIcon from '../../assets/performance-forecast-icon.webp';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;

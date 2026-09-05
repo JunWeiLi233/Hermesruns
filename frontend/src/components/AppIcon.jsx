@@ -143,6 +143,16 @@ export default function AppIcon({ name, className = '', title }) {
           />
         </>
       );
+    case 'load_balance':
+      return titled(
+        <>
+          <rect x="5" y="5.5" width="14" height="3" rx="1.5" fill="currentColor" stroke="none" />
+          <rect x="5" y="10.5" width="14" height="3" rx="1.5" fill="var(--accent-coral-strong, #f07561)" stroke="none" />
+          <path d="M12 13.5v2" />
+          <path d="m9.5 19 2.5-4 2.5 4" />
+          <path d="M9.5 19h5" />
+        </>
+      );
     case 'person':
       return titled(
         <>
