@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const pageSource = readFileSync(path.join(here, "../ProfileDashboard.jsx"), 'utf8');
+const pageSource = readFileSync(path.join(here, '../ProfileDashboard.jsx'), 'utf8');
 
 assert.match(
   pageSource,
@@ -14,10 +14,9 @@ assert.match(
 
 assert.match(
   pageSource,
-  /apiJson\('\/api\/profile\/me'\)[\s\S]*apiJson\('\/api\/activities'\)/s,
-  'Profile dashboard should keep the individual endpoint fallback path.',
+  /apiJson\('\/api\/profile\/me'\)[\s\S]*PROFILE_ACTIVITIES_FETCH_LIMIT/,
+  'Profile dashboard should keep the individual endpoint fallback path with a bounded activities limit.',
 );
-
 
 assert.match(
   pageSource,

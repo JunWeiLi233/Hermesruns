@@ -69,8 +69,8 @@ assert.match(
 
 assert.match(
   profileSource,
-  /loadProfileDashboardFullHistoryData[\s\S]*apiJson\('\/api\/activities'\)/,
-  'Profile dashboard should fetch full run history in the background after the bounded batch paints.',
+  /loadProfileDashboardFullHistoryData[\s\S]*PROFILE_ACTIVITIES_FETCH_LIMIT/,
+  'Profile dashboard should fetch bounded run history (limit=500) in the background after the bounded batch paints.',
 );
 
 assert.match(

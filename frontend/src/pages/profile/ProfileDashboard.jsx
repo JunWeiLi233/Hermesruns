@@ -44,6 +44,8 @@ function getDashboardCacheKey(email) {
 // 5 MB quota. The background revalidate still hydrates the full list into
 // memory, so derived stats stay correct after the first paint.
 const DASHBOARD_CACHE_RUN_LIMIT = 500;
+// Keep in sync with BE APP_ACTIVITIES_DEFAULT_LIMIT / RFC-005 (max 500).
+const PROFILE_ACTIVITIES_FETCH_LIMIT = DASHBOARD_CACHE_RUN_LIMIT;
 const DASHBOARD_FIRST_PAINT_RUN_LIMIT = 60;
 const PROFILE_DASHBOARD_BATCH_TIMEOUT_MS = 1400;
 
@@ -513,7 +515,7 @@ function normalizeProfileDashboardPayload(payload) {
 async function loadProfileDashboardFallbackData() {
   const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
     apiJson('/api/profile/me'),
-    apiJson('/api/activities'),
+    apiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`),
     apiJson('/api/shoes'),
   ]);
 
@@ -569,7 +571,7 @@ async function loadProfileDashboardData() {
 }
 
 async function loadProfileDashboardFullHistoryData() {
-  const activities = await apiJson('/api/activities');
+  const activities = await apiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`);
   return sortRunsByMostRecent(Array.isArray(activities) ? activities : []);
 }
 
