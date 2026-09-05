@@ -942,3 +942,36 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-
 body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card.recent-runs-insight-card--primary strong {
   color: #fff7ee !important;
 }
+
+/* Runs supplied reference cascade. This file follows runs.css, so repeat the
+   month-shell reset here to keep the heading outside the white row surface. */
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-apple-month-group {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-apple-month-group .recent-runs-month-header {
+  min-height: 24px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-apple-month-group .recent-runs-month-toggle-chevron {
+  display: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-apple-month-group .recent-runs-month-title {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  font-style: normal !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-apple-month-group .recent-runs-month-grid {
+  border: 1px solid var(--runs-reference-line) !important;
+  border-radius: 10px !important;
+  background: var(--runs-reference-surface) !important;
+}

@@ -4,10 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const analysisSource = readFileSync(path.join(here, "../Analysis.jsx"), 'utf8');
-const styleSource = readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8');
-const analysisSplitStyleSource = readFileSync(path.join(here, "../../../styles/_split/analysis.css"), 'utf8');
-const liquidGlassStyleSource = readFileSync(path.join(here, "../../../styles/all-pages-liquid-glass.css"), 'utf8');
+const analysisSource = readFileSync(path.join(here, '../Analysis.jsx'), 'utf8');
+const styleSource = readFileSync(path.join(here, '../../styles/style.generated.css'), 'utf8');
+const analysisSplitStyleSource = readFileSync(path.join(here, '../../styles/_split/analysis.css'), 'utf8');
+const legacyStyleSource = readFileSync(path.join(here, '../../styles/style.css'), 'utf8');
+const analysisSummaryStyleSource = readFileSync(path.join(here, '../../styles/analysis-summary.css'), 'utf8');
+const liquidGlassStyleSource = readFileSync(path.join(here, '../../styles/all-pages-liquid-glass.css'), 'utf8');
 
 assert.match(
   analysisSource,
@@ -15,10 +17,34 @@ assert.match(
   'Analysis VO2 trend grid should keep rendering as a static profile-cockpit article, not as a clickable navigation button.',
 );
 
+assert.doesNotMatch(
+  analysisSource,
+  /<span className="analysis-overview-card-kicker">\{t\('analysis\.stitch_vo2_kicker'\)\}<\/span>/,
+  'The Analysis VO2 trend grid should omit the redundant aerobic signal kicker.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /analysis\.stitch_vo2_band|analysis-overview-vo2-legend/,
+  'The Analysis VO2 overview should omit the representative-trend caption and raw/weather legend.',
+);
+
 assert.match(
-  styleSource,
-  /#root \.runner-shell-page\.analysis-page-shell \.analysis-overview-card--vo2 \.analysis-overview-card-kicker\s*\{[^}]*color:\s*var\(--accent-coral-strong\)\s*!important;/,
-  'The Analysis VO2 context label should use the coach card coral accent without recoloring the VO2max title.',
+  analysisSource,
+  /<div className="analysis-overview-hero-value">[\s\S]*?<strong>\{currentMonthVdot != null \? currentMonthVdot\.toFixed\(1\) : '--'\}<\/strong>[\s\S]*?<span className="analysis-overview-hero-value-unit">\{t\('analysis\.stitch_vo2_unit'\)\}<\/span>/,
+  'The Analysis VO2 value should render the current month mL/kg/min value beside the headline number.',
+);
+
+assert.doesNotMatch(
+  analysisSource,
+  /analysis-overview-vo2-status-gauge/,
+  'The VO2 chart should not render a duplicate semi-circle status gauge.',
+);
+
+assert.match(
+  analysisSource,
+  /analysis-overview-card--load analysis-profile-reference-card[\s\S]*?<Gauge value=\{trainingLoad\?\.lastAcwr \|\| 0\} color=\{loadZone\.color\} \/>/,
+  'The workload card should retain the original semi-circle status gauge.',
 );
 
 assert.match(
@@ -225,8 +251,8 @@ const analysisLabBlock = analysisSplitStyleSource.slice(
 
 assert.match(
   analysisLabBlock,
-  /\/\* Analysis VO2 inner grids use a neutral light-grey surface[\s\S]*?\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary :is\(\s*\.analysis-overview-hero-value,\s*\.analysis-profile-decision-chip\s*\)\s*\{[\s\S]*background:\s*#f3f4f4 !important;[\s\S]*\.analysis-overview-vo2-bars\s*\{[\s\S]*background:[\s\S]*#f3f4f4 !important;/,
-  'Analysis VO2 value, chart, and decision grids should use the requested light-grey inner surface.',
+  /\/\* Analysis VO2 inner grids use a neutral light-grey surface[\s\S]*?\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary \.analysis-overview-hero-value\s*\{[\s\S]*background:\s*#f3f4f4 !important;[\s\S]*\.analysis-overview-vo2-bars\s*\{[\s\S]*background:[\s\S]*#f3f4f4 !important;/,
+  'Analysis VO2 value and chart surfaces should retain their requested light-grey inner treatment.',
 );
 
 assert.ok(
@@ -301,7 +327,6 @@ const analysisContrastBlock = analysisLabBlock.slice(
 for (const selector of [
   '.analysis-overview-card-head h2',
   '.analysis-overview-hero-value strong',
-  '.analysis-profile-decision-chip strong',
   '.analysis-overview-card--forecast > strong',
   '.analysis-overview-gauge-value',
 ]) {
@@ -394,6 +419,102 @@ assert.match(
   analysisSplitStyleSource,
   /\.analysis-page-shell \.analysis-profile-reference-card\.is-trend \.analysis-overview-card-kicker\s*\{[\s\S]*?padding:\s*0;[\s\S]*?border-color:\s*transparent;[\s\S]*?background:\s*transparent\s*!important;/,
   'The VDOT trend kicker should keep its label without the decorative capsule layer.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-overview-vo2-bar\s*\{[\s\S]*?border-radius:\s*2px 2px 0 0;/,
+  'Analysis VO2 bars should use the lightly rounded, flat-bottomed shape from the reference.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell \.analysis-profile-primary \.analysis-overview-vdot-title\s*\{[\s\S]*?font-size:\s*clamp\(1\.1rem,\s*1\.5vw,\s*1\.45rem\)\s*!important;[\s\S]*?color:\s*#ff634f\s*!important;/,
+  'The Analysis VO2max title should match the runner icon color and responsive size.',
+);
+
+assert.match(
+  analysisSplitStyleSource,
+  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary \.analysis-overview-vdot-title\s*\{[\s\S]*?font-size:\s*clamp\(1\.1rem,\s*1\.5vw,\s*1\.45rem\)\s*!important;[\s\S]*?color:\s*#ff634f\s*!important;/,
+  'The final direct Analysis title override should beat later heading rules.',
+);
+
+assert.match(
+  legacyStyleSource,
+  /\.analysis-page-shell \.analysis-overview-vo2-bar\s*\{[^}]*border-radius:\s*2px 2px 0 0;/,
+  'The legacy Analysis stylesheet should preserve the reference bar shape for direct page mounts.',
+);
+
+assert.match(
+  legacyStyleSource,
+  /\.hermes-site-frame\[data-gpt-taste-system="gpt-taste"\]\[data-route-path="\/analysis"\] \.analysis-overview-vo2-bar\s*\{[^}]*border-radius:\s*2px 2px 0 0;/,
+  'The legacy site-frame Analysis stylesheet should preserve the reference bar shape for wrapped mounts.',
+);
+
+assert.match(
+  legacyStyleSource,
+  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-primary\.analysis-profile-primary \.analysis-overview-vdot-title\s*\{[\s\S]*?font-size:\s*clamp\(1\.1rem,\s*1\.5vw,\s*1\.45rem\)\s*!important;[\s\S]*?color:\s*#ff634f\s*!important;/,
+  'The legacy direct Analysis stylesheet should preserve the runner-matched title styling.',
+);
+
+assert.match(
+  legacyStyleSource,
+  /\.hermes-site-frame\[data-gpt-taste-system="gpt-taste"\]\[data-route-path="\/analysis"\] \.analysis-profile-primary \.analysis-overview-vdot-title\s*\{[\s\S]*?font-size:\s*clamp\(1\.1rem,\s*1\.5vw,\s*1\.45rem\)\s*!important;[\s\S]*?color:\s*#ff634f\s*!important;/,
+  'The legacy wrapped Analysis stylesheet should preserve the runner-matched title styling.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-vdot-title\s*\{[\s\S]*?color:\s*#ff634f\s*!important;[\s\S]*?font-size:\s*1\.15rem\s*!important;/,
+  'The late Apple Health Analysis override should keep the VO2max title coral instead of restoring dark text.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-overview-vdot-title\s*\{[\s\S]*?color:\s*#ff634f\s*!important;[\s\S]*?font-size:\s*0\.94rem\s*!important;/,
+  'The compact Apple Health Analysis override should use the runner coral at smaller breakpoints too.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-hero-value\s*\{[\s\S]*?margin-bottom:\s*clamp\(1rem,\s*1\.6vw,\s*1\.5rem\)\s*!important;/,
+  'The Apple Health Analysis VO2 value should lift to the bar graph baseline.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-hero-value\s*\{[\s\S]*?display:\s*flex\s*!important;[\s\S]*?align-items:\s*baseline\s*!important;/,
+  'The Apple Health Analysis VO2 value and unit should share a baseline row.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-primary \.analysis-overview-hero-value-unit\s*\{(?=[\s\S]*?font-size:\s*0\.75rem\s*!important;)(?=[\s\S]*?color:\s*#8e8e93\s*!important;)/,
+  'The Apple Health Analysis VO2 unit should be significantly smaller and light grey.',
+);
+
+assert.match(
+  analysisSummaryStyleSource,
+  /#root \.analysis-page-shell \.analysis-profile-reference-card\.is-load \.analysis-overview-gauge-svg\s*\{[\s\S]*?grid-area:\s*gauge\s*!important;[\s\S]*?justify-self:\s*center\s*!important;/,
+  'The workload gauge should be centered in the same horizontal status position.',
+);
+
+assert.doesNotMatch(
+  analysisSummaryStyleSource,
+  /analysis-overview-vo2-status-gauge/,
+  'The Apple Health stylesheet should not retain duplicate VO2 gauge positioning.',
+);
+
+assert.match(
+  legacyStyleSource,
+  /\.analysis-page-shell\.analysis-page-shell \.analysis-profile-reference-card\.is-load \.analysis-overview-gauge-svg,[\s\S]*?\{[\s\S]*?justify-self:\s*center\s*!important;/,
+  'The legacy direct workload gauge should remain centered.',
+);
+
+assert.doesNotMatch(
+  legacyStyleSource,
+  /analysis-overview-vo2-status-gauge/,
+  'The legacy stylesheet should not retain duplicate VO2 gauge positioning.',
 );
 
 console.log('[PASS] Analysis VDOT trend accent guardrails passed.');

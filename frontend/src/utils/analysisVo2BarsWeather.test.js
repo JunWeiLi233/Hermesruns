@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { buildVo2Bars } from './analysisInsights.js';
+import { buildAnalysisSnapshot, buildVo2Bars } from './analysisInsights.js';
 
 const now = new Date();
 
@@ -43,5 +43,30 @@ assert.ok(previousBar, 'previous month bar should exist');
 assert.equal(previousBar.value, 47.3, 'previous month should keep raw VDOT');
 assert.equal(previousBar.adjustedValue, 47.3, 'previous month should expose unchanged adjusted VDOT');
 assert.equal(previousBar.hasAdjustment, false, 'previous month should not flag an adjustment when raw and adjusted match');
+
+const snapshot = buildAnalysisSnapshot([
+  {
+    distanceKm: 5,
+    movingTimeSeconds: 1800,
+    startTime: monthDate(0, 2).toISOString(),
+  },
+  {
+    distanceKm: 10,
+    movingTimeSeconds: 3000,
+    startTime: monthDate(-1, 8).toISOString(),
+  },
+], 'en', 'km');
+const snapshotCurrentBar = snapshot.vo2Bars.at(-1);
+
+assert.equal(
+  snapshot.currentMonthVdot,
+  snapshotCurrentBar.value,
+  'snapshot currentMonthVdot should mirror the current month raw VO2 bar value',
+);
+assert.notEqual(
+  snapshot.currentMonthVdot,
+  snapshot.bestVdot,
+  'snapshot currentMonthVdot should not reuse the representative lookback VDOT',
+);
 
 console.log('[PASS] analysis VO2 bars weather adjustment enrichment works.');

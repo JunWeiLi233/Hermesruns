@@ -587,6 +587,7 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
   const bestVdot = bestEstimate.representativeVdot;
   const entries = normalizeAnalysisList(collectAllVdotEntries(runs));
   const vo2Bars = normalizeAnalysisList(buildVo2Bars(entries, lang));
+  const currentMonthVdot = vo2Bars.at(-1)?.value ?? null;
   const trainingLoad = buildTrainingLoad(runs, bestVdot);
   const loadZone = acwrZone(trainingLoad?.lastAcwr);
   const polarized = buildPolarized(runs, bestVdot);
@@ -614,6 +615,7 @@ export function buildAnalysisSnapshot(runs, lang, unit) {
   return {
     bestEstimate,
     bestVdot,
+    currentMonthVdot,
     entries,
     vo2Bars,
     trainingLoad,
