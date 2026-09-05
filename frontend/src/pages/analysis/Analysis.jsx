@@ -322,6 +322,12 @@ export default function Analysis() {
   const localizedCoachAdvice = injuryStatus?.risk === 'LOW'
     ? t('analysis.stitch_injury_prevention_coach_advice_low')
     : injuryStatus?.coachAdvice;
+  const injuryAcwrColor = useMemo(() => {
+    const acwr = Number(injuryStatus?.acwr) || 0;
+    if (acwr < 1.0) return '#38a35e';
+    if (acwr <= 1.2) return '#d98c3a';
+    return '#d94a3a';
+  }, [injuryStatus?.acwr]);
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -933,11 +939,11 @@ export default function Analysis() {
                       <div
                         className="analysis-injury-prevention-acwr-body"
                         style={{
-                          color: (Number(injuryStatus?.acwr) || 0) < 1.0 ? '#38a35e' : (Number(injuryStatus?.acwr) || 0) <= 1.2 ? '#d98c3a' : '#d94a3a',
-                          '--analysis-gauge-value-color': (Number(injuryStatus?.acwr) || 0) < 1.0 ? '#38a35e' : (Number(injuryStatus?.acwr) || 0) <= 1.2 ? '#d98c3a' : '#d94a3a',
+                          color: injuryAcwrColor,
+                          '--analysis-gauge-value-color': injuryAcwrColor,
                         }}
                       >
-                        <Gauge value={injuryStatus?.acwr || 0} color={(Number(injuryStatus?.acwr) || 0) < 1.0 ? '#38a35e' : (Number(injuryStatus?.acwr) || 0) <= 1.2 ? '#d98c3a' : '#d94a3a'} />
+                        <Gauge value={injuryStatus?.acwr || 0} color={injuryAcwrColor} />
                         <div className="analysis-injury-prevention-acwr-value">
                           {injuryStatus?.acwr != null ? injuryStatus.acwr.toFixed(2) : '--'}
                         </div>
