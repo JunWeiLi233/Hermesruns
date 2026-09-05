@@ -15,5 +15,9 @@ assert.ok(fullIdx >= 0 && sampleIdx > fullIdx, 'FULL_RENDER must be declared bef
 assert.doesNotMatch(heatmap, /HEATMAP_SAMPLE_LIMIT = 25000/);
 assert.match(cache, /ACTIVITIES_TTL_MS = 120 \* 1000/);
 assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'\)/);
-assert.doesNotMatch(analysis, /apiJson\('\/api\/activities\/analysis'\)/);
+assert.match(analysis, /apiJson\('\/api\/activities\/analysis'\)/);
+assert.match(analysis, /invalidateResourceCache\('\/api\/activities'\)/);
+// initial load keeps cache; post-import refresh must invalidate + apiJson
+assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
+assert.equal((analysis.match(/apiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
 console.log('frontendMemoryFootprint.smoke.test.js OK');
