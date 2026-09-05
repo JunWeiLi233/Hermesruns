@@ -100,6 +100,11 @@ Controllers delegate business/data operations to domain services. Profile uses `
 
 ## 6. Key call chains and data flow
 
+`runtime/SleepModeConfiguration.java` and `runtime/SleepWakeCatchUp.java` own the
+opt-in sleep profile's sequential wake catch-up. Scheduler/provider behavior stays
+in `imports/` and coaching stays in `coaching/`. Their regression tests live in the
+matching `runtime/` and `imports/` test packages.
+
 ### Authentication
 
 `Login.jsx` / auth UI -> `AuthContext.jsx` and `api.ts` -> `POST /api/auth/login` -> `auth/LoginController.java` -> `auth/AuthService.java`, `auth/PasswordHasher.java`, login limiter/store -> opaque bearer-session token (stored as a hash by the backend) -> `localStorage` -> route guards in `App.jsx` and authenticated API calls.

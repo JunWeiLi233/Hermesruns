@@ -66,6 +66,9 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw -q test
+      - name: Run offline Garmin downloader tests
+        working-directory: backend
+        run: python3 -m unittest discover -s src/test/python -v
 
   # ── Docker build ───────────────────────────────────────────────────────────
   build-docker:

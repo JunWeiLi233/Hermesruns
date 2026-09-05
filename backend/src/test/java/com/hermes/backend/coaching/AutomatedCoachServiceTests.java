@@ -9,6 +9,9 @@ import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
 import com.hermes.backend.shoes.Shoe;
 import com.hermes.backend.shoes.ShoeTrackerService;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,6 +25,131 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 class AutomatedCoachServiceTests {
+
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3, 4, 9, 26000})
+    void nightlyAuditCatchesUpMissedWeeksWithoutIncreasingLoadOrRepeatingProgression(int missedWeeks) {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        fixture.block().setBlockStartedOn(currentWeek.minusWeeks(missedWeeks + 2L));
+        fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(missedWeeks));
+
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(2 + missedWeeks);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(currentWeek);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(13.3);
+
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(2 + missedWeeks);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(currentWeek);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(13.3);
+        verify(fixture.blocks()).save(fixture.block());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0,14.9", "3,9.3", "4,14.9"})
+    void nightlyAuditPreservesSingleWeekIncreaseCutbackAndRounding(int previousIndex, double expectedKm) {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        fixture.block().setWeekIndex(previousIndex);
+        fixture.block().setBlockStartedOn(currentWeek.minusWeeks(previousIndex + 1L));
+        fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(1));
+
+        fixture.service().nightlyAuditAllRunners();
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(previousIndex + 1);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(currentWeek);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(expectedKm);
+        verify(fixture.blocks()).save(fixture.block());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void nightlyAuditDoesNotAdvanceCurrentOrFutureWatermark(int weeksAhead) {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate watermark = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .plusWeeks(weeksAhead);
+        fixture.block().setLastProgressionWeekStart(watermark);
+
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(2);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(watermark);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(13.3);
+        verify(fixture.blocks(), never()).save(any());
+    }
+
+    @Test
+    void nightlyAuditRecoversNullWatermarkFromBlockStartWithoutIncreasingLoad() {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        fixture.block().setBlockStartedOn(currentWeek.minusWeeks(6).plusDays(2));
+        fixture.block().setLastProgressionWeekStart(null);
+
+        fixture.service().nightlyAuditAllRunners();
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(6);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(currentWeek);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(13.3);
+        verify(fixture.blocks()).save(fixture.block());
+    }
+
+    @Test
+    void nightlyAuditInitializesMissingDatesWithoutInventingTrainingProgress() {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        fixture.block().setBlockStartedOn(null);
+        fixture.block().setLastProgressionWeekStart(null);
+
+        fixture.service().nightlyAuditAllRunners();
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(2);
+        assertThat(fixture.block().getLastProgressionWeekStart()).isEqualTo(currentWeek);
+        assertThat(fixture.block().getCurrentLongRunKm()).isEqualTo(13.3);
+        verify(fixture.blocks()).save(fixture.block());
+    }
+
+    @Test
+    void multiweekNightlyRecoveryPreservesCompletedWorkout() {
+        NightlyAuditFixture fixture = nightlyAuditFixture();
+        LocalDate today = LocalDate.now();
+        LocalDate currentWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        fixture.block().setBlockStartedOn(currentWeek.minusWeeks(5));
+        fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(3));
+        CoachScheduledWorkout completedPlan = new CoachScheduledWorkout();
+        completedPlan.setRunner(fixture.runner());
+        completedPlan.setScheduledDate(today);
+        completedPlan.setWorkoutType(CoachWorkoutType.THRESHOLD);
+        completedPlan.setPlannedDistanceKm(9.0);
+        completedPlan.setPlannedDurationMinutes(50);
+        completedPlan.setNotes("Completed threshold workout");
+        when(fixture.schedules().findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(
+                eq(fixture.runner()), any(), any())).thenReturn(List.of(completedPlan));
+        when(fixture.activities().countByRunnerAndActivityType(fixture.runner(), ActivityType.RUN)).thenReturn(10L);
+        List<RunMetricsProjection> completedRuns = List.of(runMetric(today.atStartOfDay(), 9.0, 3000, 170));
+        when(fixture.activities().findRunMetricsBetween(eq(fixture.runner()), eq(ActivityType.RUN), any(), any()))
+                .thenReturn(completedRuns);
+        doAnswer(invocation -> {
+            Iterable<CoachScheduledWorkout> saved = invocation.getArgument(0);
+            assertThat(saved).doesNotContain(completedPlan);
+            return List.of();
+        }).when(fixture.schedules()).saveAll(anyList());
+
+        fixture.service().nightlyAuditAllRunners();
+        fixture.service().nightlyAuditAllRunners();
+
+        assertThat(fixture.block().getWeekIndex()).isEqualTo(5);
+        assertThat(completedPlan.getWorkoutType()).isEqualTo(CoachWorkoutType.THRESHOLD);
+        assertThat(completedPlan.getPlannedDistanceKm()).isEqualTo(9.0);
+        assertThat(completedPlan.getPlannedDurationMinutes()).isEqualTo(50);
+        assertThat(completedPlan.getNotes()).isEqualTo("Completed threshold workout");
+        verify(fixture.schedules(), times(2)).saveAll(anyList());
+    }
 
     @Test
     void getScheduleDoesNotRewriteTodaysWorkoutAfterRunnerCompletedIt() {
@@ -392,6 +520,37 @@ class AutomatedCoachServiceTests {
         assertThat(today.recommendedShoe().daysSinceLastWear()).isEqualTo(6);
         assertThat(today.recommendedShoe().recommendationReason()).contains("trail surface");
     }
+
+    private NightlyAuditFixture nightlyAuditFixture() {
+        Runner runner = runner();
+        RunnerRepository runners = mock(RunnerRepository.class);
+        ActivityRepository activities = mock(ActivityRepository.class);
+        CoachRunnerStateRepository states = mock(CoachRunnerStateRepository.class);
+        CoachScheduledWorkoutRepository schedules = mock(CoachScheduledWorkoutRepository.class);
+        CoachTrainingBlockRepository blocks = mock(CoachTrainingBlockRepository.class);
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(runner);
+        when(runners.findAllById(List.of(runner.getId()))).thenReturn(List.of(runner));
+        when(activities.findDistinctRunnerIdsWithActivityType(ActivityType.RUN)).thenReturn(List.of(runner.getId()));
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        CoachTrainingBlock block = new CoachTrainingBlock();
+        block.setRunner(runner);
+        block.setRaceDistanceKm(21.1);
+        block.setWeekIndex(2);
+        block.setCurrentLongRunKm(13.3);
+        when(blocks.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.of(block));
+        AutomatedCoachService service = new AutomatedCoachService(
+                runners, activities, states, schedules, blocks,
+                mock(CoachFeedbackAlertRepository.class), mock(ShoeTrackerService.class), mock(CoachRouteService.class),
+                new ReadinessService(mock(DailySleepDataRepository.class), mock(DailyHRVDataRepository.class),
+                        mock(DailyStressDataRepository.class), mock(DailyWellnessSummaryRepository.class), activities),
+                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class));
+        return new NightlyAuditFixture(service, runner, activities, schedules, blocks, block);
+    }
+
+    private record NightlyAuditFixture(AutomatedCoachService service, Runner runner, ActivityRepository activities,
+                                     CoachScheduledWorkoutRepository schedules, CoachTrainingBlockRepository blocks,
+                                     CoachTrainingBlock block) {}
 
     private AutomatedCoachService service(
             CoachRunnerStateRepository stateRepository,

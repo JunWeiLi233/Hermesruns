@@ -9,8 +9,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
@@ -135,9 +133,8 @@ class SecureByDefaultRouteSecurityTests {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML));
 
-        Resource[] assets = new PathMatchingResourcePatternResolver().getResources("classpath:/static/assets/*");
-        assertThat(assets).isNotEmpty();
-        mockMvc.perform(get("/assets/" + assets[0].getFilename()))
-                .andExpect(status().isOk());
+        mockMvc.perform(get("/assets/auth-policy-probe.css"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Test-only resource for anonymous static-asset authorization")));
     }
 }

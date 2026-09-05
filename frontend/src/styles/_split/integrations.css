@@ -1767,10 +1767,10 @@ body:not(.theme-light):not(.theme-high-contrast-light) .garmin-profile-page {
 }
 
 .garmin-profile-form-card .garmin-import-field--limit {
-  padding: 16px;
+  padding: 16px 0;
   border: 1px solid var(--garmin-profile-line);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--garmin-profile-card) 58%, transparent);
+  background: transparent;
   box-shadow: none;
 }
 

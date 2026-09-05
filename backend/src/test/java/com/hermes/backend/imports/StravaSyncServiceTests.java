@@ -63,6 +63,23 @@ class StravaSyncServiceTests {
         return (ParameterizedTypeReference) any(ParameterizedTypeReference.class);
     }
 
+    private static boolean isBootstrapRecentPage(String url, int page) {
+        String prefix = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page="
+                + page + "&after=";
+        if (url == null || !url.startsWith(prefix)) {
+            return false;
+        }
+        try {
+            return Long.parseLong(url.substring(prefix.length())) >= 0L;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static String bootstrapRecentPage(int page) {
+        return argThat(url -> isBootstrapRecentPage(url, page));
+    }
+
     @Test
     void recentSyncScansConfiguredPagesAndUpdatesChangedDuplicateRun() {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
@@ -104,11 +121,9 @@ class StravaSyncServiceTests {
         when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(true);
         when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        String pageTwoUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=2";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("1001", "Morning Run", 5000d, 1500L))));
-        when(restTemplate.exchange(eq(pageTwoUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(2), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("1002", "Corrected Strava Title", 7000d, 2100L))));
 
         service.fetchAndSaveStravaActivities("token", 41L, true, "test_recent_sync");
@@ -126,7 +141,7 @@ class StravaSyncServiceTests {
         assertEquals(2, status.processedPages());
         assertEquals(2, status.processedActivities());
 
-        verify(restTemplate).exchange(eq(pageTwoUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
+        verify(restTemplate).exchange(bootstrapRecentPage(2), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
         verify(automatedCoachService).reaggregateRunner(41L);
         verify(applicationEventPublisher, never()).publishEvent(any());
     }
@@ -161,8 +176,7 @@ class StravaSyncServiceTests {
         when(runnerRepository.findById(42L)).thenReturn(Optional.of(runner));
         when(stravaTokenService.resolveRunnerStravaAccessToken(runner)).thenReturn(null);
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenThrow(HttpClientErrorException.create(
                         HttpStatus.UNAUTHORIZED,
                         "Unauthorized",
@@ -209,8 +223,7 @@ class StravaSyncServiceTests {
         runner.setId(43L);
         when(runnerRepository.findById(43L)).thenReturn(Optional.of(runner));
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenThrow(HttpClientErrorException.create(
                         HttpStatus.FORBIDDEN,
                         "Forbidden",
@@ -388,8 +401,7 @@ class StravaSyncServiceTests {
                 .when(activityDataAccess)
                 .savePointsIfAbsentAtomically(eq(19L), anyList());
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("1001", "Morning Run", 5000d, 1500L))));
         String gpsUrl = "https://www.strava.com/api/v3/activities/1001/streams?keys=latlng,time,distance,altitude,heartrate,cadence";
         when(restTemplate.exchange(
@@ -465,7 +477,7 @@ class StravaSyncServiceTests {
     }
 
     @Test
-    void recentSyncWithoutCursorKeepsBoundedPagesAndSetsCursor() {
+    void recentSyncWithoutCursorUsesBootstrapLookbackAndSetsCursor() {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
@@ -501,22 +513,30 @@ class StravaSyncServiceTests {
         when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(true);
         when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        String pageTwoUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=2";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
-                .thenReturn(ResponseEntity.ok(List.of(stravaActivity("1001", "Morning Run", 5000d, 1500L))));
-        when(restTemplate.exchange(eq(pageTwoUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+                .thenReturn(ResponseEntity.ok(List.of(stravaActivity("1001", "Morning Run", 5000d, 1500L))))
                 .thenReturn(ResponseEntity.ok(List.of()));
 
         long beforeSyncEpoch = Instant.now().getEpochSecond();
         service.fetchAndSaveStravaActivities("token", 46L, true, "test_no_cursor_sync");
+        long afterSyncEpoch = Instant.now().getEpochSecond();
 
         ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
         verify(restTemplate, times(2)).exchange(urlCaptor.capture(), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
         assertEquals(2, urlCaptor.getAllValues().size());
-        for (String url : urlCaptor.getAllValues()) {
-            assertTrue(!url.contains("after="), "full-window sync must not send after=, got: " + url);
-        }
+        String firstUrl = urlCaptor.getAllValues().get(0);
+        String secondUrl = urlCaptor.getAllValues().get(1);
+        assertTrue(firstUrl.contains("&page=1&after="), "missing-cursor recent sync must be bounded, got: " + firstUrl);
+        assertTrue(secondUrl.contains("&page=2&after="), "all pages must share the bootstrap bound, got: " + secondUrl);
+
+        long firstAfter = Long.parseLong(firstUrl.substring(firstUrl.lastIndexOf("&after=") + "&after=".length()));
+        long secondAfter = Long.parseLong(secondUrl.substring(secondUrl.lastIndexOf("&after=") + "&after=".length()));
+        long bootstrapWindowSeconds = 14L * 24L * 60L * 60L;
+        assertEquals(firstAfter, secondAfter);
+        assertTrue(firstAfter >= beforeSyncEpoch - bootstrapWindowSeconds,
+                "bootstrap bound must not precede the configured lookback window");
+        assertTrue(firstAfter <= afterSyncEpoch - bootstrapWindowSeconds,
+                "bootstrap bound must cover the full configured lookback window");
 
         ArgumentCaptor<Runner> runnerCaptor = ArgumentCaptor.forClass(Runner.class);
         verify(runnerRepository).save(runnerCaptor.capture());
@@ -527,6 +547,47 @@ class StravaSyncServiceTests {
         assertEquals("COMPLETED", status.status());
         assertEquals(1, status.importedRuns());
         assertEquals(1, status.processedPages());
+    }
+
+    @Test
+    void negativeBootstrapLookbackClampsAfterToSyncStart() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+
+        StravaSyncService service = new StravaSyncService(
+                activityRepository,
+                activityPointRepository,
+                runnerRepository,
+                restTemplate,
+                mock(AcclimatizationService.class),
+                mock(AutomatedCoachService.class),
+                mock(ApplicationEventPublisher.class),
+                mock(AiUsageService.class),
+                mock(StravaTokenService.class),
+                mock(ActivityDataAccess.class)
+        );
+        ReflectionTestUtils.setField(service, "stravaRecentSyncMaxPages", 1);
+        ReflectionTestUtils.setField(service, "bootstrapLookbackDays", -5L);
+
+        Runner runner = new Runner();
+        runner.setId(53L);
+        when(runnerRepository.findById(53L)).thenReturn(Optional.of(runner));
+        when(runnerRepository.save(any(Runner.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+                .thenReturn(ResponseEntity.ok(List.of()));
+
+        long beforeSyncEpoch = Instant.now().getEpochSecond();
+        service.fetchAndSaveStravaActivities("token", 53L, true, "test_negative_bootstrap");
+        long afterSyncEpoch = Instant.now().getEpochSecond();
+
+        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(restTemplate).exchange(urlCaptor.capture(), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
+        String url = urlCaptor.getValue();
+        long afterParam = Long.parseLong(url.substring(url.lastIndexOf("&after=") + "&after=".length()));
+        assertTrue(afterParam >= beforeSyncEpoch, "negative lookback must clamp to the sync start");
+        assertTrue(afterParam <= afterSyncEpoch, "clamped bootstrap bound must not be in the future");
     }
 
     @Test
@@ -622,8 +683,7 @@ class StravaSyncServiceTests {
         when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(false);
         when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("2001", "Treadmill Run", 5000d, 1500L))));
         String streamsUrl = "https://www.strava.com/api/v3/activities/2001/streams?keys=latlng,time,distance,altitude,heartrate,cadence";
         when(restTemplate.exchange(eq(streamsUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
@@ -701,8 +761,7 @@ class StravaSyncServiceTests {
         when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(false);
         when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
 
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("3001", "Morning Run", 5000d, 1500L))));
 
         service.fetchAndSaveStravaActivities("token", 49L, true, "test_duplicate_gate");
@@ -764,8 +823,7 @@ class StravaSyncServiceTests {
         when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
 
         // Title change makes the run NEW_OR_UPDATED so the streams gate is evaluated.
-        String pageOneUrl = "https://www.strava.com/api/v3/athlete/activities?per_page=200&page=1";
-        when(restTemplate.exchange(eq(pageOneUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
                 .thenReturn(ResponseEntity.ok(List.of(stravaActivity("3002", "Corrected Title", 5000d, 1500L))));
         String streamsUrl = "https://www.strava.com/api/v3/activities/3002/streams?keys=latlng,time,distance,altitude,heartrate,cadence";
         when(restTemplate.exchange(eq(streamsUrl), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))

@@ -8,6 +8,7 @@ import { makeClaim, renderClaimMarkdown } from "./auto-hermes-claim-state.mjs";
 import { acquireTaskClaim, releaseTaskClaim } from "./auto-hermes-task-claims.mjs";
 import { createAutoHermesRun, loadAutoHermesRun, recordWebsiteAuditAttempt } from "./auto-hermes-run-state.mjs";
 import { createAutoHermesSupervisorState, evaluateAutoHermesSupervisorRound } from "./auto-hermes-supervisor.mjs";
+import { shellQuote, runExecutable, runExecutorCommand, resolveCommandFromPath } from "./auto-hermes-process.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
@@ -160,10 +161,6 @@ function runtimeExecutorLabel(runtime) {
 function configuredExecutorLabel(runtime, executor) {
   if (executor?.label) return executor.label;
   return getRuntimeNativeExecution(runtime) ? runtimeExecutorLabel(runtime) : "";
-}
-
-function shellQuote(value) {
-  return `'${String(value || "").replace(/'/g, "''")}'`;
 }
 
 function compactKey(value) {
@@ -496,15 +493,16 @@ function detectOmxRalphExecutor(args) {
     permissionMode: YOLO_EXECUTOR_PERMISSION.mode,
     permissionFlag: YOLO_EXECUTOR_PERMISSION.omxFlag,
     permissionDescription: YOLO_EXECUTOR_PERMISSION.description,
-    command: `& ${shellQuote(omxCommand)} ralph ${YOLO_EXECUTOR_PERMISSION.omxFlag} --no-deslop "Read the bounded /auto-hermes worker brief at {promptFile}. Treat {controllerJson} as the authoritative routing brief for task {task} on surface {surface}. Execute that single round, verify it, then stop."`,
+    file: omxCommand,
+    args: ["ralph", YOLO_EXECUTOR_PERMISSION.omxFlag, "--no-deslop", "Read the bounded /auto-hermes worker brief at {promptFile}. Treat {controllerJson} as the authoritative routing brief for task {task} on surface {surface}. Execute that single round, verify it, then stop."],
   };
 }
 
 function readCodexHelp(codexCommand) {
   try {
-    return execFileSync(
-      "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-      ["-Command", `& ${shellQuote(codexCommand)} --help`],
+    return runExecutable(
+      codexCommand,
+      ["--help"],
       {
         cwd: ROOT,
         encoding: "utf8",
@@ -527,7 +525,7 @@ function findCodexExecutorCandidate() {
   const globalCodex = commandExists("codex");
   const candidates = [
     globalCodex ? { command: globalCodex, source: "global" } : null,
-    fs.existsSync(localCodex) ? { command: localCodex, source: "bundled" } : null,
+    process.platform === "win32" && fs.existsSync(localCodex) ? { command: localCodex, source: "bundled" } : null,
   ].filter(Boolean);
 
   return candidates.find((candidate) => codexSupportsFlag(candidate.command, "--dangerously-bypass-hook-trust") === true)
@@ -555,11 +553,13 @@ function detectCodexExecutor() {
     .map((name) => {
       const source = path.join(userCodexHome, name);
       const target = path.join(localCodexHome, name);
-      return `if (Test-Path ${shellQuote(source)}) { Copy-Item -LiteralPath ${shellQuote(source)} -Destination ${shellQuote(target)} -Force }`;
+      return process.platform === "win32"
+        ? `if (Test-Path ${shellQuote(source)}) { Copy-Item -LiteralPath ${shellQuote(source)} -Destination ${shellQuote(target)} -Force }`
+        : `if [ -f ${shellQuote(source)} ]; then cp ${shellQuote(source)} ${shellQuote(target)}; fi`;
     })
     .join("; ");
   const clearProxyCommands = proxyVars
-    .map((name) => `$env:${name}=$null`)
+    .map((name) => process.platform === "win32" ? `$env:${name}=$null` : `unset ${name}`)
     .join("; ");
 
   return {
@@ -567,19 +567,16 @@ function detectCodexExecutor() {
     permissionMode: YOLO_EXECUTOR_PERMISSION.mode,
     permissionFlag: codexPermissionFlags.join(" "),
     permissionDescription: YOLO_EXECUTOR_PERMISSION.description,
-    command: `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(codexCommand)} ${codexPermissionFlags.join(" ")} exec --ephemeral --color never -C {cwd} -`,
+    command: process.platform === "win32"
+      ? `${clearProxyCommands}; $env:CODEX_HOME=${shellQuote(localCodexHome)}; New-Item -ItemType Directory -Force $env:CODEX_HOME | Out-Null; New-Item -ItemType Directory -Force (Join-Path $env:CODEX_HOME '.tmp') | Out-Null; ${seedCommands}; Get-Content -Raw {promptFile} | & ${shellQuote(codexCommand)} ${codexPermissionFlags.join(" ")} exec --ephemeral --color never -C {cwd} -`
+      : `${clearProxyCommands}; export CODEX_HOME=${shellQuote(localCodexHome)}; mkdir -p ${shellQuote(path.join(localCodexHome, ".tmp"))}; ${seedCommands}; ${shellQuote(codexCommand)} ${codexPermissionFlags.join(" ")} exec --ephemeral --color never -C {cwd} - < {promptFile}`,
   };
 }
 
 function runNodeScript(scriptPath, scriptArgs, options = {}) {
-  const command = [
-    "& 'C:\\Program Files\\nodejs\\node.exe'",
-    shellQuote(scriptPath),
-    ...scriptArgs.map((arg) => shellQuote(arg)),
-  ].join(" ");
   return execFileSync(
-    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    ["-Command", command],
+    process.execPath,
+    [scriptPath, ...scriptArgs],
     {
       cwd: ROOT,
       encoding: options.encoding,
@@ -628,42 +625,10 @@ function detectRtk() {
   }
 }
 
-function resolveCommandFromPath(commandName) {
-  const raw = String(commandName || "").trim();
-  if (!raw) return "";
-
-  if (raw.includes("\\") || raw.includes("/")) {
-    return fs.existsSync(raw) ? raw : "";
-  }
-
-  const pathEntries = String(process.env.PATH || "")
-    .split(path.delimiter)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-  const pathExts = String(process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD;.PS1")
-    .split(";")
-    .map((ext) => ext.trim())
-    .filter(Boolean);
-  const hasExtension = /\.[^./\\]+$/.test(raw);
-  const candidates = hasExtension
-    ? [raw]
-    : [raw, ...pathExts.map((ext) => `${raw}${ext}`)];
-
-  for (const dir of pathEntries) {
-    for (const candidate of candidates) {
-      const fullPath = path.join(dir, candidate);
-      if (fs.existsSync(fullPath)) {
-        return fullPath;
-      }
-    }
-  }
-
-  return "";
-}
-
 function commandExists(commandName) {
   const fromPath = resolveCommandFromPath(commandName);
   if (fromPath) return fromPath;
+  if (process.platform !== "win32") return "";
 
   try {
     const output = execFileSync(
@@ -1404,31 +1369,18 @@ function renderWorkerPrompt(controllerResult, roundIndex, rtk, ralphArtifacts = 
   ].join("\n");
 }
 
-function applyTemplate(template, values) {
-  return template.replace(/\{([a-zA-Z0-9]+)\}/g, (match, key) => {
-    if (!(key in values)) return match;
-    return values[key];
-  });
-}
-
 function runExecutor(executor, controllerResult, promptPath, roundIndex, args) {
-  const command = applyTemplate(executor.command, {
-    cwd: shellQuote(ROOT),
-    promptFile: shellQuote(promptPath),
-    round: String(roundIndex),
-    task: shellQuote(controllerResult?.title || ""),
-    surface: shellQuote(controllerResult?.surface || ""),
-    controllerJson: shellQuote(resolveFromRoot(args.controllerJson)),
+  runExecutorCommand(executor, {
+    cwd: ROOT,
+    promptFile: promptPath,
+    round: roundIndex,
+    task: controllerResult?.title || "",
+    surface: controllerResult?.surface || "",
+    controllerJson: resolveFromRoot(args.controllerJson),
+  }, {
+    cwd: ROOT,
+    stdio: "inherit",
   });
-
-  execFileSync(
-    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    ["-Command", command],
-    {
-      cwd: ROOT,
-      stdio: "inherit",
-    },
-  );
 }
 
 function sleepSync(ms) {

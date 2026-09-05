@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { test as check } from "node:test";
 import { pathToFileURL } from "node:url";
 import { runAutoHermesController } from "./auto-hermes-controller.mjs";
 import { runAutoHermesFinish } from "./auto-hermes-finish.mjs";
@@ -9,6 +10,7 @@ import { runAutoHermesLoop } from "./auto-hermes-loop.mjs";
 import { runAutoHermesMax } from "./auto-hermes-max.mjs";
 import { runAutoHermesMaxLoop } from "./auto-hermes-max-loop.mjs";
 import { runAutoHermesSelfLoop } from "./auto-hermes-self-loop.mjs";
+import { runExecutorCommand, resolveCommandFromPath } from "./auto-hermes-process.mjs";
 import { createAutoHermesSupervisorState, evaluateAutoHermesSupervisorRound } from "./auto-hermes-supervisor.mjs";
 import { acquireTaskClaim, taskClaimKey } from "./auto-hermes-task-claims.mjs";
 import { shouldExecuteFinishCommit, shouldExecuteFinishPush, syncQueueWithController } from "./auto-hermes-round-close.mjs";
@@ -83,6 +85,12 @@ function writeFixtureFile(baseDir, name, content) {
   return target;
 }
 
+function fixtureNodeCommand(fixture, source, args = []) {
+  const script = writeFixtureFile(fixture.dir, "executor.mjs", source);
+  const quote = (value) => `'${String(value).replace(/'/g, process.platform === "win32" ? "''" : "'\"'\"'")}'`;
+  return `${process.platform === "win32" ? "& " : ""}${[process.execPath, script, ...args].map(quote).join(" ")}`;
+}
+
 function makeControllerFixture(taskBlock) {
   const fixture = makeFixture();
   fs.writeFileSync(fixture.files.tasks, `# Hermes Tasks
@@ -97,17 +105,93 @@ ${taskBlock}
   return fixture;
 }
 
-function check(name, fn) {
-  Promise.resolve()
-    .then(fn)
-    .then(() => {
-      console.log(`PASS ${name}`);
-    })
-    .catch((error) => {
-      console.error(`FAIL ${name}`);
-      console.error(error instanceof Error ? error.stack : error);
-      process.exitCode = 1;
+for (const nativeArgv of [false, true]) {
+  check(`executor process preserves literal arguments, cwd and environment (${nativeArgv ? "argv" : "shell"})`, () => {
+    const fixture = makeFixture();
+    const workDir = path.join(fixture.dir, "worker's space & $cash");
+    fs.mkdirSync(workDir);
+    const command = fixtureNodeCommand({ dir: workDir }, `
+      console.log(JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), marker: process.env.HERMES_PROCESS_TEST }));
+    `);
+    const task = "runner's \"$value\" `literal` $(echo expanded); & | {round}";
+    const values = { task, promptFile: path.join(workDir, "prompt's $name.md"), round: 7 };
+    const executor = nativeArgv
+      ? { file: process.execPath, args: [path.join(workDir, "executor.mjs"), "{task}", "{promptFile}", "{round}", "{task}"] }
+      : { command: process.platform === "win32"
+          ? "[Console]::WriteLine((ConvertTo-Json -Compress -InputObject @{ args=@({task}, {promptFile}, [string]{round}, {task}); cwd=(Get-Location).Path; marker=$env:HERMES_PROCESS_TEST }))"
+          : `${command} {task} {promptFile} {round} {task}` };
+    const output = runExecutorCommand(executor, values, {
+      cwd: workDir,
+      env: { ...process.env, HERMES_PROCESS_TEST: "preserved" },
+      encoding: "utf8",
     });
+    assert.deepEqual(JSON.parse(output), {
+      args: [task, values.promptFile, "7", task], cwd: workDir, marker: "preserved",
+    });
+  });
+}
+
+check("executor command discovery respects the platform and executable permission", (t) => {
+  const fixture = makeFixture();
+  const oldPath = process.env.PATH;
+  process.env.PATH = fixture.dir;
+  t.after(() => { if (oldPath === undefined) delete process.env.PATH; else process.env.PATH = oldPath; });
+  fs.mkdirSync(path.join(fixture.dir, "directory"));
+  assert.equal(resolveCommandFromPath("directory"), "");
+  const executable = writeFixtureFile(fixture.dir, process.platform === "win32" ? "worker.cmd" : "worker", "");
+  fs.chmodSync(executable, 0o755);
+  assert.equal(path.relative(resolveCommandFromPath("worker"), executable), "");
+  assert.equal(resolveCommandFromPath(executable), executable);
+  assert.equal(resolveCommandFromPath("missing-worker"), "");
+  if (process.platform !== "win32") {
+    fs.chmodSync(executable, 0o644);
+    assert.equal(resolveCommandFromPath("worker"), "");
+    writeFixtureFile(fixture.dir, "worker.cmd", "");
+    assert.equal(resolveCommandFromPath("worker"), "");
+  }
+});
+
+for (const outcome of ["retry-success", "retry-exhausted", "pause", "stop"]) {
+  check(`executor loop preserves retries and claims at ${outcome}`, () => {
+    const fixture = makeFixture();
+    const attemptsPath = path.join(fixture.dir, "attempts.txt");
+    const failedAttempts = outcome === "retry-success" ? 1 : 3;
+    const command = fixtureNodeCommand(fixture, `
+      import fs from 'node:fs';
+      const attemptsPath = process.argv[2];
+      const count = (fs.existsSync(attemptsPath) ? Number(fs.readFileSync(attemptsPath, 'utf8')) : 0) + 1;
+      fs.writeFileSync(attemptsPath, String(count));
+      if (count <= Number(process.argv[3])) process.exit(23);
+    `, [attemptsPath, failedAttempts]);
+    if (outcome === "pause" || outcome === "stop") {
+      fs.writeFileSync(fixture.files.humanLoop,
+        fs.readFileSync(fixture.files.humanLoop, "utf8").replace("Status: active", `Status: ${outcome}`));
+    }
+    const claimDir = path.join(fixture.dir, "claims");
+    const { state } = runAutoHermesLoop({
+      json: true, write: true, runtime: "codex-live", mode: "self-loop", maxRounds: 1,
+      executorCommand: command, maxExecutorRetries: 3, executorRetryBackoff: [0, 0, 0],
+      tasks: fixture.files.tasks, humanLoop: fixture.files.humanLoop, agentSync: fixture.files.agentSync,
+      contextLedger: fixture.files.contextLedger, loopState: fixture.files.loopState,
+      claimDir, claimOwner: "executor-regression",
+      controllerJson: path.join(fixture.dir, "controller.json"), controllerMd: path.join(fixture.dir, "controller.md"),
+      promotionJson: path.join(fixture.dir, "promotion.json"), promotionMd: path.join(fixture.dir, "promotion.md"),
+      outputJson: path.join(fixture.dir, "loop.json"), outputMd: path.join(fixture.dir, "loop.md"),
+      coordinatorJson: path.join(fixture.dir, "coordinator.json"), coordinatorMd: path.join(fixture.dir, "coordinator.md"),
+      promptFile: path.join(fixture.dir, "prompt.md"), loopStateJson: path.join(fixture.dir, "loop-state.json"),
+      roundResultJson: path.join(fixture.dir, "round-result.json"),
+    });
+    assert.deepEqual(fs.existsSync(claimDir) ? fs.readdirSync(claimDir) : [], []);
+    if (outcome === "pause" || outcome === "stop") {
+      assert.equal(fs.existsSync(attemptsPath), false);
+      assert.equal(state.roundsCompleted, 0);
+      assert.equal(state.history[0].action, "stop");
+    } else {
+      assert.equal(Number(fs.readFileSync(attemptsPath, "utf8")), outcome === "retry-success" ? 2 : 3);
+      assert.equal(state.roundsCompleted, outcome === "retry-success" ? 1 : 0);
+      assert.equal(state.status, outcome === "retry-success" ? "max-rounds-reached" : "executor-unavailable", state.stopReason);
+    }
+  });
 }
 
 check("catalog helper reports repo-local VoltAgent installs and safe fallback when manifest is missing", async () => {
@@ -745,7 +829,8 @@ check("self-loop resets same-task stall history when the repeated task shows new
     json: true,
     write: true,
     runtime: "codex-live",
-    executorCommand: "Write-Output 'noop'",
+    executorCommand: "echo noop",
+    maxExecutorRetries: 1,
     maxRounds: 1,
     maxSameWorkUnitRepeats: 2,
     tasks: fixture.files.tasks,
@@ -823,7 +908,8 @@ check("self-loop still stalls when the repeated task returns with unchanged roun
     json: true,
     write: true,
     runtime: "codex-live",
-    executorCommand: "Write-Output 'noop'",
+    executorCommand: "echo noop",
+    maxExecutorRetries: 1,
     maxRounds: 1,
     maxSameWorkUnitRepeats: 2,
     tasks: fixture.files.tasks,
@@ -1017,7 +1103,8 @@ check("loop resume carries same-work-unit stall history forward for the same per
     json: true,
     write: true,
     runtime: "codex-live",
-    executorCommand: "Write-Output 'noop'",
+    executorCommand: "echo noop",
+    maxExecutorRetries: 1,
     maxRounds: 1,
     maxSameWorkUnitRepeats: 2,
     tasks: fixture.files.tasks,
@@ -1064,7 +1151,8 @@ check("loop resume resets same-work-unit stall history when the persisted work u
     json: true,
     write: true,
     runtime: "codex-live",
-    executorCommand: "Write-Output 'noop'",
+    executorCommand: "echo noop",
+    maxExecutorRetries: 1,
     maxRounds: 1,
     maxSameWorkUnitRepeats: 2,
     tasks: fixture.files.tasks,
@@ -1111,12 +1199,11 @@ check("loop resume resets same-work-unit stall history when the persisted work u
 
 check("codex-live loop uses executor-owned self-loop path when an executor is configured", () => {
   const fixture = makeFixture();
-  const command = [
-    `$p='${fixture.files.tasks.replace(/'/g, "''")}'`,
-    "$c=[IO.File]::ReadAllText($p)",
-    "$c=[regex]::Replace($c,'- \\[ \\]','- [x]',1)",
-    "[IO.File]::WriteAllText($p,$c,[Text.Encoding]::UTF8)",
-  ].join("; ");
+  const command = fixtureNodeCommand(fixture, `
+    import fs from 'node:fs';
+    const tasks = process.argv[2];
+    fs.writeFileSync(tasks, fs.readFileSync(tasks, 'utf8').replace('- [ ]', '- [x]'), 'utf8');
+  `, [fixture.files.tasks]);
 
   const { state: result } = runAutoHermesLoop({
     json: true,
@@ -1124,6 +1211,7 @@ check("codex-live loop uses executor-owned self-loop path when an executor is co
     mode: "single-round",
     runtime: "codex-live",
     executorCommand: command,
+    maxExecutorRetries: 1,
     maxRounds: 2,
     tasks: fixture.files.tasks,
     humanLoop: fixture.files.humanLoop,
@@ -1149,8 +1237,15 @@ check("codex-live loop uses executor-owned self-loop path when an executor is co
   assert.equal(coordinator.claimStates.loopOwner.state, "verified");
 });
 
-check("loop prefers the OMX Ralph executor when the bridge maps loop ownership to $ralph", () => {
+check("loop prefers the OMX Ralph executor when the bridge maps loop ownership to $ralph", (t) => {
   const fixture = makeFixture();
+  const binDir = path.join(fixture.dir, "bin");
+  const omxPath = writeFixtureFile(binDir, process.platform === "win32" ? "omx.cmd" : "omx",
+    process.platform === "win32" ? "@echo off\r\nexit /b 0\r\n" : "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(omxPath, 0o755);
+  const oldPath = process.env.PATH;
+  process.env.PATH = `${binDir}${path.delimiter}${oldPath || ""}`;
+  t.after(() => { if (oldPath === undefined) delete process.env.PATH; else process.env.PATH = oldPath; });
   const bridgePath = path.join(fixture.dir, ".workspace/state", "OMX_AUTO_HERMES_BRIDGE.json");
   fs.mkdirSync(path.dirname(bridgePath), { recursive: true });
   fs.writeFileSync(bridgePath, JSON.stringify({
@@ -1212,7 +1307,7 @@ check("explicit executorCommand still overrides the OMX Ralph loop preference", 
     mode: "self-loop",
     runtime: "codex-live",
     maxRounds: 1,
-    executorCommand: "Write-Output 'inline executor'",
+    executorCommand: "echo inline-executor",
     tasks: fixture.files.tasks,
     humanLoop: fixture.files.humanLoop,
     agentSync: fixture.files.agentSync,
@@ -1893,17 +1988,23 @@ check("executed normal queue rounds refresh post-round work units and clear stal
     },
   }, null, 2), "utf8");
 
-  const executorCommand = [
-    `$p='${fixture.files.tasks.replace(/'/g, "''")}'`,
-    `$lines = @('# Hermes Tasks', '', '## Active Tasks', '- [ ] Fix Profile empty state', '  Files: \`frontend/src/pages/profile/Profile.jsx\`', '  Problem: frontend-design', '  Context: Promoted from executor round', '  Done when: the profile page empty state is fixed', '  Verify: \`cd frontend && npm run lint && npm run build\`', '', '## Tech Debt Tasks', '', '## Suggested Next Tasks')`,
-    'Set-Content -LiteralPath $p -Value $lines -Encoding UTF8',
-  ].join("; ");
+  const executorCommand = fixtureNodeCommand(fixture, `
+    import fs from 'node:fs';
+    fs.writeFileSync(process.argv[2], [
+      '# Hermes Tasks', '', '## Active Tasks', '- [ ] Fix Profile empty state',
+      '  Files: frontend/src/pages/profile/Profile.jsx', '  Problem: frontend-design',
+      '  Context: Promoted from executor round', '  Done when: the profile page empty state is fixed',
+      '  Verify: cd frontend && npm run lint && npm run build',
+      '', '## Tech Debt Tasks', '', '## Suggested Next Tasks',
+    ].join('\\n'), 'utf8');
+  `, [fixture.files.tasks]);
 
   const { state } = runAutoHermesLoop({
     json: true,
     write: true,
     runtime: "codex-live",
     executorCommand,
+    maxExecutorRetries: 1,
     maxRounds: 1,
     tasks: fixture.files.tasks,
     humanLoop: fixture.files.humanLoop,
@@ -2862,13 +2963,20 @@ check("auto-hermes-max loop refreshes merge state at the configured custom paths
   const resultsDir = path.join(sandboxRoot, ".workspace/state", "auto-hermes-max-results");
   const promptFile = path.join(sandboxRoot, ".workspace/state", "AUTO_HERMES_MAX_NEXT_PROMPT.md");
 
-  const executorCommand = [
-    `$coord = Get-Content -Raw '${coordinatorJson.replace(/'/g, "''")}' | ConvertFrom-Json`,
-    "$lane = $coord.lanes[0]",
-    `Set-Content -LiteralPath '${path.join(sandboxRoot, "work", "target.txt").replace(/'/g, "''")}' -Value 'sandbox-lane-complete'`,
-    "$payload = @{ laneId = $lane.laneId; parentRunId = $lane.parentRunId; correlationId = $lane.correlationId; goal = $lane.goal; ownedFiles = $lane.ownedFiles; changedFiles = @('.tmp/real-ahmax/work/target.txt'); completedRounds = @(@{ surface = 'Sandbox'; task = 'Write a verified sandbox completion marker.' }); verification = 'Get-Content .tmp/real-ahmax/work/target.txt => sandbox-lane-complete'; runtimeProof = 'not-needed'; architectVerdict = 'APPROVED'; deslopPass = 'pass'; regressionPass = 'pass'; risks = ''; mustPreserve = @(); mergeNotes = 'sandbox harness lane complete'; status = 'approved' }",
-    "$payload | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $lane.resultFile",
-  ].join("; ");
+  const executorCommand = fixtureNodeCommand(fixture, `
+    import fs from 'node:fs';
+    const lane = JSON.parse(fs.readFileSync(process.argv[2], 'utf8')).lanes[0];
+    fs.writeFileSync(process.argv[3], 'sandbox-lane-complete\\n', 'utf8');
+    const payload = {
+      laneId: lane.laneId, parentRunId: lane.parentRunId, correlationId: lane.correlationId,
+      goal: lane.goal, ownedFiles: lane.ownedFiles, changedFiles: ['.tmp/real-ahmax/work/target.txt'],
+      completedRounds: [{ surface: 'Sandbox', task: 'Write a verified sandbox completion marker.' }],
+      verification: 'Get-Content .tmp/real-ahmax/work/target.txt => sandbox-lane-complete',
+      runtimeProof: 'not-needed', architectVerdict: 'APPROVED', deslopPass: 'pass', regressionPass: 'pass',
+      risks: '', mustPreserve: [], mergeNotes: 'sandbox harness lane complete', status: 'approved',
+    };
+    fs.writeFileSync(lane.resultFile, JSON.stringify(payload), 'utf8');
+  `, [coordinatorJson, path.join(sandboxRoot, "work", "target.txt")]);
 
   const { state } = runAutoHermesMaxLoop({
     json: true,
@@ -2895,6 +3003,7 @@ check("auto-hermes-max loop refreshes merge state at the configured custom paths
     mergeMd,
     promptFile,
     executorCommand,
+    maxExecutorRetries: 1,
   });
 
   assert.equal(state.iterationsCompleted, 1);

@@ -10,7 +10,10 @@ assert.match(publisherSource, /\$nodeArgs = @\(\$refreshScript, '--json', '--for
 assert.doesNotMatch(publisherSource, /\$nodeArgs \+= '--changed-file'/, 'Large migrations must not put every staged path on the Windows command line.');
 const cases = [
   ['tools/check-architecture.mjs', false, 'publishable'],
+  ['tools/auto-hermes-process.mjs', false, 'publishable'],
   ['tools/unreviewed-helper.mjs', false, 'review'],
+  ['tools/garmin_wellness_download.py', false, 'publishable'],
+  ['tools/garmin_credentials.json', false, 'review'],
   ['Hermes.code-workspace', false, 'publishable'],
   ['private.code-workspace', false, 'should-ignore'],
   ['.workspace/state/AGENT_SYNC.md', false, 'local-only'],

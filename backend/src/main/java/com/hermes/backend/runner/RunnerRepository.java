@@ -24,6 +24,15 @@ public interface RunnerRepository extends JpaRepository<Runner, Long>, JpaSpecif
 
     List<Runner> findByGarminWellnessSyncEnabledTrueAndGarminConnectEmailIsNotNullAndDeletedFalse();
 
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Runner r set r.garminWellnessLastSyncedAt = :syncedAt
+        where r.id = :runnerId and r.deleted = false
+          and (r.garminWellnessLastSyncedAt is null or r.garminWellnessLastSyncedAt < :syncedAt)
+    """)
+    int recordGarminWellnessSyncSuccess(@Param("runnerId") Long runnerId, @Param("syncedAt") LocalDateTime syncedAt);
+
     Optional<Runner> findByEmailVerificationTokenHash(String emailVerificationTokenHash);
 
     Optional<Runner> findByPasswordResetTokenHash(String passwordResetTokenHash);

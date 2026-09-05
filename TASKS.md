@@ -23,6 +23,8 @@ Use this file as the working queue for AI agents.
 - 2026-09-04: Removed generated course-map output, Vite staging, completed migration scratch files and obsolete pre-move test reports. Preserved the Boston fixture under test resources; 187 course-map tests pass without recreating the deleted upload folder.
 - 2026-09-04: Completed the user-requested repository architecture refactor; domain packages, service/UI extraction, cleanup and verification are recorded in `docs/architecture/repository-refactor.md`, including retained compatibility issues.
 - 2026-09-04: Grouped frontend routes into 17 human-readable feature directories with colocated tests, a URL-to-owner guide and feature-scoped test commands; typecheck, 80 unit tests, 330 contracts, lint and build pass. See `docs/architecture/frontend-route-structure.md`.
+- 2026-09-04: Verified opt-in Railway sleep mode and fixed review findings: sequential provider completion, successful-only Garmin watermark updates, conservative multiweek coach recovery, busy/failed-provider audit deferral, and Windows-safe frontend contract matching. Backend: 1337 tests, zero failures/errors, one skip. Frontend: 59 unit tests and 330 contracts passed; build passed, lint zero errors/two existing warnings. Offline Garmin downloader: 12 tests passed. Docker build and isolated HTTP 200/auth 401 passed. Draft PR and exact-revision Railway deployment remain pending.
+
 
 ## Active Tasks
 - [x] Improve Analysis page

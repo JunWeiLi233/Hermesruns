@@ -475,8 +475,8 @@
       "label": "Schedulers, background jobs, and webhooks",
       "aliases": ["scheduler", "background job", "async import", "Strava webhook", "idempotency"],
       "readFirst": ["backend/src/main/java/com/hermes/backend/imports/StravaWebhookController.java", "backend/src/main/java/com/hermes/backend/imports/StravaAutoSyncScheduler.java", "backend/src/main/java/com/hermes/backend/imports/GarminWellnessSyncScheduler.java"],
-      "thenCheck": ["backend/src/main/java/com/hermes/backend/admin/AdminBackgroundJobService.java", "backend/src/main/java/com/hermes/backend/coaching/ActivityIngestedEventListenerComponent.java", "backend/src/main/java/com/hermes/backend/billing/ProcessedStripeEventRepository.java"],
-      "verify": ["cd backend && ./mvnw -q -Dtest=StravaWebhookControllerTests,StravaAutoSyncSchedulerTests,AdminBackgroundJobServiceTests test"]
+      "thenCheck": ["backend/src/main/java/com/hermes/backend/admin/AdminBackgroundJobService.java", "backend/src/main/java/com/hermes/backend/coaching/ActivityIngestedEventListenerComponent.java", "backend/src/main/java/com/hermes/backend/billing/ProcessedStripeEventRepository.java", "backend/src/main/java/com/hermes/backend/runtime/SleepModeConfiguration.java", "backend/src/main/java/com/hermes/backend/runtime/SleepWakeCatchUp.java", "backend/src/test/java/com/hermes/backend/imports/GarminWellnessCompletionTests.java", "backend/src/test/java/com/hermes/backend/imports/GarminWellnessWatermarkTests.java", "backend/src/test/java/com/hermes/backend/runtime/SleepPollingTests.java", "backend/src/test/java/com/hermes/backend/runtime/SleepProfileTests.java"],
+      "verify": ["cd backend && ./mvnw -q -Dtest=StravaWebhookControllerTests,StravaAutoSyncSchedulerTests,AdminBackgroundJobServiceTests test", "cd backend && ./mvnw -q -Dtest=SleepModeConfigurationTests,SleepWakeCatchUpTests,SleepPollingTests,SleepProfileTests,GarminWellnessCompletionTests,GarminWellnessWatermarkTests test"]
     },
     {
       "id": "runtime-publication",

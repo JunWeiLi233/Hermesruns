@@ -295,6 +295,10 @@ Start with the entity and repository reached by the owning service. Preserve H2 
 
 Start at the scheduler/controller boundary, then trace job state, idempotency record, access context, and retry behavior. Do not infer that an enqueued job executed successfully from an accepted HTTP response.
 
+For opt-in sleep/wake behavior, check `runtime/SleepModeConfiguration.java` and
+`runtime/SleepWakeCatchUp.java` under the backend package. The matching runtime
+tests and Garmin completion/watermark tests are indexed in this concern's manifest.
+
 <!-- concern:runtime-publication -->
 ### Runtime publication
 - Manifest evidence: Frontend build publication and live runtime drift · `frontend/scripts/run-vite-build.mjs` · `backend/src/main/java/com/hermes/backend/infrastructure/web/StaticAssetCacheConfig.java`

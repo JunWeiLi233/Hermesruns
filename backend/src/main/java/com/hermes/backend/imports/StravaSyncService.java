@@ -86,6 +86,9 @@ public class StravaSyncService {
     @Value("${strava.sync.cursor-buffer-seconds:21600}")
     private long cursorBufferSeconds = 21600;
 
+    @Value("${strava.sync.bootstrap-lookback-days:14}")
+    private long bootstrapLookbackDays = 14;
+
     @Value("${strava.sync.no-gps-retry-days:30}")
     private int noGpsRetryDays = 30;
 
@@ -300,9 +303,19 @@ public class StravaSyncService {
         headers.setBearerAuth(currentAccessToken);
 
         final long syncStartEpoch = Instant.now().getEpochSecond();
-        final Long afterEpoch = recentOnly && runner.getStravaListCursorEpoch() != null
-                ? Math.max(0L, runner.getStravaListCursorEpoch() - Math.max(0L, cursorBufferSeconds))
-                : null;
+        final Long afterEpoch;
+        if (!recentOnly) {
+            afterEpoch = null;
+        } else if (runner.getStravaListCursorEpoch() != null) {
+            afterEpoch = Math.max(0L, runner.getStravaListCursorEpoch() - Math.max(0L, cursorBufferSeconds));
+        } else {
+            long bootstrapLookbackSeconds = java.util.concurrent.TimeUnit.DAYS.toSeconds(
+                    Math.max(0L, bootstrapLookbackDays)
+            );
+            afterEpoch = bootstrapLookbackSeconds >= syncStartEpoch
+                    ? 0L
+                    : syncStartEpoch - bootstrapLookbackSeconds;
+        }
 
         int page = 1;
         int lastPageSize = 0;

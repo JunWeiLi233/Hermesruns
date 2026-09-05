@@ -7,6 +7,12 @@ attachment and the active-goal attachment were verified identical.
 This report records the initial refactor. The subsequent web-only root layout and
 iOS removal are documented in [repository-layout.md](repository-layout.md).
 
+For PR #90, frontend design was checked against `origin/master` commit
+`1cbf202ddaa97afccc3a68ecb8c149223542f5c4`: all 51 CSS files retain their rules,
+public assets and localization remain unchanged, and active page markup is
+preserved across route moves and component extraction. The only CSS-file diff is
+a comment updating the tooling directory name. No frontend redesign is intended.
+
 ## Problems Found
 
 The audit inventoried all 2,036 initially tracked files across application code,

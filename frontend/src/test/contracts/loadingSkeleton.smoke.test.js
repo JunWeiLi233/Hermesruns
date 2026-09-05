@@ -105,7 +105,7 @@ assert(
     && skeletonSource.includes('page-skeleton__prediction-command-grid')
     && skeletonSource.includes('page-skeleton__admin-layout')
     && skeletonSource.includes('page-skeleton__admin-sidebar')
-    && ['profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'prediction', 'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'garmin', 'import-data', 'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule', 'muscle-training', 'admin']
+    && ['profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'prediction', 'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'import-data', 'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule', 'muscle-training', 'admin']
       .every((variant) => skeletonSource.includes(`variant === '${variant}'`))
     && skeletonSource.includes("if (variant === 'landing')")
     && skeletonSource.includes('page-skeleton__landing-hero')

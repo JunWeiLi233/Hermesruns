@@ -772,18 +772,35 @@ public class AutomatedCoachService {
     }
 
     private void maybeAdvanceTrainingWeek(Runner runner, CoachTrainingBlock block) {
-        LocalDate today = LocalDate.now();
-        LocalDate nextWeekStart = block.getLastProgressionWeekStart().plusDays(7);
-        if (!today.isBefore(nextWeekStart)) {
-            block.setWeekIndex(block.getWeekIndex() + 1);
-            block.setLastProgressionWeekStart(nextWeekStart);
+        LocalDate currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate lastWeekStart = block.getLastProgressionWeekStart();
+        if (lastWeekStart == null) {
+            // Recover calendar position without treating an unknown history as completed training.
+            LocalDate startedOn = block.getBlockStartedOn();
+            if (startedOn != null && !startedOn.isAfter(currentWeekStart)) {
+                long elapsedWeeks = ChronoUnit.WEEKS.between(
+                        startedOn.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)), currentWeekStart);
+                block.setWeekIndex((int) Math.min(Integer.MAX_VALUE, Math.max(block.getWeekIndex(), elapsedWeeks)));
+            }
+            block.setLastProgressionWeekStart(currentWeekStart);
+            coachTrainingBlockRepository.save(block);
+            return;
+        }
+
+        long elapsedWeeks = ChronoUnit.WEEKS.between(lastWeekStart, currentWeekStart);
+        if (elapsedWeeks <= 0) return;
+
+        block.setWeekIndex((int) Math.min(Integer.MAX_VALUE, (long) block.getWeekIndex() + elapsedWeeks));
+        block.setLastProgressionWeekStart(currentWeekStart);
+        // A multiweek gap proves elapsed time, not attendance. Keep the last load target.
+        if (elapsedWeeks == 1) {
             if (block.getWeekIndex() % 4 != 0) {
                 block.setCurrentLongRunKm(round1(block.getCurrentLongRunKm() * LONG_RUN_WEEKLY_BUMP));
             } else {
                 block.setCurrentLongRunKm(round1(block.getCurrentLongRunKm() * 0.7));
             }
-            coachTrainingBlockRepository.save(block);
         }
+        coachTrainingBlockRepository.save(block);
     }
 
     private void apply8020ToTomorrow(Runner runner) {

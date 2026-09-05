@@ -10,6 +10,7 @@ import {
   evaluateAutoHermesSupervisorRound,
 } from "./auto-hermes-supervisor.mjs";
 import { runAutoHermesFinish } from "./auto-hermes-finish.mjs";
+import { shellQuote, runExecutorCommand, resolveCommandFromPath } from "./auto-hermes-process.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), "..");
@@ -84,18 +85,6 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function shellQuote(value) {
-  return `'${String(value || "").replace(/'/g, "''")}'`;
-}
-
-function applyTemplate(template, values) {
-  let output = template;
-  for (const [key, value] of Object.entries(values)) {
-    output = output.replaceAll(`{${key}}`, String(value ?? ""));
-  }
-  return output;
-}
-
 function sleepSync(ms) {
   if (ms <= 0) return;
   try {
@@ -107,6 +96,9 @@ function sleepSync(ms) {
 }
 
 function commandExists(commandName) {
+  const fromPath = resolveCommandFromPath(commandName);
+  if (fromPath) return fromPath;
+  if (process.platform !== "win32") return "";
   try {
     const output = execFileSync(
       "C:\\WINDOWS\\System32\\where.exe",
@@ -150,11 +142,13 @@ function detectOmxRalphExecutor(args) {
 
   return {
     label: "omx-ralph-max",
-    command: `& ${shellQuote(omxCommand)} ralph --no-deslop "Read the bounded /auto-hermes-max worker brief at {promptFile}. Treat {coordinatorJson} as the authoritative parent coordinator brief for {parentGoal}. Execute exactly one parent iteration, including child lane launches, merge arbitration, and post-merge writeback, then stop."`,
+    file: omxCommand,
+    args: ["ralph", "--no-deslop", "Read the bounded /auto-hermes-max worker brief at {promptFile}. Treat {coordinatorJson} as the authoritative parent coordinator brief for {parentGoal}. Execute exactly one parent iteration, including child lane launches, merge arbitration, and post-merge writeback, then stop."],
   };
 }
 
 function detectBundledCodexExecutor() {
+  if (process.platform !== "win32") return null;
   const localCodex = resolveFromRoot("tools/codex-local.exe");
   if (!fs.existsSync(localCodex)) return null;
   const localCodexHome = resolveFromRoot(".workspace/cache/codex-home");
@@ -203,14 +197,9 @@ function loadExecutorConfig(args) {
 }
 
 function runNodeScript(scriptPath, scriptArgs, options = {}) {
-  const command = [
-    "& 'C:\\Program Files\\nodejs\\node.exe'",
-    shellQuote(scriptPath),
-    ...scriptArgs.map((arg) => shellQuote(arg)),
-  ].join(" ");
   return execFileSync(
-    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    ["-Command", command],
+    process.execPath,
+    [scriptPath, ...scriptArgs],
     {
       cwd: ROOT,
       encoding: options.encoding,
@@ -308,23 +297,17 @@ function renderWorkerPrompt(plannerState, iterationIndex, args) {
 }
 
 function runExecutor(executor, plannerState, promptPath, iterationIndex, args) {
-  const command = applyTemplate(executor.command, {
-    cwd: shellQuote(ROOT),
-    promptFile: shellQuote(promptPath),
-    iteration: String(iterationIndex),
-    parentGoal: shellQuote(plannerState.parentGoal || ""),
-    coordinatorJson: shellQuote(resolveFromRoot(args.coordinatorJson)),
-    mergeJson: shellQuote(resolveFromRoot(args.mergeJson)),
+  runExecutorCommand(executor, {
+    cwd: ROOT,
+    promptFile: promptPath,
+    iteration: iterationIndex,
+    parentGoal: plannerState.parentGoal || "",
+    coordinatorJson: resolveFromRoot(args.coordinatorJson),
+    mergeJson: resolveFromRoot(args.mergeJson),
+  }, {
+    cwd: ROOT,
+    stdio: "inherit",
   });
-
-  execFileSync(
-    "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    ["-Command", command],
-    {
-      cwd: ROOT,
-      stdio: "inherit",
-    },
-  );
 }
 
 function runExecutorWithRetry(executor, plannerState, promptPath, iterationIndex, args) {
