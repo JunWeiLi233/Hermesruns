@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -83,11 +82,6 @@ public class ActivityController {
         this.cacheStore = cacheStore;
     }
 
-    @PostConstruct
-    void normalizeActivityLimits() {
-        this.activitiesMaxLimit = Math.max(1, activitiesMaxLimit);
-        this.activitiesDefaultLimit = Math.max(1, Math.min(activitiesDefaultLimit, this.activitiesMaxLimit));
-    }
 
     @GetMapping
     public ResponseEntity<?> getUserRuns(
@@ -113,8 +107,10 @@ public class ActivityController {
         // app.activities.default-limit (500); explicit values are clamped to
         // app.activities.max-limit (also 500 until cursor pagination exists).
         // The bound goes into the query so we never materialize full history here.
-        int requested = limit == null ? activitiesDefaultLimit : limit;
-        int bounded = Math.max(1, Math.min(requested, activitiesMaxLimit));
+        int maxLimit = Math.max(1, activitiesMaxLimit);
+        int defaultLimit = Math.max(1, Math.min(activitiesDefaultLimit, maxLimit));
+        int requested = limit == null ? defaultLimit : limit;
+        int bounded = Math.max(1, Math.min(requested, maxLimit));
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
         return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
     }
