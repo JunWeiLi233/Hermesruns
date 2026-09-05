@@ -387,7 +387,7 @@ class ProfileControllerTests {
         when(activityRepository.existsByRunnerAndActivityTypeIsNull(runner)).thenReturn(false);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(2L);
         when(activityPointRepository.countHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name())).thenReturn(1_000_000L);
-        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 40, 25000))
+        when(activityPointRepository.findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 84, 12000))
                 .thenReturn(List.of(
                         new Object[]{12L, 40.0, -73.0, 0.0, 0},
                         new Object[]{12L, 40.1, -73.1, 1000.0, 300},
@@ -433,7 +433,7 @@ class ProfileControllerTests {
                 .usingRecursiveComparison()
                 .ignoringFields("intensity")
                 .isEqualTo(body.points());
-        verify(activityPointRepository, times(1)).findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 40, 25000);
+        verify(activityPointRepository, times(1)).findHeatmapCoveragePointsByRunnerAndType(runner.getId(), ActivityType.RUN.name(), 84, 12000);
         verify(activityPointRepository, never()).findAllHeatmapPointsByRunnerAndType(runner.getId(), ActivityType.RUN.name());
     }
 
