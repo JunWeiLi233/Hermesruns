@@ -10,9 +10,9 @@ const cache = fs.readFileSync(path.join(srcRoot, 'api/resourceCache.ts'), 'utf8'
 const analysis = fs.readFileSync(path.join(srcRoot, 'pages/analysis/Analysis.jsx'), 'utf8');
 
 const fullIdx = heatmap.indexOf('const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000');
-const sampleIdx = heatmap.indexOf('const HEATMAP_SAMPLE_LIMIT = HEATMAP_FULL_RENDER_POINT_LIMIT');
-assert.ok(fullIdx >= 0 && sampleIdx > fullIdx, 'FULL_RENDER must be declared before SAMPLE_LIMIT');
+assert.match(heatmap, /const HEATMAP_SAMPLE_LIMIT = 12000/);
 assert.doesNotMatch(heatmap, /HEATMAP_SAMPLE_LIMIT = 25000/);
+assert.ok(fullIdx >= 0);
 assert.match(cache, /ACTIVITIES_TTL_MS = 120 \* 1000/);
 assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'\)/);
 assert.match(analysis, /apiJson\('\/api\/activities\/analysis'\)/);

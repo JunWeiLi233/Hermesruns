@@ -26,7 +26,7 @@ public class ProfileHeatmapService {
     // mode returns one bounded, strided pool (25k points) instead of letting
     // clients page through the full multi-million-point history (~75MB JSON
     // observed in production, all parsed and cached on the main thread).
-    private static final int DEFAULT_HEATMAP_SAMPLE_LIMIT = 25000;
+    private static final int DEFAULT_HEATMAP_SAMPLE_LIMIT = 12000;
     // Bounds come from a strided coordinate sample with tail trimming instead of
     // a raw SQL min/max: a single stray GPS reading (import glitch, dropped-fix
     // point) used to stretch the map across the planet and pin the heatmap at

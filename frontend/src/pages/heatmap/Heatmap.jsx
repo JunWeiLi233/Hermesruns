@@ -30,7 +30,7 @@ const HEATMAP_REQUEST_TIMEOUT_MS = 120000;
 // point history (~75MB JSON observed in production) through the main thread.
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
-const HEATMAP_SAMPLE_LIMIT = HEATMAP_FULL_RENDER_POINT_LIMIT; // never request more GPS than we render
+const HEATMAP_SAMPLE_LIMIT = 12000; // align with FULL_RENDER + backend DEFAULT (was 25000)
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
 const HEATMAP_CANVAS_PADDING = 0.25;
 const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;

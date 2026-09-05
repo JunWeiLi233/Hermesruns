@@ -107,7 +107,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const HEATMAP_SAMPLE_LIMIT = 25000;[\s\S]*?async function fetchSampledHeatmap\(signal\) \{[\s\S]*?\/api\/profile\/heatmap\?sample=true&limit=\$\{HEATMAP_SAMPLE_LIMIT\}/,
+  /const HEATMAP_SAMPLE_LIMIT = 12000;[\s\S]*?async function fetchSampledHeatmap\(signal\) \{[\s\S]*?\/api\/profile\/heatmap\?sample=true&limit=\$\{HEATMAP_SAMPLE_LIMIT\}/,
   'Heatmap should load one bounded server-side render pool instead of paging the full GPS history.',
 );
 assert.doesNotMatch(
