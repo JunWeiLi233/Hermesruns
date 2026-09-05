@@ -628,6 +628,8 @@ export default function ProfileDashboard() {
   const [banner, setBanner] = useState(null);
   const [prCelebration, setPrCelebration] = useState(null);
   const [dismissedComeback, setDismissedComeback] = useState(false);
+  // pending | settled | timed_out �� only render comeback after coach enrichment settles
+  const [comebackGateStatus, setComebackGateStatus] = useState('pending');
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [_activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
@@ -644,6 +646,7 @@ export default function ProfileDashboard() {
   const loadDashboard = useCallback(() => {
     const loadToken = ++dashboardLoadGenerationRef.current;
     const isCurrentLoad = () => dashboardLoadGenerationRef.current === loadToken;
+    setComebackGateStatus('pending');
 
     // Stale-while-revalidate: paint immediately from the last cached payload
     // for this account, then fetch fresh data in the background. Only the
@@ -763,20 +766,30 @@ export default function ProfileDashboard() {
           window.history.replaceState({}, document.title, nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
         }
 
+        const settleComebackGate = () => {
+          if (isCurrentLoad()) setComebackGateStatus('settled');
+        };
+
         if (dashboardData.source === 'batch') {
           applyDashboardEnrichment(dashboardData);
           if (dashboardData.deferredEnrichment) {
             void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
-              if (isCurrentLoad()) applyDashboardEnrichment(enrichmentData);
+              if (!isCurrentLoad()) return;
+              applyDashboardEnrichment(enrichmentData);
+              settleComebackGate();
             }).catch(() => {
-              // Optional dashboard enrichments should not block the first render.
+              // Enrichment failed �� leave gate pending until timeout forces timed_out (no flash).
             });
+          } else {
+            settleComebackGate();
           }
         } else {
           void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
-            if (isCurrentLoad()) applyDashboardEnrichment(enrichmentData);
+            if (!isCurrentLoad()) return;
+            applyDashboardEnrichment(enrichmentData);
+            settleComebackGate();
           }).catch(() => {
-            // Optional dashboard enrichments should not block the first render.
+            // Enrichment failed �� leave gate pending until timeout forces timed_out (no flash).
           });
         }
       } catch {
@@ -803,6 +816,14 @@ export default function ProfileDashboard() {
       dashboardLoadGenerationRef.current += 1;
     };
   }, [isAuthenticated, navigate, loadDashboard]);
+
+  useEffect(() => {
+    if (comebackGateStatus !== 'pending' || loadState === 'loading') return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setComebackGateStatus((status) => (status === 'pending' ? 'timed_out' : status));
+    }, 8000);
+    return () => window.clearTimeout(timeoutId);
+  }, [comebackGateStatus, loadState]);
 
   useEffect(() => {
     if (loadState !== 'ready' || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) {
@@ -932,8 +953,11 @@ export default function ProfileDashboard() {
   const vdotTrend = useMemo(() => computeVdotTrend(dashboardMetricRuns), [dashboardMetricRuns]);
   const streak = useMemo(() => calculateStreaks(dashboardMetricRuns), [dashboardMetricRuns]);
   const daysOff = useMemo(() => getDaysSinceLastRun(dashboardMetricRuns), [dashboardMetricRuns]);
+  // Wait for coach enrichment to settle before rendering. Timed-out / failed
+  // enrichment never shows the card (avoids first-paint comeback flash).
   const shouldShowComebackCard = (
     loadState === 'ready'
+    && comebackGateStatus === 'settled'
     && !dismissedComeback
     && todayBundle.recommendation?.intent === 'comeback'
     && runs.length > 0

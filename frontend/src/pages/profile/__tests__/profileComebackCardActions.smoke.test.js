@@ -15,8 +15,32 @@ const translationsSource = [
 
 assert.match(
   profileSource,
-  /const shouldShowComebackCard =[\s\S]*todayBundle\.recommendation\?\.intent === 'comeback'[\s\S]*runs\.length > 0/,
-  'Profile dashboard should derive the comeback card from the recommendation intent instead of the stale runsFreshness/day-count gate.',
+  /const \[comebackGateStatus, setComebackGateStatus\] = useState\('pending'\)/,
+  'Profile dashboard should track comeback gate as pending until coach enrichment settles.',
+);
+
+assert.match(
+  profileSource,
+  /const shouldShowComebackCard =[\s\S]*comebackGateStatus === 'settled'[\s\S]*todayBundle\.recommendation\?\.intent === 'comeback'[\s\S]*runs\.length > 0/,
+  'True comeback still shows: only render after enrichment settles and settled intent is comeback.',
+);
+
+assert.match(
+  profileSource,
+  /setComebackGateStatus\('pending'\)[\s\S]*settleComebackGate[\s\S]*setComebackGateStatus\('settled'\)/,
+  'Comeback gate resets pending on each load and settles only after coach enrichment applies.',
+);
+
+assert.match(
+  profileSource,
+  /status === 'pending' \? 'timed_out'/,
+  'Enrichment timeout must force timed_out so a slow path never flashes a transient comeback.',
+);
+
+assert.doesNotMatch(
+  profileSource,
+  /shouldShowComebackCard =[\s\S]{0,280}daysOff >= 2/,
+  'Do not latch first-paint comeback via daysOff �� wait for settled intent instead.',
 );
 
 assert.match(
