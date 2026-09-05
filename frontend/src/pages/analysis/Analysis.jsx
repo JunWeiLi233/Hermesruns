@@ -565,7 +565,7 @@ export default function Analysis() {
                 <article className="analysis-overview-card analysis-overview-card--vo2 analysis-profile-primary">
                   <div className="analysis-overview-card-head">
                     <h2 className="analysis-overview-vdot-title">
-                      <AppIcon name="directions_run" className="analysis-overview-vdot-runner-icon" />
+                      <AppIcon name="load_balance_runner" className="analysis-overview-vdot-runner-icon" />
                       {t('analysis.stitch_vo2_title')}
                     </h2>
                     <div className="analysis-overview-hero-value">
