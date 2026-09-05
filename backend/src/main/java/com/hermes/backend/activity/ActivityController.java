@@ -23,6 +23,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,6 +46,25 @@ public class ActivityController {
     private final ReadinessService readinessService;
     private final TtlCacheStore cacheStore;
 
+    // Field-injected so the @Autowired ctor stays under the <8 dependency guard
+    // (ActivityControllerTests.autowiredConstructorKeepsDependencyCountBelowTarget).
+    @Value("${app.activities.default-limit:500}")
+    private int activitiesDefaultLimit = 500;
+
+    @Value("${app.activities.max-limit:500}")
+    private int activitiesMaxLimit = 500;
+
+    public ActivityController(AuthService authService,
+                              ActivityDataAccess activityDataAccess,
+                              ActivityStravaStreamService stravaStreamService,
+                              ElevationCorrectionService elevationCorrectionService,
+                              AcclimatizationService acclimatizationService,
+                              ReadinessService readinessService) {
+        this(authService, activityDataAccess, stravaStreamService,
+                elevationCorrectionService, acclimatizationService, readinessService,
+                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
+    }
+
     @Autowired
     public ActivityController(AuthService authService,
                               ActivityDataAccess activityDataAccess,
@@ -62,16 +82,6 @@ public class ActivityController {
         this.cacheStore = cacheStore;
     }
 
-    public ActivityController(AuthService authService,
-                              ActivityDataAccess activityDataAccess,
-                              ActivityStravaStreamService stravaStreamService,
-                              ElevationCorrectionService elevationCorrectionService,
-                              AcclimatizationService acclimatizationService,
-                              ReadinessService readinessService) {
-        this(authService, activityDataAccess, stravaStreamService,
-                elevationCorrectionService, acclimatizationService, readinessService,
-                TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
-    }
 
     @GetMapping
     public ResponseEntity<?> getUserRuns(
@@ -93,13 +103,15 @@ public class ActivityController {
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 
-        // Runs come back newest-first, so a limit serves the most recent N.
-        // Consumers that need the whole history (the Runs list) omit it.
-        // The clamped limit goes into the query itself, so a limited feed load
-        // materializes only N run entities instead of the runner's full history.
-        List<Activity> runs = limit == null
-                ? activityDataAccess.findRunsForRunner(activeUser.get())
-                : activityDataAccess.findRunsForRunner(activeUser.get(), Math.max(1, Math.min(limit, 500)));
+        // Runs come back newest-first. Missing limit defaults to
+        // app.activities.default-limit (500); explicit values are clamped to
+        // app.activities.max-limit (also 500 until cursor pagination exists).
+        // The bound goes into the query so we never materialize full history here.
+        int maxLimit = Math.max(1, activitiesMaxLimit);
+        int defaultLimit = Math.max(1, Math.min(activitiesDefaultLimit, maxLimit));
+        int requested = limit == null ? defaultLimit : limit;
+        int bounded = Math.max(1, Math.min(requested, maxLimit));
+        List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
         return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
     }
 
