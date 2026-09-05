@@ -1001,6 +1001,19 @@ body.theme-midnight .vdot-badge,
   transform: none;
 }
 
+.analysis-overview-card-head .analysis-overview-vdot-title {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 14px);
+}
+
+.analysis-overview-card-head .analysis-overview-vdot-runner-icon {
+  flex: 0 0 auto;
+  width: clamp(1.35rem, 2.5vw, 2rem);
+  height: clamp(1.35rem, 2.5vw, 2rem);
+  color: var(--accent-coral-strong);
+}
+
 .analysis-overview-hero-value {
   text-align: right;
 }
@@ -1140,6 +1153,19 @@ body.theme-midnight .vdot-badge,
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.analysis-page-shell .analysis-overview-card-kicker--load {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analysis-page-shell .analysis-load-balance-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  color: var(--accent-coral-strong, #f07561);
 }
 
 .analysis-overview-gauge-svg {
@@ -1333,6 +1359,22 @@ body.theme-midnight .vdot-badge,
 
 .analysis-overview-intensity-row {
   margin-top: 18px;
+}
+
+.analysis-intensity-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.analysis-intensity-icon {
+  display: block;
+  flex: 0 0 auto;
+  width: clamp(28px, 3.2vw, 42px);
+  height: clamp(28px, 3.2vw, 42px);
+  object-fit: contain;
 }
 
 .analysis-overview-intensity-row strong,
@@ -7283,7 +7325,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
   .schedule-plan-page,
   .runner-dashboard-page:has(.muscle-training-page)
 ) :is(
-  .analysis-profile-decision-chip,
   .recent-runs-card-metric,
   .recent-runs-chip,
   .weather-engine-data-pill,
@@ -7994,9 +8035,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
     grid-template-columns: 1fr;
   }
 
-  .analysis-page-shell .analysis-profile-decision-spine,
   .analysis-page-shell .analysis-profile-reference-card.is-load,
-  .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-decision-spine,
   .hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-reference-card.is-load {
     grid-template-columns: 1fr;
   }
@@ -8204,7 +8243,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
   min-height: 230px;
   margin-top: clamp(24px, 3vw, 42px);
   padding: 18px 14px 12px;
-  border: 1px solid var(--analysis-lab-line);
   border-radius: 8px;
   background:
     linear-gradient(rgba(27, 34, 32, 0.06) 1px, transparent 1px),
@@ -8213,7 +8251,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 }
 
 .analysis-page-shell .analysis-overview-vo2-bar {
-  border-radius: 8px 8px 3px 3px;
+  border-radius: 2px 2px 0 0;
   background: linear-gradient(180deg, var(--analysis-lab-accent), var(--analysis-lab-accent-dark)) !important;
   box-shadow: none !important;
 }
@@ -8234,40 +8272,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
   background: var(--analysis-lab-surface) !important;
   color: var(--analysis-lab-ink) !important;
   box-shadow: 0 14px 30px rgba(28, 45, 42, 0.11);
-}
-
-.analysis-page-shell .analysis-profile-decision-spine {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.analysis-page-shell .analysis-profile-decision-chip {
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--analysis-lab-line);
-  border-radius: 8px;
-  background: var(--analysis-lab-surface-soft) !important;
-  color: var(--analysis-lab-ink) !important;
-}
-
-.analysis-page-shell .analysis-profile-decision-chip span {
-  display: block;
-  color: var(--analysis-lab-muted) !important;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.analysis-page-shell .analysis-profile-decision-chip strong {
-  display: block;
-  margin-top: 7px;
-  color: var(--analysis-lab-ink) !important;
-  font-size: clamp(1.35rem, 1.85rem, 2.1rem);
-  line-height: 1;
-  letter-spacing: 0;
 }
 
 .analysis-page-shell .analysis-profile-reference-grid {
@@ -8404,7 +8408,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 .analysis-page-shell .analysis-overview-coach-badge {
   border: 0 !important;
   border-radius: 8px;
-  background: var(--analysis-lab-surface-soft) !important;
+  background: transparent !important;
 }
 
 .analysis-page-shell .analysis-overview-card--vdot-insight .analysis-overview-insight-delta strong,
@@ -8610,7 +8614,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 
   .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head,
   .analysis-page-shell .analysis-profile-reference-grid,
-  .analysis-page-shell .analysis-profile-decision-spine,
   .analysis-page-shell .analysis-profile-reference-card.is-load {
     grid-template-columns: 1fr !important;
   }
@@ -8674,10 +8677,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 
 /* Analysis VO2 inner grids use a neutral light-grey surface while the hero
  * card remains white, keeping the chart and metric tiles visually grouped. */
-.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary :is(
-  .analysis-overview-hero-value,
-  .analysis-profile-decision-chip
-) {
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary .analysis-overview-hero-value {
   background: #f3f4f4 !important;
 }
 
@@ -8692,7 +8692,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 .analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary :is(
   .analysis-overview-card-head h2,
   .analysis-overview-hero-value strong,
-  .analysis-profile-decision-chip strong,
   .analysis-overview-vo2-tag
 ),
 .analysis-page-shell.analysis-page-shell :is(
@@ -8706,7 +8705,6 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
 
 .analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary :is(
   .analysis-overview-hero-value span,
-  .analysis-profile-decision-chip span,
   .analysis-overview-vo2-label,
   .analysis-overview-vo2-legend-item span
 ) {
@@ -8989,10 +8987,147 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-soreness-modal-actions 
   box-shadow: 0 7px 16px rgba(var(--analysis-heat-accent-rgb), 0.22);
 }
 
+/* Analysis VO2 hero full-width composition: let the main VO2 card own the
+   upper row, then place its existing three-card reference stack underneath. */
+@media (min-width: 1181px) {
+  .analysis-page-shell .analysis-profile-cockpit {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .analysis-page-shell .analysis-profile-cockpit > .analysis-profile-primary,
+  .analysis-page-shell .analysis-profile-cockpit > .analysis-profile-reference-grid {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Analysis VO2 chart lower-right composition: keep the title/value block on
+   the left and anchor the interactive chart panel to the card's lower-right
+   side on wide desktop screens. */
+@media (min-width: 1280px) {
+  .analysis-page-shell .analysis-profile-primary {
+    grid-template-columns: minmax(320px, 0.34fr) minmax(640px, 0.66fr) !important;
+    grid-template-rows: auto minmax(190px, 1fr) auto;
+    column-gap: clamp(22px, 2.6vw, 42px);
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head {
+    display: contents;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head h2 {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: end;
+    justify-self: start;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bars {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    align-self: end;
+    justify-self: end;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-legend {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: end;
+  }
+}
+
+/* Analysis VO2 Apple Fitness language: keep the data-rich card compact,
+   quiet, and metric-led without changing its chart or interaction model. */
+@media (min-width: 761px) {
+  .analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary {
+    min-height: clamp(360px, 28rem, 440px);
+    padding: clamp(20px, 2.2vw, 30px) !important;
+    border: 1px solid rgba(60, 60, 67, 0.12) !important;
+    border-radius: 16px !important;
+    box-shadow:
+      0 1px 2px rgba(60, 60, 67, 0.05),
+      0 8px 24px rgba(60, 60, 67, 0.045) !important;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head h2 {
+    max-width: none;
+    margin: 0;
+    font-size: clamp(1.6rem, 2.7vw, 2.6rem) !important;
+    line-height: 1;
+    letter-spacing: -0.06em;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vdot-title {
+    gap: 10px;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vdot-runner-icon {
+    width: clamp(1.1rem, 1.5vw, 1.45rem);
+    height: clamp(1.1rem, 1.5vw, 1.45rem);
+    color: #ff634f !important;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value {
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value strong {
+    color: var(--analysis-lab-ink) !important;
+    font-size: clamp(2.2rem, 3.4vw, 3.4rem);
+    line-height: 0.95;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value span {
+    color: #ff634f !important;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bars {
+    min-height: 190px;
+    margin-top: 14px;
+    padding: 14px 12px 10px;
+    border: 0;
+    border-radius: 14px;
+    background: #f5f5f7 !important;
+    background-image: none !important;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar {
+    background: var(--analysis-lab-accent) !important;
+  }
+
+  .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-legend {
+    gap: 12px;
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+}
+
 .analysis-page-shell .analysis-heat-context__exposure-labels {
   color: var(--analysis-heat-muted);
   font-size: 0.68rem;
   font-weight: 750;
+}
+
+/* VO2 hover details read as a floating modal through shadow, not a framed
+   outline around the selected data point. */
+.analysis-page-shell .analysis-overview-vo2-tooltip {
+  border: 0 !important;
+  outline: none;
+  border-radius: 14px;
+  box-shadow:
+    0 18px 40px rgba(28, 45, 42, 0.16),
+    0 4px 12px rgba(28, 45, 42, 0.08) !important;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) .analysis-page-shell .analysis-heat-context {
@@ -10363,6 +10498,52 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-soreness-modal-card 
   }
 }
 
+/* Analysis load-balance typography parity: use the same display family as the
+   VO2max title without changing the label's size, weight, or accent color. */
+.analysis-page-shell.analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load {
+  font-family: "Manrope", var(--font-display) !important;
+}
+
+/* Use the generated green fitness mark as the leading visual for the VDOT
+   trend label, keeping the dynamic trend value heading unchanged. */
+.analysis-page-shell.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  color: #34c759 !important;
+}
+
+.analysis-page-shell.analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker > span {
+  color: #34c759 !important;
+}
+
+.analysis-page-shell .analysis-vdot-trend-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: contain;
+}
+
+/* Analysis independent bento card surfaces: the summary grid only positions
+   the three cards; it must not render a fourth card behind them. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid {
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+  border: 1px solid rgba(60, 60, 67, 0.18) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
 /* Soreness modal level above title */
 .analysis-soreness-modal-card .modal-header {
   display: grid;
@@ -10457,6 +10638,34 @@ body:is(.theme-light, .theme-high-contrast-light) .analysis-soreness-modal-card 
   min-height: 60px !important;
   font-size: 1.1rem !important;
   box-shadow: none !important;
+}
+
+/* Keep the VO2max title paired with its runner mark across every breakpoint
+   and route stylesheet cascade. */
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary .analysis-overview-vdot-title {
+  color: #ff634f !important;
+  font-size: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.analysis-page-shell.analysis-page-shell .analysis-profile-primary.analysis-profile-primary .analysis-overview-vdot-runner-icon {
+  width: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  height: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  color: #ff634f !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-primary .analysis-overview-vdot-title {
+  color: #ff634f !important;
+  font-size: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.hermes-site-frame[data-gpt-taste-system="gpt-taste"][data-route-path="/analysis"] .analysis-profile-primary .analysis-overview-vdot-runner-icon {
+  width: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  height: clamp(1.1rem, 1.5vw, 1.45rem) !important;
+  color: #ff634f !important;
 }
 
 @media (max-width: 540px) {

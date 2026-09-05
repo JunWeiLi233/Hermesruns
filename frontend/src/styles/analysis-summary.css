@@ -1,0 +1,2124 @@
+/*
+ * Analysis summary layout (DV-2026-09-04-005)
+ * Page shell, sidebar rail, and summary-card layout for /analysis.
+ */
+
+:root {
+  /* Semantic roles (approx system colors; adaptive intent) */
+  --ahs-canvas: #f2f2f7;
+  --ahs-surface: #ffffff;
+  --ahs-label: #1c1c1e;
+  --ahs-secondary: rgba(60, 60, 67, 0.6);
+  --ahs-tertiary: rgba(60, 60, 67, 0.3);
+  --ahs-separator: rgba(60, 60, 67, 0.12);
+  --ahs-blue: #007aff;
+  --ahs-red: #ff3b30;
+  --ahs-orange: #ff9500;
+  --ahs-green: #34c759;
+  --ahs-teal: #30b0c7;
+  --ahs-purple: #af52de;
+  --ahs-pink: #ff2d55;
+  --ahs-indigo: #5856d6;
+
+  --ahs-radius: 22px;
+  --ahs-radius-lg: 28px;
+  --ahs-space: 8px;
+  --ahs-gap: 12px;
+  --ahs-inset: 16px;
+  --ahs-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --ahs-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+
+  --ahs-wash:
+    radial-gradient(90% 55% at 12% -10%, rgba(255, 214, 232, 0.22), transparent 58%),
+    radial-gradient(80% 50% at 88% -6%, rgba(186, 214, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, #f5f5f7 0%, var(--ahs-canvas) 28%, var(--ahs-canvas) 100%);
+}
+
+/* ---------- Canvas (Deference: quiet stage) ---------- */
+html:has(#root .today-run-command-page),
+html:has(#root .runs-dashboard-page.runs-ledger-page),
+html:has(#root .analysis-page-shell),
+html:has(#root .profile-dashboard-page),
+body:has(#root .today-run-command-page),
+body:has(#root .runs-dashboard-page.runs-ledger-page),
+body:has(#root .analysis-page-shell),
+body:has(#root .profile-dashboard-page) {
+  background: var(--ahs-wash) !important;
+  background-color: var(--ahs-canvas) !important;
+  background-attachment: fixed !important;
+  font-family: var(--ahs-font) !important;
+}
+
+#root .today-run-command-page,
+#root .runs-dashboard-page.runs-ledger-page,
+#root .analysis-page-shell,
+#root .profile-dashboard-page {
+  background: transparent !important;
+  color: var(--ahs-label) !important;
+  font-family: var(--ahs-font) !important;
+}
+
+#root .today-run-command-page .runner-shell-canvas,
+#root .runs-dashboard-page .runner-shell-canvas,
+#root .analysis-page-shell .runner-shell-canvas,
+#root .profile-dashboard-page .runner-shell-canvas,
+#root .profile-dashboard-page .hd-content {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#root .today-run-command-page .runner-shell-canvas::before,
+#root .runs-dashboard-page .runner-shell-canvas::before,
+#root .analysis-page-shell .runner-shell-canvas::before,
+#root .profile-dashboard-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* ---------- Glass chrome only (Liquid Glass = nav layer) ---------- */
+#root .today-run-command-page > .runner-shell-sidebar,
+#root .runs-dashboard-page > .runner-shell-sidebar,
+#root .analysis-page-shell > .runner-shell-sidebar,
+#root .profile-dashboard-page > .runner-shell-sidebar {
+  background: rgba(255, 255, 255, 0.72) !important;
+  background-image: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: none !important;
+}
+
+#root .today-run-command-page .runner-shell-topbar,
+#root .runs-dashboard-page .runner-shell-topbar,
+#root .analysis-page-shell .runner-shell-topbar,
+#root .profile-dashboard-page .runner-shell-topbar {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Large Title */
+#root .today-run-command-page .runner-shell-topbar h1,
+#root .runs-dashboard-page .runner-shell-topbar h1,
+#root .analysis-page-shell .runner-shell-topbar h1,
+#root .profile-dashboard-page .runner-shell-topbar h1,
+#root .runs-dashboard-page .runs-reference-header h1,
+#root .runs-dashboard-page .runs-apple-ledger-header h1 {
+  color: var(--ahs-label) !important;
+  font-family: var(--ahs-font) !important;
+  font-size: clamp(1.85rem, 2.6vw, 2.125rem) !important; /* ~34pt */
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.15 !important;
+}
+
+/* Shared card surface */
+#root .today-run-command-page :is(
+  .today-run-coaching-answer,
+  .today-run-plan-card,
+  .today-run-command-hero-copy,
+  .today-run-command-readiness-panel
+),
+#root .runs-dashboard-page.runs-ledger-page :is(
+  .runs-apple-summary-band,
+  .runs-reference-stat-rail,
+  .runs-apple-control-workbench,
+  .runs-reference-controls,
+  .recent-runs-card
+),
+#root .analysis-page-shell :is(
+  .analysis-overview-card,
+  .analysis-profile-primary,
+  .analysis-injury-prevention-section
+),
+#root .profile-dashboard-page :is(
+  .hd-metric-card,
+  .hd-weekly-card,
+  .hd-sessions-card,
+  .hd-predictions-card,
+  .hd-stamina-card,
+  .hd-streak-card,
+  .hd-rewards,
+  .hd-hero-readiness,
+  .hd-today-card
+) {
+  border: 0 !important;
+  border-radius: var(--ahs-radius-lg) !important;
+  background: var(--ahs-surface) !important;
+  box-shadow: var(--ahs-shadow) !important;
+  transition: opacity 120ms ease !important;
+  transform: none !important;
+}
+
+/* No hover-lift carnival �?Apple uses subtle press/opacity */
+#root .today-run-command-page :is(.today-run-coaching-answer, .today-run-plan-card):active,
+#root .analysis-page-shell .analysis-overview-card:active,
+#root .profile-dashboard-page :is(.hd-metric-card, .hd-weekly-card, .hd-sessions-card):active,
+#root .runs-dashboard-page .recent-runs-card:active {
+  opacity: 0.92 !important;
+}
+
+/* ---------- Today: Health card header grammar ---------- */
+@media (min-width: 861px) {
+  #root .today-run-command-page .today-run-coaching-strip-inner {
+    gap: var(--ahs-gap) !important;
+  }
+
+  #root .today-run-command-page :is(
+    .today-run-summary-kicker,
+    .today-run-coaching-answer-kicker,
+    .today-run-apple-kicker
+  ) {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 0.94rem !important; /* ~15pt */
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+  }
+
+  #root .today-run-command-page .today-run-coaching-answer--readiness :is(.today-run-summary-kicker, .today-run-coaching-answer-kicker) { color: var(--ahs-pink) !important; }
+  #root .today-run-command-page .today-run-coaching-answer--fitness :is(.today-run-summary-kicker, .today-run-coaching-answer-kicker) { color: var(--ahs-blue) !important; }
+  #root .today-run-command-page .today-run-coaching-answer--wellness :is(.today-run-summary-kicker, .today-run-coaching-answer-kicker) { color: var(--ahs-green) !important; }
+  #root .today-run-command-page .today-run-coaching-answer--load :is(.today-run-summary-kicker, .today-run-coaching-answer-kicker) { color: var(--ahs-orange) !important; }
+  #root .today-run-command-page .today-run-coaching-answer--shoe :is(.today-run-summary-kicker, .today-run-coaching-answer-kicker),
+  #root .today-run-command-page .today-run-apple-kicker { color: var(--ahs-teal) !important; }
+
+  /* Headline value */
+  #root .today-run-command-page :is(.today-run-coaching-answer-value, .today-run-plan-panel-copy h2) {
+    color: var(--ahs-label) !important;
+    font-size: clamp(1.5rem, 2vw, 1.85rem) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Quiet secondary copy */
+  #root .today-run-command-page .today-run-coaching-answer p,
+  #root .today-run-command-page .today-run-plan-morning-briefing p,
+  #root .today-run-command-page .today-run-readiness-metric-label small {
+    color: var(--ahs-secondary) !important;
+    font-size: 0.94rem !important;
+    font-weight: 400 !important;
+  }
+}
+
+/* ---------- Analysis ---------- */
+#root .analysis-page-shell .analysis-overview-grid {
+  gap: var(--ahs-gap) !important;
+}
+
+#root .analysis-page-shell .analysis-overview-vdot-title {
+  color: #ff634f !important;
+  font-size: 0.94rem !important;
+  font-weight: 600 !important;
+}
+
+#root .analysis-page-shell .analysis-overview-card-kicker,
+#root .analysis-page-shell .analysis-overview-card-kicker--load {
+  font-size: 0.94rem !important;
+  font-weight: 600 !important;
+  color: var(--ahs-purple) !important;
+}
+
+#root .analysis-page-shell .analysis-overview-card--load .analysis-overview-card-kicker--load { color: var(--ahs-orange, #ff9500) !important; }
+#root .analysis-page-shell .analysis-overview-card--coach .analysis-overview-card-kicker { color: var(--ahs-blue) !important; }
+
+#root .analysis-page-shell .analysis-overview-hero-value,
+#root .analysis-page-shell .analysis-overview-card strong {
+  color: var(--ahs-label) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  font-size: clamp(1.75rem, 2.4vw, 2.125rem) !important; /* headline */
+}
+
+#root .analysis-page-shell .analysis-overview-card p,
+#root .analysis-page-shell .analysis-overview-card .analysis-overview-card-copy {
+  color: var(--ahs-secondary) !important;
+  font-size: 0.94rem !important;
+}
+
+#root .analysis-page-shell .analysis-overview-vo2-bars {
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: rgba(120, 120, 128, 0.08) !important; /* systemFill-ish */
+}
+
+/* ---------- Profile: Health Summary home ---------- */
+#root .profile-dashboard-page .hd-content {
+  gap: var(--ahs-gap) !important;
+}
+
+#root .profile-dashboard-page .hd-hero-greeting {
+  color: var(--ahs-label) !important;
+  font-size: clamp(1.6rem, 2.4vw, 2rem) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+}
+
+#root .profile-dashboard-page .hd-hero-date,
+#root .profile-dashboard-page .hd-readiness-label,
+#root .profile-dashboard-page .hd-metric-detail,
+#root .profile-dashboard-page .hd-today-purpose,
+#root .profile-dashboard-page .hd-today-stat-label {
+  color: var(--ahs-secondary) !important;
+  font-weight: 400 !important;
+}
+
+#root .profile-dashboard-page .hd-today-card {
+  color: var(--ahs-label) !important;
+}
+
+#root .profile-dashboard-page .hd-today-bg {
+  opacity: 0.06 !important;
+}
+
+#root .profile-dashboard-page .hd-today-bg-overlay {
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.98)) !important;
+}
+
+#root .profile-dashboard-page .hd-today-content {
+  text-shadow: none !important;
+}
+
+#root .profile-dashboard-page .hd-today-kicker {
+  color: var(--ahs-pink) !important;
+  font-size: 0.94rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+
+#root .profile-dashboard-page .hd-today-title,
+#root .profile-dashboard-page .hd-today-stat strong,
+#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(1) .hd-metric-kicker,
+#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(2) .hd-metric-kicker,
+#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(3) .hd-metric-kicker {
+  color: rgba(60, 60, 67, 0.42) !important;
+  font-weight: 600 !important;
+}
+
+#root .profile-dashboard-page .hd-metric-value,
+#root .profile-dashboard-page .hd-card-title {
+  color: var(--ahs-label) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.025em !important;
+}
+
+#root .profile-dashboard-page .hd-metric-strip {
+  gap: var(--ahs-gap) !important;
+}
+
+
+
+
+
+#root .profile-dashboard-page .hd-btn-primary {
+  min-height: 44px !important;
+  border-radius: 980px !important;
+  background: var(--ahs-blue) !important;
+  box-shadow: none !important;
+}
+
+#root .profile-dashboard-page .hd-btn-ghost {
+  min-height: 44px !important;
+  border-radius: 980px !important;
+  border: 1px solid var(--ahs-separator) !important;
+  color: var(--ahs-label) !important;
+  background: transparent !important;
+}
+
+/* ---------- Runs ---------- */
+#root .runs-dashboard-page.runs-ledger-page {
+  --runs-apple-paper: var(--ahs-canvas);
+  --runs-apple-surface: var(--ahs-surface);
+  --runs-apple-ink: var(--ahs-label);
+  --runs-apple-muted: var(--ahs-secondary);
+  --runs-apple-line: var(--ahs-separator);
+}
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-reference-stat-card span, .recent-runs-stat-card span) {
+  color: var(--ahs-secondary) !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-reference-stat-card strong, .recent-runs-stat-card strong) {
+  color: var(--ahs-label) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+@media (max-width: 860px) {
+  #root .today-run-command-page :is(.today-run-coaching-answer, .today-run-plan-card, .today-run-command-hero-copy, .today-run-command-readiness-panel),
+  #root .analysis-page-shell :is(.analysis-overview-card, .analysis-profile-primary),
+  #root .profile-dashboard-page :is(.hd-metric-card, .hd-weekly-card, .hd-sessions-card, .hd-today-card) {
+    border-radius: var(--ahs-radius) !important;
+  }
+}
+
+
+/* ==========================================================================
+ * DV-2026-09-04-005 final overrides
+ * Beat contrast-fixes.css Pattern A restore-cream dark hero, and kill any
+ * residual Today grid wash from older bundled CSS.
+ * ========================================================================== */
+
+/* Today: force Summary wash even if bundled today-run still paints a grid */
+body:has(#root .today-run-command-page),
+html:has(#root .today-run-command-page) body {
+  background-color: #f2f2f7 !important;
+  background-image:
+    radial-gradient(90% 55% at 12% -10%, rgba(255, 214, 232, 0.22), transparent 58%),
+    radial-gradient(80% 50% at 88% -6%, rgba(186, 214, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, #f5f5f7 0%, #f2f2f7 28%, #f2f2f7 100%) !important;
+  background-size: auto !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+/* Profile today card: convert dark poster �?Apple Summary white card
+   Specificity must beat contrast-fixes restore-cream block. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card {
+  isolation: isolate !important;
+  background: #ffffff !important;
+  color: #1c1c1e !important;
+  border-radius: 28px !important;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg {
+  opacity: 0.05 !important;
+  filter: saturate(0.7) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.98)) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-content,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-content {
+  text-shadow: none !important;
+  color: #1c1c1e !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-title,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-purpose,
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-title,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-purpose,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
+  color: inherit !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
+  color: #ff2d55 !important;
+  font-size: 0.94rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong),
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong) {
+  color: #1c1c1e !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label),
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label) {
+  color: rgba(60, 60, 67, 0.6) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-btn-ghost,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-ghost {
+  border-color: rgba(60, 60, 67, 0.18) !important;
+  background: transparent !important;
+  color: #1c1c1e !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-btn-primary,
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary {
+  background: #007aff !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  min-height: 44px !important;
+}
+
+
+/* ==========================================================================
+ * DV-2026-09-04-006 profile Apple Summary convergence
+ * Must beat dynamic app.css (contrast-fixes) load order for /profile.
+ * Canvas: clean system gray. Hero: white card. Numbers: high-contrast ink.
+ * Accents: kickers only �?not blooming fills.
+ * ========================================================================== */
+
+/* Cleaner Profile canvas �?soft gray with a restrained top wash (not peach bloom) */
+html:has(#root .profile-dashboard-page),
+body:has(#root .profile-dashboard-page),
+html:has(#root .profile-dashboard-page) body {
+  background-color: var(--ahs-canvas) !important;
+  background-image:
+    radial-gradient(90% 55% at 12% -10%, rgba(255, 214, 232, 0.22), transparent 58%),
+    radial-gradient(80% 50% at 88% -6%, rgba(186, 214, 255, 0.2), transparent 55%),
+    linear-gradient(180deg, #f5f5f7 0%, var(--ahs-canvas) 28%, var(--ahs-canvas) 100%) !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Kill residual grid/paper washes on Profile shell */
+#root .profile-dashboard-page .runner-shell-canvas,
+#root .profile-dashboard-page .hd-content,
+#root .runner-dashboard-page.profile-dashboard-page .runner-shell-canvas {
+  background: transparent !important;
+  background-image: none !important;
+}
+#root .profile-dashboard-page .runner-shell-canvas::before,
+#root .runner-dashboard-page.profile-dashboard-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Readiness + metric numbers: instantly readable */
+#root .profile-dashboard-page .hd-readiness-value strong,
+#root .profile-dashboard-page .hd-metric-value,
+#root .profile-dashboard-page .hd-today-stat strong,
+#root .profile-dashboard-page .hd-weekly-card .hd-card-title,
+#root .runner-dashboard-page.profile-dashboard-page .hd-readiness-value strong,
+#root .runner-dashboard-page.profile-dashboard-page .hd-metric-value {
+  color: var(--ahs-label) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.03em !important;
+  -webkit-text-fill-color: var(--ahs-label) !important;
+}
+
+#root .profile-dashboard-page .hd-metric-value {
+  font-size: clamp(1.65rem, 2.4vw, 2.05rem) !important;
+  line-height: 1.1 !important;
+}
+
+#root .profile-dashboard-page .hd-readiness-value strong {
+  font-size: 1.45rem !important;
+}
+
+/* Restrain accents to kickers / ring stroke �?not card floods */
+#root .profile-dashboard-page .hd-metric-card,
+#root .profile-dashboard-page .hd-weekly-card,
+#root .profile-dashboard-page .hd-sessions-card,
+#root .profile-dashboard-page .hd-hero-readiness {
+  background: var(--ahs-surface) !important;
+  box-shadow: var(--ahs-shadow) !important;
+}
+
+#root .profile-dashboard-page .hd-metric-icon,
+#root .profile-dashboard-page .hd-metric-strip .hd-metric-icon {
+  background: rgba(120, 120, 128, 0.08) !important;
+  color: var(--ahs-label) !important;
+  box-shadow: none !important;
+}
+
+/* Readiness ring: calm pink accent stroke, not coral bloom fill */
+#root .profile-dashboard-page .hd-readiness-svg {
+  color: rgba(60, 60, 67, 0.18) !important;
+}
+
+/* Final white today-card hammer (beats dynamic contrast-fixes) */
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card,
+body.theme-high-contrast-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card,
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card,
+body.theme-high-contrast-light #root .profile-dashboard-page .hd-content .hd-today-card {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #1c1c1e !important;
+  border-radius: 28px !important;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-bg,
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg {
+  opacity: 0.04 !important;
+}
+
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay,
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay {
+  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.98)) !important;
+}
+
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong, .hd-today-content),
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong, .hd-today-content) {
+  color: #1c1c1e !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: #1c1c1e !important;
+}
+
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
+  color: #ff2d55 !important;
+}
+
+body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label),
+body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label) {
+  color: rgba(60, 60, 67, 0.6) !important;
+  -webkit-text-fill-color: rgba(60, 60, 67, 0.6) !important;
+}
+
+
+/* Kill paper/grid textures that leak onto Profile from older shell skins */
+body:has(#root .profile-dashboard-page),
+html:has(#root .profile-dashboard-page) body,
+#root .profile-dashboard-page,
+#root .profile-dashboard-page .runner-shell-main,
+#root .profile-dashboard-page .runner-shell-canvas,
+#root .profile-dashboard-page .hd-content {
+  background-size: auto !important;
+  background-repeat: no-repeat !important;
+}
+body:has(#root .profile-dashboard-page)::before,
+#root .profile-dashboard-page::before,
+#root .profile-dashboard-page .runner-shell-main::before,
+#root .profile-dashboard-page .runner-shell-canvas::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+}
+
+/* ==========================================================================
+ * DV-2026-09-04-006 Analysis reference restoration
+ * Restore the approved Analysis composition without changing its data model:
+ * full-width chrome, VO2 hero first, load row second, bento cards below.
+ * ========================================================================= */
+
+@media (min-width: 861px) {
+  html:has(#root .analysis-page-shell),
+  body:has(#root .analysis-page-shell) {
+    scrollbar-width: none;
+  }
+
+  body:has(#root .analysis-page-shell) {
+    background: #f5f5f7 !important;
+    background-image: none !important;
+  }
+
+  #root .analysis-page-shell {
+    display: grid !important;
+    grid-template-columns: var(--runner-nav-collapsed-width, 96px) minmax(0, 1fr) !important;
+    min-height: 100vh;
+    background: transparent !important;
+    color: #1c1c1e !important;
+  }
+
+  /* Profile/Home already resize the main column when the rail opens. Analysis
+     uses a grid spacer instead of margin-left, so the first track must follow
+     the same expanded / hover-expanded widths or the bento stays full-bleed. */
+  #root .analysis-page-shell:not(.is-sidebar-collapsed),
+  #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover),
+  #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) {
+    grid-template-columns: var(--runner-nav-expanded-width, 156px) minmax(0, 1fr) !important;
+  }
+
+  #root .analysis-page-shell > .runner-shell-sidebar {
+    display: flex !important;
+  }
+
+  #root .analysis-page-shell > .runner-shell-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    grid-column: 2 !important;
+    padding-top: 88px !important;
+  }
+
+  #root .analysis-page-shell > .runner-shell-main > .runner-shell-topbar {
+    width: auto !important;
+    height: 88px !important;
+    min-height: 88px !important;
+    position: fixed !important;
+    left: var(--runner-nav-collapsed-width, 96px) !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    padding: 0 42px !important;
+    border-bottom: 1px solid #e5e5ea !important;
+    border-radius: 0 !important;
+    background: #f5f5f7 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
+  #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
+  #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
+    left: var(--runner-nav-expanded-width, 156px) !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-topnav-current-stack strong {
+    color: #2c2f30 !important;
+    font-family: var(--ahs-font) !important;
+    font-size: 1.25rem !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-topbar-profile-actions {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-topbar-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    justify-content: flex-end !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-icon-btn,
+  #root .analysis-page-shell .runner-shell-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid rgba(60, 60, 67, 0.18) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #5c6670 !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-avatar {
+    border-color: rgba(201, 90, 63, 0.24) !important;
+    background: #f7ded8 !important;
+    color: #8f2f24 !important;
+  }
+
+  #root .analysis-page-shell .runner-shell-canvas {
+    width: calc(100% - 116px) !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding: 47px 0 80px !important;
+    gap: 12px !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-cockpit {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px !important;
+    background: transparent !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary {
+    display: grid !important;
+    grid-column: 1 / -1 !important;
+    grid-template-columns: minmax(320px, 0.34fr) minmax(0, 0.66fr) !important;
+    grid-template-rows: auto minmax(190px, 1fr) auto !important;
+    column-gap: clamp(22px, 2.6vw, 42px) !important;
+    width: 100% !important;
+    height: 440px !important;
+    min-height: 440px !important;
+    max-height: 440px !important;
+    padding: 32px !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow:
+      0 1px 2px rgba(60, 60, 67, 0.05),
+      0 8px 24px rgba(60, 60, 67, 0.045) !important;
+    overflow: hidden !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head {
+    display: contents !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head h2 {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    color: #2c2f30 !important;
+    font-size: 1.15rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vdot-title {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: #ff634f !important;
+    font-size: 1.15rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head h2.analysis-overview-vdot-title {
+    color: #ff634f !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vdot-runner-icon {
+    width: 20px !important;
+    height: 20px !important;
+    color: #ff634f !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    align-self: end !important;
+    justify-self: start !important;
+    margin-bottom: clamp(1rem, 1.6vw, 1.5rem) !important;
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: left !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value-label {
+    color: #8e8e93 !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value-row {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 6px !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value strong {
+    color: #2c2f30 !important;
+    font-size: clamp(2.6rem, 3.2vw, 3.25rem) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.06em !important;
+    line-height: 0.95 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value-unit {
+    color: #8e8e93 !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1 !important;
+    white-space: nowrap;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bars {
+    grid-column: 2 !important;
+    grid-row: 1 / span 3 !important;
+    align-self: end !important;
+    justify-self: end !important;
+    /* Keep the live chart readable without letting it dominate the hero. */
+    width: min(72%, 640px) !important;
+    height: 74% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar-col {
+    gap: 10px !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar {
+    min-height: 32px !important;
+    border-radius: 2px 2px 0 0 !important;
+    background: #ff634f !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar.is-current,
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar.is-hovered {
+    background: #ff634f !important;
+    box-shadow: 0 8px 18px rgba(255, 99, 79, 0.18) !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-label {
+    color: #8a8a92 !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-label.is-current {
+    color: #8a8a92 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-legend {
+    display: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-profile-decision-spine {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    align-self: start !important;
+    justify-self: start !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-profile-decision-chip {
+    display: grid !important;
+    grid-template-columns: auto auto !important;
+    align-items: baseline !important;
+    column-gap: 10px !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-profile-decision-chip span {
+    display: inline !important;
+    color: #8e8e93 !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-profile-decision-chip strong {
+    display: inline !important;
+    margin: 0 !important;
+    color: #2c2f30 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-tag {
+    border: 1px solid #34c759 !important;
+    border-radius: 999px !important;
+    background: #fff !important;
+    color: #34c759 !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: auto auto !important;
+    gap: 18px !important;
+    align-content: start !important;
+    background: transparent !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card {
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow:
+      0 1px 2px rgba(60, 60, 67, 0.05),
+      0 8px 24px rgba(60, 60, 67, 0.045) !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    display: grid !important;
+    grid-column: 1 / -1 !important;
+    grid-template-columns: minmax(0, 1fr) minmax(128px, 168px) !important;
+    grid-template-areas:
+      "label gauge"
+      "copy gauge" !important;
+    align-items: center !important;
+    min-height: 200px !important;
+    height: 200px !important;
+    box-sizing: border-box !important;
+    padding: 24px 26px 24px 32px !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    grid-area: label !important;
+    color: #2c2f30 !important;
+    font-size: 1.15rem !important;
+    font-weight: 650 !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.2 !important;
+    text-transform: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-load-balance-icon {
+    width: 20px !important;
+    height: 20px !important;
+    color: var(--ahs-orange, #ff9500) !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-svg {
+    grid-area: 1 / 1 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: 156px !important;
+    margin: 0 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack {
+    position: relative !important;
+    display: grid !important;
+    grid-area: gauge !important;
+    align-self: center !important;
+    justify-self: center !important;
+    width: min(100%, 156px) !important;
+    aspect-ratio: 220 / 140 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-value {
+    grid-area: 1 / 1 !important;
+    align-self: start !important;
+    justify-self: center !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding-top: 39% !important;
+    color: var(--analysis-gauge-value-color, currentColor) !important;
+    font-size: 3rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.06em !important;
+    line-height: 1 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load p {
+    grid-area: copy !important;
+    max-width: 30ch !important;
+    margin: 0 !important;
+    color: rgba(60, 60, 67, 0.6) !important;
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+    text-align: left !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-coach,
+  #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+    min-height: 200px !important;
+    height: 200px !important;
+    box-sizing: border-box !important;
+    padding: 24px !important;
+  }
+}
+
+/* Profile start-training CTA: keep the action in Hermes red even though the
+   shared Apple Summary action palette uses blue for runner-dashboard cards. */
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary {
+  background: #f07561 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(240, 117, 97, 0.28) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary:hover {
+  background: #e46758 !important;
+  box-shadow: 0 6px 20px rgba(240, 117, 97, 0.34) !important;
+}
+
+/* Keep the wide load-balance status group on the right: the explanation stays
+   left while the gauge and numeric status read as one compact control. */
+@media (min-width: 1280px) {
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 174px) !important;
+  }
+}
+
+/* Coach Insight is a content card, not a framed panel. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Wide Analysis reference layout: pair workload with the fitness-change card,
+   then put injury left and Coach Insight on the right. */
+@media (min-width: 1181px) {
+  #root .analysis-page-shell .analysis-profile-reference-grid {
+    grid-template-areas:
+      "load trend"
+      "injury coach" !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    grid-area: load !important;
+    grid-column: auto !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+    grid-area: trend !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-coach {
+    grid-area: coach !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-injury {
+    grid-area: injury !important;
+    grid-column: auto !important;
+    min-height: 200px !important;
+    height: 200px !important;
+    box-sizing: border-box !important;
+    padding: 32px 26px 24px 32px !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-bento-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-bento-grid .analysis-overview-card--intensity {
+    grid-column: span 5 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-bento-grid .analysis-overview-card--forecast {
+    grid-column: span 3 !important;
+  }
+}
+
+/* Match the light-theme card sweep's specificity (1 ID, 5 classes, 1 type)
+   so this later rule supplies the borderless load-balance surface. */
+body #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
+  .analysis-profile-primary,
+  .analysis-profile-reference-card.is-trend
+) {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Keep the ACWR number in the open center of its semi-circle instead of
+   reserving a separate grid column for it. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-load {
+  grid-template-areas:
+    "label gauge"
+    "copy gauge" !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack {
+  position: relative !important;
+  display: grid !important;
+  grid-area: gauge !important;
+  align-self: center !important;
+  justify-self: center !important;
+  width: min(100%, 156px) !important;
+  aspect-ratio: 220 / 140 !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack .analysis-overview-gauge-svg,
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-value {
+  grid-area: 1 / 1 !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack .analysis-overview-gauge-svg {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack .analysis-overview-gauge-value {
+  align-self: start !important;
+  justify-self: center !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding-top: 39% !important;
+  transform: translateY(10px) !important;
+  color: var(--analysis-gauge-value-color, currentColor) !important;
+  font-size: 3rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.06em !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+@media (max-width: 760px) {
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    grid-template-areas:
+      "label"
+      "gauge"
+      "copy" !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-gauge-stack {
+    justify-self: start !important;
+    width: min(100%, 180px) !important;
+  }
+}
+
+/* Keep the runner mark and load-balance mark on one left guide at narrow
+   widths too; the hero card uses a 20px inset below the desktop breakpoint. */
+@media (max-width: 860px) {
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    padding-left: 20px !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load {
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+  }
+}
+
+/* Keep the load-balance mark orange at every breakpoint. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-load-balance-icon {
+  color: var(--ahs-orange, #ff9500) !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load {
+  color: var(--ahs-orange, #ff9500) !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load > span {
+  color: var(--ahs-orange, #ff9500) !important;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  text-transform: inherit !important;
+}
+
+/* Match the fitness-change label to the VO2max heading typography. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+
+@media (max-width: 860px) {
+  #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+    font-size: 0.94rem !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+  }
+}
+
+/* Keep Analysis content cards flat after the shared light-card sweep. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
+  .analysis-profile-reference-card.is-coach,
+  .analysis-profile-reference-card.is-injury,
+  .analysis-profile-bento-card,
+  .analysis-profile-table-card
+) {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Only the two table cards paint a surface; their wrapper stays on the canvas. */
+body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analysis-page-shell .analysis-profile-table-grid {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* The summary bento grid is a layout wrapper, not a fourth card. Keep its
+   three child cards independent after the shared white-card sweep. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid {
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+  border: 0 !important;
+  border-radius: var(--ahs-radius-lg) !important;
+  background: var(--ahs-surface) !important;
+  background-image: none !important;
+  box-shadow: var(--ahs-shadow) !important;
+}
+
+/* Keep the generated injury-risk mark legible beside its localized title. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-title-block {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#root .analysis-page-shell .analysis-injury-risk-icon {
+  width: clamp(20px, 2vw, 28px) !important;
+  height: clamp(20px, 2vw, 28px) !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+/* Stack the trend direction directly above its delta in the right column. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-rows: auto auto !important;
+  align-items: start !important;
+  gap: 0 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
+  display: contents !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: start !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  position: static !important;
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  align-self: start !important;
+  justify-self: end !important;
+  margin: 0 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  align-self: start !important;
+  justify-self: end !important;
+  margin: 4px 0 0 !important;
+}
+
+/* Analysis VDOT trend placement: keep the direction above its delta value. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+  position: relative !important;
+  padding-bottom: 78px !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+}
+
+/* Place the trend conclusion in the card's lower-left corner. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+  position: relative !important;
+  padding-bottom: 78px !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
+  display: block !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
+  display: block !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  position: absolute !important;
+  left: 24px !important;
+  bottom: 54px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+  position: absolute !important;
+  left: 24px !important;
+  bottom: 18px !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker,
+#root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker > span {
+  color: #34c759 !important;
+}
+
+/* Keep the reference system bar consistent across authenticated runner pages. */
+@media (min-width: 861px) {
+  #root .runner-dashboard-page > .runner-shell-main > .runner-shell-topbar {
+    width: auto !important;
+    height: 88px !important;
+    min-height: 88px !important;
+    position: fixed !important;
+    left: var(--runner-nav-collapsed-width, 96px) !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    padding: 0 42px !important;
+    border-bottom: 1px solid #e5e5ea !important;
+    border-radius: 0 !important;
+    background: #f5f5f7 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  #root .runner-dashboard-page > .runner-shell-main {
+    padding-top: 88px !important;
+  }
+
+  #root .runner-dashboard-page:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar {
+    left: var(--runner-nav-expanded-width, 156px) !important;
+  }
+
+  #root .runner-dashboard-page .runner-shell-topnav-current-stack strong {
+    color: #2c2f30 !important;
+    font-family: var(--ahs-font) !important;
+    font-size: 1.25rem !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+  }
+
+  #root .runner-dashboard-page .runner-shell-topbar-profile-actions {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  #root .runner-dashboard-page .runner-shell-topbar-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    justify-content: flex-end !important;
+  }
+
+  #root .runner-dashboard-page .runner-shell-icon-btn,
+  #root .runner-dashboard-page .runner-shell-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid rgba(60, 60, 67, 0.18) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #5c6670 !important;
+  }
+
+  #root .runner-dashboard-page .runner-shell-avatar {
+    border-color: rgba(201, 90, 63, 0.24) !important;
+    background: #f7ded8 !important;
+    color: #8f2f24 !important;
+  }
+
+  /* Today Run intentionally has no rail, so its shared bar spans the viewport. */
+  #root .today-run-command-page > .runner-shell-main > .runner-shell-topbar {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+  }
+}
+
+@media (min-width: 861px) {
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page > .runner-shell-main > .runner-shell-topbar {
+    border-bottom-color: rgba(255, 238, 226, 0.12) !important;
+    background: rgba(15, 13, 10, 0.86) !important;
+    color: #fff7ef !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-topnav-current-stack strong {
+    color: #fff7ef !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-icon-btn,
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-avatar {
+    border-color: rgba(255, 238, 226, 0.16) !important;
+    background: rgba(255, 238, 226, 0.06) !important;
+    color: rgba(255, 247, 239, 0.76) !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-avatar {
+    border-color: rgba(255, 154, 134, 0.28) !important;
+    background: rgba(240, 117, 97, 0.18) !important;
+    color: #ffb4a7 !important;
+  }
+}
+
+/* Keep the workload heading on the same top guide as the adjacent trend heading. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-load .analysis-overview-card-kicker--load {
+  align-self: start !important;
+  margin: 0 !important;
+}
+
+/* Keep the trend arrow as a standalone mark instead of a coloured tile. */
+#root .analysis-page-shell .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon {
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Analysis VDOT / fitness card: mirror load-balance grid (label+copy left, metric stack right). */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 168px) !important;
+  grid-template-areas:
+    "label gauge"
+    "copy gauge" !important;
+  align-items: center !important;
+  column-gap: clamp(12px, 1.5vw, 20px) !important;
+  row-gap: 10px !important;
+  min-height: 200px !important;
+  height: 200px !important;
+  box-sizing: border-box !important;
+  padding: 24px 26px 24px 32px !important;
+  padding-bottom: 24px !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend > .analysis-overview-card-kicker {
+  grid-area: label !important;
+  position: static !important;
+  align-self: start !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+  text-transform: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
+  grid-area: gauge !important;
+  position: static !important;
+  display: grid !important;
+  justify-items: start !important;
+  align-content: center !important;
+  align-self: center !important;
+  justify-self: end !important;
+  width: max-content !important;
+  max-width: min(100%, 156px) !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  font-weight: 650 !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+  position: static !important;
+  left: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
+  font-size: 3rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.06em !important;
+  line-height: 1 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
+  grid-area: copy !important;
+  position: static !important;
+  max-width: 30ch !important;
+  margin: 0 !important;
+  color: rgba(60, 60, 67, 0.6) !important;
+  font-size: 0.9rem !important;
+  line-height: 1.45 !important;
+  text-align: left !important;
+}
+
+/* Analysis reference topbar parity: Profile uses the same system chrome. */
+@media (min-width: 861px) {
+  #root :is(.analysis-page-shell, .profile-dashboard-page) > .runner-shell-main > .runner-shell-topbar {
+    width: auto !important;
+    height: 88px !important;
+    min-height: 88px !important;
+    position: fixed !important;
+    left: var(--runner-nav-collapsed-width, 96px) !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    padding: 0 42px !important;
+    border-bottom: 1px solid #e5e5ea !important;
+    border-radius: 0 !important;
+    background: #f5f5f7 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) > .runner-shell-main {
+    padding-top: 88px !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topnav-current-stack strong {
+    color: #2c2f30 !important;
+    font-family: var(--ahs-font) !important;
+    font-size: 1.25rem !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topbar-profile-actions {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topbar-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    justify-content: flex-end !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-icon-btn,
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid rgba(60, 60, 67, 0.18) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    color: #5c6670 !important;
+  }
+
+  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-avatar {
+    border-color: rgba(201, 90, 63, 0.24) !important;
+    background: #f7ded8 !important;
+    color: #8f2f24 !important;
+  }
+
+  /* Keep Analysis/Profile system chrome aligned when the rail is pinned open or
+     temporarily unfolded via hover/focus. */
+  #root :is(.analysis-page-shell, .profile-dashboard-page):not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
+  #root :is(.analysis-page-shell, .profile-dashboard-page).is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
+  #root :is(.analysis-page-shell, .profile-dashboard-page).is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
+    left: var(--runner-nav-expanded-width, 156px) !important;
+  }
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+  border: 0 !important;
+  border-radius: var(--ahs-radius-lg) !important;
+  background: var(--ahs-surface) !important;
+  background-image: none !important;
+  box-shadow: var(--ahs-shadow) !important;
+}
+
+/* Fitness trend stack: left-align so decline/improve icon shares the minus/plus column. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-vdot-trend-heading,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-insight-delta {
+  justify-self: start !important;
+  width: max-content !important;
+  max-width: 100% !important;
+}
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
+  justify-items: start !important;
+  justify-self: end !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  gap: 6px !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  width: max-content !important;
+  text-align: left !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon {
+  width: 1em !important;
+  height: 1em !important;
+  flex: 0 0 1em !important;
+  display: block !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+/* Label matches the direction icon color (same red/green as the mark on its left). */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-negative,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-negative > span,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-negative {
+  color: #ff3b30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-positive,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-positive > span,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-positive {
+  color: #34c759 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+  display: block !important;
+  width: max-content !important;
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
+  display: block !important;
+  font-variant-numeric: tabular-nums !important;
+  text-align: left !important;
+  min-width: 0 !important;
+}
+
+
+
+/* Keep the generated coaching mark aligned with its localized card title. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#root .analysis-page-shell .analysis-coach-advice-icon {
+  width: clamp(20px, 2vw, 28px) !important;
+  height: clamp(20px, 2vw, 28px) !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+/* Coach badge compact horizontal */
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-badge.coach-identity-badge,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-badge.analysis-overview-coach-badge,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-badge {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+  max-width: 100% !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-avatar {
+  width: 28px !important;
+  height: 28px !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12) !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy strong,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy span {
+  display: inline !important;
+  white-space: nowrap !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy strong {
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+  color: #1d1d1f !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy span {
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: rgba(60, 60, 67, 0.58) !important;
+}
+/* end coach badge compact horizontal */
+
+/* Coach quote under title */
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-head {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+  height: 100% !important;
+  min-height: 152px !important;
+  gap: 12px !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  height: 100% !important;
+  min-width: 0 !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
+  grid-area: auto !important;
+  justify-self: start !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-quote {
+  grid-area: auto !important;
+  margin: 0 !important;
+  justify-self: start !important;
+  align-self: start !important;
+  text-align: left !important;
+  max-width: 22ch !important;
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: clamp(1.55rem, 2.1vw, 1.9rem);
+  line-height: 1.25 !important;
+  font-weight: 800;
+  letter-spacing: -0.03em !important;
+  color: var(--text-strong, #1d1d1f) !important;
+}
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-badge {
+  grid-area: auto !important;
+  margin-top: auto !important;
+  align-self: start !important;
+  justify-self: start !important;
+}
+/* end coach quote under title */
+
+/* Keep the generated intensity mark aligned with its localized card title. */
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--intensity .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#root .analysis-page-shell .analysis-intensity-card-icon {
+  width: clamp(20px, 2vw, 28px) !important;
+  height: clamp(20px, 2vw, 28px) !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+/* Align injury+coach text to load-balance */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach {
+  padding: 24px 26px 24px 32px !important;
+  box-sizing: border-box !important;
+}
+
+/* Titles: same type ramp as ����ƽ�� / ������� */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-kicker,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+  text-transform: none !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-title-block {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#root .analysis-page-shell .analysis-injury-risk-icon,
+#root .analysis-page-shell .analysis-coach-advice-icon {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+}
+
+/* Risk chips + bars: centered in each grid column */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels {
+  margin-top: 14px !important;
+  gap: 10px !important;
+  color: rgba(60, 60, 67, 0.72) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.35 !important;
+  text-align: center !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels span {
+  justify-content: center !important;
+  padding: 0 10px !important;
+  min-height: 28px !important;
+  font: inherit !important;
+  letter-spacing: inherit !important;
+  text-align: center !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-meter {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: center !important;
+  justify-items: center !important;
+  margin-top: 10px !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-meter span {
+  width: 100% !important;
+  max-width: 100% !important;
+  justify-self: stretch !important;
+}
+
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-quote {
+  margin: 0 !important;
+  text-align: left !important;
+  max-width: 28ch !important;
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: clamp(1.55rem, 2.1vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em !important;
+  line-height: 1.35 !important;
+  color: #1d1d1f !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy {
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+/* end align injury+coach text to load-balance */
+
+/* Keep the generated forecast mark aligned with its localized card title. */
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--forecast .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#root .analysis-page-shell .analysis-performance-forecast-icon {
+  width: clamp(20px, 2vw, 28px) !important;
+  height: clamp(20px, 2vw, 28px) !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+/* Align injury+coach titles on one horizontal line */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-title-block,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: 22px !important;
+  height: 22px !important;
+  line-height: 22px !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-kicker,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: 22px !important;
+  height: 22px !important;
+  line-height: 22px !important;
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  text-transform: none !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-injury-risk-icon,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-coach-advice-icon {
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+/* Keep both title rows pinned to the same card top inset */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach {
+  padding-top: 24px !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-head,
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  gap: 10px !important;
+}
+/* end align injury+coach titles on one horizontal line */
+
+/* Use cyan consistently for the injury-risk title mark and label. */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-kicker {
+  color: var(--ahs-teal, #30b0c7) !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-injury-risk-icon {
+  filter: grayscale(1) brightness(0) saturate(100%) invert(68%) sepia(74%) saturate(630%) hue-rotate(143deg) brightness(93%) contrast(86%) !important;
+}
+
+/* Center injury risk status block */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-card-title-block {
+  flex: 0 0 auto !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels,
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-meter {
+  width: 100% !important;
+}
+
+/* Keep label+bar pairs as one centered cluster in the card body */
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels {
+  margin-top: auto !important;
+  margin-bottom: 10px !important;
+  text-align: center !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels span {
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+#root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-meter {
+  margin-top: 0 !important;
+  margin-bottom: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  justify-items: stretch !important;
+  align-items: center !important;
+}
+/* end center injury risk status block */
+
+/* Coach quote spoken scale */
+#root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-quote {
+  margin: 2px 0 0 !important;
+  max-width: 12em !important;
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: clamp(1.85rem, 2.6vw, 2.35rem) !important;
+  font-weight: 800 !important;
+  font-style: normal !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.15 !important;
+  color: #1d1d1f !important;
+  text-align: left !important;
+}
+/* end coach quote spoken scale */
+
+
+/* Training-zone names: smaller, not bold */
+#root .analysis-page-shell .analysis-overview-card--training-zones .analysis-overview-table tbody td.analysis-overview-zone-name,
+#root .analysis-page-shell .analysis-overview-card--training-zones .analysis-overview-table tbody td:first-child {
+  font-size: 0.78rem !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Bento titles match load-balance */
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--intensity,
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--forecast {
+  padding: 24px 26px 24px 32px !important;
+  box-sizing: border-box !important;
+}
+
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--intensity .analysis-overview-card-kicker,
+#root .analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--forecast .analysis-overview-card-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-family: "Manrope", var(--font-display) !important;
+  font-size: 1.15rem !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+  text-transform: none !important;
+}
+
+#root .analysis-page-shell .analysis-intensity-card-icon,
+#root .analysis-page-shell .analysis-performance-forecast-icon {
+  width: 20px !important;
+  height: 20px !important;
+  flex: 0 0 auto !important;
+  object-fit: contain !important;
+  margin: 0 !important;
+}
+/* end bento titles match load-balance */
