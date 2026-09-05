@@ -80,10 +80,10 @@ const javaOptions = runtime.instructions.filter((line) => line.startsWith('ENV J
 assert.equal(javaOptions.length, 1, 'Keep one overridable JAVA_OPTS default in the runtime stage.')
 const flags = JSON.parse(javaOptions[0].slice('ENV JAVA_OPTS='.length)).split(/\s+/)
 assert.deepEqual(flags, [
-  '-Xms128m',
-  '-Xmx768m',
+  '-Xms64m',
+  '-Xmx512m',
   '-XX:+UseSerialGC',
-  '-XX:MaxMetaspaceSize=256m',
+  '-XX:MaxMetaspaceSize=192m',
   '-XX:MinHeapFreeRatio=20',
   '-XX:MaxHeapFreeRatio=40',
   '-XX:+ExitOnOutOfMemoryError',
