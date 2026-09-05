@@ -28,9 +28,9 @@ const HEATMAP_REQUEST_TIMEOUT_MS = 120000;
 // The server returns one bounded, strided render pool (it draws ~12k dots, so
 // more fidelity is invisible); this replaced paging the full multi-million-
 // point history (~75MB JSON observed in production) through the main thread.
-const HEATMAP_SAMPLE_LIMIT = 25000;
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
+const HEATMAP_SAMPLE_LIMIT = 12000; // align with FULL_RENDER + backend DEFAULT (was 25000)
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
 const HEATMAP_CANVAS_PADDING = 0.25;
 const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;

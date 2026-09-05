@@ -45,8 +45,8 @@ assert.match(
 // multi-million-point GPS history through the main thread.
 assert.match(
   heatmapSource,
-  /const HEATMAP_SAMPLE_LIMIT = 25000;/,
-  'Heatmap should request one bounded server-side render pool instead of every GPS point.',
+  /const HEATMAP_SAMPLE_LIMIT = 12000;/,
+  'Heatmap should request one bounded server-side render pool (12000) instead of every GPS point.',
 );
 assert.match(
   heatmapSource,
