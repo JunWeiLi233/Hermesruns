@@ -768,9 +768,11 @@ body:has(#root .profile-dashboard-page)::before,
   }
 
   #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vdot-runner-icon {
-    width: 20px !important;
-    height: 20px !important;
+    width: 22px !important;
+    height: 22px !important;
     color: #ff634f !important;
+    flex-shrink: 0 !important;
+    shape-rendering: geometricPrecision !important;
   }
 
   #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value {
