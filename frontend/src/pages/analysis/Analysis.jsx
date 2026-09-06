@@ -464,7 +464,7 @@ export default function Analysis() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} aria-label={item.label} aria-current={item.active ? 'page' : undefined} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
@@ -862,7 +862,6 @@ export default function Analysis() {
                             className="clickable-row"
                             role="link"
                             tabIndex={0}
-                            aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel}`}
                             onClick={() => navigate(`/prediction/${row.key}`)}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {

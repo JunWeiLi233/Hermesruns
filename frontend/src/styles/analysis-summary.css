@@ -2124,3 +2124,49 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   margin: 0 !important;
 }
 /* end bento titles match load-balance */
+
+/* Small summary labels need text contrast, not the brighter chart palette. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell {
+  --ahs-blue: #0066d6;
+  --ahs-orange: #a85c00;
+  --ahs-green: #207c38;
+  --ahs-teal: #087d90;
+  --ahs-purple: #9140b9;
+  --ahs-secondary: #626269;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-load p,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy > span {
+  color: var(--ahs-secondary) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker > span,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-positive,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-positive > span,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-positive {
+  color: var(--ahs-green) !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-negative,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading.is-negative > span,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon.is-negative {
+  color: #c32b22 !important;
+}
+
+/* Reveal the LCP heading immediately instead of waiting for the hero fade. */
+#root .analysis-page-shell .analysis-profile-cockpit {
+  animation: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-primary .analysis-overview-card-head h2.analysis-overview-vdot-title {
+  color: #c43c2d !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-overview-hero-value-label,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-overview-hero-value-unit,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-label,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-label.is-current,
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
+  color: var(--ahs-secondary) !important;
+}
