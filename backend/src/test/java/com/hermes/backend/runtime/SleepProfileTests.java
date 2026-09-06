@@ -48,7 +48,7 @@ class SleepProfileTests {
         try (HikariDataSource dataSource = new HikariDataSource()) {
             Binder.get(environment).bind("spring.datasource.hikari", Bindable.ofInstance(dataSource));
             assertThat(dataSource.getMinimumIdle()).isZero();
-            assertThat(dataSource.getIdleTimeout()).isEqualTo(60_000L);
+            assertThat(dataSource.getIdleTimeout()).isEqualTo(30_000L);
             assertThat(dataSource.getKeepaliveTime()).isZero();
             assertThat(environment.getProperty("app.background.polling.enabled")).isEqualTo("false");
             assertThat(environment.getProperty("app.coach.nightly.cron")).isEqualTo("-");
