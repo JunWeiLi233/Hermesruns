@@ -62,7 +62,7 @@ USER hermes
 # uncommit heap after spikes. Deployments can override JAVA_OPTS without
 # rebuilding the image.
 ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
-    -XX:MaxMetaspaceSize=192m \
+    -XX:MaxMetaspaceSize=128m \
     -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 \
     -XX:+ExitOnOutOfMemoryError"
 
