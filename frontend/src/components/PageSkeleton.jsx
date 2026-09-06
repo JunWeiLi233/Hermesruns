@@ -1,5 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { subscribeWakeRetry } from '../api';
+import { useI18n } from '../contexts/I18nContext';
 import shoeSkeletonAsset from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
+
+function WakeRetryNote() {
+  const { t } = useI18n();
+  const [active, setActive] = useState(false);
+  useEffect(() => subscribeWakeRetry(setActive), []);
+  if (!active) return null;
+  return <p className="page-skeleton__wake-note">{t('common.waking_server')}</p>;
+}
 
 function SkeletonBlock({ className = '', style }) {
   return <span className={`page-skeleton__block ${className}`.trim()} style={style} aria-hidden="true" />;
@@ -78,6 +88,7 @@ function RunnerFrame({ variant, children }) {
 
   return (
     <div className={rootClassName} role="status" aria-live="polite" aria-busy="true" aria-label="Loading page">
+      <WakeRetryNote />
       <aside className="page-skeleton__rail" aria-hidden="true">
         <div className="page-skeleton__brand-row">
           <SkeletonBlock className="page-skeleton__brand" />
@@ -1153,3 +1164,4 @@ export default function PageSkeleton({ variant = 'runner', activeTab = 'overview
   if (variant === 'legal') return <LegalPageSkeleton />;
   return <RunnerPageSkeleton variant={variant} activeTab={activeTab} />;
 }
+

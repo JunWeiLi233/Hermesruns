@@ -25,6 +25,7 @@ export default {
     "heatmap_back": "背面",
     "close_notifications": "关闭通知",
     "show_details": "查看说明",
+    "waking_server": "正在唤醒服务…",
   },
   "auth": {
     "login_success": "登录成功。",

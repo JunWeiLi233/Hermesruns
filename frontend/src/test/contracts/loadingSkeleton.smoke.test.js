@@ -121,7 +121,11 @@ assert(
     && skeletonSource.includes('page-skeleton__auth-formside')
     && skeletonSource.includes('page-skeleton__auth-social')
     && styleSource.includes('.page-skeleton__auth-dot-field')
-    && styleSource.includes('.page-skeleton__auth-formside'),
+    && styleSource.includes('.page-skeleton__auth-formside')
+    && skeletonSource.includes("import { useI18n } from '../contexts/I18nContext'")
+    && skeletonSource.includes("t('common.waking_server')")
+    && skeletonSource.includes('subscribeWakeRetry')
+    && !skeletonSource.includes('resolveWakeCopy'),
   'The shared skeleton should expose a distinct composition for every application route.',
 );
 
