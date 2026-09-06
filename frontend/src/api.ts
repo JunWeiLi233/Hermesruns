@@ -19,7 +19,7 @@ export class ApiRequestError extends Error {
 
 /** Retries after the first attempt for Railway cold-start wake failures. */
 export const WAKE_RETRY_MAX = 2;
-export const WAKE_RETRY_DELAYS_MS = [350, 800] as const;
+export const WAKE_RETRY_DELAYS_MS = [1000, 2500] as const;
 const WAKE_RETRYABLE_STATUSES = new Set([502, 503, 504]);
 
 type WakeRetryListener = (active: boolean) => void;

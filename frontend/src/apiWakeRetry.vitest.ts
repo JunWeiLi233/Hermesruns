@@ -7,12 +7,19 @@ import {
   isWakeRetryableStatus,
   subscribeWakeRetry,
   withWakeRetry,
+  WAKE_RETRY_DELAYS_MS,
+  WAKE_RETRY_MAX,
 } from './api';
 
 describe('wake retry helpers', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('uses seconds-scale default backoff for Railway cold start', () => {
+    expect(WAKE_RETRY_MAX).toBe(2);
+    expect([...WAKE_RETRY_DELAYS_MS]).toEqual([1000, 2500]);
   });
 
   it('treats GET as safe and POST as unsafe', () => {

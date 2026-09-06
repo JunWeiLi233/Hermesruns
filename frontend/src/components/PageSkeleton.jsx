@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { subscribeWakeRetry } from '../api';
+import { useI18n } from '../contexts/I18nContext';
 import shoeSkeletonAsset from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 
-function resolveWakeCopy() {
-  try {
-    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('hermes_lang') : '';
-    const lang = (stored || (typeof navigator !== 'undefined' ? (navigator.languages?.[0] || navigator.language) : 'en') || 'en').toLowerCase();
-    if (lang.startsWith('zh')) return '正在唤醒服务…';
-  } catch { /* ignore */ }
-  return 'Waking the server…';
-}
-
 function WakeRetryNote() {
+  const { t } = useI18n();
   const [active, setActive] = useState(false);
   useEffect(() => subscribeWakeRetry(setActive), []);
   if (!active) return null;
-  return <p className="page-skeleton__wake-note">{resolveWakeCopy()}</p>;
+  return <p className="page-skeleton__wake-note">{t('common.waking_server')}</p>;
 }
 
 function SkeletonBlock({ className = '', style }) {
@@ -1171,3 +1164,4 @@ export default function PageSkeleton({ variant = 'runner', activeTab = 'overview
   if (variant === 'legal') return <LegalPageSkeleton />;
   return <RunnerPageSkeleton variant={variant} activeTab={activeTab} />;
 }
+
