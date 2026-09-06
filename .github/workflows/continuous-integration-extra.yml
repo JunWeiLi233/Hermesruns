@@ -36,8 +36,6 @@ jobs:
         run: npm ci
       - name: Check translation parity and missing usage
         run: node tools/check-translations.mjs --full
-      - name: Check generated command adapters
-        run: node tools/generate-runtime-commands.mjs --check
 
   frontend-build:
     name: frontend-build

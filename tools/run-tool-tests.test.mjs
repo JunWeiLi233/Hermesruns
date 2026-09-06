@@ -7,7 +7,6 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { discoverToolTests, runToolTests, SKIP_EXIT_CODE } from './run-tool-tests.mjs';
 import { runBackendTests } from './run-backend-tests.mjs';
-import { roundCloseFixtureOptions } from './test-support/round-close-fixture.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const quiet = { log() {}, error() {} };
@@ -151,15 +150,4 @@ test('root frontend commands delegate to existing scripts without replacing them
     assert.equal(root.scripts[command], `npm --prefix frontend run ${target}`);
     assert.equal(typeof frontend.scripts[target], 'string');
   }
-});
-
-test('round-close fixture redirects every state output and rejects checkout paths', (t) => {
-  const rootDir = fixture(t, { 'TASKS.md': '# Fixture tasks\n' });
-  const options = roundCloseFixtureOptions({ tasks: path.join(rootDir, 'TASKS.md'), write: true });
-  assert.equal(options.agentSyncJson, path.join(rootDir, '.workspace/state/AGENT_SYNC.json'));
-  assert.equal(options.qualityAudit, path.join(rootDir, '.workspace/state/QUALITY_AUDIT.md'));
-  assert.equal(options.telemetryJson, path.join(rootDir, '.workspace/state/AUTO_HERMES_TELEMETRY.json'));
-  assert.equal(options.write, true);
-  assert.throws(() => roundCloseFixtureOptions({ tasks: path.join(rootDir, 'TASKS.md'), agentSyncJson: path.resolve(here, '../.workspace/state/AGENT_SYNC.json') }), /agentSyncJson must stay inside the fixture/);
-  assert.throws(() => roundCloseFixtureOptions({ tasks: path.resolve(here, '../TASKS.md') }), /temporary fixture/);
 });

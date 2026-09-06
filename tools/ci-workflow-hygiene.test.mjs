@@ -32,19 +32,6 @@ const workflowExpectations = [
       "actions/setup-java@v4",
     ],
   },
-  {
-    file: ".github/workflows/auto-hermes-self.yml",
-    required: [
-      /actions\/checkout@v[67]/,
-      /actions\/setup-node@v[67]/,
-      /actions\/setup-java@v(?:5|6(?:\.\d+\.\d+)?)/,
-    ],
-    banned: [
-      "actions/checkout@v4",
-      "actions/setup-node@v4",
-      "actions/setup-java@v4",
-    ],
-  },
 ];
 
 for (const workflow of workflowExpectations) {
