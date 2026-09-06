@@ -17,6 +17,125 @@ export class ApiRequestError extends Error {
   }
 }
 
+/** Retries after the first attempt for Railway cold-start wake failures. */
+export const WAKE_RETRY_MAX = 2;
+export const WAKE_RETRY_DELAYS_MS = [350, 800] as const;
+const WAKE_RETRYABLE_STATUSES = new Set([502, 503, 504]);
+
+type WakeRetryListener = (active: boolean) => void;
+const wakeRetryListeners = new Set<WakeRetryListener>();
+let wakeRetryDepth = 0;
+
+export function subscribeWakeRetry(listener: WakeRetryListener): () => void {
+  wakeRetryListeners.add(listener);
+  listener(wakeRetryDepth > 0);
+  return () => {
+    wakeRetryListeners.delete(listener);
+  };
+}
+
+function setWakeRetryActive(active: boolean): void {
+  if (active) {
+    wakeRetryDepth += 1;
+    if (wakeRetryDepth === 1) {
+      wakeRetryListeners.forEach((listener) => listener(true));
+    }
+    return;
+  }
+  wakeRetryDepth = Math.max(0, wakeRetryDepth - 1);
+  if (wakeRetryDepth === 0) {
+    wakeRetryListeners.forEach((listener) => listener(false));
+  }
+}
+
+/** GET/HEAD/OPTIONS only — never blindly retry POST mutations. */
+export function isSafeWakeRetryMethod(method?: string): boolean {
+  const normalized = (method || 'GET').toUpperCase();
+  return normalized === 'GET' || normalized === 'HEAD' || normalized === 'OPTIONS';
+}
+
+export function isWakeRetryableStatus(status: number): boolean {
+  return WAKE_RETRYABLE_STATUSES.has(status);
+}
+
+export function isWakeRetryableNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  // Caller aborted — do not wake-retry.
+  if (error.name === 'AbortError') return false;
+  if (error.name === 'TypeError') return true;
+  const message = error.message.toLowerCase();
+  return message.includes('network')
+    || message.includes('failed to fetch')
+    || message.includes('fetch failed')
+    || message.includes('timeout')
+    || message.includes('timed out');
+}
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/**
+ * Retry helper for Railway sleep wake: network blips + 502/503/504 on safe methods.
+ * Does not retry 401/400 or unsafe methods (POST/PUT/PATCH/DELETE).
+ */
+export async function withWakeRetry<T>(
+  operation: () => Promise<T>,
+  options: {
+    method?: string;
+    shouldRetryResult?: (result: T) => boolean;
+    maxRetries?: number;
+    delaysMs?: readonly number[];
+  } = {},
+): Promise<T> {
+  const maxRetries = options.maxRetries ?? WAKE_RETRY_MAX;
+  const delays = options.delaysMs ?? WAKE_RETRY_DELAYS_MS;
+  const allowRetry = isSafeWakeRetryMethod(options.method);
+
+  let attempt = 0;
+  let wakeNotified = false;
+
+  try {
+    while (true) {
+      try {
+        const result = await operation();
+        if (
+          allowRetry
+          && typeof options.shouldRetryResult === 'function'
+          && options.shouldRetryResult(result)
+          && attempt < maxRetries
+        ) {
+          if (!wakeNotified) {
+            setWakeRetryActive(true);
+            wakeNotified = true;
+          }
+          const delay = delays[Math.min(attempt, delays.length - 1)] ?? 500;
+          attempt += 1;
+          await sleep(delay);
+          continue;
+        }
+        return result;
+      } catch (error) {
+        if (allowRetry && isWakeRetryableNetworkError(error) && attempt < maxRetries) {
+          if (!wakeNotified) {
+            setWakeRetryActive(true);
+            wakeNotified = true;
+          }
+          const delay = delays[Math.min(attempt, delays.length - 1)] ?? 500;
+          attempt += 1;
+          await sleep(delay);
+          continue;
+        }
+        throw error;
+      }
+    }
+  } finally {
+    if (wakeNotified) setWakeRetryActive(false);
+  }
+}
+
 export function resolveBackendBaseUrl(
   _location: Pick<Location, 'hostname' | 'port'>,
   _isDev: boolean,
@@ -46,7 +165,15 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  return fetch(`${baseUrl}${url}`, { ...options, headers });
+
+  const method = typeof options.method === 'string' ? options.method : 'GET';
+  return withWakeRetry(
+    () => fetch(`${baseUrl}${url}`, { ...options, headers }),
+    {
+      method,
+      shouldRetryResult: (response) => isWakeRetryableStatus(response.status),
+    },
+  );
 }
 
 export async function apiJson<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {

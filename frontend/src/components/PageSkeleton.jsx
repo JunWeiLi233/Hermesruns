@@ -1,5 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { subscribeWakeRetry } from '../api';
 import shoeSkeletonAsset from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
+
+function resolveWakeCopy() {
+  try {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('hermes_lang') : '';
+    const lang = (stored || (typeof navigator !== 'undefined' ? (navigator.languages?.[0] || navigator.language) : 'en') || 'en').toLowerCase();
+    if (lang.startsWith('zh')) return '正在唤醒服务…';
+  } catch { /* ignore */ }
+  return 'Waking the server…';
+}
+
+function WakeRetryNote() {
+  const [active, setActive] = useState(false);
+  useEffect(() => subscribeWakeRetry(setActive), []);
+  if (!active) return null;
+  return <p className="page-skeleton__wake-note">{resolveWakeCopy()}</p>;
+}
 
 function SkeletonBlock({ className = '', style }) {
   return <span className={`page-skeleton__block ${className}`.trim()} style={style} aria-hidden="true" />;
@@ -78,6 +95,7 @@ function RunnerFrame({ variant, children }) {
 
   return (
     <div className={rootClassName} role="status" aria-live="polite" aria-busy="true" aria-label="Loading page">
+      <WakeRetryNote />
       <aside className="page-skeleton__rail" aria-hidden="true">
         <div className="page-skeleton__brand-row">
           <SkeletonBlock className="page-skeleton__brand" />

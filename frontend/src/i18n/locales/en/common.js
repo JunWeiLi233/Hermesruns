@@ -25,6 +25,7 @@ export default {
     "heatmap_back": "Back",
     "close_notifications": "Close notifications",
     "show_details": "Show details",
+    "waking_server": "Waking the server…",
   },
   "auth": {
     "login_success": "Login successful.",

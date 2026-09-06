@@ -3438,3 +3438,32 @@ body.theme-high-contrast {
     grid-template-columns: 1fr;
   }
 }
+
+/* Calm cold-start wake note while API client retries 502/503/504 */
+.page-skeleton__wake-note {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 40;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(93, 75, 57, 0.12);
+  background: rgba(255, 252, 247, 0.92);
+  color: rgba(72, 55, 42, 0.78);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  box-shadow: 0 10px 30px rgba(105, 68, 48, 0.12);
+  pointer-events: none;
+}
+
+body.theme-midnight .page-skeleton__wake-note,
+body.theme-high-contrast .page-skeleton__wake-note {
+  border-color: rgba(247, 240, 232, 0.14);
+  background: rgba(31, 32, 36, 0.92);
+  color: rgba(247, 240, 232, 0.82);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
