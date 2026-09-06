@@ -11,6 +11,8 @@ import {
   WAKE_RETRY_MAX,
 } from './api';
 
+type StatusLike = { status: number };
+
 describe('wake retry helpers', () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -49,7 +51,7 @@ describe('wake retry helpers', () => {
   it('retries on 502 then succeeds', async () => {
     vi.useFakeTimers();
     const operation = vi
-      .fn()
+      .fn<() => Promise<StatusLike & { ok?: boolean }>>()
       .mockResolvedValueOnce({ status: 502 })
       .mockResolvedValueOnce({ status: 200, ok: true });
 
@@ -67,7 +69,7 @@ describe('wake retry helpers', () => {
   });
 
   it('does not retry on 401', async () => {
-    const operation = vi.fn().mockResolvedValue({ status: 401 });
+    const operation = vi.fn<() => Promise<StatusLike>>().mockResolvedValue({ status: 401 });
     const result = await withWakeRetry(operation, {
       method: 'GET',
       shouldRetryResult: (result) => isWakeRetryableStatus(result.status),
@@ -77,7 +79,7 @@ describe('wake retry helpers', () => {
   });
 
   it('does not retry on 400', async () => {
-    const operation = vi.fn().mockResolvedValue({ status: 400 });
+    const operation = vi.fn<() => Promise<StatusLike>>().mockResolvedValue({ status: 400 });
     const result = await withWakeRetry(operation, {
       method: 'GET',
       shouldRetryResult: (result) => isWakeRetryableStatus(result.status),
@@ -87,7 +89,7 @@ describe('wake retry helpers', () => {
   });
 
   it('does not retry POST mutations on 502', async () => {
-    const operation = vi.fn().mockResolvedValue({ status: 502 });
+    const operation = vi.fn<() => Promise<StatusLike>>().mockResolvedValue({ status: 502 });
     const result = await withWakeRetry(operation, {
       method: 'POST',
       shouldRetryResult: (result) => isWakeRetryableStatus(result.status),
@@ -130,7 +132,7 @@ describe('wake retry helpers', () => {
     });
 
     const operation = vi
-      .fn()
+      .fn<() => Promise<StatusLike>>()
       .mockResolvedValueOnce({ status: 503 })
       .mockResolvedValueOnce({ status: 200 });
 
