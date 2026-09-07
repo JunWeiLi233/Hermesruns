@@ -7,5 +7,6 @@ public enum ImportProvider {
     COROS,
     HUAWEI,
     APPLE_HEALTH,
-    GOOGLE_HEALTH
+    GOOGLE_HEALTH,
+    MANUAL
 }

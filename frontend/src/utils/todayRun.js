@@ -602,7 +602,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherC
     recommendation,
     tone,
     metrics,
-    plan: buildPlan(recommendation.type, t, metrics),
+    plan: personalized?.steps || buildPlan(recommendation.type, t, metrics),
     reasons: personalized?.reasons || buildReasons(recommendation, t, metrics),
     personalizedPlan: personalized?.plan || null,
   };

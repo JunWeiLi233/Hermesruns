@@ -377,6 +377,11 @@ public class AutomatedCoachService {
 
     @Transactional
     public void logRecoveryMetrics(Runner runner, Integer restingHr, Integer sleepScore, Integer hrvMs, Integer stressScore) {
+        readinessService.recordManualRecovery(runner, LocalDate.now(),
+                restingHr != null && restingHr > 30 && restingHr < 120 ? restingHr : null,
+                sleepScore != null && sleepScore >= 0 && sleepScore <= 100 ? sleepScore : null,
+                hrvMs != null && hrvMs > 0 && hrvMs < 5000 ? hrvMs : null,
+                stressScore != null && stressScore >= 0 && stressScore <= 100 ? stressScore : null);
         CoachRunnerState state = getOrCreateState(runner);
         if (restingHr != null && restingHr > 30 && restingHr < 120) state.setLastNightRestingHr(restingHr);
         if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) state.setLastSleepScore(sleepScore);
@@ -576,12 +581,8 @@ public class AutomatedCoachService {
                 if (workout != null && completedRunDates.contains(session.date())) {
                     continue;
                 }
-                // A persisted rest day is an explicit schedule choice. The
-                // personalized planner may replan future load, but should not
-                // silently turn an existing rest day into a run.
-                if (workout != null && workout.getWorkoutType() == CoachWorkoutType.REST) {
-                    continue;
-                }
+                // These rows are planner-owned. Reassess automatic rest as inputs
+                // change; completed runs and explicit check-in reads stay preserved.
                 if (workout == null) {
                     workout = new CoachScheduledWorkout();
                     workout.setRunner(runner);
@@ -932,10 +933,13 @@ public class AutomatedCoachService {
     }
 
     private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
-        CoachStaminaDto stamina = buildStaminaDto(runner, s, todayWorkout);
         ReadinessService.MultiSourceReadinessSnapshot snapshot =
                 readinessService.resolveReadinessSnapshot(runner, s, LocalDate.now());
         ReadinessService.ReadinessResult readiness = resolveReadiness(snapshot, s);
+        ReadinessService.MetricReadings readings = snapshot == null || snapshot.readings() == null
+                ? ReadinessService.MetricReadings.none() : snapshot.readings();
+        CoachStaminaDto stamina = readings.bodyBatteryAtWake() == null ? null
+                : new CoachStaminaDto(readings.bodyBatteryAtWake(), readings.bodyBatteryAtWake(), null, null, "steady");
         ReadinessService.MetricAvailability availability = snapshot == null || snapshot.availability() == null
                 ? ReadinessService.MetricAvailability.none()
                 : snapshot.availability();
@@ -948,12 +952,13 @@ public class AutomatedCoachService {
                 s.getVolumeKm7d(), s.getVolumeKm28d(), s.getMinutesLowZ1Z2Last7d(),
                 s.getMinutesGreyZ3Last7d(), s.getMinutesHighZ4Z5Last7d(), s.getMinutesUnknownHrLast7d(),
                 s.getHighIntensityRatioLast7d(), s.isHighMileageGrinder(),
-                s.getBaselineRestingHr(), s.getLastNightRestingHr(), s.getLastSleepScore(), s.getLastHrvMs(), s.getLastStressScore(),
-                s.getLastHrvStatus(), s.getLastBodyBatteryAtWake(),
-                s.getReadinessScore(), s.getReadinessVerdict(),
-                readiness.sleepScore(), readiness.hrvScore(), readiness.rhrScore(), readiness.stressScore(),
-                readiness.loadScore(), readiness.confidence(),
-                readiness.score(), readinessDataSupported,
+                s.getBaselineRestingHr(), readings.restingHeartRate(), readings.sleepScore(), readings.hrvMs(), readings.stressScore(),
+                readings.hrvStatus(), readings.bodyBatteryAtWake(),
+                readinessDataSupported ? readiness.score() : null, readinessDataSupported ? readiness.verdict() : null,
+                availability.sleep() ? readiness.sleepScore() : null, availability.hrv() ? readiness.hrvScore() : null,
+                availability.restingHeartRate() ? readiness.rhrScore() : null, availability.stress() ? readiness.stressScore() : null,
+                availability.trainingLoad() ? readiness.loadScore() : null, readiness.confidence(),
+                readinessDataSupported ? readiness.score() : null, readinessDataSupported,
                 sleepDataSupported, sleepDataSource,
                 runner.getMaxHeartRateBpm(), runner.getRestingHeartRateBpm(), stamina,
                 coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).map(b -> new CoachTrainingBlockDto(
@@ -977,42 +982,10 @@ public class AutomatedCoachService {
         if (state != null) {
             ReadinessService.ReadinessResult computed = readinessService.compute(state);
             if (computed != null) return computed;
-            int score = state.getReadinessScore() != null ? state.getReadinessScore() : 75;
-            String verdict = state.getReadinessVerdict() != null ? state.getReadinessVerdict() : "EASY";
-            int sleep = state.getLastSleepScore() != null ? state.getLastSleepScore() : score;
-            int stress = state.getLastStressScore() != null ? Math.max(0, 100 - state.getLastStressScore()) : score;
-            return new ReadinessService.ReadinessResult(score, verdict, sleep, score, score, stress, 75, 0);
         }
         return new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75, 75, 0);
     }
 
-    private CoachStaminaDto buildStaminaDto(Runner runner, CoachRunnerState state, CoachScheduledWorkout todayWorkout) {
-        int recoveryCap = 100;
-        Integer sleep = state.getLastSleepScore();
-        if (sleep != null) {
-            if (sleep < 60) recoveryCap -= 12;
-            else if (sleep < 78) recoveryCap -= 5;
-        }
-        int score = recoveryCap;
-        CoachWorkoutType type = todayWorkout != null ? todayWorkout.getWorkoutType() : null;
-        if (type != null) {
-            switch (type) {
-                case LONG_RUN -> score -= 5;
-                case TEMPO, THRESHOLD -> score -= 7;
-                case INTERVALS -> score -= 9;
-                default -> score -= 1;
-            }
-        }
-        Integer targetPace = null;
-        if (todayWorkout != null && todayWorkout.getPlannedDistanceKm() != null && todayWorkout.getPlannedDistanceKm() > 0
-                && todayWorkout.getPlannedDurationMinutes() != null && todayWorkout.getPlannedDurationMinutes() > 0) {
-            targetPace = (int) Math.round((todayWorkout.getPlannedDurationMinutes() * 60.0) / todayWorkout.getPlannedDistanceKm());
-        }
-        Double hrMax = state.getEstimatedHrMaxBpm() != null ? state.getEstimatedHrMaxBpm() : (runner.getMaxHeartRateBpm() != null ? runner.getMaxHeartRateBpm().doubleValue() : null);
-        Integer targetHr = hrMax == null ? null : (int) Math.round(hrMax * 0.62);
-        String direction = score < recoveryCap ? "down" : score > recoveryCap ? "up" : "steady";
-        return new CoachStaminaDto(score, recoveryCap, targetPace, targetHr, direction);
-    }
 
     private String inferScheduledSurface(CoachScheduledWorkout workout) {
         if (workout == null || workout.getNotes() == null) return null;
@@ -1046,7 +1019,13 @@ public class AutomatedCoachService {
             boolean sleepDataSupported, String sleepDataSource,
             Integer profileMaxHeartRateBpm, Integer profileRestingHeartRateBpm, CoachStaminaDto stamina,
             CoachTrainingBlockDto activeBlock
-    ) {}
+    ) {
+        @com.fasterxml.jackson.annotation.JsonProperty("readinessAvailability")
+        public ReadinessService.MetricAvailability readinessAvailability() {
+            return new ReadinessService.MetricAvailability(readinessSleep != null, readinessHrv != null,
+                    readinessRhr != null, readinessStress != null, readinessLoad != null);
+        }
+    }
 
     public record CoachScheduledWorkoutDto(
             LocalDate scheduledDate, String workoutType, Double plannedDistanceKm,

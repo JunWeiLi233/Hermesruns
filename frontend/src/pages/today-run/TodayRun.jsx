@@ -14,6 +14,7 @@ import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { getTodayRunRecommendation } from '../../utils/todayRun';
+import { normalizeCoachEvidence } from '../../utils/personalizedCoachPlan';
 import { formatPlannedDuration, prettifyWorkoutType } from '../../utils/coach/presentation.js';
 import { getTodayRunAcwrInsight } from '../../utils/todayRunAcwrInsight';
 import { generateMorningBriefing } from '../../utils/coachVoice';
@@ -174,7 +175,8 @@ function buildWorkoutBlueprint(plan, plannedDurationMinutes, t) {
   return plan.map((step, index) => ({
     ...step,
     phase: labels[index] || t('today_run.plan_step_generic', { index: index + 1 }),
-    duration: formatSegmentDuration(totalMinutes * (ratios[index] || 1 / plan.length), t),
+    duration: step.isRest ? t('today_run.stitch_duration_unknown')
+      : formatSegmentDuration(totalMinutes * (ratios[index] || 1 / plan.length), t),
     isAccent: index === 1 || (plan.length === 4 && index === 2),
   }));
 }
@@ -186,64 +188,6 @@ function getDisplayName(profile, fallback) {
   return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
-function buildConfidenceModel(metrics, toneKey, hasCoachSession, runs, coachState) {
-  let score = 76;
-
-  if (hasCoachSession) score += 6;
-  if (toneKey === 'quality') score += 5;
-  if (toneKey === 'easy') score += 1;
-  if (toneKey === 'recovery') score -= 7;
-  if (toneKey === 'restart') score -= 10;
-
-  if (metrics.acwr != null) {
-    if (metrics.acwr >= 0.9 && metrics.acwr <= 1.15) score += 7;
-    else if (metrics.acwr > 1.2 || metrics.acwr < 0.7) score -= 9;
-    else score -= 2;
-  }
-
-  if (metrics.recoveryHours > 24) score -= 10;
-  else if (metrics.recoveryHours > 12) score -= 5;
-  else score += 3;
-
-  if ((metrics.hardRuns7d || 0) >= (metrics.qualityCap || 1)) score -= 4;
-  if ((metrics.runDays7 || 0) >= 4) score += 3;
-
-  // Recovery Data (Garmin Wellness)
-  if (coachState) {
-    if (coachState.lastSleepScore != null) {
-      if (coachState.lastSleepScore < 50) score -= 15;
-      else if (coachState.lastSleepScore < 70) score -= 5;
-      else if (coachState.lastSleepScore > 85) score += 5;
-    }
-    if (coachState.lastStressScore != null) {
-      if (coachState.lastStressScore > 75) score -= 10;
-      else if (coachState.lastStressScore < 25) score += 5;
-    }
-    if (coachState.lastNightRestingHr != null && coachState.baselineRestingHr != null) {
-      const hrDelta = coachState.lastNightRestingHr - coachState.baselineRestingHr;
-      if (hrDelta > 5) score -= 8;
-      else if (hrDelta < -2) score += 4;
-    }
-  }
-
-  // VDOT trend adjustment
-  if (Array.isArray(runs) && runs.length > 0) {
-    const vdotTrend = computeVdotTrend(runs);
-    if (vdotTrend.hasData) {
-      if (vdotTrend.direction === 'declining') score -= 3;
-      else if (vdotTrend.direction === 'improving') score += 2;
-      // 'maintaining' leaves score unchanged
-    }
-  }
-
-  score = Math.max(42, Math.min(96, Math.round(score)));
-
-  let tone = 'ready';
-  if (score < 60) tone = 'action';
-  else if (score < 76) tone = 'warning';
-
-  return { score, tone };
-}
 
 function isRecord(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
@@ -339,7 +283,7 @@ export default function TodayRun() {
 
         setProfile(dashboardData.profile && typeof dashboardData.profile === 'object' ? dashboardData.profile : null);
         setRuns(dashboardData.runs);
-        setCoachPayload(dashboardData.coachPayload && typeof dashboardData.coachPayload === 'object' ? dashboardData.coachPayload : null);
+        setCoachPayload(normalizeCoachEvidence(dashboardData.coachPayload));
         setWeatherContext(dashboardData.weatherContext && typeof dashboardData.weatherContext === 'object' ? dashboardData.weatherContext : null);
         setRaces(Array.isArray(dashboardData.races) ? dashboardData.races : []);
         setShoes(Array.isArray(dashboardData.shoes) ? dashboardData.shoes : []);
@@ -375,10 +319,6 @@ export default function TodayRun() {
   const initials = displayName.slice(0, 1).toUpperCase();
   const hasHeatPenalty = weatherContext?.available && (weatherContext?.pacePenaltySecPerKm ?? 0) > 0;
   const showWeatherStrip = weatherContext?.available && !heatDismissed;
-  const confidence = useMemo(
-    () => buildConfidenceModel(metrics, tone.key, Boolean(coachPayload?.today), runs, coachPayload?.state),
-    [coachPayload, metrics, tone.key, runs],
-  );
 
   const coachSessionTitle = coachPayload?.today
     ? prettifyWorkoutType(coachPayload.today.workoutType, t)
@@ -423,13 +363,7 @@ export default function TodayRun() {
     return predictRetirement(recommendedShoe, runs);
   }, [recommendedShoe, runs]);
   const heroLocation = marathonPlan.race?.location || marathonPlan.race?.city || t('today_run.stitch_route_fallback');
-  const readinessBattery = Math.max(
-    48,
-    Math.min(
-      98,
-      Math.round(confidence.score + (metrics.recoveryHours > 0 ? Math.max(-16, -metrics.recoveryHours / 2) : 6)),
-    ),
-  );
+  const readinessBattery = coachPayload?.state?.currentReadinessScore ?? null;
   const blueprintSteps = useMemo(
     () => buildWorkoutBlueprint(plan, coachPayload?.today?.plannedDurationMinutes, t),
     [plan, coachPayload, t],
@@ -472,12 +406,12 @@ export default function TodayRun() {
       };
     }
     return {
-      scorePercent: readinessBattery,
-      recoveryCapPercent: Math.min(100, readinessBattery + 2),
+      scorePercent: null,
+      recoveryCapPercent: null,
       targetHeartRateBpm: null,
       direction: 'steady',
     };
-  }, [coachPayload, readinessBattery]);
+  }, [coachPayload]);
 
   const staminaScorePercent = stamina.scorePercent;
   const staminaCapPercent = stamina.recoveryCapPercent;
@@ -617,6 +551,22 @@ export default function TodayRun() {
                   <p className="today-run-coaching-answer-coach-message">{coachPayload.coachMessage}</p>
                 )}
                 <div className="today-run-readiness-signals">
+                  {coachPayload?.state?.readinessLoad != null
+                    && [coachPayload.state.readinessSleep, coachPayload.state.readinessHrv,
+                      coachPayload.state.readinessRhr, coachPayload.state.readinessStress].every(value => value == null)
+                    && <span className="today-run-coaching-answer-sub">{t('today_run.readiness_load_only')}</span>}
+                  {[
+                    ['sleep', 'sleep', coachPayload?.state?.readinessSleep],
+                    ['hrv', 'monitor_heart', coachPayload?.state?.readinessHrv],
+                    ['rhr', 'favorite', coachPayload?.state?.readinessRhr],
+                    ['stress', 'stress', coachPayload?.state?.readinessStress],
+                  ].filter(([, , score]) => score == null).map(([metric, icon]) => (
+                    <span className="today-run-readiness-signal" key={metric}>
+                      <AppIcon name={icon} className="today-run-readiness-signal-icon" aria-hidden="true" />
+                      <span className="today-run-readiness-signal-label">{t(`today_run.readiness_signal_${metric}_short`)}</span>
+                      <small>{t('today_run.wellness_no_data')}</small>
+                    </span>
+                  ))}
                   {coachPayload?.state?.readinessSleep != null && (
                     <span
                       className="today-run-readiness-signal"
@@ -843,7 +793,7 @@ export default function TodayRun() {
                   <strong>
                     {coachPayload?.state?.lastBodyBatteryAtWake != null
                       ? `${coachPayload.state.lastBodyBatteryAtWake}%`
-                      : `${readinessBattery}%`}
+                      : readinessBattery != null ? `${readinessBattery}/100` : t('today_run.wellness_no_data')}
                   </strong>
                 </article>
               </div>
@@ -888,16 +838,16 @@ export default function TodayRun() {
 
                 <div className="today-run-plan-panel-grid">
                   <article>
-                    <span>{t('today_run.stitch_recovery_hour')}</span>
+                    <span>{t('today_run.last_run_recovery_estimate')}</span>
                     <strong>
                       {metrics.recoveryHours > 0
                         ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
-                        : t('analysis.fully_recovered')}
+                        : metrics.recoveryHasData ? t('today_run.last_run_recovery_elapsed') : t('today_run.wellness_no_data')}
                     </strong>
                   </article>
                   <article>
                     <span>{t('today_run.stamina_score')}</span>
-                    <strong>{staminaScorePercent}%</strong>
+                    <strong>{staminaScorePercent != null ? `${staminaScorePercent}%` : t('today_run.wellness_no_data')}</strong>
                   </article>
                   <article>
                     <span>{t('today_run.metric_vo2max')}</span>
@@ -1010,7 +960,7 @@ export default function TodayRun() {
                   </article>
                   <article>
                     <span>{t('today_run.stamina_recovery_cap')}</span>
-                    <strong>{staminaCapPercent}%</strong>
+                    <strong>{staminaCapPercent != null ? `${staminaCapPercent}%` : t('today_run.wellness_no_data')}</strong>
                   </article>
                   <article>
                     <span>{t('today_run.stamina_target_hr')}</span>
