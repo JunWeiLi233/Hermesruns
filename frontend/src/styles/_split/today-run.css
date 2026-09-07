@@ -2671,3 +2671,250 @@ body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page 
   color: var(--slate-700);
   line-height: 1.5;
 }
+
+/* Today Run follows Analysis: a clear session card, quiet evidence cards,
+   and a two-column reading order. Recommendation logic stays in the shared planner. */
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned {
+  --today-analysis-card: var(--ahs-surface);
+  --today-analysis-ink: var(--ahs-label);
+  --today-analysis-muted: #626269;
+  --today-analysis-soft: rgba(60, 60, 67, 0.035);
+  --today-analysis-line: var(--ahs-separator);
+  --today-analysis-accent: #b23e31;
+  font-family: var(--ahs-font) !important;
+  background: var(--ahs-wash) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned {
+  --today-analysis-muted: #c0b8ad;
+  --today-analysis-soft: rgba(255, 255, 255, 0.035);
+  --today-analysis-accent: #ffb4a7;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(h1, h2, h3, p, span, strong, button) { font-family: var(--ahs-font) !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 46px clamp(24px, 4vw, 64px) 56px !important;
+  display: grid;
+  gap: 18px !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero, .today-run-coaching-strip, .today-run-coaching-strip-inner, .today-run-command-grid) {
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero-copy, .today-run-command-readiness-panel, .today-run-coaching-answer, .today-run-plan-card) {
+  min-width: 0;
+  min-height: 0 !important;
+  padding: 28px 32px !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  color: var(--today-analysis-ink) !important;
+  background: var(--today-analysis-card) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero-copy, .today-run-command-readiness-panel, .today-run-plan-card)::before,
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero-copy, .today-run-command-readiness-panel, .today-run-plan-card)::after {
+  content: none !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-hero-copy h1 {
+  font-family: var(--ahs-font) !important;
+  font-size: clamp(1.65rem, 2.4vw, 2rem) !important;
+  font-style: normal !important;
+  font-weight: 750;
+  line-height: 1.25 !important;
+  letter-spacing: -0.035em !important;
+  max-width: none !important;
+  margin: 18px 0 10px !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-kicker, .today-run-plan-panel-copy > span, .today-run-plan-card-head > div > span) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--today-analysis-accent) !important;
+  font-size: 1rem !important;
+  font-weight: 750;
+  line-height: 1.4;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-kicker, .today-run-plan-panel-copy > span, .today-run-plan-card-head > div > span) > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero-copy > p, .today-run-plan-panel-copy p, .today-run-plan-card-head > p, .today-run-plan-coach-line p, .today-run-plan-step-card p, .today-run-plan-reason-card p) {
+  color: var(--today-analysis-muted) !important;
+  font-size: 0.85rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.6;
+  letter-spacing: 0;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0;
+  margin: 24px 0 0;
+  border-block: 1px solid var(--today-analysis-line);
+  padding: 6px 0;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-hero-metrics > article, .today-run-plan-panel-grid > article, .today-run-plan-signal-grid > article) {
+  min-width: 0;
+  padding: 14px 12px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-hero-metrics > article > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: clamp(1.3rem, 2vw, 1.9rem) !important;
+  line-height: 1.25;
+  color: var(--today-analysis-ink) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-hero-metrics > article:nth-child(2) > strong { font-size: 1.2rem !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-metric-basis { display: block; margin-top: 8px; font-size: 0.7rem; font-weight: 400; line-height: 1.5; color: var(--today-analysis-muted) !important; text-decoration: none !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-morning-briefing, .today-run-plan-rationale, .today-run-plan-weather, .today-run-shoe-brief) {
+  border: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  background: var(--today-analysis-soft) !important;
+  padding: 16px !important;
+  margin-top: 18px !important;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-morning-briefing { display: block; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-morning-briefing > p {
+  font-size: 0.85rem;
+  font-style: normal !important;
+  line-height: 1.65;
+  color: var(--today-analysis-muted) !important;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-downshift-btn { margin-top: 12px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-overview-disclosure { margin-top: 12px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-badges { margin-top: 16px !important; gap: 8px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-marathon-pill { font-size: 0.7rem; font-weight: 600; letter-spacing: 0; padding: 6px 10px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-rationale-content { display: grid; gap: 10px; margin-top: 10px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-rationale-item { display: flex; align-items: flex-start; gap: 8px; padding: 0 !important; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none !important; font-size: 0.8rem; line-height: 1.6; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-rationale-icon { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 2px; }
+
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-hero .today-run-plan-rationale .today-run-plan-rationale-item { background: transparent !important; }
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-hero .today-run-plan-morning-briefing { background: var(--today-analysis-soft) !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-panel-copy h2 {
+  font-size: 1.65rem !important;
+  font-style: normal;
+  line-height: 1.3 !important;
+  margin: 20px 0 12px;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-panel-grid { gap: 10px; margin-top: 24px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-panel-grid > article { background: var(--today-analysis-soft) !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-panel-grid > article strong { font-size: 1.1rem; line-height: 1.4; margin-top: 8px; color: var(--today-analysis-ink) !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-coaching-strip-inner, .today-run-command-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  align-items: start;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer { grid-area: auto !important; align-self: stretch; min-height: 180px !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer-kicker { font-size: 1rem; margin-bottom: 12px; letter-spacing: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer-value { font-size: 1.5rem !important; line-height: 1.3; font-weight: 750; letter-spacing: -0.025em; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer-delta { font-size: 2.4rem; margin-top: 18px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer--load .today-run-coaching-answer-value { font-size: 2.6rem !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-coaching-answer-sub, .today-run-coaching-answer-copy) { margin-top: 8px; font-size: 0.8rem; line-height: 1.5; color: var(--today-analysis-muted) !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-readiness-signals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin-top: 16px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-readiness-signals > .today-run-coaching-answer-sub { grid-column: 1 / -1; margin: 0 0 4px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-readiness-signal { padding: 8px 10px; border-radius: 8px; background: var(--today-analysis-soft) !important; gap: 8px; min-width: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-readiness-signal small { margin-left: auto; font-size: 0.7rem; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer--wellness { grid-column: 1 / -1; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-strip--onboarding .today-run-coaching-answer { grid-column: 1 / -1 !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-left, .today-run-plan-right) { min-width: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-card-head { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-card-head h2 { font-size: 1.5rem !important; font-style: normal; line-height: 1.3; margin: 10px 0 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-list { display: grid; grid-template-columns: minmax(0, 1fr) !important; gap: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-step-card, .today-run-plan-coach-line, .today-run-plan-reason-card) {
+  padding: 20px 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-plan-step-card + .today-run-plan-step-card, .today-run-plan-coach-line + .today-run-plan-coach-line) { border-top: 1px solid var(--today-analysis-line) !important; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-card { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-card > span { grid-column: 1; font-size: 0.75rem; padding: 0; background: transparent; box-shadow: none; text-transform: none; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-card > h3 { grid-column: 1; font-size: 1.05rem; font-style: normal !important; margin: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-card > strong { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 1.25rem; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-step-card > p { grid-column: 1 / -1; margin: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-coach-lines { margin-top: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-reason-list { display: grid; gap: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-reason-card { display: grid; grid-template-columns: 26px 1fr; gap: 12px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-reason-card > strong { min-width: 0; width: auto; height: auto; padding: 0; background: transparent !important; border-radius: 0; font-size: 1rem; color: var(--today-analysis-accent); }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-reason-card > p { margin: 0; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-signal-grid { border-top: 1px solid var(--today-analysis-line); padding-top: 12px; gap: 8px; }
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-signal-grid strong { font-size: 1.25rem; color: var(--today-analysis-ink) !important; }
+
+body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-stitch-primary-btn, .today-run-stitch-secondary-btn, .today-run-plan-downshift-btn, .today-run-shoe-brief-action) {
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 999px !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1050px) {
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-canvas { padding: 28px 24px 40px !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-hero { grid-template-columns: minmax(0, 1fr) !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-readiness-panel .today-run-plan-panel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-canvas { padding: 20px 16px 36px !important; gap: 14px !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-command-hero-copy, .today-run-command-readiness-panel, .today-run-coaching-answer, .today-run-plan-card) { padding: 22px 20px !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned :is(.today-run-coaching-strip-inner, .today-run-command-grid) { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-command-readiness-panel .today-run-plan-panel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-readiness-signals { grid-template-columns: minmax(0, 1fr); }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-hero-metrics > article { padding: 12px 6px !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-plan-hero-metrics > article:nth-child(2) > strong { font-size: 1rem !important; }
+  body #root .runner-shell-page.today-run-command-page.today-run-analysis-aligned .today-run-coaching-answer { min-height: 0 !important; }
+}
