@@ -1,0 +1,12 @@
+/* Public account/legal pages reuse the existing cascade without downloading
+ * analytics, maps, shoe catalogs, or admin page styles. Keep import order in
+ * sync with app.css; the imported files remain the sole style owners. */
+@import './_split/auth.css';
+@import './_split/misc.css';
+@import './_split/light-theme-overrides.css';
+@import './contrast-fixes.css';
+@import './liquid-glass.css';
+@import './auth-liquid-glass.css';
+@import './all-pages-liquid-glass.css';
+@import './loading-skeleton.css';
+@import './dark-mode-cohesion.css';

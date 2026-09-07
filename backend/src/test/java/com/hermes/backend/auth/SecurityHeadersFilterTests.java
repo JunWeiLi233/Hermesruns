@@ -10,6 +10,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SecurityHeadersFilterTests {
 
     @Test
+    void cloudflareDetectionNonceIsUnpredictableAndUniquePerResponse() throws Exception {
+        SecurityHeadersFilter filter = new SecurityHeadersFilter();
+        java.util.Set<String> nonces = new java.util.HashSet<>();
+        for (int i = 0; i < 20; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login");
+            request.addHeader("Content-Security-Policy", "script-src 'nonce-attacker'");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(request, response, new MockFilterChain());
+
+            String csp = response.getHeader("Content-Security-Policy");
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("'nonce-([A-Za-z0-9+/]+={0,2})'").matcher(csp);
+            assertThat(matcher.find()).as("Cloudflare needs a response-header nonce").isTrue();
+            String nonce = matcher.group(1);
+            assertThat(java.util.Base64.getDecoder().decode(nonce)).hasSizeGreaterThanOrEqualTo(16);
+            assertThat(nonces.add(nonce)).as("Never reuse a nonce across responses").isTrue();
+            assertThat(csp).doesNotContain("nonce-attacker");
+        }
+    }
+
+    @Test
     void contentSecurityPolicyAllowsBlobImagesForLocalPreviewUrls() throws Exception {
         SecurityHeadersFilter filter = new SecurityHeadersFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");

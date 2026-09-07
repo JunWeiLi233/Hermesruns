@@ -84,7 +84,7 @@ public class SpaForwardingController {
         boolean indexable = isIndexableRoute(request.getRequestURI());
         Path localStaticIndex = Path.of("target", "classes", "static", "index.html");
         if (Files.isRegularFile(localStaticIndex)) {
-            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8), indexable);
+            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8), indexable, request.getRequestURI());
         }
 
         try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {
@@ -92,7 +92,7 @@ public class SpaForwardingController {
                 return ResponseEntity.notFound().build();
             }
             String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            return htmlResponse(html, indexable);
+            return htmlResponse(html, indexable, request.getRequestURI());
         }
     }
 
@@ -100,13 +100,17 @@ public class SpaForwardingController {
         return "/".equals(requestUri) || "/terms".equals(requestUri) || "/privacy".equals(requestUri);
     }
 
-    private ResponseEntity<String> htmlResponse(String html, boolean indexable) {
+    private ResponseEntity<String> htmlResponse(String html, boolean indexable, String requestUri) {
         ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
                 .header(HttpHeaders.PRAGMA, "no-cache")
                 .header(HttpHeaders.EXPIRES, "0");
         if (!indexable) {
             response.header("X-Robots-Tag", "noindex, nofollow, noarchive");
+        }
+        if ("/profile".equals(requestUri)) {
+            response.header(HttpHeaders.LINK,
+                    "</images/races/dashboard-hero.webp>; rel=preload; as=image; fetchpriority=high");
         }
         return response.contentType(MediaType.TEXT_HTML).body(html);
     }

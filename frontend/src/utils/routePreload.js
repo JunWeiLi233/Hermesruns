@@ -173,3 +173,9 @@ export function installRoutePreloadListener() {
   };
   return uninstallListener;
 }
+
+// A direct Profile visit already expresses navigation intent. Fetch its chunk
+// alongside the app stylesheet instead of waiting for RouteStyleGate to mount it.
+if (typeof window !== 'undefined' && window.location.pathname === '/profile') {
+  preloadRoute('/profile');
+}

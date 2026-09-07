@@ -20,8 +20,10 @@
   --hd-bg-today-text: #f6f1eb;
   --hd-bg-input: rgba(0,0,0,0.03);
   --hd-text-primary: #1c1917;
-  --hd-text-secondary: #78716c;
-  --hd-text-tertiary: #a8a29e;
+  --hd-text-secondary: #625c56;
+  --hd-text-tertiary: #706963;
+  --ahs-secondary: #626269;
+  --ahs-tertiary: #707078;
   /* Accent now derives from the global brand token so Profile is consistent with
      every other page rather than a divergent #c0462b island. */
   --hd-accent: var(--brand-accent, #a0392a);
@@ -175,6 +177,35 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.72) 100%);
+}
+
+.hd-today-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Profile content should be visible at its final position on the first paint. */
+.profile-dashboard-page .hd-content :is(.hd-hero, .hd-today-card, .hd-metric-strip, .hd-training-grid, .hd-progression, .hd-bottom-grid, .hd-rewards) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-dashboard-page :is(.hd-stamina-fill, .hd-rewards-next-fill) {
+    transition: none;
+  }
+}
+
+.profile-dashboard-page .hd-trend-badge.improving,
+.profile-dashboard-page .profile-weekly-digest-vdot-improving {
+  color: #2f7248;
+}
+
+body #root .profile-dashboard-page .hd-content .hd-metric-strip .hd-metric-card .hd-metric-kicker {
+  color: var(--hd-text-secondary) !important;
 }
 
 .hd-today-content {
@@ -444,7 +475,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
 }
 
 .hd-card-title {
@@ -944,10 +975,12 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
 }
 
 .hd-stamina-fill {
+  width: 100%;
   height: 100%;
   border-radius: 4px;
   background: var(--hd-accent-gradient);
-  transition: width 0.5s var(--hd-transition-bounce);
+  transform-origin: left;
+  transition: transform 0.5s var(--hd-transition-bounce);
 }
 
 .hd-stamina-fill.cap {
@@ -1090,7 +1123,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
 
 .hd-rewards-ring-center span {
   font-size: 0.62rem;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
   font-weight: 600;
 }
 
@@ -1109,7 +1142,7 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
 .hd-rewards-progress-label span {
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1174,10 +1207,12 @@ body:is(.theme-midnight, .theme-high-contrast) .hd-content {
 }
 
 .hd-rewards-next-fill {
+  width: 100%;
   height: 100%;
   border-radius: 4px;
   background: var(--hd-accent-gradient);
-  transition: width 0.5s var(--hd-transition-bounce);
+  transform-origin: left;
+  transition: transform 0.5s var(--hd-transition-bounce);
 }
 
 .hd-rewards-next-pct {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { preload } from 'react-dom';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -28,6 +29,8 @@ import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
 
 const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.webp';
+// Start the largest visible image while the dashboard data is still loading.
+preload(DASHBOARD_HERO_IMAGE, { as: 'image', fetchPriority: 'high' });
 const PR_SNAPSHOT_VERSION = 1;
 
 function getPrSnapshotStorageKey(email) {
@@ -1275,7 +1278,8 @@ export default function ProfileDashboard() {
               <>
                 {/* 2. Today's Session */}
                 <section className="hd-today-card">
-                  <div className="hd-today-bg" style={{ backgroundImage: `url(${DASHBOARD_HERO_IMAGE})` }}>
+                  <div className="hd-today-bg">
+                    <img className="hd-today-image" src={DASHBOARD_HERO_IMAGE} alt="" width="512" height="512" fetchPriority="high" decoding="async" />
                     <div className="hd-today-bg-overlay" />
                   </div>
                   <div className="hd-today-content">
@@ -1654,7 +1658,7 @@ export default function ProfileDashboard() {
                           <strong>{staminaScorePercent}%</strong>
                         </div>
                         <div className="hd-stamina-meter">
-                          <div className="hd-stamina-fill" style={{ width: `${staminaScorePercent}%` }} />
+                          <div className="hd-stamina-fill" style={{ transform: `scaleX(${staminaScorePercent / 100})` }} />
                         </div>
                       </div>
                       <div className="hd-stamina-meter-group">
@@ -1663,7 +1667,7 @@ export default function ProfileDashboard() {
                           <strong>{staminaCapPercent}%</strong>
                         </div>
                         <div className="hd-stamina-meter">
-                          <div className="hd-stamina-fill cap" style={{ width: `${staminaCapPercent}%` }} />
+                          <div className="hd-stamina-fill cap" style={{ transform: `scaleX(${staminaCapPercent / 100})` }} />
                         </div>
                       </div>
                     </div>
@@ -1749,7 +1753,7 @@ export default function ProfileDashboard() {
                         <p className="hd-rewards-next-hint">{rewardNextMilestone.hint || rewardNextMilestone.subtitle}</p>
                         <div className="hd-rewards-next-bar-wrap">
                           <div className="hd-rewards-next-bar">
-                            <div className="hd-rewards-next-fill" style={{ width: `${rewardNextMilestonePct}%` }} />
+                            <div className="hd-rewards-next-fill" style={{ transform: `scaleX(${rewardNextMilestonePct / 100})` }} />
                           </div>
                           <span className="hd-rewards-next-pct">{rewardNextMilestonePct}%</span>
                         </div>
