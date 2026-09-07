@@ -8,8 +8,8 @@ const styleSource = readFileSync(path.join(here, '../../../styles/analysis-summa
 
 assert.match(
   styleSource,
-  /#root \.analysis-page-shell > \.runner-shell-main > \.runner-shell-topbar\s*\{[\s\S]*?height:\s*88px\s*!important;[\s\S]*?position:\s*fixed\s*!important;[\s\S]*?padding:\s*0 42px\s*!important;[\s\S]*?background:\s*#f5f5f7\s*!important;/,
-  'Analysis should retain its own 88px fixed topbar treatment.',
+  /#root \.analysis-page-shell > \.runner-shell-main > \.runner-shell-topbar\s*\{[\s\S]*?height:\s*88px\s*!important;[\s\S]*?position:\s*fixed\s*!important;[\s\S]*?padding:\s*0 42px\s*!important;[\s\S]*?background:\s*var\(--ahs-chrome-fill,\s*#f5f5f7\)\s*!important;/,
+  'Analysis should retain its 88px fixed topbar with its light fallback and an adaptive dark fill.',
 );
 
 assert.match(

@@ -2200,8 +2200,8 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-import-modal-form .impor
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .profile-import-modal-card {
-  background: #ffffff !important;
-  color: #24252a;
+  background: #211e19 !important;
+  color: #fff8ee;
 }
 
 @media (max-width: 820px) {
@@ -3510,9 +3510,43 @@ body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page 
   transform: none !important;
 }
 
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-card :is(.import-source-card, .import-summary-line) {
+  background: #2a261f !important;
+  color: #fff8ee;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form :is(.import-source-index, .import-source-tag),
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form input[type="file"]::file-selector-button {
+  background: #3a332b !important;
+  border-color: transparent !important;
+  color: #fff8ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card :is(.modal-label, .import-source-title) {
+  color: #fff8ee !important;
+}
+
+/* Dialogs can mount outside the page that defines the runner palette. */
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card {
+  --runner-profile-card: #211e19;
+  --runner-profile-card-strong: #2a261f;
+  --runner-profile-ink: #fff8ee;
+  --runner-profile-muted: #c0b8ad;
+  --runner-profile-flame: #ffb4a7;
+  --runner-profile-line: rgba(255, 248, 238, 0.13);
+  --hermes-glass-paper: #211e19;
+  --hermes-glass-paper-strong: #2a261f;
+  --hermes-glass-ink: #fff8ee;
+  --hermes-glass-muted: #c0b8ad;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card :is(.modal-help, .selected-file-name, .modal-close) {
+  color: #c8bfb2 !important;
+}
+
 body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .profile-import-modal-card {
-  background: #ffffff !important;
-  color: #24252a;
+  background: #211e19 !important;
+  color: #fff8ee;
 }
 
 @media (max-width: 820px) {

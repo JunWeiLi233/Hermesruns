@@ -69,6 +69,32 @@
     linear-gradient(180deg, #f5f5f7 0%, var(--ahs-canvas) 28%, var(--ahs-canvas) 100%);
 }
 
+/* The summary palette is shared by Analysis, Today and Runs. Define its
+   dark values at the root so both page content and the html canvas adapt. */
+:root:has(body:is(.theme-midnight, .theme-high-contrast)) {
+  --ahs-canvas: var(--profile-night-base, #11141a);
+  --ahs-surface: var(--profile-night-card, rgba(255, 255, 255, 0.04));
+  --ahs-label: #f8f4ef;
+  --ahs-secondary: #c0b8ad;
+  --ahs-tertiary: #a69e93;
+  --ahs-separator: rgba(255, 248, 238, 0.12);
+  --ahs-blue: #91baff;
+  --ahs-red: #ff9b87;
+  --ahs-orange: #ffbc83;
+  --ahs-green: #9cd2aa;
+  --ahs-teal: #a3dce8;
+  --ahs-purple: #d4a6f0;
+  --ahs-pink: #ffa3bc;
+  --ahs-indigo: #b7b5ff;
+  --ahs-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --ahs-strong-ink: #f8f4ef;
+  --ahs-muted-ink: #c0b8ad;
+  --ahs-accent-ink: #ffb4a7;
+  --ahs-chrome-fill: rgba(36, 42, 52, 0.78);
+  --ahs-chrome-line: rgba(255, 248, 238, 0.12);
+  --ahs-wash: var(--profile-night-canvas, linear-gradient(145deg, #11141a, #080a0f));
+}
+
 /* ---------- Canvas (Deference: quiet stage) ---------- */
 html:has(#root .today-run-command-page),
 html:has(#root .runs-dashboard-page.runs-ledger-page),
@@ -108,9 +134,9 @@ body:has(#root .analysis-page-shell) {
 #root .today-run-command-page > .runner-shell-sidebar,
 #root .runs-dashboard-page > .runner-shell-sidebar,
 #root .analysis-page-shell > .runner-shell-sidebar {
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--ahs-chrome-fill, rgba(255, 255, 255, 0.72)) !important;
   background-image: none !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.55) !important;
+  border-right: 1px solid var(--ahs-chrome-line, rgba(255, 255, 255, 0.55)) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
   box-shadow: none !important;
@@ -297,11 +323,8 @@ body:has(#root .analysis-page-shell) {
 /* Today: force Summary wash even if bundled today-run still paints a grid */
 body:has(#root .today-run-command-page),
 html:has(#root .today-run-command-page) body {
-  background-color: #f2f2f7 !important;
-  background-image:
-    radial-gradient(90% 55% at 12% -10%, rgba(255, 214, 232, 0.22), transparent 58%),
-    radial-gradient(80% 50% at 88% -6%, rgba(186, 214, 255, 0.2), transparent 55%),
-    linear-gradient(180deg, #f5f5f7 0%, #f2f2f7 28%, #f2f2f7 100%) !important;
+  background-color: var(--ahs-canvas) !important;
+  background-image: var(--ahs-wash) !important;
   background-size: auto !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
@@ -320,7 +343,7 @@ html:has(#root .today-run-command-page) body {
   }
 
   body:has(#root .analysis-page-shell) {
-    background: #f5f5f7 !important;
+    background: var(--ahs-chrome-fill, #f5f5f7) !important;
     background-image: none !important;
   }
 
@@ -329,7 +352,7 @@ html:has(#root .today-run-command-page) body {
     grid-template-columns: var(--runner-nav-collapsed-width, 96px) minmax(0, 1fr) !important;
     min-height: 100vh;
     background: transparent !important;
-    color: #1c1c1e !important;
+    color: var(--ahs-strong-ink, #1c1c1e) !important;
   }
 
   /* Profile/Home already resize the main column when the rail opens. Analysis
@@ -363,9 +386,9 @@ html:has(#root .today-run-command-page) body {
     top: 0 !important;
     z-index: 20 !important;
     padding: 0 42px !important;
-    border-bottom: 1px solid #e5e5ea !important;
+    border-bottom: 1px solid var(--ahs-chrome-line, #e5e5ea) !important;
     border-radius: 0 !important;
-    background: #f5f5f7 !important;
+    background: var(--ahs-chrome-fill, #f5f5f7) !important;
     background-image: none !important;
     box-shadow: none !important;
   }
@@ -377,7 +400,7 @@ html:has(#root .today-run-command-page) body {
   }
 
   #root .analysis-page-shell .runner-shell-topnav-current-stack strong {
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-family: var(--ahs-font) !important;
     font-size: 1.25rem !important;
     font-style: normal !important;
@@ -409,15 +432,15 @@ html:has(#root .today-run-command-page) body {
     height: 34px !important;
     border: 1px solid rgba(60, 60, 67, 0.18) !important;
     border-radius: 50% !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow: none !important;
-    color: #5c6670 !important;
+    color: var(--ahs-muted-ink, #5c6670) !important;
   }
 
   #root .analysis-page-shell .runner-shell-avatar {
     border-color: rgba(201, 90, 63, 0.24) !important;
     background: #f7ded8 !important;
-    color: #8f2f24 !important;
+    color: var(--ahs-accent-ink, #8f2f24) !important;
   }
 
   #root .analysis-page-shell .runner-shell-canvas {
@@ -450,7 +473,7 @@ html:has(#root .today-run-command-page) body {
     padding: 32px !important;
     border: 0 !important;
     border-radius: 16px !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow:
       0 1px 2px rgba(60, 60, 67, 0.05),
       0 8px 24px rgba(60, 60, 67, 0.045) !important;
@@ -466,7 +489,7 @@ html:has(#root .today-run-command-page) body {
     grid-row: 1 !important;
     max-width: none !important;
     margin: 0 !important;
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-size: 1.15rem !important;
     font-weight: 650 !important;
     letter-spacing: -0.02em !important;
@@ -528,7 +551,7 @@ html:has(#root .today-run-command-page) body {
   }
 
   #root .analysis-page-shell .analysis-profile-primary .analysis-overview-hero-value strong {
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-size: clamp(2.6rem, 3.2vw, 3.25rem) !important;
     font-weight: 700 !important;
     letter-spacing: -0.06em !important;
@@ -636,7 +659,7 @@ html:has(#root .today-run-command-page) body {
   #root .analysis-page-shell .analysis-profile-primary .analysis-profile-decision-chip strong {
     display: inline !important;
     margin: 0 !important;
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-size: 0.95rem !important;
     font-weight: 700 !important;
     letter-spacing: -0.02em !important;
@@ -646,7 +669,7 @@ html:has(#root .today-run-command-page) body {
   #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-tag {
     border: 1px solid #34c759 !important;
     border-radius: 999px !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     color: #34c759 !important;
     box-shadow: none !important;
   }
@@ -663,7 +686,7 @@ html:has(#root .today-run-command-page) body {
   #root .analysis-page-shell .analysis-profile-reference-card {
     border: 0 !important;
     border-radius: 16px !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow:
       0 1px 2px rgba(60, 60, 67, 0.05),
       0 8px 24px rgba(60, 60, 67, 0.045) !important;
@@ -683,7 +706,7 @@ html:has(#root .today-run-command-page) body {
     padding: 24px 26px 24px 32px !important;
     border: 0 !important;
     border-radius: 16px !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow: none !important;
   }
 
@@ -692,7 +715,7 @@ html:has(#root .today-run-command-page) body {
     align-items: center !important;
     gap: 8px !important;
     grid-area: label !important;
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-size: 1.15rem !important;
     font-weight: 650 !important;
     letter-spacing: -0.02em !important;
@@ -743,7 +766,7 @@ html:has(#root .today-run-command-page) body {
     grid-area: copy !important;
     max-width: 30ch !important;
     margin: 0 !important;
-    color: rgba(60, 60, 67, 0.6) !important;
+    color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.6)) !important;
     font-size: 0.9rem !important;
     line-height: 1.45 !important;
     text-align: left !important;
@@ -833,7 +856,7 @@ body #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
   border-style: none !important;
   border-color: transparent !important;
   border-radius: 16px !important;
-  background: #fff !important;
+  background: var(--ahs-surface) !important;
   box-shadow: none !important;
 }
 
@@ -1099,9 +1122,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     top: 0 !important;
     z-index: 20 !important;
     padding: 0 42px !important;
-    border-bottom: 1px solid #e5e5ea !important;
+    border-bottom: 1px solid var(--ahs-chrome-line, #e5e5ea) !important;
     border-radius: 0 !important;
-    background: #f5f5f7 !important;
+    background: var(--ahs-chrome-fill, #f5f5f7) !important;
     background-image: none !important;
     box-shadow: none !important;
   }
@@ -1115,7 +1138,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   }
 
   #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topnav-current-stack strong {
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-family: var(--ahs-font) !important;
     font-size: 1.25rem !important;
     font-style: normal !important;
@@ -1147,15 +1170,15 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     height: 34px !important;
     border: 1px solid rgba(60, 60, 67, 0.18) !important;
     border-radius: 50% !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow: none !important;
-    color: #5c6670 !important;
+    color: var(--ahs-muted-ink, #5c6670) !important;
   }
 
   #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-avatar {
     border-color: rgba(201, 90, 63, 0.24) !important;
     background: #f7ded8 !important;
-    color: #8f2f24 !important;
+    color: var(--ahs-accent-ink, #8f2f24) !important;
   }
 
   /* Today Run intentionally has no rail, so its shared bar spans the viewport. */
@@ -1167,6 +1190,12 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 }
 
 @media (min-width: 861px) {
+  /* The midnight Today page keeps its navigation rail. */
+  body:is(.theme-midnight, .theme-high-contrast) #root .today-run-command-page > .runner-shell-main > .runner-shell-topbar {
+    left: var(--runner-nav-collapsed-width, 96px) !important;
+    width: auto !important;
+  }
+
   body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) > .runner-shell-main > .runner-shell-topbar {
     border-bottom-color: rgba(255, 238, 226, 0.12) !important;
     background: rgba(15, 13, 10, 0.86) !important;
@@ -1289,7 +1318,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   position: static !important;
   max-width: 30ch !important;
   margin: 0 !important;
-  color: rgba(60, 60, 67, 0.6) !important;
+  color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.6)) !important;
   font-size: 0.9rem !important;
   line-height: 1.45 !important;
   text-align: left !important;
@@ -1307,9 +1336,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     top: 0 !important;
     z-index: 20 !important;
     padding: 0 42px !important;
-    border-bottom: 1px solid #e5e5ea !important;
+    border-bottom: 1px solid var(--ahs-chrome-line, #e5e5ea) !important;
     border-radius: 0 !important;
-    background: #f5f5f7 !important;
+    background: var(--ahs-chrome-fill, #f5f5f7) !important;
     background-image: none !important;
     box-shadow: none !important;
   }
@@ -1319,7 +1348,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   }
 
   #root .analysis-page-shell .runner-shell-topnav-current-stack strong {
-    color: #2c2f30 !important;
+    color: var(--ahs-strong-ink, #2c2f30) !important;
     font-family: var(--ahs-font) !important;
     font-size: 1.25rem !important;
     font-style: normal !important;
@@ -1351,15 +1380,15 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     height: 34px !important;
     border: 1px solid rgba(60, 60, 67, 0.18) !important;
     border-radius: 50% !important;
-    background: #fff !important;
+    background: var(--ahs-surface) !important;
     box-shadow: none !important;
-    color: #5c6670 !important;
+    color: var(--ahs-muted-ink, #5c6670) !important;
   }
 
   #root .analysis-page-shell .runner-shell-avatar {
     border-color: rgba(201, 90, 63, 0.24) !important;
     background: #f7ded8 !important;
-    color: #8f2f24 !important;
+    color: var(--ahs-accent-ink, #8f2f24) !important;
   }
 
   /* Keep Analysis system chrome aligned when the rail is pinned open or
@@ -1444,7 +1473,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page {
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card > span {
-  color: #625c56 !important;
+  color: var(--ahs-muted-ink, #625c56) !important;
 }
 
 /* Keep the generated coaching mark aligned with its localized card title. */
@@ -1495,14 +1524,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
   font-size: 0.78rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em !important;
-  color: #1d1d1f !important;
+  color: var(--ahs-strong-ink, #1d1d1f) !important;
 }
 #root .analysis-page-shell .analysis-profile-reference-card.is-coach .coach-identity-copy span {
   font-size: 0.68rem !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
-  color: rgba(60, 60, 67, 0.58) !important;
+  color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.58)) !important;
 }
 /* end coach badge compact horizontal */
 
@@ -1606,7 +1635,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
 #root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels {
   margin-top: 14px !important;
   gap: 10px !important;
-  color: rgba(60, 60, 67, 0.72) !important;
+  color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.72)) !important;
   font-size: 0.9rem !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
@@ -1648,7 +1677,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
   font-weight: 800;
   letter-spacing: -0.02em !important;
   line-height: 1.35 !important;
-  color: #1d1d1f !important;
+  color: var(--ahs-strong-ink, #1d1d1f) !important;
 }
 
 #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-coach-copy {
@@ -1789,7 +1818,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
   font-style: normal !important;
   letter-spacing: -0.04em !important;
   line-height: 1.15 !important;
-  color: #1d1d1f !important;
+  color: var(--ahs-strong-ink, #1d1d1f) !important;
   text-align: left !important;
 }
 /* end coach quote spoken scale */
@@ -2027,4 +2056,26 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   #root .analysis-page-shell .analysis-injury-prevention-soreness-btn {
     min-height: 44px;
   }
+}
+
+/* Table headers inherit the same raised surface as their dark cards. */
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-table-card .analysis-overview-table-head {
+  background: var(--ahs-surface) !important;
+  color: var(--ahs-label) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-injury-prevention-soreness-btn.is-low {
+  color: var(--ahs-green) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-injury-prevention-soreness-btn.is-medium {
+  color: var(--ahs-orange) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-injury-prevention-soreness-btn.is-high {
+  color: var(--ahs-red) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .today-run-command-page :is(.today-run-plan-step-card > span, .today-run-plan-reason-card > strong) {
+  color: var(--ahs-accent-ink) !important;
 }

@@ -50,7 +50,7 @@
 
 /* Dark mode token overrides */
 [data-theme="midnight"] .hd-content,
-body.theme-midnight .hd-content {
+body:is(.theme-midnight, .theme-high-contrast) .hd-content {
   --hd-bg-card: rgba(255,255,255,0.04);
   --hd-bg-card-elevated: rgba(255,255,255,0.06);
   --hd-bg-card-hover: rgba(255,255,255,0.07);
@@ -58,8 +58,8 @@ body.theme-midnight .hd-content {
   --hd-bg-today-text: #f6f1eb;
   --hd-bg-input: rgba(255,255,255,0.04);
   --hd-text-primary: #ece5dd;
-  --hd-text-secondary: #9e988f;
-  --hd-text-tertiary: #7a7368;
+  --hd-text-secondary: #c8bfb2;
+  --hd-text-tertiary: #b2a99c;
   --hd-accent: var(--accent-coral-strong, #f07561);
   --hd-accent-soft: rgba(240,117,97,0.1);
   --hd-accent-medium: rgba(240,117,97,0.18);
@@ -67,7 +67,7 @@ body.theme-midnight .hd-content {
   --hd-coral: var(--accent-coral-strong, #f07561);
   --hd-coral-soft: rgba(240,117,97,0.1);
   --hd-coral-medium: rgba(240,117,97,0.16);
-  --hd-green: #6fa985;
+  --hd-green: #9cd2aa;
   --hd-green-soft: rgba(111,169,133,0.12);
   --hd-line: rgba(255,255,255,0.06);
   --hd-line-strong: rgba(255,255,255,0.1);
@@ -1509,4 +1509,13 @@ body.theme-midnight .hd-rewards-badge-icon {
   outline: 2px solid var(--hd-accent);
   outline-offset: 4px;
   border-radius: 8px;
+}
+
+/* Pale coral actions and green badges need a distinct dark-mode text pair. */
+body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-btn-primary {
+  color: #2b1b14;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-trend-badge.improving {
+  color: var(--hd-green);
 }

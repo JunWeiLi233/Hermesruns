@@ -1,2 +1,167 @@
-/* Final dark-mode fix layer.
-   Kept as a real file so the split CSS import chain stays buildable. */
+/* Profile is the color reference for every runner page in midnight mode.
+   These roles mirror its rendered canvas, 4% card fill and glass chrome.
+   Route owners keep layout, artwork and semantic status colors. */
+:root {
+  --profile-night-canvas: linear-gradient(145deg, rgba(17, 20, 26, 0.98), rgba(8, 10, 15, 0.98));
+  --profile-night-base: #11141a;
+  --profile-night-card: rgba(255, 255, 255, 0.04);
+  --profile-night-raised: rgba(255, 255, 255, 0.06);
+  --profile-night-solid: #1b1e24;
+  --profile-night-solid-raised: #242a34;
+  --profile-night-ink: #f8f4ef;
+  --profile-night-muted: #c8bfb2;
+  --profile-night-line: rgba(255, 255, 255, 0.1);
+  --profile-night-coral: #f07561;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) {
+  --runner-minimal-canvas: var(--profile-night-base);
+  --runner-minimal-surface: var(--profile-night-card);
+  --runner-minimal-surface-soft: var(--profile-night-raised);
+  --runner-minimal-ink: var(--profile-night-ink);
+  --runner-minimal-muted: var(--profile-night-muted);
+  --runner-minimal-line: var(--profile-night-line);
+  --runner-profile-paper: var(--profile-night-base);
+  --runner-profile-card: var(--profile-night-card);
+  --runner-profile-card-strong: var(--profile-night-raised);
+  --runner-profile-ink: var(--profile-night-ink);
+  --runner-profile-muted: var(--profile-night-muted);
+  --runner-profile-line: var(--profile-night-line);
+  --runner-profile-flame: #ffb4a7;
+  --runner-atlas-paper: var(--profile-night-base);
+  --runner-atlas-card: var(--profile-night-card);
+  --runner-atlas-card-strong: var(--profile-night-raised);
+  --runner-atlas-ink: var(--profile-night-ink);
+  --runner-atlas-muted: var(--profile-night-muted);
+  --hermes-glass-paper: var(--profile-night-card);
+  --hermes-glass-paper-strong: var(--profile-night-raised);
+  --hermes-glass-ink: var(--profile-night-ink);
+  --hermes-glass-muted: var(--profile-night-muted);
+  --hermes-glass-line: var(--profile-night-line);
+  --hermes-glass-highlight: transparent;
+  background: var(--profile-night-canvas) !important;
+  color: var(--profile-night-ink) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) > .runner-shell-sidebar {
+  background: rgba(29, 34, 43, 0.62) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) > .runner-shell-main > .runner-shell-topbar {
+  background: rgba(36, 42, 52, 0.78) !important;
+  color: var(--profile-night-ink) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(
+  .today-run-coaching-answer,
+  .today-run-plan-card,
+  .today-run-command-hero-copy,
+  .today-run-command-readiness-panel,
+  .analysis-overview-card,
+  .analysis-profile-bento-card,
+  .analysis-injury-prevention-section,
+  .recent-runs-stat-card,
+  .runs-profile-cockpit,
+  .recent-runs-insight-card,
+  .recent-runs-card,
+  .shoe-inventory-card,
+  .shoe-inventory-summary-tile,
+  .shoe-inventory-filterbar,
+  .race-center-card,
+  .race-center-pb-card,
+  .schedule-plan-day,
+  .schedule-plan-readiness-card,
+  .schedule-plan-next-card,
+  .schedule-plan-route-card,
+  .schedule-plan-coach-card,
+  .schedule-plan-gear-card,
+  .weather-engine-card,
+  .weather-engine-hud-card,
+  .weather-engine-forecast-panel,
+  .mt-top-panel,
+  .mt-top-muscle-card,
+  .mt-top-actions-card,
+  .mt-reference-card,
+  .muscle-control-card,
+  .rewards-ledger-hero-card,
+  .rewards-ledger-earned-card,
+  .st-card,
+  .st-services,
+  .st-service-card,
+  .add-shoes-step-card,
+  .add-shoes-model-board-shell,
+  .add-shoes-model-grid,
+  .add-shoes-setup-payload-shell
+) {
+  background: var(--profile-night-card) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(
+  .today-run-command-hero,
+  .schedule-plan-hero,
+  .weather-engine-hero-shell,
+  .st-hero
+) {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 40%),
+    rgba(31, 32, 36, 0.66) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page[data-muscle-theme]:has(.mt-top-workbench) {
+  background: var(--profile-night-canvas) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .runner-shell-canvas.muscle-training-canvas {
+  background: transparent !important;
+}
+
+/* Heatmap has its own full-screen shell; retain the map and style its UI. */
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page {
+  color: var(--profile-night-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page :is(.heatmap-page-brand-pill, .heatmap-page-search-pill, .heatmap-page-action-strip) {
+  background: rgba(36, 42, 52, 0.78) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page :is(.heatmap-page-legend-card, .heatmap-page-utility-rail, .heatmap-page-empty) {
+  background: var(--profile-night-solid) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+/* Native form controls and overlays need an opaque raised surface. */
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(input, select, textarea) {
+  background-color: var(--profile-night-solid-raised) !important;
+  color: var(--profile-night-ink) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card {
+  --runner-profile-card: var(--profile-night-solid);
+  --runner-profile-card-strong: var(--profile-night-solid-raised);
+  --hermes-glass-paper: var(--profile-night-solid);
+  --hermes-glass-paper-strong: var(--profile-night-solid-raised);
+  --runner-profile-ink: var(--profile-night-ink);
+  --runner-profile-muted: var(--profile-night-muted);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page .profile-import-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-card {
+  background: var(--profile-night-solid) !important;
+  color: var(--profile-night-ink) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-card :is(.import-source-card, .import-summary-line) {
+  background: var(--profile-night-solid-raised) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form :is(.import-source-index, .import-source-tag),
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form input[type="file"]::file-selector-button {
+  background: var(--profile-night-solid) !important;
+}
