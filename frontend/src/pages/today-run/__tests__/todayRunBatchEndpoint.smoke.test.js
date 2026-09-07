@@ -14,7 +14,7 @@ assert.match(
 
 assert.match(
   pageSource,
-  /apiJson\('\/api\/profile\/me'\)[\s\S]*apiJson\('\/api\/shoes'\)/s,
+  /cachedApiJson\('\/api\/profile\/me'\)[\s\S]*cachedApiJson\('\/api\/activities'\)[\s\S]*apiJson\('\/api\/shoes'\)/s,
   'Today Run should keep the individual endpoint fallback path.',
 );
 
