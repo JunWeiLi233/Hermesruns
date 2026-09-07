@@ -5514,32 +5514,122 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 }
 
 @media (max-width: 860px) {
-  .runner-dashboard-page .runner-shell-sidebar {
-    position: static;
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar,
+  #root .runner-dashboard-page.runner-shell-page.is-sidebar-collapsed > .runner-shell-sidebar {
+    position: static !important;
+    inset: auto !important;
     width: 100% !important;
-    padding: 14px !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto;
+    min-height: 0;
+    padding: 8px 10px !important;
+    box-sizing: border-box;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden !important;
     border-right: 0;
     border-bottom: 1px solid var(--runner-nav-line);
-    box-shadow: 0 14px 34px rgba(105, 68, 48, 0.08);
+    box-shadow: 0 8px 24px rgba(105, 68, 48, 0.08);
   }
 
-  .runner-dashboard-page .runner-shell-side-nav {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(118px, 1fr);
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar > .runner-shell-brand {
+    display: none;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-nav {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
     overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
+    overflow-y: hidden;
+    padding: 0 2px 0 0;
+    scrollbar-width: none;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
   }
 
-  .runner-dashboard-page .runner-shell-side-link {
-    min-height: 42px;
-    padding: 9px 26px 9px 10px !important;
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-link {
+    flex: 0 0 auto;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 12px !important;
+    justify-content: center;
+    gap: 8px;
+    overflow: visible;
     white-space: nowrap;
+    scroll-snap-align: start;
   }
 
-  .runner-dashboard-page .runner-shell-side-link::before {
-    right: 8px;
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-link::before {
+    display: none;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-link::after {
+    inset: auto 10px 3px;
+    width: auto;
+    height: 2px;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-side-link.is-active::after {
+    width: auto;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-dashboard-side-link-label {
+    display: inline !important;
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-sidebar-footer {
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 0;
+    margin-top: 0;
+    padding: 0 !important;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-sidebar-footer > .runner-shell-workout-btn {
+    flex: 0 0 auto;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 !important;
+    gap: 0;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-sidebar .runner-shell-sidebar-footer > .runner-shell-workout-btn .runner-dashboard-workout-btn-label {
+    display: none !important;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-main,
+  #root .runner-dashboard-page.runner-shell-page.is-sidebar-collapsed > .runner-shell-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    grid-column: auto !important;
   }
 }
 
@@ -5747,6 +5837,61 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
 
   .runner-shell-topnav-meta {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  #root .runner-dashboard-page.runner-shell-page > .runner-shell-main > .runner-shell-topbar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topbar-left {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topbar-actions {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topbar-profile-actions {
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topnav--command,
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topnav-identity,
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topnav-current-stack {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #root .runner-dashboard-page.runner-shell-page .runner-shell-topnav-current-stack strong {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    text-overflow: clip;
+    white-space: normal;
   }
 }
 

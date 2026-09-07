@@ -1119,8 +1119,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-eng
 }
 
 #root .runner-shell-page.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input:focus-visible {
-  outline: 2px solid var(--runs-profile-muted) !important;
-  outline-offset: -2px;
+  outline: none !important;
 }
 
 #root .runner-shell-page.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap:focus-within {
@@ -2200,8 +2199,8 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-import-modal-form .impor
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-page-shell .profile-import-modal-card {
-  background: #ffffff !important;
-  color: #24252a;
+  background: #211e19 !important;
+  color: #fff8ee;
 }
 
 @media (max-width: 820px) {
@@ -2694,10 +2693,33 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-shell-page .runner-shell-
 }
 
 @media (max-width: 520px) {
+  #root .modal-shell .modal-card .modal-header .modal-close,
+  body > .modal-shell .modal-card .modal-header .modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
   .runner-shell-page .runner-shell-notification-popover {
     width: min(392px, calc(100vw - 16px));
     max-width: calc(100vw - 16px);
     border-radius: 20px;
+  }
+
+  #root .runner-shell-page .runner-shell-notification-popover {
+    position: fixed;
+    inset: 64px 8px auto;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 152px);
+    overflow-y: auto;
+    transform: none;
+  }
+
+  #root .runner-shell-page .runner-shell-notification-popover::before,
+  #root .runner-shell-page .runner-shell-notification-popover::after {
+    display: none;
   }
 
   .runner-shell-page .runner-shell-notification-head {
@@ -3487,9 +3509,43 @@ body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page 
   transform: none !important;
 }
 
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-card :is(.import-source-card, .import-summary-line) {
+  background: #2a261f !important;
+  color: #fff8ee;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form :is(.import-source-index, .import-source-tag),
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form input[type="file"]::file-selector-button {
+  background: #3a332b !important;
+  border-color: transparent !important;
+  color: #fff8ee !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card :is(.modal-label, .import-source-title) {
+  color: #fff8ee !important;
+}
+
+/* Dialogs can mount outside the page that defines the runner palette. */
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card {
+  --runner-profile-card: #211e19;
+  --runner-profile-card-strong: #2a261f;
+  --runner-profile-ink: #fff8ee;
+  --runner-profile-muted: #c0b8ad;
+  --runner-profile-flame: #ffb4a7;
+  --runner-profile-line: rgba(255, 248, 238, 0.13);
+  --hermes-glass-paper: #211e19;
+  --hermes-glass-paper-strong: #2a261f;
+  --hermes-glass-ink: #fff8ee;
+  --hermes-glass-muted: #c0b8ad;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card :is(.modal-help, .selected-file-name, .modal-close) {
+  color: #c8bfb2 !important;
+}
+
 body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .profile-import-modal-card {
-  background: #ffffff !important;
-  color: #24252a;
+  background: #211e19 !important;
+  color: #fff8ee;
 }
 
 @media (max-width: 820px) {

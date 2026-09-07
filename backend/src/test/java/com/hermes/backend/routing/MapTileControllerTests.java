@@ -148,6 +148,48 @@ class MapTileControllerTests {
     }
 
     @Test
+    void tileRechecksCacheWhenPreviousOwnerFinishesAfterInitialMiss() throws Exception {
+        RestTemplate upstream = mock(RestTemplate.class);
+        TtlCacheStore cache = mock(TtlCacheStore.class);
+        CountDownLatch firstFetching = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        CountDownLatch secondMissed = new CountDownLatch(1);
+        CountDownLatch releaseSecond = new CountDownLatch(1);
+        AtomicInteger lookups = new AtomicInteger();
+        when(cache.get(eq("map-tile"), eq("osm/10/20/30"), ArgumentMatchers.<Class<Object>>any())).thenAnswer(call -> {
+            if (lookups.incrementAndGet() == 2) {
+                secondMissed.countDown();
+                assertThat(releaseSecond.await(5, TimeUnit.SECONDS)).isTrue();
+            }
+            return java.util.Optional.empty();
+        });
+        when(upstream.exchange(ArgumentMatchers.anyString(), eq(HttpMethod.GET),
+                ArgumentMatchers.<HttpEntity<?>>any(), eq(byte[].class))).thenAnswer(call -> {
+            firstFetching.countDown();
+            assertThat(releaseFirst.await(5, TimeUnit.SECONDS)).isTrue();
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(new byte[]{1, 2, 3});
+        });
+        MapTileService service = new MapTileService(upstream, "http://localhost:8080", "", cache);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> service.tile(10, 20, 30));
+            assertThat(firstFetching.await(5, TimeUnit.SECONDS)).isTrue();
+            var second = executor.submit(() -> service.tile(10, 20, 30));
+            assertThat(secondMissed.await(5, TimeUnit.SECONDS)).isTrue();
+            releaseFirst.countDown();
+            first.get(5, TimeUnit.SECONDS);
+            releaseSecond.countDown();
+            assertThat(second.get(5, TimeUnit.SECONDS).body()).containsExactly(1, 2, 3);
+            verify(upstream, times(1)).exchange(ArgumentMatchers.anyString(), eq(HttpMethod.GET),
+                    ArgumentMatchers.<HttpEntity<?>>any(), eq(byte[].class));
+        } finally {
+            releaseFirst.countDown();
+            releaseSecond.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void tileReturnsStaleCachedTileWhenRefreshFails() {
         RestTemplate restTemplate = mock(RestTemplate.class);
         byte[] tile = new byte[] { 9, 9, 9 };

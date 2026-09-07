@@ -12,6 +12,16 @@ class PersonalizedRunningPlannerTests {
     private final PersonalizedRunningPlanner planner = new PersonalizedRunningPlanner();
 
     @Test
+    void newRunnerCanStartOnAPlannedRunDayInsteadOfRestartingOnboardingRestDaily() {
+        var plan = planner.plan(input(LocalDate.of(2026, 9, 8),
+                history(0, 0, 0, 0, 0, 0, 0, 0, null, null, Map.of()),
+                75, "EASY", false, "LOW", null));
+        assertThat(plan.today().workoutType()).isEqualTo(CoachWorkoutType.EASY);
+        assertThat(plan.today().distanceKm()).isBetween(1.0, 5.0);
+        assertThat(plan.today().reasonCode()).isEqualTo("onboarding");
+    }
+
+    @Test
     void onboardingPlanIsConservativeWhenThereIsNoHistory() {
         PersonalizedRunningPlanner.PersonalizedPlan plan = planner.plan(input(
                 LocalDate.of(2026, 8, 24),

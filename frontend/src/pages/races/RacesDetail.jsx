@@ -1171,6 +1171,7 @@ export default function RacesDetail() {
               onPointerEnter={() => preloadRoute(item.route)}
               onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>

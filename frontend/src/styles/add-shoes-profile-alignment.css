@@ -737,6 +737,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
   .add-shoes-browser-panel.add-shoes-stage,
   .add-shoes-catalog-step,
   .add-shoes-step-card,
+  .add-shoes-model-board-shell,
+  .add-shoes-model-board .add-shoes-model-grid,
+  .add-shoes-setup-payload-shell,
+  .add-shoes-model-grid-head.add-shoes-model-board-header,
   .add-shoes-brand-deck-card,
   .add-shoes-model-card,
   .add-shoes-form
@@ -781,6 +785,17 @@ body:is(.theme-midnight, .theme-high-contrast) #root .add-shoes-profile-redesign
 }
 
 @media (max-width: 760px) {
+  #root .add-shoes-profile-redesign .add-shoes-setup-payload,
+  #root .add-shoes-profile-redesign .add-shoes-setup-payload-shell {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  #root .add-shoes-profile-redesign .add-shoes-step-head > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   #root .add-shoes-profile-redesign .add-shoes-canvas {
     width: min(calc(100% - 24px), 1500px);
     padding-top: 14px;

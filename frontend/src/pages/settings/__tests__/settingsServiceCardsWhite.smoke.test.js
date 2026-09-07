@@ -32,4 +32,26 @@ assert.match(
   'The connected-service action must center its label even when it is not in the connect state.',
 );
 
+const serviceLayoutStart = settingsStyleSource.indexOf('.st-service-head {');
+const phoneServiceLayoutStart = settingsStyleSource.indexOf('@media (max-width: 640px)', serviceLayoutStart);
+const phoneServiceLayoutSource = settingsStyleSource.slice(phoneServiceLayoutStart);
+
+assert.match(
+  phoneServiceLayoutSource,
+  /\.settings-atlas-canvas \.st-service-head\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*40px minmax\(0, 1fr\);/,
+  'Phone service headers should reserve a stable icon column and a shrinkable copy column.',
+);
+
+assert.match(
+  phoneServiceLayoutSource,
+  /\.settings-atlas-canvas \.st-service-head :is\(\.settings-atlas-service-action, \.st-service-btn\)\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/,
+  'Phone Strava and Garmin actions should stack below service copy and wrap within a 44px touch target.',
+);
+
+assert.match(
+  phoneServiceLayoutSource,
+  /\.settings-atlas-canvas \.st-service-info :is\(strong, span\)\s*\{[^}]*max-width:\s*100%;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/,
+  'Phone provider names and status copy should wrap instead of widening the service card.',
+);
+
 console.log('[PASS] Settings connected-services grid white-surface guard passed.');

@@ -101,7 +101,7 @@ class ReadinessServiceTests {
     }
 
     @Test
-    void resolveReadinessSnapshotUsesCoachStateWhenManualSourceIsPreferred() {
+    void resolveReadinessSnapshotUsesDatedManualEntryWhenManualSourceIsPreferred() {
         DailySleepDataRepository sleepRepository = mock(DailySleepDataRepository.class);
         DailyHRVDataRepository hrvRepository = mock(DailyHRVDataRepository.class);
         DailyStressDataRepository stressRepository = mock(DailyStressDataRepository.class);
@@ -121,7 +121,8 @@ class ReadinessServiceTests {
         LocalDate today = LocalDate.of(2026, 4, 25);
 
         when(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today))
-                .thenReturn(List.of(hrv(today, ImportProvider.APPLE_HEALTH, 88.0, "BALANCED")));
+                .thenReturn(List.of(hrv(today, ImportProvider.APPLE_HEALTH, 88.0, "BALANCED"),
+                        hrv(today, ImportProvider.MANUAL, 30.0, "LOW")));
 
         ReadinessService.MultiSourceReadinessSnapshot snapshot =
                 service.resolveReadinessSnapshot(runner, state, today);
@@ -186,7 +187,8 @@ class ReadinessServiceTests {
         ReadinessService.MultiSourceReadinessSnapshot snapshot =
                 service.resolveReadinessSnapshot(runner, state, today);
 
-        assertThat(snapshot.readiness().sleepScore()).isEqualTo(88);
+        assertThat(snapshot.readiness().sleepScore()).isEqualTo(75);
+        assertThat(snapshot.hasSourceData()).isFalse();
         assertThat(snapshot.availability().sleep()).isFalse();
         assertThat(snapshot.availability().any()).isFalse();
     }
@@ -383,6 +385,68 @@ class ReadinessServiceTests {
         assertThat(spiking.readiness().loadScore()).isLessThanOrEqualTo(70);
         assertThat(spiking.readiness().score()).isLessThan(steady.readiness().score());
         assertThat(spiking.readiness().verdict()).isEqualTo("RECOVERY");
+    }
+
+    @Test
+    void undatedCachedWellnessCannotForceRestOrBecomeCurrentEvidence() {
+        ReadinessService service = new ReadinessService(mock(DailySleepDataRepository.class),
+                mock(DailyHRVDataRepository.class), mock(DailyStressDataRepository.class),
+                mock(DailyWellnessSummaryRepository.class), mock(ActivityRepository.class));
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(new Runner());
+        state.setLastSleepScore(35);
+        state.setLastHrvStatus("LOW");
+        state.setLastNightRestingHr(70);
+        state.setLastStressScore(95);
+        state.setLastRecoveryLoggedAt(LocalDateTime.now());
+
+        var snapshot = service.resolveReadinessSnapshot(state.getRunner(), state, LocalDate.now());
+
+        assertThat(snapshot.readiness().verdict()).isEqualTo("EASY");
+        assertThat(snapshot.readiness().confidence()).isZero();
+        assertThat(snapshot.hasSourceData()).isFalse();
+        assertThat(snapshot.availability().any()).isFalse();
+    }
+
+    @Test
+    void datedManualCheckInCanProtectTodayButDoesNotCarryIntoTomorrow() {
+        var sleep = mock(DailySleepDataRepository.class);
+        var hrv = mock(DailyHRVDataRepository.class);
+        var stress = mock(DailyStressDataRepository.class);
+        var wellness = mock(DailyWellnessSummaryRepository.class);
+        ReadinessService service = new ReadinessService(sleep, hrv, stress, wellness, mock(ActivityRepository.class));
+        Runner runner = new Runner();
+        LocalDate today = LocalDate.of(2026, 9, 7);
+        when(sleep.save(any(DailySleepData.class))).thenAnswer(call -> {
+            DailySleepData row = call.getArgument(0);
+            assertThat(row.getDate()).isEqualTo(today);
+            assertThat(row.getProvider()).isEqualTo(ImportProvider.MANUAL);
+            when(sleep.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of(row));
+            return row;
+        });
+        when(hrv.save(any(DailyHRVData.class))).thenAnswer(call -> {
+            DailyHRVData row = call.getArgument(0);
+            when(hrv.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of(row));
+            return row;
+        });
+        when(stress.save(any(DailyStressData.class))).thenAnswer(call -> {
+            DailyStressData row = call.getArgument(0);
+            when(stress.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of(row));
+            return row;
+        });
+        when(wellness.save(any(DailyWellnessSummary.class))).thenAnswer(call -> {
+            DailyWellnessSummary row = call.getArgument(0);
+            when(wellness.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today)).thenReturn(List.of(row));
+            return row;
+        });
+        service.recordManualRecovery(runner, today, 70, 35, 25, 95);
+        var current = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), today);
+        assertThat(current.readiness().verdict()).isEqualTo("REST");
+        assertThat(current.sources().sleep()).isEqualTo("MANUAL");
+        assertThat(current.readings().sleepScore()).isEqualTo(35);
+        var tomorrow = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), today.plusDays(1));
+        assertThat(tomorrow.availability().any()).isFalse();
+        assertThat(tomorrow.readiness().verdict()).isEqualTo("EASY");
     }
 
     private RunMetricsProjection runMetric(LocalDateTime startedAt, double distanceKm, long durationSeconds) {

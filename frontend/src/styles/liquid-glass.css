@@ -11,7 +11,7 @@
 }
 
 body {
-  min-width: 320px;
+  min-width: 0;
   isolation: isolate;
   background: #f3f1ef;
 }

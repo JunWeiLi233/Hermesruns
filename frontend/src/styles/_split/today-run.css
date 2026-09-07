@@ -1944,6 +1944,13 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
   --tr-command-soft: rgba(33, 31, 26, 0.76);
   --tr-command-muted: rgba(33, 31, 26, 0.58);
   --tr-command-accent: #a13d31;
+  /* Text-safe variants of the shared chart accents. Keep the brighter hues
+   * for charts and icons while summary labels stay readable on white cards. */
+  --ahs-pink: #c6254b;
+  --ahs-blue: #0066d6;
+  --ahs-green: #207c38;
+  --ahs-orange: #9c5300;
+  --ahs-teal: #087184;
   background:
     radial-gradient(circle at 10% 8%, rgba(191, 91, 73, 0.11), transparent 24rem),
     radial-gradient(circle at 88% 14%, rgba(122, 168, 130, 0.08), transparent 26rem),
@@ -2437,22 +2444,25 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.75rem;
+  line-height: 1.25;
   color: rgba(255,255,255,0.6); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
 }
 
 .today-run-readiness-signal-label {
   flex-shrink: 0;
   min-width: 32px; /* tokens-ok */
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 0.7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 1;
   letter-spacing: 0.02em;
 }
 
 .today-run-readiness-signal small {
   flex-shrink: 0;
   min-width: 18px;
+  font-size: 0.75rem;
+  line-height: 1.25;
   text-align: right;
   font-weight: 600;
   color: rgba(255,255,255,0.7); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
@@ -2460,7 +2470,8 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
 
 .today-run-readiness-signal-scale {
   font-weight: 400; /* tokens-ok */
-  opacity: 0.55;
+  font-size: inherit;
+  opacity: 1;
   margin-left: 1px;
 }
 
@@ -2485,6 +2496,133 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
   border-radius: var(--radius-sm);
   background: linear-gradient(90deg, #60a5fa, #4ade80); /* tokens-ok �?data-vis gradient, no token equivalent */
   transition: width var(--transition);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page :is(
+  .today-run-readiness-signal,
+  .today-run-readiness-signal-label,
+  .today-run-readiness-signal small,
+  .today-run-readiness-signal-scale
+) {
+  color: #55504a !important;
+  opacity: 1;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-coaching-answer-delta {
+  color: #1f7836 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-coaching-answer.is-declining .today-run-coaching-answer-delta {
+  color: #a84700 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero .today-run-plan-hero-metrics > article > span {
+  color: #59544e !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-plan-step-card > span {
+  color: #8f3b30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-shoe-brief-action {
+  color: #7a332a !important;
+}
+
+/* Keep the decision summary within the first desktop viewport. The breakpoint
+ * matches the existing two-column command layout, leaving mobile untouched. */
+@media (min-width: 1181px) {
+  #root .today-run-command-page .runner-shell-canvas.today-run-command-canvas {
+    padding-top: clamp(16px, 1.5vw, 22px) !important;
+    padding-bottom: clamp(36px, 4vw, 52px) !important;
+    gap: clamp(12px, 1.25vw, 18px) !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero {
+    min-height: 0 !important;
+    height: auto !important;
+    align-items: start !important;
+    gap: clamp(14px, 1.4vw, 20px) !important;
+    padding: clamp(20px, 2vw, 28px) !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy,
+  #root .today-run-command-page .today-run-command-readiness-panel {
+    align-self: start !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy {
+    justify-content: flex-start !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy h1 {
+    max-width: 18ch !important;
+    margin: 8px 0 0 !important;
+    font-size: clamp(2.2rem, 3.6vw, 3.5rem) !important;
+    font-style: normal !important;
+    line-height: 0.98 !important;
+    letter-spacing: -0.055em !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy > p {
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  #root .today-run-command-page .today-run-overview-disclosure {
+    margin-top: 10px;
+  }
+
+  #root .today-run-command-page .today-run-plan-morning-briefing {
+    margin-top: 12px;
+    padding: 12px 14px;
+    gap: 6px 12px;
+  }
+
+  #root .today-run-command-page .today-run-plan-morning-briefing-label {
+    margin-bottom: 0;
+  }
+
+  #root .today-run-command-page .today-run-plan-badges,
+  #root .today-run-command-page .today-run-plan-rationale {
+    margin-top: 10px !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-rationale-content {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  #root .today-run-command-page .today-run-plan-hero-metrics,
+  #root .today-run-command-page .today-run-plan-panel-grid {
+    margin-top: 12px;
+  }
+
+  #root .today-run-command-page :is(
+    .today-run-plan-hero-metrics article,
+    .today-run-plan-panel-grid article
+  ) {
+    padding: 10px 12px;
+  }
+
+  #root .today-run-command-page .today-run-command-readiness-panel {
+    padding: clamp(16px, 1.5vw, 20px) !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-panel-copy h2 {
+    font-size: clamp(1.75rem, 2.5vw, 2.5rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-weather {
+    margin-top: 12px;
+    padding: 12px 14px;
+  }
+
+  body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .today-run-command-page .today-run-command-hero-copy {
+    padding: clamp(20px, 2vw, 28px) !important;
+  }
 }
 
 .today-run-plan-metric-adjusted {
@@ -2532,4 +2670,182 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
   font-weight: 500;
   color: var(--slate-700);
   line-height: 1.5;
+}
+
+/* Session-first Today Run. Uses Analysis surfaces without its old nested deck. */
+body #root .runner-shell-page.today-run-session-page {
+  --tr-surface: var(--ahs-surface, #fff);
+  --tr-ink: var(--ahs-label, #1c1c1e);
+  --tr-muted: #65656b;
+  --tr-line: var(--ahs-separator, rgba(60, 60, 67, .12));
+  --tr-accent: #b64032;
+  --tr-teal: #237783;
+  --tr-blue: #286a9f;
+  --tr-green: #2d794b;
+  --tr-amber: #97611f;
+  --tr-soft: rgba(60, 60, 67, .04);
+  --tr-action: var(--brand-accent-gradient);
+  --tr-action-ink: #fff;
+  background: var(--ahs-wash) !important;
+  color: var(--tr-ink);
+  font-family: var(--ahs-font) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page.today-run-session-page {
+  --tr-muted: #c0b8ad;
+  --tr-accent: #ffb4a7;
+  --tr-teal: #a3dce8;
+  --tr-blue: #91baff;
+  --tr-green: #9cd2aa;
+  --tr-amber: #ffbc83;
+  --tr-soft: rgba(255,255,255,.04);
+  --tr-action: linear-gradient(135deg, #f07561, #ffb4a7);
+  --tr-action-ink: #2b1b14;
+}
+body #root .today-run-session-page .today-run-command-canvas {
+  display: grid;
+  gap: 18px !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 40px clamp(24px, 4vw, 64px) 56px !important;
+}
+body #root .today-run-session-page :is(h1,h2,h3,p,span,strong,small,button,dt,dd,summary) {
+  font-family: var(--ahs-font) !important;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+}
+body #root .today-run-session-page .tr-session-surface {
+  padding: 28px 32px;
+  min-width: 0;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--tr-surface) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+body #root .today-run-session-page .tr-session-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+body #root .today-run-session-page .tr-session-kicker {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  color: var(--tr-accent) !important; font-size: 1.05rem; line-height: 1.4; font-weight: 700;
+}
+body #root .today-run-session-page .tr-session-kicker > svg { width: 21px; height: 21px; flex: 0 0 21px; }
+body #root .today-run-session-page .tr-session-kicker.is-teal { color: var(--tr-teal) !important; }
+body #root .today-run-session-page .tr-session-kicker.is-blue { color: var(--tr-blue) !important; }
+body #root .today-run-session-page .tr-session-kicker.is-green { color: var(--tr-green) !important; }
+body #root .today-run-session-page .tr-session-kicker.is-amber { color: var(--tr-amber) !important; }
+body #root .today-run-session-page .tr-session-hero-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(32px, 5vw, 80px); margin-top: 26px; }
+body #root .today-run-session-page .tr-session-workout { min-width: 0; }
+body #root .today-run-session-page .tr-session-workout h1 { margin: 0; font-size: clamp(1.75rem, 2.7vw, 2.35rem) !important; line-height: 1.2; letter-spacing: -.035em; font-weight: 750; color: var(--tr-ink) !important; }
+body #root .today-run-session-page .tr-session-purpose { margin: 12px 0 0; max-width: 54ch; color: var(--tr-muted); font-size: .875rem; line-height: 1.65; }
+body #root .today-run-session-page .tr-session-target { display: flex; align-items: baseline; gap: 10px; margin: 24px 0 22px; }
+body #root .today-run-session-page .tr-session-target strong { color: var(--tr-ink); font-size: clamp(3.7rem, 5.4vw, 5rem); line-height: 1; letter-spacing: -.055em; font-weight: 750; font-variant-numeric: tabular-nums; }
+body #root .today-run-session-page .tr-session-target > span { color: var(--tr-muted); font-size: 1.35rem; font-weight: 500; }
+body #root .today-run-session-page .tr-session-target.is-text-target strong { max-width: 20ch; font-size: clamp(1.6rem, 2.7vw, 2.2rem); line-height: 1.25; letter-spacing: -.025em; }
+body #root .today-run-session-page .tr-session-targets { display: flex; flex-wrap: wrap; gap: 18px 32px; margin: 0; }
+body #root .today-run-session-page dt { color: var(--tr-muted); font-size: .75rem; line-height: 1.5; }
+body #root .today-run-session-page dd { margin: 6px 0 0; font-size: 1.2rem; line-height: 1.35; color: var(--tr-ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+body #root .today-run-session-page .tr-session-targets small { display: block; margin-top: 4px; font-size: .7rem; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+body #root .today-run-session-page :is(.tr-session-primary, .tr-session-secondary) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 18px; border-radius: 999px !important; font-size: .8rem; font-weight: 700; line-height: 1.4; cursor: pointer; box-shadow: none !important; }
+body #root .today-run-session-page .tr-session-primary { background: var(--tr-action) !important; color: var(--tr-action-ink) !important; border: 0 !important; }
+body #root .today-run-session-page .tr-session-secondary { background: transparent !important; border: 1px solid var(--tr-line) !important; color: var(--tr-ink) !important; }
+body #root .today-run-session-page :is(.tr-session-primary, .tr-session-secondary) svg { width: 16px; height: 16px; flex: 0 0 16px; }
+body #root .today-run-session-page .tr-session-secondary.is-active { background: var(--tr-soft) !important; }
+body #root .today-run-session-page .tr-session-race-link { display: flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 14px; padding: 6px 0; border: 0; background: transparent; color: var(--tr-muted); font-size: .75rem; text-align: left; }
+body #root .today-run-session-page .tr-session-race-link svg { width: 15px; height: 15px; flex: 0 0 15px; }
+body #root .today-run-session-page .tr-session-timeline { min-width: 0; padding-left: 32px; border-left: 1px solid var(--tr-line); }
+body #root .today-run-session-page .tr-session-timeline > h2 { font-size: .9rem; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-timeline ol { padding: 0; margin: 18px 0 0; list-style: none; }
+body #root .today-run-session-page .tr-session-timeline li { position: relative; display: grid; grid-template-columns: 28px minmax(0,1fr) auto; gap: 12px; padding: 16px 0; }
+body #root .today-run-session-page .tr-session-timeline li + li { border-top: 1px solid var(--tr-line); }
+body #root .today-run-session-page .tr-session-stage-number { color: var(--tr-muted); font-size: .8rem; font-weight: 650; padding-top: 3px; }
+body #root .today-run-session-page .tr-session-timeline h3 { margin: 0; font-size: 1rem; line-height: 1.4; font-weight: 650; color: var(--tr-ink); }
+body #root .today-run-session-page .tr-session-timeline p { margin: 6px 0 0; color: var(--tr-muted); font-size: .8rem; line-height: 1.6; }
+body #root .today-run-session-page .tr-session-stage-duration { align-self: start; color: var(--tr-muted); font-size: .9rem; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
+body #root .today-run-session-page .tr-session-timeline .is-main :is(h3,.tr-session-stage-duration,.tr-session-stage-number) { color: var(--tr-accent); }
+body #root .today-run-session-page .tr-session-weather { display: flex; align-items: center; gap: 12px; padding-top: 18px; margin-top: 26px; border-top: 1px solid var(--tr-line); color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-weather > svg { width: 20px; height: 20px; flex: 0 0 20px; }
+body #root .today-run-session-page .tr-session-weather p { flex: 1; margin: 0; font-size: .8rem; line-height: 1.5; }
+body #root .today-run-session-page .tr-session-weather strong { color: var(--tr-ink); margin-right: 10px; font-weight: 600; }
+body #root .today-run-session-page .tr-session-weather button { width: 40px; height: 40px; padding: 11px; flex: 0 0 40px; border: 0; border-radius: 50%; background: var(--tr-soft); color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-weather button svg { width: 18px; height: 18px; }
+body #root .today-run-session-page .tr-session-support-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+body #root .today-run-session-page .tr-session-readiness-score { display: flex; align-items: baseline; gap: 6px; margin-top: 22px; }
+body #root .today-run-session-page .tr-session-readiness-score > strong { font-size: 2.75rem; line-height: 1; letter-spacing: -.045em; color: var(--tr-ink); }
+body #root .today-run-session-page .tr-session-readiness-score > span { font-size: .85rem; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-readiness-score .tr-session-verdict { margin-left: auto; padding: 5px 10px; border-radius: 999px; background: var(--tr-soft); color: var(--tr-teal); font-size: .75rem; font-weight: 650; }
+body #root .today-run-session-page .tr-session-evidence-note { margin: 12px 0 0; color: var(--tr-muted); font-size: .75rem; line-height: 1.6; }
+body #root .today-run-session-page .tr-session-evidence { margin-top: 18px; }
+body #root .today-run-session-page .tr-session-evidence-row { display: flex; align-items: center; gap: 10px; min-height: 34px; font-size: .8rem; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-evidence-row > svg { width: 16px; height: 16px; flex: 0 0 16px; }
+body #root .today-run-session-page .tr-session-evidence-row > span:nth-child(2) { min-width: 44px; }
+body #root .today-run-session-page .tr-session-evidence-row small { font-size: .75rem; white-space: nowrap; }
+body #root .today-run-session-page .tr-session-evidence-spacer { flex: 1; }
+body #root .today-run-session-page .tr-session-meter { flex: 1; height: 4px; border-radius: 4px; background: var(--tr-soft); overflow: hidden; }
+body #root .today-run-session-page .tr-session-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--brand-accent-gradient); }
+body #root .today-run-session-page .tr-session-recovery-note { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 16px; margin-top: 14px; border-top: 1px solid var(--tr-line); font-size: .75rem; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-recovery-note strong { font-weight: 600; color: var(--tr-ink); }
+body #root .today-run-session-page .tr-session-coach-identity { margin-top: 20px; gap: 12px; }
+body #root .today-run-session-page .tr-session-coach-identity .coach-identity-avatar { width: 42px; height: 42px; border-radius: 50%; }
+body #root .today-run-session-page .tr-session-coach-identity .coach-identity-copy strong { color: var(--tr-ink); font-size: .9rem; }
+body #root .today-run-session-page .tr-session-coach-identity .coach-identity-copy span { margin-top: 3px; color: var(--tr-muted); font-size: .7rem; letter-spacing: 0; text-transform: none; }
+body #root .today-run-session-page .tr-session-coach-briefing { margin: 18px 0 0; font-size: .875rem; line-height: 1.75; color: var(--tr-ink); }
+body #root .today-run-session-page .tr-session-context { margin-top: 18px; font-size: .8rem; line-height: 1.6; color: var(--tr-muted); }
+body #root .today-run-session-page .tr-session-context summary { display: flex; align-items: center; justify-content: space-between; min-height: 40px; gap: 12px; cursor: pointer; color: var(--tr-blue); font-weight: 600; list-style: none; }
+body #root .today-run-session-page .tr-session-context summary::-webkit-details-marker { display: none; }
+body #root .today-run-session-page .tr-session-context summary svg { width: 18px; height: 18px; flex: 0 0 18px; transition: transform .15s; }
+body #root .today-run-session-page .tr-session-context[open] summary svg { transform: rotate(180deg); }
+body #root .today-run-session-page .tr-session-context ul, body #root .today-run-session-page .tr-session-wellness-notes { margin: 8px 0 0; padding-left: 18px; color: var(--tr-muted); font-size: .8rem; line-height: 1.65; }
+body #root .today-run-session-page .tr-session-context li + li { margin-top: 7px; }
+body #root .today-run-session-page .tr-session-context dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+body #root .today-run-session-page .tr-session-context dd { font-size: .9rem; }
+body #root .today-run-session-page .tr-session-context .tr-session-actions { margin-top: 14px; }
+body #root .today-run-session-page .tr-session-text-link { min-height: 40px; padding: 8px 0; border: 0; background: transparent; color: var(--tr-accent); font-size: .8rem; font-weight: 650; text-align: left; }
+body #root .today-run-session-page .tr-session-shoe { display: flex; align-items: center; gap: 12px; padding-top: 20px; margin-top: 16px; border-top: 1px solid var(--tr-line); }
+body #root .today-run-session-page .tr-session-shoe > svg { width: 24px; height: 24px; flex: 0 0 24px; color: var(--tr-teal); }
+body #root .today-run-session-page .tr-session-shoe > div { min-width: 0; flex: 1; }
+body #root .today-run-session-page .tr-session-shoe :is(span,strong,small) { display: block; }
+body #root .today-run-session-page .tr-session-shoe span { color: var(--tr-muted); font-size: .7rem; }
+body #root .today-run-session-page .tr-session-shoe strong { color: var(--tr-ink); font-size: .9rem; line-height: 1.4; margin: 3px 0; }
+body #root .today-run-session-page .tr-session-shoe small { color: var(--tr-muted); font-size: .7rem; line-height: 1.5; }
+body #root .today-run-session-page .tr-session-icon-link { width: 40px; height: 40px; padding: 11px; flex: 0 0 40px; background: transparent; border: 1px solid var(--tr-line); color: var(--tr-muted); border-radius: 50%; }
+body #root .today-run-session-page .tr-session-icon-link svg { width: 18px; height: 18px; }
+body #root .today-run-session-page .tr-session-context-metric { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: 24px; }
+body #root .today-run-session-page .tr-session-context-metric span { display: block; font-size: .75rem; color: var(--tr-muted); line-height: 1.5; }
+body #root .today-run-session-page .tr-session-context-metric strong { display: block; margin-top: 6px; font-size: 2.6rem; line-height: 1.1; color: var(--tr-ink); font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+body #root .today-run-session-page .tr-session-context-metric p { max-width: 27ch; margin: 0; color: var(--tr-muted); font-size: .8rem; line-height: 1.6; }
+body #root .today-run-session-page .tr-session-trend { text-align: right; }
+body #root .today-run-session-page .tr-session-trend strong { color: var(--tr-green); font-size: 2.1rem; }
+body #root .today-run-session-page .tr-session-trend.is-declining strong { color: var(--tr-amber); }
+body #root .today-run-session-page .tr-session-context--compact { margin-top: 12px; }
+body #root .today-run-session-page .tr-session-context--compact summary { color: var(--tr-amber); font-weight: 500; }
+body #root .today-run-session-page .tr-session-notice { padding-block: 20px; }
+body #root .today-run-session-page .tr-session-notice > strong { color: var(--tr-ink); font-size: 1rem; }
+body #root .today-run-session-page .tr-session-notice > p { margin: 8px 0 0; color: var(--tr-muted); font-size: .85rem; line-height: 1.6; }
+body #root .today-run-session-page :is(.tr-session-primary,.tr-session-secondary,.tr-session-race-link,.tr-session-icon-link,.tr-session-context summary):focus-visible { outline: 2px solid var(--tr-accent); outline-offset: 4px; }
+@media (max-width: 1050px) {
+  body #root .today-run-session-page .today-run-command-canvas { padding: 28px 24px 40px !important; }
+  body #root .today-run-session-page .tr-session-hero-layout { gap: 28px; }
+  body #root .today-run-session-page .tr-session-timeline { padding-left: 24px; }
+}
+@media (max-width: 760px) {
+  body #root .today-run-session-page .today-run-command-canvas { padding: 20px 16px 36px !important; gap: 14px !important; }
+  body #root .today-run-session-page .tr-session-surface { padding: 24px 20px; }
+  body #root .today-run-session-page .tr-session-hero-layout { grid-template-columns: minmax(0,1fr); gap: 28px; margin-top: 20px; }
+  body #root .today-run-session-page .tr-session-timeline { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--tr-line); }
+  body #root .today-run-session-page .tr-session-support-grid { grid-template-columns: minmax(0,1fr); gap: 14px; }
+  body #root .today-run-session-page .tr-session-target { margin-block: 22px; }
+  body #root .today-run-session-page .tr-session-targets { gap: 18px; }
+  body #root .today-run-session-page .tr-session-targets dd { font-size: 1.05rem; }
+  body #root .today-run-session-page .tr-session-actions { gap: 10px; margin-top: 22px; }
+  body #root .today-run-session-page :is(.tr-session-primary,.tr-session-secondary) { flex: 1 1 150px; padding-inline: 14px; }
+  body #root .today-run-session-page .tr-session-timeline li { grid-template-columns: 22px minmax(0,1fr) auto; gap: 10px; }
+  body #root .today-run-session-page .tr-session-stage-duration { font-size: .8rem; }
+  body #root .today-run-session-page .tr-session-weather { align-items: flex-start; }
+  body #root .today-run-session-page .tr-session-weather p > span { display: block; margin-top: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body #root .today-run-session-page .tr-session-context summary svg { transition: none; }
 }

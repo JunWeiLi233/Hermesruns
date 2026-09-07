@@ -145,32 +145,66 @@ function AdminOnlyRoute({ children }) {
 
 let appStylesLoaded = false;
 let appStylesPromise;
+let authStylesLoaded = false;
+let authStylesPromise;
+let profileStylesLoaded = false;
+let profileStylesPromise;
+const authStyleRoutes = new Set(['/login', '/signup', '/forgot-password', '/terms', '/privacy']);
 
-// The application stylesheet is large and gated behind RouteStyleGate, so
-// start fetching it during module evaluation — before React mounts and the
-// gate's effect runs — for any non-landing entry URL. Landing keeps its own
-// lightweight stylesheet and never pays for the app bundle's CSS.
+// Start the appropriate stylesheet before React mounts. Public account pages
+// need only the auth cascade; landing retains its own lightweight stylesheet.
 if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-  appStylesPromise = import('./styles/app.css').then(() => {
-    appStylesLoaded = true;
+  if (window.location.pathname === '/profile') {
+    profileStylesPromise = import('./styles/profile-entry.css').then(() => {
+      profileStylesLoaded = true;
+    });
+  } else if (authStyleRoutes.has(window.location.pathname)) {
+    authStylesPromise = import('./styles/auth-entry.css').then(() => {
+      authStylesLoaded = true;
+    });
+  } else {
+    appStylesPromise = import('./styles/app.css').then(() => {
+      appStylesLoaded = true;
+    });
+  }
+}
+
+// Fetch the entry route alongside its stylesheet, instead of waiting for the
+// style gate to mount React.lazy and start a second network waterfall.
+if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+  routePreloaders['/login']().catch(() => {
+    // React.lazy and the existing error boundary handle a failed route load.
   });
 }
 
 function RouteStyleGate({ children }) {
   const { pathname } = useLocation();
-  const [stylesReady, setStylesReady] = useState(() => appStylesLoaded);
+  const [, setStylesVersion] = useState(0);
 
   useEffect(() => {
-    if (pathname === '/' || appStylesLoaded) return undefined;
+    // Once app CSS starts loading, reuse that superset. Appending the shared
+    // auth cascade after it could override feature styles on a later login.
+    const isProfileRoute = pathname === '/profile' && !appStylesPromise;
+    const isAuthRoute = authStyleRoutes.has(pathname) && !appStylesPromise && !profileStylesPromise;
+    if (pathname === '/' || appStylesLoaded || (isAuthRoute && authStylesLoaded) || (isProfileRoute && profileStylesLoaded)) return undefined;
 
     let active = true;
-    if (!appStylesPromise) {
+    if (isProfileRoute && !profileStylesPromise) {
+      profileStylesPromise = import('./styles/profile-entry.css').then(() => {
+        profileStylesLoaded = true;
+      });
+    } else if (isAuthRoute && !authStylesPromise) {
+      authStylesPromise = import('./styles/auth-entry.css').then(() => {
+        authStylesLoaded = true;
+      });
+    } else if (!isAuthRoute && !isProfileRoute && !appStylesPromise) {
       appStylesPromise = import('./styles/app.css').then(() => {
         appStylesLoaded = true;
       });
     }
-    appStylesPromise.then(() => {
-      if (active) setStylesReady(true);
+    const stylesPromise = isProfileRoute ? profileStylesPromise : isAuthRoute ? authStylesPromise : appStylesPromise;
+    stylesPromise.then(() => {
+      if (active) setStylesVersion((version) => version + 1);
     });
 
     return () => {
@@ -178,7 +212,11 @@ function RouteStyleGate({ children }) {
     };
   }, [pathname]);
 
-  if (pathname !== '/' && !appStylesLoaded && !stylesReady) return <RouteLoading />;
+  const stylesReady = appStylesLoaded || (!appStylesPromise && (
+    (pathname === '/profile' && profileStylesLoaded)
+    || (authStyleRoutes.has(pathname) && authStylesLoaded && !profileStylesPromise)
+  ));
+  if (pathname !== '/' && !stylesReady) return <RouteLoading />;
   return children;
 }
 

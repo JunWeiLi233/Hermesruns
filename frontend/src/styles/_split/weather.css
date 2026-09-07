@@ -628,6 +628,28 @@
 }
 
 @media (max-width: 640px) {
+  .weather-engine-page .weather-engine-canvas,
+  .weather-engine-page .weather-engine-hero,
+  .weather-engine-page .weather-engine-hero-primary,
+  .weather-engine-page .weather-engine-hero-secondary,
+  .weather-engine-page .weather-engine-forecast-panel,
+  .weather-engine-page .weather-engine-analysis-grid,
+  .weather-engine-page .weather-engine-card,
+  .weather-engine-page .weather-engine-engine-grid,
+  .weather-engine-page .weather-engine-judgment-actions {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* A later shared dashboard rule uses a 320px minimum second column. Beat
+     that desktop constraint so the Weather cards fit a 320px phone. */
+  .weather-engine-page .weather-engine-analysis-grid,
+  .weather-engine-page .weather-engine-engine-grid,
+  .weather-engine-page .weather-engine-hero-secondary {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
   .weather-engine-hero-shell,
   .weather-engine-forecast-panel,
   .weather-engine-card {
@@ -659,5 +681,55 @@
 
   .weather-engine-forecast-strip {
     grid-auto-columns: minmax(108px, 1fr);
+  }
+
+  .weather-engine-page :is(
+    .weather-engine-card-head,
+    .weather-engine-card-head > div,
+    .weather-engine-panel-head,
+    .weather-engine-panel-head > div,
+    .weather-engine-coach-quote,
+    .weather-engine-judgment-callout,
+    .weather-engine-judgment-meta
+  ) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .weather-engine-page :is(
+    .weather-engine-card-head h2,
+    .weather-engine-panel-head h2,
+    .weather-engine-coach-quote,
+    .weather-engine-judgment-callout strong,
+    .weather-engine-judgment-callout p,
+    .weather-engine-judgment-meta strong,
+    .weather-engine-judgment-meta p
+  ) {
+    overflow-wrap: anywhere;
+  }
+
+  .weather-engine-page .weather-engine-btn {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* The late liquid-glass layer intentionally exposes desktop labels. On a
+     narrow top bar the Weather title needs to shrink beside its three actions. */
+  #root .runner-shell-page.weather-engine-page .runner-shell-topbar-left,
+  #root .runner-shell-page.weather-engine-page .runner-shell-topnav--command,
+  #root .runner-shell-page.weather-engine-page .runner-shell-topnav-identity,
+  #root .runner-shell-page.weather-engine-page .runner-shell-topnav-current-stack {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  #root .runner-shell-page.weather-engine-page .runner-shell-topnav--command .runner-shell-topnav-current-stack strong {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    overflow-wrap: anywhere;
+    text-overflow: ellipsis !important;
   }
 }

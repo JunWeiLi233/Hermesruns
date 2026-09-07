@@ -18,9 +18,6 @@ for (const file of ['stop_hermes.bat', 'start_hermes_local.ps1', 'CONTEXT.md']) 
 for (const file of ['tools/one-shot-muscle-inspect.mjs', 'tools/one-shot-shoes-add-inspect.mjs']) {
   assert.equal(existsSync(new URL(file, root)), false, `Retired one-off probe returned: ${file}`);
 }
-for (const file of ['tools/auto-hermes-browser.mjs', 'tools/auto-hermes-playwright.mjs', 'tools/auto-hermes-config.json', 'tools/auto-hermes-human-loop.json']) {
-  assert.ok(existsSync(new URL(file, root)), `Required browser tooling or live configuration is missing: ${file}`);
-}
 for (const file of ['start_hermes.bat', 'start_hermes.sh', 'stop_hermes.cmd', 'stop_hermes.ps1', 'stop_hermes.sh', 'docs/domain-glossary.md']) {
   assert.ok(existsSync(new URL(file, root)), `Missing maintained entry point or document: ${file}`);
 }
@@ -32,7 +29,7 @@ const encodedMessages = [...startup.matchAll(/\[char\[\]\]\(([^)]+)\)/g)]
   .join('\n');
 assert.doesNotMatch(encodedMessages, /stop_hermes\.bat/);
 assert.match(encodedMessages, /stop_hermes\.cmd/);
-for (const directory of ['.agents', '.codex', '.claude', '.gemini', '.opencode', '.github', '.railway', '.codeant']) {
+for (const directory of ['.github', '.railway']) {
   assert.ok(existsSync(new URL(directory, root)), `Tool discovery directory must stay at root: ${directory}`);
 }
 const manifest = JSON.parse(readFileSync(new URL('package.json', root), 'utf8'));

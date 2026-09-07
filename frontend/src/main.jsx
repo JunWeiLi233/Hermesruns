@@ -10,6 +10,10 @@ import {
   reloadForStaleAsset,
 } from './utils/staleAssetRecovery.js'
 import { installLocalConsoleErrorTracker } from './utils/localConsoleErrorTracker.js'
+import { preloadRoute } from './utils/routePreload.js'
+
+// Fetch Analysis alongside its stylesheet instead of after the style gate opens.
+if (window.location.pathname === '/analysis') preloadRoute('/analysis')
 
 installLocalConsoleErrorTracker()
 

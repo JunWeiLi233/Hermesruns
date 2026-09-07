@@ -98,8 +98,8 @@ assert.doesNotMatch(
 );
 assert.match(
   loginSource,
-  /hasConfiguredSocialProvider\s*=\s*stravaConfigured\s*\|\|\s*googleConfigured/,
-  'Login should render the provider action group only when at least one provider is ready.',
+  /className="auth-flow-social auth-flow-social--reserved" aria-busy=\{authProviders === null\}/,
+  'Login should reserve provider space while readiness loads without exposing unconfigured actions.',
 );
 assert.match(
   loginSource,

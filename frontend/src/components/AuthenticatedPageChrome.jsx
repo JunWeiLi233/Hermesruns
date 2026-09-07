@@ -89,6 +89,7 @@ export default function AuthenticatedPageChrome({
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
               aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -123,7 +124,7 @@ export default function AuthenticatedPageChrome({
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>

@@ -47,9 +47,45 @@ assert.match(
 );
 
 assert.match(
-  styleSource,
-  /@media \(max-width:\s*860px\)[\s\S]*\.runner-dashboard-page \.runner-shell-side-nav\s*\{[\s\S]*grid-auto-flow:\s*column;/,
-  'Small screens should turn the sidebar nav into a horizontal rail instead of a tall fixed desktop column.',
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page > \.runner-shell-sidebar \.runner-shell-side-nav\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*row;[^}]*flex-wrap:\s*nowrap;[^}]*min-width:\s*0;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/,
+  'Small screens should turn the sidebar nav into a horizontal scroller instead of a tall fixed desktop column.',
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page\.is-sidebar-collapsed > \.runner-shell-sidebar\s*\{[^}]*width:\s*100%\s*!important;[^}]*min-width:\s*0\s*!important;[^}]*max-width:\s*none\s*!important;[^}]*flex-direction:\s*row;/,
+  'Collapsed mobile runner pages should release the desktop rail width and render one compact horizontal strip.',
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page\.is-sidebar-collapsed > \.runner-shell-main\s*\{[^}]*width:\s*100%\s*!important;[^}]*min-width:\s*0\s*!important;[^}]*margin-left:\s*0\s*!important;/,
+  'Collapsed mobile runner pages should give the main content the full viewport without a desktop rail offset.',
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page > \.runner-shell-sidebar \.runner-dashboard-side-link-label\s*\{[^}]*display:\s*inline\s*!important;[^}]*opacity:\s*1;[^}]*width:\s*auto;/,
+  'Mobile runner route labels should remain readable even when the desktop shell state is collapsed.',
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page > \.runner-shell-sidebar \.runner-shell-sidebar-footer > \.runner-shell-workout-btn\s*\{[^}]*width:\s*44px\s*!important;[^}]*min-width:\s*44px\s*!important;[^}]*max-width:\s*44px\s*!important;[^}]*height:\s*44px\s*!important;[^}]*min-height:\s*44px\s*!important;[^}]*padding:\s*0\s*!important;/,
+  'The mobile Today training shortcut should remain a compact 44px icon touch target beside the route scroller.',
+);
+
+assert.match(
+  profileStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*#root \.runner-dashboard-page\.runner-shell-page > \.runner-shell-sidebar \.runner-shell-sidebar-footer > \.runner-shell-workout-btn \.runner-dashboard-workout-btn-label\s*\{[^}]*display:\s*none\s*!important;/,
+  'The mobile Today training shortcut should hide its visual label while retaining the button aria-label.',
+);
+
+assert.match(
+  runnerShellStyleSource,
+  /@media \(max-width:\s*860px\)[\s\S]*\.runner-shell-topbar-link,[\s\S]*\.runner-shell-notification-link\s*\{[^}]*min-height:\s*44px;/,
+  'Mobile runner-shell controls should retain at least a 44px touch target.',
 );
 
 assert.match(

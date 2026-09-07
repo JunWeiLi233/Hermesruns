@@ -34,10 +34,13 @@ assert.match(
   'The shared workout button parity layer should load from the main stylesheet.',
 );
 const parityImport = "@import './styles/runner-shell-workout-button.css';";
-assert(
-  indexSource.slice(indexSource.lastIndexOf(parityImport) + parityImport.length).indexOf('@import') === -1,
-  'The shared workout button parity layer should load after every page-specific stylesheet.',
+const trailingImports = indexSource.slice(indexSource.lastIndexOf(parityImport) + parityImport.length).match(/@import[^;]+;/g) || [];
+assert.deepEqual(
+  trailingImports,
+  ["@import './styles/dark-mode-final-fixes.css';"],
+  'Only the final dark color palette may follow the shared workout button layout.',
 );
+assert.doesNotMatch(read('styles/dark-mode-final-fixes.css'), /\.runner-shell-workout-btn/, 'The dark palette must preserve the shared workout button design.');
 
 assert.match(
   unifiedStyleSource,

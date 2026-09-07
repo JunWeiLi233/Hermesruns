@@ -318,8 +318,8 @@ class AutomatedCoachServiceTests {
 
         AutomatedCoachService.CoachTodayDto today = s.getTodayWithReadiness(runner);
 
-        assertThat(today.today().workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.RECOVERY.name());
-        assertThat(today.today().reasonCode()).isEqualTo("onboarding");
+        assertThat(today.today().workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
+        assertThat(today.today().reasonCode()).isIn("onboarding", "scheduled_rest");
         assertThat(today.today().readinessAdjusted()).isFalse();
         assertThat(today.plan().phase()).isEqualTo("onboarding");
     }
@@ -351,13 +351,13 @@ class AutomatedCoachServiceTests {
 
         assertThat(schedule).hasSize(1);
         AutomatedCoachService.CoachScheduledWorkoutDto today = schedule.get(0);
-        assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.RECOVERY.name());
-        assertThat(today.reasonCode()).isEqualTo("onboarding");
+        assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
+        assertThat(today.reasonCode()).isIn("onboarding", "scheduled_rest");
         assertThat(today.readinessAdjusted()).isFalse();
     }
 
     @Test
-    void getScheduleAppliesRestReadinessGateToTodaysQualityWorkout() {
+    void getScheduleDoesNotUseUndatedCachedWellnessToForceRest() {
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
 
@@ -387,9 +387,9 @@ class AutomatedCoachServiceTests {
 
         assertThat(schedule).hasSize(1);
         AutomatedCoachService.CoachScheduledWorkoutDto today = schedule.get(0);
-        assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.RECOVERY.name());
-        assertThat(today.reasonCode()).isEqualTo("readiness_protect");
-        assertThat(today.readinessAdjusted()).isTrue();
+        assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
+        assertThat(today.reasonCode()).isIn("onboarding", "scheduled_rest");
+        assertThat(today.readinessAdjusted()).isFalse();
     }
 
     @Test
@@ -657,6 +657,51 @@ class AutomatedCoachServiceTests {
         data.setProvider(provider);
         data.setRestingHeartRate(restingHeartRate);
         return data;
+    }
+
+    @Test
+    void automaticRestIsReplannedWhenReadinessImprovesAndMissingEvidenceIsNotPublished() {
+        var states = mock(CoachRunnerStateRepository.class);
+        var schedule = mock(CoachScheduledWorkoutRepository.class);
+        var activities = mock(ActivityRepository.class);
+        var readiness = mock(ReadinessService.class);
+        Runner runner = runner();
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(runner);
+        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastSleepScore(35);
+        state.setLastStressScore(95);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        when(activities.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(20L);
+        var history = List.of(runMetric(LocalDate.now().minusDays(7).atTime(8, 0), 6, 2100, 140),
+                runMetric(LocalDate.now().minusDays(14).atTime(8, 0), 6, 2100, 140));
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any())).thenReturn(history);
+        CoachScheduledWorkout rest = new CoachScheduledWorkout();
+        rest.setRunner(runner); rest.setScheduledDate(LocalDate.now()); rest.setWorkoutType(CoachWorkoutType.REST);
+        rest.setReadinessAdjusted(true);
+        when(schedule.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
+                .thenReturn(new ArrayList<>(List.of(rest)));
+        var poor = new ReadinessService.MultiSourceReadinessSnapshot(
+                new ReadinessService.ReadinessResult(42, "REST", 35, 45, 60, 5, 75, 80),
+                new ReadinessService.MetricSources("MANUAL", "MANUAL", "MANUAL", "MANUAL"));
+        when(readiness.resolveReadinessSnapshot(eq(runner), any(), any())).thenReturn(poor);
+        var service = service(states, schedule, mock(CoachTrainingBlockRepository.class), readiness,
+                mock(ShoeTrackerService.class), activities);
+        assertThat(service.getTodayWithReadiness(runner).today().workoutType()).isEqualTo("REST");
+
+        var missing = new ReadinessService.MultiSourceReadinessSnapshot(
+                new ReadinessService.ReadinessResult(75, "EASY", 75, 75, 75, 75, 75, 0),
+                new ReadinessService.MetricSources("AUTO", "AUTO", "AUTO", "AUTO"), false);
+        when(readiness.resolveReadinessSnapshot(eq(runner), any(), any())).thenReturn(missing);
+        var updated = service.getTodayWithReadiness(runner);
+        assertThat(updated.today().workoutType()).isNotEqualTo("REST");
+        assertThat(updated.state().lastSleepScore()).isNull();
+        assertThat(updated.state().lastStressScore()).isNull();
+        assertThat(updated.state().readinessSleep()).isNull();
+        assertThat(updated.state().readinessHrv()).isNull();
+        assertThat(updated.state().readinessRhr()).isNull();
+        assertThat(updated.state().readinessStress()).isNull();
+        assertThat(updated.state().stamina()).isNull();
     }
 
     private Runner runner() {

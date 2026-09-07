@@ -1,5 +1,5 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
@@ -482,7 +482,7 @@ export default function Analysis() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} aria-label={item.label} aria-current={item.active ? 'page' : undefined} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
@@ -640,7 +640,7 @@ export default function Analysis() {
                             />
                           )}
                           <div
-                            className={cx('analysis-overview-vo2-bar', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
+                            className={cx('analysis-overview-vo2-bar', bar.value == null && 'is-empty', bar.current && 'is-current', hoveredVo2BarKey === bar.key && 'is-hovered')}
                             style={{ height: `${bar.height}%` }}
                           >
                             {null}
@@ -878,18 +878,16 @@ export default function Analysis() {
                           <tr
                             key={row.key}
                             className="clickable-row"
-                            role="link"
-                            tabIndex={0}
-                            aria-label={`${row.label} ${row.timeLabel} ${row.paceLabel}`}
-                            onClick={() => navigate(`/prediction/${row.key}`)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                navigate(`/prediction/${row.key}`);
-                              }
+                            onClick={(event) => {
+                              if (!event.target.closest('a, button')) navigate(`/prediction/${row.key}`);
                             }}
                           >
-                            <td>{row.label}</td>
+                            <td>
+                              <Link className="analysis-prediction-link" to={`/prediction/${row.key}`}>
+                                <span>{row.label}</span>
+                                <AppIcon name="chevron_right" aria-hidden="true" />
+                              </Link>
+                            </td>
                             <td className="is-accent">{row.timeLabel}</td>
                             <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
                           </tr>

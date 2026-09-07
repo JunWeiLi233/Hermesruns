@@ -2405,6 +2405,8 @@ export default function MuscleTraining() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -2413,7 +2415,7 @@ export default function MuscleTraining() {
         </nav>
 
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={scrollToControls}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={scrollToControls} aria-label={stitchCopy.startWorkout}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{stitchCopy.startWorkout}</span>
           </button>
@@ -2520,7 +2522,7 @@ export default function MuscleTraining() {
                   <h2>{stitchCopy.topActionsTitle}</h2>
                   <span>{pickLabel(copy.strengthDoseOptions, strengthCoachDecision?.appliedDose, stitchCopy.topActionsSelected)}</span>
                 </div>
-                <div className="mt-top-action-list" role="list">
+                <div className="mt-top-action-list" role="group" aria-label={stitchCopy.topActionsTitle}>
                   {topRecommendationItems.map((item) => {
                     const itemKey = getProtocolItemKey(item);
                     const isLibrary = item.source === 'library';

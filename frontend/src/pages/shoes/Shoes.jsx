@@ -1080,6 +1080,7 @@ const Shoes = memo(function Shoes() {
                 onPointerEnter={() => preloadRoute(item.route)}
                 onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
+                aria-current={item.active ? 'page' : undefined}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
                 <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -1118,7 +1119,20 @@ const Shoes = memo(function Shoes() {
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <div className="user-menu-shell" ref={avatarMenuRef}>
+                <div
+                  className="user-menu-shell"
+                  ref={avatarMenuRef}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && avatarMenuOpen) {
+                      event.preventDefault();
+                      setAvatarMenuOpen(false);
+                      event.currentTarget.querySelector('button')?.focus();
+                    }
+                  }}
+                >
                   <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={displayName} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
                     {initials}
                   </button>
@@ -1190,14 +1204,14 @@ const Shoes = memo(function Shoes() {
                   </div>
                 </header>
 
-                <div className="shoe-inventory-hero-tabs" role="tablist" aria-label={t('shoes.stitch_surface_label')}>
-                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')}>
+                <div className="shoe-inventory-hero-tabs" role="group" aria-label={t('shoes.stitch_surface_label')}>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'all' ? ' active' : ''}`} onClick={() => setInventoryTab('all')} aria-pressed={inventoryTab === 'all'}>
                     {t('shoes.inventory_all', { count: shoes.length })}
                   </button>
-                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')}>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'active' ? ' active' : ''}`} onClick={() => setInventoryTab('active')} aria-pressed={inventoryTab === 'active'}>
                     {t('shoes.inventory_active', { count: activeShoes.length })}
                   </button>
-                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')}>
+                  <button type="button" className={`shoe-inventory-pill${inventoryTab === 'retired' ? ' active' : ''}`} onClick={() => setInventoryTab('retired')} aria-pressed={inventoryTab === 'retired'}>
                     {t('shoes.inventory_retired', { count: retiredShoes.length })}
                   </button>
                 </div>

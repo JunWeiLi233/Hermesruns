@@ -294,7 +294,7 @@ export default function AddShoes() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)} aria-label={item.label}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.active && 'is-active')} onClick={() => navigate(item.route)} onPointerEnter={() => preloadRoute(item.route)} onFocus={() => preloadRoute(item.route)} aria-label={item.label} aria-current={item.active ? 'page' : undefined}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
@@ -325,7 +325,20 @@ export default function AddShoes() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <div className="user-menu-shell" ref={avatarMenuRef}>
+              <div
+                  className="user-menu-shell"
+                  ref={avatarMenuRef}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && avatarMenuOpen) {
+                      event.preventDefault();
+                      setAvatarMenuOpen(false);
+                      event.currentTarget.querySelector('button')?.focus();
+                    }
+                  }}
+                >
                 <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={profileLabel} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
                   {initials}
                 </button>

@@ -140,18 +140,18 @@ export default function Rewards() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.route === '/profile' && false)} onClick={() => navigate(item.route)}>
+            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.route === '/profile' && false)} onClick={() => navigate(item.route)} aria-label={item.label} aria-current={item.active ? 'page' : undefined}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
           ))}
-          <button type="button" className="runner-shell-side-link is-active" onClick={() => navigate('/rewards')}>
+          <button type="button" className="runner-shell-side-link is-active" onClick={() => navigate('/rewards')} aria-label={t('rewards.heading')} aria-current="page">
             <AppIcon name="workspace_premium" className="runner-dashboard-side-link-icon" />
             <span className="runner-dashboard-side-link-label">{t('rewards.heading')}</span>
           </button>
         </nav>
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} aria-label={t('profile.dashboard_start_workout')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
@@ -173,7 +173,20 @@ export default function Rewards() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <div className="user-menu-shell" ref={avatarMenuRef}>
+              <div
+                  className="user-menu-shell"
+                  ref={avatarMenuRef}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && avatarMenuOpen) {
+                      event.preventDefault();
+                      setAvatarMenuOpen(false);
+                      event.currentTarget.querySelector('button')?.focus();
+                    }
+                  }}
+                >
                 <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={t('analysis.stitch_edit_profile')} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
                   {initials}
                 </button>
@@ -227,7 +240,7 @@ export default function Rewards() {
                   <p className="rewards-ledger-hero-copy">{t('rewards.earned_empty_coach')}</p>
                 </>
               )}
-              <div className="rewards-ledger-hero-progress" role="progressbar" aria-valuenow={heroProgressPct} aria-valuemin={0} aria-valuemax={100}>
+              <div className="rewards-ledger-hero-progress" role="progressbar" aria-label={t('rewards.progress_label')} aria-valuenow={heroProgressPct} aria-valuemin={0} aria-valuemax={100}>
                 <span style={{ width: `${heroProgressPct}%` }} />
               </div>
               <span className="rewards-ledger-hero-foot">
@@ -253,7 +266,7 @@ export default function Rewards() {
                   </div>
                   <h2 className="rewards-ledger-hero-h2">{nextMilestone.title}</h2>
                   <p className="rewards-ledger-hero-copy">{nextMilestone.hint}</p>
-                  <div className="rewards-ledger-hero-progress rewards-ledger-hero-progress--accent" role="progressbar" aria-valuenow={nextMilestonePct} aria-valuemin={0} aria-valuemax={100}>
+                  <div className="rewards-ledger-hero-progress rewards-ledger-hero-progress--accent" role="progressbar" aria-label={`${nextMilestone.title}: ${t('rewards.progress_label')}`} aria-valuenow={nextMilestonePct} aria-valuemin={0} aria-valuemax={100}>
                     <span style={{ width: `${nextMilestonePct}%` }} />
                   </div>
                   <div className="rewards-ledger-hero-actions">
@@ -353,7 +366,7 @@ export default function Rewards() {
                         <p className="rewards-ledger-pipeline-hint">{reward.hint}</p>
                       </div>
                       <div className="rewards-ledger-pipeline-progress">
-                        <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                        <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-label={`${reward.title}: ${t('rewards.progress_label')}`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                           <span style={{ width: `${pct}%` }} />
                         </div>
                         <span className="rewards-ledger-pipeline-pct">{pct}%</span>
@@ -391,7 +404,7 @@ export default function Rewards() {
                       <p className="rewards-ledger-catalog-sub">{reward.earned ? reward.subtitle : reward.hint}</p>
                       {!reward.earned && (
                         <div className="rewards-ledger-catalog-progress">
-                          <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                          <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-label={`${reward.title}: ${t('rewards.progress_label')}`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
                             <span style={{ width: `${pct}%` }} />
                           </div>
                           <span>{pct}%</span>

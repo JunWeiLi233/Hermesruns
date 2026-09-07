@@ -147,13 +147,16 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .ru
   gap: 12px !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-month-group {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runs-dashboard-page .runs-profile-history .recent-runs-month-group {
   border: 1px solid var(--runs-profile-line) !important;
   border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-month-group {
   background: #ffffff !important;
   background-image: none !important;
   box-shadow: 0 18px 42px rgba(58, 43, 28, 0.08) !important;
-  overflow: hidden !important;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history .recent-runs-status--loading {
@@ -407,8 +410,8 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[d
 /* The shared liquid-glass sweep can paint a second surface on the text
    wrapper. Remove only that nested strip; keep the muscle-selection card and
    its anatomy panel surface intact. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head h2 {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head h2 {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;

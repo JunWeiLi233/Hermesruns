@@ -24,7 +24,6 @@
 @import './settings-fullwidth.css';
 @import './contrast-fixes.css';
 @import './admin-kinetic-editorial.css';
-@import './dark-mode-final-fixes.css';
 @import './shoes-atelier-redesign.css';
 @import './muscle-training-profile-alignment.css';
 @import './liquid-glass.css';
@@ -44,3 +43,4 @@
 @import './grid-cards-white.css';
 @import './runner-shell-workout-button.css';
 @import './muscle-training-action-list.css';
+@import './dark-mode-final-fixes.css';

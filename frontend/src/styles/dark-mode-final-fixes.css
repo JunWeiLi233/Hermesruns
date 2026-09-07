@@ -1,2 +1,358 @@
-/* Final dark-mode fix layer.
-   Kept as a real file so the split CSS import chain stays buildable. */
+/* Profile is the color reference for every runner page in midnight mode.
+   These roles mirror its rendered canvas, 4% card fill and glass chrome.
+   Route owners keep layout, artwork and semantic status colors. */
+:root {
+  --profile-night-canvas: linear-gradient(145deg, rgba(17, 20, 26, 0.98), rgba(8, 10, 15, 0.98));
+  --profile-night-base: #11141a;
+  --profile-night-card: rgba(255, 255, 255, 0.04);
+  --profile-night-raised: rgba(255, 255, 255, 0.06);
+  --profile-night-solid: #1b1e24;
+  --profile-night-solid-raised: #242a34;
+  --profile-night-ink: #f8f4ef;
+  --profile-night-muted: #c8bfb2;
+  --profile-night-line: rgba(255, 255, 255, 0.1);
+  --profile-night-coral: #f07561;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) {
+  --runner-minimal-canvas: var(--profile-night-base);
+  --runner-minimal-surface: var(--profile-night-card);
+  --runner-minimal-surface-soft: var(--profile-night-raised);
+  --runner-minimal-ink: var(--profile-night-ink);
+  --runner-minimal-muted: var(--profile-night-muted);
+  --runner-minimal-line: var(--profile-night-line);
+  --runner-profile-paper: var(--profile-night-base);
+  --runner-profile-card: var(--profile-night-card);
+  --runner-profile-card-strong: var(--profile-night-raised);
+  --runner-profile-ink: var(--profile-night-ink);
+  --runner-profile-muted: var(--profile-night-muted);
+  --runner-profile-line: var(--profile-night-line);
+  --runner-profile-flame: #ffb4a7;
+  --runner-atlas-paper: var(--profile-night-base);
+  --runner-atlas-card: var(--profile-night-card);
+  --runner-atlas-card-strong: var(--profile-night-raised);
+  --runner-atlas-ink: var(--profile-night-ink);
+  --runner-atlas-muted: var(--profile-night-muted);
+  --hermes-glass-paper: var(--profile-night-card);
+  --hermes-glass-paper-strong: var(--profile-night-raised);
+  --hermes-glass-ink: var(--profile-night-ink);
+  --hermes-glass-muted: var(--profile-night-muted);
+  --hermes-glass-line: var(--profile-night-line);
+  --hermes-glass-highlight: transparent;
+  background: var(--profile-night-canvas) !important;
+  color: var(--profile-night-ink) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) > .runner-shell-sidebar {
+  background: rgba(29, 34, 43, 0.62) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) > .runner-shell-main > .runner-shell-topbar {
+  background: rgba(36, 42, 52, 0.78) !important;
+  color: var(--profile-night-ink) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(
+  .today-run-coaching-answer,
+  .today-run-plan-card,
+  .today-run-command-hero-copy,
+  .today-run-command-readiness-panel,
+  .analysis-overview-card,
+  .analysis-profile-bento-card,
+  .analysis-injury-prevention-section,
+  .recent-runs-stat-card,
+  .runs-profile-cockpit,
+  .recent-runs-insight-card,
+  .recent-runs-card,
+  .shoe-inventory-card,
+  .shoe-inventory-summary-tile,
+  .shoe-inventory-filterbar,
+  .race-center-card,
+  .race-center-pb-card,
+  .schedule-plan-day,
+  .schedule-plan-readiness-card,
+  .schedule-plan-next-card,
+  .schedule-plan-route-card,
+  .schedule-plan-coach-card,
+  .schedule-plan-gear-card,
+  .weather-engine-card,
+  .weather-engine-hud-card,
+  .weather-engine-forecast-panel,
+  .mt-top-panel,
+  .mt-top-muscle-card,
+  .mt-top-actions-card,
+  .mt-reference-card,
+  .muscle-control-card,
+  .rewards-ledger-hero-card,
+  .rewards-ledger-earned-card,
+  .st-card,
+  .st-services,
+  .st-service-card,
+  .add-shoes-step-card,
+  .add-shoes-model-board-shell,
+  .add-shoes-model-grid,
+  .add-shoes-setup-payload-shell
+) {
+  background: var(--profile-night-card) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(
+  .schedule-plan-hero,
+  .weather-engine-hero-shell,
+  .st-hero
+) {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 40%),
+    rgba(31, 32, 36, 0.66) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page[data-muscle-theme]:has(.mt-top-workbench) {
+  background: var(--profile-night-canvas) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .runner-shell-canvas.muscle-training-canvas {
+  background: transparent !important;
+}
+
+/* Heatmap has its own full-screen shell; retain the map and style its UI. */
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page {
+  color: var(--profile-night-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page :is(.heatmap-page-brand-pill, .heatmap-page-search-pill, .heatmap-page-action-strip) {
+  background: rgba(36, 42, 52, 0.78) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .heatmap-page :is(.heatmap-page-legend-card, .heatmap-page-utility-rail, .heatmap-page-empty) {
+  background: var(--profile-night-solid) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+/* Native form controls and overlays need an opaque raised surface. */
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(input, select, textarea) {
+  background-color: var(--profile-night-solid-raised) !important;
+  color: var(--profile-night-ink) !important;
+  border-color: var(--profile-night-line) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card {
+  --runner-profile-card: var(--profile-night-solid);
+  --runner-profile-card-strong: var(--profile-night-solid-raised);
+  --hermes-glass-paper: var(--profile-night-solid);
+  --hermes-glass-paper-strong: var(--profile-night-solid-raised);
+  --runner-profile-ink: var(--profile-night-ink);
+  --runner-profile-muted: var(--profile-night-muted);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page .profile-import-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoe-edit-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-garmin-import-modal-card {
+  background: var(--profile-night-solid) !important;
+  color: var(--profile-night-ink) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-card :is(.import-source-card, .import-summary-line) {
+  background: var(--profile-night-solid-raised) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form :is(.import-source-index, .import-source-tag),
+body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form input[type="file"]::file-selector-button {
+  background: var(--profile-night-solid) !important;
+}
+
+/* Detail views use the same components as light mode and borrow Profile's
+   color roles instead of retaining an older warm-brown canvas. */
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page {
+  --analysis-v2-paper: var(--profile-night-base);
+  --analysis-v2-card: var(--profile-night-card);
+  --analysis-v2-card-soft: var(--profile-night-raised);
+  --analysis-v2-focus: #1f2024;
+  --analysis-v2-focus-end: var(--profile-night-base);
+  --analysis-v2-ink: var(--profile-night-ink);
+  --analysis-v2-muted: var(--profile-night-muted);
+  --analysis-v2-faint: #b2a99c;
+  --analysis-v2-green: #9cd2aa;
+  --analysis-v2-line: var(--profile-night-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page .runner-shell-main,
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page .runner-shell-canvas.analysis-insight-detail-canvas {
+  background: transparent !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile {
+  --load-profile-paper: var(--profile-night-base);
+  --load-profile-card: var(--profile-night-card);
+  --load-profile-card-solid: var(--profile-night-solid);
+  --load-profile-ink: var(--profile-night-ink);
+  --load-profile-muted: var(--profile-night-muted);
+  --load-profile-faint: #b2a99c;
+  --load-profile-green: #9cd2aa;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+  --intensity-card: var(--profile-night-card);
+  --intensity-card-strong: var(--profile-night-raised);
+  --intensity-ink: var(--profile-night-ink);
+  --intensity-muted: var(--profile-night-muted);
+  --intensity-faint: #b2a99c;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .prediction-detail-page .prediction-profile-content {
+  --prediction-profile-card: var(--profile-night-card);
+  --prediction-profile-card-strong: var(--profile-night-raised);
+  --prediction-profile-ink: var(--profile-night-ink);
+  --prediction-profile-muted: var(--profile-night-muted);
+  --prediction-profile-faint: #b2a99c;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-profile-minimal {
+  --run-detail-card: var(--profile-night-card);
+  --run-detail-card-raised: var(--profile-night-raised);
+  --run-detail-dark: var(--profile-night-solid);
+  --run-detail-ink: var(--profile-night-ink);
+  --run-detail-muted: var(--profile-night-muted);
+  --run-detail-faint: #b2a99c;
+}
+
+/* Shoes' atelier layer has its own warm light tokens. Midnight must override
+   those roles and control states as well as the outer runner shell. */
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page.shoes-dashboard-page.shoes-atelier-redesign {
+  --shoe-atelier-paper: var(--profile-night-base);
+  --shoe-atelier-paper-strong: var(--profile-night-solid);
+  --shoe-atelier-ink: var(--profile-night-ink);
+  --shoe-atelier-muted: var(--profile-night-muted);
+  --shoe-atelier-line: var(--profile-night-line);
+  --shoe-atelier-soft: var(--profile-night-card);
+  --shoe-atelier-soft-strong: var(--profile-night-raised);
+  --shoe-atelier-accent: #ffb4a7;
+  --shoe-atelier-accent-soft: rgba(240, 117, 97, .14);
+  --shoe-atelier-green: #9cd2aa;
+  --shoe-atelier-watch: #ffbc83;
+  --shoe-atelier-dark: var(--profile-night-solid);
+  --shoe-atelier-dark-soft: var(--profile-night-solid-raised);
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-stage, .shoe-inventory-topbar, .shoe-inventory-manage-group
+) {
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-card, .shoe-inventory-summary-tile, .shoe-inventory-manage-strip, .shoe-inventory-intel-panel
+) {
+  background: var(--profile-night-card) !important;
+  border-color: var(--profile-night-line) !important;
+  color: var(--profile-night-ink) !important;
+  box-shadow: none !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-card:hover {
+  background: var(--profile-night-raised) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-card-image {
+  background: var(--profile-night-card) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-card-copy h2, .shoe-inventory-card-metric-value strong, .shoe-inventory-card-action, .shoe-inventory-chevron
+) { color: var(--profile-night-ink) !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-card-metric-value.is-warn strong, .shoe-inventory-card-metric-value.is-warning strong
+) { color: #ffbc83 !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-card-action.is-danger, .shoe-inventory-card-metric-value.is-critical strong
+) { color: #ffb4a7 !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-pill, .shoe-inventory-brand-pill, .shoe-inventory-action-btn
+) {
+  color: var(--profile-night-muted) !important;
+  background: var(--profile-night-card) !important;
+  border-color: var(--profile-night-line) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(
+  .shoe-inventory-pill.active, .shoe-inventory-brand-pill.active, .shoe-inventory-action-btn.is-muted
+) {
+  color: #ffb4a7 !important;
+  background: rgba(240, 117, 97, .14) !important;
+  border-color: rgba(240, 117, 97, .3) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-cta {
+  color: #2b1b14 !important;
+  background: linear-gradient(135deg, #f07561, #ffb4a7) !important;
+  border-color: transparent !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-cta :is(span, svg) { color: inherit !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search {
+  background: var(--profile-night-solid-raised) !important;
+  color: var(--profile-night-muted) !important;
+  border-color: var(--profile-night-line) !important;
+  box-shadow: none !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search input {
+  min-width: 0;
+  background: transparent !important;
+  color: var(--profile-night-ink) !important;
+  caret-color: var(--profile-night-ink);
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search input::placeholder {
+  color: #bfc3cb !important;
+  opacity: 1;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign :is(button, a):focus-visible,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .shoe-inventory-search:focus-within {
+  outline: 2px solid #ffb4a7;
+  outline-offset: 3px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .runner-shell-side-link.is-active,
+body:is(.theme-midnight, .theme-high-contrast) #root .shoes-dashboard-page.shoes-atelier-redesign .runner-shell-side-link.is-active svg {
+  color: #ffb4a7 !important;
+}
+
+/* Shoe dialogs are portalled outside the page; give them the same dark roles. */
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card {
+  background: var(--profile-night-solid) !important;
+  color: var(--profile-night-ink) !important;
+  border-color: var(--profile-night-line) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card .modal-form {
+  background: transparent !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card :is(
+  .shoe-photo-studio-hero, .shoe-photo-studio-preview-panel, .shoe-photo-studio-tool-panel,
+  .shoe-photo-studio-search-panel, .shoe-photo-studio-upload, .shoe-photo-studio-pending-panel
+) {
+  background: var(--profile-night-card) !important;
+  border-color: var(--profile-night-line) !important;
+  box-shadow: none !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card :is(
+  .shoe-photo-studio-preview-frame, .shoe-photo-studio-candidate, .shoe-photo-studio-input
+) {
+  background: var(--profile-night-solid-raised) !important;
+  border-color: var(--profile-night-line) !important;
+  color: var(--profile-night-ink) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card .shoe-photo-studio-input::placeholder {
+  color: #bfc3cb !important;
+  opacity: 1;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card .shoe-photo-studio-upload-mark {
+  color: #ffb4a7 !important;
+  background: rgba(240, 117, 97, .14) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-edit-modal-card .shoe-edit-modal-actions .btn-primary,
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-photo-modal-card .shoe-photo-studio-primary-btn {
+  color: #2b1b14 !important;
+  background: linear-gradient(135deg, #f07561, #ffb4a7) !important;
+  border-color: transparent !important;
+}

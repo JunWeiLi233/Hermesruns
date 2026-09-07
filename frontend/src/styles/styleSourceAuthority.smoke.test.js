@@ -10,23 +10,17 @@ const root = path.resolve(here, '../../..');
 const indexCssPath = path.join(root, 'frontend/src/index.css');
 const generatorPath = path.join(root, 'tools/generate-legacy-style-bundle.mjs');
 const retiredSplitToolPath = path.join(root, 'tools/split-styles.mjs');
-const suggestTasksPath = path.join(root, 'tools/suggest-tasks.mjs');
-const autoHermesControllerPath = path.join(root, 'tools/auto-hermes-controller.mjs');
 
 assert.ok(existsSync(generatorPath), 'The active CSS import graph must have a compatibility-bundle generator.');
 assert.equal(existsSync(retiredSplitToolPath), false, 'The deprecated forwarding alias must not return; use the canonical generator.');
 
 const indexCss = readFileSync(indexCssPath, 'utf8');
 const generator = readFileSync(generatorPath, 'utf8');
-const suggestTasks = readFileSync(suggestTasksPath, 'utf8');
-const autoHermesController = readFileSync(autoHermesControllerPath, 'utf8');
 
 assert.doesNotMatch(indexCss, /@import\s+['"]\.\/styles\/style\.css['"]/, 'Production CSS must not import the legacy bundle.');
 assert.match(generator, /GENERATED FILE - DO NOT EDIT/, 'The compatibility bundle must identify itself as generated.');
 assert.match(generator, /frontend\/src\/index\.css/, 'The runtime index must own compatibility bundle ordering.');
 assert.doesNotMatch(generator, /readFileSync\([^\n]*frontend\/src\/styles\/style\.css/, 'The generator must not use the frozen legacy bundle as input.');
-assert.doesNotMatch(suggestTasks, /frontend\/src\/styles\/style\.css/);
-assert.doesNotMatch(autoHermesController, /frontend\/src\/styles\/style\.css/);
 
 const check = spawnSync(process.execPath, [generatorPath, '--check'], {
   cwd: root,

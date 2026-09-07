@@ -725,6 +725,7 @@
     top: auto;
     bottom: 18px;
     left: 16px;
+    right: 16px;
     grid-auto-flow: column;
     grid-auto-columns: 52px;
     width: auto;
@@ -733,12 +734,18 @@
     overflow-y: hidden;
     max-width: calc(100% - 32px);
     padding-bottom: 4px;
+    box-sizing: border-box;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: 5px;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
   }
 
   .heatmap-page-utility-btn {
     width: 52px;
     height: 52px;
     border-radius: 16px;
+    scroll-margin-inline: 5px;
   }
 
   .heatmap-page-legend-card {
@@ -755,6 +762,35 @@
 }
 
 @media (max-width: 720px) {
+  .heatmap-page-action-strip {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .heatmap-page-action-strip > .runner-shell-topbar-profile-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) 48px;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .heatmap-page-action-strip :is(
+    .heatmap-page-secondary-btn,
+    .heatmap-page-primary-btn
+  ) {
+    width: 100%;
+    min-width: 0;
+    padding-inline: clamp(8px, 3vw, 12px);
+    font-size: clamp(0.66rem, 3vw, 0.72rem);
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
   .heatmap-page-brand-pill,
   .heatmap-page-search-pill,
   .heatmap-page-filter-pill,

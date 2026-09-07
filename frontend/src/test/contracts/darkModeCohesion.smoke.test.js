@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.resolve(here, "../..");
 const cohesionPath = path.join(srcRoot, 'styles', 'dark-mode-cohesion.css');
+const finalPalettePath = path.join(srcRoot, 'styles', 'dark-mode-final-fixes.css');
 
 function read(relativePath) {
   return readFileSync(path.join(srcRoot, relativePath), 'utf8');
@@ -19,6 +20,32 @@ const profileSource = read('pages/profile/ProfileDashboard.jsx');
 const dashboardSource = read('pages/admin/Dashboard.jsx');
 const appIconSource = read('components/AppIcon.jsx');
 const cohesionSource = existsSync(cohesionPath) ? readFileSync(cohesionPath, 'utf8') : '';
+const finalPaletteSource = existsSync(finalPalettePath) ? readFileSync(finalPalettePath, 'utf8') : '';
+
+assert(
+  indexSource.lastIndexOf("@import './styles/dark-mode-final-fixes.css';")
+    > indexSource.lastIndexOf("@import './styles/runner-shell-workout-button.css';"),
+  'The Profile-derived midnight palette must be the final runner color authority.',
+);
+
+for (const sourcePath of ['styles/app.css', 'styles/profile-entry.css']) {
+  const source = read(sourcePath);
+  assert(
+    source.trimEnd().endsWith("@import './dark-mode-final-fixes.css';"),
+    `${sourcePath} must finish with the Profile-derived midnight palette.`,
+  );
+}
+
+assert(
+  finalPaletteSource.includes('--profile-night-canvas: linear-gradient(145deg, rgba(17, 20, 26, 0.98), rgba(8, 10, 15, 0.98))')
+    && finalPaletteSource.includes('--profile-night-card: rgba(255, 255, 255, 0.04)')
+    && finalPaletteSource.includes('--profile-night-ink: #f8f4ef')
+    && finalPaletteSource.includes('.runner-shell-page:not(.profile-dashboard-page)')
+    && finalPaletteSource.includes('.profile-import-modal-card')
+    && finalPaletteSource.includes('.shoe-edit-modal-card')
+    && finalPaletteSource.includes('.settings-garmin-import-modal-card'),
+  'Runner pages and dialogs must inherit the rendered Profile canvas, card, ink, and overlay colors.',
+);
 
 assert(
   indexSource.includes("@import './styles/dark-mode-cohesion.css';")

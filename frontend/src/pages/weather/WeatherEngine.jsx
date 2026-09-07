@@ -580,6 +580,8 @@ export default function WeatherEngine() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -588,7 +590,7 @@ export default function WeatherEngine() {
         </nav>
 
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} aria-label={wt('coach_cta_primary')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{wt('coach_cta_primary')}</span>
           </button>

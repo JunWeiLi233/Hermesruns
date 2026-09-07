@@ -52,10 +52,20 @@ class SpaForwardingControllerTests {
     }
 
     @Test
+    void profilePreloadsHeroWithoutMakingAccountIndexable() throws Exception {
+        mockMvc.perform(get("/profile"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Link",
+                        "</images/races/dashboard-hero.webp>; rel=preload; as=image; fetchpriority=high"))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
+    @Test
     void legalRouteRemainsIndexable() throws Exception {
         mockMvc.perform(get("/privacy"))
                 .andExpect(status().isOk())
-                .andExpect(header().doesNotExist("X-Robots-Tag"));
+                .andExpect(header().doesNotExist("X-Robots-Tag"))
+                .andExpect(header().doesNotExist("Link"));
     }
 
     @ParameterizedTest

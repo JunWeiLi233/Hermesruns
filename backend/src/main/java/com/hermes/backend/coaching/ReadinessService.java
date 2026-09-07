@@ -141,25 +141,7 @@ public class ReadinessService {
         if (state == null) {
             return neutralResult();
         }
-        LocalDate today = LocalDate.now();
-        Integer loadScore = computeLoadScore(runsForRunner(state.getRunner(), today), state.getRunner(), today);
-        double[] hrvBaseline = state.getRunner() == null
-                ? null
-                : hrvBaselineFor(hrvRepository.findByRunnerAndDateBetweenOrderByDateDesc(
-                        state.getRunner(),
-                        today.minusDays(HRV_BASELINE_WINDOW_DAYS),
-                        today.minusDays(1)
-                ).stream().collect(Collectors.groupingBy(DailyHRVData::getDate)), today);
-        return computeReadiness(
-                state.getLastSleepScore(),
-                state.getLastHrvStatus(),
-                state.getLastHrvMs(),
-                hrvBaseline,
-                state.getBaselineRestingHr(),
-                state.getLastNightRestingHr(),
-                state.getLastStressScore(),
-                loadScore
-        );
+        return resolveReadinessSnapshot(state.getRunner(), state, LocalDate.now()).readiness();
     }
 
     public MultiSourceReadinessSnapshot resolveReadinessSnapshot(Runner runner, CoachRunnerState state, LocalDate date) {
@@ -184,20 +166,21 @@ public class ReadinessService {
                 fallback.getBaselineRestingHr()
         );
 
+        // Rolling state is an undated cache, not evidence about the target day.
         Integer sleepScore = sleep.value() == null || sleep.value().getSleepScore() == null
-                ? fallback.getLastSleepScore()
+                ? null
                 : sleep.value().getSleepScore();
         Integer hrvMs = hrv.value() == null || hrv.value().getLastNightAvg() == null
-                ? fallback.getLastHrvMs()
+                ? null
                 : Integer.valueOf((int) Math.round(hrv.value().getLastNightAvg()));
         String hrvStatus = hrv.value() == null || hrv.value().getStatus() == null
-                ? fallback.getLastHrvStatus()
+                ? null
                 : hrv.value().getStatus();
         Integer restingHr = wellness.value() == null || wellness.value().getRestingHeartRate() == null
-                ? fallback.getLastNightRestingHr()
+                ? null
                 : wellness.value().getRestingHeartRate();
         Integer stressScore = stress.value() == null || stress.value().getOverallStressLevel() == null
-                ? fallback.getLastStressScore()
+                ? null
                 : stress.value().getOverallStressLevel();
 
         double[] hrvBaseline = hrvMs == null && (hrvStatus == null || hrvStatus.isBlank())
@@ -223,15 +206,50 @@ public class ReadinessService {
         return new MultiSourceReadinessSnapshot(
                 readiness,
                 new MetricSources(sourceName(sleep), sourceName(hrv), sourceName(wellness), sourceName(stress)),
-                hasSelectedDailyData(sleep, hrv, stress, wellness) || hasFallbackDailyReadinessData(fallback),
+                hasSelectedDailyData(sleep, hrv, stress, wellness),
                 new MetricAvailability(
                         sleep.value() != null,
                         hrv.value() != null,
                         wellness.value() != null,
                         stress.value() != null,
                         loadScore != null
-                )
+                ),
+                new MetricReadings(sleepScore, hrvMs, hrvStatus, restingHr, stressScore,
+                        wellness.value() == null ? null : wellness.value().getBodyBatteryAtWake())
         );
+    }
+
+    /** Manual check-ins use the same dated evidence store as device readings. */
+    public void recordManualRecovery(Runner runner, LocalDate date, Integer restingHr,
+                                     Integer sleepScore, Integer hrvMs, Integer stressScore) {
+        if (sleepScore != null) {
+            DailySleepData row = sleepRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.MANUAL, date)
+                    .orElseGet(DailySleepData::new);
+            row.setRunner(runner); row.setProvider(ImportProvider.MANUAL); row.setDate(date);
+            row.setSleepScore(sleepScore); row.setSourceChecksum("manual-" + date);
+            sleepRepository.save(row);
+        }
+        if (hrvMs != null) {
+            DailyHRVData row = hrvRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.MANUAL, date)
+                    .orElseGet(DailyHRVData::new);
+            row.setRunner(runner); row.setProvider(ImportProvider.MANUAL); row.setDate(date);
+            row.setLastNightAvg(hrvMs.doubleValue()); row.setSourceChecksum("manual-" + date);
+            hrvRepository.save(row);
+        }
+        if (restingHr != null) {
+            DailyWellnessSummary row = wellnessRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.MANUAL, date)
+                    .orElseGet(DailyWellnessSummary::new);
+            row.setRunner(runner); row.setProvider(ImportProvider.MANUAL); row.setDate(date);
+            row.setRestingHeartRate(restingHr); row.setSourceChecksum("manual-" + date);
+            wellnessRepository.save(row);
+        }
+        if (stressScore != null) {
+            DailyStressData row = stressRepository.findByRunnerAndProviderAndDate(runner, ImportProvider.MANUAL, date)
+                    .orElseGet(DailyStressData::new);
+            row.setRunner(runner); row.setProvider(ImportProvider.MANUAL); row.setDate(date);
+            row.setOverallStressLevel(stressScore); row.setSourceChecksum("manual-" + date);
+            stressRepository.save(row);
+        }
     }
 
     /**
@@ -306,15 +324,6 @@ public class ReadinessService {
         return Arrays.stream(selections)
                 .filter(Objects::nonNull)
                 .anyMatch(selection -> selection.value() != null);
-    }
-
-    private boolean hasFallbackDailyReadinessData(CoachRunnerState state) {
-        if (state == null) return false;
-        return state.getLastSleepScore() != null
-                || state.getLastHrvMs() != null
-                || (state.getLastHrvStatus() != null && !state.getLastHrvStatus().isBlank())
-                || state.getLastNightRestingHr() != null
-                || state.getLastStressScore() != null;
     }
 
     private ReadinessResult computeReadiness(
@@ -521,7 +530,10 @@ public class ReadinessService {
     ) {
         List<T> safeEntries = entries == null ? List.of() : entries;
         if (isManualSource(preferredSource)) {
-            return new SourceSelection<>(null, null, "MANUAL");
+            return safeEntries.stream().filter(Objects::nonNull).filter(usable)
+                    .filter(entry -> providerResolver.apply(entry) == ImportProvider.MANUAL)
+                    .findFirst().map(entry -> new SourceSelection<>(entry, ImportProvider.MANUAL, null))
+                    .orElse(new SourceSelection<>(null, null, "MANUAL"));
         }
         Optional<ImportProvider> preferredProvider = parseWellnessSource(preferredSource);
         if (preferredProvider.isPresent()) {
@@ -603,6 +615,11 @@ public class ReadinessService {
 
     public record MetricSources(String sleep, String hrv, String restingHeartRate, String stress) {}
 
+    public record MetricReadings(Integer sleepScore, Integer hrvMs, String hrvStatus,
+                                 Integer restingHeartRate, Integer stressScore, Integer bodyBatteryAtWake) {
+        public static MetricReadings none() { return new MetricReadings(null, null, null, null, null, null); }
+    }
+
     public record MetricAvailability(boolean sleep, boolean hrv, boolean restingHeartRate, boolean stress, boolean trainingLoad) {
         public boolean any() {
             return sleep || hrv || restingHeartRate || stress || trainingLoad;
@@ -621,8 +638,13 @@ public class ReadinessService {
             ReadinessResult readiness,
             MetricSources sources,
             boolean hasSourceData,
-            MetricAvailability availability
+            MetricAvailability availability,
+            MetricReadings readings
     ) {
+        public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources,
+                                            boolean hasSourceData, MetricAvailability availability) {
+            this(readiness, sources, hasSourceData, availability, MetricReadings.none());
+        }
         public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources) {
             this(readiness, sources, true, MetricAvailability.all());
         }

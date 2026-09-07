@@ -24,8 +24,8 @@ assert.ok(
   'Shoes redesign CSS should load after contrast fixes so route-specific decisions win.',
 );
 assert.ok(
-  indexCss.indexOf("@import './styles/dark-mode-final-fixes.css';") < indexCss.indexOf("@import './styles/shoes-atelier-redesign.css';"),
-  'Shoes redesign CSS should load after dark-mode final fixes.',
+  indexCss.indexOf("@import './styles/dark-mode-final-fixes.css';") > indexCss.indexOf("@import './styles/shoes-atelier-redesign.css';"),
+  'The final Profile dark palette should follow Shoes styling so light surfaces cannot leak into dark mode.',
 );
 
 [

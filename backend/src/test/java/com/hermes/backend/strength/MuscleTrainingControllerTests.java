@@ -54,6 +54,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MuscleTrainingControllerTests {
 
     @Autowired
+    private com.hermes.backend.coaching.ReadinessService readinessService;
+
+    @Autowired
     private MockMvc mockMvc;
 
     @Autowired
@@ -334,6 +337,8 @@ class MuscleTrainingControllerTests {
         state.setLastSleepScore(40);
         state.setLastAggregatedAt(LocalDateTime.now());
         coachRunnerStateRepository.save(state);
+        // Recovery gating now requires dated evidence, not cached aggregate fields.
+        readinessService.recordManualRecovery(runner, LocalDate.now(), 60, 40, null, null);
 
         CoachTrainingBlock block = new CoachTrainingBlock();
         block.setRunner(runner);

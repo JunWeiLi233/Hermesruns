@@ -20,8 +20,10 @@
   --hd-bg-today-text: #f6f1eb;
   --hd-bg-input: rgba(0,0,0,0.03);
   --hd-text-primary: #1c1917;
-  --hd-text-secondary: #78716c;
-  --hd-text-tertiary: #a8a29e;
+  --hd-text-secondary: #625c56;
+  --hd-text-tertiary: #706963;
+  --ahs-secondary: #626269;
+  --ahs-tertiary: #707078;
   /* Accent now derives from the global brand token so Profile is consistent with
      every other page rather than a divergent #c0462b island. */
   --hd-accent: var(--brand-accent, #a0392a);
@@ -50,7 +52,7 @@
 
 /* Dark mode token overrides */
 [data-theme="midnight"] .hd-content,
-body.theme-midnight .hd-content {
+body:is(.theme-midnight, .theme-high-contrast) .hd-content {
   --hd-bg-card: rgba(255,255,255,0.04);
   --hd-bg-card-elevated: rgba(255,255,255,0.06);
   --hd-bg-card-hover: rgba(255,255,255,0.07);
@@ -58,8 +60,8 @@ body.theme-midnight .hd-content {
   --hd-bg-today-text: #f6f1eb;
   --hd-bg-input: rgba(255,255,255,0.04);
   --hd-text-primary: #ece5dd;
-  --hd-text-secondary: #9e988f;
-  --hd-text-tertiary: #7a7368;
+  --hd-text-secondary: #c8bfb2;
+  --hd-text-tertiary: #b2a99c;
   --hd-accent: var(--accent-coral-strong, #f07561);
   --hd-accent-soft: rgba(240,117,97,0.1);
   --hd-accent-medium: rgba(240,117,97,0.18);
@@ -67,7 +69,7 @@ body.theme-midnight .hd-content {
   --hd-coral: var(--accent-coral-strong, #f07561);
   --hd-coral-soft: rgba(240,117,97,0.1);
   --hd-coral-medium: rgba(240,117,97,0.16);
-  --hd-green: #6fa985;
+  --hd-green: #9cd2aa;
   --hd-green-soft: rgba(111,169,133,0.12);
   --hd-line: rgba(255,255,255,0.06);
   --hd-line-strong: rgba(255,255,255,0.1);
@@ -175,6 +177,35 @@ body.theme-midnight .hd-content {
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.72) 100%);
+}
+
+.hd-today-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Profile content should be visible at its final position on the first paint. */
+.profile-dashboard-page .hd-content :is(.hd-hero, .hd-today-card, .hd-metric-strip, .hd-training-grid, .hd-progression, .hd-bottom-grid, .hd-rewards) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-dashboard-page :is(.hd-stamina-fill, .hd-rewards-next-fill) {
+    transition: none;
+  }
+}
+
+.profile-dashboard-page .hd-trend-badge.improving,
+.profile-dashboard-page .profile-weekly-digest-vdot-improving {
+  color: #2f7248;
+}
+
+body #root .profile-dashboard-page .hd-content .hd-metric-strip .hd-metric-card .hd-metric-kicker {
+  color: var(--hd-text-secondary) !important;
 }
 
 .hd-today-content {
@@ -444,7 +475,7 @@ body.theme-midnight .hd-content {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
 }
 
 .hd-card-title {
@@ -944,10 +975,12 @@ body.theme-midnight .hd-content {
 }
 
 .hd-stamina-fill {
+  width: 100%;
   height: 100%;
   border-radius: 4px;
   background: var(--hd-accent-gradient);
-  transition: width 0.5s var(--hd-transition-bounce);
+  transform-origin: left;
+  transition: transform 0.5s var(--hd-transition-bounce);
 }
 
 .hd-stamina-fill.cap {
@@ -1090,7 +1123,7 @@ body.theme-midnight .hd-content {
 
 .hd-rewards-ring-center span {
   font-size: 0.62rem;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
   font-weight: 600;
 }
 
@@ -1109,7 +1142,7 @@ body.theme-midnight .hd-content {
 .hd-rewards-progress-label span {
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--hd-text-tertiary);
+  color: var(--hd-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1174,10 +1207,12 @@ body.theme-midnight .hd-content {
 }
 
 .hd-rewards-next-fill {
+  width: 100%;
   height: 100%;
   border-radius: 4px;
   background: var(--hd-accent-gradient);
-  transition: width 0.5s var(--hd-transition-bounce);
+  transform-origin: left;
+  transition: transform 0.5s var(--hd-transition-bounce);
 }
 
 .hd-rewards-next-pct {
@@ -1394,4 +1429,128 @@ body.theme-midnight .hd-rewards-badge-icon {
     padding: 0.875rem 1rem;
     font-size: 0.875rem;
   }
+}
+
+/* Keep the dashboard readable and its controls reachable on a phone. */
+@media (max-width: 640px) {
+  #root .profile-dashboard-page .hd-content {
+    min-width: 0;
+    padding: 20px 16px 40px;
+    gap: 20px;
+  }
+
+  #root .profile-dashboard-page .hd-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: 20px;
+  }
+
+  #root .profile-dashboard-page .hd-hero-greeting {
+    font-size: clamp(1.35rem, 5.5vw, 1.65rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-readiness-ring {
+    width: 48px;
+    height: 48px;
+  }
+
+  #root .profile-dashboard-page .hd-readiness-value strong {
+    font-size: 1.1rem;
+  }
+
+  #root .profile-dashboard-page :is(.hd-card-kicker, .hd-readiness-label, .hd-metric-kicker, .hd-today-stat-label, .hd-session-info span, .hd-session-right span) {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  #root .profile-dashboard-page .hd-today-content {
+    padding: 24px 20px;
+  }
+
+  #root .profile-dashboard-page .hd-today-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  #root .profile-dashboard-page .hd-today-stat,
+  #root .profile-dashboard-page .hd-today-stat strong {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-today-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  #root .profile-dashboard-page .hd-today-actions > button {
+    min-height: 44px;
+    flex: 1 1 110px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-card {
+    min-width: 0;
+    padding: 18px 16px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  #root .profile-dashboard-page .hd-metric-value {
+    font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-progression {
+    min-width: 0;
+    padding: 22px 16px;
+  }
+
+  #root .profile-dashboard-page .hd-progression-switcher {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    gap: 2px;
+  }
+
+  #root .profile-dashboard-page .hd-progression-tab {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 4px;
+    font-size: 0.75rem;
+  }
+
+  #root .profile-dashboard-page .hd-progression-meta-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 16px;
+  }
+}
+
+.profile-dashboard-page :is(.hd-progression-tab, .hd-bar-col, .hd-link-btn, .hd-session-item):focus-visible {
+  outline: 2px solid var(--hd-accent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+/* Pale coral actions and green badges need a distinct dark-mode text pair. */
+body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-btn-primary {
+  color: #2b1b14;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-trend-badge.improving {
+  color: var(--hd-green);
 }

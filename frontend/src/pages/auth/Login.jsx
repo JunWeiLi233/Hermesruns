@@ -34,7 +34,6 @@ export default function Login() {
 
   const stravaConfigured = authProviders?.stravaConfigured === true;
   const googleConfigured = authProviders?.googleConfigured === true;
-  const hasConfiguredSocialProvider = stravaConfigured || googleConfigured;
 
   useEffect(() => {
     const oauthMfa = searchParams.get('adminMfa');
@@ -440,8 +439,8 @@ export default function Login() {
               )}
             </form>
 
-            {!adminMfaStage && hasConfiguredSocialProvider && (
-              <div className="auth-flow-social">
+            {!adminMfaStage && (
+              <div className="auth-flow-social auth-flow-social--reserved" aria-busy={authProviders === null}>
                 {stravaConfigured && (
                   <button
                     type="button"
@@ -455,6 +454,7 @@ export default function Login() {
                       width="237"
                       height="48"
                       loading="eager"
+                      fetchPriority="high"
                       decoding="async"
                     />
                   </button>

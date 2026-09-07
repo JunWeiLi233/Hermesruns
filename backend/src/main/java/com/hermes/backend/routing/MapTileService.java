@@ -201,6 +201,13 @@ public class MapTileService {
         headers.set(HttpHeaders.ORIGIN, normalizedOrigin(referer));
 
         try {
+            // Another owner may have filled the cache and removed its future
+            // between our initial miss and putIfAbsent. Do not fetch it twice.
+            CachedTile completedWhileClaiming = tileCache.get(cacheKey);
+            if (completedWhileClaiming != null && !completedWhileClaiming.isExpired(clock.instant())) {
+                inFlight.complete(completedWhileClaiming);
+                return freshResult(completedWhileClaiming);
+            }
             ResponseEntity<byte[]> upstream = restTemplate.exchange(
                     upstreamUrl,
                     HttpMethod.GET,

@@ -236,6 +236,8 @@ export default function ShoeCatalog() {
               onClick={() => navigate(item.route)}
               onPointerEnter={() => preloadRoute(item.route)}
               onFocus={() => preloadRoute(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -244,7 +246,7 @@ export default function ShoeCatalog() {
         </nav>
 
         <div className="runner-shell-sidebar-footer">
-          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} onPointerEnter={() => preloadRoute('/today-run')} onFocus={() => preloadRoute('/today-run')}>
+          <button type="button" className="runner-shell-workout-btn runner-dashboard-workout-btn" onClick={() => navigate('/today-run')} onPointerEnter={() => preloadRoute('/today-run')} onFocus={() => preloadRoute('/today-run')} aria-label={t('profile.dashboard_start_workout')}>
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
           </button>
@@ -264,7 +266,20 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <div className="user-menu-shell" ref={avatarMenuRef}>
+            <div
+                  className="user-menu-shell"
+                  ref={avatarMenuRef}
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Escape' && avatarMenuOpen) {
+                      event.preventDefault();
+                      setAvatarMenuOpen(false);
+                      event.currentTarget.querySelector('button')?.focus();
+                    }
+                  }}
+                >
               <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label="Profile" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
                 H
               </button>

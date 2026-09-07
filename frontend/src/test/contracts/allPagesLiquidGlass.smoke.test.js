@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const indexSource = readFileSync(path.join(here, "../../index.css"), 'utf8');
+const foundationStyleSource = readFileSync(path.join(here, "../../styles/liquid-glass.css"), 'utf8');
 const styleSource = readFileSync(path.join(here, "../../styles/all-pages-liquid-glass.css"), 'utf8');
 
 function assert(condition, message) {
@@ -34,6 +35,12 @@ assert(
     && styleSource.includes('@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)))')
     && styleSource.includes('@media (prefers-reduced-motion: reduce)'),
   'The shared treatment should provide frosted depth, a browser fallback, and reduced-motion behavior.',
+);
+
+assert(
+  /body\s*\{[^}]*min-width:\s*0;/.test(foundationStyleSource)
+    && !/body\s*\{[^}]*min-width:\s*320px;/.test(foundationStyleSource),
+  'The shared glass foundation must let the body fit the usable viewport beside a classic scrollbar.',
 );
 
 assert(

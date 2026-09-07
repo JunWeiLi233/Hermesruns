@@ -448,14 +448,29 @@
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.14);
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
+    visibility: hidden;
     pointer-events: none;
     transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .user-menu-dropdown.visible {
     opacity: 1;
+    visibility: visible;
     transform: translateY(0) scale(1);
     pointer-events: auto;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runner-shell-page .user-menu-dropdown {
+    background: #26231f;
+    border-color: rgba(255, 248, 238, 0.2);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runner-shell-page .user-menu-item {
+    color: #fff8ee;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .runner-shell-page .user-menu-item-logout {
+    color: #ffa599;
 }
 
 .user-menu-header {

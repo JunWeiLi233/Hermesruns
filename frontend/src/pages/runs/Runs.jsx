@@ -515,7 +515,7 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onD
         <div className="recent-runs-card-body">
           <div className="recent-runs-card-top">
             <div>
-              <h2>{runName}</h2>
+              <h3>{runName}</h3>
               <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
             </div>
           </div>
@@ -534,7 +534,7 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onD
           title={t('runs.delete')}
           onClick={(e) => { e.stopPropagation(); onDelete(run); }}
         >
-          <AppIcon name="close" />
+          <AppIcon name="delete" />
         </button>
       )}
     </div>
@@ -1166,20 +1166,20 @@ const Runs = memo(function Runs() {
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
       return distinctYears.map((year) => (
-        <button key={year} type="button" className={`recent-runs-chip${year === selectedYear ? ' is-active' : ''}`} onClick={() => setSelectedYear(year)}>
+        <button key={year} type="button" className={`recent-runs-chip${year === selectedYear ? ' is-active' : ''}`} onClick={() => setSelectedYear(year)} aria-pressed={year === selectedYear}>
           {year}
         </button>
       ));
     }
     if (activeMode === 'month') {
       return monthsWithData.map((month) => (
-        <button key={month} type="button" className={`recent-runs-chip${month === selectedMonth ? ' is-active' : ''}`} onClick={() => setSelectedMonth(month)}>
+        <button key={month} type="button" className={`recent-runs-chip${month === selectedMonth ? ' is-active' : ''}`} onClick={() => setSelectedMonth(month)} aria-pressed={month === selectedMonth}>
           {monthNames[month]}
         </button>
       ));
     }
     return sortOptions.map((option) => (
-      <button key={option.key} type="button" className={`recent-runs-chip${runsSort === option.key ? ' is-active' : ''}`} onClick={() => setRunsSort(option.key)}>
+      <button key={option.key} type="button" className={`recent-runs-chip${runsSort === option.key ? ' is-active' : ''}`} onClick={() => setRunsSort(option.key)} aria-pressed={runsSort === option.key}>
         {option.label}
       </button>
     ));
@@ -1279,6 +1279,7 @@ const Runs = memo(function Runs() {
                 onPointerEnter={() => preloadRoute(item.route)}
                 onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
+                aria-current={item.active ? 'page' : undefined}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
                 <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -1323,7 +1324,7 @@ const Runs = memo(function Runs() {
           </header>
 
           <div className="runner-shell-canvas">
-            <main className="integration-alert-shell runs-dashboard-shell runs-ledger-awaiting">
+            <div className="integration-alert-shell runs-dashboard-shell runs-ledger-awaiting">
               <div className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
                 <h1>{t('runs.heading')}</h1>
                 <p>{t('runs.page_copy')}</p>
@@ -1407,7 +1408,7 @@ const Runs = memo(function Runs() {
               <footer className="runner-shell-footer runner-dashboard-footer">
                 <FooterNavLinks />
               </footer>
-            </main>
+            </div>
           </div>
         </main>
         {renderImportModal()}
@@ -1443,6 +1444,7 @@ const Runs = memo(function Runs() {
               onPointerEnter={() => preloadRoute(item.route)}
               onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -1487,7 +1489,7 @@ const Runs = memo(function Runs() {
         </header>
 
         <div className="runner-shell-canvas">
-          <main className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign">
+          <div className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign">
             <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
               <div className="runs-profile-cockpit__primary">
                 <div className="runs-profile-cockpit__heading">
@@ -1516,7 +1518,7 @@ const Runs = memo(function Runs() {
               </div>
               <div className="runs-profile-cockpit__rail" aria-label={t('runs.stitch_pattern_title')}>
                 <article className="runs-profile-signal runs-profile-signal--count">
-                  <span>{t('runs.full_history')}</span>
+                  <span>{t('runs.result_count_label')}</span>
                   <strong>{countText}</strong>
                 </article>
                 <article className="runs-profile-signal">
@@ -1531,9 +1533,9 @@ const Runs = memo(function Runs() {
             </section>
             <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
               <section className="recent-runs-stats-grid">
-                <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="route" className="runs-profile-metric-icon" />{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="speed" className="runs-profile-metric-icon" />{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="timer" className="runs-profile-metric-icon" />{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
               </section>
               {filteredRuns.length > 0 ? (
                 <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
@@ -1563,29 +1565,38 @@ const Runs = memo(function Runs() {
                     type="text"
                     className="recent-runs-search-input"
                     placeholder={t('runs.search_placeholder')}
+                    aria-label={t('runs.search_placeholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   {searchQuery && (
-                    <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('profile.close')}>
+                    <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('runs.clear_search')}>
                       <AppIcon name="close" />
                     </button>
                   )}
                 </div>
               </div>
               <div className="runs-profile-workbench__filters">
-                <div className="recent-runs-chip-row">
+                <div className="recent-runs-chip-row" role="group" aria-label={t('runs.filter_group_label')}>
                   {timeFilterOptions.map((option) => (
                     <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
                       setActiveMode(option.key);
                       setSelectedYear(null);
                       setSelectedMonth(null);
-                    }}>
+                    }} aria-pressed={activeMode === option.key}>
                       {option.label}
                     </button>
                   ))}
                 </div>
-                <div className="recent-runs-chip-row recent-runs-chip-row--secondary">{renderSecondaryFilterRow()}</div>
+                <div
+                  className="recent-runs-chip-row recent-runs-chip-row--secondary"
+                  role="group"
+                  aria-label={activeMode === 'year' || activeMode === 'month'
+                    ? t('runs.filter_group_label')
+                    : t('runs.sort_group_label')}
+                >
+                  {renderSecondaryFilterRow()}
+                </div>
               </div>
             </section>
             <section className="recent-runs-card-list" aria-label={t('runs.full_history')}>
@@ -1604,7 +1615,7 @@ const Runs = memo(function Runs() {
                         className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
                         aria-label={group.label}
                       >
-                        <button
+                        <h2 className="recent-runs-month-heading"><button
                           type="button"
                           className="recent-runs-month-header recent-runs-month-toggle"
                           aria-expanded={!collapsed}
@@ -1614,13 +1625,13 @@ const Runs = memo(function Runs() {
                           <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
                             <AppIcon name={collapsed ? 'expand_more' : 'expand_less'} />
                           </span>
-                          <h3 className="recent-runs-month-title">{group.label}</h3>
+                          <span className="recent-runs-month-title">{group.label}</span>
                           <span className="recent-runs-month-meta">
                             {t('runs.count_label', { count: group.runs.length })}
                             {' · '}
                             {formatDistance(group.totalKm, 1, lang)}
                           </span>
-                        </button>
+                        </button></h2>
                         <div
                           id={panelId}
                           className="recent-runs-month-grid"
@@ -1662,7 +1673,7 @@ const Runs = memo(function Runs() {
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
             </footer>
-          </main>
+          </div>
         </div>
       </main>
       {renderImportModal()}

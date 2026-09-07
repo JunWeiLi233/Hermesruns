@@ -65,7 +65,7 @@ function formatWellnessSourceLabel(source, t) {
 
 export default function Settings() {
   const { isAuthenticated, authHydrated, logout } = useAuth();
-  const { t, lang, setLang } = useI18n();
+  const { t, lang, locale, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
   const { unit, setUnit } = useUnit();
   const navigate = useNavigate();
@@ -166,10 +166,8 @@ export default function Settings() {
     { value: 'light', label: t('settings.stitch_theme_glitter'), icon: 'light_mode' },
   ]), [t]);
   const activeThemeLabel = themeCards.find((card) => card.value === theme)?.label || '';
-  const languageLabel = t('settings.language_label');
   const stravaLabel = formatStravaSyncLabel(stravaStatus, t);
-  const digestLabel = digestEnabled ? t('settings.stitch_digest_enabled') : t('settings.stitch_enable_digest');
-  const resolvedLanguageLabel = languageLabel;
+  const resolvedLanguageLabel = locale.label;
   const garminStatusLabel = t('settings.stitch_garmin_ready');
   const wellnessRows = useMemo(() => WELLNESS_SOURCE_ROWS.map((row) => ({
     ...row,
@@ -426,6 +424,8 @@ export default function Settings() {
               type="button"
               className="runner-shell-side-link"
               onClick={() => navigate(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -458,7 +458,7 @@ export default function Settings() {
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
+              <button type="button" className="runner-shell-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayNameResolved}>
@@ -480,7 +480,6 @@ export default function Settings() {
           heroBadge={heroBadge}
           completionScore={completionScore}
           ecosystemCount={ecosystemCount}
-          digestLabel={digestLabel}
           digestEnabled={digestEnabled}
           stravaStatus={stravaStatus}
           stravaLabel={stravaLabel}
@@ -516,10 +515,12 @@ export default function Settings() {
           onAvatarUpload={uploadAvatar}
           onAvatarRemove={removeAvatar}
         />
-        <GarminImportModal
-          embedded={garminImportModalOpen}
-          onClose={() => setGarminImportModalOpen(false)}
-        />
+        {garminImportModalOpen && (
+          <GarminImportModal
+            embedded={garminImportModalOpen}
+            onClose={() => setGarminImportModalOpen(false)}
+          />
+        )}
       </main>
     </div>
   );

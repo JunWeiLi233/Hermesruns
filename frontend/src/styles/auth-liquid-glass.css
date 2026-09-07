@@ -501,6 +501,11 @@
   font-size: 0.84rem;
 }
 
+/* Keep the centered login form stable while provider discovery resolves. */
+#root .auth-page--login .auth-flow-social--reserved {
+  min-height: 48px;
+}
+
 #root .auth-page--liquid-glass .auth-flow-btn--strava {
   grid-column: 1;
   grid-row: 1;
@@ -962,6 +967,10 @@
 
   #root .auth-page--liquid-glass .auth-flow-social {
     grid-template-columns: 1fr;
+  }
+
+  #root .auth-page--login .auth-flow-social--reserved {
+    min-height: 104px;
   }
 
   #root .auth-page--liquid-glass .auth-flow-btn--strava,

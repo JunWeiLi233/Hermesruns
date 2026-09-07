@@ -15,9 +15,28 @@ function assert(condition, message) {
   }
 }
 
+function readCssBlock(source, marker) {
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return '';
+  const openIndex = source.indexOf('{', markerIndex);
+  if (openIndex < 0) return '';
+
+  let depth = 0;
+  for (let index = openIndex; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] !== '}') continue;
+    depth -= 1;
+    if (depth === 0) return source.slice(openIndex + 1, index);
+  }
+
+  return '';
+}
+
 const heatmapSource = read('pages/heatmap/Heatmap.jsx');
 const styleSource = read('styles/_split/heatmap.css');
 const liquidGlassSource = read('styles/all-pages-liquid-glass.css');
+const compactViewportStyles = readCssBlock(styleSource, '@media (max-width: 920px)');
+const mobileViewportStyles = readCssBlock(styleSource, '@media (max-width: 720px)');
 
 assert(
   heatmapSource.includes("aria-label={t('heatmap.page_recenter')}"),
@@ -46,6 +65,28 @@ assert(
 assert(
   /\.heatmap-page-utility-rail\s*\{[\s\S]*bottom:\s*18px;[\s\S]*grid-auto-flow:\s*column;[\s\S]*max-width:\s*calc\(100% - 32px\);/.test(styleSource),
   'Heatmap mobile utility rail should remain reachable as a bottom horizontal control strip.',
+);
+
+const compactUtilityRailStyles = readCssBlock(compactViewportStyles, '.heatmap-page-utility-rail');
+assert(
+  /left:\s*16px;/.test(compactUtilityRailStyles)
+    && /right:\s*16px;/.test(compactUtilityRailStyles)
+    && /overflow-x:\s*auto;/.test(compactUtilityRailStyles)
+    && /touch-action:\s*pan-x;/.test(compactUtilityRailStyles)
+    && /-webkit-overflow-scrolling:\s*touch;/.test(compactUtilityRailStyles),
+  'Heatmap compact utility rail should expose every route and zoom control through native horizontal touch scrolling.',
+);
+
+const mobileActionGroupStyles = readCssBlock(
+  mobileViewportStyles,
+  '.heatmap-page-action-strip > .runner-shell-topbar-profile-actions',
+);
+assert(
+  /display:\s*grid;/.test(mobileActionGroupStyles)
+    && /grid-template-columns:\s*minmax\(0,\s*4fr\)\s+minmax\(0,\s*5fr\)\s+48px;/.test(mobileActionGroupStyles)
+    && /width:\s*100%;/.test(mobileActionGroupStyles)
+    && /max-width:\s*100%;/.test(mobileActionGroupStyles),
+  'Heatmap mobile topbar actions should fit both readable text actions and the avatar within the available row.',
 );
 
 assert(
