@@ -259,9 +259,16 @@ export default function Analysis() {
       }
     }
 
+    // Critical path only: profile + analysis activities power first paint.
+    // Coach is wake-amplifying and paints into non-blocking cards — idle it.
     loadProfile();
     loadRuns();
-    loadCoachToday();
+
+    const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 200));
+    scheduleIdle(() => {
+      if (!isCurrentLoad()) return;
+      void loadCoachToday();
+    });
   }, []);
 
   useEffect(() => {
@@ -294,8 +301,11 @@ export default function Analysis() {
   const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
   const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) return undefined;
     let cancelled = false;
+    const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 200));
+    const cancelIdle = window.cancelIdleCallback || window.clearTimeout;
+
     async function fetchInjuryStatus() {
       setInjuryStatusLoading(true);
       try {
@@ -310,8 +320,16 @@ export default function Analysis() {
         if (!cancelled) setInjuryStatusLoading(false);
       }
     }
-    fetchInjuryStatus();
-    return () => { cancelled = true; };
+
+    // Defer injury-risk until after first paint / idle so wake first-paint
+    // only contends with profile/me + activities/analysis.
+    const idleHandle = scheduleIdle(() => {
+      if (!cancelled) void fetchInjuryStatus();
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle(idleHandle);
+    };
   }, [isAuthenticated]);
 
   const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
@@ -362,7 +380,7 @@ export default function Analysis() {
     setRunsState('loading');
     try {
       invalidateResourceCache('/api/activities');
-      const activitiesData = await apiJson('/api/activities/analysis');
+      const activitiesData = await cachedApiJson('/api/activities/analysis');
       const list = Array.isArray(activitiesData) ? activitiesData : [];
       startTransition(() => {
         setRuns(list);

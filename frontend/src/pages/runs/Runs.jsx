@@ -8,6 +8,7 @@ const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch, apiJson, getBackendBaseUrl } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
+import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import AppIcon from '../../components/AppIcon';
 import PageSkeleton from '../../components/PageSkeleton';
 import FooterNavLinks from '../../components/FooterNavLinks';
@@ -653,13 +654,8 @@ const Runs = memo(function Runs() {
         runsMetadataRef.current.stravaStatus = cachedHit.stravaStatus;
       }
       setLoadState('ready');
-      const preloadIds = sorted
-        .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
-        .map((run) => run?.id)
-        .filter((id) => Number.isFinite(Number(id)));
-      if (preloadIds.length > 0) {
-        requestRoutePreviews(preloadIds, { isCurrent: isCurrentLoad });
-      }
+      // Route-previews are deferred to the post-paint idle effect so the
+      // activities list can commit before the preview batch contends on wake.
     }
 
     if (!isCurrentLoad()) return;
@@ -682,15 +678,9 @@ const Runs = memo(function Runs() {
         const list = Array.isArray(data) ? data : [];
         list.sort((a, b) => runDate(b) - runDate(a));
         latestRuns = list;
-        const preloadIds = list
-          .slice(0, ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT)
-          .map((run) => run?.id)
-          .filter((id) => Number.isFinite(Number(id)));
         setAllRuns(list);
         setLoadState('ready');
-        if (preloadIds.length > 0) {
-          requestRoutePreviews(preloadIds, { isCurrent: isCurrentLoad });
-        }
+        // Route-previews deferred until after the activities list paints.
       })
       .catch((err) => {
         if (!isCurrentLoad()) return;
@@ -725,7 +715,7 @@ const Runs = memo(function Runs() {
     if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
       writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
     }
-  }, [email, requestRoutePreviews, runsIdentity]);
+  }, [email, runsIdentity]);
 
   const refreshRuns = useCallback(() => {
     runsLoadGenerationRef.current.invalidate();
@@ -767,6 +757,7 @@ const Runs = memo(function Runs() {
     let sawActiveSync = false;
 
     while (Date.now() < deadlineMs) {
+      await waitWhileDocumentHidden();
       let syncStatus = null;
       try {
         syncStatus = await apiJson('/api/auth/strava/sync-status');
@@ -1153,14 +1144,22 @@ const Runs = memo(function Runs() {
       const hasPointPreview = run.id in routePreviewFallbacks;
       const hasBbox = run.id in routeBboxes || !!readBboxFromPreview(routePreviewFallbacks[run.id] || run.routePreview);
       return !hasPointPreview || !hasBbox;
-    }).slice(0, 50);
+    }).slice(0, Math.max(ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT, 50));
     if (pendingRuns.length === 0) return undefined;
 
     let cancelled = false;
     const pendingIds = pendingRuns.map((run) => run.id);
-    requestRoutePreviews(pendingIds, { isCurrent: () => !cancelled });
+    const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 0));
+    const cancelIdle = window.cancelIdleCallback || window.clearTimeout;
+    // Wait until idle (or next macrotask) so the activities list paints first
+    // before /api/activities/route-previews contends on a cold wake.
+    const idleHandle = scheduleIdle(() => {
+      if (cancelled) return;
+      requestRoutePreviews(pendingIds, { isCurrent: () => !cancelled });
+    });
     return () => {
       cancelled = true;
+      cancelIdle(idleHandle);
     };
   }, [requestRoutePreviews, routePreviewRuns, routeBboxes, routePreviewFallbacks]);
 

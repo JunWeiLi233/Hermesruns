@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson, apiFetch } from '../../api';
+import { cachedApiJson } from '../../api/resourceCache';
 import 'leaflet/dist/leaflet.css';
 import AppIcon from '../../components/AppIcon';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
@@ -358,8 +359,8 @@ export default function Schedule() {
       setLoadState('loading');
       try {
         const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData] = await Promise.all([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
+          cachedApiJson('/api/profile/me'),
+          cachedApiJson('/api/activities'),
           apiJson('/api/coach/state').catch(() => null),
           apiJson('/api/coach/today').catch(() => null),
           apiJson('/api/coach/schedule?days=14').catch(() => []),

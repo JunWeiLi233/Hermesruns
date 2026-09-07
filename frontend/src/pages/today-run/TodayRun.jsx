@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
+import { cachedApiJson } from '../../api/resourceCache';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { getTodayRunRecommendation } from '../../utils/todayRun';
 import { formatPlannedDuration, prettifyWorkoutType } from '../../utils/coach/presentation.js';
@@ -272,8 +273,8 @@ function normalizeTodayDashboardPayload(payload) {
 
 async function loadTodayRunFallbackData() {
   const [profileData, activitiesData, coachData, weatherData, raceData, shoeData] = await Promise.all([
-    apiJson('/api/profile/me').catch(() => null),
-    apiJson('/api/activities'),
+    cachedApiJson('/api/profile/me').catch(() => null),
+    cachedApiJson('/api/activities'),
     apiJson('/api/coach/today').catch(() => null),
     apiJson('/api/v1/weather/context').catch(() => null),
     apiJson('/api/races').catch(() => []),

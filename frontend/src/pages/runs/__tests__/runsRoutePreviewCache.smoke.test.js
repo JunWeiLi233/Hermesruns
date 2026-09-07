@@ -45,10 +45,22 @@ assert.match(
   'Runs page should centralize batched route-preview fetching so initial preload and scroll hydration share one code path.',
 );
 
+assert.doesNotMatch(
+  runsSource,
+  /requestRoutePreviews\(preloadIds/,
+  'Runs loadRuns must not eagerly request route-previews before the activities list paints.',
+);
+
 assert.match(
   runsSource,
-  /slice\(0,\s*ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT\)/,
-  'Runs page should still request route previews for the initial history window.',
+  /requestIdleCallback[\s\S]*requestRoutePreviews\(pendingIds/,
+  'Runs route-preview batch must wait for idle/after-paint before hitting /api/activities/route-previews.',
+);
+
+assert.match(
+  runsSource,
+  /slice\(0,\s*Math\.max\(ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT,\s*50\)\)/,
+  'Runs page should still bound each route-preview network batch using the initial preload floor.',
 );
 
 assert.match(
@@ -65,8 +77,8 @@ assert.match(
 
 assert.match(
   runsSource,
-  /routePreviewRuns\.filter\(\(run\) => \{[\s\S]*return !hasPointPreview \|\| !hasBbox;[\s\S]*\}\)\.slice\(0,\s*50\)/,
-  'Runs page should choose missing preview work from the visible window and cap each network batch to 50 ids.',
+  /routePreviewRuns\.filter\(\(run\) => \{[\s\S]*return !hasPointPreview \|\| !hasBbox;[\s\S]*\}\)\.slice\(0,\s*Math\.max\(ROUTE_PREVIEW_INITIAL_PRELOAD_COUNT,\s*50\)\)/,
+  'Runs page should choose missing preview work from the visible window and cap each network batch (floor 15 / max 50).',
 );
 
 assert.match(
@@ -160,8 +172,8 @@ assert.match(
 
 assert.match(
   runsSource,
-  /setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);[\s\S]*const preloadIds = sorted[\s\S]*requestRoutePreviews\(preloadIds(?:, \{ isCurrent: isCurrentLoad \})?\)/,
-  'Runs page should paint cached history before prewarming route previews.',
+  /setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/,
+  'Runs page should paint cached history to ready before any route-preview network work.',
 );
 
 assert.match(
@@ -196,8 +208,14 @@ assert.match(
 
 assert.match(
   runsSource,
-  /setAllRuns\(list\);[\s\S]*setLoadState\('ready'\);[\s\S]*if \(preloadIds\.length > 0\) \{[\s\S]*requestRoutePreviews\(preloadIds(?:, \{ isCurrent: isCurrentLoad \})?\)/,
-  'Runs page should paint fresh /api/activities results before route-preview enrichment finishes.',
+  /setAllRuns\(list\);[\s\S]*setLoadState\('ready'\);/,
+  'Runs page should paint fresh /api/activities results before route-preview enrichment.',
+);
+
+assert.doesNotMatch(
+  runsSource,
+  /const preloadIds = list[\s\S]*requestRoutePreviews\(preloadIds/,
+  'Fresh activities paint must not eagerly request route-previews inside loadRuns.',
 );
 
 assert.doesNotMatch(
@@ -223,7 +241,7 @@ const freshActivitiesStart = runsSource.indexOf("const runsPromise = cachedApiJs
 assert.ok(cachePaintStart >= 0 && freshActivitiesStart > cachePaintStart, 'Runs cache paint should be defined before fresh activity revalidation.');
 const cacheToRevalidationSource = runsSource.slice(cachePaintStart, freshActivitiesStart);
 assert.match(cacheToRevalidationSource, /setAllRuns\(sorted\);[\s\S]*setProfile\(cachedHit\.profile\);[\s\S]*setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/);
-const cacheHitBlock = cacheToRevalidationSource.match(/if \(fromCache && cachedHit && isCurrentLoad\(\)\) \{[\s\S]*?\n\s{6}\}\n\s{4}\}/)?.[0] || '';
+const cacheHitBlock = cacheToRevalidationSource.match(/if \(fromCache && cachedHit && isCurrentLoad\(\)\) \{[\s\S]*?\n\s{4}\}/)?.[0] || '';
 assert.ok(cacheHitBlock, 'Runs cache paint should have a recognizable guarded cache-hit block.');
 assert.doesNotMatch(cacheHitBlock, /\breturn;/, 'A valid cache hit should not return before fresh activity revalidation starts.');
 
@@ -357,6 +375,12 @@ assert.doesNotMatch(
   styleSource,
   /\.recent-runs-virtual-list/,
   'Runs CSS should not keep the internal virtual-list scrollbar class.',
+);
+
+assert.match(
+  runsSource,
+  /await waitWhileDocumentHidden\(\);[\s\S]*apiJson\('\/api\/auth\/strava\/sync-status'\)/,
+  'Manual Strava sync polling must pause API ticks while the tab is backgrounded.',
 );
 
 console.log('[PASS] Runs route preview cache guardrails passed.');
