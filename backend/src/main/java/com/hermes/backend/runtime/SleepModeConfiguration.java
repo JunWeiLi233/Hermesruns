@@ -35,10 +35,12 @@ public class SleepModeConfiguration {
             GarminWellnessSyncScheduler garmin,
             ObjectProvider<Coach8020NightlyScheduler> coach,
             @Value("${strava.sync.enabled:true}") boolean stravaEnabled,
-            @Value("${garmin.wellness.sync.enabled:true}") boolean garminEnabled) {
+            @Value("${garmin.wellness.sync.enabled:true}") boolean garminEnabled,
+            @Value("${app.sleep.wake-catchup.delay-ms:90000}") long wakeCatchUpDelayMs) {
         return new SleepWakeCatchUp(executor,
                 () -> !stravaEnabled || strava.syncOnWake(),
                 () -> !garminEnabled || garmin.syncOnWake(),
-                () -> coach.ifAvailable(Coach8020NightlyScheduler::nightlyCoachAudit));
+                () -> coach.ifAvailable(Coach8020NightlyScheduler::nightlyCoachAudit),
+                wakeCatchUpDelayMs);
     }
 }

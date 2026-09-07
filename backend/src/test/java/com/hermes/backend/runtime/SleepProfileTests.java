@@ -52,6 +52,7 @@ class SleepProfileTests {
             assertThat(dataSource.getKeepaliveTime()).isZero();
             assertThat(environment.getProperty("app.background.polling.enabled")).isEqualTo("false");
             assertThat(environment.getProperty("app.coach.nightly.cron")).isEqualTo("-");
+            assertThat(environment.getProperty("app.sleep.wake-catchup.delay-ms")).isEqualTo("90000");
             assertThat(environment.getProperty("strava.sync.enabled")).isNull();
             assertThat(environment.getProperty("garmin.wellness.sync.enabled")).isNull();
         }

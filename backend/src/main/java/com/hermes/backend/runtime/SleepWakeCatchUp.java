@@ -12,17 +12,37 @@ import java.util.function.BooleanSupplier;
 /** One sequential catch-up pass off the readiness thread, never an idle polling loop. */
 public final class SleepWakeCatchUp {
     private static final Logger log = LoggerFactory.getLogger(SleepWakeCatchUp.class);
+
+    @FunctionalInterface
+    public interface Delay {
+        void await(long millis) throws InterruptedException;
+    }
+
     private final Executor executor;
     private final BooleanSupplier strava;
     private final BooleanSupplier garmin;
     private final Runnable coach;
+    private final long delayMs;
+    private final Delay delay;
     private final AtomicBoolean started = new AtomicBoolean();
 
     public SleepWakeCatchUp(Executor executor, BooleanSupplier strava, BooleanSupplier garmin, Runnable coach) {
+        this(executor, strava, garmin, coach, 0L, Thread::sleep);
+    }
+
+    public SleepWakeCatchUp(Executor executor, BooleanSupplier strava, BooleanSupplier garmin, Runnable coach,
+                            long delayMs) {
+        this(executor, strava, garmin, coach, delayMs, Thread::sleep);
+    }
+
+    public SleepWakeCatchUp(Executor executor, BooleanSupplier strava, BooleanSupplier garmin, Runnable coach,
+                            long delayMs, Delay delay) {
         this.executor = executor;
         this.strava = strava;
         this.garmin = garmin;
         this.coach = coach;
+        this.delayMs = Math.max(0L, delayMs);
+        this.delay = delay;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -31,6 +51,16 @@ public final class SleepWakeCatchUp {
             return;
         }
         executor.execute(() -> {
+            if (delayMs > 0L) {
+                try {
+                    log.info("Sleep mode: deferring wake catch-up by {}ms to avoid FE first-paint stacking", delayMs);
+                    delay.await(delayMs);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Sleep mode: wake catch-up delay interrupted; skipping catch-up pass");
+                    return;
+                }
+            }
             log.info("Sleep mode: starting one wake catch-up pass");
             boolean stravaReady = runStep("Strava", strava);
             boolean garminReady = runStep("Garmin", garmin);
