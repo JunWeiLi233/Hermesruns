@@ -1395,3 +1395,118 @@ body.theme-midnight .hd-rewards-badge-icon {
     font-size: 0.875rem;
   }
 }
+
+/* Keep the dashboard readable and its controls reachable on a phone. */
+@media (max-width: 640px) {
+  #root .profile-dashboard-page .hd-content {
+    min-width: 0;
+    padding: 20px 16px 40px;
+    gap: 20px;
+  }
+
+  #root .profile-dashboard-page .hd-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: 20px;
+  }
+
+  #root .profile-dashboard-page .hd-hero-greeting {
+    font-size: clamp(1.35rem, 5.5vw, 1.65rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-readiness-ring {
+    width: 48px;
+    height: 48px;
+  }
+
+  #root .profile-dashboard-page .hd-readiness-value strong {
+    font-size: 1.1rem;
+  }
+
+  #root .profile-dashboard-page :is(.hd-card-kicker, .hd-readiness-label, .hd-metric-kicker, .hd-today-stat-label, .hd-session-info span, .hd-session-right span) {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  #root .profile-dashboard-page .hd-today-content {
+    padding: 24px 20px;
+  }
+
+  #root .profile-dashboard-page .hd-today-stats {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  #root .profile-dashboard-page .hd-today-stat,
+  #root .profile-dashboard-page .hd-today-stat strong {
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-today-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  #root .profile-dashboard-page .hd-today-actions > button {
+    min-height: 44px;
+    flex: 1 1 110px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-card {
+    min-width: 0;
+    padding: 18px 16px;
+  }
+
+  #root .profile-dashboard-page .hd-metric-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  #root .profile-dashboard-page .hd-metric-value {
+    font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+    overflow-wrap: anywhere;
+  }
+
+  #root .profile-dashboard-page .hd-progression {
+    min-width: 0;
+    padding: 22px 16px;
+  }
+
+  #root .profile-dashboard-page .hd-progression-switcher {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    gap: 2px;
+  }
+
+  #root .profile-dashboard-page .hd-progression-tab {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 4px;
+    font-size: 0.75rem;
+  }
+
+  #root .profile-dashboard-page .hd-progression-meta-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 16px;
+  }
+}
+
+.profile-dashboard-page :is(.hd-progression-tab, .hd-bar-col, .hd-link-btn, .hd-session-item):focus-visible {
+  outline: 2px solid var(--hd-accent);
+  outline-offset: 4px;
+  border-radius: 8px;
+}

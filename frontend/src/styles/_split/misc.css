@@ -2310,6 +2310,18 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   gap: 1rem 1.6rem;
 }
 
+.global-footer-links > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+}
+
+@media (pointer: coarse) {
+    .global-footer-links > a {
+        min-height: 44px;
+    }
+}
+
 .global-footer-links a,
 .global-footer-links button {
   border: 0;

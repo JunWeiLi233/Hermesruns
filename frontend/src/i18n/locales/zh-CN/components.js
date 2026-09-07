@@ -2,6 +2,25 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "components": {
+    "training_tips": {
+      "open": "打开训练提示",
+      "close": "关闭训练提示",
+      "title": "训练提示",
+      "subtitle": "下次跑步前，可以先看看这些信息。",
+      "open_runs": "查看跑步记录",
+      "dismiss": "关闭提示",
+      "empty_title": "已看完全部提示",
+      "empty_body": "需要时，可以在跑步记录中回顾最近的活动。",
+      "load_label": "训练负荷",
+      "load_title": "回顾近期训练量",
+      "load_body": "增加训练量前，先到分析页查看近期训练负荷与恢复情况。",
+      "routes_label": "跑步路线",
+      "routes_title": "看看你跑过的地方",
+      "routes_body": "打开热力图，查看已导入活动中记录的跑步路线。",
+      "connections_label": "已连接的账户",
+      "connections_title": "检查活动连接",
+      "connections_body": "如果缺少活动，可以到设置中检查 Strava 和 Garmin 连接。"
+    },
     "retry": "重试"
   },
   "rewards": {

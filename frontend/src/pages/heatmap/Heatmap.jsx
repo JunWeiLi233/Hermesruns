@@ -876,11 +876,12 @@ export default function Heatmap() {
   };
 
   const showMapOverlays = heatmapState === 'ready' && pointCount > 0 && !mapMountFailed;
+  const recenterStatusLabel = showMapOverlays ? centerLabel : t('heatmap.loading');
 
   if (heatmapState === 'loading') return <PageSkeleton variant="heatmap" />;
 
   return (
-    <div className="heatmap-page">
+    <main className="heatmap-page">
       <div className="heatmap-page-map-shell">
         <div ref={mapRef} className="heatmap-page-map-canvas" />
         <div className="heatmap-page-map-vignette" aria-hidden="true" />
@@ -890,7 +891,7 @@ export default function Heatmap() {
             type="button"
             className="heatmap-page-brand-pill"
             onClick={() => navigate('/profile')}
-            aria-label={t('profile.dashboard_nav_dashboard')}
+            title={t('profile.dashboard_nav_dashboard')}
           >
             <HermesLogo dark />
             <span>{t('heatmap.page_kicker')}</span>
@@ -901,12 +902,11 @@ export default function Heatmap() {
             className="heatmap-page-search-pill"
             onClick={recenterMap}
             disabled={!showMapOverlays}
-            aria-label={t('heatmap.page_recenter')}
           >
             <AppIcon name="search" className="heatmap-page-pill-icon" />
             <div className="heatmap-page-search-copy">
               <strong>{t('heatmap.page_recenter')}</strong>
-              <span>{showMapOverlays ? centerLabel : t('heatmap.loading')}</span>
+              <span>{recenterStatusLabel}</span>
             </div>
           </button>
 
@@ -940,6 +940,7 @@ export default function Heatmap() {
                   className={cx('heatmap-page-utility-btn', item.active && 'is-active')}
                   onClick={() => navigate(item.route)}
                   aria-label={item.label}
+                  aria-current={item.active ? 'page' : undefined}
                   title={item.label}
                 >
                   <AppIcon name={item.icon} className="heatmap-page-utility-icon" />
@@ -1041,6 +1042,6 @@ export default function Heatmap() {
           </div>
         ) : null}
       </div>
-    </div>
+    </main>
   );
 }

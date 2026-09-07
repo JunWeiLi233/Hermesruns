@@ -668,10 +668,15 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
   .runner-shell-sidebar {
     position: static;
     width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
     box-shadow: none;
   }
 
   .runner-shell-main {
+    width: 100%;
+    min-width: 0;
     margin-left: 0;
   }
 
@@ -692,6 +697,35 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
   .runner-shell-canvas {
     width: min(100%, calc(100% - 28px));
     padding-top: 8px;
+  }
+
+  .runner-shell-topbar-link,
+  .runner-shell-icon-btn,
+  .runner-shell-avatar,
+  .runner-shell-section-tab,
+  .runner-shell-side-link,
+  .runner-shell-workout-btn,
+  .runner-shell-notification-close,
+  .runner-shell-notification-delete,
+  .runner-shell-notification-link {
+    min-height: 44px;
+  }
+
+  .runner-shell-icon-btn,
+  .runner-shell-avatar,
+  .runner-shell-notification-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .runner-shell-notification-delete {
+    height: 44px;
+  }
+
+  .runner-shell-topnav-crumb {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .runner-dashboard-page.is-sidebar-collapsed .runner-shell-sidebar,
@@ -735,11 +769,45 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
     padding-inline: 12px;
     font-size: 0.58rem;
   }
+}
 
+@media (max-width: 860px) {
   .runner-shell-topbar {
-    padding: 14px;
+    min-width: 0;
+    min-height: 64px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
   }
 
+  .runner-shell-topbar-left {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  .runner-shell-topbar-actions {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .runner-shell-topbar-profile-actions {
+    min-width: 0;
+    flex-wrap: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
   .analysis-overview-card,
   .analysis-overview-table-head,
   .analysis-overview-table-actions {

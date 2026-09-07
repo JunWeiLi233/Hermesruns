@@ -527,6 +527,8 @@ export default function TodayRun() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -540,6 +542,7 @@ export default function TodayRun() {
             className="runner-shell-workout-btn runner-dashboard-workout-btn"
             onClick={() => navigate('/today-run')}
             aria-label={t('profile.dashboard_start_workout')}
+            aria-current="page"
           >
             <span className="runner-dashboard-workout-glyph" aria-hidden="true">&gt;</span>
             <span className="runner-dashboard-workout-btn-label">{t('profile.dashboard_start_workout')}</span>
@@ -617,7 +620,11 @@ export default function TodayRun() {
                   {coachPayload?.state?.readinessSleep != null && (
                     <span
                       className="today-run-readiness-signal"
-                      aria-label={`${t('today_run.readiness_signal_sleep')}: ${coachPayload.state.readinessSleep}/100`}
+                      role="meter"
+                      aria-label={t('today_run.readiness_signal_sleep')}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={coachPayload.state.readinessSleep}
                       title={t('today_run.readiness_signal_sleep_tooltip')}
                     >
                       <AppIcon name="sleep" className="today-run-readiness-signal-icon" aria-hidden="true" />
@@ -631,7 +638,11 @@ export default function TodayRun() {
                   {coachPayload?.state?.readinessHrv != null && (
                     <span
                       className="today-run-readiness-signal"
-                      aria-label={`${t('today_run.readiness_signal_hrv')}: ${coachPayload.state.readinessHrv}/100`}
+                      role="meter"
+                      aria-label={t('today_run.readiness_signal_hrv')}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={coachPayload.state.readinessHrv}
                       title={t('today_run.readiness_signal_hrv_tooltip')}
                     >
                       <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" aria-hidden="true" />
@@ -645,7 +656,11 @@ export default function TodayRun() {
                   {coachPayload?.state?.readinessRhr != null && (
                     <span
                       className="today-run-readiness-signal"
-                      aria-label={`${t('today_run.readiness_signal_rhr')}: ${coachPayload.state.readinessRhr}/100`}
+                      role="meter"
+                      aria-label={t('today_run.readiness_signal_rhr')}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={coachPayload.state.readinessRhr}
                       title={t('today_run.readiness_signal_rhr_tooltip')}
                     >
                       <AppIcon name="favorite" className="today-run-readiness-signal-icon" aria-hidden="true" />
@@ -659,7 +674,11 @@ export default function TodayRun() {
                   {coachPayload?.state?.readinessStress != null && (
                     <span
                       className="today-run-readiness-signal"
-                      aria-label={`${t('today_run.readiness_signal_stress')}: ${coachPayload.state.readinessStress}/100`}
+                      role="meter"
+                      aria-label={t('today_run.readiness_signal_stress')}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={coachPayload.state.readinessStress}
                       title={t('today_run.readiness_signal_stress_tooltip')}
                     >
                       <AppIcon name="stress" className="today-run-readiness-signal-icon" aria-hidden="true" />

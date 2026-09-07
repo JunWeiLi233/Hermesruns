@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const layoutSource = readFileSync(path.join(here, "../../../components/SettingsAtlasLayout.jsx"), 'utf8');
+const splitSettingsStyleSource = readFileSync(
+  path.join(here, "../../../styles/_split/settings.css"),
+  'utf8',
+);
 const styleSource = [
   readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8'),
-  readFileSync(path.join(here, "../../../styles/_split/settings.css"), 'utf8'),
+  splitSettingsStyleSource,
 ].join('\n');
 const liquidGlassStyleSource = readFileSync(
   path.join(here, "../../../styles/all-pages-liquid-glass.css"),
@@ -97,6 +101,24 @@ assert.match(
   styleSource,
   /\.st-service-meta\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
   'Service metadata must stay in readable cards for localized labels.',
+);
+
+assert.match(
+  splitSettingsStyleSource,
+  /\.settings-atlas-quick-copy strong\s*\{[^}]*min-width:\s*0;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;[^}]*word-break:\s*normal;/,
+  'Legacy Settings quick-control labels should wrap long English and Chinese text without clipping.',
+);
+
+assert.match(
+  splitSettingsStyleSource,
+  /\.st-pref-label > div\s*\{[^}]*min-width:\s*0;/,
+  'Visible Settings preference copy must be allowed to shrink inside its control row.',
+);
+
+assert.match(
+  splitSettingsStyleSource,
+  /\.st-pref-label :is\(strong, span\)\s*\{[^}]*max-width:\s*100%;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;[^}]*word-break:\s*normal;/,
+  'Visible Settings preference labels and descriptions should wrap naturally in both locales.',
 );
 
 assert.match(

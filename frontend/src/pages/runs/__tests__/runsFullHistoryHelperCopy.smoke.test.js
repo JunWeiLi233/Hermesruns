@@ -10,8 +10,8 @@ const enPagesSource = readFileSync(path.join(here, "../../../i18n/locales/en/pag
 
 assert.match(
   runsSource,
-  /className="runs-profile-signal runs-profile-signal--count"[\s\S]*<span>\{t\('runs\.full_history'\)\}<\/span>[\s\S]*<strong>\{countText\}<\/strong>/,
-  'The full-history signal should keep its label and run count.',
+  /className="runs-profile-signal runs-profile-signal--count"[\s\S]*<span>\{t\('runs\.result_count_label'\)\}<\/span>[\s\S]*<strong>\{countText\}<\/strong>/,
+  'The count signal should describe the matching runs rather than unfiltered history.',
 );
 
 assert.doesNotMatch(

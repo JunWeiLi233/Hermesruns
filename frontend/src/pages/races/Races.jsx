@@ -168,6 +168,7 @@ const RaceCard = memo(function RaceCard({
   const monthLabel = lang === 'en'
     ? MONTH_LABELS_EN[(race.month || 1) - 1]
     : MONTH_LABELS_ZH[(race.month || 1) - 1];
+  const discoveryTagLabel = t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`);
 
   return (
     <article className="race-center-card" data-race-card>
@@ -175,7 +176,7 @@ const RaceCard = memo(function RaceCard({
         type="button"
         className="race-center-card-image-wrap"
         onClick={() => onNavigate(race, imgSrc)}
-        aria-label={t('races.detail_open_card', { name: raceName })}
+        aria-label={`${discoveryTagLabel}. ${t('races.detail_open_card', { name: raceName })}`}
       >
         <img
           className="race-center-card-image"
@@ -189,7 +190,7 @@ const RaceCard = memo(function RaceCard({
           onError={(e) => onImageError(e, race)}
         />
         <span className="race-center-card-tag">
-          {t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}
+          {discoveryTagLabel}
         </span>
       </button>
       <div className="race-center-card-body">
@@ -230,6 +231,7 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
   const monthLabel = lang === 'en'
     ? MONTH_LABELS_EN[(race.month || 1) - 1]
     : MONTH_LABELS_ZH[(race.month || 1) - 1];
+  const discoveryTagLabel = t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`);
 
   return (
     <article className="race-center-featured-card">
@@ -237,7 +239,7 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
         type="button"
         className="race-center-featured-image-wrap"
         onClick={() => onNavigate(race, imgSrc)}
-        aria-label={t('races.detail_open_card', { name: raceName })}
+        title={t('races.detail_open_card', { name: raceName })}
       >
         <img
           className="race-center-featured-image"
@@ -252,7 +254,7 @@ const FeaturedRaceCard = memo(function FeaturedRaceCard({
         />
         <div className="race-center-featured-overlay" aria-hidden="true" />
         <span className="race-center-featured-tag">
-          {t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)}
+          {discoveryTagLabel}
         </span>
         <div className="race-center-featured-body">
           <div className="race-center-featured-meta">
@@ -755,6 +757,7 @@ const Races = memo(function Races() {
                 onPointerEnter={() => preloadRoute(item.route)}
                 onFocus={() => preloadRoute(item.route)}
                 aria-label={item.label}
+                aria-current={item.active ? 'page' : undefined}
               >
                 <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
                 <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -807,7 +810,7 @@ const Races = memo(function Races() {
               <section className="race-center-hero">
                 <img
                   className="race-center-hero-image"
-                  src="/images/races/race-center-hero.webp"
+                  src="/images/races/dashboard-hero.webp"
                   alt={t('races.stitch_hero_image_alt')}
                   width="1600"
                   height="900"

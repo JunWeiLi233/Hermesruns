@@ -106,13 +106,6 @@ export default function SettingsAtlasLayout({
         </div>
       </section>
 
-      <RunActivityContributionGraph
-        runs={runActivities}
-        status={runActivityState}
-        lang={lang}
-        t={t}
-      />
-
       {/* ── Row 1: Account + Preferences ── */}
       <div className="st-main-grid">
 
@@ -121,7 +114,7 @@ export default function SettingsAtlasLayout({
           <div className="st-card-head">
             <div>
               <p className="st-kicker">{t('settings.stitch_account_kicker')}</p>
-              <h3 className="st-card-title">{t('settings.stitch_account_info')}</h3>
+              <h2 className="st-card-title">{t('settings.stitch_account_info')}</h2>
             </div>
           </div>
           <form className="st-account-form" onSubmit={saveProfile}>
@@ -183,7 +176,7 @@ export default function SettingsAtlasLayout({
           <div className="st-card-head">
             <div>
               <p className="st-kicker">{t('settings.stitch_preferences')}</p>
-              <h3 className="st-card-title">{t('settings.stitch_prefs_title')}</h3>
+              <h2 className="st-card-title">{t('settings.stitch_prefs_title')}</h2>
             </div>
           </div>
 
@@ -237,12 +230,12 @@ export default function SettingsAtlasLayout({
             <div className="st-pref-label">
               <AppIcon name="translate" className="runner-dashboard-side-link-icon" />
               <div>
-                <strong>{t('settings.language_title')}</strong>
+                <strong id="settings-language-label">{t('settings.language_title')}</strong>
                 <span>{t('settings.language_hint')}</span>
               </div>
             </div>
             <div className="st-select-wrap">
-              <select className="st-select" value={lang} onChange={(e) => setLang(e.target.value)}>
+              <select className="st-select" value={lang} onChange={(e) => setLang(e.target.value)} aria-labelledby="settings-language-label">
                 <option value="zh-CN">中文（简体）</option>
                 <option value="en">English (US)</option>
               </select>
@@ -259,7 +252,7 @@ export default function SettingsAtlasLayout({
           <div className="st-card-head">
             <div>
               <p className="st-kicker">{t('settings.stitch_checklist_kicker')}</p>
-              <h3 className="st-card-title">{t('settings.stitch_setup_checklist_title')}</h3>
+              <h2 className="st-card-title">{t('settings.stitch_setup_checklist_title')}</h2>
             </div>
           </div>
           <p className="st-checklist-desc">{t('settings.stitch_setup_checklist_copy')}</p>
@@ -280,7 +273,7 @@ export default function SettingsAtlasLayout({
           <div className="st-card-head">
             <div>
               <p className="st-kicker">{t('settings.stitch_weekly_brief')}</p>
-              <h3 className="st-card-title">{t('settings.stitch_weekly_brief')}</h3>
+              <h2 className="st-card-title">{t('settings.stitch_weekly_brief')}</h2>
             </div>
           </div>
           <p className="st-brief-desc">{t('settings.stitch_weekly_brief_copy')}</p>
@@ -291,6 +284,7 @@ export default function SettingsAtlasLayout({
               className={`st-toggle-btn${digestEnabled ? ' is-on' : ''}`}
               onClick={toggleDigest}
               aria-pressed={digestEnabled}
+              aria-label={t('settings.stitch_weekly_brief')}
             >
               <span className="st-toggle-thumb" />
             </button>
@@ -314,7 +308,7 @@ export default function SettingsAtlasLayout({
         <div className="st-card-head">
           <div>
             <p className="st-kicker">{t('settings.connected_title')}</p>
-            <h3 className="st-card-title">{t('settings.stitch_data_services_title')}</h3>
+            <h2 className="st-card-title">{t('settings.stitch_data_services_title')}</h2>
           </div>
         </div>
 
@@ -406,7 +400,7 @@ export default function SettingsAtlasLayout({
           <div className="st-card-head">
             <div>
               <p className="st-kicker">{t('settings.stitch_wellness_hub_title')}</p>
-              <h3 className="st-card-title">{t('settings.stitch_wellness_hub_title')}</h3>
+              <h2 className="st-card-title">{t('settings.stitch_wellness_hub_title')}</h2>
             </div>
           </div>
           <p className="st-wellness-desc">{t('settings.stitch_wellness_hub_copy')}</p>
@@ -423,6 +417,13 @@ export default function SettingsAtlasLayout({
           </div>
         </article>
       </div>
+
+      <RunActivityContributionGraph
+        runs={runActivities}
+        status={runActivityState}
+        lang={lang}
+        t={t}
+      />
 
       <footer className="runner-shell-footer settings-atlas-footer">
         <FooterNavLinks />

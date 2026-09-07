@@ -2,6 +2,25 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "components": {
+    "training_tips": {
+      "open": "Open training tips",
+      "close": "Close training tips",
+      "title": "Training tips",
+      "subtitle": "Useful checks before your next run.",
+      "open_runs": "Open runs",
+      "dismiss": "Dismiss tip",
+      "empty_title": "You're all caught up",
+      "empty_body": "Review your recent activities in Runs whenever you need them.",
+      "load_label": "Training load",
+      "load_title": "Review your recent workload",
+      "load_body": "Use Analysis to compare recent effort and recovery before increasing your training.",
+      "routes_label": "Your routes",
+      "routes_title": "Explore where you run",
+      "routes_body": "Open Heatmap to see the routes recorded in your imported activities.",
+      "connections_label": "Connected accounts",
+      "connections_title": "Check your activity connections",
+      "connections_body": "Review Strava and Garmin connections in Settings if an activity is missing."
+    },
     "retry": "Retry"
   },
   "rewards": {

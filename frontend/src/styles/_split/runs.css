@@ -1953,6 +1953,11 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   border-bottom-color: rgba(240, 117, 97, 0.28);
 }
 
+.recent-runs-month-heading {
+  margin: 0;
+  font: inherit;
+}
+
 .recent-runs-month-title {
   margin: 0;
   font-size: clamp(1rem, 1.6vw, 1.18rem);
@@ -2176,7 +2181,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   gap: 16px;
 }
 
-.recent-runs-card-top h2 {
+.recent-runs-card-top h2,
+.recent-runs-card-top h3 {
   margin: 0;
   color: #f4efea;
   font-family: "Inter", var(--font-body);
@@ -2771,7 +2777,8 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
 .runs-dashboard-page .runs-profile-history .recent-runs-stat-card strong,
 .runs-dashboard-page .runs-profile-history .recent-runs-insight-card strong,
 .runs-dashboard-page .runs-profile-history .recent-runs-card-top h2,
-.runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {
+.runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong,
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h3 {
   color: var(--runs-profile-ink);
 }
 
@@ -2900,7 +2907,8 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
 body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-stat-card strong,
 body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-insight-card strong,
 body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-card-top h2,
-body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong {
+body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-card-metric strong,
+body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profile-history .recent-runs-card-top h3 {
   color: #fff7ee;
 }
 
@@ -3255,7 +3263,8 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   gap: 10px;
 }
 
-.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2 {
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2,
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h3 {
   font-size: clamp(0.94rem, 1.15vw, 1.1rem);
   line-height: 1.05;
 }
@@ -3534,7 +3543,8 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   gap: 18px;
 }
 
-.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2 {
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h2,
+.runs-dashboard-page .runs-profile-history .recent-runs-card-top h3 {
   font-size: clamp(1.16rem, 1.5vw, 1.42rem);
   line-height: 1.08;
 }
@@ -3630,6 +3640,223 @@ body:is(.theme-midnight, .theme-high-contrast) .runs-dashboard-page .runs-profil
   .runs-dashboard-page .runs-profile-primary-action,
   .runs-dashboard-page .runs-profile-secondary-action {
     width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px;
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) {
+    min-width: 0;
+    min-height: auto;
+  }
+
+  .runs-dashboard-page .recent-runs-search-bar,
+  .runs-dashboard-page .recent-runs-search-input-wrap,
+  .runs-dashboard-page .runs-profile-workbench__filters,
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .runs-dashboard-page .recent-runs-search-input {
+    min-width: 0;
+  }
+
+  .runs-dashboard-page .recent-runs-search-clear {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    flex: 0 0 44px;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row--secondary {
+    width: 100%;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench .recent-runs-chip {
+    min-width: 0;
+    min-height: 44px;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Runs desktop density correction */
+@media (min-width: 1101px) {
+  .runs-dashboard-page .runs-profile-history {
+    gap: 12px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit {
+    grid-template-columns: minmax(0, 1.2fr) minmax(520px, 0.9fr);
+    min-height: 0;
+    gap: 14px;
+    padding: clamp(16px, 1.6vw, 22px);
+    border-radius: 24px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__primary {
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit .recent-runs-hero-kicker {
+    padding: 5px 10px;
+    font-size: 0.62rem;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit h1 {
+    margin-top: 8px;
+    font-size: clamp(2rem, 3vw, 3rem);
+    line-height: 1;
+    letter-spacing: -0.055em;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__primary p {
+    max-width: 60ch;
+    margin-top: 8px;
+    font-size: clamp(0.86rem, 0.8vw, 0.96rem);
+    line-height: 1.45;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__actions {
+    gap: 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-cockpit__rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .runs-dashboard-page .runs-profile-signal,
+  .runs-dashboard-page .runs-profile-signal--status {
+    grid-column: auto;
+    min-height: 0;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .runs-dashboard-page .runs-profile-signal span {
+    font-size: 0.58rem;
+    letter-spacing: 0.11em;
+  }
+
+  .runs-dashboard-page .runs-profile-signal strong {
+    font-size: clamp(1.05rem, 1.4vw, 1.4rem);
+    letter-spacing: -0.045em;
+  }
+
+  .runs-dashboard-page .runs-profile-signal p {
+    font-size: 0.72rem;
+    line-height: 1.3;
+  }
+
+  .runs-dashboard-page .runs-profile-glance {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip) {
+    gap: 8px;
+    margin: 0;
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) {
+    min-height: 0;
+    padding: 12px 14px;
+    border-radius: 16px;
+    box-shadow: 0 10px 24px rgba(58, 43, 28, 0.06);
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) span {
+    font-size: 0.62rem;
+    letter-spacing: 0.11em;
+  }
+
+  .runs-dashboard-page .runs-profile-glance :is(.recent-runs-stat-card, .recent-runs-insight-card) strong {
+    margin-top: 6px;
+    font-size: clamp(1.08rem, 1.3vw, 1.38rem);
+    letter-spacing: -0.045em;
+  }
+
+  .runs-dashboard-page .runs-profile-glance .recent-runs-insight-card p {
+    margin-top: 5px;
+    font-size: 0.74rem;
+    line-height: 1.3;
+  }
+
+  #root .runner-shell-page.runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-profile-glance .recent-runs-insight-card.recent-runs-insight-card--primary {
+    min-height: 0 !important;
+    padding: 12px 14px 12px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  #root .runner-shell-page.runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign .runs-profile-glance .recent-runs-insight-card.recent-runs-insight-card--primary strong {
+    font-size: clamp(1.08rem, 1.3vw, 1.38rem) !important;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.6fr);
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench .recent-runs-search-bar {
+    margin: 0;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap {
+    min-height: 44px;
+    border-radius: 14px;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters,
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters {
+    justify-content: flex-end;
+  }
+
+  .runs-dashboard-page .runs-profile-workbench__filters .recent-runs-chip-row--secondary {
+    margin: 0;
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--runs-profile-line);
+  }
+
+  .runs-dashboard-page .recent-runs-card-list {
+    gap: 14px;
+    margin-top: 0;
   }
 }
 

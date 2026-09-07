@@ -1035,6 +1035,100 @@
 }
 
 @media (max-width: 640px) {
+  .schedule-plan-hero {
+    gap: 18px;
+    padding: 18px;
+  }
+
+  .schedule-plan-hero h1 {
+    font-size: clamp(1.8rem, 9vw, 2.25rem);
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+
+  .schedule-plan-hero-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin-top: 14px;
+  }
+
+  .schedule-plan-hero-summary-chip {
+    min-width: 0;
+    padding: 10px 12px;
+    box-sizing: border-box;
+  }
+
+  .schedule-plan-hero-summary-chip:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .schedule-plan-hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+  }
+
+  .schedule-plan-hero-metrics div {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .schedule-plan-hero-metrics strong {
+    font-size: clamp(1.35rem, 7vw, 1.65rem);
+  }
+
+  .schedule-plan-bottom-grid,
+  .schedule-plan-left-rail,
+  .schedule-plan-right-rail,
+  .schedule-plan-dual-grid,
+  .schedule-plan-route-card,
+  .schedule-plan-route-map,
+  .schedule-plan-route-content {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .schedule-plan-bottom-grid,
+  .schedule-plan-dual-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #root .schedule-plan-page .schedule-plan-bottom-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .schedule-plan-route-card {
+    min-width: min(100%, 280px);
+  }
+
+  .schedule-plan-route-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .schedule-plan-route-content > div {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .schedule-plan-route-content h3,
+  .schedule-plan-route-target p {
+    overflow-wrap: anywhere;
+  }
+
+  .schedule-plan-watch-btn {
+    min-height: 44px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+
   .schedule-plan-route-card.is-route-fallback .schedule-plan-route-map-svg {
     inset: 48px 14px 10px;
     width: calc(100% - 28px);

@@ -1001,16 +1001,14 @@ export default function ProfileDashboard() {
   }, [nextRace]);
 
   const heroWorkout = coachToday?.today || null;
-  const isRestDay = heroWorkout?.workoutType === 'REST';
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
   const heroDuration = heroWorkout?.plannedDurationMinutes
     ? formatPlannedDuration(heroWorkout.plannedDurationMinutes)
     : todayBundle.recommendation?.distance || '--';
   const heroPace = todayBundle.recommendation?.pace || '--';
-  // The 7-day volume reads like "today's distance" on a rest day — hide it
-  // there so the grid never suggests a 43.8 km rest-day run.
-  const heroLoad = !isRestDay && coachState?.volumeKm7d
-    ? formatDistance(coachState.volumeKm7d, 1, lang, unit)
+  const volumeKm7d = Number(coachState?.volumeKm7d);
+  const heroLoad = coachState?.volumeKm7d != null && Number.isFinite(volumeKm7d) && volumeKm7d >= 0
+    ? formatDistance(volumeKm7d, 1, lang, unit)
     : '--';
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
   const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
@@ -1123,6 +1121,7 @@ export default function ProfileDashboard() {
               onPointerEnter={() => preloadRoute(item.route)}
               onFocus={() => preloadRoute(item.route)}
               aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -1183,27 +1182,29 @@ export default function ProfileDashboard() {
                   })()}, {displayName}.
                 </h1>
               </div>
-              <div className="hd-hero-readiness">
-                <div className="hd-readiness-ring">
-                  <svg viewBox="0 0 80 80" className="hd-readiness-svg">
-                    <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="6" />
-                    <circle cx="40" cy="40" r="34" fill="none" stroke="url(#hdReadinessGrad)" strokeWidth="6"
-                      strokeDasharray={`${readiness.score * 2.136} 999`}
-                      strokeLinecap="round" transform="rotate(-90 40 40)" />
-                    <defs>
-                      <linearGradient id="hdReadinessGrad" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#f07561" />
-                        <stop offset="100%" stopColor="#a0392a" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <div className="hd-readiness-value"><strong>{readiness.score}</strong></div>
+              {runs.length > 0 && (
+                <div className="hd-hero-readiness">
+                  <div className="hd-readiness-ring">
+                    <svg viewBox="0 0 80 80" className="hd-readiness-svg">
+                      <circle cx="40" cy="40" r="34" fill="none" stroke="currentColor" strokeOpacity="0.08" strokeWidth="6" />
+                      <circle cx="40" cy="40" r="34" fill="none" stroke="url(#hdReadinessGrad)" strokeWidth="6"
+                        strokeDasharray={`${readiness.score * 2.136} 999`}
+                        strokeLinecap="round" transform="rotate(-90 40 40)" />
+                      <defs>
+                        <linearGradient id="hdReadinessGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#f07561" />
+                          <stop offset="100%" stopColor="#a0392a" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="hd-readiness-value"><strong>{readiness.score}</strong></div>
+                  </div>
+                  <div className="hd-readiness-meta">
+                    <span className="hd-readiness-label">{t('profile.dashboard_redesign.hero_readiness')}</span>
+                    <span className="hd-readiness-status">{readiness.label}</span>
+                  </div>
                 </div>
-                <div className="hd-readiness-meta">
-                  <span className="hd-readiness-label">{t('profile.dashboard_redesign.hero_readiness')}</span>
-                  <span className="hd-readiness-status">{readiness.label}</span>
-                </div>
-              </div>
+              )}
             </section>
 
             {/* Banners / comeback (preserved) */}
@@ -1291,7 +1292,7 @@ export default function ProfileDashboard() {
                         <strong>{heroPace}</strong>
                       </div>
                       <div className="hd-today-stat">
-                        <span className="hd-today-stat-label">{t('profile.dashboard_redesign.today_distance')}</span>
+                        <span className="hd-today-stat-label">{t('profile.dashboard_redesign.today_recent_volume')}</span>
                         <strong>{heroLoad}</strong>
                       </div>
                     </div>
@@ -1396,8 +1397,17 @@ export default function ProfileDashboard() {
                           <div
                             key={bar.key}
                             className={`hd-bar-col${bar.isToday ? ' is-today' : ''}`}
+                            role="img"
+                            tabIndex={0}
+                            aria-label={`${bar.label}: ${t('profile.dashboard_redesign.weekly_actual')} ${formatDistance(bar.actual, 1, lang, unit)}; ${t('profile.dashboard_redesign.weekly_projected')} ${formatDistance(bar.projected, 1, lang, unit)}`}
                             onMouseEnter={() => setActiveWeeklyBar(bar)}
                             onMouseLeave={() => setActiveWeeklyBar(null)}
+                            onFocus={() => setActiveWeeklyBar(bar)}
+                            onBlur={() => setActiveWeeklyBar(null)}
+                            onPointerDown={() => setActiveWeeklyBar(bar)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') setActiveWeeklyBar(null);
+                            }}
                           >
                             <div className="hd-bar-track">
                               <div className="hd-bar projected" style={{ height: `${projH}%` }} />
@@ -1409,7 +1419,7 @@ export default function ProfileDashboard() {
                       })}
                     </div>
                     {activeWeeklyBar && (
-                      <div className="hd-bar-tooltip" role="status">
+                      <div className="hd-bar-tooltip" aria-hidden="true">
                         <strong>{activeWeeklyBar.label}</strong>: {formatDistance(activeWeeklyBar.actual, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_actual')} / {formatDistance(activeWeeklyBar.projected, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_projected')}
                       </div>
                     )}
@@ -1474,6 +1484,7 @@ export default function ProfileDashboard() {
                           key={frame.key}
                           type="button"
                           className={`hd-progression-tab${activeProgressionFrame === frame.key ? ' is-active' : ''}`}
+                          aria-pressed={activeProgressionFrame === frame.key}
                           onClick={() => setActiveProgressionFrame(frame.key)}
                         >
                           {frame.label}

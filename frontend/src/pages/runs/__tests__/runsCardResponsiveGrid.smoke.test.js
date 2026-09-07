@@ -49,6 +49,44 @@ assert.ok(
   'The narrow-card metric fit rule must come after the final desktop sizing block in the cascade.',
 );
 
+const runsScaleParityRule = styleSource.indexOf('/* Runs page scale parity */');
+const phoneLayoutRule = styleSource.indexOf('@media (max-width: 640px)', runsScaleParityRule);
+const finalGlanceGridRule = styleSource.lastIndexOf(
+  '.runs-dashboard-page .runs-profile-glance :is(.recent-runs-stats-grid, .recent-runs-insight-strip)',
+  phoneLayoutRule - 1,
+);
+const phoneLayoutEnd = styleSource.indexOf('/* Runs ledger redesign.', phoneLayoutRule);
+const phoneLayoutSource = styleSource.slice(phoneLayoutRule, phoneLayoutEnd);
+
+assert.ok(
+  phoneLayoutRule > finalGlanceGridRule,
+  'Phone-specific Runs layout rules must come after the final desktop glance sizing block.',
+);
+
+assert.match(
+  phoneLayoutSource,
+  /\.runs-dashboard-page \.runs-profile-glance :is\(\.recent-runs-stats-grid, \.recent-runs-insight-strip\)\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) !important;/,
+  'Phone summary and insight groups should collapse to one readable column.',
+);
+
+assert.match(
+  phoneLayoutSource,
+  /\.runs-dashboard-page \.runs-profile-workbench__filters \.recent-runs-chip-row--secondary\s*\{[\s\S]*margin-top:\s*0;[\s\S]*padding:\s*0;[\s\S]*border:\s*0;/,
+  'Phone filter groups should wrap together without a desktop divider splitting them.',
+);
+
+assert.match(
+  phoneLayoutSource,
+  /\.runs-dashboard-page \.runs-profile-workbench \.recent-runs-chip\s*\{[\s\S]*min-height:\s*44px;[\s\S]*max-width:\s*100%;[\s\S]*white-space:\s*normal;[\s\S]*overflow-wrap:\s*anywhere;/,
+  'Phone filter chips should keep accessible touch targets and wrap long localized labels.',
+);
+
+assert.match(
+  phoneLayoutSource,
+  /\.runs-dashboard-page \.recent-runs-search-clear\s*\{[\s\S]*width:\s*44px;[\s\S]*height:\s*44px;/,
+  'The phone search clear action should expose a full-size touch target.',
+);
+
 assert.match(
   styleSource,
   /@container recent-run-metrics \(max-width: 360px\)[\s\S]*\.recent-runs-card-metric\s*\{[\s\S]*padding-inline:\s*6px;[\s\S]*\.recent-runs-card-metric strong\s*\{[\s\S]*font-size:\s*clamp\(0\.78rem, 5cqi, 1rem\);[\s\S]*white-space:\s*normal;[\s\S]*overflow-wrap:\s*anywhere;/,

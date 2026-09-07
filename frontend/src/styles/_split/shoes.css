@@ -6064,7 +6064,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) .modal-card.shoe-scan-mod
   background: color-mix(in srgb, var(--runner-profile-card, #fffaf2) 66%, transparent);
 }
 
-.shoes-profile-workspace .shoe-inventory-filterbar {
+body:is(.theme-light, .theme-high-contrast-light) .shoes-profile-workspace .shoe-inventory-filterbar {
   background: #f1f2f2;
 }
 

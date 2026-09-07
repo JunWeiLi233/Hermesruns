@@ -145,6 +145,18 @@ assert.doesNotMatch(
 );
 
 assert.match(
+  styleSource,
+  /@media \(min-width:\s*1181px\)\s*\{[\s\S]*#root \.today-run-command-page \.today-run-command-hero-copy h1\s*\{[\s\S]*max-width:\s*18ch !important;[\s\S]*font-size:\s*clamp\(2\.2rem,\s*3\.6vw,\s*3\.5rem\) !important;[\s\S]*font-style:\s*normal !important;/,
+  'Desktop Today Run should use a compact, upright headline that leaves the workout plan in view.',
+);
+
+assert.match(
+  styleSource,
+  /#root \.today-run-command-page \.today-run-command-hero\s*\{[\s\S]*align-items:\s*start !important;[\s\S]*gap:\s*clamp\(14px,\s*1\.4vw,\s*20px\) !important;/,
+  'Desktop Today Run should avoid stretching its two hero panels or spacing them like a billboard.',
+);
+
+assert.match(
   liquidGlassSource,
   /@media \(max-width:\s*860px\)\s*\{[\s\S]*\.runner-shell-page > \.runner-shell-sidebar\s*\{[\s\S]*position:\s*static;/,
   'The shared glass shell must not cover Profile-aligned pages with a fixed full-height sidebar on mobile.',

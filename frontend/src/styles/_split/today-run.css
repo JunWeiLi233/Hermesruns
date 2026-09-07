@@ -1944,6 +1944,13 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page {
   --tr-command-soft: rgba(33, 31, 26, 0.76);
   --tr-command-muted: rgba(33, 31, 26, 0.58);
   --tr-command-accent: #a13d31;
+  /* Text-safe variants of the shared chart accents. Keep the brighter hues
+   * for charts and icons while summary labels stay readable on white cards. */
+  --ahs-pink: #c6254b;
+  --ahs-blue: #0066d6;
+  --ahs-green: #207c38;
+  --ahs-orange: #9c5300;
+  --ahs-teal: #087184;
   background:
     radial-gradient(circle at 10% 8%, rgba(191, 91, 73, 0.11), transparent 24rem),
     radial-gradient(circle at 88% 14%, rgba(122, 168, 130, 0.08), transparent 26rem),
@@ -2437,22 +2444,25 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 0.75rem;
+  line-height: 1.25;
   color: rgba(255,255,255,0.6); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
 }
 
 .today-run-readiness-signal-label {
   flex-shrink: 0;
   min-width: 32px; /* tokens-ok */
-  font-size: 10px;
-  font-weight: 600;
-  opacity: 0.7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 1;
   letter-spacing: 0.02em;
 }
 
 .today-run-readiness-signal small {
   flex-shrink: 0;
   min-width: 18px;
+  font-size: 0.75rem;
+  line-height: 1.25;
   text-align: right;
   font-weight: 600;
   color: rgba(255,255,255,0.7); /* tokens-ok �?inside dark coaching strip; overridden in light mode below */
@@ -2460,7 +2470,8 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
 
 .today-run-readiness-signal-scale {
   font-weight: 400; /* tokens-ok */
-  opacity: 0.55;
+  font-size: inherit;
+  opacity: 1;
   margin-left: 1px;
 }
 
@@ -2485,6 +2496,133 @@ body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today
   border-radius: var(--radius-sm);
   background: linear-gradient(90deg, #60a5fa, #4ade80); /* tokens-ok �?data-vis gradient, no token equivalent */
   transition: width var(--transition);
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page :is(
+  .today-run-readiness-signal,
+  .today-run-readiness-signal-label,
+  .today-run-readiness-signal small,
+  .today-run-readiness-signal-scale
+) {
+  color: #55504a !important;
+  opacity: 1;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-coaching-answer-delta {
+  color: #1f7836 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-coaching-answer.is-declining .today-run-coaching-answer-delta {
+  color: #a84700 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero .today-run-plan-hero-metrics > article > span {
+  color: #59544e !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-plan-step-card > span {
+  color: #8f3b30 !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-shoe-brief-action {
+  color: #7a332a !important;
+}
+
+/* Keep the decision summary within the first desktop viewport. The breakpoint
+ * matches the existing two-column command layout, leaving mobile untouched. */
+@media (min-width: 1181px) {
+  #root .today-run-command-page .runner-shell-canvas.today-run-command-canvas {
+    padding-top: clamp(16px, 1.5vw, 22px) !important;
+    padding-bottom: clamp(36px, 4vw, 52px) !important;
+    gap: clamp(12px, 1.25vw, 18px) !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero {
+    min-height: 0 !important;
+    height: auto !important;
+    align-items: start !important;
+    gap: clamp(14px, 1.4vw, 20px) !important;
+    padding: clamp(20px, 2vw, 28px) !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy,
+  #root .today-run-command-page .today-run-command-readiness-panel {
+    align-self: start !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy {
+    justify-content: flex-start !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy h1 {
+    max-width: 18ch !important;
+    margin: 8px 0 0 !important;
+    font-size: clamp(2.2rem, 3.6vw, 3.5rem) !important;
+    font-style: normal !important;
+    line-height: 0.98 !important;
+    letter-spacing: -0.055em !important;
+  }
+
+  #root .today-run-command-page .today-run-command-hero-copy > p {
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  #root .today-run-command-page .today-run-overview-disclosure {
+    margin-top: 10px;
+  }
+
+  #root .today-run-command-page .today-run-plan-morning-briefing {
+    margin-top: 12px;
+    padding: 12px 14px;
+    gap: 6px 12px;
+  }
+
+  #root .today-run-command-page .today-run-plan-morning-briefing-label {
+    margin-bottom: 0;
+  }
+
+  #root .today-run-command-page .today-run-plan-badges,
+  #root .today-run-command-page .today-run-plan-rationale {
+    margin-top: 10px !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-rationale-content {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  #root .today-run-command-page .today-run-plan-hero-metrics,
+  #root .today-run-command-page .today-run-plan-panel-grid {
+    margin-top: 12px;
+  }
+
+  #root .today-run-command-page :is(
+    .today-run-plan-hero-metrics article,
+    .today-run-plan-panel-grid article
+  ) {
+    padding: 10px 12px;
+  }
+
+  #root .today-run-command-page .today-run-command-readiness-panel {
+    padding: clamp(16px, 1.5vw, 20px) !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-panel-copy h2 {
+    font-size: clamp(1.75rem, 2.5vw, 2.5rem) !important;
+    line-height: 1 !important;
+  }
+
+  #root .today-run-command-page .today-run-plan-weather {
+    margin-top: 12px;
+    padding: 12px 14px;
+  }
+
+  body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero-copy {
+    padding: clamp(20px, 2vw, 28px) !important;
+  }
 }
 
 .today-run-plan-metric-adjusted {

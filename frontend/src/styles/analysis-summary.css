@@ -3,6 +3,40 @@
  * Page shell, sidebar rail, and summary-card layout for /analysis.
  */
 
+#root .analysis-page-shell .analysis-prediction-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+}
+
+#root .analysis-page-shell .analysis-prediction-link svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--text-muted);
+}
+
+#root .analysis-page-shell .analysis-prediction-link:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* A month without a VO2max estimate must not look like a low measured value. */
+#root .analysis-page-shell .analysis-overview-vo2-bar.is-empty {
+  visibility: hidden;
+}
+
+#root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-bar-col:focus-visible {
+  outline: 2px solid var(--text-strong, #2c2f30) !important;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
 :root {
   /* Semantic roles (approx system colors; adaptive intent) */
   --ahs-canvas: #f2f2f7;
@@ -1405,6 +1439,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   min-width: 0 !important;
 }
 
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page {
+  --ahs-secondary: #626269;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .runs-dashboard-page .runs-profile-history.runs-ledger-redesign .recent-runs-insight-card > span {
+  color: #625c56 !important;
+}
+
 /* Keep the generated coaching mark aligned with its localized card title. */
 #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {
   display: inline-flex !important;
@@ -1840,4 +1882,149 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-primary .analysis-overview-vo2-label.is-current,
 body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
   color: var(--ahs-secondary) !important;
+}
+
+/* Narrow phones: grid tracks must be allowed to shrink below their contents.
+   Keep tables horizontally scrollable inside their card instead of making the
+   entire Analysis page wider than the viewport. */
+@media (max-width: 640px) {
+  #root .analysis-page-shell :is(
+    .runner-shell-main,
+    .runner-shell-canvas,
+    .analysis-profile-cockpit,
+    .analysis-profile-primary,
+    .analysis-profile-reference-grid,
+    .analysis-profile-reference-card,
+    .analysis-profile-bento-grid,
+    .analysis-profile-bento-card,
+    .analysis-profile-table-grid,
+    .analysis-profile-table-card,
+    .analysis-overview-table-wrap,
+    .analysis-injury-prevention-section,
+    .analysis-injury-prevention-grid
+  ) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-profile-cockpit,
+    .analysis-profile-reference-grid,
+    .analysis-profile-bento-grid,
+    .analysis-profile-table-grid,
+    .analysis-injury-prevention-grid,
+    .analysis-injury-prevention-head
+  ) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-profile-reference-grid,
+    .analysis-profile-bento-grid,
+    .analysis-profile-table-grid,
+    .analysis-injury-prevention-grid
+  ) > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    grid-column: 1 / -1 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-load {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas:
+      "label"
+      "gauge"
+      "copy" !important;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-profile-reference-card.is-injury,
+    .analysis-profile-reference-card.is-coach,
+    .analysis-profile-bento-card.analysis-overview-card--intensity,
+    .analysis-profile-bento-card.analysis-overview-card--forecast,
+    .analysis-injury-prevention-section
+  ) {
+    padding-inline: 20px !important;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-overview-card-kicker,
+    .analysis-overview-metric-title,
+    .analysis-overview-card--forecast > strong,
+    .analysis-overview-table-head h2,
+    .analysis-injury-prevention-head h2,
+    .analysis-injury-prevention-head p,
+    .analysis-injury-prevention-risk-meta,
+    .analysis-injury-prevention-rec
+  ) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+
+  #root .runner-shell-page.analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--intensity .analysis-overview-card-kicker,
+  #root .runner-shell-page.analysis-page-shell .analysis-profile-bento-card.analysis-overview-card--forecast .analysis-overview-card-kicker {
+    display: inline-flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-overview-intensity-row,
+    .analysis-overview-forecast-footer
+  ) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap;
+  }
+
+  #root .analysis-page-shell :is(
+    .analysis-overview-intensity-row,
+    .analysis-overview-forecast-footer
+  ) > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere;
+  }
+
+  #root .analysis-page-shell .analysis-overview-table-wrap {
+    width: 100% !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root .analysis-page-shell .analysis-overview-table-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+
+  #root .analysis-page-shell .analysis-overview-table-actions .runner-shell-inline-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels,
+  #root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-meter,
+  #root .analysis-page-shell .analysis-injury-prevention-acwr-zones,
+  #root .analysis-page-shell .analysis-injury-prevention-soreness-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    min-width: 0 !important;
+  }
+
+  #root .analysis-page-shell .analysis-profile-reference-card.is-injury .analysis-overview-risk-labels span,
+  #root .analysis-page-shell .analysis-injury-prevention-soreness-btn {
+    min-width: 0 !important;
+    padding-inline: 6px !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  #root .analysis-page-shell .analysis-injury-prevention-soreness-btn {
+    min-height: 44px;
+  }
 }

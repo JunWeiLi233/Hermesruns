@@ -54,7 +54,7 @@ assert.match(
 );
 assert.match(
   modalSource,
-  /className="modal-header-main"[\s\S]*?headerContent[\s\S]*?<h3>\{title\}<\/h3>/,
+  /className="modal-header-main"[\s\S]*?headerContent[\s\S]*?<h3 id=\{titleId\}>\{title\}<\/h3>/,
   'The shared modal should place optional header content before its title.',
 );
 for (const localeSource of [englishComponents, chineseComponents]) {

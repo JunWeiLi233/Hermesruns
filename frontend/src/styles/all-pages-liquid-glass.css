@@ -2694,10 +2694,33 @@ body:is(.theme-midnight, .theme-high-contrast) .runner-shell-page .runner-shell-
 }
 
 @media (max-width: 520px) {
+  #root .modal-shell .modal-card .modal-header .modal-close,
+  body > .modal-shell .modal-card .modal-header .modal-close {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+
   .runner-shell-page .runner-shell-notification-popover {
     width: min(392px, calc(100vw - 16px));
     max-width: calc(100vw - 16px);
     border-radius: 20px;
+  }
+
+  #root .runner-shell-page .runner-shell-notification-popover {
+    position: fixed;
+    inset: 64px 8px auto;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 152px);
+    overflow-y: auto;
+    transform: none;
+  }
+
+  #root .runner-shell-page .runner-shell-notification-popover::before,
+  #root .runner-shell-page .runner-shell-notification-popover::after {
+    display: none;
   }
 
   .runner-shell-page .runner-shell-notification-head {

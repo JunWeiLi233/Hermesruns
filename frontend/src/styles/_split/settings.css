@@ -612,6 +612,8 @@
   align-items: center;
   gap: 14px;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 74px;
   padding: 14px;
   border: 0;
@@ -658,9 +660,11 @@
 }
 
 .settings-atlas-quick-copy strong {
+  min-width: 0;
   line-height: 1.18;
-  overflow-wrap: normal;
-  word-break: keep-all;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .settings-atlas-quick-copy strong,
@@ -676,6 +680,13 @@
   color: rgba(232, 226, 220, 0.68);
   font-size: 0.82rem;
   line-height: 1.45;
+}
+
+.settings-atlas-quick-copy span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .settings-atlas-quick-arrow {
@@ -4615,6 +4626,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-select {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .st-pref-label strong {
@@ -4627,6 +4639,13 @@ body:is(.theme-midnight, .theme-high-contrast) .st-select {
 .st-pref-label span {
   font-size: 0.68rem;
   color: var(--text-muted);
+}
+
+.st-pref-label :is(strong, span) {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .st-segmented {
@@ -5551,6 +5570,40 @@ body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="3"]
 }
 
 @media (max-width: 640px) {
+  .settings-atlas-canvas .st-service-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .settings-atlas-canvas .st-service-head {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .settings-atlas-canvas .st-service-head :is(.settings-atlas-service-action, .st-service-btn) {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+    padding: 8px 14px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .settings-atlas-canvas .st-service-info :is(strong, span) {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
   .st-activity-graph {
     padding: 18px 16px 16px;
   }

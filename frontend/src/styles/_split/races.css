@@ -568,6 +568,24 @@
     margin: 0 auto;
 }
 
+@media (max-width: 640px) {
+    #root .races-dashboard-page .race-center-pb-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #root .races-dashboard-page .race-center-pb-card {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    #root .races-dashboard-page .race-center-pb-race-meta {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+}
+
 .race-center-hero {
     position: relative;
     min-height: 430px;
@@ -3021,6 +3039,32 @@
   padding-inline: clamp(18px, 2.4vw, 32px);
 }
 
+.races-dashboard-page .runner-shell-canvas,
+.races-dashboard-page .race-center-content,
+.races-dashboard-page .race-center-section,
+.races-dashboard-page .race-center-hero-actions,
+.races-dashboard-page .race-center-discovery-toolbar,
+.races-dashboard-page .race-center-country-filter,
+.races-dashboard-page .race-center-country-strip,
+.races-dashboard-page .race-center-filter-strip,
+.races-dashboard-page .race-center-filter-row,
+.races-dashboard-page .race-center-featured-card,
+.races-dashboard-page .race-center-discovery-grid {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.races-dashboard-page .race-center-discovery-toolbar input,
+.races-dashboard-page .race-center-featured-image-wrap,
+.races-dashboard-page .race-center-primary-btn,
+.races-dashboard-page .race-center-secondary-btn,
+.races-dashboard-page .race-center-country-chip,
+.races-dashboard-page .race-center-filter-chip {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
 .races-dashboard-page .race-center-content {
   width: min(100%, 1160px);
   margin: 0 auto;
@@ -3029,6 +3073,91 @@
 
 .races-dashboard-page .race-center-section:last-of-type {
   margin-bottom: 0;
+}
+
+@media (min-width: 721px) {
+  #root .races-dashboard-page .race-center-hero {
+    min-height: clamp(320px, 24vw, 350px);
+    box-shadow: 0 20px 44px rgba(42, 28, 21, 0.2);
+  }
+
+  #root .races-dashboard-page .race-center-hero-image {
+    object-position: center 52%;
+    filter: saturate(0.84) contrast(1.04);
+  }
+
+  #root .races-dashboard-page .race-center-hero-overlay {
+    background:
+      linear-gradient(90deg, rgba(24, 18, 15, 0.94) 0%, rgba(31, 24, 20, 0.78) 46%, rgba(31, 24, 20, 0.28) 100%),
+      linear-gradient(180deg, rgba(31, 24, 20, 0.08) 0%, rgba(24, 18, 15, 0.62) 100%) !important;
+  }
+
+  #root .races-dashboard-page .race-center-hero-body {
+    align-items: flex-start;
+    justify-content: center;
+    min-height: clamp(320px, 24vw, 350px);
+    padding: clamp(30px, 4vw, 52px);
+    text-align: left;
+  }
+
+  #root .races-dashboard-page .race-center-hero h1 {
+    max-width: 12ch;
+    font-size: clamp(2.4rem, 5.4vw, 4.6rem);
+    line-height: 0.92;
+    letter-spacing: -0.065em;
+    text-align: left;
+    color: #fff4e6 !important;
+    text-shadow: 0 3px 18px rgba(24, 18, 15, 0.4);
+  }
+
+  #root .races-dashboard-page .race-center-hero :is(
+    h1,
+    h1 span
+  ) {
+    color: #fff4e6 !important;
+    -webkit-text-fill-color: #fff4e6 !important;
+  }
+
+  #root .races-dashboard-page .race-center-hero p {
+    max-width: 52ch;
+    margin: 14px 0 0;
+    color: rgba(255, 244, 230, 0.86) !important;
+    font-size: 0.96rem;
+    line-height: 1.55;
+    text-shadow: 0 2px 12px rgba(24, 18, 15, 0.46);
+  }
+
+  #root .races-dashboard-page .race-center-hero-actions {
+    width: auto;
+    justify-content: flex-start;
+    margin-top: 20px;
+  }
+
+  #root .races-dashboard-page .race-center-primary-btn {
+    min-height: 44px;
+    padding-inline: 20px;
+    border: 1px solid rgba(255, 248, 238, 0.18) !important;
+    background: var(--accent-coral-strong, #f07561) !important;
+    color: #fff8f2 !important;
+    box-shadow: 0 12px 24px rgba(160, 57, 42, 0.2) !important;
+  }
+
+  #root .races-dashboard-page .race-center-secondary-btn {
+    min-height: 44px;
+    padding-inline: 20px;
+    border: 1px solid rgba(255, 248, 238, 0.48) !important;
+    background: rgba(31, 27, 25, 0.42) !important;
+    color: #fff4e6 !important;
+    box-shadow: none !important;
+  }
+
+  #root .races-dashboard-page :is(
+    .race-center-primary-btn,
+    .race-center-secondary-btn
+  ):focus-visible {
+    outline: 2px solid #fff4e6;
+    outline-offset: 3px;
+  }
 }
 
 /* Keep the race catalog cards compact enough to scan without losing the
@@ -3077,8 +3206,18 @@
   }
 
   .races-dashboard-page .race-center-discovery-grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     margin-top: 18px;
+  }
+
+  .races-dashboard-page :is(
+    .race-center-country-chip,
+    .race-center-filter-chip
+  ) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
 }
 

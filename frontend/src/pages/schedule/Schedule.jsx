@@ -1009,6 +1009,8 @@ export default function Schedule() {
               type="button"
               className={`runner-shell-side-link${item.active ? ' is-active' : ''}`}
               onClick={() => navigate(item.route)}
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
@@ -1163,7 +1165,7 @@ export default function Schedule() {
               </div>
 
               <article className={`schedule-plan-route-card${hasRoutePreview ? ' has-route-preview' : ' is-route-fallback'}`}>
-                <div className="schedule-plan-route-map" aria-hidden="true">
+                <div className="schedule-plan-route-map" role="region" aria-label={s('planned_route')}>
                   {hasRoutePreview ? (
                     <div ref={routeMapRef} className="schedule-plan-route-leaflet-map" />
                   ) : (
