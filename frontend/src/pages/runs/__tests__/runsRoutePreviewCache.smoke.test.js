@@ -219,7 +219,7 @@ assert.match(
 );
 
 const cachePaintStart = runsSource.indexOf('if (fromCache && cachedHit && isCurrentLoad()) {');
-const freshActivitiesStart = runsSource.indexOf("const runsPromise = apiJson('/api/activities')");
+const freshActivitiesStart = runsSource.indexOf("const runsPromise = cachedApiJson('/api/activities')");
 assert.ok(cachePaintStart >= 0 && freshActivitiesStart > cachePaintStart, 'Runs cache paint should be defined before fresh activity revalidation.');
 const cacheToRevalidationSource = runsSource.slice(cachePaintStart, freshActivitiesStart);
 assert.match(cacheToRevalidationSource, /setAllRuns\(sorted\);[\s\S]*setProfile\(cachedHit\.profile\);[\s\S]*setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/);

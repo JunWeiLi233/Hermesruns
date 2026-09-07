@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { apiJson } from '../api';
+import { cachedApiJson } from '../api/resourceCache';
 import { useI18n } from '../contexts/I18nContext';
 import AppIcon from './AppIcon';
 import HermesLogo from './HermesLogo';
@@ -33,7 +33,7 @@ export default function AuthenticatedPageChrome({
     let cancelled = false;
     (async () => {
       try {
-        const data = await apiJson('/api/profile/me');
+        const data = await cachedApiJson('/api/profile/me');
         if (!cancelled) setLoadedProfile(data);
       } catch {
         if (!cancelled) setLoadedProfile(null);

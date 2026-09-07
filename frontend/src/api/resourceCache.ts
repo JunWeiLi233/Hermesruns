@@ -30,6 +30,7 @@ export const PROFILE_TTL_MS = 15 * 1000;
 // be covered by invalidation, so /api/shoes must remain uncached.
 const TTL_BY_PREFIX: ReadonlyArray<readonly [prefix: string, ttlMs: number]> = [
   ['/api/activities', ACTIVITIES_TTL_MS], // covers /api/activities/analysis
+  ['/api/profile/dashboard', PROFILE_TTL_MS],
   ['/api/profile/me', PROFILE_TTL_MS],
 ];
 

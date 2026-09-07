@@ -7,7 +7,7 @@ const RUNS_STRAVA_SYNC_POLL_INTERVAL_MS = 2000;
 const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch, apiJson, getBackendBaseUrl } from '../../api';
-import { invalidateResourceCache } from '../../api/resourceCache';
+import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import PageSkeleton from '../../components/PageSkeleton';
 import FooterNavLinks from '../../components/FooterNavLinks';
@@ -676,7 +676,7 @@ const Runs = memo(function Runs() {
       : (cachedHit?.stravaStatus ?? null);
     let runsFailed = false;
 
-    const runsPromise = apiJson('/api/activities')
+    const runsPromise = cachedApiJson('/api/activities')
       .then((data) => {
         if (!isCurrentLoad()) return;
         const list = Array.isArray(data) ? data : [];
@@ -700,7 +700,7 @@ const Runs = memo(function Runs() {
         }
       });
 
-    const profilePromise = apiJson('/api/profile/me')
+    const profilePromise = cachedApiJson('/api/profile/me')
       .then((data) => {
         if (!isCurrentLoad() || data == null) return;
         setProfile(data);
