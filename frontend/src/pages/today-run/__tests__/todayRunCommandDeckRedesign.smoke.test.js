@@ -98,8 +98,8 @@ assert.match(
 
 assert.match(
   contrastSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.today-run-command-page \.today-run-command-hero\s*\{[\s\S]*padding:\s*0 !important;[\s\S]*background:\s*transparent !important;[\s\S]*box-shadow:\s*none !important;/,
-  'Light themes should remove the shared outer card so the decision grid can split into two panels.',
+  /body:is\(\.theme-light, \.theme-high-contrast-light, \.theme-midnight, \.theme-high-contrast\) #root \.today-run-command-page \.today-run-command-hero\s*\{[^}]*padding:\s*0 !important;[^}]*background:\s*transparent !important;[^}]*box-shadow:\s*none !important;/,
+  'Both themes should use two independent decision cards without the older outer panel.',
 );
 
 assert.match(
@@ -110,8 +110,8 @@ assert.match(
 
 assert.match(
   contrastSource,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.today-run-command-page \.today-run-command-readiness-panel\s*\{[\s\S]*align-self:\s*stretch;[\s\S]*rgba\(250, 245, 236, 0\.84\) !important;/,
-  'The right readiness column should remain a distinct full-height light panel.',
+  /body:is\(\.theme-light, \.theme-high-contrast-light, \.theme-midnight, \.theme-high-contrast\) #root \.today-run-command-page \.today-run-command-readiness-panel\s*\{[^}]*align-self:\s*stretch;/,
+  'The right readiness column should use the same full-height layout in both themes.',
 );
 
 assert.match(

@@ -9,8 +9,8 @@ const positioningBlock = styleSource.slice(styleSource.indexOf('Analysis VDOT / 
 
 assert.match(
   positioningBlock,
-  /body:is\(\.theme-light,\s*\.theme-high-contrast-light\) #root \.analysis-page-shell \.analysis-profile-reference-card\.is-trend\s*\{[^}]*grid-template-areas:[\s\S]*"label gauge"[\s\S]*"copy gauge"/,
-  'The fitness trend card should use the load-balance label/copy + metric grid.',
+  /body:is\(\.theme-light,\s*\.theme-high-contrast-light,\s*\.theme-midnight,\s*\.theme-high-contrast\) #root \.analysis-page-shell \.analysis-profile-reference-card\.is-trend\s*\{[^}]*grid-template-areas:[\s\S]*"label gauge"[\s\S]*"copy gauge"/,
+  'Both themes should use the same fitness trend label/copy and metric grid.',
 );
 assert.match(
   positioningBlock,

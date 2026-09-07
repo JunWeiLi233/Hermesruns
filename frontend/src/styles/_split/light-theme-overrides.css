@@ -888,11 +888,11 @@ body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .muscle-human-tor
     stroke: rgba(255, 255, 255, 0.08);
 }
 
-body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .info-disclosure-trigger,
-body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .info-disclosure-panel {
-    background: rgba(10, 17, 31, 0.76);
-    border-color: var(--line);
-    color: var(--text);
+body:is(.theme-midnight, .theme-high-contrast) #root :is(.dashboard-body, .runner-shell-page) .info-disclosure-trigger,
+body:is(.theme-midnight, .theme-high-contrast) #root :is(.dashboard-body, .runner-shell-page) .info-disclosure-panel {
+    background: var(--profile-night-solid, #1b1e24) !important;
+    border-color: var(--profile-night-line, rgba(255, 255, 255, 0.1));
+    color: var(--profile-night-ink, #f8f4ef);
 }
 
 body.theme-midnight .dashboard-body .history-count-pill,
@@ -3726,8 +3726,11 @@ body.theme-light .analysis-overview-risk-meter span.is-on {
   box-shadow: 0 0 18px rgba(0, 0, 0, 0.08), 0 8px 22px rgba(0, 0, 0, 0.1);
 }
 
-body.theme-light .analysis-overview-table-head {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) .analysis-overview-table-head {
   padding: 24px 24px 18px;
+}
+
+body.theme-light .analysis-overview-table-head {
   background:
     radial-gradient(circle at top right, rgba(252, 126, 105, 0.10), transparent 34%),
     linear-gradient(180deg, rgba(239, 241, 242, 0.98), rgba(245, 246, 247, 0.94));
@@ -3751,7 +3754,7 @@ body.theme-light .analysis-overview-table tbody tr:hover {
   background: rgba(247, 104, 52, 0.06);
 }
 
-body.theme-light .analysis-overview-table-head h2 {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) .analysis-overview-table-head h2 {
   font-size: clamp(2.4rem, 4.4vw, 3.6rem);
   font-style: italic;
   letter-spacing: -0.07em;

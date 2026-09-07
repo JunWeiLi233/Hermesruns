@@ -100,7 +100,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.pro
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page:not(.profile-dashboard-page) :is(
-  .today-run-command-hero,
   .schedule-plan-hero,
   .weather-engine-hero-shell,
   .st-hero
@@ -164,4 +163,59 @@ body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-card 
 body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form :is(.import-source-index, .import-source-tag),
 body:is(.theme-midnight, .theme-high-contrast) #root .profile-import-modal-form input[type="file"]::file-selector-button {
   background: var(--profile-night-solid) !important;
+}
+
+/* Detail views use the same components as light mode and borrow Profile's
+   color roles instead of retaining an older warm-brown canvas. */
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page {
+  --analysis-v2-paper: var(--profile-night-base);
+  --analysis-v2-card: var(--profile-night-card);
+  --analysis-v2-card-soft: var(--profile-night-raised);
+  --analysis-v2-focus: #1f2024;
+  --analysis-v2-focus-end: var(--profile-night-base);
+  --analysis-v2-ink: var(--profile-night-ink);
+  --analysis-v2-muted: var(--profile-night-muted);
+  --analysis-v2-faint: #b2a99c;
+  --analysis-v2-green: #9cd2aa;
+  --analysis-v2-line: var(--profile-night-line);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page .runner-shell-main,
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page .runner-shell-canvas.analysis-insight-detail-canvas {
+  background: transparent !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile {
+  --load-profile-paper: var(--profile-night-base);
+  --load-profile-card: var(--profile-night-card);
+  --load-profile-card-solid: var(--profile-night-solid);
+  --load-profile-ink: var(--profile-night-ink);
+  --load-profile-muted: var(--profile-night-muted);
+  --load-profile-faint: #b2a99c;
+  --load-profile-green: #9cd2aa;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-intensity .analysis-intensity-profile-content {
+  --intensity-card: var(--profile-night-card);
+  --intensity-card-strong: var(--profile-night-raised);
+  --intensity-ink: var(--profile-night-ink);
+  --intensity-muted: var(--profile-night-muted);
+  --intensity-faint: #b2a99c;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .prediction-detail-page .prediction-profile-content {
+  --prediction-profile-card: var(--profile-night-card);
+  --prediction-profile-card-strong: var(--profile-night-raised);
+  --prediction-profile-ink: var(--profile-night-ink);
+  --prediction-profile-muted: var(--profile-night-muted);
+  --prediction-profile-faint: #b2a99c;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-profile-minimal {
+  --run-detail-card: var(--profile-night-card);
+  --run-detail-card-raised: var(--profile-night-raised);
+  --run-detail-dark: var(--profile-night-solid);
+  --run-detail-ink: var(--profile-night-ink);
+  --run-detail-muted: var(--profile-night-muted);
+  --run-detail-faint: #b2a99c;
 }

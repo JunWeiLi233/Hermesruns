@@ -969,8 +969,8 @@ body #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
   }
 }
 
-/* Keep Analysis content cards flat after the shared light-card sweep. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
+/* Keep the same independent Analysis card structure in both themes. */
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-shell-page.analysis-page-shell .analysis-overview-card:is(
   .analysis-profile-reference-card.is-coach,
   .analysis-profile-reference-card.is-injury,
   .analysis-profile-bento-card,
@@ -981,7 +981,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analy
 }
 
 /* Only the two table cards paint a surface; their wrapper stays on the canvas. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analysis-page-shell .analysis-profile-table-grid {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-shell-page.analysis-page-shell .analysis-profile-table-grid {
   background: transparent !important;
   background-image: none !important;
   border: 0 !important;
@@ -991,7 +991,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .runner-shell-page.analy
 
 /* The summary bento grid is a layout wrapper, not a fourth card. Keep its
    three child cards independent after the shared white-card sweep. */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-bento-grid {
   border: 0 !important;
   border-radius: 0 !important;
   padding: 0 !important;
@@ -1000,11 +1000,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   box-shadow: none !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
   border: 0 !important;
   border-radius: var(--ahs-radius-lg) !important;
-  background: var(--ahs-surface) !important;
   background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+  background: var(--ahs-surface) !important;
   box-shadow: var(--ahs-shadow) !important;
 }
 
@@ -1024,7 +1027,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 }
 
 /* Stack the trend direction directly above its delta in the right column. */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
   grid-template-rows: auto auto !important;
@@ -1032,17 +1035,17 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   gap: 0 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
   display: contents !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-kicker {
   grid-column: 1 !important;
   grid-row: 1 !important;
   align-self: start !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
   position: static !important;
   grid-column: 2 !important;
   grid-row: 1 !important;
@@ -1051,7 +1054,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   margin: 0 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
   grid-column: 2 !important;
   grid-row: 2 !important;
   align-self: start !important;
@@ -1060,12 +1063,12 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 }
 
 /* Analysis VDOT trend placement: keep the direction above its delta value. */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
   position: relative !important;
   padding-bottom: 78px !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
   position: static !important;
   left: auto !important;
   bottom: auto !important;
@@ -1073,20 +1076,20 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 }
 
 /* Place the trend conclusion in the card's lower-left corner. */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
   position: relative !important;
   padding-bottom: 78px !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head {
   display: block !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-card-head > div:first-child {
   display: block !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
   position: absolute !important;
   left: 24px !important;
   bottom: 54px !important;
@@ -1097,7 +1100,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   margin: 0 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
   position: absolute !important;
   left: 24px !important;
   bottom: 18px !important;
@@ -1181,21 +1184,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     color: var(--ahs-accent-ink, #8f2f24) !important;
   }
 
-  /* Today Run intentionally has no rail, so its shared bar spans the viewport. */
-  #root .today-run-command-page > .runner-shell-main > .runner-shell-topbar {
-    left: 0 !important;
-    right: 0 !important;
-    width: 100vw !important;
-  }
 }
 
 @media (min-width: 861px) {
-  /* The midnight Today page keeps its navigation rail. */
-  body:is(.theme-midnight, .theme-high-contrast) #root .today-run-command-page > .runner-shell-main > .runner-shell-topbar {
-    left: var(--runner-nav-collapsed-width, 96px) !important;
-    width: auto !important;
-  }
-
   body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) > .runner-shell-main > .runner-shell-topbar {
     border-bottom-color: rgba(255, 238, 226, 0.12) !important;
     background: rgba(15, 13, 10, 0.86) !important;
@@ -1236,7 +1227,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:wher
 }
 
 /* Analysis VDOT / fitness card: mirror load-balance grid (label+copy left, metric stack right). */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend {
   position: relative !important;
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(128px, 168px) !important;
@@ -1253,8 +1244,8 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   padding-bottom: 24px !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker,
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend > .analysis-overview-card-kicker {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-vdot-trend-kicker,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend > .analysis-overview-card-kicker {
   grid-area: label !important;
   position: static !important;
   align-self: start !important;
@@ -1269,7 +1260,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-transform: none !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
   grid-area: gauge !important;
   position: static !important;
   display: grid !important;
@@ -1283,7 +1274,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   margin: 0 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
   position: static !important;
   left: auto !important;
   bottom: auto !important;
@@ -1298,7 +1289,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-align: left !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
   position: static !important;
   left: auto !important;
   bottom: auto !important;
@@ -1306,22 +1297,25 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-align: left !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
   font-size: 3rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.06em !important;
   line-height: 1 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
   grid-area: copy !important;
   position: static !important;
   max-width: 30ch !important;
   margin: 0 !important;
-  color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.6)) !important;
   font-size: 0.9rem !important;
   line-height: 1.45 !important;
   text-align: left !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-copy {
+  color: var(--ahs-muted-ink, rgba(60, 60, 67, 0.6)) !important;
 }
 
 /* Analysis reference topbar: scoped separately from the Profile dashboard. */
@@ -1400,22 +1394,25 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   }
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
   border: 0 !important;
   border-radius: var(--ahs-radius-lg) !important;
-  background: var(--ahs-surface) !important;
   background-image: none !important;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-bento-grid > .analysis-profile-bento-card {
+  background: var(--ahs-surface) !important;
   box-shadow: var(--ahs-shadow) !important;
 }
 
 /* Fitness trend stack: left-align so decline/improve icon shares the minus/plus column. */
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-vdot-trend-heading,
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-insight-delta {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-vdot-trend-heading,
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack > .analysis-overview-insight-delta {
   justify-self: start !important;
   width: max-content !important;
   max-width: 100% !important;
 }
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-trend-stack {
   justify-items: start !important;
   justify-self: end !important;
   width: max-content !important;
@@ -1423,7 +1420,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   gap: 6px !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
@@ -1432,7 +1429,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-align: left !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-vdot-trend-heading .runner-dashboard-side-link-icon {
   width: 1em !important;
   height: 1em !important;
   flex: 0 0 1em !important;
@@ -1454,14 +1451,14 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   color: #34c759 !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta {
   display: block !important;
   width: max-content !important;
   margin: 0 !important;
   text-align: left !important;
 }
 
-body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
+body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .analysis-page-shell .analysis-profile-reference-card.is-trend .analysis-overview-insight-delta strong {
   display: block !important;
   font-variant-numeric: tabular-nums !important;
   text-align: left !important;

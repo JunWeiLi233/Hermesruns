@@ -10,7 +10,7 @@ const finalWhiteSource = readFileSync(path.join(here, "../../../styles/grid-card
 
 const cardSweepIndex = liquidGlassSource.lastIndexOf('.runner-dashboard-page :is(');
 const headingResetIndex = finalWhiteSource.lastIndexOf(
-  'body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page[data-muscle-theme="white"]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,',
+  'body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .runner-dashboard-page[data-muscle-theme]:has(.mt-top-workbench) .mt-top-muscle-card .mt-top-panel-head,',
 );
 
 assert.ok(
@@ -22,9 +22,9 @@ assert.ok(
   'The muscle-selection heading must have a final nested reset after the shared card sweep.',
 );
 assert.match(
-  finalWhiteSource.slice(headingResetIndex, headingResetIndex + 520),
+  finalWhiteSource.slice(headingResetIndex, headingResetIndex + 650),
   /border:\s*0 !important;[\s\S]*border-radius:\s*0 !important;[\s\S]*background:\s*transparent !important;[\s\S]*background-image:\s*none !important;[\s\S]*box-shadow:\s*none !important;/,
-  'The light-theme muscle-selection heading should not paint a strip on top of its card.',
+  'Neither theme should paint an extra strip behind the muscle-selection heading.',
 );
 assert.doesNotMatch(
   finalWhiteSource,

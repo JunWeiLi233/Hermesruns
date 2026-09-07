@@ -2620,7 +2620,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page 
     padding: 12px 14px;
   }
 
-  body:is(.theme-light, .theme-high-contrast-light) #root .today-run-command-page .today-run-command-hero-copy {
+  body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-contrast) #root .today-run-command-page .today-run-command-hero-copy {
     padding: clamp(20px, 2vw, 28px) !important;
   }
 }
