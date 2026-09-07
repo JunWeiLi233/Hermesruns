@@ -8,14 +8,20 @@ const profileSource = readFileSync(path.join(here, "../ProfileDashboard.jsx"), '
 
 assert.match(
   profileSource,
-  /PROFILE_DASHBOARD_BATCH_TIMEOUT_MS\s*=\s*1400/,
-  'Profile dashboard should timebox the batch endpoint so the loading card does not wait indefinitely.',
+  /PROFILE_DASHBOARD_BATCH_TIMEOUT_MS\s*=\s*8000/,
+  'Profile dashboard should timebox the batch endpoint long enough to cover Railway wake retries without stampeding into fallback.',
 );
 
 assert.match(
   profileSource,
-  /withProfileDashboardTimeout\(apiJson\('\/api\/profile\/dashboard'\)\)/,
+  /withProfileDashboardTimeout\([\s\S]*cachedApiJson\('\/api\/profile\/dashboard'/,
   'Profile dashboard should fall back when the batch endpoint is slow instead of blocking first paint.',
+);
+
+assert.match(
+  profileSource,
+  /controller\.abort\(\)/,
+  'Profile dashboard batch timeout must abort the in-flight request so fallback does not run alongside an orphaned wake.',
 );
 
 assert.match(
@@ -78,4 +84,22 @@ assert.match(
   /dashboardData\.source === 'batch'[\s\S]*loadProfileDashboardFullHistoryData\(\)[\s\S]*setRuns\(fullRuns\)/,
   'Profile dashboard should hydrate full runs after batch first paint without blocking the initial render.',
 );
+assert.match(
+  profileSource,
+  /cachedApiJson\('\/api\/profile\/me'\)/,
+  'Profile fallback should reuse the shared resource cache for /api/profile/me.',
+);
+
+assert.match(
+  profileSource,
+  /cachedApiJson\(`\/api\/activities\?limit=\$\{PROFILE_ACTIVITIES_FETCH_LIMIT\}`\)/,
+  'Profile fallback/full-history should reuse the shared resource cache for activities.',
+);
+
+assert.match(
+  profileSource,
+  /requestIdleCallback[\s\S]*apiJson\('\/api\/weekly-digest'\)/,
+  'Weekly digest should defer until idle so it does not amplify first-paint wake fan-out.',
+);
+
 console.log('[PASS] Profile load resilience smoke test passed.');

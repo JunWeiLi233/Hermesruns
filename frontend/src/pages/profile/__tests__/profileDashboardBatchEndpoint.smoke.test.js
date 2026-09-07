@@ -8,14 +8,14 @@ const pageSource = readFileSync(path.join(here, '../ProfileDashboard.jsx'), 'utf
 
 assert.match(
   pageSource,
-  /apiJson\('\/api\/profile\/dashboard'\)/,
-  'Profile dashboard should request the new batch endpoint first.',
+  /cachedApiJson\('\/api\/profile\/dashboard'/,
+  'Profile dashboard should request the batch endpoint first through the shared resource cache.',
 );
 
 assert.match(
   pageSource,
-  /apiJson\('\/api\/profile\/me'\)[\s\S]*PROFILE_ACTIVITIES_FETCH_LIMIT/,
-  'Profile dashboard should keep the individual endpoint fallback path with a bounded activities limit.',
+  /cachedApiJson\('\/api\/profile\/me'\)[\s\S]*PROFILE_ACTIVITIES_FETCH_LIMIT/,
+  'Profile dashboard should keep the individual endpoint fallback path with a bounded activities limit via cachedApiJson.',
 );
 
 assert.match(

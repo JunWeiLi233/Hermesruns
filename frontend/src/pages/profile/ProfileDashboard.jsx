@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
+import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import HermesLogo from '../../components/HermesLogo';
 import Modal from '../../components/Modal';
@@ -47,7 +48,7 @@ const DASHBOARD_CACHE_RUN_LIMIT = 500;
 // Keep in sync with BE APP_ACTIVITIES_DEFAULT_LIMIT / RFC-005 (max 500).
 const PROFILE_ACTIVITIES_FETCH_LIMIT = DASHBOARD_CACHE_RUN_LIMIT;
 const DASHBOARD_FIRST_PAINT_RUN_LIMIT = 60;
-const PROFILE_DASHBOARD_BATCH_TIMEOUT_MS = 1400;
+const PROFILE_DASHBOARD_BATCH_TIMEOUT_MS = 8000;
 
 function buildDashboardCacheSnapshot(dashboardData) {
   if (!dashboardData || !dashboardData.profile) return null;
@@ -129,12 +130,18 @@ function writeJsonStorage(key, value) {
     console.warn('[hermes] localStorage write failed:', key, error);
   }
 }
-function withProfileDashboardTimeout(promise) {
+function withProfileDashboardTimeout(promiseFactory) {
+  const controller = new AbortController();
   let timeoutId;
   const timeout = new Promise((_, reject) => {
-    timeoutId = window.setTimeout(() => reject(new Error('profile_dashboard_batch_timeout')), PROFILE_DASHBOARD_BATCH_TIMEOUT_MS);
+    timeoutId = window.setTimeout(() => {
+      controller.abort();
+      reject(new Error('profile_dashboard_batch_timeout'));
+    }, PROFILE_DASHBOARD_BATCH_TIMEOUT_MS);
   });
-  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+  return Promise.race([promiseFactory(controller.signal), timeout]).finally(() => {
+    window.clearTimeout(timeoutId);
+  });
 }
 
 function resolveRunDistanceKm(run) {
@@ -514,8 +521,8 @@ function normalizeProfileDashboardPayload(payload) {
 
 async function loadProfileDashboardFallbackData() {
   const [profileResult, activitiesResult, shoesResult] = await Promise.allSettled([
-    apiJson('/api/profile/me'),
-    apiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`),
+    cachedApiJson('/api/profile/me'),
+    cachedApiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`),
     apiJson('/api/shoes'),
   ]);
 
@@ -560,18 +567,21 @@ async function loadProfileDashboardFallbackEnrichmentData() {
 
 async function loadProfileDashboardData() {
   try {
-    const batchPayload = await withProfileDashboardTimeout(apiJson('/api/profile/dashboard'));
+    const batchPayload = await withProfileDashboardTimeout(
+      (signal) => cachedApiJson('/api/profile/dashboard', { signal }),
+    );
     const normalized = normalizeProfileDashboardPayload(batchPayload);
     if (normalized) return normalized;
   } catch {
     // Fall through to the individual endpoints that powered the dashboard before batching.
+    // Timeout aborts the batch request first so fallback does not stampede alongside it.
   }
 
   return loadProfileDashboardFallbackData();
 }
 
 async function loadProfileDashboardFullHistoryData() {
-  const activities = await apiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`);
+  const activities = await cachedApiJson(`/api/activities?limit=${PROFILE_ACTIVITIES_FETCH_LIMIT}`);
   return sortRunsByMostRecent(Array.isArray(activities) ? activities : []);
 }
 
@@ -873,6 +883,9 @@ export default function ProfileDashboard() {
     if (!isAuthenticated) return undefined;
 
     function handleStravaSyncFinished() {
+      invalidateResourceCache('/api/profile/dashboard');
+      invalidateResourceCache('/api/activities');
+      invalidateResourceCache('/api/profile/me');
       loadDashboard();
     }
 
@@ -918,17 +931,25 @@ export default function ProfileDashboard() {
     if (!isAuthenticated) return undefined;
     let cancelled = false;
     setWeeklyDigestLoading(true);
-    apiJson('/api/weekly-digest')
-      .then((data) => {
-        if (!cancelled) setWeeklyDigest(data || null);
-      })
-      .catch(() => {
-        if (!cancelled) setWeeklyDigest(null);
-      })
-      .finally(() => {
-        if (!cancelled) setWeeklyDigestLoading(false);
-      });
-    return () => { cancelled = true; };
+    const scheduleIdle = window.requestIdleCallback || ((callback) => window.setTimeout(callback, 240));
+    const cancelIdle = window.cancelIdleCallback || window.clearTimeout;
+    const idleHandle = scheduleIdle(() => {
+      if (cancelled) return;
+      apiJson('/api/weekly-digest')
+        .then((data) => {
+          if (!cancelled) setWeeklyDigest(data || null);
+        })
+        .catch(() => {
+          if (!cancelled) setWeeklyDigest(null);
+        })
+        .finally(() => {
+          if (!cancelled) setWeeklyDigestLoading(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+      cancelIdle(idleHandle);
+    };
   }, [isAuthenticated]);
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);

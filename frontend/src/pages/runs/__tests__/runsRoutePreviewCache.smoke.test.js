@@ -23,7 +23,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const runsPromise = apiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
+  /const runsPromise = cachedApiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
   'Runs should normalize the direct /api/activities response to an array before sorting and rendering activity cards.',
 );
 
@@ -219,7 +219,7 @@ assert.match(
 );
 
 const cachePaintStart = runsSource.indexOf('if (fromCache && cachedHit && isCurrentLoad()) {');
-const freshActivitiesStart = runsSource.indexOf("const runsPromise = apiJson('/api/activities')");
+const freshActivitiesStart = runsSource.indexOf("const runsPromise = cachedApiJson('/api/activities')");
 assert.ok(cachePaintStart >= 0 && freshActivitiesStart > cachePaintStart, 'Runs cache paint should be defined before fresh activity revalidation.');
 const cacheToRevalidationSource = runsSource.slice(cachePaintStart, freshActivitiesStart);
 assert.match(cacheToRevalidationSource, /setAllRuns\(sorted\);[\s\S]*setProfile\(cachedHit\.profile\);[\s\S]*setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/);
