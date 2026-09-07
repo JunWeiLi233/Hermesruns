@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson, apiFetch } from '../../api';
+import { cachedApiJson } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import Modal from '../../components/Modal';
@@ -328,7 +329,7 @@ const Shoes = memo(function Shoes() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const data = await apiJson('/api/profile/me');
+      const data = await cachedApiJson('/api/profile/me');
       setProfile(data || null);
     } catch {
       setProfile(null);

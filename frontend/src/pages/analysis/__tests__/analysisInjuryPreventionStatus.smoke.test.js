@@ -8,8 +8,8 @@ const analysisSource = readFileSync(path.join(here, "../Analysis.jsx"), 'utf8');
 
 assert.match(
   analysisSource,
-  /useEffect\(\(\) => \{\s*if \(!isAuthenticated\) return;\s*let cancelled = false;[\s\S]*?apiJson\('\/api\/injury-risk\/status'\)/,
-  'Injury prevention should load for every authenticated runner, even without run history.',
+  /useEffect\(\(\) => \{\s*if \(!isAuthenticated\) return undefined;\s*let cancelled = false;[\s\S]*?requestIdleCallback[\s\S]*?apiJson\('\/api\/injury-risk\/status'\)/,
+  'Injury prevention should idle-defer load for every authenticated runner, even without run history.',
 );
 
 assert.doesNotMatch(

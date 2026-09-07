@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
+import { cachedApiJson } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
@@ -1250,8 +1251,8 @@ export default function AnalysisInsightDetail() {
       setLoadState('loading');
       try {
         const [profileData, activitiesData, coachTodayData] = await Promise.all([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
+          cachedApiJson('/api/profile/me'),
+          cachedApiJson('/api/activities'),
           insightKey === 'coach-insight' ? apiJson('/api/coach/today').catch(() => null) : Promise.resolve(null),
         ]);
         const list = Array.isArray(activitiesData) ? activitiesData : [];

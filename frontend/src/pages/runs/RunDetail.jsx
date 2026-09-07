@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch, apiJson } from '../../api';
+import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
@@ -758,6 +759,7 @@ export default function RunDetail() {
     let sawActiveSync = false;
 
     while (Date.now() < deadlineMs) {
+      await waitWhileDocumentHidden();
       let syncStatus;
       try {
         syncStatus = await apiJson('/api/auth/strava/sync-status');

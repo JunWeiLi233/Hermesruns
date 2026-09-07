@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,9 +15,8 @@ assert.doesNotMatch(heatmap, /HEATMAP_SAMPLE_LIMIT = 25000/);
 assert.ok(fullIdx >= 0);
 assert.match(cache, /ACTIVITIES_TTL_MS = 120 \* 1000/);
 assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'\)/);
-assert.match(analysis, /apiJson\('\/api\/activities\/analysis'\)/);
 assert.match(analysis, /invalidateResourceCache\('\/api\/activities'\)/);
-// initial load keeps cache; post-import refresh must invalidate + apiJson
-assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
-assert.equal((analysis.match(/apiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
+// initial load keeps cache; post-import refresh must invalidate then re-fetch via cachedApiJson
+assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'\)/g) || []).length, 2);
+assert.doesNotMatch(analysis, /apiJson\('\/api\/activities\/analysis'\)/);
 console.log('frontendMemoryFootprint.smoke.test.js OK');

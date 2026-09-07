@@ -72,4 +72,12 @@ assert.equal(
   'Runs must not raw-apiJson /api/activities on mount (duplicates Analysis/Profile cache).',
 );
 
+
+assert.match(
+  analysis,
+  /requestIdleCallback[\s\S]*loadCoachToday\(\)/,
+  'Analysis coach/today must remain idle-deferred after #115 cachedApiJson wiring.',
+);
+
 console.log('[PASS] Profile/Runs/Analysis wake fan-out smoke test passed.');
+
