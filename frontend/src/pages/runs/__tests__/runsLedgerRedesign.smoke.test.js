@@ -132,10 +132,10 @@ assert.match(
   'Runs ledger rows should collapse to one column on mobile.',
 );
 
-assert.doesNotMatch(
+assert.match(
   ledgerBlock,
-  /font-size:[^;]*vw|letter-spacing:\s*-/,
-  'New Runs ledger CSS should avoid viewport-scaled type and negative tracking.',
+  /\.runs-profile-cockpit__heading h1,[^{]+\.runs-dashboard-hero-copy h1\s*\{[^}]*font-family:\s*var\(--font-display\);[^}]*font-size:\s*clamp\(1\.75rem,\s*3vw,\s*2\.2rem\);[^}]*font-style:\s*italic;/,
+  'Runs should use the same bounded editorial heading treatment as Profile.',
 );
 
 assert.match(

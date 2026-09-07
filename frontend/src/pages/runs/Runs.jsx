@@ -533,7 +533,7 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onD
           title={t('runs.delete')}
           onClick={(e) => { e.stopPropagation(); onDelete(run); }}
         >
-          <AppIcon name="close" />
+          <AppIcon name="delete" />
         </button>
       )}
     </div>
@@ -1534,9 +1534,9 @@ const Runs = memo(function Runs() {
             </section>
             <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
               <section className="recent-runs-stats-grid">
-                <article className="recent-runs-stat-card"><span>{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-                <article className="recent-runs-stat-card"><span>{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="route" className="runs-profile-metric-icon" />{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="speed" className="runs-profile-metric-icon" />{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
+                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="timer" className="runs-profile-metric-icon" />{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
               </section>
               {filteredRuns.length > 0 ? (
                 <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
