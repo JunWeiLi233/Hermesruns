@@ -2366,6 +2366,22 @@ body:is(.theme-midnight, .theme-high-contrast) .recent-runs-month-header {
   color: var(--text-muted);
 }
 
+/* The wrapper paints this compound control; its input must not become a
+   second form-field surface when the shared theme styles load. */
+#root .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap .recent-runs-search-input {
+  min-width: 0;
+  padding: 12px 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap:focus-within {
+  outline: 2px solid var(--text-strong, #2c2f30);
+  outline-offset: 3px;
+}
+
 .recent-runs-search-clear {
   background: transparent;
   border: none;

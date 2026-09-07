@@ -1119,8 +1119,7 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-shell-page.weather-eng
 }
 
 #root .runner-shell-page.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input:focus-visible {
-  outline: 2px solid var(--runs-profile-muted) !important;
-  outline-offset: -2px;
+  outline: none !important;
 }
 
 #root .runner-shell-page.runs-dashboard-page .runs-profile-workbench .recent-runs-search-input-wrap:focus-within {
