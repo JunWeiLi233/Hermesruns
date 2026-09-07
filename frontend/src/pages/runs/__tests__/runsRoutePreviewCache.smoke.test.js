@@ -23,7 +23,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const runsPromise = apiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
+  /const runsPromise = cachedApiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
   'Runs should normalize the direct /api/activities response to an array before sorting and rendering activity cards.',
 );
 
