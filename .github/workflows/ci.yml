@@ -52,6 +52,22 @@ jobs:
   test-backend:
     name: test-backend
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: hermes_upgrade_test
+          POSTGRES_USER: hermes_test
+          POSTGRES_PASSWORD: local-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hermes_test -d hermes_upgrade_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      HERMES_TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/hermes_upgrade_test
+      HERMES_TEST_POSTGRES_USER: hermes_test
+      HERMES_TEST_POSTGRES_PASSWORD: local-test-only
     permissions:
       contents: read
     steps:

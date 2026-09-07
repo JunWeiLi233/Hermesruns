@@ -563,7 +563,7 @@ export default function TodayRun() {
               <AppIcon name="weather" />
               <p><strong>{hasHeatPenalty ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm }) : t('today_run.acclimatization_clear')}</strong>
                 <span>{hasHeatPenalty ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm }) : t('today_run.stitch_weather_none')}</span></p>
-              <button type="button" aria-label={t('common.close')} onClick={() => setHeatDismissed(true)}><AppIcon name="close" /></button>
+              <button type="button" aria-label={t('profile.close')} onClick={() => setHeatDismissed(true)}><AppIcon name="close" /></button>
             </div>}
           </section>
 
