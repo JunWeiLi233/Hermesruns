@@ -39,11 +39,9 @@
 html:has(#root .today-run-command-page),
 html:has(#root .runs-dashboard-page.runs-ledger-page),
 html:has(#root .analysis-page-shell),
-html:has(#root .profile-dashboard-page),
 body:has(#root .today-run-command-page),
 body:has(#root .runs-dashboard-page.runs-ledger-page),
-body:has(#root .analysis-page-shell),
-body:has(#root .profile-dashboard-page) {
+body:has(#root .analysis-page-shell) {
   background: var(--ahs-wash) !important;
   background-color: var(--ahs-canvas) !important;
   background-attachment: fixed !important;
@@ -52,8 +50,7 @@ body:has(#root .profile-dashboard-page) {
 
 #root .today-run-command-page,
 #root .runs-dashboard-page.runs-ledger-page,
-#root .analysis-page-shell,
-#root .profile-dashboard-page {
+#root .analysis-page-shell {
   background: transparent !important;
   color: var(--ahs-label) !important;
   font-family: var(--ahs-font) !important;
@@ -61,17 +58,14 @@ body:has(#root .profile-dashboard-page) {
 
 #root .today-run-command-page .runner-shell-canvas,
 #root .runs-dashboard-page .runner-shell-canvas,
-#root .analysis-page-shell .runner-shell-canvas,
-#root .profile-dashboard-page .runner-shell-canvas,
-#root .profile-dashboard-page .hd-content {
+#root .analysis-page-shell .runner-shell-canvas {
   background: transparent !important;
   background-image: none !important;
 }
 
 #root .today-run-command-page .runner-shell-canvas::before,
 #root .runs-dashboard-page .runner-shell-canvas::before,
-#root .analysis-page-shell .runner-shell-canvas::before,
-#root .profile-dashboard-page .runner-shell-canvas::before {
+#root .analysis-page-shell .runner-shell-canvas::before {
   content: none !important;
   display: none !important;
 }
@@ -79,8 +73,7 @@ body:has(#root .profile-dashboard-page) {
 /* ---------- Glass chrome only (Liquid Glass = nav layer) ---------- */
 #root .today-run-command-page > .runner-shell-sidebar,
 #root .runs-dashboard-page > .runner-shell-sidebar,
-#root .analysis-page-shell > .runner-shell-sidebar,
-#root .profile-dashboard-page > .runner-shell-sidebar {
+#root .analysis-page-shell > .runner-shell-sidebar {
   background: rgba(255, 255, 255, 0.72) !important;
   background-image: none !important;
   border-right: 1px solid rgba(255, 255, 255, 0.55) !important;
@@ -91,8 +84,7 @@ body:has(#root .profile-dashboard-page) {
 
 #root .today-run-command-page .runner-shell-topbar,
 #root .runs-dashboard-page .runner-shell-topbar,
-#root .analysis-page-shell .runner-shell-topbar,
-#root .profile-dashboard-page .runner-shell-topbar {
+#root .analysis-page-shell .runner-shell-topbar {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
@@ -102,7 +94,6 @@ body:has(#root .profile-dashboard-page) {
 #root .today-run-command-page .runner-shell-topbar h1,
 #root .runs-dashboard-page .runner-shell-topbar h1,
 #root .analysis-page-shell .runner-shell-topbar h1,
-#root .profile-dashboard-page .runner-shell-topbar h1,
 #root .runs-dashboard-page .runs-reference-header h1,
 #root .runs-dashboard-page .runs-apple-ledger-header h1 {
   color: var(--ahs-label) !important;
@@ -131,17 +122,6 @@ body:has(#root .profile-dashboard-page) {
   .analysis-overview-card,
   .analysis-profile-primary,
   .analysis-injury-prevention-section
-),
-#root .profile-dashboard-page :is(
-  .hd-metric-card,
-  .hd-weekly-card,
-  .hd-sessions-card,
-  .hd-predictions-card,
-  .hd-stamina-card,
-  .hd-streak-card,
-  .hd-rewards,
-  .hd-hero-readiness,
-  .hd-today-card
 ) {
   border: 0 !important;
   border-radius: var(--ahs-radius-lg) !important;
@@ -154,7 +134,6 @@ body:has(#root .profile-dashboard-page) {
 /* No hover-lift carnival �?Apple uses subtle press/opacity */
 #root .today-run-command-page :is(.today-run-coaching-answer, .today-run-plan-card):active,
 #root .analysis-page-shell .analysis-overview-card:active,
-#root .profile-dashboard-page :is(.hd-metric-card, .hd-weekly-card, .hd-sessions-card):active,
 #root .runs-dashboard-page .recent-runs-card:active {
   opacity: 0.92 !important;
 }
@@ -246,90 +225,6 @@ body:has(#root .profile-dashboard-page) {
   background: rgba(120, 120, 128, 0.08) !important; /* systemFill-ish */
 }
 
-/* ---------- Profile: Health Summary home ---------- */
-#root .profile-dashboard-page .hd-content {
-  gap: var(--ahs-gap) !important;
-}
-
-#root .profile-dashboard-page .hd-hero-greeting {
-  color: var(--ahs-label) !important;
-  font-size: clamp(1.6rem, 2.4vw, 2rem) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.03em !important;
-}
-
-#root .profile-dashboard-page .hd-hero-date,
-#root .profile-dashboard-page .hd-readiness-label,
-#root .profile-dashboard-page .hd-metric-detail,
-#root .profile-dashboard-page .hd-today-purpose,
-#root .profile-dashboard-page .hd-today-stat-label {
-  color: var(--ahs-secondary) !important;
-  font-weight: 400 !important;
-}
-
-#root .profile-dashboard-page .hd-today-card {
-  color: var(--ahs-label) !important;
-}
-
-#root .profile-dashboard-page .hd-today-bg {
-  opacity: 0.06 !important;
-}
-
-#root .profile-dashboard-page .hd-today-bg-overlay {
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.98)) !important;
-}
-
-#root .profile-dashboard-page .hd-today-content {
-  text-shadow: none !important;
-}
-
-#root .profile-dashboard-page .hd-today-kicker {
-  color: var(--ahs-pink) !important;
-  font-size: 0.94rem !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.01em !important;
-  text-transform: none !important;
-}
-
-#root .profile-dashboard-page .hd-today-title,
-#root .profile-dashboard-page .hd-today-stat strong,
-#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(1) .hd-metric-kicker,
-#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(2) .hd-metric-kicker,
-#root .profile-dashboard-page .hd-metric-strip .hd-metric-card:nth-child(3) .hd-metric-kicker {
-  color: rgba(60, 60, 67, 0.42) !important;
-  font-weight: 600 !important;
-}
-
-#root .profile-dashboard-page .hd-metric-value,
-#root .profile-dashboard-page .hd-card-title {
-  color: var(--ahs-label) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.025em !important;
-}
-
-#root .profile-dashboard-page .hd-metric-strip {
-  gap: var(--ahs-gap) !important;
-}
-
-
-
-
-
-#root .profile-dashboard-page .hd-btn-primary {
-  min-height: 44px !important;
-  border-radius: 980px !important;
-  background: var(--ahs-blue) !important;
-  box-shadow: none !important;
-}
-
-#root .profile-dashboard-page .hd-btn-ghost {
-  min-height: 44px !important;
-  border-radius: 980px !important;
-  border: 1px solid var(--ahs-separator) !important;
-  color: var(--ahs-label) !important;
-  background: transparent !important;
-}
-
 /* ---------- Runs ---------- */
 #root .runs-dashboard-page.runs-ledger-page {
   --runs-apple-paper: var(--ahs-canvas);
@@ -353,8 +248,7 @@ body:has(#root .profile-dashboard-page) {
 
 @media (max-width: 860px) {
   #root .today-run-command-page :is(.today-run-coaching-answer, .today-run-plan-card, .today-run-command-hero-copy, .today-run-command-readiness-panel),
-  #root .analysis-page-shell :is(.analysis-overview-card, .analysis-profile-primary),
-  #root .profile-dashboard-page :is(.hd-metric-card, .hd-weekly-card, .hd-sessions-card, .hd-today-card) {
+#root .analysis-page-shell :is(.analysis-overview-card, .analysis-profile-primary) {
     border-radius: var(--ahs-radius) !important;
   }
 }
@@ -377,214 +271,6 @@ html:has(#root .today-run-command-page) body {
   background-size: auto !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
-}
-
-/* Profile today card: convert dark poster �?Apple Summary white card
-   Specificity must beat contrast-fixes restore-cream block. */
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card {
-  isolation: isolate !important;
-  background: #ffffff !important;
-  color: #1c1c1e !important;
-  border-radius: 28px !important;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg {
-  opacity: 0.05 !important;
-  filter: saturate(0.7) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.98)) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-content,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-content {
-  text-shadow: none !important;
-  color: #1c1c1e !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-title,
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-purpose,
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-title,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-purpose,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
-  color: inherit !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
-  color: #ff2d55 !important;
-  font-size: 0.94rem !important;
-  font-weight: 600 !important;
-  letter-spacing: -0.01em !important;
-  text-transform: none !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong),
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong) {
-  color: #1c1c1e !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label),
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label) {
-  color: rgba(60, 60, 67, 0.6) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-btn-ghost,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-ghost {
-  border-color: rgba(60, 60, 67, 0.18) !important;
-  background: transparent !important;
-  color: #1c1c1e !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .runner-dashboard-page .hd-content .hd-today-card .hd-btn-primary,
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary {
-  background: #007aff !important;
-  color: #fff !important;
-  box-shadow: none !important;
-  min-height: 44px !important;
-}
-
-
-/* ==========================================================================
- * DV-2026-09-04-006 profile Apple Summary convergence
- * Must beat dynamic app.css (contrast-fixes) load order for /profile.
- * Canvas: clean system gray. Hero: white card. Numbers: high-contrast ink.
- * Accents: kickers only �?not blooming fills.
- * ========================================================================== */
-
-/* Cleaner Profile canvas �?soft gray with a restrained top wash (not peach bloom) */
-html:has(#root .profile-dashboard-page),
-body:has(#root .profile-dashboard-page),
-html:has(#root .profile-dashboard-page) body {
-  background-color: var(--ahs-canvas) !important;
-  background-image:
-    radial-gradient(90% 55% at 12% -10%, rgba(255, 214, 232, 0.22), transparent 58%),
-    radial-gradient(80% 50% at 88% -6%, rgba(186, 214, 255, 0.2), transparent 55%),
-    linear-gradient(180deg, #f5f5f7 0%, var(--ahs-canvas) 28%, var(--ahs-canvas) 100%) !important;
-  background-attachment: fixed !important;
-  background-repeat: no-repeat !important;
-}
-
-/* Kill residual grid/paper washes on Profile shell */
-#root .profile-dashboard-page .runner-shell-canvas,
-#root .profile-dashboard-page .hd-content,
-#root .runner-dashboard-page.profile-dashboard-page .runner-shell-canvas {
-  background: transparent !important;
-  background-image: none !important;
-}
-#root .profile-dashboard-page .runner-shell-canvas::before,
-#root .runner-dashboard-page.profile-dashboard-page .runner-shell-canvas::before {
-  content: none !important;
-  display: none !important;
-}
-
-/* Readiness + metric numbers: instantly readable */
-#root .profile-dashboard-page .hd-readiness-value strong,
-#root .profile-dashboard-page .hd-metric-value,
-#root .profile-dashboard-page .hd-today-stat strong,
-#root .profile-dashboard-page .hd-weekly-card .hd-card-title,
-#root .runner-dashboard-page.profile-dashboard-page .hd-readiness-value strong,
-#root .runner-dashboard-page.profile-dashboard-page .hd-metric-value {
-  color: var(--ahs-label) !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.03em !important;
-  -webkit-text-fill-color: var(--ahs-label) !important;
-}
-
-#root .profile-dashboard-page .hd-metric-value {
-  font-size: clamp(1.65rem, 2.4vw, 2.05rem) !important;
-  line-height: 1.1 !important;
-}
-
-#root .profile-dashboard-page .hd-readiness-value strong {
-  font-size: 1.45rem !important;
-}
-
-/* Restrain accents to kickers / ring stroke �?not card floods */
-#root .profile-dashboard-page .hd-metric-card,
-#root .profile-dashboard-page .hd-weekly-card,
-#root .profile-dashboard-page .hd-sessions-card,
-#root .profile-dashboard-page .hd-hero-readiness {
-  background: var(--ahs-surface) !important;
-  box-shadow: var(--ahs-shadow) !important;
-}
-
-#root .profile-dashboard-page .hd-metric-icon,
-#root .profile-dashboard-page .hd-metric-strip .hd-metric-icon {
-  background: rgba(120, 120, 128, 0.08) !important;
-  color: var(--ahs-label) !important;
-  box-shadow: none !important;
-}
-
-/* Readiness ring: calm pink accent stroke, not coral bloom fill */
-#root .profile-dashboard-page .hd-readiness-svg {
-  color: rgba(60, 60, 67, 0.18) !important;
-}
-
-/* Final white today-card hammer (beats dynamic contrast-fixes) */
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card,
-body.theme-high-contrast-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card,
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card,
-body.theme-high-contrast-light #root .profile-dashboard-page .hd-content .hd-today-card {
-  background: #ffffff !important;
-  background-image: none !important;
-  color: #1c1c1e !important;
-  border-radius: 28px !important;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06) !important;
-}
-
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-bg,
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg {
-  opacity: 0.04 !important;
-}
-
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay,
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-bg-overlay {
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.98)) !important;
-}
-
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong, .hd-today-content),
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-title, .hd-today-stat strong, .hd-today-content) {
-  color: #1c1c1e !important;
-  text-shadow: none !important;
-  -webkit-text-fill-color: #1c1c1e !important;
-}
-
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker,
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card .hd-today-kicker {
-  color: #ff2d55 !important;
-}
-
-body.theme-light #root .runner-dashboard-page.profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label),
-body.theme-light #root .profile-dashboard-page .hd-content .hd-today-card :is(.hd-today-purpose, .hd-today-stat-label) {
-  color: rgba(60, 60, 67, 0.6) !important;
-  -webkit-text-fill-color: rgba(60, 60, 67, 0.6) !important;
-}
-
-
-/* Kill paper/grid textures that leak onto Profile from older shell skins */
-body:has(#root .profile-dashboard-page),
-html:has(#root .profile-dashboard-page) body,
-#root .profile-dashboard-page,
-#root .profile-dashboard-page .runner-shell-main,
-#root .profile-dashboard-page .runner-shell-canvas,
-#root .profile-dashboard-page .hd-content {
-  background-size: auto !important;
-  background-repeat: no-repeat !important;
-}
-body:has(#root .profile-dashboard-page)::before,
-#root .profile-dashboard-page::before,
-#root .profile-dashboard-page .runner-shell-main::before,
-#root .profile-dashboard-page .runner-shell-canvas::after {
-  content: none !important;
-  display: none !important;
-  background: none !important;
 }
 
 /* ==========================================================================
@@ -1038,19 +724,6 @@ body:has(#root .profile-dashboard-page)::before,
   }
 }
 
-/* Profile start-training CTA: keep the action in Hermes red even though the
-   shared Apple Summary action palette uses blue for runner-dashboard cards. */
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary {
-  background: #f07561 !important;
-  color: #fff !important;
-  box-shadow: 0 4px 16px rgba(240, 117, 97, 0.28) !important;
-}
-
-body:is(.theme-light, .theme-high-contrast-light) #root .profile-dashboard-page .hd-content .hd-today-card .hd-btn-primary:hover {
-  background: #e46758 !important;
-  box-shadow: 0 6px 20px rgba(240, 117, 97, 0.34) !important;
-}
-
 /* Keep the wide load-balance status group on the right: the explanation stays
    left while the gauge and numeric status read as one compact control. */
 @media (min-width: 1280px) {
@@ -1382,7 +1055,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 
 /* Keep the reference system bar consistent across authenticated runner pages. */
 @media (min-width: 861px) {
-  #root .runner-dashboard-page > .runner-shell-main > .runner-shell-topbar {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) > .runner-shell-main > .runner-shell-topbar {
     width: auto !important;
     height: 88px !important;
     min-height: 88px !important;
@@ -1399,15 +1072,15 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     box-shadow: none !important;
   }
 
-  #root .runner-dashboard-page > .runner-shell-main {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) > .runner-shell-main {
     padding-top: 88px !important;
   }
 
-  #root .runner-dashboard-page:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)):not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar {
     left: var(--runner-nav-expanded-width, 156px) !important;
   }
 
-  #root .runner-dashboard-page .runner-shell-topnav-current-stack strong {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topnav-current-stack strong {
     color: #2c2f30 !important;
     font-family: var(--ahs-font) !important;
     font-size: 1.25rem !important;
@@ -1418,7 +1091,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     text-transform: none !important;
   }
 
-  #root .runner-dashboard-page .runner-shell-topbar-profile-actions {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topbar-profile-actions {
     display: inline-flex !important;
     flex: 0 0 auto !important;
     flex-wrap: nowrap !important;
@@ -1426,7 +1099,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     gap: 10px !important;
   }
 
-  #root .runner-dashboard-page .runner-shell-topbar-actions {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topbar-actions {
     display: flex !important;
     flex: 0 0 auto !important;
     width: auto !important;
@@ -1434,8 +1107,8 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     justify-content: flex-end !important;
   }
 
-  #root .runner-dashboard-page .runner-shell-icon-btn,
-  #root .runner-dashboard-page .runner-shell-avatar {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-icon-btn,
+#root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-avatar {
     width: 34px !important;
     height: 34px !important;
     border: 1px solid rgba(60, 60, 67, 0.18) !important;
@@ -1445,7 +1118,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     color: #5c6670 !important;
   }
 
-  #root .runner-dashboard-page .runner-shell-avatar {
+  #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-avatar {
     border-color: rgba(201, 90, 63, 0.24) !important;
     background: #f7ded8 !important;
     color: #8f2f24 !important;
@@ -1460,24 +1133,24 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
 }
 
 @media (min-width: 861px) {
-  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page > .runner-shell-main > .runner-shell-topbar {
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) > .runner-shell-main > .runner-shell-topbar {
     border-bottom-color: rgba(255, 238, 226, 0.12) !important;
     background: rgba(15, 13, 10, 0.86) !important;
     color: #fff7ef !important;
   }
 
-  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-topnav-current-stack strong {
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topnav-current-stack strong {
     color: #fff7ef !important;
   }
 
-  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-icon-btn,
-  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-avatar {
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-icon-btn,
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-avatar {
     border-color: rgba(255, 238, 226, 0.16) !important;
     background: rgba(255, 238, 226, 0.06) !important;
     color: rgba(255, 247, 239, 0.76) !important;
   }
 
-  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page .runner-shell-avatar {
+  body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-avatar {
     border-color: rgba(255, 154, 134, 0.28) !important;
     background: rgba(240, 117, 97, 0.18) !important;
     color: #ffb4a7 !important;
@@ -1588,9 +1261,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-align: left !important;
 }
 
-/* Analysis reference topbar parity: Profile uses the same system chrome. */
+/* Analysis reference topbar: scoped separately from the Profile dashboard. */
 @media (min-width: 861px) {
-  #root :is(.analysis-page-shell, .profile-dashboard-page) > .runner-shell-main > .runner-shell-topbar {
+  #root .analysis-page-shell > .runner-shell-main > .runner-shell-topbar {
     width: auto !important;
     height: 88px !important;
     min-height: 88px !important;
@@ -1607,11 +1280,11 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     box-shadow: none !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) > .runner-shell-main {
+  #root .analysis-page-shell > .runner-shell-main {
     padding-top: 88px !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topnav-current-stack strong {
+  #root .analysis-page-shell .runner-shell-topnav-current-stack strong {
     color: #2c2f30 !important;
     font-family: var(--ahs-font) !important;
     font-size: 1.25rem !important;
@@ -1622,7 +1295,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     text-transform: none !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topbar-profile-actions {
+  #root .analysis-page-shell .runner-shell-topbar-profile-actions {
     display: inline-flex !important;
     flex: 0 0 auto !important;
     flex-wrap: nowrap !important;
@@ -1630,7 +1303,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     gap: 10px !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-topbar-actions {
+  #root .analysis-page-shell .runner-shell-topbar-actions {
     display: flex !important;
     flex: 0 0 auto !important;
     width: auto !important;
@@ -1638,8 +1311,8 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     justify-content: flex-end !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-icon-btn,
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-avatar {
+  #root .analysis-page-shell .runner-shell-icon-btn,
+#root .analysis-page-shell .runner-shell-avatar {
     width: 34px !important;
     height: 34px !important;
     border: 1px solid rgba(60, 60, 67, 0.18) !important;
@@ -1649,17 +1322,17 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     color: #5c6670 !important;
   }
 
-  #root :is(.analysis-page-shell, .profile-dashboard-page) .runner-shell-avatar {
+  #root .analysis-page-shell .runner-shell-avatar {
     border-color: rgba(201, 90, 63, 0.24) !important;
     background: #f7ded8 !important;
     color: #8f2f24 !important;
   }
 
-  /* Keep Analysis/Profile system chrome aligned when the rail is pinned open or
+  /* Keep Analysis system chrome aligned when the rail is pinned open or
      temporarily unfolded via hover/focus. */
-  #root :is(.analysis-page-shell, .profile-dashboard-page):not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
-  #root :is(.analysis-page-shell, .profile-dashboard-page).is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
-  #root :is(.analysis-page-shell, .profile-dashboard-page).is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
+  #root .analysis-page-shell:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
+#root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
+#root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
     left: var(--runner-nav-expanded-width, 156px) !important;
   }
 }
@@ -1731,8 +1404,6 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   text-align: left !important;
   min-width: 0 !important;
 }
-
-
 
 /* Keep the generated coaching mark aligned with its localized card title. */
 #root .analysis-page-shell .analysis-profile-reference-card.is-coach .analysis-overview-card-kicker {

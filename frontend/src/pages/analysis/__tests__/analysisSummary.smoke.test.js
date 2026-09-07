@@ -15,11 +15,10 @@ assert.match(summaryStyle, /--ahs-canvas:\s*#f2f2f7;/);
 assert.match(summaryStyle, /Deference: quiet stage|Liquid Glass = nav layer|APPLE_HEALTH_REDESIGN_BRIEF/);
 assert.match(summaryStyle, /Liquid Glass = nav layer|Glass chrome only/);
 assert.match(summaryStyle, /No hover-lift carnival/);
-assert.match(summaryStyle, /hd-today-card/);
-assert.match(
+assert.doesNotMatch(
   summaryStyle,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.profile-dashboard-page \.hd-content \.hd-today-card \.hd-btn-primary\s*\{[\s\S]*background:\s*#f07561\s*!important;/,
-  'The Profile start-training CTA should override the shared blue Apple Summary action with red.',
+  /\.hd-today-card/,
+  'Analysis summary styling must not override the Profile training card.',
 );
 assert.match(
   summaryStyle,
