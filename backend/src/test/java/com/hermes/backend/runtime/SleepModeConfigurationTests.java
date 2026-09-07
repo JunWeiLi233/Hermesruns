@@ -51,7 +51,7 @@ class SleepModeConfigurationTests {
         when(strava.syncOnWake()).thenReturn(true);
         when(garmin.syncOnWake()).thenReturn(true);
         config.sleepWakeCatchUp(Runnable::run, strava, garmin,
-                beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true).afterStartup();
+                beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true, 0L).afterStartup();
         var order = inOrder(strava, garmin, coach);
         order.verify(strava).syncOnWake();
         order.verify(garmin).syncOnWake();
@@ -62,7 +62,7 @@ class SleepModeConfigurationTests {
         clearInvocations(strava, garmin, coach);
         config.sleepWakeCatchUp(Runnable::run, strava, garmin,
                 new StaticListableBeanFactory().getBeanProvider(Coach8020NightlyScheduler.class),
-                false, false).afterStartup();
+                false, false, 0L).afterStartup();
         verifyNoInteractions(strava, garmin, coach);
     }
 
@@ -73,7 +73,7 @@ class SleepModeConfigurationTests {
         when(strava.syncOnWake()).thenReturn(false);
         when(garmin.syncOnWake()).thenReturn(true);
         new SleepModeConfiguration().sleepWakeCatchUp(Runnable::run, strava, garmin,
-                beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true).afterStartup();
+                beans.getBeanProvider(Coach8020NightlyScheduler.class), true, true, 0L).afterStartup();
         verify(strava).syncOnWake();
         verify(garmin).syncOnWake();
         verifyNoInteractions(coach);
