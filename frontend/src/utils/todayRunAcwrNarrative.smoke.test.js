@@ -14,7 +14,7 @@ assert.match(
 
 assert.match(
   todayRunSource,
-  /today-run-coaching-answer--load is-acwr-\$\{acwrInsight\.zone\}/,
+  /tr-session-load tr-session-surface is-acwr-\$\{acwrInsight\.zone\}/,
   'TodayRun.jsx should render the ACWR load block with the insight zone class'
 );
 

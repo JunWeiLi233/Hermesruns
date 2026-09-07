@@ -301,7 +301,6 @@ export default function TodayRun() {
 
   const {
     recommendation,
-    tone,
     plan,
     reasons,
     metrics,
@@ -362,7 +361,6 @@ export default function TodayRun() {
     if (!recommendedShoe) return null;
     return predictRetirement(recommendedShoe, runs);
   }, [recommendedShoe, runs]);
-  const heroLocation = marathonPlan.race?.location || marathonPlan.race?.city || t('today_run.stitch_route_fallback');
   const readinessBattery = coachPayload?.state?.currentReadinessScore ?? null;
   const blueprintSteps = useMemo(
     () => buildWorkoutBlueprint(plan, coachPayload?.today?.plannedDurationMinutes, t),
@@ -413,6 +411,14 @@ export default function TodayRun() {
     };
   }, [coachPayload]);
 
+  const distanceDisplay = typeof coachDistance === 'string' ? coachDistance.match(/^(\d+(?:[.,]\d+)?)\s+(.+)$/) : null;
+  const wellnessSignals = [
+    { metric: 'sleep', icon: 'sleep', score: coachPayload?.state?.readinessSleep },
+    { metric: 'hrv', icon: 'monitor_heart', score: coachPayload?.state?.readinessHrv },
+    { metric: 'rhr', icon: 'favorite', score: coachPayload?.state?.readinessRhr },
+    { metric: 'stress', icon: 'stress', score: coachPayload?.state?.readinessStress },
+  ];
+  const historyOnlyReadiness = coachPayload?.state?.readinessLoad != null && wellnessSignals.every(signal => signal.score == null);
   const staminaScorePercent = stamina.scorePercent;
   const staminaCapPercent = stamina.recoveryCapPercent;
   const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
@@ -436,7 +442,7 @@ export default function TodayRun() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page today-run-analysis-aligned today-run-plan-page today-run-command-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page today-run-session-page today-run-plan-page today-run-command-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -508,540 +514,142 @@ export default function TodayRun() {
         </header>
 
         <div className="runner-shell-canvas today-run-plan-canvas today-run-command-canvas">
-          <section className="today-run-plan-hero today-run-command-hero">
-            <div className="today-run-plan-hero-copy today-run-command-hero-copy">
-              <span className="today-run-plan-kicker"><AppIcon name="directions_run" />{t('today_run.stitch_focus_label')}</span>
-              <h1>{marathonPlan.focusTitle}</h1>
-              <p>{marathonPlan.focusCopy}</p>
-
-              <div className="today-run-plan-hero-metrics">
-                <article>
-                  <span>{t('profile.today_run_distance')}</span>
-                  <strong>{coachDistance}</strong>
-                </article>
-                <article className={metrics.weatherPenalty > 0 ? 'today-run-plan-metric-adjusted' : ''}>
-                  <span>{t('today_run.stitch_target_pace')}</span>
-                  <strong>{recommendation.pace}</strong>
-                  {metrics.weatherPenalty > 0 && (
-                    <small>{t('today_run.acclimatization_normal_pace', { pace: recommendation.normalPace })}</small>
-                  )}
-                </article>
-                <article>
-                  <span>{t('today_run.stitch_est_time')}</span>
-                  <strong>{coachDuration}</strong>
-                </article>
-                <article>
-                  <span>
-                    {coachPayload?.state?.lastBodyBatteryAtWake != null
-                      ? t('today_run.stitch_body_battery')
-                      : t('today_run.stitch_readiness_blend')}
-                  </span>
-                  <strong>
-                    {coachPayload?.state?.lastBodyBatteryAtWake != null
-                      ? `${coachPayload.state.lastBodyBatteryAtWake}%`
-                      : readinessBattery != null ? `${readinessBattery}/100` : t('today_run.wellness_no_data')}
-                  </strong>
-                  {coachPayload?.state?.readinessLoad != null
-                    && [coachPayload.state.readinessSleep, coachPayload.state.readinessHrv,
-                      coachPayload.state.readinessRhr, coachPayload.state.readinessStress].every(value => value == null)
-                    && <small className="today-run-plan-metric-basis">{t('today_run.readiness_load_only')}</small>}
-                </article>
-              </div>
-
-              <InfoDisclosure className="today-run-overview-disclosure">
-                <p>{t('today_run.copy')}</p>
-              </InfoDisclosure>
-
-              <div className="today-run-plan-badges">
-                <span className="today-run-marathon-pill">{coachSessionTitle}</span>
-                <span className="today-run-marathon-pill">{heroLocation}</span>
-                <span className="today-run-marathon-pill">{marathonPlan.countdown}</span>
-              </div>
-
-              <div className="today-run-plan-rationale">
-                <div className="today-run-plan-rationale-header">
-                  <span className="today-run-plan-rationale-label">{t('today_run.rationale_title')}</span>
-                </div>
-                <div className="today-run-plan-rationale-content">
-                  {reasons.slice(0, 3).map((reason) => (
-                    <span key={reason} className="today-run-plan-rationale-item">
-                      <AppIcon name="check_circle" className="today-run-plan-rationale-icon" />
-                      {reason}
-                    </span>
-                  ))}
-                </div>              </div>
-
-              {showWeatherStrip && (
-                <section className={`today-run-plan-weather${hasHeatPenalty ? ' is-penalty' : ''}`}>
-                  <div className="today-run-plan-weather-copy">
-                    <span>{t('today_run.acclimatization_title')}</span>
-                    <strong>
-                      {hasHeatPenalty
-                        ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm })
-                        : t('today_run.acclimatization_clear')}
-                    </strong>
-                    <p>
-                      {hasHeatPenalty
-                        ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm })
-                        : t('today_run.stitch_weather_none')}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="today-run-plan-weather-dismiss"
-                    aria-label={t('profile.close')}
-                    onClick={() => {
-                      const today = new Date().toISOString().slice(0, 10);
-                      window.localStorage.setItem(`hermes_heat_strip_dismissed_${today}`, '1');
-                      setHeatDismissed(true);
-                    }}
-                  >
-                    <AppIcon name="close" className="runner-dashboard-side-link-icon" />
-                  </button>
-                </section>
-              )}
+          <section className="tr-session-hero tr-session-surface" aria-labelledby="tr-session-title">
+            <div className="tr-session-heading">
+              <span className="tr-session-kicker"><AppIcon name="directions_run" />{t('today_run.session_heading')}</span>
+              <InfoDisclosure className="tr-session-about"><p>{t('today_run.copy')}</p></InfoDisclosure>
             </div>
-
-            <aside className="today-run-plan-hero-panel today-run-command-readiness-panel">
-              <div className="today-run-plan-panel-copy">
-                <span><AppIcon name="monitor_heart" />{t('today_run.stitch_readiness_status')}</span>
-                <h2>{recommendation.type}</h2>
-                <p>{recommendation.purpose}</p>
-              </div>
-
-                <div className="today-run-plan-panel-grid">
-                  <article>
-                    <span>{t('today_run.last_run_recovery_estimate')}</span>
-                    <strong>
-                      {metrics.recoveryHours > 0
-                        ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
-                        : metrics.recoveryHasData ? t('today_run.last_run_recovery_elapsed') : t('today_run.wellness_no_data')}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.stamina_score')}</span>
-                    <strong>{staminaScorePercent != null ? `${staminaScorePercent}%` : t('today_run.wellness_no_data')}</strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.metric_vo2max')}</span>
-                    <strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '--'}</strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.metric_acwr')}</span>
-                    <strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '--'}</strong>
-                  </article>
-                  {vdotTrend.hasData && (
-                    <article className={`today-run-plan-vdot-trend is-${vdotTrend.direction}`}>
-                      <span>{t('today_run.vdot_trend_label')}</span>
-                      <strong>
-                        {vdotTrend.direction === 'improving' ? t('today_run.vdot_trend_improving') :
-                         vdotTrend.direction === 'declining' ? t('today_run.vdot_trend_declining') :
-                         t('today_run.vdot_trend_maintaining')}
-                        {vdotTrend.delta !== 0 && (
-                          <span className="today-run-plan-vdot-trend-delta">
-                            ({vdotTrend.delta > 0 ? '+' : ''}{vdotTrend.delta.toFixed(1)})
-                          </span>
-                        )}
-                      </strong>
-                    </article>
-                  )}
+            <div className="tr-session-hero-layout">
+              <div className="tr-session-workout">
+                <h1 id="tr-session-title">{isDownshifted ? recommendation.type : coachSessionTitle}</h1>
+                <p className="tr-session-purpose">{recommendation.purpose}</p>
+                <div className={`tr-session-target${distanceDisplay ? '' : ' is-text-target'}`}>
+                  {distanceDisplay ? <><strong>{distanceDisplay[1]}</strong><span>{distanceDisplay[2]}</span></> : <strong>{coachDistance}</strong>}
                 </div>
-              <div className="today-run-plan-morning-briefing">
-                <span className="today-run-plan-morning-briefing-label">{t('today_run.morning_briefing_label')}</span>
-                <p>{morningBriefing}</p>
-                {wellnessInterpretations.length > 0 && (
-                  <div className="today-run-plan-wellness-insights">
-                    {wellnessInterpretations.map((insight) => (
-                      <div key={insight} className="today-run-plan-wellness-insight">
-                        <AppIcon name="chat_bubble_outline" className="today-run-plan-wellness-insight-icon" />
-                        <span>{insight}</span>
-                      </div>
-                    ))}
+                <dl className="tr-session-targets">
+                  <div><dt>{t('today_run.stitch_target_pace')}</dt><dd>{recommendation.pace}</dd>
+                    {hasHeatPenalty && <small>{t('today_run.acclimatization_normal_pace', { pace: recommendation.normalPace })}</small>}
                   </div>
-                )}
-                <button
-                  type="button"
-                  className={`today-run-plan-downshift-btn${isDownshifted ? ' is-active' : ''}`}
-                  aria-pressed={isDownshifted}
-                  onClick={() => setIsDownshifted(!isDownshifted)}
-                >
-                  <AppIcon name={isDownshifted ? 'refresh' : 'low_priority'} className="runner-dashboard-side-link-icon" />
-                  <span>{t(isDownshifted ? 'profile.reset' : 'today_run.downshift_trigger')}</span>
-                </button>
+                  <div><dt>{t('today_run.stitch_est_time')}</dt><dd>{coachDuration}</dd></div>
+                </dl>
+                <div className="tr-session-actions">
+                  <button type="button" className="tr-session-primary" onClick={() => navigate('/schedule')}>
+                    <AppIcon name="calendar_today" />{t('today_run.stitch_action_schedule')}
+                  </button>
+                  <button type="button" className={`tr-session-secondary${isDownshifted ? ' is-active' : ''}`}
+                    aria-pressed={isDownshifted} onClick={() => setIsDownshifted(!isDownshifted)}>
+                    <AppIcon name={isDownshifted ? 'refresh' : 'low_priority'} />
+                    {t(isDownshifted ? 'profile.reset' : 'today_run.downshift_trigger')}
+                  </button>
+                </div>
+                {marathonPlan.race && <button type="button" className="tr-session-race-link" onClick={() => navigate('/races')}>
+                  <AppIcon name="flag" /><span>{marathonPlan.race.name} · {marathonPlan.countdown}</span><AppIcon name="chevron_right" />
+                </button>}
               </div>
-
-            </aside>
+              <div className="tr-session-timeline">
+                <h2 className="tr-session-kicker"><AppIcon name="route" />{t('today_run.plan_title')}</h2>
+                <ol>
+                  {blueprintSteps.map((step, index) => (
+                    <li key={`${step.phase}-${step.label}`} className={step.isAccent ? 'is-main' : ''}>
+                      <span className="tr-session-stage-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                      <div><h3>{step.phase}</h3><p>{step.value}</p></div>
+                      <strong className="tr-session-stage-duration">{coachDuration === '--' ? t('today_run.stitch_duration_unknown') : step.duration}</strong>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+            {showWeatherStrip && hasHeatPenalty && <div className={`tr-session-weather${hasHeatPenalty ? ' is-penalty' : ''}`}>
+              <AppIcon name="weather" />
+              <p><strong>{hasHeatPenalty ? t('today_run.acclimatization_penalty', { n: weatherContext.pacePenaltySecPerKm }) : t('today_run.acclimatization_clear')}</strong>
+                <span>{hasHeatPenalty ? t('today_run.acclimatization_reason', { n: weatherContext.pacePenaltySecPerKm }) : t('today_run.stitch_weather_none')}</span></p>
+              <button type="button" aria-label={t('common.close')} onClick={() => setHeatDismissed(true)}><AppIcon name="close" /></button>
+            </div>}
           </section>
 
-          {runnerPersona === 'new' ? (
-            <section className="today-run-coaching-strip today-run-coaching-strip--onboarding" aria-label={t('today_run.coaching_intelligence_title')}>
-              <div className="today-run-coaching-strip-inner">
-                <article className="today-run-coaching-answer today-run-coaching-answer--onboarding">
-                  <span className="today-run-coaching-answer-kicker">{t('today_run.readiness_label')}</span>
-                  <strong className="today-run-coaching-answer-value">{t('today_run.new_runner_title')}</strong>
-                  <span className="today-run-coaching-answer-sub">{t('today_run.new_runner_body')}</span>
-                  <button
-                    type="button"
-                    className="today-run-stitch-primary-btn"
-                    onClick={() => navigate('/runs')}
-                    style={{ marginTop: '12px' }}
-                  >
-                    {t('today_run.new_runner_cta')}
-                  </button>
-                </article>
+          {runnerPersona !== 'active' && <section className="tr-session-notice tr-session-surface" role="status">
+            <strong>{t(runnerPersona === 'new' ? 'today_run.new_runner_title' : 'today_run.comeback_title')}</strong>
+            <p>{t(runnerPersona === 'new' ? 'today_run.new_runner_body' : 'today_run.comeback_body')}</p>
+            {runnerPersona === 'new' && <button type="button" className="tr-session-text-link" onClick={() => navigate('/runs')}>{t('today_run.new_runner_cta')} →</button>}
+          </section>}
+
+          <section className="tr-session-support-grid" aria-label={t('today_run.coaching_intelligence_title')}>
+            <article className="tr-session-readiness tr-session-surface">
+              <h2 className="tr-session-kicker is-teal"><AppIcon name="monitor_heart" />{t('today_run.readiness_label')}</h2>
+              <div className="tr-session-readiness-score">
+                <strong>{readinessBattery != null ? readinessBattery : '—'}</strong>
+                {readinessBattery != null && <span>/100</span>}
+                {coachPayload?.state?.readinessVerdict && <span className="tr-session-verdict">{t(`today_run.readiness_verdict_${coachPayload.state.readinessVerdict.toLowerCase()}`)}</span>}
               </div>
-            </section>
-          ) : (
-          <section className="today-run-coaching-strip" aria-label={t('today_run.coaching_intelligence_title')}>
-            {runnerPersona === 'comeback' && (
-              <div className="today-run-coaching-strip-banner today-run-coaching-strip-banner--comeback" role="status">
-                <strong>{t('today_run.comeback_title')}</strong>
-                <p>{t('today_run.comeback_body')}</p>
+              {historyOnlyReadiness && <p className="tr-session-evidence-note">{t('today_run.readiness_load_only')}</p>}
+              <div className="tr-session-evidence">
+                {wellnessSignals.map(({ metric, icon, score }) => (
+                  <div className={`tr-session-evidence-row${score == null ? ' is-missing' : ''}`} key={metric}>
+                    <AppIcon name={icon} />
+                    <span>{t(`today_run.readiness_signal_${metric}_short`)}</span>
+                    {score != null
+                      ? <span className="tr-session-meter" role="meter" aria-label={t(`today_run.readiness_signal_${metric}`)}
+                          aria-valuemin={0} aria-valuemax={100} aria-valuenow={score}><span style={{ width: `${score}%` }} /></span>
+                      : <span className="tr-session-evidence-spacer" />}
+                    <small>{score != null ? `${score}/100` : t('today_run.wellness_no_data')}</small>
+                  </div>
+                ))}
               </div>
-            )}
-            <div className="today-run-coaching-strip-inner">
-              <article className={`today-run-coaching-answer today-run-coaching-answer--readiness is-verdict-${(coachPayload?.state?.readinessVerdict || tone.key).toLowerCase()}`}>
-                <span className="today-run-coaching-answer-kicker">{t('today_run.readiness_label')}</span>
-                <strong className="today-run-coaching-answer-value">
-                  {coachPayload?.state?.readinessVerdict
-                    ? t(`today_run.readiness_verdict_${coachPayload.state.readinessVerdict.toLowerCase()}`)
-                    : (tone.key === 'recovery' || tone.key === 'restart'
-                      ? t('today_run.coaching_intelligence_rest')
-                      : tone.key === 'easy'
-                        ? t('today_run.coaching_intelligence_easy')
-                        : t('today_run.coaching_intelligence_run'))}
-                </strong>
-                <span className="today-run-coaching-answer-sub">{coachPayload?.state?.readinessScore != null ? `${coachPayload.state.readinessScore}/100` : recommendation.purpose}</span>
-                {runnerPersona === 'active' && coachPayload?.coachMessage && (
-                  <p className="today-run-coaching-answer-coach-message">{coachPayload.coachMessage}</p>
-                )}
-                <div className="today-run-readiness-signals">
-                  {coachPayload?.state?.readinessLoad != null
-                    && [coachPayload.state.readinessSleep, coachPayload.state.readinessHrv,
-                      coachPayload.state.readinessRhr, coachPayload.state.readinessStress].every(value => value == null)
-                    && <span className="today-run-coaching-answer-sub">{t('today_run.readiness_load_only')}</span>}
-                  {[
-                    ['sleep', 'sleep', coachPayload?.state?.readinessSleep],
-                    ['hrv', 'monitor_heart', coachPayload?.state?.readinessHrv],
-                    ['rhr', 'favorite', coachPayload?.state?.readinessRhr],
-                    ['stress', 'stress', coachPayload?.state?.readinessStress],
-                  ].filter(([, , score]) => score == null).map(([metric, icon]) => (
-                    <span className="today-run-readiness-signal" key={metric}>
-                      <AppIcon name={icon} className="today-run-readiness-signal-icon" aria-hidden="true" />
-                      <span className="today-run-readiness-signal-label">{t(`today_run.readiness_signal_${metric}_short`)}</span>
-                      <small>{t('today_run.wellness_no_data')}</small>
-                    </span>
-                  ))}
-                  {coachPayload?.state?.readinessSleep != null && (
-                    <span
-                      className="today-run-readiness-signal"
-                      role="meter"
-                      aria-label={t('today_run.readiness_signal_sleep')}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={coachPayload.state.readinessSleep}
-                      title={t('today_run.readiness_signal_sleep_tooltip')}
-                    >
-                      <AppIcon name="sleep" className="today-run-readiness-signal-icon" aria-hidden="true" />
-                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_sleep_short')}</span>
-                      <span className="today-run-readiness-signal-bar">
-                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessSleep}%` }} />
-                      </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessSleep}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_sleep_scale')}</span></small>
-                    </span>
-                  )}
-                  {coachPayload?.state?.readinessHrv != null && (
-                    <span
-                      className="today-run-readiness-signal"
-                      role="meter"
-                      aria-label={t('today_run.readiness_signal_hrv')}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={coachPayload.state.readinessHrv}
-                      title={t('today_run.readiness_signal_hrv_tooltip')}
-                    >
-                      <AppIcon name="monitor_heart" className="today-run-readiness-signal-icon" aria-hidden="true" />
-                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_hrv_short')}</span>
-                      <span className="today-run-readiness-signal-bar">
-                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessHrv}%` }} />
-                      </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessHrv}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_hrv_scale')}</span></small>
-                    </span>
-                  )}
-                  {coachPayload?.state?.readinessRhr != null && (
-                    <span
-                      className="today-run-readiness-signal"
-                      role="meter"
-                      aria-label={t('today_run.readiness_signal_rhr')}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={coachPayload.state.readinessRhr}
-                      title={t('today_run.readiness_signal_rhr_tooltip')}
-                    >
-                      <AppIcon name="favorite" className="today-run-readiness-signal-icon" aria-hidden="true" />
-                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_rhr_short')}</span>
-                      <span className="today-run-readiness-signal-bar">
-                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessRhr}%` }} />
-                      </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessRhr}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_rhr_scale')}</span></small>
-                    </span>
-                  )}
-                  {coachPayload?.state?.readinessStress != null && (
-                    <span
-                      className="today-run-readiness-signal"
-                      role="meter"
-                      aria-label={t('today_run.readiness_signal_stress')}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={coachPayload.state.readinessStress}
-                      title={t('today_run.readiness_signal_stress_tooltip')}
-                    >
-                      <AppIcon name="stress" className="today-run-readiness-signal-icon" aria-hidden="true" />
-                      <span className="today-run-readiness-signal-label" aria-hidden="true">{t('today_run.readiness_signal_stress_short')}</span>
-                      <span className="today-run-readiness-signal-bar">
-                        <span className="today-run-readiness-signal-fill" style={{ width: `${coachPayload.state.readinessStress}%` }} />
-                      </span>
-                      <small aria-hidden="true">{coachPayload.state.readinessStress}<span className="today-run-readiness-signal-scale">{t('today_run.readiness_signal_stress_scale')}</span></small>
-                    </span>
-                  )}
+              <div className="tr-session-recovery-note"><span>{t('today_run.last_run_recovery_estimate')}</span>
+                <strong>{metrics.recoveryHours > 0 ? t('today_run.metric_recovery_hours', { hours: metrics.recoveryHours })
+                  : metrics.recoveryHasData ? t('today_run.last_run_recovery_elapsed') : t('today_run.wellness_no_data')}</strong>
+              </div>
+              {staminaScorePercent != null && <div className="tr-session-recovery-note"><span>{t('today_run.stamina_score')}</span><strong>{staminaScorePercent}%</strong></div>}
+            </article>
+
+            <article className="tr-session-coach tr-session-surface">
+              <h2 className="tr-session-kicker is-blue"><AppIcon name="chat_bubble_outline" />{t('today_run.coach_explanation')}</h2>
+              <CoachIdentityBadge coach={assignedCoach} lang={lang} className="tr-session-coach-identity" />
+              <p className="tr-session-coach-briefing">{morningBriefing}</p>
+              {wellnessInterpretations.length > 0 && <ul className="tr-session-wellness-notes">{wellnessInterpretations.map(insight => <li key={insight}>{insight}</li>)}</ul>}
+              <details className="tr-session-context">
+                <summary>{t('today_run.training_context')}<AppIcon name="expand_more" /></summary>
+                <ul>{reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+                <p><strong>{marathonPlan.phaseLabel}</strong> — {marathonPlan.coachNote}</p>
+                <dl>
+                  <div><dt>{t('today_run.coach_polarization')}</dt><dd>{coachPayload?.state?.highIntensityRatioLast7d != null ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%` : '—'}</dd></div>
+                  <div><dt>{t('today_run.coach_grey_zone')}</dt><dd>{coachPayload?.state?.minutesGreyZ3Last7d ?? '—'}</dd></div>
+                  <div><dt>{t('today_run.stamina_recovery_cap')}</dt><dd>{staminaCapPercent != null ? `${staminaCapPercent}%` : t('today_run.wellness_no_data')}</dd></div>
+                  <div><dt>{t('today_run.stamina_target_hr')}</dt><dd>{staminaHeartLabel} {staminaHeartLabel !== '--' ? 'bpm' : ''}</dd></div>
+                </dl>
+                <div className="tr-session-actions">
+                  <button type="button" className="tr-session-secondary" onClick={() => navigate('/schedule')}>{t('today_run.stitch_sync_watch')}</button>
+                  {marathonPlan.race && <button type="button" className="tr-session-text-link" onClick={() => navigate('/races')}>{t('today_run.stitch_manage_block')} →</button>}
                 </div>
-              </article>
-
-              <article className="today-run-coaching-answer today-run-coaching-answer--fitness">
-                <span className="today-run-coaching-answer-kicker">{t('today_run.vdot_trend_label')}</span>
-                <strong className={`today-run-coaching-answer-value is-${vdotTrend.direction}`}>
-                  {vdotTrend.hasData
-                    ? t(`today_run.coaching_intelligence_fitness_${vdotTrend.direction === 'improving' ? 'improving' : vdotTrend.direction === 'declining' ? 'declining' : 'steady'}`)
-                    : '--'}
-                </strong>
-                {vdotTrend.hasData && vdotTrend.delta !== 0 && (
-                  <span className="today-run-coaching-answer-delta">
-                    {vdotTrend.delta > 0 ? '+' : ''}{vdotTrend.delta.toFixed(1)}
-                  </span>
-                )}
-              </article>
-
-              {coachPayload?.state && (coachPayload.state.lastSleepScore != null || coachPayload.state.lastStressScore != null) && (
-                <article className="today-run-coaching-answer today-run-coaching-answer--wellness">
-                  <span className="today-run-coaching-answer-kicker">{t('today_run.wellness_signal_label')}</span>
-                  <div className="today-run-coaching-wellness-row">
-                    {coachPayload.state.lastSleepScore != null && (
-                      <div className="today-run-coaching-wellness-item" aria-label={`${t('profile.dashboard_sleep_score')}: ${coachPayload.state.lastSleepScore}`}>
-                        <AppIcon name="sleep" className="today-run-coaching-wellness-icon" aria-hidden="true" />
-                        <strong>{coachPayload.state.lastSleepScore}</strong>
-                      </div>
-                    )}
-                    {coachPayload.state.lastStressScore != null && (
-                      <div className="today-run-coaching-wellness-item" aria-label={`${t('profile.dashboard_stress_score')}: ${coachPayload.state.lastStressScore}`}>
-                        <AppIcon name="stress" className="today-run-coaching-wellness-icon" aria-hidden="true" />
-                        <strong>{coachPayload.state.lastStressScore}</strong>
-                      </div>
-                    )}
-                  </div>
-                  <span className="today-run-coaching-answer-sub">{t('today_run.wellness_signal_sub')}</span>
-                </article>
-              )}
-
-              <article className={`today-run-coaching-answer today-run-coaching-answer--load is-acwr-${acwrInsight.zone}`}>
-                <span className="today-run-coaching-answer-kicker">{t('today_run.metric_acwr')}</span>
-                <strong className="today-run-coaching-answer-value">
-                  {metrics.acwr != null ? metrics.acwr.toFixed(2) : '--'}
-                </strong>
-                <span className="today-run-coaching-answer-sub">{acwrNarrative.stripLabel}</span>
-                <span className="today-run-coaching-answer-title">{acwrNarrative.title}</span>
-                <p className="today-run-coaching-answer-copy">{acwrNarrative.body}</p>
-              </article>
-
-              <article className="today-run-coaching-answer today-run-coaching-answer--shoe">
-                <span className="today-run-coaching-answer-kicker">{t('today_run.coaching_intelligence_shoe_label')}</span>
-                <strong className="today-run-coaching-answer-value">
-                  {recommendedShoeName || t('today_run.coaching_intelligence_no_shoe')}
-                </strong>
-                {recommendedShoeMileageLeftKm > 0 && (
-                  <span className="today-run-coaching-answer-sub">
-                    {t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}
-                  </span>
-                )}
-                {recommendedShoeHealth && recommendedShoeHealth.healthPercent != null && (
-                  <span className={`today-run-shoe-health today-run-shoe-health--${recommendedShoeHealth.healthPercent > 50 ? 'healthy' : recommendedShoeHealth.healthPercent > 20 ? 'warning' : 'replace'}`}>
-                    <span className="today-run-shoe-health-bar">
-                      <span className="today-run-shoe-health-bar-fill" style={{ width: `${Math.min(100, recommendedShoeHealth.healthPercent)}%` }} />
-                    </span>
-                    <span className="today-run-shoe-health-label">
-                      {recommendedShoeHealth.healthPercent > 50
-                        ? t('today_run.shoe_health_healthy')
-                        : recommendedShoeHealth.healthPercent > 20
-                          ? t('today_run.shoe_health_warning')
-                          : t('today_run.shoe_health_replace')}
-                    </span>
-                  </span>
-                )}
-              </article>
-            </div>
-          </section>
-          )}
-
-          <section className="today-run-plan-grid today-run-command-grid">
-            <div className="today-run-plan-left">
-              <article className="today-run-plan-card">
-                <div className="today-run-plan-card-head">
-                  <div>
-                    <span><AppIcon name="route" />{t('today_run.plan_title')}</span>
-                    <h2>{t('today_run.stitch_workout_blueprint')}</h2>
-                  </div>
-                  <p>{t('today_run.marathon_plan_copy', { race: marathonPlan.race?.name || t('today_run.marathon_goal_generic') })}</p>
+              </details>
+              <div className="tr-session-shoe">
+                <AppIcon name="footprint" />
+                <div><span>{t('today_run.shoe_title')}</span><strong>{recommendedShoeName || t('today_run.shoe_empty_title')}</strong>
+                  <small>{shoeRecommendation
+                    ? t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })
+                    : t('today_run.shoe_empty_copy')}</small>
+                  {recommendedShoeHealth?.healthPercent != null && <small>{t(recommendedShoeHealth.healthPercent > 50 ? 'today_run.shoe_health_healthy' : recommendedShoeHealth.healthPercent > 20 ? 'today_run.shoe_health_warning' : 'today_run.shoe_health_replace')}</small>}
                 </div>
+                <button type="button" className="tr-session-icon-link" aria-label={t('today_run.shoe_open_locker')} onClick={() => navigate('/shoes')}><AppIcon name="arrow_forward" /></button>
+              </div>
+            </article>
 
-                <div className="today-run-plan-step-list">
-                  {blueprintSteps.map((step) => (
-                    <article
-                      key={`${step.phase}-${step.label}`}
-                      className="today-run-plan-step-card"
-                    >
-                      <span>{step.phase}</span>
-                      <h3>{step.label}</h3>
-                      <strong>{step.duration}</strong>
-                      <p>{step.value}</p>
-                    </article>
-                  ))}
-                </div>
-              </article>
-            </div>
-
-            <aside className="today-run-plan-right">
-              <article className="today-run-plan-card today-run-plan-card--coach">
-                <div className="today-run-plan-card-head">
-                  <div>
-                    <span><AppIcon name="chat_bubble_outline" />{t('today_run.coach_title')}</span>
-                    <h2>{t('today_run.stitch_automated_coach')}</h2>
-                  </div>
-                  <CoachIdentityBadge coach={assignedCoach} lang={lang} className="today-run-stitch-coach-badge" />
-                </div>
-                <p>{t('today_run.stitch_logic_engine')}</p>
-
-                <div className="today-run-plan-coach-lines">
-                  <article className="today-run-plan-coach-line">
-                    <div>
-                      <span>{t('today_run.stitch_why_label')}</span>
-                      <strong>{recommendation.type}</strong>
-                    </div>
-                    <p>{recommendation.purpose}</p>
-                  </article>
-                  <article className="today-run-plan-coach-line">
-                    <div>
-                      <span>{t('today_run.stitch_coach_note_label')}</span>
-                      <strong>{marathonPlan.phaseLabel}</strong>
-                    </div>
-                    <p>{marathonPlan.coachNote}</p>
-                  </article>
-                  {coachPayload?.today?.readinessAdjusted && (
-                    <article className="today-run-plan-coach-line">
-                      <div>
-                        <span>{t('today_run.coach_readiness')}</span>
-                        <strong>{t('today_run.stitch_readiness_status')}</strong>
-                      </div>
-                      <p>{t('today_run.coach_recovery_hint')}</p>
-                    </article>
-                  )}
-                </div>
-
-                <div className="today-run-plan-reason-list">
-                  {reasons.slice(0, 3).map((reason, index) => (
-                    <article key={reason} className="today-run-plan-reason-card">
-                      <strong>{String(index + 1).padStart(2, '0')}</strong>
-                      <p>{reason}</p>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="today-run-plan-signal-grid">
-                  <article>
-                    <span>{t('today_run.coach_polarization')}</span>
-                    <strong>
-                      {coachPayload?.state?.highIntensityRatioLast7d != null
-                        ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%`
-                        : '--'}
-                    </strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.stamina_recovery_cap')}</span>
-                    <strong>{staminaCapPercent != null ? `${staminaCapPercent}%` : t('today_run.wellness_no_data')}</strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.stamina_target_hr')}</span>
-                    <strong>{staminaHeartLabel} {staminaHeartLabel !== '--' ? 'bpm' : ''}</strong>
-                  </article>
-                  <article>
-                    <span>{t('today_run.coach_grey_zone')}</span>
-                    <strong>{coachPayload?.state?.minutesGreyZ3Last7d ?? '--'}</strong>
-                  </article>
-                </div>
-
-                {shoeRecommendation ? (
-                  <div className={`today-run-shoe-brief${shoeRecommendation.type === 'insight' ? ' is-positive' : ''}`}>
-                    <div className="today-run-shoe-brief-copy">
-                      <span>{t('today_run.shoe_title')}</span>
-                      <h3>{recommendedShoeName}</h3>
-                      <p>
-                        {shoeRecommendation.type === 'insight'
-                          ? t('today_run.shoe_insight_summary', {
-                            bpm: Math.abs(shoeRecommendation.insight.deltaHr).toFixed(1),
-                            runCount: shoeRecommendation.runCount,
-                          })
-                          : shoeRecommendation.type === 'rotation'
-                            ? t('today_run.shoe_rotation_summary', { count: shoeRecommendation.runCount })
-                            : t('today_run.shoe_primary_summary')}
-                      </p>
-                    </div>
-                    <div className="today-run-shoe-brief-meta">
-                      <span>{t('today_run.shoe_current_mileage', { distance: formatDistance(Number(shoeRecommendation.shoe.currentDistanceKm || 0), 0, lang, unit) })}</span>
-                      <span>{t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}</span>
-                      <button
-                        type="button"
-                        className="today-run-shoe-brief-action"
-                        onClick={() => navigate('/shoes')}
-                      >
-                        {t('today_run.shoe_open_locker')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="today-run-shoe-brief is-empty">
-                    <div className="today-run-shoe-brief-copy">
-                      <span>{t('today_run.shoe_title')}</span>
-                      <h3>{t('today_run.shoe_empty_title')}</h3>
-                      <p>{t('today_run.shoe_empty_copy')}</p>
-                    </div>
-                    <div className="today-run-shoe-brief-meta">
-                      <button
-                        type="button"
-                        className="today-run-shoe-brief-action"
-                        onClick={() => navigate('/shoes')}
-                      >
-                        {t('today_run.shoe_empty_cta')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="today-run-marathon-cta-row today-run-stitch-action-row">
-                  <button
-                    type="button"
-                    className="today-run-stitch-primary-btn today-run-marathon-cta-btn"
-                    onClick={() => navigate('/schedule')}
-                  >
-                    {t('today_run.stitch_sync_watch')}
-                  </button>
-                  <button
-                    type="button"
-                    className="today-run-stitch-secondary-btn today-run-marathon-cta-btn"
-                    onClick={() => navigate(marathonPlan.race ? '/races' : '/schedule')}
-                  >
-                    {marathonPlan.race ? t('today_run.stitch_manage_block') : t('today_run.stitch_action_schedule')}
-                  </button>
-                </div>
-              </article>
-            </aside>
+            <article className="tr-session-fitness tr-session-surface">
+              <h2 className="tr-session-kicker is-green"><AppIcon name="trending_up" />{t('today_run.vdot_trend_label')}</h2>
+              <div className="tr-session-context-metric">
+                <div><span>{t('today_run.metric_vo2max')}</span><strong>{metrics.bestVdot > 0 ? metrics.bestVdot.toFixed(1) : '—'}</strong></div>
+                {vdotTrend.hasData && <div className={`tr-session-trend is-${vdotTrend.direction}`}>
+                  <span>{t(`today_run.coaching_intelligence_fitness_${vdotTrend.direction === 'improving' ? 'improving' : vdotTrend.direction === 'declining' ? 'declining' : 'steady'}`)}</span>
+                  {vdotTrend.delta !== 0 && <strong>{vdotTrend.delta > 0 ? '+' : ''}{vdotTrend.delta.toFixed(1)}</strong>}
+                </div>}
+              </div>
+            </article>
+            <article className={`tr-session-load tr-session-surface is-acwr-${acwrInsight.zone}`}>
+              <h2 className="tr-session-kicker is-amber"><AppIcon name="load_balance" />{t('today_run.metric_acwr')}</h2>
+              <div className="tr-session-context-metric"><div><strong>{metrics.acwr !== null ? metrics.acwr.toFixed(2) : '—'}</strong></div>
+                <p>{acwrNarrative.stripLabel}</p></div>
+              <details className="tr-session-context tr-session-context--compact"><summary>{acwrNarrative.title}<AppIcon name="expand_more" /></summary><p>{acwrNarrative.body}</p></details>
+            </article>
           </section>
 
           <footer className="runner-shell-footer runner-dashboard-footer">

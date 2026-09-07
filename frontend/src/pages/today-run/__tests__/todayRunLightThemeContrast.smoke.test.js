@@ -98,15 +98,20 @@ assert.match(
 
 assert.equal(
   (pageSource.match(/role="meter"/g) || []).length,
-  4,
-  'Each readiness signal must expose meter semantics instead of labeling a generic span.',
+  1,
+  'The shared readiness row must expose meter semantics only when a score exists.',
 );
 
-for (const attribute of ['aria-valuemin={0}', 'aria-valuemax={100}', 'aria-valuenow={coachPayload.state.readiness']) {
+for (const metric of ['sleep', 'hrv', 'rhr', 'stress']) {
+  assert.ok(pageSource.includes(`metric: '${metric}'`), `The readiness list must include ${metric}.`);
+}
+assert.match(pageSource, /wellnessSignals\.map/);
+assert.match(pageSource, /score != null\s*\? <span className="tr-session-meter"/);
+for (const attribute of ['aria-valuemin={0}', 'aria-valuemax={100}', 'aria-valuenow={score}']) {
   assert.equal(
     pageSource.split(attribute).length - 1,
-    4,
-    `Each readiness meter must include ${attribute}.`,
+    1,
+    `The shared readiness meter must include ${attribute}.`,
   );
 }
 

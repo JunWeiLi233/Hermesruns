@@ -27,7 +27,7 @@ assert.match(
 
 assert.match(
   todayRunSource,
-  /today-run-overview-disclosure/,
+  /tr-session-about/,
   'TodayRun should wire the overview helper copy through InfoDisclosure.'
 );
 
