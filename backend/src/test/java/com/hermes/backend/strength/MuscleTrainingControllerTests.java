@@ -441,13 +441,18 @@ class MuscleTrainingControllerTests {
                 CoachWorkoutType.RECOVERY
         ));
 
-        mockMvc.perform(get("/api/training/muscle/plan")
+        String coachPlanResponse = mockMvc.perform(get("/api/training/muscle/plan")
                         .header("Authorization", bearer(runner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.planSource").value("COACH_SCHEDULE"))
                 .andExpect(jsonPath("$.todayCheckIn").doesNotExist())
                 .andExpect(jsonPath("$.days[0].run.planSource").value("COACH_SCHEDULE"))
-                .andExpect(jsonPath("$.days[0].run.workoutType").value("REST"));
+                .andReturn().getResponse().getContentAsString();
+        // The planner refreshes seeded rows for the current weekday. Clearing a
+        // check-in must restore that generated workout, which is not always REST.
+        String coachWorkoutType = objectMapper.readTree(coachPlanResponse)
+                .path("days").get(0).path("run").path("workoutType").asText();
+        assertThat(coachWorkoutType).isNotBlank();
 
         mockMvc.perform(put("/api/training/muscle/today")
                         .header("Authorization", bearer(runner))
@@ -479,7 +484,7 @@ class MuscleTrainingControllerTests {
                 .andExpect(jsonPath("$.planSource").value("COACH_SCHEDULE"))
                 .andExpect(jsonPath("$.todayCheckIn").doesNotExist())
                 .andExpect(jsonPath("$.days[0].run.planSource").value("COACH_SCHEDULE"))
-                .andExpect(jsonPath("$.days[0].run.workoutType").value("REST"));
+                .andExpect(jsonPath("$.days[0].run.workoutType").value(coachWorkoutType));
     }
 
     @Test
