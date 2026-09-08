@@ -90,5 +90,5 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 ## Related Docs
 
 - [Root README](../README.md) — project entry point
-- [docs/PROJECT_MAP.md](../docs/PROJECT_MAP.md) — where the analysis code lives (Analysis.jsx, `ActivityController.java` / `ProfileController.java`, `frontend/src/utils/analysisInsights.js`)
+- [Frontend page map](../frontend/src/pages/README.md) and [backend guide](../backend/README.md) — where the analysis pages, controllers and domain utilities live
 - [docs/README-DEV.md](../docs/README-DEV.md) — contributor onboarding

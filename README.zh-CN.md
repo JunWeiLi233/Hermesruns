@@ -30,7 +30,7 @@ Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，
 ./start_hermes.sh
 ```
 
-打开 `http://localhost:8080`，邮箱注册即可使用 — 无需配置数据库、API 密钥。更多命令见 [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md)。生产部署（PostgreSQL、OAuth、Stripe）见 [docs/setup.md](docs/setup.md)。
+打开 `http://localhost:8080`，邮箱注册即可使用 — 无需配置数据库、API 密钥。开发命令见 [frontend/README.md](frontend/README.md) 和 [backend/README.md](backend/README.md)。生产部署（PostgreSQL、OAuth、Stripe）见 [docs/setup.md](docs/setup.md)。
 
 开发时可打开 [Hermes.code-workspace](Hermes.code-workspace)，分别浏览前端、后端、文档和工具；集成配置在独立分区中。目录说明见 [repository-layout.md](docs/architecture/repository-layout.md)。
 
@@ -63,19 +63,16 @@ Hermes 是你本地运行的**私人跑步教练**，分析你的跑步数据，
 
 ## 文档
 
-- [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) — 项目架构地图：目录结构、模块映射、调用链
+- [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md) — 应用目录与构建配置
 - [docs/README-DEV.md](docs/README-DEV.md) — 贡献者入门：模拟账号、第一次代码改动、提交/同步流程
 - [docs/README-ANALYSIS.md](docs/README-ANALYSIS.md) — 分析公式详解：VDOT、训练配速、ACWR、恢复时间
 - [docs/setup.md](docs/setup.md) — 本地与生产部署、环境变量参考
-- [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md) — 技术栈、核心命令、编码规范
-- [docs/repo-rules/index.md](docs/repo-rules/index.md) — 仓库规则记录系统
-- [docs/auto-hermes/index.md](docs/auto-hermes/index.md) — `/auto-hermes` 记录系统地图
+- [frontend/README.md](frontend/README.md) — 前端开发与验证
+- [backend/README.md](backend/README.md) — 后端模块与命令
 
 ## 参与贡献
 
-- **任务队列** — `TASKS.md` 是共享任务队列；可领取任务或添加新任务。
-- **AI 智能体工作流** — `/auto-hermes`（有界单轮）和 `/auto-hermes-max`（并行通道 + 合并闸门）随仓库分发；在 Claude Code 或 Codex 中输入 `/` 即可使用。
-- **提交改动** — `/auto-hermes-push-main` 是向 `main` 发起 PR 的**唯一受支持路径**（全量闸门：安全扫描、lint、编译、Docker、身份校验）。详见 [docs/repo-rules/git-and-publish.md](docs/repo-rules/git-and-publish.md)。
+- **提交改动** — 从 `master` 创建功能分支，验证受影响的功能，并在草稿 PR 中说明改动和已完成的检查。详见 [docs/README-DEV.md](docs/README-DEV.md#how-to-submit-your-change)。
 - **新贡献者** — 使用内置模拟账号登录，即可看到所有功能都预置了真实数据：[docs/README-DEV.md](docs/README-DEV.md)。
 
 ## English
