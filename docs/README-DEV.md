@@ -6,9 +6,9 @@ Everything a new contributor needs: the fastest path from clone to "I changed so
 
 1. **What is Hermes?** — read the [root README](../README.md) to understand what you're building and who it's for. (5 min)
 2. **Quick Start** — get the app live on `localhost:8080` via the root README. (5 min)
-3. **Walk the Project Tour** — [docs/PROJECT_MAP.md](../docs/PROJECT_MAP.md) answers "where do I add a page / change copy / add an API". (5 min)
+3. **Walk the Project Tour** — [repository layout](architecture/repository-layout.md) explains the application directories. (5 min)
 4. **Make your first change** — the two worked examples below. Edit something, see it land. (10 min)
-5. **Read the workflow docs** — daily-driver commands in [docs/repo-rules/stack-and-commands.md](../docs/repo-rules/stack-and-commands.md); submit/publish rules in [docs/repo-rules/git-and-publish.md](../docs/repo-rules/git-and-publish.md). (10 min)
+5. **Read the development guides** — commands and conventions in [frontend/README.md](../frontend/README.md) and [backend/README.md](../backend/README.md). (10 min)
 
 No prior knowledge of Spring Boot, React, or sports science is required to make the first change.
 
@@ -90,13 +90,9 @@ Territory accounts are enabled the same way with `APP_LOCAL_TERRITORY_RIVAL_*`, 
 
 > **Local-safe.** The mock accounts are disabled by default and skipped entirely in production. Never use these credentials outside your local machine.
 
-### For AI-agent contributors
-
-Use `tools/auto-hermes-browser.mjs` for an existing authorized browser session, or `tools/auto-hermes-playwright.mjs` for a dedicated persistent QA browser state. When local mock accounts are enabled, sign in through the normal login flow before inspecting auth-walled pages. These shared helpers support route navigation, DOM inspection and screenshots; successful script execution alone is not end-to-end verification.
-
 ## Project Tour: Where Lives What?
 
-The full tree lives in [docs/PROJECT_MAP.md §3 (Directory map)](../docs/PROJECT_MAP.md), with the frontend module map in §4 and the backend module map in §5. Quick-answer cheat sheet:
+The [repository layout](architecture/repository-layout.md), [page map](../frontend/src/pages/README.md), and [backend guide](../backend/README.md) describe the main modules. Quick-answer cheat sheet:
 
 | Question | Answer |
 |---|---|
@@ -185,45 +181,15 @@ The frontend consumes this endpoint in `frontend/src/pages/profile/ProfileDashbo
 
 ## How to Submit Your Change
 
-> **`/auto-hermes-push-main` is the only supported way to open a PR into `main`.**
-> Do not `git push origin main` directly, do not run `gh pr create` by hand, do not cherry-pick, rebase, force-push, or merge through any other path. The command runs every required gate (security scan, lint, backend compile, Docker, identity), blocks on real failures, pushes the current branch, opens the PR, and writes an auditable artifact at `.workspace/state/AUTO_HERMES_PUSH_MAIN.{md,json}`. Bypassing it skips those gates.
-
-Run it from the repo root:
-
-```bash
-node tools/auto-hermes-push-main.mjs --execute --write --message "<type>: <one-line summary>"
-```
-
-Or invoke it as a slash command in Claude Code / Codex / Gemini CLI: `/auto-hermes-push-main`.
-
-Commit and PR citation rules (enforced by the command for AI agents, recommended for humans): every commit title is `<type>: <imperative one-line summary ≤ 70 chars>`, every PR body has `## Summary` (one bullet per touched surface — what changed and why), `## Test plan` (checklist of verification commands you actually ran), and links to `Closes #N` when an issue exists. Cite touched files inline, cite browser proof screenshots for UI changes and runtime proof artifacts for backend changes, and never claim "all tests pass" without listing which tests.
-
-Full policy, the pre-push safety pass, and the Docker gate live in [docs/repo-rules/git-and-publish.md](../docs/repo-rules/git-and-publish.md).
+1. Start from the latest `master` on a feature branch. Keep unrelated edits out of the change.
+2. Run the frontend lint, tests and production build, compile the backend, and confirm the production Docker image builds. Verify changed pages in a browser and check the diff for credentials or personal data.
+3. Use a concise commit title such as `fix: align the race map marker`. Attribute commits to the actual contributor; do not add automated assistant co-author trailers.
+4. Open a draft PR targeting `master`. Describe the problem, resulting behavior, and checks actually completed. Link the relevant issue when one exists.
+5. Wait for review and required CI before merging. Publishing a branch does not deploy it; deployment is a separate maintainer action.
 
 ## How to Sync from Upstream
 
-> **`/auto-hermes-pull-main` is the safe counterpart to `/auto-hermes-push-main`.**
-> Use it whenever someone else (or you, on another machine) has pushed commits to `main` and you want them locally without losing your in-progress edits.
-
-```bash
-# Dry-run first — shows what would change, never touches the tree.
-node tools/auto-hermes-pull-main.mjs
-
-# Then pull. Auto-stashes dirty work, fast-forwards on `main`, merges (or
-# rebases with --strategy rebase) on a feature branch, and writes an audit
-# artifact to `.workspace/state/AUTO_HERMES_PULL_MAIN.{md,json}`.
-node tools/auto-hermes-pull-main.mjs --execute --write
-```
-
-Or invoke it as a slash command: `/auto-hermes-pull-main`.
-
-The command never force-pulls, never `git reset --hard`s, and never auto-resolves conflicts — on any conflict it aborts and restores your stash. Typical loop:
-
-```
-/auto-hermes-pull-main   # before you start editing
-…work, commit…
-/auto-hermes-push-main   # when ready to open a PR
-```
+Preserve local changes in a commit or stash before updating. Fetch `origin`, inspect the incoming changes, and use a fast-forward update for a clean `master` checkout. If your feature branch has diverged or a conflict appears, review it explicitly; do not discard work or force-push to make the update succeed.
 
 ## Regression Checklist
 
@@ -249,8 +215,8 @@ Run after changes to auth, import, upload, or third-party integrations.
 ## Related Docs
 
 - [Root README](../README.md) — project entry point, quick start, features
-- [docs/PROJECT_MAP.md](../docs/PROJECT_MAP.md) — durable architecture map
+- [Repository layout](architecture/repository-layout.md) — application directories and build configuration
 - [docs/README-ANALYSIS.md](../docs/README-ANALYSIS.md) — analysis methodology (VDOT, ACWR, recovery)
-- [docs/repo-rules/stack-and-commands.md](../docs/repo-rules/stack-and-commands.md) — stack facts, commands, conventions
-- [docs/repo-rules/git-and-publish.md](../docs/repo-rules/git-and-publish.md) — commit/push/privacy rules
+- [Frontend guide](../frontend/README.md) — browser development and verification
+- [Backend guide](../backend/README.md) — packages and backend commands
 - [docs/setup.md](../docs/setup.md) — local & production setup, env var reference

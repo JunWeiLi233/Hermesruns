@@ -19,6 +19,13 @@
 .omx
 .share
 .superpowers
+docs/ai
+docs/auto-hermes
+docs/superpowers
+docs/repo-rules
+docs/plans
+docs/specs
+docs/architecture/ai-agents-workflow.*
 .tmp
 tmp
 .venv

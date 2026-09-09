@@ -445,7 +445,9 @@ class AutomatedCoachServiceTests {
 
         assertThat(schedule).hasSize(1);
         AutomatedCoachService.CoachScheduledWorkoutDto todayDto = schedule.get(0);
-        assertThat(todayDto.workoutType()).isEqualTo(CoachWorkoutType.REST.name());
+        // Onboarding alternates easy runs and rest according to the weekday.
+        // This test verifies source preference, not a Monday-only rest slot.
+        assertThat(todayDto.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
         assertThat(todayDto.phase()).isEqualTo("onboarding");
         assertThat(todayDto.readinessAdjusted()).isFalse();
         assertThat(state.getReadinessScore()).isEqualTo(89);

@@ -59,6 +59,11 @@ assert(
 );
 
 assert(
+  /@media\s*\(max-width:\s*1080px\)[\s\S]*?\.landing-cinematic-race-list\s*\{[\s\S]*?width:\s*100%;[\s\S]*?max-width:\s*none;/.test(landingStyleSource),
+  'The stacked race table should extend across the same content track as the world map.',
+);
+
+assert(
   /\.landing-cinematic-footer-links\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*\}/.test(landingStyleSource),
   'Landing footer utility links should align horizontally and wrap only when the viewport is too narrow.',
 );
@@ -101,9 +106,9 @@ assert(
 
 assert(
   landingSource.includes('className="landing-cinematic-race-order"')
-    && landingSource.includes('function getRaceTimelineDelay(index, total)')
-    && landingSource.includes('function getRaceCycleDuration(total)')
-    && landingSource.includes('const RACE_MAP_CYCLE_STEP_SECONDS = 3;')
+    && landingSource.includes('getRaceFlightFrame(flight.legs, elapsed)')
+    && landingSource.includes('onActiveRaceChange(destination)')
+    && landingSource.includes('data-race-id={race.id}')
     && landingSource.includes('const ROBINSON_X_COEFFICIENTS =')
     && landingSource.includes('const ROBINSON_Y_COEFFICIENTS =')
     && landingSource.includes('const RACE_MAP_CITY_ANCHORS =')
@@ -118,19 +123,12 @@ assert(
     && landingSource.includes('const robinsonY = 25 - (lat >= 0 ? yCoefficient : -yCoefficient) * 25;')
     && !landingSource.includes('((lng + 180) / 360) * 100')
     && !landingSource.includes('((90 - lat) / 180) * WORLD_MAP_VIEWBOX_HEIGHT')
-    && landingSource.includes('return `${index * RACE_MAP_CYCLE_STEP_SECONDS}s`;')
-    && landingSource.includes('return `${Math.max(total, 1) * RACE_MAP_CYCLE_STEP_SECONDS}s`;')
     && !landingSource.includes('function buildRaceReadoutPath(pin, index)')
-    && landingSource.includes("'--race-cycle-duration': getRaceCycleDuration(races.length)")
-    && landingSource.includes("style={{ '--race-cycle-duration': raceCycleDuration }}")
     && !landingSource.includes('className="landing-cinematic-map-readout-layer"')
     && !landingSource.includes('className="landing-cinematic-map-readout-line"')
-    && landingSource.includes('function buildCurvedFlightPath(points)')
-    && landingSource.includes('const flightPath = buildCurvedFlightPath')
     && landingSource.includes('className="landing-cinematic-map-flight-route"')
     && landingSource.includes('className="landing-cinematic-map-flight-route-live"')
     && landingSource.includes('className="landing-cinematic-map-aircraft"')
-    && landingSource.includes('<animateMotion')
     && !landingSource.includes('className="landing-cinematic-map-selection-layer"')
     && !landingSource.includes('className="landing-cinematic-map-selection"')
     && !landingSource.includes('className="landing-cinematic-map-selection-spread"')
@@ -145,7 +143,7 @@ assert(
     && landingSource.includes("{ key: 'match', order: '03', label: flowLabels.plan }")
     && landingSource.includes('className="landing-cinematic-map-caption-strip"')
     && landingSource.includes('className="landing-cinematic-map-caption-meta"')
-    && landingSource.includes('function WorldMap({ races, metricLabels, flowLabels })')
+    && landingSource.includes('function WorldMap({ races, metricLabels, flowLabels, activeRaceId, onActiveRaceChange })')
     && landingSource.includes('metricLabels={{')
     && landingSource.includes('flowLabels={{')
     && landingSource.includes("select: t('landing.cinematic_race_flow_select')")
@@ -161,7 +159,7 @@ assert(
     && landingSource.includes("data-label={t('landing.cinematic_race_col_days')}")
     && landingSource.includes("data-label={t('landing.cinematic_race_col_distance')}")
     && landingSource.includes('className="landing-cinematic-sr-only"'),
-  'Landing race rows and map captions should use fixed projected coordinates, a data-driven cycle duration, and a readable pin-to-readout-to-row animation instead of fake route or score-panel motion.',
+  'Landing race rows and map captions should use fixed projected coordinates, one shared destination clock, and a matching pin, caption, and row instead of fake route or score-panel motion.',
 );
 
 assert(

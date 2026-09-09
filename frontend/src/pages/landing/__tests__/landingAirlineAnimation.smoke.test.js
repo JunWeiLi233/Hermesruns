@@ -1,58 +1,31 @@
+import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const landingSource = readFileSync(path.join(here, "../Landing.jsx"), 'utf8');
-const styleSource = readFileSync(path.join(here, "../../../styles/_split/landing.css"), 'utf8');
+const page = readFileSync(path.join(here, '../Landing.jsx'), 'utf8');
+const css = readFileSync(path.join(here, '../../../styles/_split/landing.css'), 'utf8');
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
-}
-
-assert(
-  /function buildCurvedFlightPath\(points\)[\s\S]*?Q \$\{midpointX\.toFixed\(2\)\} \$\{controlY\.toFixed\(2\)\}/.test(landingSource),
-  'Landing race map should build curved flight legs instead of flashing destination markers only.',
-);
-
-assert(
-  /const flightPath = buildCurvedFlightPath\(\[\.\.\.flightPoints, flightPoints\[0\]\]\.filter\(Boolean\)\);/.test(landingSource),
-  'Landing race map should keep one closed loop through every destination.',
-);
-
-assert(
-  /landing-cinematic-map-flight-route-live[\s\S]*landing-cinematic-map-aircraft[\s\S]*<animateMotion dur=\{raceCycleDuration\} path=\{flightPath\} rotate="auto" repeatCount="indefinite"/.test(landingSource),
-  'Landing race map should keep one aircraft flying continuously around the route.',
-);
-
-assert(
-  !landingSource.includes('landing-cinematic-map-selection-layer'),
-  'Landing race map should not retain the old stacked selection-ring animation.',
-);
-
-assert(
-  /<circle r="0\.72" className="landing-cinematic-map-pin-halo"\s*\/>[\s\S]*<circle r="0\.5" className="landing-cinematic-map-badge"\s*\/>[\s\S]*<circle r="0\.12" className="landing-cinematic-map-core"\s*\/>/.test(landingSource)
-    && /<text x="0" y="0\.16"[\s\S]*landing-cinematic-map-order/.test(landingSource)
-    && /\.landing-cinematic-map-order\s*\{[\s\S]*font-size:\s*0\.68px;/.test(styleSource),
-  'Landing race map markers should stay compact while preserving a readable order label.',
-);
-
-assert(
-  /\.landing-cinematic-map-flight-route\s*\{[\s\S]*stroke-dasharray:[\s\S]*vector-effect:\s*non-scaling-stroke;/.test(styleSource)
-    && /\.landing-cinematic-map-flight-route-live\s*\{[\s\S]*animation:\s*landing-cinematic-map-flight-route-step/.test(styleSource)
-    && /\.landing-cinematic-map-aircraft-glow\s*\{[\s\S]*animation:\s*landing-cinematic-map-aircraft-glow-step/.test(styleSource),
-  'Landing race map should keep the loop legible and animate its moving-flight accent.',
-);
-
-assert(
-  /\.landing-cinematic-map-pin-halo\s*\{[\s\S]*stroke:\s*rgba\(240,\s*117,\s*97,\s*0\.46\)[\s\S]*animation:\s*landing-cinematic-map-pin-halo-step/.test(styleSource)
-    && /\.landing-cinematic-map-badge\s*\{[\s\S]*stroke:\s*rgba\(255,\s*250,\s*243,\s*0\.98\)/.test(styleSource),
-  'Landing race map markers should use a visible coral halo and high-contrast compact badge.',
-);
-
-assert(
-  /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*\.landing-cinematic-map-flight-route-live[\s\S]*\.landing-cinematic-map-aircraft[\s\S]*\.landing-cinematic-map-pin-halo[\s\S]*display:\s*none;/.test(styleSource),
-  'Landing race map should freeze safely for reduced-motion users.',
-);
-
-console.log('[PASS] Landing airline route animation guardrails passed.');
+assert.match(page, /buildRaceFlight, getRaceFlightFrame/);
+assert.match(page, /getRaceFlightFrame\(flight\.legs, elapsed\)/);
+assert.match(page, /onActiveRaceChange\(destination\)/);
+assert.match(page, /activeRaceId=\{activeRaceId\}[\s\S]*onActiveRaceChange=\{setActiveRaceId\}/);
+assert.match(page, /pointer\.dataset\.destination = destination/);
+assert.match(page, /transform="translate\(-2\.55 0\)"/,
+  'The pointer nose, rather than its center, must land on the map pin.');
+assert.match(page, /<circle r="2\.2" className="landing-cinematic-map-aircraft-glow"\s*\/>\s*<g transform="translate\(-2\.55 0\)">/,
+  'The airplane glow should stay centered on the destination while the silhouette is nose-anchored.');
+assert.match(page, /M 2\.55 0 L 0\.65 -0\.16 L -0\.28 -1\.3[\s\S]*className="landing-cinematic-map-aircraft-cockpit"/,
+  'The moving marker should use a narrow airplane silhouette with swept wings and a cockpit detail.');
+assert.doesNotMatch(page, /<animateMotion|getRaceTimelineDelay/,
+  'Do not reintroduce a separate paced path or independently delayed destination clock.');
+assert.match(css, /\.is-flight-synced \.landing-cinematic-map-caption \{[^}]*display: none;[^}]*animation: none;/);
+assert.match(css, /\.is-flight-synced \.landing-cinematic-map-caption\.is-active \{ display: grid; \}/);
+assert.match(css, /\.is-flight-synced \.landing-cinematic-map-flight-route-live \{[^}]*animation: none;/);
+assert.match(css, /\.landing-cinematic-map-aircraft-cockpit\s*\{[\s\S]*fill:\s*#fffaf3;/);
+assert.match(page, /cancelAnimationFrame\(frameId\)/);
+assert.match(page, /document\.addEventListener\('visibilitychange', syncPlayback\)/);
+assert.match(page, /motionPreference\.matches/);
+assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*\.landing-cinematic-map-aircraft \{\s*display: none;/);
+console.log('[PASS] Landing race pointer synchronization guardrails passed.');

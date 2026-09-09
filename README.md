@@ -40,7 +40,7 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 ./start_hermes.sh
 ```
 
-Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. More commands: [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
+Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. Development commands: [frontend/README.md](frontend/README.md) and [backend/README.md](backend/README.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
 
 ## Feature Highlights
 
@@ -72,12 +72,6 @@ Open `http://localhost:8080`, sign up with email, and you're in — no database 
 <!-- AUTO-GENERATED ARCHITECTURE DIAGRAMS START -->
 ### Live Architecture Diagrams
 
-#### AI Agents Workflow
-
-![Hermes AI agents workflow](docs/architecture/ai-agents-workflow.svg)
-
-Source artifact: [docs/architecture/ai-agents-workflow.html](docs/architecture/ai-agents-workflow.html)
-
 #### SaaS Architecture
 
 ![Hermes SaaS architecture](docs/architecture/saas-architecture.svg)
@@ -99,19 +93,16 @@ Source artifact: [docs/architecture/data-dictionaries.html](docs/architecture/da
 
 ## Documentation
 
-- [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) — durable architecture map: directory tree, module maps, call chains
+- [docs/architecture/repository-layout.md](docs/architecture/repository-layout.md) — application directories and build configuration
 - [docs/README-DEV.md](docs/README-DEV.md) — contributor onboarding: mock account, first code change, submit/sync workflow
 - [docs/README-ANALYSIS.md](docs/README-ANALYSIS.md) — analysis methodology: VDOT, training paces, ACWR, recovery formulas
 - [docs/setup.md](docs/setup.md) — local & production setup, env var reference
-- [docs/repo-rules/stack-and-commands.md](docs/repo-rules/stack-and-commands.md) — stack facts, core commands, coding conventions
-- [docs/repo-rules/index.md](docs/repo-rules/index.md) — repo rules record system
-- [docs/auto-hermes/index.md](docs/auto-hermes/index.md) — `/auto-hermes` record-system map
+- [frontend/README.md](frontend/README.md) — frontend development and verification
+- [backend/README.md](backend/README.md) — backend packages and commands
 
 ## Contributing
 
-- **Task queue** — `TASKS.md` is the shared queue; pick up tasks or add new ones.
-- **AI-agent workflow** — `/auto-hermes` (one bounded round) and `/auto-hermes-max` (parallel lanes with a merge gate) run from this repo; type `/` in Claude Code or Codex.
-- **Submitting changes** — `/auto-hermes-push-main` is the **only supported PR path** into `main` (all gates: security scan, lint, compile, Docker, identity). See [docs/repo-rules/git-and-publish.md](docs/repo-rules/git-and-publish.md).
+- **Submitting changes** — use a feature branch based on `master`, verify the affected behavior, and describe the change and completed checks in a draft PR. See [docs/README-DEV.md](docs/README-DEV.md#how-to-submit-your-change).
 - **New contributors** — log in with the built-in mock account to see every feature pre-loaded with data: [docs/README-DEV.md](docs/README-DEV.md).
 
 ## 中文

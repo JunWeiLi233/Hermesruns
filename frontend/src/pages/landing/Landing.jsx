@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -10,6 +10,7 @@ import {
   formatRaceMonthLabel,
 } from '../../utils/landingRaceShowcase.js';
 import AppIcon from '../../components/AppIcon';
+import { buildRaceFlight, getRaceFlightFrame } from '../../utils/landingRaceFlight.js';
 import HermesMarkSvg from '../../components/HermesMarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import worldMapPoliticalDotted from '../../assets/generated/landing-world-map-political-dotted.webp';
@@ -510,35 +511,7 @@ function resolveRaceMapPoint(race) {
   return RACE_MAP_CITY_ANCHORS[race.id] ?? projectWorldPoint(race.geo);
 }
 
-const RACE_MAP_CYCLE_STEP_SECONDS = 3;
-
-function getRaceCycleDuration(total) {
-  return `${Math.max(total, 1) * RACE_MAP_CYCLE_STEP_SECONDS}s`;
-}
-
-function getRaceTimelineDelay(index, total) {
-  if (!total) return '0s';
-
-  return `${index * RACE_MAP_CYCLE_STEP_SECONDS}s`;
-}
-
-function buildCurvedFlightPath(points) {
-  if (points.length < 2) return '';
-
-  return points.reduce((path, point, index) => {
-    if (index === 0) return `M ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-
-    const previous = points[index - 1];
-    const midpointX = (previous.x + point.x) / 2;
-    const midpointY = (previous.y + point.y) / 2;
-    const arcLift = Math.min(8, Math.max(2.4, Math.abs(point.x - previous.x) * 0.08));
-    const controlY = Math.min(previous.y, point.y, midpointY) - arcLift;
-
-    return `${path} Q ${midpointX.toFixed(2)} ${controlY.toFixed(2)} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
-  }, '');
-}
-
-function WorldMap({ races, metricLabels, flowLabels }) {
+function WorldMap({ races, metricLabels, flowLabels, activeRaceId, onActiveRaceChange }) {
   // The dotted base map is a mid-page asset; only fetch it once the map
   // section approaches the viewport so first-load bandwidth stays for the hero.
   const mapHostRef = useRef(null);
@@ -561,14 +534,82 @@ function WorldMap({ races, metricLabels, flowLabels }) {
     return () => observer.disconnect();
   }, []);
 
-  const racePins = races.map((race) => ({
+  const aircraftRef = useRef(null);
+  const activeRouteRef = useRef(null);
+  const racePins = useMemo(() => races.map(race => ({
     ...race,
     pin: race.pin ?? (race.geo ? resolveRaceMapPoint(race) : null),
-  }));
-  const flightPoints = racePins.map((race) => race.pin).filter(Boolean);
-  const flightPath = buildCurvedFlightPath([...flightPoints, flightPoints[0]].filter(Boolean));
-  const getRacePhaseDelay = (index) => getRaceTimelineDelay(index, racePins.length);
-  const raceCycleDuration = getRaceCycleDuration(racePins.length);
+  })).filter(race => Number.isFinite(race.pin?.x) && Number.isFinite(race.pin?.y)), [races]);
+  const flight = useMemo(() => buildRaceFlight(racePins.map(race => race.pin)), [racePins]);
+  const activeIndex = Math.max(0, racePins.findIndex(race => race.id === activeRaceId));
+
+  useEffect(() => {
+    const host = mapHostRef.current;
+    if (!host || !flight.legs.length) return undefined;
+    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let elapsed = 0;
+    let lastTimestamp = null;
+    let frameId = null;
+    let visible = false;
+    let lastDestination = null;
+    let lastLeg = null;
+
+    const paint = () => {
+      const frame = getRaceFlightFrame(flight.legs, elapsed);
+      if (!frame) return;
+      const destination = racePins[frame.activeIndex].id;
+      const pointer = aircraftRef.current;
+      if (pointer) {
+        pointer.setAttribute('transform', `translate(${frame.x.toFixed(6)} ${frame.y.toFixed(6)}) rotate(${frame.angle.toFixed(3)})`);
+        pointer.dataset.destination = destination;
+        pointer.dataset.flightPhase = frame.travelling ? 'travelling' : 'dwell';
+      }
+      if (activeRouteRef.current) {
+        if (lastLeg !== frame.legIndex) activeRouteRef.current.setAttribute('d', flight.legs[frame.legIndex].path);
+        activeRouteRef.current.setAttribute('stroke-dashoffset', String(1 - frame.progress));
+        lastLeg = frame.legIndex;
+      }
+      if (lastDestination !== destination) {
+        onActiveRaceChange(destination);
+        lastDestination = destination;
+      }
+    };
+    const tick = timestamp => {
+      if (lastTimestamp != null) elapsed += timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+      paint();
+      frameId = window.requestAnimationFrame(tick);
+    };
+    const syncPlayback = () => {
+      if (frameId != null) window.cancelAnimationFrame(frameId);
+      frameId = null;
+      lastTimestamp = null;
+      if (motionPreference.matches) {
+        elapsed = 0;
+        paint();
+      } else if (visible && !document.hidden) {
+        frameId = window.requestAnimationFrame(tick);
+      }
+    };
+    paint();
+    const observer = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(entries => {
+        visible = entries.some(entry => entry.isIntersecting);
+        syncPlayback();
+      }, { threshold: 0 })
+      : null;
+    if (observer) observer.observe(host);
+    else { visible = true; syncPlayback(); }
+    document.addEventListener('visibilitychange', syncPlayback);
+    motionPreference.addEventListener('change', syncPlayback);
+    return () => {
+      if (frameId != null) window.cancelAnimationFrame(frameId);
+      observer?.disconnect();
+      document.removeEventListener('visibilitychange', syncPlayback);
+      motionPreference.removeEventListener('change', syncPlayback);
+    };
+  }, [flight, racePins, onActiveRaceChange]);
+
   const flowSteps = [
     { key: 'locate', order: '01', label: flowLabels.select },
     { key: 'read', order: '02', label: flowLabels.score },
@@ -576,7 +617,7 @@ function WorldMap({ races, metricLabels, flowLabels }) {
   ];
 
   return (
-    <div ref={mapHostRef} className="landing-cinematic-map" style={{ '--race-cycle-duration': raceCycleDuration }} aria-hidden="true">
+    <div ref={mapHostRef} className="landing-cinematic-map" aria-hidden="true">
       <svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
         <g className="landing-cinematic-map-graticule">
           {WORLD_MAP_GRATICULE.map((path) => <path key={path} d={path} />)}
@@ -588,17 +629,19 @@ function WorldMap({ races, metricLabels, flowLabels }) {
           preserveAspectRatio="none"
           className="landing-cinematic-map-reference"
         />
-        {flightPath ? (
+        {flight.path ? (
           <>
-            <path d={flightPath} pathLength="1" className="landing-cinematic-map-flight-route" />
-            <path d={flightPath} pathLength="1" className="landing-cinematic-map-flight-route-live" />
-            <g className="landing-cinematic-map-aircraft" aria-hidden="true">
+            <path d={flight.path} pathLength="1" className="landing-cinematic-map-flight-route" />
+            <path ref={activeRouteRef} d={flight.legs[(activeIndex + flight.legs.length - 1) % flight.legs.length].path} pathLength="1" className="landing-cinematic-map-flight-route-live" />
+            <g ref={aircraftRef} className="landing-cinematic-map-aircraft" transform={`translate(${racePins[0].pin.x} ${racePins[0].pin.y})`} aria-hidden="true">
               <circle r="2.2" className="landing-cinematic-map-aircraft-glow" />
-              <path
-                d="M 2.55 0 L 0.46 -0.52 L -1.52 -1.62 L -1.82 -1.3 L -0.62 -0.08 L -1.7 1.12 L -1.34 1.48 L 0.46 0.52 Z"
-                className="landing-cinematic-map-aircraft-shape"
-              />
-              <animateMotion dur={raceCycleDuration} path={flightPath} rotate="auto" repeatCount="indefinite" />
+              <g transform="translate(-2.55 0)">
+                <path
+                  d="M 2.55 0 L 0.65 -0.16 L -0.28 -1.3 L -0.72 -1.16 L -0.3 -0.12 L -1.5 -0.72 L -2.2 -0.52 L -2.36 -0.2 L -1.12 0 L -2.36 0.2 L -2.2 0.52 L -1.5 0.72 L -0.3 0.12 L -0.72 1.16 L -0.28 1.3 L 0.65 0.16 Z"
+                  className="landing-cinematic-map-aircraft-shape"
+                />
+                <ellipse cx="1.15" cy="0" rx="0.3" ry="0.13" className="landing-cinematic-map-aircraft-cockpit" />
+              </g>
             </g>
           </>
         ) : null}
@@ -606,8 +649,7 @@ function WorldMap({ races, metricLabels, flowLabels }) {
           <g
             key={race.name}
             transform={`translate(${race.pin.x} ${race.pin.y})`}
-            className="landing-cinematic-map-pin"
-            style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+            className={`landing-cinematic-map-pin${index === activeIndex ? ' is-active' : ''}`} data-race-id={race.id}
           >
             <circle r="0.72" className="landing-cinematic-map-pin-halo" />
             <circle r="0.5" className="landing-cinematic-map-badge" />
@@ -630,8 +672,7 @@ function WorldMap({ races, metricLabels, flowLabels }) {
           {racePins.map((race, index) => (
             <div
               key={`${race.name}-caption`}
-              className="landing-cinematic-map-caption"
-              style={{ '--race-index': index, '--race-delay': getRacePhaseDelay(index), '--race-cycle-duration': raceCycleDuration }}
+              className={`landing-cinematic-map-caption${index === activeIndex ? ' is-active' : ''}`} data-race-id={race.id}
             >
               <span className="landing-cinematic-map-caption-order">{String(index + 1).padStart(2, '0')}</span>
               <strong>{race.name}</strong>
@@ -690,6 +731,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [raceCountdownNow, setRaceCountdownNow] = useState(() => new Date());
+  const [activeRaceId, setActiveRaceId] = useState(null);
   const heroScrollRef = useRef(null);
 
   useEffect(() => {
@@ -749,25 +791,28 @@ export default function Landing() {
 
   // Showcase facts (months, distances, coordinates) come from the bundled
   // world race catalog; only the display names localize through landing keys.
-  const showcaseNames = {
-    'berlin-marathon': t('landing.cinematic_race_berlin'),
-    'sydney-marathon': t('landing.cinematic_race_sydney'),
-    'chicago-marathon': t('landing.cinematic_race_chicago'),
-    'new-york-city-marathon': t('landing.cinematic_race_new_york'),
-    'valencia-marathon': t('landing.cinematic_race_valencia'),
-    'tokyo-marathon': t('landing.cinematic_race_tokyo'),
-    'boston-marathon': t('landing.cinematic_race_boston'),
-    'london-marathon': t('landing.cinematic_race_london'),
-    'paris-marathon': t('landing.cinematic_race_paris'),
-    'comrades-marathon': t('landing.cinematic_race_comrades'),
-  };
-  const races = buildLandingRaceShowcase(raceCountdownNow).map((race) => ({
-    ...race,
-    name: showcaseNames[race.id] ?? race.catalogName,
-    date: formatRaceMonthLabel(race.nextOccurrence),
-    days: getRaceCountdownDays(race.nextOccurrence.toISOString().slice(0, 10), raceCountdownNow),
-    distance: formatRaceDistanceLabel(race.distanceKm),
-  }));
+  const races = useMemo(() => {
+    const showcaseNames = {
+      'berlin-marathon': t('landing.cinematic_race_berlin'),
+      'sydney-marathon': t('landing.cinematic_race_sydney'),
+      'chicago-marathon': t('landing.cinematic_race_chicago'),
+      'new-york-city-marathon': t('landing.cinematic_race_new_york'),
+      'valencia-marathon': t('landing.cinematic_race_valencia'),
+      'tokyo-marathon': t('landing.cinematic_race_tokyo'),
+      'boston-marathon': t('landing.cinematic_race_boston'),
+      'london-marathon': t('landing.cinematic_race_london'),
+      'paris-marathon': t('landing.cinematic_race_paris'),
+      'comrades-marathon': t('landing.cinematic_race_comrades'),
+    };
+    return buildLandingRaceShowcase(raceCountdownNow).map((race) => ({
+      ...race,
+      name: showcaseNames[race.id] ?? race.catalogName,
+      date: formatRaceMonthLabel(race.nextOccurrence),
+      days: getRaceCountdownDays(race.nextOccurrence.toISOString().slice(0, 10), raceCountdownNow),
+      distance: formatRaceDistanceLabel(race.distanceKm),
+    }));
+
+  }, [raceCountdownNow, t]);
 
   const compareRows = [
     { feature: t('landing.cinematic_compare_decision'), note: t('landing.cinematic_compare_decision_note'), hermes: true, strava: 'partial', runna: 'partial' },
@@ -844,11 +889,11 @@ export default function Landing() {
         </section>
 
         {/* ── 2. Feature Grid ── */}
-        <section id="features" className="landing-command-deck landing-command-deck--minimal-black">
+        <section id="features" className="landing-command-deck">
           <PageWidth className="landing-command-deck-grid">
             <RevealSection className="landing-command-card-stack">
               {commandCards.map((card) => (
-                <article key={card.number} className="landing-command-card">
+                <article key={card.number} className="landing-command-card landing-cinematic-answer-card">
                   <div className="landing-command-card-head">
                     <span>{card.number}</span>
                     <h2>{card.title}</h2>
@@ -923,9 +968,11 @@ export default function Landing() {
               <p>{t('landing.cinematic_races_copy')}</p>
             </RevealSection>
 
-            <div className="landing-cinematic-race-stage">
+            <div className="landing-cinematic-race-stage is-flight-synced">
               <WorldMap
                 races={races}
+                activeRaceId={activeRaceId}
+                onActiveRaceChange={setActiveRaceId}
                 metricLabels={{
                   date: t('landing.cinematic_race_col_date'),
                   days: t('landing.cinematic_race_col_days'),
@@ -948,12 +995,8 @@ export default function Landing() {
                 {races.map((race, index) => (
                   <div
                     key={race.name}
-                    className="landing-cinematic-race-row"
-                    style={{
-                      '--race-index': index,
-                      '--race-delay': getRaceTimelineDelay(index, races.length),
-                      '--race-cycle-duration': getRaceCycleDuration(races.length),
-                    }}
+                    className={`landing-cinematic-race-row${race.id === (activeRaceId || races[0]?.id) ? ' is-active' : ''}`}
+                    data-race-id={race.id}
                   >
                     <span className="landing-cinematic-race-order">{String(index + 1).padStart(2, '0')}</span>
                     <span>{race.name}</span>

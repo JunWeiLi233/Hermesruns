@@ -1323,6 +1323,12 @@
         max-width: 760px;
     }
 
+    /* Keep the stacked race table on the same full-width track as the map. */
+    .landing-cinematic-race-list {
+        width: 100%;
+        max-width: none;
+    }
+
     .landing-cinematic-answer-grid,
     .landing-cinematic-zone-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2071,7 +2077,8 @@
 .landing-cinematic-features,
 .landing-cinematic-answers,
 .landing-cinematic-formula,
-.landing-cinematic-compare {
+.landing-cinematic-compare,
+.landing-command-deck {
   background: #f4efe6 !important;
 }
 
@@ -2838,6 +2845,12 @@
   vector-effect: non-scaling-stroke;
 }
 
+.landing-cinematic-map-aircraft-cockpit {
+  fill: #fffaf3;
+  opacity: 0.92;
+  vector-effect: non-scaling-stroke;
+}
+
 .landing-cinematic-map-pin {
   opacity: 1;
 }
@@ -3192,6 +3205,7 @@
   .landing-cinematic-map-flight-route-live,
   .landing-cinematic-map-aircraft,
   .landing-cinematic-map-aircraft-glow,
+  .landing-cinematic-map-aircraft-cockpit,
   .landing-cinematic-map-pin-halo,
   .landing-cinematic-map-guide-step,
   .landing-cinematic-map-timeline-item,
@@ -3225,6 +3239,46 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* The pointer, selected pin, caption and row share the JavaScript flight clock.
+   Disable the older independent keyframes so labels cannot drift from arrivals. */
+.is-flight-synced .landing-cinematic-map-flight-route-live {
+  animation: none;
+  stroke-dasharray: 1;
+}
+.is-flight-synced .landing-cinematic-map-pin-halo {
+  animation: none;
+  opacity: 0;
+  transform: none;
+}
+.is-flight-synced .landing-cinematic-map-pin.is-active .landing-cinematic-map-pin-halo {
+  opacity: 1;
+  fill: rgba(240, 117, 97, 0.24);
+}
+.is-flight-synced .landing-cinematic-map-pin.is-active .landing-cinematic-map-badge {
+  fill: var(--lc-coral);
+}
+.is-flight-synced .landing-cinematic-map-caption {
+  display: none;
+  animation: none;
+  opacity: 1;
+}
+.is-flight-synced .landing-cinematic-map-caption.is-active { display: grid; }
+.is-flight-synced .landing-cinematic-map-caption-field,
+.is-flight-synced .landing-cinematic-map-guide-step,
+.is-flight-synced .landing-cinematic-race-row::before,
+.is-flight-synced .landing-cinematic-race-row::after,
+.is-flight-synced .landing-cinematic-race-row strong::after,
+.is-flight-synced .landing-cinematic-race-row em {
+  animation: none;
+}
+.is-flight-synced .landing-cinematic-map-caption-field { opacity: 1; }
+.is-flight-synced .landing-cinematic-race-row::before,
+.is-flight-synced .landing-cinematic-race-row::after,
+.is-flight-synced .landing-cinematic-race-row strong::after { opacity: 0; }
+.is-flight-synced .landing-cinematic-race-row.is-active { background: rgba(240, 117, 97, 0.09); }
+.is-flight-synced .landing-cinematic-race-row.is-active > .landing-cinematic-race-order,
+.is-flight-synced .landing-cinematic-race-row.is-active > span:nth-child(2) { color: var(--lc-coral); }
 
 /* Landing final CTA command grid */
 .landing-cinematic-final-card {

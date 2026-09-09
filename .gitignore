@@ -87,8 +87,9 @@ backend/backend/
 *.trace.db
 backend/HELP.md
 
-# local / prod overrides (often contain secrets)
-backend/src/main/resources/application-production.properties
+# Local profile overrides may contain secrets. The tracked production profile
+# contains environment placeholders and must reach Railway uploads.
+backend/src/main/resources/application-*.local.properties
 
 # Python
 **/venv/
@@ -363,6 +364,7 @@ RTK.md
 SKILL.md
 /TASKS.md
 /DESIGN_VERSIONS.md
+/design.md
 /HERMES_SELF_EVOLVING_ENGINE.md
 /memory.md
 /MEMORY.md
@@ -375,6 +377,11 @@ SKILL.md
 /.github/workflows/auto-hermes*.yml
 /.github/workflows/auto-hermes*.yaml
 /docs/ai/
+/docs/plans/
+/docs/specs/
+/docs/*_BRIEF.md
+/docs/DEPLOY-*.md
+/docs/architecture/repository-refactor.md
 /docs/auto-hermes/
 /docs/superpowers/
 /docs/repo-rules/
