@@ -63,7 +63,7 @@ export default function TopbarUserMenu({ initials = 'H', label, className = '', 
         {initials}
       </button>
       {isOpen ? (
-        <div ref={panelRef} id={panelId} className="account-menu-panel" role="dialog" aria-label={t('components.account_menu.title')}>
+        <div ref={panelRef} id={panelId} className="account-menu-panel account-menu-popover" role="dialog" aria-label={t('components.account_menu.title')}>
           <div className="account-menu-identity">
             <span className="account-menu-monogram" aria-hidden="true">{initials}</span>
             <div><strong>{t('components.account_menu.title')}</strong><p>{t('components.account_menu.signed_in')}</p></div>

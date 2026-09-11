@@ -16,6 +16,11 @@ async function openConfirmation(user) {
   await user.click(screen.getByRole('button', { name: 'Log Out' }));
   return screen.getByRole('dialog', { name: 'Log out of Hermes?' });
 }
+it('opts the floating menu out of generic content-panel glass styling', async () => {
+  const user = userEvent.setup(); mount();
+  await user.click(screen.getByRole('button', { name: 'Preview runner' }));
+  expect(screen.getByRole('dialog', { name: 'Your account' })).toHaveClass('account-menu-popover');
+});
 it('requires explicit confirmation and defaults focus to Cancel', async () => {
   const user = userEvent.setup(); mount();
   const dialog = await openConfirmation(user);
