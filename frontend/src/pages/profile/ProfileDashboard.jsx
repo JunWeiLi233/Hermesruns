@@ -7,6 +7,7 @@ import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
 import Modal from '../../components/Modal';
 import FooterNavLinks from '../../components/FooterNavLinks';
@@ -1182,9 +1183,7 @@ export default function ProfileDashboard() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
-                {displayName.slice(0, 1).toUpperCase()}
-              </button>
+              <TopbarUserMenu initials={displayName.slice(0, 1).toUpperCase()} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

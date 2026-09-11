@@ -5,6 +5,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { fetchActivitySummaries } from '../../api/activityApi.ts';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
@@ -408,9 +409,7 @@ export default function PredictionDetail() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>
