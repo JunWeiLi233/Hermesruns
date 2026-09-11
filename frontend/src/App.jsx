@@ -38,6 +38,7 @@ const Rewards = React.lazy(routePreloaders['/rewards']);
 const Settings = React.lazy(routePreloaders['/settings']);
 const ImportDataSettings = React.lazy(() => import('./pages/settings/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
+const MobileRunnerNavigation = React.lazy(() => import('./components/MobileRunnerNavigation'));
 
 const SKELETON_PREVIEW_VARIANTS = new Set([
   'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
@@ -226,7 +227,7 @@ function UserOnlyRoute({ children }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!authHydrated) return <RouteLoading />;
   if (isAdmin) return <Navigate to="/dashboard" replace />;
-  return children;
+  return <>{children}<Suspense fallback={null}><MobileRunnerNavigation /></Suspense></>;
 }
 
 function App() {

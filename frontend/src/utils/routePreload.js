@@ -154,6 +154,11 @@ export function installRoutePreloadListener() {
   }
 
   const handlePreloadIntent = (event) => {
+    // Touch pointerover also fires while swiping: it is not navigation intent.
+    // Respect data saver and constrained links for speculative downloads only.
+    if (event.type === 'pointerover' && event.pointerType === 'touch') return;
+    const connection = typeof navigator !== 'undefined' ? navigator.connection : null;
+    if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType)) return;
     const target = event.target;
     if (!target || typeof target.closest !== 'function') return;
     const anchor = target.closest('a');

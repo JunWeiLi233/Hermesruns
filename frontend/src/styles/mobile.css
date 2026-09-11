@@ -1,0 +1,126 @@
+/* Phone layout is the last layer of both runner entry stylesheets. */
+.mobile-runner-nav {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 80;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  background: #fffdf9;
+  color: #59504b;
+  box-shadow: 0 -2px 16px rgb(44 32 24 / 8%);
+}
+.mobile-runner-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: 600 12px/1.2 var(--font-body);
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+.mobile-runner-nav-item svg { width: 22px; height: 22px; }
+.mobile-runner-nav-item.is-active,
+.mobile-navigation-destination.is-active { background: #f9e8e1; color: #8f3426; }
+.mobile-runner-nav-item:focus-visible,
+.mobile-navigation-destination:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: -2px; }
+body.modal-open .mobile-runner-nav { visibility: hidden; }
+.modal-shell.mobile-navigation-sheet {
+  z-index: 1000;
+  align-items: flex-end;
+  padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.modal-card.mobile-navigation-card {
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100dvh - 32px);
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 24px;
+  background: #fffdf9;
+  color: #302722;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.mobile-navigation-card .modal-header { position: sticky; top: 0; background: inherit; }
+.mobile-navigation-card .modal-header h3 { color: inherit; font-size: 1.2rem; font-style: normal; text-decoration: none; }
+.mobile-navigation-card .modal-close { min-width: 44px; min-height: 44px; color: inherit !important; background: transparent !important; }
+.mobile-navigation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mobile-navigation-destination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f2eee8;
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.mobile-navigation-destination svg { flex: 0 0 22px; width: 22px; height: 22px; }
+body.theme-midnight :is(.mobile-runner-nav, .mobile-navigation-card) { background: #232321; color: #f1ece6; }
+body.theme-midnight .mobile-navigation-destination { background: #32322f; }
+body.theme-midnight :is(.mobile-runner-nav-item, .mobile-navigation-destination).is-active { background: #49342d; color: #ffb4a7; }
+
+@media (max-width: 860px), (max-width: 1100px) and (pointer: coarse) {
+  #root .auth-page :is(input, select, textarea) { font-size: 16px !important; }
+  #root .auth-page :is(button, .btn) { min-height: 44px; touch-action: manipulation; }
+  body.has-mobile-runner-navigation { --mobile-nav-space: calc(76px + env(safe-area-inset-bottom)); }
+  body.has-mobile-runner-navigation #root .runner-shell-page > .runner-shell-sidebar { display: none !important; }
+  body.has-mobile-runner-navigation #root .runner-shell-page > .runner-shell-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding-bottom: var(--mobile-nav-space);
+  }
+  body.has-mobile-runner-navigation #root .runner-shell-page { display: block !important; min-height: 100dvh; }
+  body.has-mobile-runner-navigation #root .runner-shell-canvas {
+    width: calc(100% - 28px) !important;
+    max-width: 100% !important;
+    min-width: 0;
+    margin-inline: auto !important;
+  }
+  body.has-mobile-runner-navigation #root .runner-shell-topbar {
+    padding-top: max(10px, env(safe-area-inset-top)) !important;
+    background: #fffdf9 !important;
+  }
+  body.theme-midnight.has-mobile-runner-navigation #root .runner-shell-topbar { background: #232321 !important; }
+  /* Large layers with live backdrop blur are costly while scrolling on phones. */
+  body.has-mobile-runner-navigation #root .runner-shell-page :is([class*="-card"], [class*="-panel"], [class*="-topbar"], .card, .section-card),
+  body.has-mobile-runner-navigation .modal-shell {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body.has-mobile-runner-navigation #root .runner-shell-page :is(button, .btn) { min-height: 44px; touch-action: manipulation; }
+  body.has-mobile-runner-navigation #root .runner-shell-page :is(input, select, textarea) { font-size: 16px !important; max-width: 100%; }
+  body.has-mobile-runner-navigation .modal-shell { padding: 12px; padding-block: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+  body.has-mobile-runner-navigation .modal-card {
+    max-width: 100% !important;
+    max-height: calc(100dvh - 32px) !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body.has-mobile-runner-navigation .modal-card :is(input, select, textarea) { font-size: 16px !important; }
+  body.has-mobile-runner-navigation .modal-close { min-width: 44px; min-height: 44px; }
+  /* The map keeps zoom/reset controls, with navigation handled by the bottom bar. */
+  body.has-mobile-runner-navigation .heatmap-page { height: calc(100dvh - var(--mobile-nav-space)); min-height: 0; }
+  body.has-mobile-runner-navigation .heatmap-page-utility-rail { bottom: 16px; }
+  body.has-mobile-runner-navigation .heatmap-page-legend-card { max-height: min(244px, calc(100dvh - 320px)); overflow-y: auto; }
+  body.has-mobile-runner-navigation :is(.heatmap-page-map-shell, .heatmap-page-map-canvas) { height: 100%; min-height: 0; }
+  body.has-mobile-runner-navigation .heatmap-page-utility-rail > .heatmap-page-route-link,
+  body.has-mobile-runner-navigation .heatmap-page-utility-divider { display: none; }
+}

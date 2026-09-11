@@ -937,7 +937,7 @@ export default function Heatmap() {
                 <button
                   key={item.key}
                   type="button"
-                  className={cx('heatmap-page-utility-btn', item.active && 'is-active')}
+                  className={cx('heatmap-page-utility-btn', 'heatmap-page-route-link', item.active && 'is-active')}
                   onClick={() => navigate(item.route)}
                   aria-label={item.label}
                   aria-current={item.active ? 'page' : undefined}
