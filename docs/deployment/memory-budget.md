@@ -19,3 +19,19 @@ restore MinHeapFreeRatio=20, MaxHeapFreeRatio=40 and omit -XX:-ShrinkHeapInSteps
 Keep production,sleep enabled and verify actual Railway idle/sleep transitions.
 Database memory is a separate cost; do not change PostgreSQL limits without
 measuring its workload and preserving its configuration and data.
+
+The latest weather-location lookup selects the last valid point per activity
+through the existing activity/sequence index before sorting activity candidates.
+This avoids scanning and sorting the runner's full GPS history for one location.
+The scalar subquery is verified on H2 and PostgreSQL, with a PostgreSQL plan test
+that rejects full-history sorting and excessive buffer accesses.
+
+Run the query tests with `./mvnw -Dtest=ActivityPointLatestLocationQueryTests test`.
+For PostgreSQL plan coverage, set HERMES_QUERY_TEST_POSTGRES_URL to a dedicated
+loopback test server, such as jdbc:postgresql://127.0.0.1:55439/postgres. Tests use
+the postgres role with an empty password, create a unique disposable schema,
+and drop only that schema afterward; never point this at a shared database.
+
+Lower query buffer traffic is not the same as an immediate RSS reduction:
+PostgreSQL can retain already-warmed shared buffers and filesystem cache.
+Compare memory after representative visits, not only directly after deployment.
