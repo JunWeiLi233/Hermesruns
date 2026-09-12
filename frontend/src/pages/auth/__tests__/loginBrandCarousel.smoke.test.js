@@ -16,14 +16,14 @@ const translationsSource = [
 
 assert.match(
   loginSource,
-  /import AuthBrandCarousel from '\.\.\/\.\.\/components\/AuthBrandCarousel';/,
-  'Login should use the shared brand carousel component.',
+  /import AuthPageLayout/,
+  'Login should use the shared account entry layout.',
 );
 
 assert.match(
   signupSource,
-  /import AuthBrandCarousel from '\.\.\/\.\.\/components\/AuthBrandCarousel';/,
-  'Signup should use the same shared brand carousel component.',
+  /import AuthPageLayout/,
+  'Signup should use the same shared account entry layout.',
 );
 
 assert.match(
@@ -34,8 +34,8 @@ assert.match(
 
 assert.match(
   loginSource,
-  /<AuthBrandCarousel t=\{t\} \/>/,
-  'Login brand intro should render the shared carousel inside auth-flow-brand-inner.',
+  /<AuthPageLayout variant="login"/,
+  'Login should render the shared studio layout; the reusable carousel remains available separately.',
 );
 
 assert.match(

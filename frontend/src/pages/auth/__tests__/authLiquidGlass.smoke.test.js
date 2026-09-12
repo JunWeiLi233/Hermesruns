@@ -19,23 +19,18 @@ for (const [name, source] of [
 ]) {
   assert.match(
     source,
-    /import AuthDotField from ['"]\.\.\/\.\.\/components\/AuthDotField['"];?/,
-    `${name} should mount the dot field.`,
+    /import AuthPageLayout/,
+    `${name} should use the shared studio layout.`,
   );
   assert.match(
     source,
-    /auth-page--liquid-glass/,
-    `${name} should opt into the shared glass surface.`,
-  );
-  assert.match(
-    source,
-    /auth-page--liquid-glass"[^>]*>\s*<AuthDotField\s*\/>/,
-    `${name} should render the dot field on the page background.`,
+    /<AuthPageLayout/,
+    `${name} should render the shared account surface.`,
   );
   assert.doesNotMatch(
     source,
-    /<div className="auth-flow-card">\s*<AuthDotField\s*\/>/,
-    `${name} should not nest the page field inside the form card.`,
+    /<AuthDotField\s*\/>/,
+    `${name} should leave the form clear of animated background canvases.`,
   );
   assert.ok(
     source.indexOf('auth-flow-form') < source.indexOf('auth-flow-social'),

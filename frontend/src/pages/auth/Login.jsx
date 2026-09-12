@@ -3,10 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../../api';
-import AuthDotField from '../../components/AuthDotField';
-import AuthBrandCarousel from '../../components/AuthBrandCarousel';
+import AuthPageLayout, { AuthGoogleMark } from '../../components/AuthPageLayout';
 import FooterNavLinks from '../../components/FooterNavLinks';
-import HermesMarkSvg from '../../components/HermesMarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../../utils/stravaLinking';
 import { createPasskey, getPasskey, isWebAuthnSupported } from '../../utils/webauthn';
@@ -269,30 +267,7 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-page auth-page--login auth-page--liquid-glass" data-auth-redesign="command-entry">
-      <AuthDotField />
-      <main className="auth-flow-shell">
-        <section className="auth-flow-brand">
-          <div className="auth-flow-brand-inner">
-            <div className="auth-flow-wordmark-wrap">
-              <div className="auth-flow-wordmark-row">
-                <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
-                <h1 className="auth-flow-wordmark">HERMES</h1>
-              </div>
-              <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
-            </div>
-
-            <AuthBrandCarousel t={t} />
-          </div>
-        </section>
-
-        <section className="auth-flow-formside">
-          <div className="auth-flow-card">
-            <div className="auth-flow-header">
-              <h3>{t('index.stitch_welcome')}</h3>
-              <p>{t('index.stitch_access')}</p>
-            </div>
-
+    <AuthPageLayout variant="login" title={t('index.stitch_welcome')} description={t('index.studio_login_copy')}>
             <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'verified' && (
                 <div className="error-alert error-alert--success is-visible" role="status">
@@ -406,7 +381,7 @@ export default function Login() {
                 <input
                   type="email"
                   id="email"
-                  placeholder="runner@hermes.io"
+                  placeholder="you@example.com"
                   autoComplete="email"
                   required
                   value={email}
@@ -466,7 +441,7 @@ export default function Login() {
                     className="auth-flow-btn auth-flow-btn--google"
                     onClick={() => startOAuth('google')}
                   >
-                    <span className="auth-flow-google-g" aria-hidden="true">G</span>
+                    <AuthGoogleMark />
                     <span>{t('index.google')}</span>
                   </button>
                 )}
@@ -481,9 +456,6 @@ export default function Login() {
             <footer className="auth-flow-legal auth-flow-legal--inline">
               <FooterNavLinks publicOnly={true} />
             </footer>
-          </div>
-        </section>
-      </main>
-    </div>
+    </AuthPageLayout>
   );
 }

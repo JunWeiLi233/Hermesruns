@@ -11,14 +11,14 @@ const redesignSection = authStyleSource.split('/* Auth command entry redesign */
 
 assert.match(
   loginSource,
-  /className="auth-page auth-page--login[^"]*" data-auth-redesign="command-entry"/,
-  'Login should expose the shared auth command-entry redesign marker.',
+  /<AuthPageLayout variant="login"/,
+  'Login should use the shared account entry layout.',
 );
 
 assert.equal(
-  (signupSource.match(/data-auth-redesign="command-entry"/g) || []).length,
+  (signupSource.match(/<AuthPageLayout variant="signup"/g) || []).length,
   2,
-  'Signup should expose the redesign marker on both normal and post-signup states.',
+  'Signup should share the account entry layout in both form and completion states.',
 );
 
 assert.ok(

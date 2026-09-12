@@ -299,6 +299,12 @@ export default {
     "cinematic_shoe_recovery": "Recovery Run",
   },
   "index": {
+    "studio_home": "Back to home",
+    "studio_brand_label": "A little science. A lot of running.",
+    "studio_brand_title": "Find your",
+    "studio_brand_accent": "stride.",
+    "studio_brand_copy": "Your runs, your progress, your next goal. All in one place.",
+    "studio_login_copy": "Sign in to pick up where you left off.",
     "title": "Hermes | Running Analytics Platform Sign In",
     "stitch_pulse": "Training pulse connected",
     "stitch_hero_line_one": "Bring every",
@@ -475,6 +481,8 @@ export default {
     "stitch_slide_14_stat_two": "Coach context",
   },
   "signup": {
+    "studio_title": "Create your account",
+    "studio_copy": "Start with your email. Connect your runs whenever you're ready.",
     "title": "Hermes | Create Running Analytics Account",
     "hero_title": "Your Running Coach.\nEvery Day.",
     "hero_text": "Strava sign-up keeps activities syncing automatically. Email-only accounts work, but auto-sync requires Strava. Import GPX, FIT, or TCX files to get started without it.",
