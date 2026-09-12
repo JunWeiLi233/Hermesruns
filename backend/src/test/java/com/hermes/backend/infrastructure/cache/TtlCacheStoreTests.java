@@ -24,6 +24,68 @@ import static org.mockito.Mockito.when;
 class TtlCacheStoreTests {
 
     @Test
+    void totalMemoryBudgetEvictsLeastRecentlyUsedResponses() {
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), new MutableClock(), 512, 4096, 1800);
+        String response = "x".repeat(300);
+        store.put("test", "a", response, Duration.ofMinutes(5));
+        store.put("test", "b", response, Duration.ofMinutes(5));
+        assertThat(store.get("test", "a", String.class)).contains(response);
+        store.put("test", "c", response, Duration.ofMinutes(5));
+        assertThat(store.get("test", "a", String.class)).contains(response);
+        assertThat(store.get("test", "b", String.class)).isEmpty();
+        assertThat(store.get("test", "c", String.class)).contains(response);
+        assertThat(store.localEstimatedBytesForTests()).isLessThanOrEqualTo(1800);
+    }
+
+    @Test
+    void overwritesAndEvictionsReleaseTheMemoryBudget() {
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), new MutableClock(), 512, 4096, 1800);
+        String response = "x".repeat(300);
+        for (int i = 0; i < 100; i++) store.put("test", "a", response, Duration.ofMinutes(5));
+        store.put("test", "b", response, Duration.ofMinutes(5));
+        assertThat(store.localEntrySizeForTests()).isEqualTo(2);
+        store.evict("test", "a");
+        store.evict("test", "b");
+        assertThat(store.localEstimatedBytesForTests()).isZero();
+    }
+
+    @Test
+    void expiredEntriesReleaseBudgetBeforeFreshEntriesAreEvicted() {
+        MutableClock clock = new MutableClock();
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock, 512, 4096, 1800);
+        String response = "x".repeat(300);
+        store.put("test", "live", response, Duration.ofMinutes(5));
+        store.put("test", "expired", response, Duration.ofSeconds(1));
+        clock.advance(Duration.ofSeconds(2));
+        store.put("test", "new", response, Duration.ofMinutes(5));
+        assertThat(store.get("test", "live", String.class)).contains(response);
+        assertThat(store.get("test", "expired", String.class)).isEmpty();
+        assertThat(store.get("test", "new", String.class)).contains(response);
+        clock.advance(Duration.ofMinutes(6));
+        store.sweepExpiredLocalEntries();
+        assertThat(store.localEstimatedBytesForTests()).isZero();
+    }
+
+    @Test
+    void oversizedTotalWeightClearsOnlyTheOverwrittenKey() {
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), new MutableClock(), 512, 4096, 1000);
+        store.put("test", "a", "small", Duration.ofMinutes(5));
+        store.put("test", "b", "keep", Duration.ofMinutes(5));
+        store.put("test", "a", "x".repeat(600), Duration.ofMinutes(5));
+        assertThat(store.get("test", "a", String.class)).isEmpty();
+        assertThat(store.get("test", "b", String.class)).contains("keep");
+    }
+
+    @Test
+    void concurrentCacheWritesStayWithinTheTotalBudget() {
+        TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), new MutableClock(), 512, 4096, 8192);
+        java.util.stream.IntStream.range(0, 1000).parallel().forEach(i ->
+                store.put("test", Integer.toString(i), "x".repeat(300), Duration.ofMinutes(5)));
+        assertThat(store.localEstimatedBytesForTests()).isPositive().isLessThanOrEqualTo(8192);
+        assertThat(store.localEntrySizeForTests()).isLessThan(20);
+    }
+
+    @Test
     void storesAndReadsSerializablePayloadsFromLocalFallback() {
         MutableClock clock = new MutableClock();
         TtlCacheStore store = TtlCacheStore.inMemoryForTests(new ObjectMapper(), clock);
@@ -190,6 +252,8 @@ class TtlCacheStoreTests {
 
         assertThat(entriesPlaceholder).isEqualTo("${app.cache.local-max-entries:1024}");
         assertThat(bytesPlaceholder).isEqualTo("${app.cache.local-max-value-bytes:1048576}");
+        assertThat(valuePlaceholder(autowired, "app.cache.local-max-total-bytes"))
+                .isEqualTo("${app.cache.local-max-total-bytes:16777216}");
     }
 
     private static String valuePlaceholder(Constructor<TtlCacheStore> constructor, String propertyPrefix) {
