@@ -23,7 +23,6 @@ const mobileMediaStart = liquidGlassStyles.indexOf('@media (max-width: 720px)');
 const fullSlideRule = liquidGlassStyles.split(commandEntrySlideViewportSelector)[1]?.split('}')[0] || '';
 const compactStatsRule = liquidGlassStyles.split(commandEntryStatsSelector)[1]?.split('}')[0] || '';
 const compactStatValueRule = liquidGlassStyles.split('#root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-stats strong {')[1]?.split('}')[0] || '';
-const dotFieldBehindShell = /<div className="auth-page[^>]+data-auth-redesign="command-entry">\s*<AuthDotField \/>\s*<main className="auth-flow-shell">/g;
 
 assert.match(
   brandRule,
@@ -129,12 +128,12 @@ assert.ok(
   'The compact stat grid must apply before the mobile breakpoint so desktop rails keep both values visible.',
 );
 assert.equal(
-  [...loginSource.matchAll(dotFieldBehindShell)].length,
+  [...loginSource.matchAll(/<AuthPageLayout variant="login"/g)].length,
   1,
-  'Login should mount one dot field directly behind its command-entry shell.',
+  'Login should mount one shared studio shell.',
 );
 assert.equal(
-  [...signupSource.matchAll(dotFieldBehindShell)].length,
+  [...signupSource.matchAll(/<AuthPageLayout variant="signup"/g)].length,
   2,
-  'Both Signup states should mount one dot field directly behind their command-entry shells.',
+  'Both Signup states should use the same studio shell.',
 );

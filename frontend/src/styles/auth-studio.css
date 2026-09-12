@@ -1,0 +1,149 @@
+/* Light refinement of the original dotted, two-column account entry. */
+/* Public account entry uses the landing page's light palette in every app theme. */
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] {
+  --auth-dot-color: 91, 77, 66 !important;
+  --auth-dot-opacity: .14 !important;
+  --auth-ink: #2c2f30;
+  --auth-muted: #625c56;
+  --auth-paper: #ffffff;
+  color-scheme: light;
+  color: #2c2f30 !important;
+  background: #ffffff !important;
+}
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign]::before,
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign]::after,
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-card, .auth-flow-formside)::before,
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-card, .auth-flow-formside)::after { content: none !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-card, .auth-flow-formside) { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; color: #2c2f30 !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-hero, .auth-flow-header h1, .form-group--auth label, .label-row--auth label, .auth-resend-box--login h4) { color: #2c2f30 !important; text-shadow: none !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-text, .auth-flow-header p, .auth-flow-status-note, .auth-resend-copy, .auth-resend-message, .pwd-strength-label, .pwd-strength-rule, .signup-link--auth, .forgot-password--auth) { color: #625c56 !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-wordmark, .auth-flow-hero .is-accent, .auth-flow-pulse, .signup-link--auth a, .auth-flow-legal a, .auth-refined-language) { color: #a0392a !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input { background: #faf8f5 !important; border-color: #e5dfda !important; color: #2c2f30 !important; caret-color: #a0392a; box-shadow: none !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input::placeholder { color: #7b736e !important; opacity: 1; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input:focus { border-color: #a0392a !important; box-shadow: 0 0 0 3px rgba(160,57,42,.12) !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-btn--google, .auth-resend-box--login .btn-secondary) { background: #fff !important; color: #2c2f30 !important; border-color: #e5dfda !important; box-shadow: none !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-btn--google, .auth-resend-box--login .btn-secondary):hover:not(:disabled) { background: #faf8f5 !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .auth-flow-btn--submit { color: #fffaf6 !important; border-color: rgba(160,57,42,.24) !important; background: linear-gradient(106deg, #9d3428, #bd4a39 45%, #f27664) !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .auth-flow-btn--submit:hover:not(:disabled) { background: linear-gradient(106deg, #8d2e25, #b54232 44%, #e8695a) !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .auth-flow-btn--strava.auth-flow-btn--strava-official { background: #fc5200 !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.pwd-strength-card, .auth-resend-box--login) { background: #faf8f5 !important; border-color: #e5dfda !important; box-shadow: none !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .pwd-strength-rule.is-met { color: #2d6b43 !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .error-alert { background: #fff3ef !important; color: #8d2e25 !important; border-color: #edc6bb !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .error-alert--success { background: #edf4ee !important; color: #2d6b43 !important; border-color: #3d8b5e !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(a, button, input):focus-visible { outline-color: #a0392a !important; }
+
+#root .auth-page--refined[data-auth-redesign] .auth-flow-shell {
+  width: min(1480px, 100%);
+  margin-inline: auto;
+  gap: 32px;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-brand-inner {
+  padding-left: 24px;
+  padding-bottom: 72px;
+  transform: none;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-wordmark-row { color: inherit; text-decoration: none; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-hero { max-width: 100%; line-height: 1.03; text-wrap: balance; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-formside { padding-inline: 24px; background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-card {
+  width: min(100%, 480px);
+  margin-inline: auto;
+  padding: 24px 12px;
+  transform: none;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-header { margin-bottom: 28px; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-header h1 {
+  margin: 0;
+  color: #172033;
+  font-size: 34px;
+  font-weight: 750;
+  font-style: normal;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-header p { margin-top: 10px; line-height: 1.55; overflow-wrap: anywhere; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-form { gap: 22px; }
+#root .auth-page--refined[data-auth-redesign] .form-group--auth { margin: 0; gap: 8px; }
+#root .auth-page--refined[data-auth-redesign] .form-group--auth label { margin: 0; }
+#root .auth-page--refined[data-auth-redesign] .label-row--auth { margin: 0; min-height: 22px; }
+#root .auth-page--refined[data-auth-redesign] .forgot-password--auth { min-height: 22px; }
+#root .auth-page--refined[data-auth-redesign] .form-group--auth input {
+  min-height: 54px;
+  height: 54px;
+  font-size: 16px;
+  border-radius: 14px;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-btn--submit { min-height: 54px; margin-top: 2px; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-social {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 0;
+  min-height: 0;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-social:empty { display: none; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-social[aria-busy="true"] { display: block; min-height: 48px; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-social .auth-flow-btn {
+  grid-column: auto;
+  grid-row: auto;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  font-size: 13px;
+}
+#root .auth-page--refined[data-auth-redesign] .auth-flow-social .auth-flow-btn--strava.auth-flow-btn--strava-official { padding: 0; background: #fc5200 !important; border-radius: 8px; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-btn__strava-official { width: 100%; height: auto; max-height: 48px; object-fit: contain; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-btn--google { gap: 8px; padding: 10px; }
+#root .auth-page--refined[data-auth-redesign] .auth-flow-btn--google svg { width: 18px; height: 18px; flex: 0 0 18px; }
+#root .auth-page--refined[data-auth-redesign] .signup-link--auth { margin-top: 22px; }
+#root .auth-page--refined[data-auth-redesign] .pwd-strength-card { margin: 0; }
+#root .auth-page--refined[data-auth-redesign] .pwd-strength-card--hidden { display: none; }
+#root .auth-page--refined .auth-refined-language {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  z-index: 3;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #71463d;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+#root .auth-page--refined .auth-refined-language:hover { background: rgba(168,57,43,.07); }
+#root .auth-page--refined :is(.auth-flow-wordmark-row, .auth-refined-language):focus-visible { outline: 2px solid #ad3c2d; outline-offset: 3px; }
+
+@media (max-width: 1024px) and (min-width: 760px) {
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-shell { grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr); gap: 12px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-brand { padding-inline: 20px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-brand-inner { padding-left: 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-formside { padding-inline: 16px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-social { grid-template-columns: 1fr; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-btn__strava-official { width: 237px; max-width: 100%; }
+}
+@media (max-width: 759px) {
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-shell { display: flex; flex-direction: column; min-height: 100dvh; gap: 20px; padding: 0 20px max(16px, env(safe-area-inset-bottom)); }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-brand { flex: 0 0 auto; padding: 24px 0 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-brand-inner { min-height: 0; padding: 0; gap: 0; }
+  #root .auth-page--refined[data-auth-redesign] :is(.auth-flow-copy--carousel, .auth-flow-pulse) { display: none; }
+  #root .auth-page--refined[data-auth-redesign] > .auth-dot-field { opacity: .4; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-wordmark-wrap { position: relative; top: auto; left: auto; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-wordmark { font-size: 24px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-hero { font-size: 32px; line-height: 1.08; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-slide-viewport { max-width: 420px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-formside { flex: 1 0 auto; padding: 8px 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-card { display: flex; flex-direction: column; flex: 1 0 auto; padding: 8px 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-card > * { flex-shrink: 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-header { margin-top: auto; margin-bottom: 24px; padding-left: 0; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-header h1 { font-size: 28px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-social { grid-template-columns: 1fr; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-btn__strava-official { width: 237px; max-width: 100%; }
+  #root .auth-page--refined[data-auth-redesign] .forgot-password--auth { min-height: 44px; margin-block: -11px; }
+  #root .auth-page--refined[data-auth-redesign] .auth-flow-legal { margin-top: auto; padding-top: 24px; padding-bottom: 0; }
+  #root .auth-page--refined .auth-refined-language { top: 24px; right: 16px; }
+}

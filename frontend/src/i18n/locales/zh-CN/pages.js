@@ -299,6 +299,12 @@ export default {
     "cinematic_shoe_recovery": "恢复跑",
   },
   "index": {
+    "studio_home": "返回主页",
+    "studio_brand_label": "一点科学，让每一步更有方向。",
+    "studio_brand_title": "每一步，",
+    "studio_brand_accent": "都更从容。",
+    "studio_brand_copy": "跑步记录、训练进展和下一个目标，都在这里。",
+    "studio_login_copy": "登录账号，继续你的跑步旅程。",
   "title": "Hermes | 跑步分析平台登录",
   "stitch_pulse": "训练脉动已连接",
   "stitch_hero_line_one": "带上你的",
@@ -475,6 +481,8 @@ export default {
   "stitch_slide_14_stat_two": "教练上下文",
 },
   "signup": {
+    "studio_title": "创建你的账号",
+    "studio_copy": "先用邮箱注册，随时连接你的跑步记录。",
     "title": "Hermes | 创建跑步数据分析账号",
     "hero_title": "今天怎么跑？\n你的教练在线。",
     "hero_text": "推荐使用 Strava 注册，活动会自动同步；仅用邮箱注册时，需自行导入或从其他平台同步到 Strava 后再更新。",

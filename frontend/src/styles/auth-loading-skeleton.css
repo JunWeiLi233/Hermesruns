@@ -1,0 +1,91 @@
+/* Loaded with PageSkeleton, before the heavier auth route styles are ready. */
+@keyframes hermesAccountSkeletonShimmer {
+  from { background-position: 160% 0; }
+  to { background-position: -60% 0; }
+}
+
+#root .page-skeleton--account {
+  --hermes-skeleton-base: #ede9e4;
+  --hermes-skeleton-highlight: #faf8f5;
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  min-height: 100dvh;
+  padding: 0;
+  overflow: clip;
+  background: #ffffff;
+  color-scheme: light;
+}
+#root .page-skeleton--account *, #root .page-skeleton--account *::before { box-sizing: border-box; }
+#root .page-skeleton--account .page-skeleton__block { display: block; max-width: 100%; flex-shrink: 0; background: linear-gradient(105deg, var(--hermes-skeleton-base) 20%, var(--hermes-skeleton-highlight) 42%, var(--hermes-skeleton-base) 64%); background-size: 220% 100%; animation: hermesAccountSkeletonShimmer 1.7s ease-in-out infinite; }
+#root .page-skeleton__account-dots { position: absolute; inset: 0; z-index: -1; pointer-events: none; background-image: radial-gradient(circle, rgba(91,77,66,.12) 1px, transparent 1.2px); background-size: 22px 22px; }
+#root .page-skeleton__account-language { position: absolute; top: 18px; right: 24px; display: grid; place-items: center; width: 44px; height: 44px; }
+#root .page-skeleton__account-language .page-skeleton__block { width: 18px; height: 9px; border-radius: 3px; }
+#root .page-skeleton__account-shell { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(420px, .92fr); gap: 32px; width: min(1480px, 100%); min-height: 100dvh; margin-inline: auto; }
+#root .page-skeleton__account-brand { display: flex; justify-content: center; align-items: center; min-width: 0; padding: clamp(32px, 5vw, 72px) clamp(14px, 3vw, 54px); }
+#root .page-skeleton__account-brand-inner { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 660px; min-height: calc(100dvh - 96px); padding: 0 0 72px 24px; }
+#root .page-skeleton__account-brand-head { position: absolute; top: 34px; left: 44px; display: flex; flex-direction: column; gap: 10px; }
+#root .page-skeleton__account-wordmark { display: flex; align-items: center; gap: 10px; height: 40px; }
+#root .page-skeleton__account-wordmark .page-skeleton__block:first-child { width: 32px; height: 32px; border-radius: 6px; }
+#root .page-skeleton__account-wordmark .page-skeleton__block:last-child { width: 158px; height: 28px; border-radius: 5px; }
+#root .page-skeleton__account-pulse { width: 158px; height: 12px; border-radius: 4px; }
+#root .page-skeleton__account-carousel { display: flex; flex-direction: column; align-items: center; gap: 10px; width: min(460px, 100%); }
+#root .page-skeleton__account-headline { width: 90%; height: 48px; border-radius: 10px; transform: skewX(-10deg); }
+#root .page-skeleton__account-headline:nth-child(2) { width: 72%; }
+#root .page-skeleton__account-headline--accent { width: 94%; --hermes-skeleton-base: #f1d8d0; --hermes-skeleton-highlight: #fbf1eb; }
+#root .page-skeleton__account-brand-copy { display: flex; align-items: center; flex-direction: column; gap: 8px; width: 94%; margin-top: 8px; }
+#root .page-skeleton__account-brand-copy .page-skeleton__block { width: 100%; height: 13px; border-radius: 4px; }
+#root .page-skeleton__account-brand-copy .page-skeleton__block:last-child { width: 80%; }
+#root .page-skeleton__account-formside { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: clamp(32px, 5vw, 72px) 24px; }
+#root .page-skeleton__account-card { width: min(100%, 480px); margin-inline: auto; padding: 24px 12px; }
+#root .page-skeleton__account-header { margin-bottom: 28px; }
+#root .page-skeleton__account-heading { display: flex; align-items: center; height: 41px; }
+#root .page-skeleton__account-heading .page-skeleton__block { width: 68%; height: 29px; border-radius: 7px; }
+#root .page-skeleton__account-intro { display: grid; grid-auto-rows: 24px; align-items: center; gap: 0; margin-top: 10px; }
+#root .page-skeleton__account-intro .page-skeleton__block { width: 92%; height: 12px; border-radius: 4px; }
+#root .page-skeleton__account-intro .page-skeleton__block:last-child { width: 76%; }
+#root .page-skeleton__account-form { display: flex; flex-direction: column; gap: 22px; }
+#root .page-skeleton__account-field-group { display: flex; flex-direction: column; gap: 8px; }
+#root .page-skeleton__account-label-row { display: flex; align-items: center; justify-content: space-between; height: 22px; }
+#root .page-skeleton__account-label-row > .page-skeleton__block { width: 80px; height: 10px; border-radius: 4px; }
+#root .page-skeleton__account-label-row > .page-skeleton__account-forgot { width: 90px; }
+#root .page-skeleton__account-field { width: 100%; height: 54px; border: 1px solid #e5dfda; border-radius: 14px; }
+#root .page-skeleton__account-submit { width: 100%; height: 54px; margin-top: 2px; border-radius: 15px; --hermes-skeleton-base: #f1d8d0; --hermes-skeleton-highlight: #fbf1eb; }
+#root .page-skeleton__account-social { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+#root .page-skeleton__account-social > .page-skeleton__block { height: 48px; border-radius: 14px; }
+#root .page-skeleton__account-switch { display: flex; gap: 10px; align-items: center; height: 44px; margin-top: 22px; }
+#root .page-skeleton__account-switch .page-skeleton__block:first-child { width: 136px; height: 11px; border-radius: 4px; }
+#root .page-skeleton__account-switch .page-skeleton__block:last-child { width: 58px; height: 11px; border-radius: 4px; }
+#root .page-skeleton__account-legal { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 44px; margin-top: 10px; }
+#root .page-skeleton__account-legal .page-skeleton__block { width: 34px; height: 9px; border-radius: 4px; }
+
+@media (max-width: 1024px) and (min-width: 760px) {
+  #root .page-skeleton__account-shell { grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr); gap: 12px; }
+  #root .page-skeleton__account-brand { padding-inline: 20px; }
+  #root .page-skeleton__account-brand-inner { padding-left: 0; min-height: 540px; }
+  #root .page-skeleton__account-formside { padding-inline: 16px; }
+  #root .page-skeleton__account-social { grid-template-columns: 1fr; }
+}
+@media (max-width: 759px) {
+  #root .page-skeleton__account-shell { display: flex; flex-direction: column; min-height: 100dvh; gap: 20px; padding: 0 20px max(16px, env(safe-area-inset-bottom)); }
+  #root .page-skeleton__account-brand { flex: 0 0 auto; display: block; padding: 24px 0 0; }
+  #root .page-skeleton__account-brand-inner { display: block; min-height: 0; padding: 0; }
+  #root .page-skeleton__account-brand-head { position: static; gap: 0; }
+  #root .page-skeleton__account-wordmark { height: 36px; }
+  #root .page-skeleton__account-wordmark .page-skeleton__block:last-child { width: 132px; height: 23px; }
+  #root .page-skeleton--account :is(.page-skeleton__account-pulse, .page-skeleton__account-carousel) { display: none; }
+  #root .page-skeleton__account-language { top: 24px; right: 16px; }
+  #root .page-skeleton__account-dots { opacity: .4; }
+  #root .page-skeleton__account-formside { flex: 1 0 auto; padding: 8px 0; }
+  #root .page-skeleton__account-card { display: flex; flex-direction: column; flex: 1 0 auto; padding: 8px 0; }
+  #root .page-skeleton__account-card > * { flex-shrink: 0; }
+  #root .page-skeleton__account-header { margin-top: auto; margin-bottom: 24px; }
+  #root .page-skeleton__account-heading { height: 34px; }
+  #root .page-skeleton__account-heading .page-skeleton__block { height: 24px; }
+  #root .page-skeleton__account-social { grid-template-columns: 1fr; }
+  #root .page-skeleton__account-legal { margin-top: auto; padding-top: 24px; min-height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .page-skeleton--account .page-skeleton__block { animation: none; }
+}

@@ -3,11 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '../../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../../api';
 import { fetchPasswordRules, getFailedPasswordRuleIds } from '../../utils/passwordRules';
-import AuthDotField from '../../components/AuthDotField';
-import AuthBrandCarousel from '../../components/AuthBrandCarousel';
+import AuthPageLayout, { AuthGoogleMark } from '../../components/AuthPageLayout';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
-import HermesMarkSvg from '../../components/HermesMarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import { parseSignupStatusQuery } from '../../utils/stravaLinking';
 
@@ -314,31 +312,7 @@ export default function Signup() {
 
   if (doneInfo) {
     return (
-      <div className="auth-page auth-page--signup auth-page--liquid-glass" data-auth-redesign="command-entry">
-        <AuthDotField />
-        <main className="auth-flow-shell">
-          <section className="auth-flow-brand">
-            <div className="auth-flow-brand-inner">
-              <div className="auth-flow-wordmark-wrap">
-                <div className="auth-flow-wordmark-row">
-                  <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
-                  <h1 className="auth-flow-wordmark">HERMES</h1>
-                </div>
-                <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
-              </div>
-
-              <AuthBrandCarousel t={t} />
-            </div>
-          </section>
-
-          <section className="auth-flow-formside">
-            <div className="auth-flow-card">
-              <div className="auth-flow-header">
-                <h3>{s('done_line_one')}</h3>
-                <p>{s('done_line_two')}</p>
-              </div>
-
-              <p className="auth-flow-text">{doneInfo.message || t('signup.check_email_body')}</p>
+      <AuthPageLayout variant="signup" title={`${s('done_line_one')} ${s('done_line_two')}`} description={doneInfo.message || t('signup.check_email_body')}>
               {!doneInfo.verificationRequired && (
                 <p className="auth-flow-status-note">{t('signup.no_mail_server_note')}</p>
               )}
@@ -350,42 +324,15 @@ export default function Signup() {
               >
                 {t('signup.signin_link')}
               </button>
-            </div>
-
             <footer className="auth-flow-legal">
               <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
             </footer>
-          </section>
-        </main>
-      </div>
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="auth-page auth-page--signup auth-page--liquid-glass" data-auth-redesign="command-entry">
-      <AuthDotField />
-      <main className="auth-flow-shell">
-        <section className="auth-flow-brand">
-          <div className="auth-flow-brand-inner">
-            <div className="auth-flow-wordmark-wrap">
-              <div className="auth-flow-wordmark-row">
-                <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
-                <h1 className="auth-flow-wordmark">HERMES</h1>
-              </div>
-              <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
-            </div>
-
-            <AuthBrandCarousel t={t} />
-          </div>
-        </section>
-
-        <section className="auth-flow-formside">
-          <div className="auth-flow-card">
-            <div className="auth-flow-header">
-              <h3>{s('hero_line_one')} {s('hero_line_two')} <span className="is-accent">{s('hero_line_three')}</span></h3>
-              <p>{s('hero_copy')}</p>
-            </div>
-
+    <AuthPageLayout variant="signup" title={t('signup.studio_title')} description={t('signup.studio_copy')}>
             <form className="auth-flow-form" onSubmit={handleSubmit}>
               {banner === 'strava_link_confirmation_required' && (
                 <div className="error-alert is-visible" role="alert">{t('profile.strava_link_confirmation_required')}</div>
@@ -420,37 +367,12 @@ export default function Signup() {
                 </div>
               )}
 
-              <div className={`pwd-strength-card${!password ? ' pwd-strength-card--hidden' : ''}`}>
-                <div className="pwd-strength-header">
-                  <span className="pwd-strength-label">{t('signup.password_strength')}</span>
-                  {strengthScore && (
-                    <span className={`pwd-strength-badge pwd-strength-badge--${strengthScore}`}>
-                      {t(`signup.password_strength_${strengthScore}`)}
-                    </span>
-                  )}
-                </div>
-                <div className="pwd-strength-bar-track">
-                  <div className={`pwd-strength-bar-fill${strengthScore ? ` pwd-strength-bar-fill--${strengthScore}` : ''}`} />
-                </div>
-                <ul className="pwd-strength-rules">
-                  {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
-                    const isMet = !clientFailed.includes(id) && password.length > 0;
-                    return (
-                      <li key={id} className={`pwd-strength-rule${isMet ? ' is-met' : ''}`}>
-                        <AppIcon name={isMet ? 'check' : 'close'} className="rule-icon" />
-                        <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
               <div className="form-group form-group--auth">
                 <label htmlFor="email">{t('signup.email_label')}</label>
                 <input
                   type="email"
                   id="email"
-                  placeholder="athlete@hermes.io"
+                  placeholder="you@example.com"
                   autoComplete="email"
                   required
                   value={email}
@@ -468,10 +390,30 @@ export default function Signup() {
                   id="password"
                   placeholder="********"
                   autoComplete="new-password"
+                  aria-describedby={password ? 'signup-password-rules' : undefined}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+              </div>
+
+              <div id="signup-password-rules" className={`pwd-strength-card${!password ? ' pwd-strength-card--hidden' : ''}`}>
+                <div className="pwd-strength-header">
+                  <span className="pwd-strength-label">{t('signup.password_strength')}</span>
+                  {strengthScore && <span className={`pwd-strength-badge pwd-strength-badge--${strengthScore}`}>{t(`signup.password_strength_${strengthScore}`)}</span>}
+                </div>
+                <div className="pwd-strength-bar-track">
+                  <div className={`pwd-strength-bar-fill${strengthScore ? ` pwd-strength-bar-fill--${strengthScore}` : ''}`} />
+                </div>
+                <ul className="pwd-strength-rules">
+                  {['MIN_LENGTH', 'UPPERCASE', 'LOWERCASE', 'DIGIT', 'SPECIAL'].map((id) => {
+                    const isMet = !clientFailed.includes(id) && password.length > 0;
+                    return <li key={id} className={`pwd-strength-rule${isMet ? ' is-met' : ''}`}>
+                      <AppIcon name={isMet ? 'check' : 'close'} className="rule-icon" />
+                      <span>{ruleLabels[id] ? ruleLabels[id]() : id}</span>
+                    </li>;
+                  })}
+                </ul>
               </div>
 
               <div className="form-group form-group--auth">
@@ -492,8 +434,8 @@ export default function Signup() {
               </button>
             </form>
 
-            <div className="auth-flow-social">
-              <button
+            <div className="auth-flow-social" aria-busy={authProviders === null}>
+              {stravaConfigured && <button
                 type="button"
                 className="auth-flow-btn auth-flow-btn--strava auth-flow-btn--strava-official"
                 disabled={!stravaConfigured}
@@ -502,31 +444,23 @@ export default function Signup() {
                 <img
                   className="auth-flow-btn__strava-official"
                   src={stravaConnectButton}
-                  alt={stravaConfigured ? s('strava_cta') : t('common.strava_not_configured')}
+                  alt={s('strava_cta')}
                   width="237"
                   height="48"
                   loading="eager"
                   decoding="async"
                 />
-              </button>
+              </button>}
 
-              {!stravaConfigured && (
-                <p className="auth-flow-status-note auth-flow-status-note--strava">{t('common.strava_not_configured')}</p>
-              )}
-
-              <button
+              {googleConfigured && <button
                 type="button"
                 className="auth-flow-btn auth-flow-btn--google"
                 disabled={!googleConfigured}
                 onClick={() => startOAuth('google')}
               >
-                <span className="auth-flow-google-g" aria-hidden="true">G</span>
-                <span>{t(googleConfigured ? 'signup.google' : 'common.google_not_configured')}</span>
-              </button>
-
-              {!googleConfigured && (
-                <p className="auth-flow-status-note auth-flow-status-note--google">{t('common.google_not_configured')}</p>
-              )}
+                <AuthGoogleMark />
+                <span>{t('signup.google')}</span>
+              </button>}
             </div>
 
             <div className="signup-link signup-link--auth">
@@ -537,9 +471,6 @@ export default function Signup() {
             <footer className="auth-flow-legal auth-flow-legal--inline">
               <FooterNavLinks className="signup-flow-footer-links" publicOnly={true} />
             </footer>
-          </div>
-        </section>
-      </main>
-    </div>
+    </AuthPageLayout>
   );
 }

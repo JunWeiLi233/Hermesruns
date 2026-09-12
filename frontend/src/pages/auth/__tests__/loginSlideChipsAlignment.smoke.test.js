@@ -78,8 +78,8 @@ assert.match(
 const loginSource = readFileSync(path.join(here, "../Login.jsx"), 'utf8');
 assert.match(
   loginSource,
-  /auth-flow-wordmark-row[\s\S]*?HermesMarkSvg[\s\S]*?auth-flow-wordmark-logo[\s\S]*?auth-flow-wordmark">HERMES/,
-  'Login should render the Hermes mark left of the HERMES title.',
+  /<AuthPageLayout variant="login"/,
+  'Login should get its consistent wordmark from the shared studio layout.',
 );
 assert.match(
   loginSource,
@@ -129,8 +129,8 @@ assert.match(
 const signupSource = readFileSync(path.join(here, "../Signup.jsx"), 'utf8');
 assert.match(
   signupSource,
-  /auth-flow-wordmark-row[\s\S]*?HermesMarkSvg[\s\S]*?auth-flow-wordmark-logo[\s\S]*?auth-flow-wordmark">HERMES/,
-  'Signup should render the Hermes mark left of the HERMES title.',
+  /<AuthPageLayout variant="signup"/,
+  'Signup should get its consistent wordmark from the shared studio layout.',
 );
 assert.match(
   signupSource,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { subscribeWakeRetry } from '../api';
 import { useI18n } from '../contexts/I18nContext';
 import shoeSkeletonAsset from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
+import '../styles/auth-loading-skeleton.css';
 
 function WakeRetryNote() {
   const { t } = useI18n();
@@ -1093,7 +1094,54 @@ function LandingPageSkeleton() {
   );
 }
 
+function AccountEntrySkeleton({ variant }) {
+  const isSignup = variant === 'signup';
+  return (
+    <div className={`page-skeleton page-skeleton--${variant} page-skeleton--account`} role="status" aria-live="polite" aria-busy="true" aria-label="Loading page">
+      <div className="page-skeleton__account-dots" aria-hidden="true" />
+      <div className="page-skeleton__account-language" aria-hidden="true"><SkeletonBlock /></div>
+      <div className="page-skeleton__account-shell" aria-hidden="true">
+        <section className="page-skeleton__account-brand">
+          <div className="page-skeleton__account-brand-inner">
+            <div className="page-skeleton__account-brand-head">
+              <div className="page-skeleton__account-wordmark"><SkeletonBlock /><SkeletonBlock /></div>
+              <SkeletonBlock className="page-skeleton__account-pulse" />
+            </div>
+            <div className="page-skeleton__account-carousel">
+              <SkeletonBlock className="page-skeleton__account-headline" />
+              <SkeletonBlock className="page-skeleton__account-headline" />
+              <SkeletonBlock className="page-skeleton__account-headline page-skeleton__account-headline--accent" />
+              <SkeletonLines count={2} className="page-skeleton__account-brand-copy" />
+            </div>
+          </div>
+        </section>
+        <section className="page-skeleton__account-formside">
+          <div className="page-skeleton__account-card">
+            <div className="page-skeleton__account-header">
+              <div className="page-skeleton__account-heading"><SkeletonBlock /></div>
+              <SkeletonLines count={isSignup ? 2 : 1} className="page-skeleton__account-intro" />
+            </div>
+            <div className="page-skeleton__account-form">
+              {Array.from({ length: isSignup ? 3 : 2 }, (_, index) => (
+                <div key={index} className="page-skeleton__account-field-group">
+                  <div className="page-skeleton__account-label-row"><SkeletonBlock />{!isSignup && index === 1 && <SkeletonBlock className="page-skeleton__account-forgot" />}</div>
+                  <SkeletonBlock className="page-skeleton__account-field" />
+                </div>
+              ))}
+              <SkeletonBlock className="page-skeleton__account-submit" />
+            </div>
+            <div className="page-skeleton__account-social"><SkeletonBlock /><SkeletonBlock /></div>
+            <div className="page-skeleton__account-switch"><SkeletonBlock /><SkeletonBlock /></div>
+            <footer className="page-skeleton__account-legal"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></footer>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function AuthPageSkeleton({ variant = 'auth' }) {
+  if (variant === 'auth' || variant === 'signup') return <AccountEntrySkeleton variant={variant} />;
   const isSignup = variant === 'signup';
   const isForgotPassword = variant === 'forgot-password';
   const isAdmin = variant === 'admin-login';
