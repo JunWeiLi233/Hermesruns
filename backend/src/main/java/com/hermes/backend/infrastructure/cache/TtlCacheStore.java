@@ -45,10 +45,11 @@ public class TtlCacheStore {
             ObjectProvider<StringRedisTemplate> redisTemplateProvider,
             ObjectMapper objectMapper,
             @Value("${app.cache.local-max-entries:1024}") int localMaxEntries,
-            @Value("${app.cache.local-max-value-bytes:1048576}") int localMaxValueBytes
+            @Value("${app.cache.local-max-value-bytes:1048576}") int localMaxValueBytes,
+            @Value("${app.cache.local-max-total-bytes:16777216}") long localMaxTotalBytes
     ) {
         this(redisProperties, redisTemplateProvider::getIfAvailable, objectMapper, Clock.systemUTC(),
-                localMaxEntries, localMaxValueBytes);
+                localMaxEntries, localMaxValueBytes, localMaxTotalBytes);
     }
 
     private TtlCacheStore(
@@ -57,13 +58,14 @@ public class TtlCacheStore {
             ObjectMapper objectMapper,
             Clock clock,
             int localMaxEntries,
-            int localMaxValueBytes
+            int localMaxValueBytes,
+            long localMaxTotalBytes
     ) {
         this.redisProperties = redisProperties;
         this.redisTemplateSupplier = redisTemplateSupplier;
         this.objectMapper = objectMapper;
         this.clock = clock;
-        this.localEntries = new BoundedLocalCache(Math.max(1, localMaxEntries));
+        this.localEntries = new BoundedLocalCache(Math.max(1, localMaxEntries), Math.max(1, localMaxTotalBytes));
         this.localMaxValueBytes = Math.max(1, localMaxValueBytes);
     }
 
@@ -76,9 +78,14 @@ public class TtlCacheStore {
     }
 
     public static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock, int localMaxEntries, int localMaxValueBytes) {
+        return inMemoryForTests(objectMapper, clock, localMaxEntries, localMaxValueBytes, 16_777_216);
+    }
+
+    public static TtlCacheStore inMemoryForTests(ObjectMapper objectMapper, Clock clock, int localMaxEntries,
+                                                int localMaxValueBytes, long localMaxTotalBytes) {
         objectMapper.findAndRegisterModules();
         return new TtlCacheStore(AppRedisProperties.disabledForTests(), () -> null, objectMapper, clock,
-                localMaxEntries, localMaxValueBytes);
+                localMaxEntries, localMaxValueBytes, localMaxTotalBytes);
     }
 
     static TtlCacheStore redisBackedForTests(
@@ -89,7 +96,7 @@ public class TtlCacheStore {
     ) {
         objectMapper.findAndRegisterModules();
         return new TtlCacheStore(new AppRedisProperties(true, "hermes-test"), redisTemplateSupplier, objectMapper, clock,
-                1024, localMaxValueBytes);
+                1024, localMaxValueBytes, 16_777_216);
     }
 
     public <T> Optional<T> get(String namespace, String key, Class<T> type) {
@@ -134,7 +141,8 @@ public class TtlCacheStore {
             // for non-ASCII content); an oversized value skips local retention
             // but still flows to Redis below.
             if (json.length() <= localMaxValueBytes) {
-                localEntries.put(localKey, new LocalEntry(json, clock.instant().plus(normalizedTtl)));
+                Instant now = clock.instant();
+                localEntries.put(localKey, new LocalEntry(json, now.plus(normalizedTtl)), now);
             } else {
                 // Last-write-wins locally: drop any stale entry so reads can't
                 // keep serving the previous (smaller) value after an oversized
@@ -182,6 +190,10 @@ public class TtlCacheStore {
 
     public int localEntrySizeForTests() {
         return localEntries.size();
+    }
+
+    public long localEstimatedBytesForTests() {
+        return localEntries.estimatedBytes();
     }
 
     private String getJson(String namespace, String key) {
@@ -262,24 +274,31 @@ public class TtlCacheStore {
     }
 
     /**
-     * Access-ordered LRU with a hard entry cap. Synchronized is enough here:
+     * Access-ordered LRU with entry and estimated byte caps. Synchronized is enough here:
      * operations are short map mutations, far below the HTTP fetch latencies
      * the callers already tolerate.
      */
     private static final class BoundedLocalCache {
         private final int maxEntries;
+        private final long maxBytes;
         private final LinkedHashMap<String, LocalEntry> entries;
+        private long estimatedBytes;
 
-        BoundedLocalCache(int maxEntries) {
+        BoundedLocalCache(int maxEntries, long maxBytes) {
             this.maxEntries = maxEntries;
+            this.maxBytes = maxBytes;
             this.entries = new LinkedHashMap<>(16, 0.75f, true);
         }
 
-        synchronized void put(String key, LocalEntry entry) {
+        synchronized void put(String key, LocalEntry entry, Instant now) {
+            remove(key);
+            long weight = weight(key, entry);
+            if (weight > maxBytes) return;
+            removeExpired(now);
             entries.put(key, entry);
-            while (entries.size() > maxEntries) {
-                var oldest = entries.keySet().iterator().next();
-                entries.remove(oldest);
+            estimatedBytes += weight;
+            while (entries.size() > maxEntries || estimatedBytes > maxBytes) {
+                remove(entries.keySet().iterator().next());
             }
         }
 
@@ -289,14 +308,15 @@ public class TtlCacheStore {
                 return null;
             }
             if (now.isAfter(entry.expiresAt())) {
-                entries.remove(key);
+                remove(key);
                 return null;
             }
             return entry.json();
         }
 
         synchronized void remove(String key) {
-            entries.remove(key);
+            LocalEntry removed = entries.remove(key);
+            if (removed != null) estimatedBytes -= weight(key, removed);
         }
 
         synchronized int size() {
@@ -304,7 +324,23 @@ public class TtlCacheStore {
         }
 
         synchronized void removeExpired(Instant now) {
-            entries.values().removeIf(entry -> now.isAfter(entry.expiresAt()));
+            var iterator = entries.entrySet().iterator();
+            while (iterator.hasNext()) {
+                var entry = iterator.next();
+                if (now.isAfter(entry.getValue().expiresAt())) {
+                    estimatedBytes -= weight(entry.getKey(), entry.getValue());
+                    iterator.remove();
+                }
+            }
+        }
+
+        synchronized long estimatedBytes() {
+            return estimatedBytes;
+        }
+
+        private static long weight(String key, LocalEntry entry) {
+            // UTF-16 upper bound for both strings plus entry/string/array bookkeeping.
+            return 2L * (key.length() + (long) entry.json().length()) + 192L;
         }
 
         synchronized void forceExpire(String key) {
