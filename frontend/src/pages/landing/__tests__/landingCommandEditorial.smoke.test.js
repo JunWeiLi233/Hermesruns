@@ -51,7 +51,7 @@ assert(
     && /\.landing-command-copy\s*\{[\s\S]*padding:\s*clamp\(120px,\s*19vh,\s*218px\)\s+0\s+clamp\(40px,\s*8vh,\s*92px\);/.test(landingStyleSource)
     && /\.landing-command-deck-grid\s*\{[\s\S]*display:\s*block;/.test(landingStyleSource)
     && /\.landing-command-card-stack\s*\{[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);[\s\S]*gap:\s*16px;/.test(landingStyleSource)
-    && /\.landing-command-card\s*\{[\s\S]*display:\s*flex;[\s\S]*flex-direction:\s*column;[\s\S]*min-height:\s*466px;[\s\S]*border-radius:\s*24px;/.test(landingStyleSource)
+    && /\.landing-command-card\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*min-height:\s*280px;[^}]*border-radius:\s*24px;/.test(landingStyleSource)
     && /\.landing-command-card-head\s*\{[\s\S]*align-items:\s*baseline;[\s\S]*gap:\s*18px;/.test(landingStyleSource)
     && !/\.landing-command-card:first-child\s*\{[\s\S]*grid-column:\s*1\s*\/\s*span\s*7;/.test(landingStyleSource)
     && !landingStyleSource.includes('landing-command-card-index'),
