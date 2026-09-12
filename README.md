@@ -42,6 +42,11 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 
 Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. Development commands: [frontend/README.md](frontend/README.md) and [backend/README.md](backend/README.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
 
+Garmin Connect workers require Python 3.10+ and
+`pip install -r tools/requirements-garmin-runtime.txt` for local development.
+The Docker image includes these dependencies and runs
+`python tools/check_garmin_runtime.py` with offline fixtures during its build.
+
 ## Feature Highlights
 
 | Area | What you get |
