@@ -48,20 +48,26 @@ assert.doesNotMatch(
 
 assert.equal(
   [...landingSource.matchAll(/landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large/g)].length,
-  2,
-  'Both large Strava CTA buttons should carry the Strava logo button class.',
+  1,
+  'The final Strava CTA should carry the official logo button class.',
 );
 
 assert.equal(
   [...landingSource.matchAll(/className="landing-strava-connect-button"/g)].length,
-  2,
-  'Both large Strava CTA buttons should render the official Strava asset.',
+  1,
+  'The final Strava CTA should render the official Strava asset.',
 );
 
 assert.equal(
   [...landingSource.matchAll(/src=\{stravaConnectButton\}/g)].length,
-  2,
-  'Both large Strava CTA buttons should source the vendored official artwork.',
+  1,
+  'The final Strava CTA should source the vendored official artwork.',
+);
+
+assert.match(
+  landingSource,
+  /<Link to="\/signup" className="landing-cinematic-btn landing-cinematic-btn--primary is-large">\{t\('landing.studio_get_started'\)\}/,
+  'The studio hero must keep a working signup action alongside its product preview.',
 );
 
 assert.doesNotMatch(

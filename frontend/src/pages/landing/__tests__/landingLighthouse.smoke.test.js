@@ -36,8 +36,8 @@ assert.ok(
 
 assert.equal(
   [...landingSource.matchAll(/<img className="landing-strava-connect-button"[^>]*>/g)].length,
-  2,
-  'Both Strava CTAs should keep their official image artwork.',
+  1,
+  'The final Strava CTA should keep its official image artwork.',
 );
 assert.doesNotMatch(
   landingSource,
@@ -47,8 +47,8 @@ assert.doesNotMatch(
 
 assert.match(
   landingSource,
-  /<h2>\{card\.title\}<\/h2>/,
-  'The feature deck should not skip from the hero h1 directly to h3 headings.',
+  /<h2>\{t\('landing.minimal_features_title'\)\}<\/h2>/,
+  'The feature overview must retain its h2 heading before the selected feature h3.',
 );
 assert.doesNotMatch(
   landingSource,

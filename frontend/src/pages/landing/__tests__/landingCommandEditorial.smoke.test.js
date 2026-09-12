@@ -34,10 +34,11 @@ assert(
 
 assert(
   landingSource.includes('landing-command-deck')
-    && landingSource.includes('landing-command-card-stack')
+    && landingSource.includes('LandingFeatureOverview')
+    && !landingSource.includes('landing-command-card-stack')
     && !landingSource.includes('landing-command-rhythm')
     && !landingSource.includes('landing-cinematic-feature-grid'),
-  'Landing should use the command deck card stack without the removed interactive formula rhythm panel.',
+  'Landing should present one feature overview without repeating the three-card stack or retired formula panel.',
 );
 
 assert(
@@ -105,63 +106,16 @@ assert(
 );
 
 assert(
-  landingSource.includes('className="landing-cinematic-race-order"')
-    && landingSource.includes('getRaceFlightFrame(flight.legs, elapsed)')
-    && landingSource.includes('onActiveRaceChange(destination)')
-    && landingSource.includes('data-race-id={race.id}')
+  landingSource.includes('LandingRaceMap races={races} mapImage={worldMapPoliticalDotted}')
+    && landingSource.includes('pin: resolveRaceMapPoint(race)')
     && landingSource.includes('const ROBINSON_X_COEFFICIENTS =')
     && landingSource.includes('const ROBINSON_Y_COEFFICIENTS =')
     && landingSource.includes('const RACE_MAP_CITY_ANCHORS =')
-    && landingSource.includes('function interpolateRobinsonCoefficient(coefficients, absLat)')
-    && landingSource.includes('function resolveRaceMapPoint(race)')
     && landingSource.includes('RACE_MAP_CITY_ANCHORS[race.id]')
-    && !landingSource.includes('function getRaceLabelOffset(index)')
-    && !landingSource.includes('className="landing-cinematic-map-label"')
-    && landingSource.includes('className="landing-cinematic-map-badge"')
-    && landingSource.includes('textAnchor="middle"')
     && landingSource.includes('const robinsonX = 50 + ((lng / 360) * 100 * xCoefficient);')
-    && landingSource.includes('const robinsonY = 25 - (lat >= 0 ? yCoefficient : -yCoefficient) * 25;')
-    && !landingSource.includes('((lng + 180) / 360) * 100')
-    && !landingSource.includes('((90 - lat) / 180) * WORLD_MAP_VIEWBOX_HEIGHT')
-    && !landingSource.includes('function buildRaceReadoutPath(pin, index)')
-    && !landingSource.includes('className="landing-cinematic-map-readout-layer"')
-    && !landingSource.includes('className="landing-cinematic-map-readout-line"')
-    && landingSource.includes('className="landing-cinematic-map-flight-route"')
-    && landingSource.includes('className="landing-cinematic-map-flight-route-live"')
-    && landingSource.includes('className="landing-cinematic-map-aircraft"')
-    && !landingSource.includes('className="landing-cinematic-map-selection-layer"')
-    && !landingSource.includes('className="landing-cinematic-map-selection"')
-    && !landingSource.includes('className="landing-cinematic-map-selection-spread"')
-    && !landingSource.includes('className="landing-cinematic-map-selection-ping"')
-    && !landingSource.includes('className="landing-cinematic-map-selection-ring"')
-    && !/pin:\s*\{/.test(landingSource)
-    && landingSource.includes('className="landing-cinematic-map-guide"')
-    && landingSource.includes('className={`landing-cinematic-map-guide-step is-${step.key}`}')
-    && landingSource.includes('className="landing-cinematic-map-bottom-deck"')
-    && landingSource.includes("{ key: 'locate', order: '01', label: flowLabels.select }")
-    && landingSource.includes("{ key: 'read', order: '02', label: flowLabels.score }")
-    && landingSource.includes("{ key: 'match', order: '03', label: flowLabels.plan }")
-    && landingSource.includes('className="landing-cinematic-map-caption-strip"')
-    && landingSource.includes('className="landing-cinematic-map-caption-meta"')
-    && landingSource.includes('function WorldMap({ races, metricLabels, flowLabels, activeRaceId, onActiveRaceChange })')
-    && landingSource.includes('metricLabels={{')
-    && landingSource.includes('flowLabels={{')
-    && landingSource.includes("select: t('landing.cinematic_race_flow_select')")
-    && landingSource.includes("score: t('landing.cinematic_race_flow_score')")
-    && landingSource.includes("plan: t('landing.cinematic_race_flow_plan')")
-    && landingSource.includes('<span className="landing-cinematic-map-caption-order">{String(index + 1).padStart(2, \'0\')}</span>')
-    && landingSource.includes('<span className="landing-cinematic-map-caption-verb">{flowLabels.score}</span>')
-    && landingSource.includes("date: t('landing.cinematic_race_col_date')")
-    && landingSource.includes('<em className="landing-cinematic-map-caption-field is-date"><span>{metricLabels.date}</span>{race.date}</em>')
-    && landingSource.includes('<small className="landing-cinematic-map-caption-field is-days"><span>{metricLabels.days}</span>{race.days}</small>')
-    && landingSource.includes('<b className="landing-cinematic-map-caption-field is-distance"><span>{metricLabels.distance}</span><i>{race.distance}</i></b>')
-    && landingSource.includes("data-label={t('landing.cinematic_race_col_date')}")
-    && landingSource.includes("data-label={t('landing.cinematic_race_col_days')}")
-    && landingSource.includes("data-label={t('landing.cinematic_race_col_distance')}")
-    && landingSource.includes('className="landing-cinematic-sr-only"'),
-  'Landing race rows and map captions should use fixed projected coordinates, one shared destination clock, and a matching pin, caption, and row instead of fake route or score-panel motion.',
+    && landingSource.includes('const robinsonY = 25 - (lat >= 0 ? yCoefficient : -yCoefficient) * 25;'),
+  'The interactive map must retain the catalog-backed, calibrated Robinson coordinates and optimized map imagery.',
 );
-
 assert(
   landingSource.includes("t('landing.cinematic_race_london')")
     && landingSource.includes("t('landing.cinematic_race_new_york')")

@@ -1,0 +1,489 @@
+/* Public landing / Figma-inspired editorial canvas. Scoped to this route. */
+#root .landing-page--studio {
+  /* Analysis/Profile light palette, kept local so private-route CSS is not loaded. */
+  --studio-ink: #2c2f30;
+  --studio-muted: #625c56;
+  --studio-faint: #706963;
+  --studio-surface: #ffffff;
+  --studio-paper: #f4f2ef;
+  --studio-soft: #faf8f5;
+  --studio-line: #e5dfda;
+  --studio-accent: #a0392a;
+  --studio-accent-strong: #8f2f22;
+  --studio-coral: #f07561;
+  --studio-accent-soft: #f7ded8;
+  --studio-accent-wash: #fbeee9;
+  --studio-accent-medium: #edc6bb;
+  --studio-shoe-fill: #f3d5cb;
+  --studio-note-fill: #f3e9e1;
+  --studio-track: #eae4df;
+  --studio-success: #3d8b5e;
+  --studio-success-ink: #2d6b43;
+  --studio-success-soft: #edf4ee;
+  --lc-ink: var(--studio-ink);
+  --lc-ink-muted: var(--studio-muted);
+  --lc-ink-faint: var(--studio-faint);
+  --lc-coral: var(--studio-accent);
+  --lc-bg: var(--studio-surface);
+  background: var(--studio-surface) !important;
+  color: var(--studio-ink) !important;
+  font-family: "Manrope", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif;
+  overflow-x: clip;
+}
+
+#root .landing-page--studio .landing-cinematic-width { width: min(1400px, calc(100% - 96px)); }
+#root .landing-page--studio :is(#landing-main, main > section[id], article[id]) { scroll-margin-top: 100px; }
+/* Resolve real section heights before an anchor jump; otherwise the legacy
+   offscreen height estimates can land mobile navigation in the previous section. */
+#root .landing-page--studio:has(:target) main > section { content-visibility: visible; contain-intrinsic-size: none; }
+#root .landing-page--studio .landing-cinematic-nav {
+  position: sticky !important;
+  width: 100%;
+  background: var(--studio-surface) !important;
+  border: 0;
+  border-bottom: 1px solid var(--studio-line);
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+#root .landing-page--studio .landing-cinematic-nav-inner { min-height: 80px; grid-template-columns: 1fr auto 1fr; }
+#root .landing-page--studio .landing-cinematic-brand { color: var(--studio-ink); font-size: 20px; letter-spacing: .04em; }
+#root .landing-page--studio .landing-cinematic-brand-glyph { background: none; box-shadow: none; width: 32px; height: 36px; }
+#root .landing-page--studio .landing-cinematic-links { gap: 28px; }
+#root .landing-page--studio .landing-cinematic-links a { font: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-links a:hover { text-decoration: underline; text-underline-offset: 6px; }
+#root .landing-page--studio .landing-studio-language { min-height: 36px; min-width: 36px; padding: 5px; background: transparent; border: 0; color: var(--studio-muted); font: inherit; font-size: 12px; cursor: pointer; }
+#root .landing-page--studio .landing-studio-language:hover { background: var(--studio-soft); border-radius: 4px; }
+#root .landing-page--studio .landing-cinematic-btn {
+  min-height: 46px;
+  padding: 12px 20px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -.015em;
+  text-transform: none;
+  box-shadow: none !important;
+  transition: transform .2s, background-color .2s;
+}
+#root .landing-page--studio .landing-cinematic-btn--primary { background: var(--studio-accent) !important; border-color: var(--studio-accent) !important; color: var(--studio-surface) !important; }
+#root .landing-page--studio .landing-cinematic-btn--primary:hover { background: var(--studio-accent-strong) !important; transform: translateY(-2px); }
+#root .landing-page--studio .landing-cinematic-btn--ghost { color: var(--studio-ink); background: transparent !important; border-color: transparent; }
+#root .landing-page--studio .landing-cinematic-btn--outline { color: var(--studio-ink) !important; background: transparent !important; border-color: var(--studio-ink) !important; }
+#root .landing-page--studio .landing-cinematic-btn:active { transform: translateY(1px); }
+#root .landing-page--studio :is(a, button):focus-visible { outline: 3px solid var(--studio-accent); outline-offset: 5px; }
+#root .landing-page--studio .landing-studio-skip { position: fixed; z-index: 100; left: 20px; top: 12px; padding: 14px 20px; background: var(--studio-ink); color: var(--studio-surface); transform: translateY(-160%); }
+#root .landing-page--studio .landing-studio-skip:focus { transform: none; }
+
+#root .landing-page--studio .landing-cinematic-hero {
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 48px 0 54px !important;
+  background: var(--studio-surface) !important;
+  overflow: visible;
+}
+#root .landing-page--studio .landing-cinematic-hero::before,
+#root .landing-page--studio .landing-cinematic-hero::after { display: none; }
+#root .landing-page--studio .landing-hero-shoe-grid {
+  position: relative !important;
+  padding: 0 !important;
+  top: auto !important;
+  display: grid;
+  grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr);
+  align-items: center;
+  gap: clamp(32px, 4vw, 70px);
+  min-height: 490px;
+  height: auto !important;
+}
+#root .landing-page--studio .landing-command-copy {
+  padding: 0 !important;
+  margin: 0;
+  width: 100%;
+  max-width: 640px;
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+  text-align: left;
+}
+#root .landing-page--studio .landing-studio-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; font-size: 10px; font-weight: 750; letter-spacing: .12em; }
+#root .landing-page--studio .landing-studio-eyebrow > span { width: 9px; height: 9px; background: var(--studio-coral); border-radius: 50%; }
+#root .landing-page--studio .landing-cinematic-hero-title {
+  font-family: "Manrope", "Outfit", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+  font-size: clamp(48px, 5.45vw, 84px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -.065em !important;
+  font-weight: 400 !important;
+  font-style: normal !important;
+  margin: 0 0 27px;
+  max-width: none;
+}
+#root .landing-page--studio .landing-cinematic-hero-title > span { display: block; color: var(--studio-ink) !important; text-wrap: nowrap; font: inherit !important; text-shadow: none !important; filter: none !important; }
+#root .landing-page--studio .landing-cinematic-hero-title > .is-accent { position: relative; width: fit-content; z-index: 0; }
+#root .landing-page--studio .landing-cinematic-hero-title > .is-accent::after { content: ''; position: absolute; bottom: 4px; left: -3px; right: -4px; height: .2em; background: var(--studio-accent-soft); z-index: -1; transform: rotate(-1.5deg); }
+#root .landing-page--studio .landing-command-copy > p { color: var(--studio-muted) !important; font-size: 17px; line-height: 1.8; max-width: 420px; margin: 0; }
+#root .landing-page--studio .landing-cinematic-hero-actions { display: flex; flex-direction: row !important; align-items: center; flex-wrap: wrap; gap: 22px; margin-top: 30px; }
+#root .landing-page--studio .landing-cinematic-btn.is-large { min-height: 54px; font-size: 15px; padding: 16px 23px; }
+#root .landing-page--studio .landing-cinematic-hero-alt-link { display: inline-flex; width: auto !important; align-items: center; gap: 9px; color: var(--studio-ink); font-size: 14px; padding: 10px 0; text-decoration: none; }
+#root .landing-page--studio .landing-cinematic-hero-alt-link:hover { text-decoration: underline; text-underline-offset: 5px; }
+#root .landing-page--studio .landing-cinematic-hero-alt-link svg { width: 18px; height: 18px; }
+#root .landing-page--studio .landing-cinematic-trust { margin-top: 24px; color: var(--studio-muted) !important; font: inherit; font-size: 11px; letter-spacing: 0; text-transform: none; }
+
+/* Layered, interactive illustration. Values are explicitly marked as examples. */
+#root .landing-page--studio .landing-studio-scene { position: relative; min-width: 0; }
+#root .landing-page--studio .landing-studio-scene-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 10px; color: var(--studio-muted); padding: 0 4px 18px; }
+#root .landing-page--studio .landing-studio-scene-top > span:first-child { display: flex; align-items: center; gap: 7px; font-weight: 650; }
+#root .landing-page--studio .landing-studio-scene-top i { width: 6px; height: 6px; background: var(--studio-success); border-radius: 50%; }
+#root .landing-page--studio .landing-studio-artboard { position: relative; height: 414px; isolation: isolate; }
+#root .landing-page--studio .landing-studio-orbit { position: absolute; inset: 20px 16px 20px 16px; background: #ede8e3; background-image: radial-gradient(#d5ccc4 .8px, transparent .8px); background-size: 16px 16px; border-radius: 2px; overflow: hidden; }
+#root .landing-page--studio .landing-studio-orbit span { position: absolute; width: 360px; height: 360px; border: 1px solid #e1d8d1; border-radius: 50%; left: 80px; top: 5px; }
+#root .landing-page--studio .landing-studio-orbit span:nth-child(2) { transform: scale(1.25); }
+#root .landing-page--studio .landing-studio-orbit span:nth-child(3) { transform: scale(1.5); }
+#root .landing-page--studio .landing-studio-shoe-sheet { position: absolute; right: 0; top: 10px; width: 59%; height: 325px; background: var(--studio-shoe-fill); transform: rotate(6deg); overflow: hidden; transition: transform .45s; }
+#root .landing-page--studio [data-preview="shoes"] .landing-studio-shoe-sheet { transform: rotate(3deg) translateY(-8px); }
+#root .landing-page--studio .landing-studio-sheet-label { position: absolute; left: 22px; top: 25px; max-width: 180px; font-size: 22px; line-height: 1.3; font-weight: 600; letter-spacing: -.04em; z-index: 1; }
+#root .landing-page--studio .landing-studio-shoe-foot { position: absolute; bottom: 17px; right: 20px; font-size: 9px; letter-spacing: .1em; }
+#root .landing-page--studio .landing-hero-shoe-cycle { position: absolute !important; width: 115% !important; height: 210px !important; min-height: 0 !important; left: -7% !important; right: auto !important; top: 95px !important; margin: 0 !important; transform: rotate(-17deg) !important; opacity: 1 !important; }
+#root .landing-page--studio .landing-hero-shoe-cycle-runner { position: relative; width: 100%; height: 100%; transform: none; }
+#root .landing-page--studio .landing-hero-shoe-cycle-frame { display: block; width: 100% !important; height: 100% !important; }
+#root .landing-page--studio .landing-hero-shoe-cycle-prompt { display: none; }
+#root .landing-page--studio .landing-studio-plan-sheet { position: absolute; left: 0; top: 68px; width: 68%; max-width: 352px; min-height: 332px; background: var(--studio-surface); border: 1px solid var(--studio-line); border-radius: 9px; box-shadow: 0 18px 40px rgba(44, 47, 48, .08); transform: rotate(-5deg); transition: transform .35s; }
+#root .landing-page--studio [data-preview="progress"] .landing-studio-plan-sheet { transform: rotate(-2deg) translateY(-5px); }
+#root .landing-page--studio .landing-studio-sheet-head { display: flex; align-items: center; gap: 9px; padding: 13px 17px; border-bottom: 1px solid var(--studio-line); font-size: 10px; font-weight: 650; }
+#root .landing-page--studio .landing-studio-sheet-head > svg { margin-left: auto; width: 18px; height: 18px; flex: 0 0 18px; }
+#root .landing-page--studio .landing-studio-mini-mark { display: grid; place-items: center; width: 20px; height: 20px; color: var(--studio-surface); background: var(--studio-ink); border-radius: 4px; font-size: 11px; }
+#root .landing-page--studio .landing-studio-plan-content { padding: 24px 23px 20px; min-height: 249px; }
+#root .landing-page--studio .landing-studio-overline { font-size: 9px; font-weight: 600; letter-spacing: .07em; color: var(--studio-muted); }
+#root .landing-page--studio .landing-studio-plan-content h2 { margin: 10px 0 12px; color: var(--studio-ink); font-size: 22px; font-weight: 600; letter-spacing: -.055em; line-height: 1.3; }
+#root .landing-page--studio .landing-studio-distance { display: flex; align-items: baseline; gap: 7px; font-size: 54px; line-height: 1; letter-spacing: -.06em; }
+#root .landing-page--studio .landing-studio-distance > span { font-size: 15px; letter-spacing: 0; color: var(--studio-muted); }
+#root .landing-page--studio .landing-studio-distance > i { margin-left: auto; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: var(--studio-accent-soft); font-size: 27px; font-style: normal; }
+#root .landing-page--studio .landing-studio-plan-content > p { font-size: 10px; line-height: 1.6; color: var(--studio-muted); margin: 13px 0 17px; }
+#root .landing-page--studio .landing-studio-session-bar { display: grid; grid-template-columns: 1fr 3fr 1fr; height: 24px; gap: 3px; align-items: end; }
+#root .landing-page--studio .landing-studio-session-bar > i { background: var(--studio-accent-medium); height: 12px; }
+#root .landing-page--studio .landing-studio-session-bar > i:nth-child(2) { background: var(--studio-accent); height: 24px; }
+#root .landing-page--studio .landing-studio-session-labels { display: flex; justify-content: space-between; gap: 4px; font-size: 8px; margin-top: 7px; color: var(--studio-muted); }
+#root .landing-page--studio .landing-studio-sheet-foot { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--studio-line); font-size: 8px; color: var(--studio-muted); padding: 10px 17px; }
+#root .landing-page--studio .landing-studio-sheet-foot i { width: 4px; height: 4px; border-radius: 50%; background: var(--studio-muted); }
+#root .landing-page--studio .landing-studio-preview-chart { margin-top: 10px; height: 48px; overflow: hidden; }
+#root .landing-page--studio .landing-studio-preview-chart .landing-cinematic-vdot-spark-wrap { height: 48px; margin: 0; }
+#root .landing-page--studio .landing-studio-mileage-bar { height: 22px; background: var(--studio-track); }
+#root .landing-page--studio .landing-studio-mileage-bar > i { display: block; width: 41.3%; height: 100%; background: var(--studio-accent); }
+#root .landing-page--studio .landing-studio-progress-note { position: absolute; bottom: 7px; right: 6px; display: flex; align-items: center; gap: 13px; padding: 19px 22px; background: var(--studio-note-fill); transform: rotate(3deg); box-shadow: 0 8px 24px rgba(28, 25, 23, .06); }
+#root .landing-page--studio .landing-studio-progress-note > svg { width: 22px; height: 22px; flex: 0 0 22px; }
+#root .landing-page--studio .landing-studio-progress-note > span { min-width: 150px; }
+#root .landing-page--studio .landing-studio-progress-note span { display: flex; flex-direction: column; gap: 5px; font-size: 11px; }
+#root .landing-page--studio .landing-studio-progress-note strong { font-size: 16px; font-weight: 650; letter-spacing: -.03em; }
+#root .landing-page--studio .landing-studio-sticker { position: absolute; right: -6px; top: 0; background: var(--studio-accent-soft); border: 1px solid var(--studio-ink); border-radius: 50%; padding: 14px 10px; transform: rotate(15deg); font-size: 9px; font-weight: 650; }
+#root .landing-page--studio .landing-studio-preview-switcher { display: flex; width: fit-content; gap: 3px; margin: 20px auto 0; padding: 4px; border: 1px solid var(--studio-line); border-radius: 40px; background: var(--studio-surface); }
+#root .landing-page--studio .landing-studio-preview-switcher button { min-height: 38px; padding: 7px 19px; border: 0; border-radius: 30px; background: transparent; color: #585852; font: inherit; font-size: 11px; cursor: pointer; }
+#root .landing-page--studio .landing-studio-preview-switcher button:hover { background: var(--studio-soft); }
+#root .landing-page--studio .landing-studio-preview-switcher button[aria-pressed="true"] { background: var(--studio-accent); color: var(--studio-surface); }
+
+#root .landing-page--studio .landing-studio-integrations { padding: 28px 0 42px; }
+#root .landing-page--studio .landing-studio-integrations .landing-cinematic-width { display: flex; justify-content: space-between; align-items: center; gap: 30px; border-top: 1px solid var(--studio-line); padding-top: 30px; }
+#root .landing-page--studio .landing-studio-integrations p { font-size: 12px; color: var(--studio-muted); margin: 0; }
+#root .landing-page--studio .landing-studio-integrations .landing-cinematic-width > div { display: flex; gap: clamp(25px, 4vw, 65px); align-items: center; }
+#root .landing-page--studio .landing-studio-integrations strong { color: var(--studio-ink); font-size: 19px; letter-spacing: -.04em; font-weight: 800; }
+#root .landing-page--studio .landing-studio-integrations strong:nth-child(2) { letter-spacing: .08em; font-size: 15px; }
+#root .landing-page--studio .landing-studio-integrations span { color: var(--studio-muted); font-size: 11px; }
+
+/* Full-width color panels and roomy product explanations. */
+#root .landing-page--studio .landing-command-deck { padding: 84px 0 90px; background: var(--studio-paper) !important; }
+#root .landing-page--studio .landing-studio-section-intro { display: flex; justify-content: space-between; align-items: end; gap: 30px; margin-bottom: 42px; }
+#root .landing-page--studio .landing-studio-section-intro h2 { white-space: pre-line; font-size: clamp(34px, 4vw, 58px); line-height: 1.15; letter-spacing: -.06em; font-weight: 550; margin: 0; }
+#root .landing-page--studio .landing-studio-section-intro > p { max-width: 290px; font-size: 14px; color: var(--studio-muted); line-height: 1.8; margin: 0 0 6px; }
+#root .landing-page--studio .landing-command-card-stack { gap: 20px; }
+#root .landing-page--studio .landing-command-card { min-height: 286px; padding: 30px; background: var(--studio-accent-wash) !important; border: 0 !important; border-radius: 4px; box-shadow: none !important; transition: transform .25s; }
+#root .landing-page--studio .landing-command-card:nth-child(2) { background: var(--studio-surface) !important; }
+#root .landing-page--studio .landing-command-card:nth-child(3) { background: var(--studio-note-fill) !important; }
+#root .landing-page--studio .landing-command-card::before, #root .landing-page--studio .landing-command-card::after { display: none; }
+#root .landing-page--studio .landing-command-card-head { flex-direction: column; align-items: flex-start; gap: 28px; }
+#root .landing-page--studio .landing-command-card-head > span { color: var(--studio-muted); font-size: 11px; font-weight: 600; }
+#root .landing-page--studio .landing-command-card-head h2 { font-size: clamp(23px, 2.3vw, 34px); line-height: 1.2; letter-spacing: -.055em; font-weight: 600; color: var(--studio-ink); }
+#root .landing-page--studio .landing-command-card > p { font-size: 13px; line-height: 1.8; color: var(--studio-muted); margin-top: 16px; margin-bottom: 32px; }
+#root .landing-page--studio .landing-studio-feature-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; color: var(--studio-ink); font-size: 12px; font-weight: 650; text-decoration: none; }
+#root .landing-page--studio .landing-studio-feature-link svg { width: 20px; height: 20px; transition: transform .2s; }
+#root .landing-page--studio .landing-studio-feature-link:hover svg { transform: translateX(4px); }
+#root .landing-page--studio .landing-cinematic-answers { padding: 96px 0 100px; background: var(--studio-surface) !important; }
+#root .landing-page--studio .landing-cinematic-section-head { margin-bottom: 45px; }
+#root .landing-page--studio .landing-cinematic-section-head h2 { font-family: inherit; font-size: clamp(34px, 4vw, 58px); line-height: 1.15; letter-spacing: -.06em; font-weight: 550; font-style: normal; color: var(--studio-ink) !important; }
+#root .landing-page--studio .landing-cinematic-kicker { color: #5c5c54; font: inherit; font-size: 10px; letter-spacing: .1em; font-weight: 650; }
+#root .landing-page--studio .landing-cinematic-answers-title > span { color: #76766c !important; }
+#root .landing-page--studio .landing-studio-example-caption { max-width: 560px; font-size: 12px; color: var(--studio-muted); line-height: 1.8; margin: 20px 0 0; }
+#root .landing-page--studio .landing-cinematic-answer-grid { gap: 24px; }
+#root .landing-page--studio .landing-cinematic-answer-grid .landing-cinematic-answer-card { padding: 26px; border: 1px solid var(--studio-line) !important; border-radius: 8px; background: var(--studio-surface) !important; box-shadow: none !important; color: var(--studio-ink); scroll-margin-top: 100px; }
+#root .landing-page--studio .landing-cinematic-answer-head > span { color: var(--studio-muted); }
+#root .landing-page--studio .landing-cinematic-answer-head h3 { font-size: 22px; color: var(--studio-ink); font-weight: 600; letter-spacing: -.04em; }
+#root .landing-page--studio .landing-cinematic-answer-card > p { color: var(--studio-muted); line-height: 1.8; font-size: 13px; }
+#root .landing-page--studio .landing-cinematic-answer-figure { background: var(--studio-soft); border: 0; border-radius: 3px; padding: 18px; margin-top: 25px; }
+#root .landing-page--studio .landing-cinematic-mini-paces > div { color: var(--studio-muted); }
+#root .landing-page--studio .landing-cinematic-mini-paces > div strong { color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-mini-paces > div.is-active { background: var(--studio-accent-soft); color: var(--studio-accent); border: 0; }
+#root .landing-page--studio .landing-cinematic-vdot-row { color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-vdot-row > span { color: var(--studio-success-ink); background: var(--studio-success-soft); }
+#root .landing-page--studio .landing-cinematic-vdot-line { stroke: var(--studio-accent); }
+#root .landing-page--studio .landing-cinematic-vdot-fill { fill: var(--studio-accent-wash); }
+#root .landing-page--studio .landing-cinematic-vdot-dot { fill: var(--studio-accent); }
+#root .landing-page--studio .landing-cinematic-shoe-row span { color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-shoe-row em { color: var(--studio-muted); }
+#root .landing-page--studio .landing-cinematic-shoe-row i { background: var(--studio-track); }
+#root .landing-page--studio .landing-cinematic-shoe-row i span { background: var(--studio-accent); }
+
+#root .landing-page--studio .landing-cinematic-races { padding: 85px 0 95px; background: var(--studio-paper) !important; }
+#root .landing-page--studio .landing-cinematic-section-head.is-split { grid-template-columns: 1.2fr 1fr; gap: 60px; }
+#root .landing-page--studio .landing-cinematic-section-head.is-split > p { color: var(--studio-muted); font-size: 14px; line-height: 1.9; max-width: 420px; }
+#root .landing-page--studio .landing-cinematic-race-stage { gap: 26px; align-items: start; }
+#root .landing-page--studio .landing-cinematic-map { background: var(--studio-surface) !important; box-shadow: none !important; border: 1px solid var(--studio-line) !important; border-radius: 7px; }
+#root .landing-page--studio .landing-cinematic-map::before { display: none; }
+#root .landing-page--studio .landing-cinematic-map { min-height: 0 !important; padding-bottom: 130px; }
+#root .landing-page--studio .landing-cinematic-map > svg { display: block; width: 100%; height: auto; min-height: 0; aspect-ratio: 2; }
+#root .landing-page--studio .landing-cinematic-map-guide { display: none; }
+#root .landing-page--studio .landing-cinematic-map-bottom-deck { display: block; position: absolute; inset: auto 14px 14px; width: auto; transform: none; }
+#root .landing-page--studio .landing-cinematic-map-caption-strip { width: 100%; height: 104px; min-height: 104px; }
+#root .landing-page--studio .landing-cinematic-race-list { border: 0 !important; border-radius: 7px; background: var(--studio-surface) !important; box-shadow: none !important; padding: 22px; }
+#root .landing-page--studio .landing-cinematic-race-row { border-color: var(--studio-line) !important; }
+#root .landing-page--studio .landing-cinematic-race-head { border-color: #d8cfc8; }
+#root .landing-page--studio .landing-cinematic-map-caption { border-radius: 6px; border: 1px solid var(--studio-line); background: var(--studio-surface) !important; box-shadow: none; }
+#root .landing-page--studio .landing-cinematic-race-row em { background: var(--studio-accent-wash); color: var(--studio-accent); box-shadow: none; }
+
+#root .landing-page--studio .landing-cinematic-compare { padding: 94px 0; background: var(--studio-surface) !important; }
+#root .landing-page--studio .landing-cinematic-compare-table { border: 1px solid var(--studio-line); border-radius: 7px; box-shadow: none !important; background: var(--studio-surface) !important; }
+#root .landing-page--studio .landing-cinematic-compare-row { background: transparent !important; border-color: var(--studio-line); color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-compare-row.is-head { background: var(--studio-soft) !important; font-size: 13px; color: var(--studio-muted); }
+#root .landing-page--studio .landing-cinematic-compare-row.is-head strong { color: var(--studio-ink); }
+#root .landing-page--studio .landing-cinematic-compare-feature > strong { color: var(--studio-ink); font-size: 13px; }
+#root .landing-page--studio .landing-cinematic-compare-feature small { color: var(--studio-muted); font-size: 11px; }
+#root .landing-page--studio .landing-cinematic-compare-icon.is-yes { color: var(--studio-success); }
+#root .landing-page--studio .landing-cinematic-compare-icon.is-no { color: var(--studio-faint); }
+#root .landing-page--studio .landing-cinematic-compare-icon.is-partial { color: #8d6942; }
+#root .landing-page--studio .landing-cinematic-final { background: var(--studio-accent-soft) !important; padding: 88px 0 94px; }
+#root .landing-page--studio .landing-cinematic-final-card { display: block; padding: 0; background: transparent !important; border: 0 !important; box-shadow: none !important; border-radius: 0; }
+#root .landing-page--studio .landing-cinematic-final-card::before { display: none; }
+#root .landing-page--studio .landing-cinematic-final-copy { max-width: 1050px; text-align: left; }
+#root .landing-page--studio .landing-cinematic-final h2 { white-space: pre-line; font-family: inherit; font-size: clamp(48px, 6.5vw, 98px); line-height: 1.05; letter-spacing: -.07em; font-weight: 550; color: var(--studio-ink) !important; margin: 25px 0; max-width: none; }
+#root .landing-page--studio .landing-cinematic-final-copy > p { color: var(--studio-muted); font-size: 16px; max-width: 520px; line-height: 1.8; }
+#root .landing-page--studio .landing-cinematic-btn--strava { padding: 0; background: #fc4c02 !important; border: 0 !important; border-radius: 5px; overflow: hidden; }
+#root .landing-page--studio .landing-cinematic-btn--strava:hover { background: #fc4c02 !important; }
+#root .landing-page--studio .landing-cinematic-final-trust { display: flex; flex-flow: row wrap; align-items: center; justify-content: flex-start; text-align: left; font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--studio-muted); gap: 8px 22px; }
+#root .landing-page--studio .landing-cinematic-final-trust > span { padding: 0; border: 0; text-align: left; font: inherit; }
+#root .landing-page--studio .landing-cinematic-final-trust > span::before { display: none; }
+#root .landing-page--studio .landing-cinematic-footer { background: var(--studio-surface) !important; border: 0; padding: 42px 0; }
+#root .landing-page--studio .landing-cinematic-footer-inner { display: flex; justify-content: space-between; gap: 24px; }
+#root .landing-page--studio .landing-cinematic-footer-brand strong { color: var(--studio-ink); font-size: 25px; font-weight: 800; letter-spacing: -.04em; }
+#root .landing-page--studio .landing-cinematic-footer-brand span { color: var(--studio-muted); font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; }
+#root .landing-page--studio .landing-cinematic-footer-link { color: var(--studio-ink); font: inherit; font-size: 12px; }
+
+/* Minimal reading flow: one product story, optional supporting detail. */
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-plan-content { min-height: 210px; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-plan-content h2 { margin: 0; }
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-plan-sheet { min-height: 0; }
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-distance { font-size: 62px; }
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-orbit { background-image: none; }
+#root .landing-page--minimal .landing-studio-scene--minimal .landing-studio-orbit > span { display: none; }
+#root .landing-page--studio.landing-page--minimal .landing-studio-integrations .landing-cinematic-width { justify-content: center; padding-top: 22px; }
+#root .landing-page--minimal .landing-studio-section-intro { margin-bottom: 30px; }
+#root .landing-page--minimal .landing-minimal-tabs { display: flex; gap: 32px; border-bottom: 1px solid var(--studio-line); }
+#root .landing-page--minimal .landing-minimal-tabs > button { position: relative; min-height: 48px; padding: 12px 2px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--studio-muted); font: inherit; font-size: 15px; cursor: pointer; }
+#root .landing-page--minimal .landing-minimal-tabs > button[aria-selected="true"] { border-bottom-color: var(--studio-accent); color: var(--studio-accent); font-weight: 700; }
+#root .landing-page--minimal .landing-minimal-tabs > button:hover { color: var(--studio-accent); }
+#root .landing-page--minimal .landing-minimal-feature-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 72px; align-items: center; min-height: 330px; padding-top: 42px; }
+#root .landing-page--minimal .landing-minimal-feature-panel:focus-visible { outline: 3px solid var(--studio-accent); outline-offset: 8px; }
+#root .landing-page--minimal .landing-minimal-feature-copy { max-width: 390px; }
+#root .landing-page--minimal .landing-minimal-feature-copy h3 { margin: 0 0 18px; font-size: clamp(26px, 3vw, 40px); font-weight: 500; line-height: 1.2; letter-spacing: -.05em; }
+#root .landing-page--minimal .landing-minimal-feature-copy p { margin: 0; font-size: 16px; line-height: 1.8; color: var(--studio-muted); }
+#root .landing-page--minimal .landing-minimal-feature-example { display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 510px; min-height: 262px; padding: 30px; background: var(--studio-surface); border-radius: 12px; }
+#root .landing-page--minimal .landing-minimal-example-label { display: block; margin-top: 24px; color: var(--studio-faint); font-size: 10px; }
+#root .landing-page--minimal .landing-minimal-pace { display: flex; flex-direction: column; gap: 20px; }
+#root .landing-page--minimal .landing-minimal-pace > span { font-size: 14px; color: var(--studio-muted); }
+#root .landing-page--minimal .landing-minimal-pace > strong { font-size: 64px; line-height: 1; letter-spacing: -.06em; font-weight: 500; }
+#root .landing-page--minimal .landing-minimal-pace small { font-size: 17px; color: var(--studio-muted); letter-spacing: 0; font-weight: 400; }
+#root .landing-page--minimal .landing-minimal-pace .landing-studio-session-bar { max-width: 300px; }
+#root .landing-page--minimal .landing-minimal-trend .landing-cinematic-vdot-spark-wrap { margin-top: 0; }
+#root .landing-page--minimal .landing-minimal-shoe img { display: block; width: 100%; max-width: 280px; height: 150px; object-fit: contain; margin: 0 auto 14px; }
+#root .landing-page--minimal .landing-minimal-shoe > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
+#root .landing-page--minimal .landing-minimal-shoe span { font-size: 13px; color: var(--studio-muted); }
+#root .landing-page--minimal .landing-minimal-shoe strong { font-size: 26px; letter-spacing: -.04em; font-weight: 550; }
+#root .landing-page--studio.landing-page--minimal .landing-cinematic-races { background: var(--studio-surface) !important; }
+#root .landing-page--studio.landing-page--minimal .landing-cinematic-race-stage { grid-template-columns: minmax(0, 1fr); max-width: 880px; margin: 0 auto; gap: 22px; }
+#root .landing-page--minimal .landing-minimal-disclosure { min-width: 0; }
+#root .landing-page--minimal .landing-minimal-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 54px; padding: 15px 0; color: var(--studio-ink); cursor: pointer; list-style: none; font-size: 15px; font-weight: 550; }
+#root .landing-page--minimal .landing-minimal-disclosure > summary::-webkit-details-marker { display: none; }
+#root .landing-page--minimal .landing-minimal-disclosure > summary > svg { width: 20px; height: 20px; flex: 0 0 20px; transition: transform .2s; }
+#root .landing-page--minimal .landing-minimal-disclosure[open] > summary > svg { transform: rotate(90deg); }
+#root .landing-page--minimal .landing-minimal-disclosure > summary:hover { color: var(--studio-accent); }
+#root .landing-page--minimal .landing-minimal-disclosure > summary:focus-visible { outline: 3px solid var(--studio-accent); outline-offset: 5px; }
+#root .landing-page--minimal .landing-minimal-calendar { border-top: 1px solid var(--studio-line); }
+#root .landing-page--studio.landing-page--minimal .landing-cinematic-compare { padding: 28px 0 48px; }
+#root .landing-page--minimal .landing-minimal-comparison { border-top: 1px solid var(--studio-line); border-bottom: 1px solid var(--studio-line); }
+#root .landing-page--minimal .landing-minimal-comparison .landing-cinematic-compare-table { margin: 10px 0 22px; }
+#root .landing-page--studio.landing-page--minimal .landing-cinematic-final .landing-cinematic-hero-actions { margin-top: 36px; }
+#root .landing-page--minimal :is(#answers, [role="tab"]) { scroll-margin-top: 130px; }
+
+@media (max-width: 800px) {
+  #root .landing-page--minimal .landing-minimal-tabs { justify-content: space-between; gap: 20px; }
+  #root .landing-page--minimal .landing-minimal-tabs > button { padding: 12px 8px; font-size: 14px; }
+  #root .landing-page--minimal .landing-minimal-feature-panel { grid-template-columns: 1fr; gap: 26px; padding-top: 30px; }
+  #root .landing-page--minimal .landing-minimal-feature-copy h3 { font-size: 29px; margin-bottom: 12px; }
+  #root .landing-page--minimal .landing-minimal-feature-copy p { font-size: 14px; }
+  #root .landing-page--minimal .landing-minimal-feature-example { max-width: none; min-height: 230px; padding: 24px; }
+  #root .landing-page--minimal .landing-minimal-pace > strong { font-size: 55px; }
+  #root .landing-page--studio.landing-page--minimal .landing-studio-integrations .landing-cinematic-width { align-items: stretch; }
+  #root .landing-page--studio.landing-page--minimal .landing-cinematic-races .landing-cinematic-section-head.is-split { gap: 14px; }
+  #root .landing-page--minimal .landing-minimal-disclosure > summary { font-size: 14px; }
+}
+
+/* Race explorer: fixed-size touch targets over a zoomable, lightweight SVG. */
+#root .landing-page--studio .landing-race-explorer { min-width: 0; overflow: hidden; border: 1px solid var(--studio-line); border-radius: 14px; background: var(--studio-surface); }
+#root .landing-page--studio .landing-race-explorer button, #root .landing-page--studio .landing-race-calendar button { font: inherit; cursor: pointer; }
+#root .landing-page--studio .landing-race-explorer button:disabled { opacity: .35; cursor: default; }
+#root .landing-page--studio .landing-race-explorer button > svg, #root .landing-page--studio .landing-race-calendar button > svg { width: 20px; height: 20px; flex: 0 0 20px; }
+#root .landing-page--studio .landing-race-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--studio-line); }
+#root .landing-page--studio .landing-race-map-toolbar > span { color: var(--studio-muted); font-size: 12px; line-height: 1.6; }
+#root .landing-page--studio :is(.landing-race-map-tools, .landing-race-map-navigation) { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+#root .landing-page--studio :is(.landing-race-map-tools, .landing-race-map-navigation) > button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--studio-ink); }
+#root .landing-page--studio .landing-race-explorer button:not(:disabled):hover { background-color: var(--studio-soft); }
+#root .landing-page--studio .landing-race-map-navigation > button[aria-pressed="true"] { color: var(--studio-accent); background: var(--studio-accent-wash); }
+#root .landing-page--studio .landing-race-map-viewport { position: relative; width: 100%; min-height: 260px; aspect-ratio: 2; overflow: hidden; isolation: isolate; background: var(--studio-soft); scroll-margin-top: 120px; }
+#root .landing-page--studio .landing-race-map-viewport[data-zoom]:not([data-zoom="1"]) { cursor: grab; }
+#root .landing-page--studio .landing-race-map-viewport[data-zoom]:not([data-zoom="1"]):active { cursor: grabbing; }
+#root .landing-page--studio .landing-race-map-viewport:focus-visible { outline: 3px solid var(--studio-accent); outline-offset: -4px; }
+#root .landing-page--studio .landing-race-map-canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; pointer-events: none; transform-origin: center; }
+#root .landing-page--studio .landing-race-map-canvas image { opacity: .8; }
+#root .landing-page--studio .landing-race-map-route { fill: none; stroke: #d5ccc4; stroke-width: .12; opacity: .4; }
+#root .landing-page--studio .landing-race-map-route-active { fill: none; stroke: var(--studio-accent); stroke-width: .22; stroke-dasharray: 1; }
+#root .landing-page--studio .landing-race-map-aircraft-layer { z-index: 2; }
+#root .landing-page--studio .landing-race-map-airliner { filter: drop-shadow(0 1px 1px rgba(44,47,48,.18)); }
+#root .landing-page--studio .landing-race-map-airliner .landing-cinematic-map-aircraft-shape { fill: var(--studio-accent); stroke: var(--studio-surface); stroke-width: 1.15; stroke-linejoin: round; vector-effect: none; }
+#root .landing-page--studio .landing-race-map-airliner-engines { fill: var(--studio-accent-strong); stroke: var(--studio-surface); stroke-width: .8; }
+#root .landing-page--studio .landing-race-map-airliner-fuselage { fill: var(--studio-surface); stroke: var(--studio-accent); stroke-width: .9; }
+#root .landing-page--studio .landing-race-map-airliner .landing-cinematic-map-aircraft-cockpit { fill: var(--studio-ink); }
+#root .landing-page--studio .landing-race-map-callouts { position: absolute; inset: 0; pointer-events: none; }
+#root .landing-page--studio .landing-race-map-callouts line { stroke: var(--studio-muted); stroke-width: 1; opacity: .55; }
+#root .landing-page--studio .landing-race-map-callouts circle { fill: var(--studio-ink); stroke: var(--studio-surface); stroke-width: 1.5; }
+#root .landing-page--studio .landing-race-map-callouts .is-active line { stroke: var(--studio-accent); opacity: .8; }
+#root .landing-page--studio .landing-race-map-callouts .is-active circle { fill: var(--studio-accent); }
+#root .landing-page--studio .landing-race-map-marker { position: absolute; z-index: 3; left: 0; top: 0; display: grid; place-items: center; height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--studio-ink); }
+#root .landing-page--studio .landing-race-explorer .landing-race-map-marker:hover { background: transparent; }
+#root .landing-page--studio .landing-race-map-marker > span { display: block; width: 100%; padding: 7px 8px; box-sizing: border-box; border: 1px solid var(--studio-line); border-radius: 7px; background: var(--studio-surface); color: var(--studio-ink); font-size: 11px; font-weight: 650; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color .15s; }
+#root .landing-page--studio .landing-race-map-marker.is-active > span { background: var(--studio-accent); border-color: var(--studio-accent); color: var(--studio-surface); }
+#root .landing-page--studio .landing-race-map-marker:not(.is-active):hover > span { background: var(--studio-accent-wash); border-color: var(--studio-accent-medium); }
+#root .landing-page--studio .landing-race-calendar > button { display: grid; grid-template-columns: minmax(0,1fr) auto 20px; align-items: center; gap: 16px; width: 100%; min-height: 48px; padding: 12px 10px; text-align: left; border: 0; border-radius: 6px; color: var(--studio-ink); background: transparent; }
+#root .landing-page--studio .landing-race-calendar > button > span { font-size: 14px; font-weight: 600; line-height: 1.5; }
+#root .landing-page--studio .landing-race-calendar > button > small { font-size: 11px; color: var(--studio-muted); }
+#root .landing-page--studio .landing-race-map-detail { padding: 20px 22px; border-top: 1px solid var(--studio-line); }
+#root .landing-page--studio .landing-race-map-detail-heading { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 18px; }
+#root .landing-page--studio .landing-race-map-detail h3 { margin: 0; font: inherit; font-size: 22px; font-weight: 650; line-height: 1.3; letter-spacing: -.035em; }
+#root .landing-page--studio .landing-race-map-detail dl { display: flex; gap: 36px; margin: 15px 0 0; }
+#root .landing-page--studio .landing-race-map-detail dt { margin-bottom: 5px; color: var(--studio-muted); font-size: 11px; }
+#root .landing-page--studio .landing-race-map-detail dd { margin: 0; font-size: 15px; font-weight: 600; }
+#root .landing-page--studio .landing-race-calendar { display: grid; gap: 4px; margin-top: 8px; }
+#root .landing-page--studio .landing-race-calendar > button:hover, #root .landing-page--studio .landing-race-calendar > button.is-active { background: var(--studio-accent-wash); }
+#root .landing-page--studio .landing-race-calendar > button.is-active > span { color: var(--studio-accent); }
+#root .landing-page--studio .landing-map-empty { padding: 28px; border-radius: 12px; background: var(--studio-soft); color: var(--studio-muted); }
+
+@media (max-width: 600px) {
+  #root .landing-page--studio .landing-race-map-viewport { min-height: 320px; }
+  #root .landing-page--studio .landing-race-map-toolbar { padding: 8px 10px; gap: 8px; }
+  #root .landing-page--studio .landing-race-map-toolbar > span { font-size: 11px; }
+  #root .landing-page--studio .landing-race-map-detail { padding: 16px 14px; }
+  #root .landing-page--studio .landing-race-map-detail-heading { gap: 8px; }
+  #root .landing-page--studio .landing-race-map-detail h3 { font-size: 17px; }
+  #root .landing-page--studio .landing-race-map-detail dl { gap: 28px; margin-top: 12px; }
+  #root .landing-page--studio .landing-race-map-detail dd { font-size: 14px; }
+  #root .landing-page--studio .landing-race-calendar > button { grid-template-columns: minmax(0,1fr) 20px; gap: 4px 12px; padding: 12px 10px; }
+  #root .landing-page--studio .landing-race-calendar > button > small { grid-row: 2; }
+  #root .landing-page--studio .landing-race-calendar > button > svg { grid-row: 1 / span 2; grid-column: 2; }
+}
+
+@media (min-width: 1600px) {
+  #root .landing-page--studio .landing-studio-artboard { height: 500px; }
+  #root .landing-page--studio .landing-studio-plan-sheet { top: 92px; left: 25px; }
+  #root .landing-page--studio .landing-studio-shoe-sheet { top: 30px; height: 365px; }
+}
+@media (max-width: 1100px) {
+  #root .landing-page--studio .landing-cinematic-width { width: calc(100% - 56px); }
+  #root .landing-page--studio .landing-cinematic-nav-inner { gap: 20px; }
+  #root .landing-page--studio .landing-cinematic-links { gap: 20px; }
+  #root .landing-page--studio .landing-cinematic-hero { padding-top: 50px !important; }
+  #root .landing-page--studio .landing-hero-shoe-grid { gap: 22px; min-height: 490px; }
+  #root .landing-page--studio .landing-cinematic-hero-title { font-size: clamp(44px, 5.3vw, 65px) !important; }
+  #root .landing-page--studio .landing-studio-artboard { height: 410px; }
+  #root .landing-page--studio .landing-studio-plan-sheet { width: 76%; }
+  #root .landing-page--studio .landing-studio-plan-content { padding: 20px 17px; }
+  #root .landing-page--studio .landing-studio-shoe-sheet { width: 65%; }
+  #root .landing-page--studio .landing-studio-progress-note { bottom: -3px; right: -3px; padding: 13px 16px; }
+  #root .landing-page--studio .landing-studio-progress-note strong { font-size: 13px; }
+  #root .landing-page--studio .landing-cinematic-answer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  #root .landing-page--studio .landing-cinematic-answer-grid .landing-cinematic-answer-card { padding: 18px; }
+  #root .landing-page--studio .landing-cinematic-answer-head { gap: 10px; }
+  #root .landing-page--studio .landing-cinematic-answer-head h3 { font-size: 20px; }
+  #root .landing-page--studio .landing-cinematic-answer-figure { padding: 14px; }
+}
+@media (max-width: 800px) {
+  #root .landing-page--studio :is(#landing-main, main > section[id], article[id]) { scroll-margin-top: 124px; }
+  #root .landing-page--studio .landing-cinematic-width { width: calc(100% - 40px); }
+  #root .landing-page--studio .landing-cinematic-nav-inner { grid-template-columns: 1fr auto; min-height: 68px; gap: 8px; }
+  #root .landing-page--studio .landing-cinematic-links { grid-row: 2; grid-column: 1 / -1; display: flex; justify-content: space-between; width: 100%; padding: 0 0 14px; gap: 14px; }
+  #root .landing-page--studio .landing-cinematic-links a { font-size: 12px; }
+  #root .landing-page--studio .landing-cinematic-nav-actions { grid-row: 1; grid-column: 2; gap: 2px; }
+  #root .landing-page--studio .landing-cinematic-brand { font-size: 18px; gap: 8px; }
+  #root .landing-page--studio .landing-cinematic-brand-glyph { width: 26px; height: 30px; }
+  #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn--ghost { display: inline-flex !important; }
+  #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn { min-height: 40px; padding: 10px 12px; font-size: 12px; }
+  #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn--primary svg { display: none; }
+  #root .landing-page--studio .landing-hero-shoe-grid { grid-template-columns: 1fr; min-height: 0; gap: 40px; }
+  #root .landing-page--studio .landing-cinematic-hero { padding: 42px 0 35px !important; }
+  #root .landing-page--studio .landing-command-copy { max-width: 620px; }
+  #root .landing-page--studio .landing-cinematic-hero-title { font-size: clamp(50px, 9.5vw, 76px) !important; line-height: 1.06 !important; }
+  #root .landing-page--studio .landing-studio-eyebrow { margin-bottom: 22px; font-size: 9px; }
+  #root .landing-page--studio .landing-command-copy > p { font-size: 15px; max-width: 500px; }
+  #root .landing-page--studio .landing-cinematic-hero-actions { gap: 20px; margin-top: 24px; }
+  #root .landing-page--studio .landing-studio-scene { width: min(520px, 100%); margin: 0 auto; }
+  #root .landing-page--studio .landing-studio-artboard { height: 435px; }
+  #root .landing-page--studio .landing-studio-plan-sheet { width: 70%; }
+  #root .landing-page--studio .landing-studio-progress-note { bottom: 0; }
+  #root .landing-page--studio .landing-studio-integrations .landing-cinematic-width { flex-direction: column; align-items: flex-start; gap: 22px; }
+  #root .landing-page--studio .landing-studio-integrations .landing-cinematic-width > div { justify-content: space-between; width: 100%; gap: 18px; flex-wrap: wrap; }
+  #root .landing-page--studio .landing-studio-integrations strong { font-size: 17px; }
+  #root .landing-page--studio .landing-studio-integrations strong:nth-child(2) { font-size: 13px; }
+  #root .landing-page--studio :is(.landing-command-deck, .landing-cinematic-answers, .landing-cinematic-races, .landing-cinematic-compare, .landing-cinematic-final) { padding: 60px 0; }
+  #root .landing-page--studio .landing-studio-section-intro { flex-direction: column; align-items: flex-start; gap: 20px; margin-bottom: 30px; }
+  #root .landing-page--studio .landing-studio-section-intro h2 { font-size: 38px; }
+  #root .landing-page--studio .landing-command-card-stack { grid-template-columns: 1fr; gap: 16px; }
+  #root .landing-page--studio .landing-command-card { min-height: 240px; padding: 26px; }
+  #root .landing-page--studio .landing-command-card-head { gap: 22px; }
+  #root .landing-page--studio .landing-command-card-head h2 { font-size: 28px; }
+  #root .landing-page--studio .landing-cinematic-answer-grid { grid-template-columns: 1fr; gap: 20px; }
+  #root .landing-page--studio .landing-cinematic-answer-grid .landing-cinematic-answer-card { padding: 26px; }
+  #root .landing-page--studio .landing-cinematic-answer-head h3 { font-size: 25px; }
+  #root .landing-page--studio .landing-cinematic-answer-figure { padding: 22px; }
+  #root .landing-page--studio .landing-cinematic-section-head.is-split { grid-template-columns: 1fr; gap: 20px; }
+  #root .landing-page--studio .landing-cinematic-section-head { margin-bottom: 32px; }
+  #root .landing-page--studio .landing-cinematic-race-stage { grid-template-columns: 1fr; }
+  #root .landing-page--studio .landing-cinematic-map { min-height: 270px; }
+  #root .landing-page--studio .landing-cinematic-race-list { width: 100%; min-width: 0; padding: 16px; }
+  #root .landing-page--studio .landing-cinematic-compare-feature > strong { font-size: 11px; }
+  #root .landing-page--studio .landing-cinematic-compare-feature small { font-size: 10px; }
+  #root .landing-page--studio .landing-cinematic-compare-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 20px 16px; }
+  #root .landing-page--studio .landing-cinematic-compare-row.is-head { display: none; }
+  #root .landing-page--studio .landing-cinematic-compare-feature { grid-column: 1 / -1; }
+  #root .landing-page--studio .landing-cinematic-compare-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 48px; }
+  #root .landing-page--studio .landing-cinematic-compare-cell::before { content: attr(data-platform); font-size: 10px; font-weight: 650; color: var(--studio-muted); }
+  #root .landing-page--studio .landing-cinematic-final h2 { font-size: 54px; }
+  #root .landing-page--studio .landing-cinematic-footer-inner { flex-direction: column; }
+}
+@media (max-width: 380px) {
+  #root .landing-page--studio .landing-cinematic-width { width: calc(100% - 32px); }
+  #root .landing-page--studio .landing-cinematic-hero-title { font-size: 46px !important; }
+  #root .landing-page--studio .landing-studio-scene-top { font-size: 9px; }
+  #root .landing-page--studio .landing-studio-plan-sheet { width: 82%; }
+  #root .landing-page--studio .landing-studio-shoe-sheet { width: 64%; }
+  #root .landing-page--studio .landing-studio-sheet-label { font-size: 17px; }
+  #root .landing-page--studio .landing-studio-progress-note { right: 0; }
+  #root .landing-page--studio .landing-cinematic-hero-actions { gap: 12px; }
+  #root .landing-page--studio .landing-cinematic-btn.is-large { padding: 15px 18px; }
+  #root .landing-page--studio .landing-cinematic-final h2 { font-size: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .landing-page--studio *, #root .landing-page--studio *::before, #root .landing-page--studio *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  #root .landing-page--studio .reveal-hidden { opacity: 1; transform: none; }
+}

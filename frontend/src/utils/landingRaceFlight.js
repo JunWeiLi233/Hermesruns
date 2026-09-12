@@ -15,7 +15,7 @@ export function buildRaceFlight(points) {
   return { legs, path: `M ${points[0].x} ${points[0].y} ${legs.map(leg => leg.curve).join(' ')}` };
 }
 
-function sampleLeg(leg, progress) {
+export function sampleRaceFlightLeg(leg, progress) {
   const t = progress * progress * (3 - 2 * progress);
   const u = 1 - t;
   const { start, end, control } = leg;
@@ -38,5 +38,5 @@ export function getRaceFlightFrame(legs, elapsedMs) {
   const activeIndex = travelling ? (sourceIndex + 1) % legs.length : sourceIndex;
   const legIndex = travelling ? sourceIndex : (sourceIndex + legs.length - 1) % legs.length;
   const progress = travelling ? (phase - RACE_FLIGHT_DWELL_MS) / (RACE_FLIGHT_STEP_MS - RACE_FLIGHT_DWELL_MS) : 1;
-  return { ...sampleLeg(legs[legIndex], progress), activeIndex, legIndex, progress, travelling };
+  return { ...sampleRaceFlightLeg(legs[legIndex], progress), activeIndex, legIndex, progress, travelling };
 }

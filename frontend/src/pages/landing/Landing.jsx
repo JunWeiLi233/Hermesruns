@@ -10,12 +10,15 @@ import {
   formatRaceMonthLabel,
 } from '../../utils/landingRaceShowcase.js';
 import AppIcon from '../../components/AppIcon';
-import { buildRaceFlight, getRaceFlightFrame } from '../../utils/landingRaceFlight.js';
 import HermesMarkSvg from '../../components/HermesMarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import worldMapPoliticalDotted from '../../assets/generated/landing-world-map-political-dotted.webp';
 import shoeRunMaster from '../../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 import '../../styles/_split/landing.css';
+import '../../styles/landing-studio.css';
+import LandingStudioScene from './LandingStudioScene';
+import LandingFeatureOverview from './LandingFeatureOverview';
+import LandingRaceMap from './LandingRaceMap';
 import { SUPPORT_MAILTO } from '../../utils/supportContact';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -181,6 +184,8 @@ function ShoeRunCycle({ scrollContainerRef }) {
     const scrollContainer = scrollContainerRef.current;
     const figure = figureRef.current;
     const runner = runnerRef.current;
+    // The studio preview is a compact illustration, not a scroll-pinned hero.
+    if (figure?.closest('.landing-studio-scene')) return undefined;
     const grid = figure?.closest('.landing-hero-shoe-grid');
     const copy = grid?.querySelector('.landing-command-copy');
     if (!scrollContainer || !figure || !runner || !grid || !copy) return undefined;
@@ -354,6 +359,7 @@ function LandingGlyph({ name, className = '' }) {
 }
 
 function VdotSpark() {
+  const { t } = useI18n();
   const points = [54.2, 54.6, 54.5, 55.1, 55.4, 55.8, 56, 56.4, 56.8, 57, 56.7, 57.2, 57.6, 58, 58.4];
   const min = 53.5;
   const max = 59;
@@ -391,7 +397,7 @@ function VdotSpark() {
         viewBox="0 0 280 80"
         className="landing-cinematic-vdot-spark"
         role="img"
-        aria-label={`VO2max trend: latest ${points[points.length - 1]}`}
+        aria-label={t('landing.studio_trend_label', { value: points[points.length - 1] })}
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
       >
@@ -414,7 +420,7 @@ function VdotSpark() {
         style={{ left: `${tooltipLeftPct}%` }}
       >
         <strong>{activeValue.toFixed(1)}</strong>
-        <span>VO2max · day {activeIndex + 1}</span>
+        <span>{t('landing.studio_trend_day', { day: activeIndex + 1 })}</span>
       </div>
     </div>
   );
@@ -511,215 +517,25 @@ function resolveRaceMapPoint(race) {
   return RACE_MAP_CITY_ANCHORS[race.id] ?? projectWorldPoint(race.geo);
 }
 
-function WorldMap({ races, metricLabels, flowLabels, activeRaceId, onActiveRaceChange }) {
-  // The dotted base map is a mid-page asset; only fetch it once the map
-  // section approaches the viewport so first-load bandwidth stays for the hero.
-  const mapHostRef = useRef(null);
-  const [mapReady, setMapReady] = useState(false);
-
-  useEffect(() => {
-    const host = mapHostRef.current;
-    if (!host) return undefined;
-    if (typeof IntersectionObserver !== 'function') {
-      setMapReady(true);
-      return undefined;
-    }
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        setMapReady(true);
-        observer.disconnect();
-      }
-    }, { rootMargin: '600px 0px' });
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, []);
-
-  const aircraftRef = useRef(null);
-  const activeRouteRef = useRef(null);
-  const racePins = useMemo(() => races.map(race => ({
-    ...race,
-    pin: race.pin ?? (race.geo ? resolveRaceMapPoint(race) : null),
-  })).filter(race => Number.isFinite(race.pin?.x) && Number.isFinite(race.pin?.y)), [races]);
-  const flight = useMemo(() => buildRaceFlight(racePins.map(race => race.pin)), [racePins]);
-  const activeIndex = Math.max(0, racePins.findIndex(race => race.id === activeRaceId));
-
-  useEffect(() => {
-    const host = mapHostRef.current;
-    if (!host || !flight.legs.length) return undefined;
-    const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    let elapsed = 0;
-    let lastTimestamp = null;
-    let frameId = null;
-    let visible = false;
-    let lastDestination = null;
-    let lastLeg = null;
-
-    const paint = () => {
-      const frame = getRaceFlightFrame(flight.legs, elapsed);
-      if (!frame) return;
-      const destination = racePins[frame.activeIndex].id;
-      const pointer = aircraftRef.current;
-      if (pointer) {
-        pointer.setAttribute('transform', `translate(${frame.x.toFixed(6)} ${frame.y.toFixed(6)}) rotate(${frame.angle.toFixed(3)})`);
-        pointer.dataset.destination = destination;
-        pointer.dataset.flightPhase = frame.travelling ? 'travelling' : 'dwell';
-      }
-      if (activeRouteRef.current) {
-        if (lastLeg !== frame.legIndex) activeRouteRef.current.setAttribute('d', flight.legs[frame.legIndex].path);
-        activeRouteRef.current.setAttribute('stroke-dashoffset', String(1 - frame.progress));
-        lastLeg = frame.legIndex;
-      }
-      if (lastDestination !== destination) {
-        onActiveRaceChange(destination);
-        lastDestination = destination;
-      }
-    };
-    const tick = timestamp => {
-      if (lastTimestamp != null) elapsed += timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-      paint();
-      frameId = window.requestAnimationFrame(tick);
-    };
-    const syncPlayback = () => {
-      if (frameId != null) window.cancelAnimationFrame(frameId);
-      frameId = null;
-      lastTimestamp = null;
-      if (motionPreference.matches) {
-        elapsed = 0;
-        paint();
-      } else if (visible && !document.hidden) {
-        frameId = window.requestAnimationFrame(tick);
-      }
-    };
-    paint();
-    const observer = typeof IntersectionObserver === 'function'
-      ? new IntersectionObserver(entries => {
-        visible = entries.some(entry => entry.isIntersecting);
-        syncPlayback();
-      }, { threshold: 0 })
-      : null;
-    if (observer) observer.observe(host);
-    else { visible = true; syncPlayback(); }
-    document.addEventListener('visibilitychange', syncPlayback);
-    motionPreference.addEventListener('change', syncPlayback);
-    return () => {
-      if (frameId != null) window.cancelAnimationFrame(frameId);
-      observer?.disconnect();
-      document.removeEventListener('visibilitychange', syncPlayback);
-      motionPreference.removeEventListener('change', syncPlayback);
-    };
-  }, [flight, racePins, onActiveRaceChange]);
-
-  const flowSteps = [
-    { key: 'locate', order: '01', label: flowLabels.select },
-    { key: 'read', order: '02', label: flowLabels.score },
-    { key: 'match', order: '03', label: flowLabels.plan },
-  ];
-
-  return (
-    <div ref={mapHostRef} className="landing-cinematic-map" aria-hidden="true">
-      <svg viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet">
-        <g className="landing-cinematic-map-graticule">
-          {WORLD_MAP_GRATICULE.map((path) => <path key={path} d={path} />)}
-        </g>
-        <image
-          href={mapReady ? worldMapPoliticalDotted : undefined}
-          width="100"
-          height="50"
-          preserveAspectRatio="none"
-          className="landing-cinematic-map-reference"
-        />
-        {flight.path ? (
-          <>
-            <path d={flight.path} pathLength="1" className="landing-cinematic-map-flight-route" />
-            <path ref={activeRouteRef} d={flight.legs[(activeIndex + flight.legs.length - 1) % flight.legs.length].path} pathLength="1" className="landing-cinematic-map-flight-route-live" />
-            <g ref={aircraftRef} className="landing-cinematic-map-aircraft" transform={`translate(${racePins[0].pin.x} ${racePins[0].pin.y})`} aria-hidden="true">
-              <circle r="2.2" className="landing-cinematic-map-aircraft-glow" />
-              <g transform="translate(-2.55 0)">
-                <path
-                  d="M 2.55 0 L 0.65 -0.16 L -0.28 -1.3 L -0.72 -1.16 L -0.3 -0.12 L -1.5 -0.72 L -2.2 -0.52 L -2.36 -0.2 L -1.12 0 L -2.36 0.2 L -2.2 0.52 L -1.5 0.72 L -0.3 0.12 L -0.72 1.16 L -0.28 1.3 L 0.65 0.16 Z"
-                  className="landing-cinematic-map-aircraft-shape"
-                />
-                <ellipse cx="1.15" cy="0" rx="0.3" ry="0.13" className="landing-cinematic-map-aircraft-cockpit" />
-              </g>
-            </g>
-          </>
-        ) : null}
-        {racePins.map((race, index) => (
-          <g
-            key={race.name}
-            transform={`translate(${race.pin.x} ${race.pin.y})`}
-            className={`landing-cinematic-map-pin${index === activeIndex ? ' is-active' : ''}`} data-race-id={race.id}
-          >
-            <circle r="0.72" className="landing-cinematic-map-pin-halo" />
-            <circle r="0.5" className="landing-cinematic-map-badge" />
-            <circle r="0.12" className="landing-cinematic-map-core" />
-            <text x="0" y="0.16" textAnchor="middle" className="landing-cinematic-map-order">
-              {String(index + 1).padStart(2, '0')}
-            </text>
-          </g>
-        ))}
-      </svg>
-      <div className="landing-cinematic-map-bottom-deck">
-        <div className="landing-cinematic-map-guide">
-          {flowSteps.map((step) => (
-            <span key={step.key} className={`landing-cinematic-map-guide-step is-${step.key}`}>
-              <strong>{step.label}</strong>
-            </span>
-          ))}
-        </div>
-        <div className="landing-cinematic-map-caption-strip">
-          {racePins.map((race, index) => (
-            <div
-              key={`${race.name}-caption`}
-              className={`landing-cinematic-map-caption${index === activeIndex ? ' is-active' : ''}`} data-race-id={race.id}
-            >
-              <span className="landing-cinematic-map-caption-order">{String(index + 1).padStart(2, '0')}</span>
-              <strong>{race.name}</strong>
-              <span className="landing-cinematic-map-caption-verb">{flowLabels.score}</span>
-              <div className="landing-cinematic-map-caption-meta">
-                <em className="landing-cinematic-map-caption-field is-date"><span>{metricLabels.date}</span>{race.date}</em>
-                <small className="landing-cinematic-map-caption-field is-days"><span>{metricLabels.days}</span>{race.days}</small>
-                <b className="landing-cinematic-map-caption-field is-distance"><span>{metricLabels.distance}</span><i>{race.distance}</i></b>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AnswerCard({ number, title, body, children }) {
-  return (
-    <article className="landing-cinematic-answer-card">
-      <div className="landing-cinematic-answer-head">
-        <span>{number}</span>
-        <h3>{title}</h3>
-      </div>
-      <p>{body}</p>
-      <div className="landing-cinematic-answer-figure">{children}</div>
-    </article>
-  );
-}
-
-function CompareGlyph({ value }) {
+function CompareGlyph({ value, label }) {
+  const { t } = useI18n();
+  const status = t(value === true ? 'landing.studio_compare_yes' : value === 'partial' ? 'landing.studio_compare_partial' : 'landing.studio_compare_no');
   if (value === true) {
     return (
-      <span className="landing-cinematic-compare-cell">
+      <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
         <LandingGlyph name="check" className="landing-cinematic-compare-icon is-yes" />
       </span>
     );
   }
   if (value === 'partial') {
     return (
-      <span className="landing-cinematic-compare-cell">
+      <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
         <LandingGlyph name="minus" className="landing-cinematic-compare-icon is-partial" />
       </span>
     );
   }
   return (
-    <span className="landing-cinematic-compare-cell">
+    <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
       <LandingGlyph name="close" className="landing-cinematic-compare-icon is-no" />
     </span>
   );
@@ -727,11 +543,10 @@ function CompareGlyph({ value }) {
 
 export default function Landing() {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
-  const { t } = useI18n();
+  const { t, lang, setLang } = useI18n();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [raceCountdownNow, setRaceCountdownNow] = useState(() => new Date());
-  const [activeRaceId, setActiveRaceId] = useState(null);
   const heroScrollRef = useRef(null);
 
   useEffect(() => {
@@ -762,32 +577,10 @@ export default function Landing() {
   }, []);
 
   const navLinks = [
-    ['#features', t('landing.cinematic_nav_daily')],
-    ['#answers', t('landing.cinematic_nav_method')],
+    ['#features', t('landing.minimal_nav_features')],
     ['#races', t('landing.cinematic_nav_races')],
-    ['#compare', t('landing.cinematic_nav_compare')],
   ];
 
-  const commandCards = [
-    {
-      number: '01',
-      title: t('landing.cinematic_answer_1_title'),
-      body: t('landing.cinematic_answer_1_body'),
-      metric: t('landing.command_card_1_metric'),
-    },
-    {
-      number: '02',
-      title: t('landing.cinematic_answer_2_title'),
-      body: t('landing.cinematic_answer_2_body'),
-      metric: t('landing.command_card_2_metric'),
-    },
-    {
-      number: '03',
-      title: t('landing.cinematic_answer_3_title'),
-      body: t('landing.cinematic_answer_3_body'),
-      metric: t('landing.command_card_3_metric'),
-    },
-  ];
 
   // Showcase facts (months, distances, coordinates) come from the bundled
   // world race catalog; only the display names localize through landing keys.
@@ -804,9 +597,23 @@ export default function Landing() {
       'paris-marathon': t('landing.cinematic_race_paris'),
       'comrades-marathon': t('landing.cinematic_race_comrades'),
     };
+    const mapLabels = {
+      'berlin-marathon': t('landing.map_city_berlin'),
+      'sydney-marathon': t('landing.map_city_sydney'),
+      'chicago-marathon': t('landing.map_city_chicago'),
+      'new-york-city-marathon': t('landing.map_city_new_york'),
+      'valencia-marathon': t('landing.map_city_valencia'),
+      'tokyo-marathon': t('landing.map_city_tokyo'),
+      'boston-marathon': t('landing.map_city_boston'),
+      'london-marathon': t('landing.map_city_london'),
+      'paris-marathon': t('landing.map_city_paris'),
+      'comrades-marathon': t('landing.map_city_comrades'),
+    };
     return buildLandingRaceShowcase(raceCountdownNow).map((race) => ({
       ...race,
       name: showcaseNames[race.id] ?? race.catalogName,
+      mapLabel: mapLabels[race.id] ?? race.city,
+      pin: resolveRaceMapPoint(race),
       date: formatRaceMonthLabel(race.nextOccurrence),
       days: getRaceCountdownDays(race.nextOccurrence.toISOString().slice(0, 10), raceCountdownNow),
       distance: formatRaceDistanceLabel(race.distanceKm),
@@ -832,7 +639,8 @@ export default function Landing() {
   ];
 
   return (
-    <div className="landing-page--cinematic landing-page--liquid-glass" data-hermes-landing="true">
+    <div className="landing-page--cinematic landing-page--liquid-glass landing-page--studio landing-page--minimal" data-hermes-landing="true">
+      <a className="landing-studio-skip" href="#landing-main">{t('landing.studio_skip')}</a>
       {/* ── Navigation ── */}
       <header className={`landing-cinematic-nav ${isScrolled ? 'is-scrolled' : ''}`}>
         <PageWidth className="landing-cinematic-nav-inner">
@@ -847,6 +655,7 @@ export default function Landing() {
             {navLinks.map(([href, label]) => (
               <a key={href} href={href}>{label}</a>
             ))}
+            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} aria-label={t('landing.studio_language')}>{lang === 'en' ? '中文' : 'EN'}</button>
           </nav>
 
           <div className="landing-cinematic-nav-actions">
@@ -859,101 +668,36 @@ export default function Landing() {
         </PageWidth>
       </header>
 
-      <main>
+      <main id="landing-main" tabIndex={-1}>
         {/* ── 1. Hero ── */}
         <section ref={heroScrollRef} className="landing-cinematic-hero landing-cinematic-hero--minimal">
           <PageWidth className="landing-cinematic-hero-inner landing-hero-shoe-grid">
             <div className="landing-cinematic-hero-copy landing-command-copy">
               <h1 className="landing-cinematic-hero-title">
-                <span>{t('landing.cinematic_hero_line_1')}</span>
-                <span>{t('landing.cinematic_hero_line_2')}</span>
-                <span className="is-accent">{t('landing.cinematic_hero_line_3')}</span>
+                <span>{t('landing.studio_hero_line_1')}</span>
+                <span>{t('landing.studio_hero_line_2')}</span>
+                <span className="is-accent">{t('landing.studio_hero_line_3')}</span>
               </h1>
-              <p>{t('landing.cinematic_hero_text')}</p>
+              <p>{t('landing.studio_hero_copy')}</p>
 
               <div className="landing-cinematic-hero-actions">
-                <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
-                  <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="eager" decoding="async" />
-                </button>
-                <Link to="/signup" className="landing-cinematic-hero-alt-link">
-                  {t('landing.get_started')}
-                </Link>
+                <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--primary is-large">{t('landing.studio_get_started')}<LandingGlyph name="arrow" /></Link>
               </div>
 
-              <div className="landing-cinematic-trust">
-                <span>{t('landing.cinematic_trust_local')}</span>
-              </div>
             </div>
-            <ShoeRunCycle scrollContainerRef={heroScrollRef} />
+            <LandingStudioScene shoe={<ShoeRunCycle scrollContainerRef={heroScrollRef} />} />
           </PageWidth>
         </section>
 
-        {/* ── 2. Feature Grid ── */}
+        <section className="landing-studio-integrations" aria-label={t('landing.studio_sources_label')}>
+          <PageWidth><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
+        </section>
+
+        {/* One feature at a time. */}
         <section id="features" className="landing-command-deck">
           <PageWidth className="landing-command-deck-grid">
-            <RevealSection className="landing-command-card-stack">
-              {commandCards.map((card) => (
-                <article key={card.number} className="landing-command-card landing-cinematic-answer-card">
-                  <div className="landing-command-card-head">
-                    <span>{card.number}</span>
-                    <h2>{card.title}</h2>
-                  </div>
-                  <p>{card.body}</p>
-                  <strong>{card.metric}</strong>
-                </article>
-              ))}
-            </RevealSection>
-          </PageWidth>
-        </section>
-
-        {/* ── 3. Three Daily Answers ── */}
-        <section id="answers" className="landing-cinematic-answers">
-          <PageWidth>
-            <RevealSection className="landing-cinematic-section-head landing-cinematic-section-head--answers">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_answers_kicker')}</span>
-              <h2 className="landing-cinematic-answers-title">{t('landing.cinematic_answers_title')} <span>{t('landing.cinematic_answers_title_muted')}</span></h2>
-            </RevealSection>
-
-            <div className="landing-cinematic-answer-grid">
-              <RevealSection delay={40}>
-                <AnswerCard number="01" title={t('landing.cinematic_answer_1_title')} body={t('landing.cinematic_answer_1_body')}>
-                  <div className="landing-cinematic-mini-paces">
-                    {[t('landing.cinematic_zone_recovery'), t('landing.cinematic_zone_easy'), t('landing.cinematic_zone_marathon'), t('landing.cinematic_zone_threshold'), t('landing.cinematic_zone_interval'), t('landing.cinematic_zone_repetition')].map((label, index) => (
-                      <div key={label} className={index === 3 ? 'is-active' : ''}>
-                        <span>{label}</span>
-                        <strong>{['6:18', '5:42', '4:36', '4:21', '3:52', '3:30'][index]}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </AnswerCard>
-              </RevealSection>
-
-              <RevealSection delay={90}>
-                <AnswerCard number="02" title={t('landing.cinematic_answer_2_title')} body={t('landing.cinematic_answer_2_body')}>
-                  <VdotSpark />
-                  <div className="landing-cinematic-vdot-row">
-                    <strong>58.4</strong>
-                    <span>+1.2 / 30d</span>
-                  </div>
-                </AnswerCard>
-              </RevealSection>
-
-              <RevealSection delay={140}>
-                <AnswerCard number="03" title={t('landing.cinematic_answer_3_title')} body={t('landing.cinematic_answer_3_body')}>
-                  {[
-                    ['Endorphin Speed 4', '68%', t('landing.cinematic_shoe_today')],
-                    ['Cloudmonster', '42%', t('landing.cinematic_shoe_easy')],
-                    ['Vaporfly 3', '91%', t('landing.cinematic_shoe_race')],
-                    ['Pegasus 41', '18%', t('landing.cinematic_shoe_recovery')],
-                  ].map(([name, width, tag]) => (
-                    <div key={name} className="landing-cinematic-shoe-row">
-                      <div><span>{name}</span><em>{tag}</em></div>
-                      <i><span style={{ width }} /></i>
-                    </div>
-                  ))}
-                </AnswerCard>
-              </RevealSection>
-            </div>
+            <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2></div>
+            <LandingFeatureOverview trend={<VdotSpark />} shoeSrc={shoeRunMaster} />
           </PageWidth>
         </section>
 
@@ -962,59 +706,13 @@ export default function Landing() {
           <PageWidth>
             <RevealSection className="landing-cinematic-section-head is-split">
               <div>
-                <span className="landing-cinematic-kicker">{t('landing.cinematic_races_kicker')}</span>
                 <h2>{t('landing.cinematic_races_title')}</h2>
               </div>
-              <p>{t('landing.cinematic_races_copy')}</p>
+              <p>{t('landing.minimal_races_copy')}</p>
             </RevealSection>
 
             <div className="landing-cinematic-race-stage is-flight-synced">
-              <WorldMap
-                races={races}
-                activeRaceId={activeRaceId}
-                onActiveRaceChange={setActiveRaceId}
-                metricLabels={{
-                  date: t('landing.cinematic_race_col_date'),
-                  days: t('landing.cinematic_race_col_days'),
-                  distance: t('landing.cinematic_race_col_distance'),
-                }}
-                flowLabels={{
-                  select: t('landing.cinematic_race_flow_select'),
-                  score: t('landing.cinematic_race_flow_score'),
-                  plan: t('landing.cinematic_race_flow_plan'),
-                }}
-              />
-              <RevealSection className="landing-cinematic-race-list" delay={70}>
-                <div className="landing-cinematic-race-head">
-                  <span aria-hidden="true" />
-                  <span>{t('landing.cinematic_race_col_race')}</span>
-                  <span>{t('landing.cinematic_race_col_date')}</span>
-                  <span>{t('landing.cinematic_race_col_days')}</span>
-                  <span>{t('landing.cinematic_race_col_distance')}</span>
-                </div>
-                {races.map((race, index) => (
-                  <div
-                    key={race.name}
-                    className={`landing-cinematic-race-row${race.id === (activeRaceId || races[0]?.id) ? ' is-active' : ''}`}
-                    data-race-id={race.id}
-                  >
-                    <span className="landing-cinematic-race-order">{String(index + 1).padStart(2, '0')}</span>
-                    <span>{race.name}</span>
-                    <span data-label={t('landing.cinematic_race_col_date')}>
-                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_date')}: </span>
-                      {race.date}
-                    </span>
-                    <strong data-label={t('landing.cinematic_race_col_days')}>
-                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_days')}: </span>
-                      {race.days}
-                    </strong>
-                    <em data-label={t('landing.cinematic_race_col_distance')} className={index === 0 ? 'is-primary' : ''}>
-                      <span className="landing-cinematic-sr-only">{t('landing.cinematic_race_col_distance')}: </span>
-                      {race.distance}
-                    </em>
-                  </div>
-                ))}
-              </RevealSection>
+              <LandingRaceMap races={races} mapImage={worldMapPoliticalDotted} graticule={WORLD_MAP_GRATICULE} />
             </div>
           </PageWidth>
         </section>
@@ -1022,30 +720,29 @@ export default function Landing() {
         {/* ── 8. Comparison ── */}
         <section id="compare" className="landing-cinematic-compare">
           <PageWidth>
-            <RevealSection className="landing-cinematic-section-head">
-              <span className="landing-cinematic-kicker">{t('landing.cinematic_compare_kicker')}</span>
-              <h2>{t('landing.cinematic_compare_title')}</h2>
-            </RevealSection>
+            <details className="landing-minimal-disclosure landing-minimal-comparison">
+              <summary><span>{t('landing.minimal_compare')}</span><LandingGlyph name="arrow" /></summary>
 
-            <RevealSection className="landing-cinematic-compare-table">
-              <div className="landing-cinematic-compare-row is-head">
-                <span />
-                <strong>Hermes</strong>
-                <span>{t('landing.cinematic_compare_social')}</span>
-                <span>{t('landing.cinematic_compare_device')}</span>
-              </div>
-              {compareRows.map(({ feature, note, hermes, strava, runna }) => (
-                <div key={feature} className="landing-cinematic-compare-row">
-                  <span className="landing-cinematic-compare-feature">
-                    <strong>{feature}</strong>
-                    <small>{note}</small>
-                  </span>
-                  <CompareGlyph value={hermes} />
-                  <CompareGlyph value={strava} />
-                  <CompareGlyph value={runna} />
+              <div className="landing-cinematic-compare-table">
+                <div className="landing-cinematic-compare-row is-head">
+                  <span />
+                  <strong>Hermes</strong>
+                  <span>{t('landing.cinematic_compare_social')}</span>
+                  <span>{t('landing.cinematic_compare_device')}</span>
                 </div>
-              ))}
-            </RevealSection>
+                {compareRows.map(({ feature, note, hermes, strava, runna }) => (
+                  <div key={feature} className="landing-cinematic-compare-row">
+                    <span className="landing-cinematic-compare-feature">
+                      <strong>{feature}</strong>
+                      <small>{note}</small>
+                    </span>
+                    <CompareGlyph value={hermes} label="Hermes" />
+                    <CompareGlyph value={strava} label={t('landing.cinematic_compare_social')} />
+                    <CompareGlyph value={runna} label={t('landing.cinematic_compare_device')} />
+                  </div>
+                ))}
+              </div>
+            </details>
           </PageWidth>
         </section>
 
@@ -1054,21 +751,14 @@ export default function Landing() {
           <PageWidth>
             <RevealSection className="landing-cinematic-final-card landing-cinematic-final-card--minimal">
               <div className="landing-cinematic-final-copy">
-                <span className="landing-cinematic-kicker">{t('landing.cinematic_final_kicker')}</span>
-                <h2>{t('landing.cinematic_cta_title')}</h2>
-                <p>{t('landing.cinematic_cta_copy')}</p>
+                <h2>{t('landing.studio_final_title')}</h2>
                 <div className="landing-cinematic-hero-actions">
                   <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
                     <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="lazy" decoding="async" />
                   </button>
-                  <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--outline is-large">
+                  <Link to="/signup" className="landing-cinematic-hero-alt-link">
                     {t('landing.get_started')}
                   </Link>
-                </div>
-                <div className="landing-cinematic-final-trust">
-                  <span>{t('landing.cinematic_final_no_card')}</span>
-                  <span>{t('landing.cinematic_final_no_feed')}</span>
-                  <span>{t('landing.cinematic_final_method')}</span>
                 </div>
               </div>
             </RevealSection>
