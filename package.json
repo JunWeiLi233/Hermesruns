@@ -11,7 +11,7 @@
     "check:architecture": "node tools/check-architecture.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "railway": "3.11.0"
   }
 }
