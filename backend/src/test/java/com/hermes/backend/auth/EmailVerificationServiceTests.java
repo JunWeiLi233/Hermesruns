@@ -54,11 +54,11 @@ class EmailVerificationServiceTests {
             savedTokenState.set(new TokenState(
                     savedRunner.getEmailVerificationTokenHash(), savedRunner.getEmailVerificationExpiresAt()));
             return savedRunner;
-        }).when(runnerRepository).save(any(Runner.class));
+        }).when(runnerRepository).saveAndFlush(any(Runner.class));
         EmailVerificationService service = service(authService, runnerRepository, sender);
         LocalDateTime before = LocalDateTime.now();
 
-        service.sendVerificationToNewRunner(runner, true);
+        service.sendVerificationToNewRunner(runner);
 
         LocalDateTime after = LocalDateTime.now();
         TransactionalMailMessage message = sentMessage(sender);
@@ -80,12 +80,12 @@ class EmailVerificationServiceTests {
                 .isBetween(before.plusHours(48).minusSeconds(1), after.plusHours(48).plusSeconds(1));
         InOrder inOrder = inOrder(authService, runnerRepository, sender);
         inOrder.verify(authService).hashPlainToken(eq(plainToken));
-        inOrder.verify(runnerRepository).save(runner);
+        inOrder.verify(runnerRepository).saveAndFlush(runner);
         inOrder.verify(sender).send(any());
     }
 
     @Test
-    void newRunnerDeliveryFailureDeletesPersistedRunnerWhenRollbackIsRequested() {
+    void newRunnerDeliveryFailurePropagatesForTransactionalRollbackWithoutManualDeletion() {
         AuthService authService = hashingAuthService();
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         TransactionalMailSender sender = configuredSender();
@@ -94,16 +94,16 @@ class EmailVerificationServiceTests {
         Runner runner = runner(42L, "new@hermes.test");
         EmailVerificationService service = service(authService, runnerRepository, sender);
 
-        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner, true)).isSameAs(failure);
+        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner)).isSameAs(failure);
 
         InOrder inOrder = inOrder(runnerRepository, sender);
-        inOrder.verify(runnerRepository).save(runner);
+        inOrder.verify(runnerRepository).saveAndFlush(runner);
         inOrder.verify(sender).send(any());
-        inOrder.verify(runnerRepository).deleteById(42L);
+        verify(runnerRepository, never()).deleteById(any());
     }
 
     @Test
-    void newRunnerNonDeliveryFailureDoesNotDeletePersistedRunner() {
+    void unexpectedDeliveryFailurePropagatesForTransactionalRollback() {
         AuthService authService = hashingAuthService();
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         TransactionalMailSender sender = configuredSender();
@@ -112,13 +112,13 @@ class EmailVerificationServiceTests {
         Runner runner = runner(45L, "unexpected@hermes.test");
         EmailVerificationService service = service(authService, runnerRepository, sender);
 
-        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner, true)).isSameAs(failure);
+        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner)).isSameAs(failure);
 
         verify(runnerRepository, never()).deleteById(any());
     }
 
     @Test
-    void newRunnerDeliveryFailureKeepsPersistedRunnerWhenRollbackIsNotRequested() {
+    void existingRunnerDeliveryFailureNeverManuallyDeletesTheAccount() {
         AuthService authService = hashingAuthService();
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         TransactionalMailSender sender = configuredSender();
@@ -126,7 +126,7 @@ class EmailVerificationServiceTests {
         Runner runner = runner(43L, "recycled@hermes.test");
         EmailVerificationService service = service(authService, runnerRepository, sender);
 
-        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner, false))
+        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner))
                 .isInstanceOf(MailDeliveryException.class);
 
         verify(runnerRepository, never()).deleteById(any());
@@ -141,7 +141,7 @@ class EmailVerificationServiceTests {
         Runner runner = runner(null, "pending@hermes.test");
         EmailVerificationService service = service(authService, runnerRepository, sender);
 
-        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner, true))
+        assertThatThrownBy(() -> service.sendVerificationToNewRunner(runner))
                 .isInstanceOf(MailDeliveryException.class);
 
         verify(runnerRepository, never()).deleteById(any());

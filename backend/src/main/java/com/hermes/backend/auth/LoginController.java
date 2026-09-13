@@ -4,6 +4,7 @@ import com.hermes.backend.auth.mfa.AdminMfaChallengeCookie;
 import com.hermes.backend.auth.mfa.AdminMfaException;
 import com.hermes.backend.auth.mfa.AdminMfaService;
 import com.hermes.backend.billing.AiUsageService;
+import com.hermes.backend.infrastructure.mail.MailDeliveryException;
 import com.hermes.backend.infrastructure.web.InputSanitizer;
 import com.hermes.backend.infrastructure.web.RequestBodyValidator;
 import com.hermes.backend.infrastructure.web.RequestIpResolver;
@@ -321,7 +322,19 @@ public class LoginController {
             Runner r = existingByEmail.get();
             boolean removed = r.isDeleted() || "DELETED".equalsIgnoreCase(r.getStatus());
             if (!removed) {
-                return error(HttpStatus.CONFLICT, "Email already in use.");
+                if (!r.isEmailVerified() && "ACTIVE".equalsIgnoreCase(r.getStatus())
+                        && !authService.isAdmin(r)
+                        && authService.authenticate(normalizedEmail, rawPassword)
+                                .filter(matched -> r.getId().equals(matched.getId())).isPresent()) {
+                    return ResponseEntity.accepted()
+                            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                            .body(Map.of(
+                                    "code", "EMAIL_VERIFICATION_PENDING",
+                                    "verificationRequired", true,
+                                    "email", normalizedEmail,
+                                    "message", "Your account is waiting for email verification. Check your inbox or request a new link."));
+                }
+                return errorWithCode(HttpStatus.CONFLICT, "Email already in use. Sign in or reset your password.", "EMAIL_IN_USE");
             }
         }
 
@@ -350,9 +363,15 @@ public class LoginController {
 
         runner.setEmailVerified(false);
         try {
-            emailVerificationService.sendVerificationToNewRunner(runner, existingByEmail.isEmpty());
+            emailVerificationService.sendVerificationToNewRunner(runner);
+        } catch (MailDeliveryException e) {
+            return errorWithCode(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Could not send verification email. Please try signing up again later.",
+                    "SIGNUP_EMAIL_UNAVAILABLE");
         } catch (Exception e) {
-            return error(HttpStatus.SERVICE_UNAVAILABLE, "Could not send verification email. Try again later.");
+            log.error("Auth signup could not complete failureType={}", e.getClass().getSimpleName());
+            return errorWithCode(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Could not complete signup. Please try again later.", "SIGNUP_FAILED");
         }
 
         responseBody.put("message", "Check your email to verify your address before signing in.");

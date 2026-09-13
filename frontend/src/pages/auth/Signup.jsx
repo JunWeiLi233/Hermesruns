@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useI18n } from '../../contexts/I18nContext';
 import { getBackendBaseUrl, apiFetch, apiJson } from '../../api';
@@ -67,6 +67,9 @@ function formatLocalCopy(template, vars = {}) {
 }
 
 const SIGNUP_EMAIL_ERROR_KEYS = {
+  EMAIL_IN_USE: 'signup.error_email_in_use',
+  SIGNUP_EMAIL_UNAVAILABLE: 'signup.error_verification_unavailable',
+  SIGNUP_FAILED: 'signup.error_signup_failed',
   INVALID_EMAIL: 'signup.error_invalid_email',
   DISPOSABLE_EMAIL: 'signup.error_disposable_email',
   INVALID_EMAIL_DOMAIN: 'signup.error_invalid_email_domain',
@@ -161,6 +164,11 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [pwRules, setPwRules] = useState(null);
   const [doneInfo, setDoneInfo] = useState(null);
+  const signupInFlight = useRef(false);
+  const resendInFlight = useRef(false);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
+  const [resendFailed, setResendFailed] = useState(false);
   const [banner, setBanner] = useState(null);
   const [authProviders, setAuthProviders] = useState(null);
 
@@ -244,6 +252,7 @@ export default function Signup() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (signupInFlight.current) return;
     setError('');
     setSuggestedEmail(null);
 
@@ -258,6 +267,7 @@ export default function Signup() {
       return;
     }
 
+    signupInFlight.current = true;
     setLoading(true);
     try {
       const captchaToken = await getSignupCaptchaToken({
@@ -290,12 +300,45 @@ export default function Signup() {
       setDoneInfo({
         verificationRequired: !!data.verificationRequired,
         message: data.message,
+        pending: data.code === 'EMAIL_VERIFICATION_PENDING',
+        email: data.email || email.trim(),
       });
+      setPassword('');
+      setConfirmPassword('');
     } catch (err) {
       const recaptchaFailed = err instanceof Error && err.message.startsWith('recaptcha_');
       setError(t(recaptchaFailed ? 'common.recaptcha_failed' : 'common.connection_failed'));
     } finally {
+      signupInFlight.current = false;
       setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendInFlight.current || !doneInfo?.email) return;
+    resendInFlight.current = true;
+    setResendBusy(true);
+    setResendMessage('');
+    setResendFailed(false);
+    try {
+      const res = await apiFetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: doneInfo.email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResendFailed(true);
+        setResendMessage(data.error || t('signup.resend_failed'));
+        return;
+      }
+      setResendMessage(data.message || t('index.resend_sent'));
+    } catch {
+      setResendFailed(true);
+      setResendMessage(t('common.connection_failed'));
+    } finally {
+      resendInFlight.current = false;
+      setResendBusy(false);
     }
   }
 
@@ -312,7 +355,20 @@ export default function Signup() {
 
   if (doneInfo) {
     return (
-      <AuthPageLayout variant="signup" title={`${s('done_line_one')} ${s('done_line_two')}`} description={doneInfo.message || t('signup.check_email_body')}>
+      <AuthPageLayout variant="signup"
+        title={doneInfo.pending ? t('signup.verification_pending_title') : `${s('done_line_one')} ${s('done_line_two')}`}
+        description={doneInfo.pending ? t('signup.verification_pending_body') : doneInfo.message || t('signup.check_email_body')}
+      >
+              {doneInfo.verificationRequired && (
+                <div className="auth-resend-box auth-resend-box--signup">
+                  <p className="auth-resend-copy">{t('signup.verification_help')}</p>
+                  <p className="auth-flow-status-note">{doneInfo.email}</p>
+                  <button type="button" className="btn-secondary" disabled={resendBusy} onClick={handleResend}>
+                    {resendBusy ? t('signup.resend_loading') : t('index.resend_verification')}
+                  </button>
+                  {resendMessage && <p className="auth-resend-message" role={resendFailed ? 'alert' : 'status'}>{resendMessage}</p>}
+                </div>
+              )}
               {!doneInfo.verificationRequired && (
                 <p className="auth-flow-status-note">{t('signup.no_mail_server_note')}</p>
               )}

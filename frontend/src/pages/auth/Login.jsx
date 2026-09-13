@@ -101,6 +101,10 @@ export default function Login() {
         body: JSON.stringify({ email: email.trim() }),
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setResendMsg(data.error || t('signup.resend_failed'));
+        return;
+      }
       setResendMsg(data.message || t('index.resend_sent'));
     } catch {
       setResendMsg(t('common.connection_failed'));

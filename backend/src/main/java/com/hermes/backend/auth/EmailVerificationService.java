@@ -1,6 +1,5 @@
 package com.hermes.backend.auth;
 
-import com.hermes.backend.infrastructure.mail.MailDeliveryException;
 import com.hermes.backend.infrastructure.mail.TransactionalMailMessage;
 import com.hermes.backend.infrastructure.mail.TransactionalMailSender;
 import com.hermes.backend.runner.Runner;
@@ -11,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EmailVerificationService {
@@ -39,38 +39,32 @@ public class EmailVerificationService {
     }
 
     /**
-     * First-time signup: persist runner (password already set), attach token, send mail.
-     * If sending fails and {@code deleteRunnerRowOnMailFailure} is true, the runner row is removed
-     * (brand-new signups only). For recycled soft-deleted accounts, pass false so the row is kept.
+     * Commit the account and token only when mail delivery succeeds. Rollback also
+     * preserves an existing soft-deleted account if reactivation cannot finish.
      */
-    public void sendVerificationToNewRunner(Runner runner, boolean deleteRunnerRowOnMailFailure) {
+    @Transactional
+    public void sendVerificationToNewRunner(Runner runner) {
         String plain = newPlainToken();
         applyToken(runner, plain);
-        runnerRepository.save(runner);
+        runnerRepository.saveAndFlush(runner);
         Long id = runner.getId();
         try {
             sendMail(runner.getEmail(), plain);
-        } catch (MailDeliveryException exception) {
-            log.error("Verification email delivery failed runnerId={}", id);
-            if (deleteRunnerRowOnMailFailure && id != null) {
-                runnerRepository.deleteById(id);
-            }
+        } catch (RuntimeException exception) {
+            log.error("Verification email delivery failed runnerId={} failureType={}",
+                    id, exception.getClass().getSimpleName());
             throw exception;
         }
     }
 
-    /** @see #sendVerificationToNewRunner(Runner, boolean) */
-    public void sendVerificationToNewRunner(Runner runner) {
-        sendVerificationToNewRunner(runner, true);
-    }
-
     /**
-     * Resend for an existing unverified account. Updates token. Does not delete the user on failure.
+     * A failed resend must leave the previously issued verification link usable.
      */
+    @Transactional
     public void resendVerification(Runner runner) {
         String plain = newPlainToken();
         applyToken(runner, plain);
-        runnerRepository.save(runner);
+        runnerRepository.saveAndFlush(runner);
         sendMail(runner.getEmail(), plain);
     }
 

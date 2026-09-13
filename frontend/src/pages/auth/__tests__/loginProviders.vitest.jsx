@@ -12,6 +12,20 @@ vi.mock('../../../components/AuthDotField', () => ({ default: () => null }));
 vi.mock('../../../components/AuthBrandCarousel', () => ({ default: () => null }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
+it('does not claim a verification email was sent when resend returns an error', async () => {
+  apiJson.mockResolvedValue({});
+  apiFetch.mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({ code: 'EMAIL_NOT_VERIFIED' }) });
+  apiFetch.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: 'Email delivery is temporarily unavailable.' }) });
+  render(<MemoryRouter><Login /></MemoryRouter>);
+  await act(async () => {});
+  fireEvent.change(screen.getByLabelText('index.email_label'), { target: { value: 'runner@example.com' } });
+  fireEvent.change(screen.getByLabelText('index.password_label'), { target: { value: 'test-only-password' } });
+  fireEvent.submit(document.querySelector('form'));
+  fireEvent.click(await screen.findByRole('button', { name: 'index.resend_verification' }));
+  expect(await screen.findByText('Email delivery is temporarily unavailable.')).toBeVisible();
+  expect(screen.queryByText('index.resend_sent')).not.toBeInTheDocument();
+});
+
 it('reserves provider space while loading and only exposes configured actions', async () => {
   let resolveProviders;
   apiJson.mockReturnValue(new Promise((resolve) => { resolveProviders = resolve; }));

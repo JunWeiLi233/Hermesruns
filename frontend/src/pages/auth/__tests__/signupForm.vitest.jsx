@@ -68,3 +68,54 @@ it('still blocks signup when captcha is required but unavailable', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('common.recaptcha_failed');
   expect(apiFetch).not.toHaveBeenCalled();
 });
+
+it('recovers an existing pending signup and offers verification instead of an already-used dead end', async () => {
+  apiFetch.mockResolvedValue({ ok: true, status: 202, json: async () => ({ code: 'EMAIL_VERIFICATION_PENDING', verificationRequired: true, email: 'runner@example.com' }) });
+  await mount();
+  fill('TestOnly-Route!24');
+  fireEvent.submit(document.querySelector('form'));
+  expect(await screen.findByRole('heading', { name: 'signup.verification_pending_title' })).toBeVisible();
+  expect(screen.getByText('signup.verification_pending_body')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'index.resend_verification' })).toBeEnabled();
+  expect(document.querySelector('form')).toBeNull();
+});
+
+it('shows a resend failure honestly and allows another resend attempt', async () => {
+  apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ verificationRequired: true }) });
+  apiFetch.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: 'Email delivery is temporarily unavailable.' }) });
+  apiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ message: 'Verification email requested.' }) });
+  await mount();
+  fill('TestOnly-Route!24');
+  fireEvent.submit(document.querySelector('form'));
+  const resend = await screen.findByRole('button', { name: 'index.resend_verification' });
+  fireEvent.click(resend);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Email delivery is temporarily unavailable.');
+  expect(apiFetch.mock.calls[1][0]).toBe('/api/auth/resend-verification');
+  expect(JSON.parse(apiFetch.mock.calls[1][1].body)).toEqual({ email: 'runner@example.com' });
+  expect(screen.queryByText('index.resend_sent')).not.toBeInTheDocument();
+  fireEvent.click(resend);
+  expect(await screen.findByRole('status')).toHaveTextContent('Verification email requested.');
+});
+
+it('does not create duplicate signup requests while the first request is pending', async () => {
+  let resolveSignup;
+  apiFetch.mockReturnValue(new Promise(resolve => { resolveSignup = resolve; }));
+  await mount();
+  fill('TestOnly-Route!24');
+  const form = document.querySelector('form');
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await act(async () => {});
+  expect(apiFetch).toHaveBeenCalledTimes(1);
+  await act(async () => resolveSignup({ ok: true, json: async () => ({ verificationRequired: true }) }));
+});
+
+it('keeps the form retryable when a signup was rolled back after email failure', async () => {
+  apiFetch.mockResolvedValue({ ok: false, status: 503, json: async () => ({ code: 'SIGNUP_EMAIL_UNAVAILABLE' }) });
+  await mount();
+  fill('TestOnly-Route!24');
+  fireEvent.submit(document.querySelector('form'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('signup.error_verification_unavailable');
+  expect(screen.getByRole('button', { name: 'signup.submit' })).toBeEnabled();
+  expect(document.querySelector('form')).not.toBeNull();
+});
