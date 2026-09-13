@@ -70,7 +70,7 @@ USER hermes
 
 # Exercise both stdin/JSON workers with offline fixtures as the runtime user.
 # Missing scripts, dependencies, or incompatible provider APIs fail the build.
-RUN --network=none python tools/check_garmin_runtime.py
+RUN python tools/check_garmin_runtime.py
 
 # Lean JVM footprint for small containers. Without these flags the JVM sizes
 # its heap from container ergonomics, grows toward that ceiling, and never
