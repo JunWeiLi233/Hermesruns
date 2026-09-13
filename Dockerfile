@@ -40,6 +40,18 @@ RUN chmod +x ./mvnw && ./mvnw -q -DskipTests package
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
+# Both Garmin services invoke `python tools/garmin_*.py` from /app.
+# Use a virtual environment so the OS-managed Python installation stays intact.
+COPY tools/requirements-garmin-runtime.txt /tmp/requirements-garmin-runtime.txt
+RUN apk add --no-cache python3 \
+    && apk add --no-cache --virtual .garmin-install py3-pip \
+    && python3 -m venv /opt/garmin \
+    && /opt/garmin/bin/pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements-garmin-runtime.txt \
+    && apk del .garmin-install
+
+ENV PATH="/opt/garmin/bin:${PATH}" \
+    PYTHONDONTWRITEBYTECODE=1
+
 RUN addgroup -S hermes \
     && adduser -S -G hermes hermes \
     && chown -R hermes:hermes /app
@@ -52,7 +64,13 @@ COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar
 # seeding (boot log: "catalog unavailable").
 COPY --chown=hermes:hermes frontend/src/data/worldRaceCatalog.json ./frontend/src/data/worldRaceCatalog.json
 
+COPY tools/garmin_connect_download.py tools/garmin_wellness_download.py tools/check_garmin_runtime.py ./tools/
+
 USER hermes
+
+# Exercise both stdin/JSON workers with offline fixtures as the runtime user.
+# Missing scripts, dependencies, or incompatible provider APIs fail the build.
+RUN python tools/check_garmin_runtime.py
 
 # Lean JVM footprint for small containers. Without these flags the JVM sizes
 # its heap from container ergonomics, grows toward that ceiling, and never
@@ -63,7 +81,7 @@ USER hermes
 # rebuilding the image.
 ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
     -XX:MaxMetaspaceSize=128m \
-    -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 \
+    -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:-ShrinkHeapInSteps \
     -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080

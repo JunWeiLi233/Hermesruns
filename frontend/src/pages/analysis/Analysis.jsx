@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import Modal from '../../components/Modal';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
@@ -518,17 +519,7 @@ export default function Analysis() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button
-                type="button"
-                className="runner-shell-avatar"
-                aria-label={t('analysis.stitch_edit_profile')}
-                onClick={() => {
-                  setDisplayNameInput(profile?.displayName || '');
-                  setNameModalOpen(true);
-                }}
-              >
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile onOpenProfile={() => { setDisplayNameInput(profile?.displayName || ''); setNameModalOpen(true); }} />
             </div>
           </div>
         </header>

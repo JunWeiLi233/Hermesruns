@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../../api';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
@@ -461,9 +462,7 @@ export default function Settings() {
               <button type="button" className="runner-shell-icon-btn is-active" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayNameResolved}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

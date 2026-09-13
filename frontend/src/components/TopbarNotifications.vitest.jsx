@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,6 +37,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   window.localStorage.clear();
 });
 
@@ -50,6 +51,46 @@ function renderNotifications({ onOpenRuns = vi.fn() } = {}) {
 }
 
 describe('TopbarNotifications', () => {
+  it('dismisses on an outside touch without preventing the outside control action', async () => {
+    const user = userEvent.setup();
+    renderNotifications();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside control' }), { pointerType: 'touch' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps opening and dismissing functional when browser storage is blocked', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage unavailable'); });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage unavailable'); });
+    renderNotifications();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    await user.click(screen.getAllByRole('button', { name: /Dismiss tip:/ })[0]);
+    expect(screen.getAllByRole('article')).toHaveLength(2);
+  });
+
+  it('keeps dismissed tips gone after remount and hides the unread dot when none remain', async () => {
+    const user = userEvent.setup();
+    const mounted = renderNotifications();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    for (const button of screen.getAllByRole('button', { name: /Dismiss tip:/ })) await user.click(button);
+    mounted.unmount();
+    window.localStorage.removeItem('hermes.topbar_notifications_seen.v1');
+    const next = renderNotifications();
+    expect(next.container.querySelector('.runner-shell-notification-dot')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    expect(screen.getByRole('status')).toHaveTextContent("You're all caught up");
+  });
+
+  it('opens the existing Runs destination once and closes the sheet', async () => {
+    const user = userEvent.setup();
+    const onOpenRuns = vi.fn();
+    renderNotifications({ onOpenRuns });
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    await user.click(screen.getByRole('button', { name: 'Open runs' }));
+    expect(onOpenRuns).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
   it('moves focus into the close control when opened', async () => {
     const user = userEvent.setup();
     renderNotifications();

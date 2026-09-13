@@ -18,6 +18,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RuntimeFootprintConfigContractTests {
 
     @Test
+    void boundsTotalLocalCacheMemory() {
+        assertThat(loadMain("application.properties").getProperty("app.cache.local-max-total-bytes"))
+                .isEqualTo("${APP_CACHE_LOCAL_MAX_TOTAL_BYTES:16777216}");
+    }
+
+    @Test
     void boundsDefaultConnectionPool() {
         Properties properties = loadMain("application.properties");
         assertThat(properties.getProperty("spring.datasource.hikari.maximumPoolSize"))

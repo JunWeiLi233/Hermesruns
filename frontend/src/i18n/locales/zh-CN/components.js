@@ -2,6 +2,14 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "components": {
+    "account_menu": {
+      "title": "当前账户",
+      "signed_in": "已登录 Hermes",
+      "confirm_title": "退出 Hermes？",
+      "confirm_body": "退出后需要重新登录才能访问账户。已保存的运动记录会保留在账户中。",
+      "cancel": "取消",
+      "close": "关闭退出确认"
+    },
     "training_tips": {
       "open": "打开训练提示",
       "close": "关闭训练提示",

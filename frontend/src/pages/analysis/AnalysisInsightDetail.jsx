@@ -6,6 +6,7 @@ import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
 import { cachedApiJson } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
 import FooterNavLinks from '../../components/FooterNavLinks';
@@ -1443,9 +1444,7 @@ export default function AnalysisInsightDetail() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" aria-label={profile?.displayName || 'Hermes'} onClick={() => navigate('/profile')}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

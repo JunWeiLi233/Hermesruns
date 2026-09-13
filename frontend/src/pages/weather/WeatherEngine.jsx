@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
 import PageSkeleton from '../../components/PageSkeleton';
@@ -612,9 +613,7 @@ export default function WeatherEngine() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" aria-label={getDisplayName(profile, t('profile.default_name'))} onClick={() => navigate('/profile')}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

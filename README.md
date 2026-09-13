@@ -30,6 +30,11 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 
 ## Quick Start
 
+On phones, the signed-in app has a bottom navigation bar for Home, Today, Runs,
+and All pages. The menu opens the remaining training pages and Settings. Forms
+and map controls accommodate small screens, landscape orientation, and device
+safe areas; scrolling surfaces use lighter visual effects on narrow displays.
+
 ```powershell
 # Windows
 .\start_hermes.bat
@@ -41,6 +46,11 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 ```
 
 Open `http://localhost:8080`, sign up with email, and you're in — no database setup, no API keys. Development commands: [frontend/README.md](frontend/README.md) and [backend/README.md](backend/README.md). Production setup (PostgreSQL, OAuth, Stripe): [docs/setup.md](docs/setup.md).
+
+Garmin Connect workers require Python 3.10+ and
+`pip install -r tools/requirements-garmin-runtime.txt` for local development.
+The Docker image includes these dependencies and runs
+`python tools/check_garmin_runtime.py` with offline fixtures during its build.
 
 ## Feature Highlights
 

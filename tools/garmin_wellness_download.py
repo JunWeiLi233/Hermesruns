@@ -73,7 +73,7 @@ def _failure_result(exc, message):
 
 def _fetch_wellness(client, day_str):
     from garth.data import DailySummary
-    return _model_attributes(DailySummary.get(client, day_str))
+    return _model_attributes(DailySummary.get(day_str, client=client))
 
 
 def _build_wellness(summary_data):
@@ -102,7 +102,8 @@ def _build_wellness(summary_data):
 
 def _fetch_sleep(client, day_str):
     from garth.data import SleepData
-    return _model_attributes(SleepData.get(client, day_str))
+    data = SleepData.get(day_str, client=client)
+    return _model_attributes(getattr(data, "daily_sleep_dto", data))
 
 
 def _build_sleep(sleep_data):
@@ -126,7 +127,8 @@ def _build_sleep(sleep_data):
 
 def _fetch_hrv(client, day_str):
     from garth.data import HRVData
-    return _model_attributes(HRVData.get(client, day_str))
+    data = HRVData.get(day_str, client=client)
+    return _model_attributes(getattr(data, "hrv_summary", data))
 
 
 def _build_hrv(hrv_data):
@@ -146,7 +148,10 @@ def _build_hrv(hrv_data):
 
 def _fetch_stress(client, day_str):
     from garth.stats import DailyStress
-    return _model_attributes(DailyStress.get(client, day_str))
+    entries = DailyStress.list(day_str, 1, client=client)
+    if not entries:
+        return None
+    return _model_attributes(entries[0] if isinstance(entries, list) else entries)
 
 
 def _build_stress(stress_data):
@@ -163,7 +168,7 @@ def _build_stress(stress_data):
 
 def _fetch_body(client, day_str):
     from garth.data import WeightData
-    weights = WeightData.list(client, day_str)
+    weights = WeightData.list(day_str, 1, client=client)
     if not weights:
         return None
     entry = weights[0] if isinstance(weights, list) else weights

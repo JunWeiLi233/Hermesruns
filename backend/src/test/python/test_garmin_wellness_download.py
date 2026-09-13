@@ -27,7 +27,7 @@ class GarminWellnessDownloadTests(unittest.TestCase):
             ("wellness", "DailySummary", "get", data),
             ("sleep", "SleepData", "get", data),
             ("hrv", "HRVData", "get", data),
-            ("stress", "DailyStress", "get", stats),
+            ("stress", "DailyStress", "list", stats),
             ("body", "WeightData", "list", data),
         ):
             fetch = Mock(return_value=None)
@@ -85,6 +85,15 @@ class GarminWellnessDownloadTests(unittest.TestCase):
     def test_empty_weight_list_is_legitimate_no_data(self):
         self.fetches["body"].return_value = []
         self.assertIsNone(downloader._fetch_body(self.garth.client, "2026-09-01"))
+
+    def test_nested_sleep_and_hrv_models_are_unwrapped(self):
+        self.fetches["sleep"].return_value = SimpleNamespace(
+            daily_sleep_dto=SimpleNamespace(sleep_time_seconds=25200))
+        self.fetches["hrv"].return_value = SimpleNamespace(
+            hrv_summary=SimpleNamespace(last_night_avg=60))
+        result = self.run_main()
+        self.assertEqual(result["days"][0]["sleep"]["sleep_time_seconds"], 25200)
+        self.assertEqual(result["days"][0]["hrv"]["last_night_avg"], 60)
 
     def test_each_fetch_propagates_model_conversion_failure(self):
         for name, fetch in self.fetches.items():

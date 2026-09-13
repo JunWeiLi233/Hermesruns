@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -7,6 +7,7 @@ import { apiFetch, apiJson } from '../../api';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import ShoeBrandLogo, { hasShoeBrandLogo } from '../../components/ShoeBrandLogo';
@@ -74,7 +75,7 @@ function getCatalogModelLabel(item, lang) {
 const TYPE_LABELS = { daily: 'type_daily', speed: 'type_speed', race: 'type_race', trail: 'type_trail', stability: 'type_stability' };
 
 export default function AddShoes() {
-  const { isAuthenticated, email, logout } = useAuth();
+  const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -97,19 +98,8 @@ export default function AddShoes() {
   const [formMaxDist, setFormMaxDist] = useState('500');
   const [formPrimary, setFormPrimary] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [showExtraBrands, setShowExtraBrands] = useState(false);
-  const avatarMenuRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
-        setAvatarMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -325,34 +315,7 @@ export default function AddShoes() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <div
-                  className="user-menu-shell"
-                  ref={avatarMenuRef}
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape' && avatarMenuOpen) {
-                      event.preventDefault();
-                      setAvatarMenuOpen(false);
-                      event.currentTarget.querySelector('button')?.focus();
-                    }
-                  }}
-                >
-                <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label={profileLabel} onClick={() => setAvatarMenuOpen((prev) => !prev)}>
-                  {initials}
-                </button>
-                <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
-                  <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    {t('profile.change_name')}
-                  </button>
-                  <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    {t('profile.logout')}
-                  </button>
-                </div>
-              </div>
+              <TopbarUserMenu initials={initials} label={profileLabel} showProfile />
             </div>
           </div>
         </header>

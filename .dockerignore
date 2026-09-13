@@ -30,7 +30,12 @@ docs/architecture/ai-agents-workflow.*
 tmp
 .venv
 .worktrees
-tools
+# Keep developer tooling out; ship only the Garmin workers and their build check.
+tools/*
+!tools/garmin_connect_download.py
+!tools/garmin_wellness_download.py
+!tools/requirements-garmin-runtime.txt
+!tools/check_garmin_runtime.py
 node_modules
 frontend/node_modules
 frontend/.npm-cache

@@ -84,8 +84,9 @@ assert.deepEqual(flags, [
   '-Xmx640m',
   '-XX:+UseSerialGC',
   '-XX:MaxMetaspaceSize=128m',
-  '-XX:MinHeapFreeRatio=20',
-  '-XX:MaxHeapFreeRatio=40',
+  '-XX:MinHeapFreeRatio=5',
+  '-XX:MaxHeapFreeRatio=10',
+  '-XX:-ShrinkHeapInSteps',
   '-XX:+ExitOnOutOfMemoryError',
 ], 'Preserve bounded heap/metaspace, SerialGC, heap shrinking, and fail-fast OOM defaults.')
 

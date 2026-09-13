@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { apiJson, getBackendBaseUrl } from '../../api';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import PageSkeleton from '../../components/PageSkeleton';
@@ -918,14 +919,7 @@ export default function Heatmap() {
               <button type="button" className="heatmap-page-primary-btn is-overlay" onClick={() => navigate('/settings')}>
                 {t('heatmap.page_open_settings')}
               </button>
-              <button
-                type="button"
-                className="runner-shell-avatar heatmap-page-avatar"
-                aria-label={profile?.displayName || 'Hermes'}
-                onClick={() => navigate('/profile')}
-              >
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile className="heatmap-page-avatar" />
             </div>
           </div>
         </header>
@@ -937,7 +931,7 @@ export default function Heatmap() {
                 <button
                   key={item.key}
                   type="button"
-                  className={cx('heatmap-page-utility-btn', item.active && 'is-active')}
+                  className={cx('heatmap-page-utility-btn', 'heatmap-page-route-link', item.active && 'is-active')}
                   onClick={() => navigate(item.route)}
                   aria-label={item.label}
                   aria-current={item.active ? 'page' : undefined}

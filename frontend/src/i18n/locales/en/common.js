@@ -2,6 +2,12 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "common": {
+    "mobile_navigation": "Main navigation",
+    "mobile_home": "Home",
+    "mobile_today": "Today",
+    "mobile_runs": "Runs",
+    "mobile_pages": "All pages",
+    "mobile_close": "Close menu",
     "app_crashed_title": "Something went wrong",
     "app_crashed_body": "Reload the page and try again. If this keeps happening, come back in a moment.",
     "reload": "Reload",

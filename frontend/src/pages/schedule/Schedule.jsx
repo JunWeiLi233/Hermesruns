@@ -7,6 +7,7 @@ import { apiJson, apiFetch } from '../../api';
 import { cachedApiJson } from '../../api/resourceCache';
 import 'leaflet/dist/leaflet.css';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
@@ -1048,9 +1049,7 @@ export default function Schedule() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" aria-label={displayName} onClick={() => navigate('/profile')}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

@@ -2,6 +2,14 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "components": {
+    "account_menu": {
+      "title": "Your account",
+      "signed_in": "Signed in to Hermes",
+      "confirm_title": "Log out of Hermes?",
+      "confirm_body": "You'll need to sign in again to access your account. Your saved activities will stay in your account.",
+      "cancel": "Cancel",
+      "close": "Close sign-out confirmation"
+    },
     "training_tips": {
       "open": "Open training tips",
       "close": "Close training tips",

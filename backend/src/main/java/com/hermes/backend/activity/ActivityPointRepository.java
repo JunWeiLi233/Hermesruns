@@ -106,16 +106,23 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             """)
     List<ActivityPoint> findByActivityOrderBySequenceIndexAsc(@Param("activity") Activity activity);
 
+    // Bound the final sort to one valid point per activity, not the entire GPS history.
     @Query(value = """
             select ap.latitude, ap.longitude
-            from activity_points ap
-            join activities a on a.id = ap.activity_id
+            from activities a
+            join activity_points ap on ap.id = (
+                select candidate.id
+                from activity_points candidate
+                where candidate.activity_id = a.id
+                  and candidate.latitude is not null
+                  and candidate.longitude is not null
+                  and candidate.latitude between -90 and 90
+                  and candidate.longitude between -180 and 180
+                order by candidate.sequence_index desc
+                limit 1
+            )
             where a.runner_id = :runnerId
               and a.activity_type = :activityType
-              and ap.latitude is not null
-              and ap.longitude is not null
-              and ap.latitude between -90 and 90
-              and ap.longitude between -180 and 180
             order by coalesce(a.start_time, a.created_at) desc, ap.sequence_index desc
             limit 1
             """, nativeQuery = true)
