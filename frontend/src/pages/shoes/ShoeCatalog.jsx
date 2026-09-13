@@ -4,6 +4,7 @@ import { apiJson } from '../../api';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import ShoeBrandLogo from '../../components/ShoeBrandLogo';
 import shoeCatalog from '../../data/shoeCatalog';
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,7 +54,7 @@ function getCatalogModelLabel(item, lang) {
 }
 
 export default function ShoeCatalog() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
@@ -64,9 +65,7 @@ export default function ShoeCatalog() {
   const [selectedModel, setSelectedModel] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [brandsExpanded, setBrandsExpanded] = useState(false);
-  const avatarMenuRef = useRef(null);
   const seriesSectionRef = useRef(null);
 
   const viewedBrandKeys = useMemo(() => {
@@ -87,15 +86,6 @@ export default function ShoeCatalog() {
     } catch { /* ignore */ }
   };
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (avatarMenuRef.current && !avatarMenuRef.current.contains(e.target)) {
-        setAvatarMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -266,34 +256,7 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <div
-                  className="user-menu-shell"
-                  ref={avatarMenuRef}
-                  onBlur={(event) => {
-                    if (!event.currentTarget.contains(event.relatedTarget)) setAvatarMenuOpen(false);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape' && avatarMenuOpen) {
-                      event.preventDefault();
-                      setAvatarMenuOpen(false);
-                      event.currentTarget.querySelector('button')?.focus();
-                    }
-                  }}
-                >
-              <button type="button" className="runner-shell-avatar" aria-expanded={avatarMenuOpen} aria-label="Profile" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
-                H
-              </button>
-              <div className={`user-menu-dropdown${avatarMenuOpen ? ' visible' : ''}`}>
-                <button type="button" className="user-menu-item" onClick={() => { setAvatarMenuOpen(false); navigate('/profile'); }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  {t('profile.change_name')}
-                </button>
-                <button type="button" className="user-menu-item user-menu-item-logout" onClick={() => { setAvatarMenuOpen(false); logout(); }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                  {t('profile.logout')}
-                </button>
-              </div>
-            </div>
+            <TopbarUserMenu initials="H" label={t('components.account_menu.title')} showProfile />
           </div>
         </header>
 

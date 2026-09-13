@@ -81,7 +81,7 @@ RUN python tools/check_garmin_runtime.py
 # rebuilding the image.
 ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
     -XX:MaxMetaspaceSize=128m \
-    -XX:MinHeapFreeRatio=20 -XX:MaxHeapFreeRatio=40 \
+    -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:-ShrinkHeapInSteps \
     -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080

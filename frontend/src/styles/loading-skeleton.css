@@ -3467,3 +3467,228 @@ body.theme-high-contrast .page-skeleton__wake-note {
   color: rgba(247, 240, 232, 0.82);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
 }
+
+/* Current-page parity. Keep these eager rules independent of the lazy route
+   CSS, so loading a stylesheet cannot change the skeleton's geometry. */
+.page-skeleton, .page-skeleton * { box-sizing: border-box; }
+.page-skeleton__mobile-nav { display: none; }
+.page-skeleton--runner .page-skeleton__rail { padding: 20px 10px 18px; }
+.page-skeleton--runner .page-skeleton__topbar { min-height: 88px; padding-inline: 42px; gap: 16px; border: 0; }
+.page-skeleton--profile .page-skeleton__topbar { min-height: 76px; padding-inline: clamp(20px, 2.4vw, 38px); }
+.page-skeleton__topbar-left { flex-direction: column; align-items: flex-start; gap: 0; }
+.page-skeleton__topbar-pill { width: 104px; height: 17px; border-radius: 5px; }
+.page-skeleton__parent-crumb { display: flex; align-items: center; height: 44px; width: 62px; }
+.page-skeleton__parent-crumb > .page-skeleton__block { width: 100%; height: 9px; border-radius: 4px; }
+.page-skeleton--runner:not(.page-skeleton--profile) .page-skeleton__canvas {
+  width: calc(100% - clamp(40px, 5vw, 72px)); max-width: none; margin: 0 0 0 3%;
+  padding: clamp(24px, 3vw, 48px) 0 clamp(64px, 7vw, 112px); display: grid; gap: clamp(18px, 2.2vw, 32px);
+}
+.page-skeleton--runner .page-skeleton__shoes-screen,
+.page-skeleton--runner .page-skeleton__races-content { width: 100%; max-width: none; margin: 0; }
+.page-skeleton--runs .page-skeleton__canvas { width: 100% !important; margin: 0 !important; padding: 28px clamp(24px, 5.3vw, 80px) 60px !important; }
+.page-skeleton--runs .page-skeleton__runs-shell { width: 100%; max-width: none; margin: 0; gap: 22px; }
+.page-skeleton--analysis .page-skeleton__canvas { width: calc(100% - 116px) !important; margin: 0 auto !important; padding: 47px 0 80px !important; gap: 12px !important; }
+.page-skeleton--analysis .page-skeleton__analysis-cockpit { gap: 12px; }
+.page-skeleton--analysis .page-skeleton__analysis-reference-grid { gap: 12px; }
+.page-skeleton--runner:is(.page-skeleton--analysis-load, .page-skeleton--analysis-intensity, .page-skeleton--analysis-injury, .page-skeleton--analysis-coach, .page-skeleton--analysis-insight) .page-skeleton__canvas {
+  width: 100%; margin: 0; padding: 28px 36px 68px; gap: 28px;
+}
+.page-skeleton__analysis-load { width: 100%; max-width: 1240px; margin: 0 auto; padding: 28px clamp(20px, 3vw, 48px) 60px; }
+.page-skeleton--add-shoes .page-skeleton__canvas { width: calc(100% - 32px) !important; margin: 0 16px !important; padding: 24px 28px 52px !important; gap: 24px !important; }
+.page-skeleton--settings .page-skeleton__canvas { width: 100% !important; margin: 0 !important; padding: 24px 36px 52px !important; gap: 22px !important; }
+.page-skeleton--settings .page-skeleton__settings-identity-hero { display: flex; align-items: center; justify-content: space-between; min-height: 170px; padding: 28px 32px; }
+.page-skeleton--rewards .page-skeleton__canvas { width: 100% !important; margin: 0 !important; padding: 28px clamp(20px, 3vw, 48px) 60px !important; gap: 24px !important; }
+.page-skeleton--rewards .page-skeleton__canvas { display: flex !important; flex-direction: column; }
+.page-skeleton--rewards .page-skeleton__rewards-intro { width: 100%; max-width: 760px; padding: 8px 0; min-height: 130px; gap: 7px; }
+.page-skeleton--profile .page-skeleton__profile-editorial-hero { padding: 8px 28px; }
+.page-skeleton--profile .page-skeleton__profile-today-content { min-height: 320px; }
+.page-skeleton--weather .page-skeleton__weather-metrics { gap: 16px; }
+.page-skeleton--weather .page-skeleton__weather-metric { min-height: 124px; padding: 12px; }
+.page-skeleton--weather .page-skeleton__weather-icon { width: 32px; height: 32px; margin: 0 auto; }
+.page-skeleton--weather .page-skeleton__weather-metric-label { height: 10px; margin: 8px auto 0; }
+.page-skeleton--weather .page-skeleton__weather-temp { margin-top: 8px; }
+.page-skeleton__heatmap-topbar { min-height: 76px; }
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton:is(.page-skeleton--runner, .page-skeleton--admin) { background: #17191d; }
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner :is(.page-skeleton__rail, .page-skeleton__topbar) { background: #232321; }
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skeleton__panel { background: var(--hermes-skeleton-surface); }
+@media (min-width: 1181px) {
+  .page-skeleton--analysis .page-skeleton__analysis-primary { min-height: 870px; }
+}
+.page-skeleton--muscle-training .page-skeleton__canvas { width: 100% !important; margin: 0 0 0 16px !important; padding: 0 !important; display: block !important; }
+.page-skeleton__muscle-content { display: flex; flex-direction: column; gap: 24px; padding: 28px clamp(20px, 3vw, 48px) 60px; }
+.page-skeleton--schedule .page-skeleton__schedule-command { margin-top: 0; min-height: 227px; }
+
+/* Today Run: workout + timeline, followed by readiness, coach, fitness, load. */
+.page-skeleton--today-run .page-skeleton__canvas { width: 100% !important; margin: 0 !important; padding: clamp(20px, 1.5vw, 28px) clamp(24px, 4vw, 64px) 52px !important; gap: 18px !important; }
+.page-skeleton--today-run .page-skeleton__panel { padding: 28px 32px; border: 0; border-radius: 16px; box-shadow: none; }
+.page-skeleton__session-hero { min-height: 448px; }
+.page-skeleton__session-kicker { width: 150px; height: 13px; border-radius: 4px; }
+.page-skeleton__session-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(32px, 5vw, 80px); margin-top: 26px; }
+.page-skeleton__session-workout { min-width: 0; }
+.page-skeleton__session-title { width: 70%; height: 40px; margin-bottom: 12px; border-radius: 8px; }
+.page-skeleton__session-target { width: 60%; height: 70px; margin: 24px 0 22px; border-radius: 10px; }
+.page-skeleton__session-targets { display: flex; gap: 32px; }
+.page-skeleton__session-targets > div { display: grid; gap: 9px; width: 112px; }
+.page-skeleton__session-targets .page-skeleton__block { height: 14px; border-radius: 4px; }
+.page-skeleton__session-targets .page-skeleton__block:last-child { height: 24px; }
+.page-skeleton__session-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+.page-skeleton__session-actions .page-skeleton__block { width: 148px; height: 44px; border-radius: 999px; }
+.page-skeleton__session-timeline { min-width: 0; padding-left: 32px; border-left: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__session-timeline .page-skeleton__row { min-height: 88px; padding: 16px 0; }
+.page-skeleton__session-support { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.page-skeleton__session-score { width: 86px; height: 46px; margin: 22px 0; border-radius: 8px; }
+.page-skeleton__session-disclosure { width: 100%; height: 40px; margin-block: 18px; border-radius: 8px; }
+.page-skeleton__session-context { min-height: 188px; }
+
+/* Public account pages share their real shell classes. The fallback values
+   here also work before auth-entry.css finishes downloading. */
+.page-skeleton:is(.page-skeleton--auth, .page-skeleton--signup, .page-skeleton--forgot-password, .page-skeleton--admin-login) { display: block; padding: 0; }
+.page-skeleton__auth-shell { display: grid; grid-template-columns: minmax(0, .95fr) minmax(420px, .78fr); gap: clamp(28px, 5vw, 80px); min-height: 100dvh; width: 100%; }
+.page-skeleton .page-skeleton__auth-brand { display: flex; align-self: stretch; justify-content: center; width: 100%; max-width: none; padding: 72px 3vw; }
+.page-skeleton__auth-brand > .auth-flow-brand-inner { position: relative; display: flex; flex-direction: column; justify-content: center; width: 100%; max-width: 660px; min-height: calc(100dvh - 96px); padding: 0 0 144px 96px; }
+.page-skeleton__auth-brand-head { position: absolute; top: 34px; left: 44px; display: grid; gap: 8px; }
+.page-skeleton__auth-wordmark-row { display: flex; align-items: center; gap: 10px; }
+.page-skeleton__auth-brand-glyph { width: 30px; height: 30px; border-radius: 8px; }
+.page-skeleton__auth-wordmark { width: 180px; height: 30px; }
+.page-skeleton .page-skeleton__auth-carousel { margin: 0; width: 100%; max-width: 460px; align-self: center; }
+.page-skeleton__auth-carousel .auth-flow-hero { margin: 0; font-size: clamp(2.15rem, 9.2vw, 3.5rem); line-height: .92; }
+.page-skeleton .page-skeleton__auth-title { width: 100%; height: .92em; margin: 0 0 4px; border-radius: 8px; }
+.page-skeleton .page-skeleton__auth-title--short { width: 82%; }
+.page-skeleton .page-skeleton__auth-carousel .auth-flow-hero { margin-inline: auto; }
+.page-skeleton .page-skeleton__auth-title { margin-block: 0; margin-inline: auto; }
+.page-skeleton .page-skeleton__auth-copy > .page-skeleton__block { margin-inline: auto; }
+.page-skeleton .page-skeleton__auth-copy { width: 100%; margin-top: 12px; gap: 8px; }
+.page-skeleton .page-skeleton__auth-copy > .page-skeleton__block { height: 14px; }
+.page-skeleton .page-skeleton__auth-formside { align-self: stretch; justify-content: center; align-items: center; width: 100%; padding: 52px 0; gap: 18px; }
+.page-skeleton .page-skeleton__auth-card { width: min(100%, 560px); padding: 44px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.page-skeleton--signup .page-skeleton__auth-card { padding: 36px 38px; }
+.page-skeleton .page-skeleton__auth-header { display: block; margin: 0 0 24px; }
+.page-skeleton__auth-header h3 { margin: 0 0 12px; }
+.page-skeleton .page-skeleton__auth-card-title { width: 78%; height: 36px; }
+.page-skeleton .page-skeleton__auth-card-copy { width: 100%; height: auto; gap: 8px; }
+.page-skeleton__auth-card-copy > .page-skeleton__block { height: 14px; border-radius: 6px; }
+.page-skeleton .page-skeleton__auth-form { gap: 18px; }
+.page-skeleton .page-skeleton__auth-label-row { min-height: 18px; }
+.page-skeleton:not(.page-skeleton--forgot-password) .page-skeleton__auth-label-row { min-height: 30px; }
+.page-skeleton__auth-label-row:has(.page-skeleton__auth-forgot) { min-height: 44px !important; }
+.page-skeleton__auth-strength-reserve { height: 2px; }
+.page-skeleton .page-skeleton__auth-field { height: 56px; border-radius: 8px; }
+.page-skeleton .page-skeleton__auth-button { height: 60px; margin-top: 0; border-radius: 8px; }
+.page-skeleton .page-skeleton__auth-social { min-height: 52px; margin-top: 22px; gap: 8px; }
+.page-skeleton__auth-social > .page-skeleton__block { height: 48px !important; border-radius: 8px; }
+.page-skeleton .page-skeleton__auth-signup { align-items: center; min-height: 44px; margin-top: 12px; }
+.page-skeleton .page-skeleton__auth-legal { align-items: center; min-height: 44px; gap: 22px; padding-bottom: 0; }
+.page-skeleton--forgot-password .page-skeleton__auth-brand-head { position: static; margin-bottom: 28px; }
+.page-skeleton--forgot-password .page-skeleton__auth-brand > .auth-flow-brand-inner { padding: 0; }
+.page-skeleton:not(.page-skeleton--forgot-password) .page-skeleton__auth-legal { margin-top: 10px; }
+.page-skeleton__auth-header .page-skeleton__auth-card-copy { gap: 10px; }
+.page-skeleton__auth-card-copy > .page-skeleton__block { height: 15px; }
+.page-skeleton--signup .page-skeleton__auth-card-copy > .page-skeleton__block:nth-child(4) { display: none; }
+.page-skeleton--forgot-password .page-skeleton__auth-shell { grid-template-columns: minmax(520px, .98fr) minmax(520px, 1.02fr); gap: 0; }
+.page-skeleton--forgot-password .page-skeleton__auth-brand { padding: clamp(56px, 7vw, 92px) clamp(32px, 5vw, 78px); }
+.page-skeleton--forgot-password .page-skeleton__auth-formside { padding: 56px clamp(16px, 2vw, 34px) 44px clamp(20px, 4vw, 64px); gap: 20px; align-items: flex-end; }
+.page-skeleton--forgot-password .page-skeleton__auth-card { width: min(100%, 520px); min-height: 860px; padding: 46px; }
+.page-skeleton--forgot-password .page-skeleton__auth-title:nth-child(3) { display: none; }
+
+/* Match the current landing hero scale and compact feature summaries. */
+.page-skeleton--landing { --hermes-skeleton-base: rgba(116, 102, 91, .11); --hermes-skeleton-highlight: rgba(255, 255, 255, .76); --hermes-skeleton-surface: rgba(255, 252, 247, .76); background: #f7f5f1; }
+.page-skeleton__landing-header { min-height: 72px; }
+.page-skeleton__landing-actions > .page-skeleton__block { height: 44px; }
+.page-skeleton__landing-hero { min-height: calc(100svh - 72px); gap: clamp(24px, 4vw, 80px); }
+.page-skeleton__landing-title { height: clamp(44px, 6.4vw, 96px); }
+.page-skeleton__landing-feature-preview > .page-skeleton__panel { min-height: 280px; }
+
+@media (max-width: 1080px) {
+  .page-skeleton__auth-shell { grid-template-columns: 1fr; }
+  .page-skeleton--forgot-password .page-skeleton__auth-shell { grid-template-columns: 1fr; }
+  .page-skeleton .page-skeleton__auth-brand { padding: 38px 28px 8px; }
+  .page-skeleton__auth-brand > .auth-flow-brand-inner { min-height: 0; padding: 0; gap: 24px; }
+  .page-skeleton .page-skeleton__auth-brand-head { position: static; }
+  .page-skeleton .page-skeleton__auth-formside { padding: 14px 6px 34px; }
+}
+
+@media (max-width: 860px), (max-width: 1100px) and (pointer: coarse) {
+  .page-skeleton--runner .page-skeleton__rail { display: none; }
+  .page-skeleton--runner .page-skeleton__main { width: 100%; margin: 0; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .page-skeleton--runner .page-skeleton__topbar { min-height: 64px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; gap: 10px; }
+  .page-skeleton--muscle-training .page-skeleton__topbar { min-height: 68px; }
+  .page-skeleton__topbar-action, .page-skeleton__avatar { width: 44px; height: 44px; }
+  .page-skeleton__topbar-actions { gap: 8px; }
+  .page-skeleton__parent-crumb + .page-skeleton__topbar-pill { height: 17.125px; }
+  .page-skeleton--runner:not(.page-skeleton--profile) .page-skeleton__canvas { width: calc(100% - 28px); margin: 0 auto; padding: 22px 0 64px; gap: 18px; }
+  .page-skeleton--runs .page-skeleton__canvas { width: 100% !important; padding: 22px 16px 40px !important; }
+  .page-skeleton--analysis .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 22px 0 64px !important; gap: 18px !important; }
+  .page-skeleton--analysis .page-skeleton__analysis-cockpit { padding: 20px; gap: 12px; }
+  .page-skeleton--runner:is(.page-skeleton--analysis-load, .page-skeleton--analysis-intensity, .page-skeleton--analysis-injury, .page-skeleton--analysis-coach, .page-skeleton--analysis-insight) .page-skeleton__canvas { width: 100%; padding: 20px 16px 48px; }
+  .page-skeleton--add-shoes .page-skeleton__canvas { width: calc(100% - 28px) !important; margin: 0 auto !important; padding: 14px 0 52px !important; gap: 16px !important; }
+  .page-skeleton--settings .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 18px 16px 42px !important; }
+  .page-skeleton--runner:is(.page-skeleton--settings, .page-skeleton--today-run, .page-skeleton--rewards) .page-skeleton__canvas { margin-inline: auto !important; }
+  .page-skeleton--settings .page-skeleton__settings-identity-hero { flex-direction: column; align-items: stretch; min-height: 358px; padding: 24px 20px; }
+  .page-skeleton--rewards .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 20px 16px 44px !important; gap: 16px !important; }
+  .page-skeleton--rewards .page-skeleton__rewards-intro { min-height: 118px; }
+  .page-skeleton--rewards .page-skeleton__rewards-intro, .page-skeleton--rewards .page-skeleton__rewards-intro > * { min-width: 0; max-width: 100%; }
+  .page-skeleton--runs .page-skeleton__runs-shell { min-width: 0; max-width: 100%; }
+  .page-skeleton--muscle-training .page-skeleton__canvas { width: 100% !important; margin: 0 !important; }
+  .page-skeleton__muscle-content { padding: 22px 14px 44px; gap: 20px; }
+  .page-skeleton--today-run .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 20px 16px 36px !important; gap: 14px !important; }
+  .page-skeleton__mobile-nav { position: fixed; inset: auto 0 0; z-index: 79; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); background: #fffdf9; }
+  .page-skeleton__mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; gap: 4px; padding: 4px; border-radius: 12px; }
+  .page-skeleton__mobile-nav-item.is-active { background: #f9e8e1; }
+  .page-skeleton__mobile-nav-icon { width: 22px; height: 22px; border-radius: 5px; }
+  .page-skeleton__mobile-nav-label { width: 38px; height: 12px; border-radius: 4px; }
+  body:has(.mobile-runner-nav) .page-skeleton__mobile-nav { display: none; }
+  body.theme-midnight .page-skeleton__mobile-nav { background: #232321; }
+  body.theme-midnight .page-skeleton__mobile-nav-item.is-active { background: #49342d; }
+  .page-skeleton--heatmap-page { min-height: 100dvh; }
+  .page-skeleton--heatmap-page .page-skeleton__heatmap-map-shell { height: calc(100dvh - 76px - env(safe-area-inset-bottom)); min-height: 0; }
+  .page-skeleton--heatmap-page .page-skeleton__heatmap-canvas { height: 100%; min-height: 0; }
+  .page-skeleton__heatmap-topbar { gap: 6px; min-height: 0; }
+  .page-skeleton__heatmap-utility-rail > .page-skeleton__block:nth-child(-n+9), .page-skeleton__heatmap-utility-divider { display: none; }
+}
+
+@media (max-width: 760px) {
+  .page-skeleton--profile .page-skeleton__profile-content { gap: 20px; padding-bottom: 40px; }
+  .page-skeleton--profile .page-skeleton__profile-editorial-hero { min-height: 174px; padding: 18px 20px; gap: 16px; }
+  .page-skeleton--profile .page-skeleton__profile-greeting { height: 36px; }
+  .page-skeleton--profile .page-skeleton__profile-readiness { align-self: flex-start; }
+  .page-skeleton--profile .page-skeleton__profile-today-content { min-height: 475px; }
+  .page-skeleton__session-hero { min-height: 680px; }
+  .page-skeleton--today-run .page-skeleton__panel { padding: 24px 20px; }
+  .page-skeleton__session-layout { grid-template-columns: 1fr; gap: 28px; margin-top: 20px; }
+  .page-skeleton__session-timeline { padding: 22px 0 0; border-left: 0; border-top: 1px solid var(--hermes-skeleton-line); }
+  .page-skeleton__session-target { height: 44px; margin-block: 18px; }
+  .page-skeleton__session-targets { gap: 18px; }
+  .page-skeleton__session-actions > .page-skeleton__block { flex: 1; width: auto; min-width: 0; }
+  .page-skeleton__session-timeline .page-skeleton__row { min-height: 76px; padding-block: 10px; }
+  .page-skeleton--schedule .page-skeleton__schedule-command { min-height: 195px; padding: 22px 20px; gap: 18px; }
+  .page-skeleton--schedule .page-skeleton__schedule-title { height: 36px; }
+  .page-skeleton--schedule .page-skeleton__schedule-command-metrics { gap: 18px; }
+  .page-skeleton--schedule .page-skeleton__schedule-command-metric { min-width: 0; }
+  .page-skeleton--schedule .page-skeleton__schedule-command-metric-value { width: 70px; height: 26px; }
+  .page-skeleton__session-support { grid-template-columns: 1fr; gap: 14px; }
+  .page-skeleton .page-skeleton__auth-brand { padding: 30px 18px 8px; }
+  .page-skeleton .page-skeleton__auth-brand > .auth-flow-brand-inner { transform: none; align-items: stretch; }
+  .page-skeleton .page-skeleton__auth-carousel { max-width: none; }
+  .page-skeleton .page-skeleton__auth-card { padding: 30px 20px; width: 100%; }
+  .page-skeleton__auth-shell { gap: 12px; }
+  .page-skeleton .page-skeleton__auth-social { grid-template-columns: 1fr; min-height: 104px; }
+  .page-skeleton .page-skeleton__auth-card-title { height: 28px; }
+  .page-skeleton .page-skeleton__auth-button { height: 44px; min-height: 44px; }
+  .page-skeleton--signup .page-skeleton__auth-card-copy > .page-skeleton__block:nth-child(4) { display: block; }
+  .page-skeleton:not(.page-skeleton--forgot-password) .page-skeleton__auth-legal { min-height: 92px; }
+  .page-skeleton--forgot-password .page-skeleton__auth-brand { padding: 40px 20px 4px; }
+  .page-skeleton--forgot-password .page-skeleton__auth-brand > .auth-flow-brand-inner { min-height: 232px; gap: 22px; }
+  .page-skeleton--forgot-password .page-skeleton__auth-brand-head { margin-bottom: 0; }
+  .page-skeleton--forgot-password .page-skeleton__auth-formside { padding: 10px 18px 20px; }
+  .page-skeleton--forgot-password .page-skeleton__auth-card { width: 100%; min-height: 715px; padding: 26px 20px 24px; }
+  .page-skeleton--forgot-password .page-skeleton__auth-title:nth-child(3) { display: block; }
+  .page-skeleton--forgot-password .page-skeleton__auth-carousel .auth-flow-hero { font-size: 33.15px; line-height: .96; }
+  .page-skeleton__landing-art { order: 0; }
+  .page-skeleton__landing-title { height: clamp(36px, 11.7vw, 68px); }
+  .page-skeleton__landing-header, .page-skeleton__landing-main { width: calc(100% - 36px); }
+  .page-skeleton__landing-actions > .page-skeleton__block:first-child { display: block; width: 60px; }
+  .page-skeleton__landing-actions > .page-skeleton__block:last-child { width: 72px; }
+  .page-skeleton__landing-brand { width: 74px; }
+  .page-skeleton__landing-brand-glyph { width: 28px; height: 28px; }
+  .page-skeleton__landing-feature-preview > .page-skeleton__panel { min-height: 220px; }
+}

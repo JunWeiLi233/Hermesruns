@@ -6,6 +6,7 @@ import { apiFetch, apiJson } from '../../api';
 import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import RunsSubpageNav from '../../components/RunsSubpageNav';
@@ -901,9 +902,7 @@ export default function RunDetail() {
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
-                  {initials}
-                </button>
+                <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
               </div>
             </div>
           </header>

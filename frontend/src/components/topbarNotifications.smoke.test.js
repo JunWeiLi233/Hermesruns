@@ -70,20 +70,20 @@ assert.doesNotMatch(
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*border:\s*1px solid var\(--runner-profile-line\);[\s\S]*var\(--runner-profile-card-strong\) !important;/,
-  'The training-message popover should use the Profile paper, border, and surface tokens.'
+  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*background:\s*var\(--notification-sheet\) !important;/,
+  'The Apple-inspired notification sheet should use a readable, theme-aware surface.'
 );
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*34px minmax\(0, 1fr\) 28px;[\s\S]*border-radius:\s*16px;[\s\S]*box-shadow:\s*none !important;/,
-  'Training messages should use compact icon-led rows instead of oversized nested cards.'
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*grid-template-columns:\s*34px minmax\(0, 1fr\) 44px;[\s\S]*border-radius:\s*20px;[\s\S]*box-shadow:\s*none !important;/,
+  'Notification rows should reserve a 44px dismissal target without nesting shadows.'
 );
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*background:\s*transparent !important;/,
-  'Training-message rows should sit directly on the notification paper without nested panel strips.'
+  /\.runner-shell-page \.runner-shell-notification-card\s*\{[\s\S]*background:\s*var\(--notification-row-bg\) !important;/,
+  'Rounded notification rows should use the shared quiet material for their grouping.'
 );
 
 assert.doesNotMatch(
@@ -94,13 +94,13 @@ assert.doesNotMatch(
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-delete\s*\{[\s\S]*width:\s*28px;[\s\S]*border-radius:\s*999px;[\s\S]*background:\s*transparent !important;[\s\S]*var\(--runner-profile-muted\) !important;/,
+  /\.runner-shell-page \.runner-shell-notification-delete\s*\{[\s\S]*width:\s*44px;[\s\S]*border-radius:\s*999px;[\s\S]*background:\s*transparent !important;[\s\S]*var\(--runner-profile-muted\) !important;/,
   'Delete actions should be quiet circular controls that reveal the destructive accent on interaction.'
 );
 
 assert.match(
   profileStyleSource,
-  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*backdrop-filter:\s*blur\(26px\) saturate\(135%\);[\s\S]*animation:\s*runner-shell-notification-in/,
+  /\.runner-shell-page \.runner-shell-notification-popover\s*\{[\s\S]*backdrop-filter:\s*blur\(20px\) saturate\(125%\);[\s\S]*animation:\s*runner-shell-notification-in/,
   'The notification sheet should use the shared material treatment with a restrained entrance.'
 );
 
@@ -114,6 +114,12 @@ assert.match(
   profileStyleSource,
   /\.runner-shell-page \.runner-shell-notification-list\s*\{[\s\S]*max-height:\s*min\(52vh, 390px\);[\s\S]*overflow-y:\s*auto;/,
   'The notification list should remain compact and scroll internally when more messages arrive.'
+);
+
+assert.match(
+  profileStyleSource,
+  /\.runner-shell-topbar:has\(\.runner-shell-notification-wrap\.is-open\)\s*\{\s*z-index:\s*90\s*!important;/,
+  'The open notification header must paint above the page canvas on phones.'
 );
 
 console.log('[PASS] Topbar notification contrast, wrapping, and delete guardrails passed.');

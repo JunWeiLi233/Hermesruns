@@ -10,6 +10,7 @@ import { apiFetch, apiJson, getBackendBaseUrl } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import AppIcon from '../../components/AppIcon';
+import TopbarUserMenu from '../../components/TopbarUserMenu';
 import PageSkeleton from '../../components/PageSkeleton';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../../utils/format';
@@ -1316,9 +1317,7 @@ const Runs = memo(function Runs() {
                 <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                   <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
                 </button>
-                <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
-                  {initials}
-                </button>
+                <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
               </div>
             </div>
           </header>
@@ -1481,9 +1480,7 @@ const Runs = memo(function Runs() {
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={displayName}>
-                {initials}
-              </button>
+              <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

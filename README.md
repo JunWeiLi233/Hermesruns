@@ -30,6 +30,11 @@ Data sources: **Strava**, **Garmin Connect**, **COROS**, and manual file imports
 
 ## Quick Start
 
+On phones, the signed-in app has a bottom navigation bar for Home, Today, Runs,
+and All pages. The menu opens the remaining training pages and Settings. Forms
+and map controls accommodate small screens, landscape orientation, and device
+safe areas; scrolling surfaces use lighter visual effects on narrow displays.
+
 ```powershell
 # Windows
 .\start_hermes.bat

@@ -1,0 +1,137 @@
+/* Shared avatar exit flow, matching the quiet notification surfaces. */
+.account-menu-panel {
+  --account-ink: #1d1d1f;
+  --account-muted: #67676c;
+  --account-surface: #f6f6f8;
+  --account-row: #ebebef;
+  --account-danger: #ba332f;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 2;
+  width: min(268px, calc(100vw - 28px));
+  padding: 8px;
+  border: 1px solid rgb(60 60 67 / 8%);
+  border-radius: 22px;
+  background: var(--account-surface);
+  color: var(--account-ink);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 14%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-body);
+  white-space: normal;
+  animation: account-menu-appear 140ms ease-out;
+}
+.account-menu-identity { display: flex; align-items: center; gap: 12px; padding: 12px 10px 16px; }
+.account-menu-monogram {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--account-row);
+  font-size: 15px;
+  font-weight: 600;
+}
+.account-menu-identity strong { font-size: 14px; font-weight: 600; font-style: normal; color: var(--account-ink); }
+.account-menu-identity p { margin: 3px 0 0; font-size: 12px; color: var(--account-muted); }
+.account-menu-panel .account-menu-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--account-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.account-menu-action svg { width: 18px; height: 18px; flex: 0 0 18px; }
+.account-menu-action svg:last-child { margin-left: auto; width: 14px; opacity: .5; }
+.account-menu-panel .account-menu-action--logout { color: var(--account-danger); }
+.account-menu-panel .account-menu-action:hover { background: var(--account-row); }
+.account-menu-action:focus-visible { outline: 2px solid var(--account-ink); outline-offset: -2px; }
+
+body .modal-shell.logout-confirm-shell {
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: rgb(20 20 24 / 36%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body .logout-confirm-shell .modal-card.logout-confirm-card {
+  --account-ink: #1d1d1f;
+  --account-muted: #67676c;
+  --account-surface: #fbfbfd;
+  --account-row: #ededf1;
+  --account-danger: #ba332f;
+  position: relative;
+  width: min(360px, 100%);
+  max-height: calc(100dvh - 32px);
+  margin: 0;
+  padding: 28px 20px 20px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 28px;
+  background: var(--account-surface) !important;
+  color: var(--account-ink);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 18%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", var(--font-body);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body .logout-confirm-card .modal-header { display: block; margin: 0; padding: 0; border: 0; text-align: center; }
+body .logout-confirm-card .modal-header-main { display: grid; justify-items: center; gap: 16px; }
+body .logout-confirm-card .modal-header h3 {
+  margin: 0;
+  color: var(--account-ink);
+  font: inherit;
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+  text-transform: none;
+  text-decoration: none;
+}
+.logout-confirm-symbol { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 18px; background: var(--account-row); }
+.logout-confirm-symbol svg { width: 26px; height: 26px; color: var(--account-ink); }
+body .logout-confirm-card .modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent !important;
+  color: var(--account-muted) !important;
+  box-shadow: none;
+}
+body .logout-confirm-card .modal-form { display: block; padding: 0; }
+.logout-confirm-description { margin: 12px 10px 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--account-muted); }
+.logout-confirm-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.logout-confirm-actions button { min-height: 48px; padding: 12px; border: 0; border-radius: 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.logout-confirm-actions .logout-confirm-cancel { background: var(--account-row); color: var(--account-ink); }
+.logout-confirm-actions .logout-confirm-submit { background: var(--account-danger); color: #fff; }
+.logout-confirm-actions button:active { opacity: .8; }
+.logout-confirm-actions button:focus-visible { outline: 2px solid var(--account-ink); outline-offset: 3px; }
+body.theme-midnight .account-menu-panel,
+body.theme-midnight .logout-confirm-shell .modal-card.logout-confirm-card {
+  --account-ink: #f5f5f7;
+  --account-muted: #b9b9bf;
+  --account-surface: #29292c;
+  --account-row: #3a3a3e;
+  --account-danger: #c43832;
+}
+body.theme-midnight .account-menu-panel .account-menu-action--logout { color: #ffb4a7; }
+@keyframes account-menu-appear { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .account-menu-panel { animation: none; } }
