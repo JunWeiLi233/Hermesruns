@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 public class EmailValidationService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailValidationService.class);
-    private static final String DNS_CACHE_NAMESPACE = "email-domain-dns";
+    private static final String DNS_CACHE_NAMESPACE = "email-domain-dns-v2";
     private static final Duration DNS_POSITIVE_TTL = Duration.ofHours(24);
     private static final Duration DNS_NEGATIVE_TTL = Duration.ofHours(1);
     private static final int DNS_TIMEOUT_MILLIS = 2000;
@@ -187,8 +187,13 @@ public class EmailValidationService {
         DirContext ctx = null;
         try {
             ctx = new InitialDirContext(env);
-            Attributes attrs = ctx.getAttributes(domain, new String[]{"MX", "A"});
-            return attrs.get("MX") != null || attrs.get("A") != null;
+            // Multiple record types make JNDI issue ANY, which may omit real MX/A records.
+            Attributes mx = ctx.getAttributes(domain, new String[]{"MX"});
+            if (mx.get("MX") != null) {
+                return true;
+            }
+            Attributes address = ctx.getAttributes(domain, new String[]{"A"});
+            return address.get("A") != null;
         } catch (NameNotFoundException e) {
             return false;
         } catch (NamingException e) {

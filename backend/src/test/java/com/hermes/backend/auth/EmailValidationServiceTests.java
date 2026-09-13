@@ -3,14 +3,76 @@ package com.hermes.backend.auth;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.InitialDirContext;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 class EmailValidationServiceTests {
+
+    @Test
+    void queriesMxExplicitlyWhenCombinedDnsResponsesOmitMailRecords() throws Exception {
+        try (var contexts = mockConstruction(InitialDirContext.class, (ctx, context) -> {
+            when(ctx.getAttributes(eq("mail.example"), any(String[].class))).thenAnswer(call -> {
+                String[] types = call.getArgument(1);
+                BasicAttributes records = new BasicAttributes(true);
+                if (types.length == 1 && "MX".equals(types[0])) records.put("MX", "10 inbound.example.");
+                return records;
+            });
+        })) {
+            assertThat(EmailValidationService.lookupMailRecordsViaDns("mail.example")).isTrue();
+            verify(contexts.constructed().get(0)).getAttributes("mail.example", new String[]{"MX"});
+            verify(contexts.constructed().get(0)).close();
+        }
+    }
+
+    @Test
+    void queriesAddressSeparatelyWhenTheDomainHasNoMx() throws Exception {
+        try (var contexts = mockConstruction(InitialDirContext.class, (ctx, context) -> {
+            when(ctx.getAttributes(eq("address.example"), any(String[].class))).thenAnswer(call -> {
+                String[] types = call.getArgument(1);
+                BasicAttributes records = new BasicAttributes(true);
+                if (types.length == 1 && "A".equals(types[0])) records.put("A", "192.0.2.20");
+                return records;
+            });
+        })) {
+            assertThat(EmailValidationService.lookupMailRecordsViaDns("address.example")).isTrue();
+            verify(contexts.constructed().get(0)).getAttributes("address.example", new String[]{"MX"});
+            verify(contexts.constructed().get(0)).getAttributes("address.example", new String[]{"A"});
+            verify(contexts.constructed().get(0)).close();
+        }
+    }
+
+    @Test
+    void stillRejectsDomainsWithoutMxOrAddressRecords() {
+        try (var contexts = mockConstruction(InitialDirContext.class, (ctx, context) -> {
+            when(ctx.getAttributes(eq("missing.example"), any(String[].class)))
+                    .thenReturn(new BasicAttributes(true));
+        })) {
+            assertThat(EmailValidationService.lookupMailRecordsViaDns("missing.example")).isFalse();
+        }
+    }
+
+    @Test
+    void ignoresNegativeCacheEntriesFromTheOldCombinedDnsLookup() {
+        TtlCacheStore cache = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        cache.put("email-domain-dns", "mail.example", false, Duration.ofHours(1));
+        EmailVerificationService verification = mock(EmailVerificationService.class);
+        when(verification.isMailConfigured()).thenReturn(true);
+        EmailValidationService service = new EmailValidationService(cache, verification, domain -> true, true);
+
+        assertThat(service.validateSignupEmail("runner@mail.example").status())
+                .isEqualTo(EmailValidationService.Status.VALID);
+    }
 
     @Test
     void rejectsInvalidSyntax() {
