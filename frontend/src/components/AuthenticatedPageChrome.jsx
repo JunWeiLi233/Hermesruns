@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { cachedApiJson } from '../api/resourceCache';
 import { useI18n } from '../contexts/I18nContext';
 import AppIcon from './AppIcon';
+import TopbarUserMenu from './TopbarUserMenu';
 import HermesLogo from './HermesLogo';
 import RunnerShellTopNav from './RunnerShellTopNav';
 import TopbarNotifications from './TopbarNotifications';
@@ -127,9 +128,7 @@ export default function AuthenticatedPageChrome({
               <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
-              <button type="button" className="runner-shell-avatar" onClick={() => navigate('/profile')} aria-label={t('profile.settings')}>
-                {profileInitial}
-              </button>
+              <TopbarUserMenu initials={profileInitial} label={t('components.account_menu.title')} showProfile />
             </div>
           </div>
         </header>

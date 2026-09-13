@@ -34,7 +34,11 @@ export default function TopbarNotifications({ onOpenRuns }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem(NOTIFICATION_SEEN_STORAGE_KEY) !== 'seen';
+    try {
+      return window.localStorage.getItem(NOTIFICATION_SEEN_STORAGE_KEY) !== 'seen';
+    } catch {
+      return true;
+    }
   });
   const [deletedIds, setDeletedIds] = useState(() => {
     if (typeof window === 'undefined') return [];
@@ -63,7 +67,9 @@ export default function TopbarNotifications({ onOpenRuns }) {
       if (currentIds.includes(itemId)) return currentIds;
       const nextIds = [...currentIds, itemId];
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem(NOTIFICATION_DELETED_STORAGE_KEY, JSON.stringify(nextIds));
+        try {
+          window.localStorage.setItem(NOTIFICATION_DELETED_STORAGE_KEY, JSON.stringify(nextIds));
+        } catch { /* Dismiss still works when browser storage is unavailable. */ }
       }
       return nextIds;
     });
@@ -74,7 +80,9 @@ export default function TopbarNotifications({ onOpenRuns }) {
     if (!isOpen) return;
     setHasUnread(false);
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(NOTIFICATION_SEEN_STORAGE_KEY, 'seen');
+      try {
+        window.localStorage.setItem(NOTIFICATION_SEEN_STORAGE_KEY, 'seen');
+      } catch { /* The seen state remains available for this session. */ }
     }
   }, [isOpen]);
 
@@ -96,10 +104,10 @@ export default function TopbarNotifications({ onOpenRuns }) {
       }
     }
 
-    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('keydown', handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen]);
@@ -125,19 +133,22 @@ export default function TopbarNotifications({ onOpenRuns }) {
         onClick={() => setIsOpen((value) => !value)}
       >
         <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-        {hasUnread ? <span className="runner-shell-notification-dot" aria-hidden="true" /> : null}
+        {hasUnread && visibleItems.length > 0 ? <span className="runner-shell-notification-dot" aria-hidden="true" /> : null}
       </button>
 
       {isOpen ? (
-        <div id={panelId} className={lang === 'zh-CN' ? 'runner-shell-notification-popover is-zh' : 'runner-shell-notification-popover'} role="dialog" aria-label={copy.title}>
+        <div id={panelId} className={lang === 'zh-CN' ? 'runner-shell-notification-popover is-zh' : 'runner-shell-notification-popover'} role="dialog" aria-label={copy.title} aria-describedby={`${panelId}-description`}>
           <div className="runner-shell-notification-head">
             <div className="runner-shell-notification-heading">
               <span className="runner-shell-notification-heading-icon" aria-hidden="true">
                 <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
               </span>
               <div className="runner-shell-notification-head-copy">
-                <strong>{copy.title}</strong>
-                <p>{copy.subtitle}</p>
+                <div className="runner-shell-notification-title-row">
+                  <strong>{copy.title}</strong>
+                  {visibleItems.length > 0 ? <span className="runner-shell-notification-count" aria-hidden="true">{visibleItems.length}</span> : null}
+                </div>
+                <p id={`${panelId}-description`}>{copy.subtitle}</p>
               </div>
             </div>
             <button
@@ -153,7 +164,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
 
           <div className="runner-shell-notification-list">
             {visibleItems.length > 0 ? visibleItems.map((item) => (
-              <article key={item.id} className="runner-shell-notification-card">
+              <article key={item.id} className="runner-shell-notification-card" data-kind={item.copy}>
                 <span className="runner-shell-notification-card-icon" aria-hidden="true">
                   <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
                 </span>
@@ -174,7 +185,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
             )) : (
               <div className="runner-shell-notification-empty" role="status">
                 <span className="runner-shell-notification-empty-icon" aria-hidden="true">
-                  <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
+                  <AppIcon name="check_circle" className="runner-dashboard-side-link-icon" />
                 </span>
                 <div>
                   <strong>{copy.emptyTitle}</strong>

@@ -38,6 +38,7 @@ const Rewards = React.lazy(routePreloaders['/rewards']);
 const Settings = React.lazy(routePreloaders['/settings']);
 const ImportDataSettings = React.lazy(() => import('./pages/settings/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
+const MobileRunnerNavigation = React.lazy(() => import('./components/MobileRunnerNavigation'));
 
 const SKELETON_PREVIEW_VARIANTS = new Set([
   'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
@@ -91,7 +92,8 @@ function ScrollToTop() {
 }
 
 function RouteLoading() {
-  const { pathname } = useLocation();
+  const { pathname: routePathname } = useLocation();
+  const pathname = routePathname.replace(/\/+$/, '') || '/';
   let variant = 'runner';
   if (pathname === '/') variant = 'landing';
   else if (pathname === '/login') variant = 'auth';
@@ -131,7 +133,13 @@ function RouteLoading() {
 }
 
 function SkeletonPreview({ variant, activeTab }) {
-  return <PageSkeleton variant={variant} activeTab={activeTab} />;
+  return (
+    <I18nProvider>
+      <ThemeProvider>
+        <PageSkeleton variant={variant} activeTab={activeTab} />
+      </ThemeProvider>
+    </I18nProvider>
+  );
 }
 
 function AdminOnlyRoute({ children }) {
@@ -226,14 +234,15 @@ function UserOnlyRoute({ children }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!authHydrated) return <RouteLoading />;
   if (isAdmin) return <Navigate to="/dashboard" replace />;
-  return children;
+  return <>{children}<Suspense fallback={null}><MobileRunnerNavigation /></Suspense></>;
 }
 
 function App() {
   const skeletonPreviewVariant = getSkeletonPreviewVariant();
   if (skeletonPreviewVariant) {
+    const requestedTab = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('skeleton-tab');
     const activeTab = skeletonPreviewVariant === 'admin' && typeof window !== 'undefined'
-      ? getAdminSkeletonTab(window.location.pathname)
+      ? (Object.values(ADMIN_SKELETON_ROUTE_TABS).includes(requestedTab) ? requestedTab : getAdminSkeletonTab(window.location.pathname))
       : 'overview';
     return <SkeletonPreview variant={skeletonPreviewVariant} activeTab={activeTab} />;
   }

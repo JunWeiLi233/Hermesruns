@@ -6,6 +6,11 @@ const skeletonSource = fs.readFileSync(new URL('../../components/PageSkeleton.js
 const indexSource = fs.readFileSync(new URL('../../index.css', import.meta.url), 'utf8');
 const styleSource = fs.readFileSync(new URL('../../styles/loading-skeleton.css', import.meta.url), 'utf8');
 
+assert(
+  skeletonSource.includes("import '../styles/loading-skeleton.css';"),
+  'The skeleton must load its own CSS before lazy page styles, including on the landing route.',
+);
+
 const routeVariants = {
   '/': 'landing',
   '/login': 'auth',
@@ -74,7 +79,7 @@ assert(
     && skeletonSource.includes('page-skeleton__analysis-bento-grid')
     && skeletonSource.includes('page-skeleton__analysis-table-grid')
     && skeletonSource.includes('page-skeleton__profile-editorial-hero')
-    && skeletonSource.includes('page-skeleton__profile-comeback')
+    && !skeletonSource.includes('className="page-skeleton__profile-comeback"')
     && skeletonSource.includes('page-skeleton__profile-today')
     && skeletonSource.includes('page-skeleton__profile-training-grid')
     && skeletonSource.includes('page-skeleton__profile-progression')
@@ -88,7 +93,10 @@ assert(
     && skeletonSource.includes('page-skeleton__schedule-week-grid')
     && skeletonSource.includes('page-skeleton__schedule-command-metric')
     && skeletonSource.includes('page-skeleton__schedule-coach-card')
-    && skeletonSource.includes('page-skeleton__today-coaching')
+    && skeletonSource.includes('page-skeleton__session-hero')
+    && skeletonSource.includes('page-skeleton__session-timeline')
+    && skeletonSource.includes('page-skeleton__session-support')
+    && skeletonSource.includes('page-skeleton__mobile-nav')
     && skeletonSource.includes('page-skeleton__rewards-hero-card')
     && skeletonSource.includes('page-skeleton__settings-identity-hero')
     && skeletonSource.includes('page-skeleton__settings-content-grid')

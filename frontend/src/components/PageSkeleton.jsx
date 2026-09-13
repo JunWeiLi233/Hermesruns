@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { subscribeWakeRetry } from '../api';
 import { useI18n } from '../contexts/I18nContext';
 import shoeSkeletonAsset from '../assets/generated/run-gait-v2/evo-sl-side-master.webp';
+import '../styles/loading-skeleton.css';
 import '../styles/auth-loading-skeleton.css';
 
 function WakeRetryNote() {
@@ -71,6 +72,16 @@ function RunnerFooterSkeleton() {
   );
 }
 
+function MobileNavigationSkeleton({ variant }) {
+  const active = variant === 'profile' ? 0 : variant === 'today-run' ? 1 : ['runs', 'run-detail'].includes(variant) ? 2 : 3;
+  return <div className="page-skeleton__mobile-nav" aria-hidden="true">
+    {Array.from({ length: 4 }, (_, index) => <div key={index} className={`page-skeleton__mobile-nav-item${index === active ? ' is-active' : ''}`}>
+      <SkeletonBlock className="page-skeleton__mobile-nav-icon" />
+      <SkeletonBlock className="page-skeleton__mobile-nav-label" />
+    </div>)}
+  </div>;
+}
+
 function RunnerFrame({ variant, children }) {
   const rootClassName = ['page-skeleton', 'page-skeleton--runner', 'is-sidebar-collapsed', `page-skeleton--${variant}`].join(' ');
   const activeNavIndex = {
@@ -113,6 +124,7 @@ function RunnerFrame({ variant, children }) {
       <main className="page-skeleton__main">
         <header className="page-skeleton__topbar" aria-hidden="true">
           <div className="page-skeleton__topbar-left">
+            {['analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'analysis-insight', 'run-detail', 'race-detail', 'prediction', 'add-shoes', 'import-data'].includes(variant) && <div className="page-skeleton__parent-crumb"><SkeletonBlock /></div>}
             <SkeletonBlock className="page-skeleton__crumb page-skeleton__topbar-pill" />
           </div>
           <div className="page-skeleton__topbar-actions">
@@ -126,6 +138,7 @@ function RunnerFrame({ variant, children }) {
           <RunnerFooterSkeleton />
         </section>
       </main>
+      <MobileNavigationSkeleton variant={variant} />
     </div>
   );
 }
@@ -400,6 +413,7 @@ function HeatmapPageSkeleton() {
           {Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={`map-${index}`} />)}
         </div>
       </div>
+      <MobileNavigationSkeleton variant="heatmap" />
     </div>
   );
 }
@@ -429,16 +443,6 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
             <div className="page-skeleton__profile-readiness-copy"><SkeletonBlock /><SkeletonBlock /></div>
           </div>
         </div>
-
-        <SkeletonPanel className="page-skeleton__profile-comeback">
-          <div className="page-skeleton__profile-comeback-body">
-            <SkeletonBlock className="page-skeleton__profile-comeback-eyebrow" />
-            <SkeletonBlock className="page-skeleton__profile-comeback-title" />
-            <SkeletonLines count={2} className="page-skeleton__profile-comeback-copy" />
-            <div className="page-skeleton__profile-comeback-actions"><SkeletonBlock /><SkeletonBlock /></div>
-          </div>
-          <SkeletonBlock className="page-skeleton__profile-comeback-orb" />
-        </SkeletonPanel>
 
         <SkeletonPanel className="page-skeleton__profile-today">
           <div className="page-skeleton__profile-today-content">
@@ -582,7 +586,7 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
       </div>
       <div className="recent-runs-card-list page-skeleton__runs-card-list">
       <div className="page-skeleton__runs-history">
-        {[16, 14, 13].map((cardCount, groupIndex) => (
+        {[3, 3].map((cardCount, groupIndex) => (
           <SkeletonPanel key={groupIndex} className="page-skeleton__runs-month">
             <div className="page-skeleton__runs-month-header"><SkeletonBlock className="page-skeleton__runs-month-chevron" /><SkeletonBlock className="page-skeleton__runs-month-label" /><SkeletonBlock className="page-skeleton__runs-month-meta" /></div>
             <div className="page-skeleton__runs-card-grid">
@@ -891,26 +895,27 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
 
   if (variant === 'today-run') {
     return <RunnerFrame variant={variant}>
-      <section className="today-run-coaching-strip page-skeleton__today-coaching">
-        <div className="page-skeleton__today-coaching-grid" aria-hidden="true">
-          <SkeletonPanel className="page-skeleton__today-coaching-card page-skeleton__today-coaching-card--lead"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>
-          <SkeletonPanel className="page-skeleton__today-coaching-card"><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>
-          <SkeletonPanel className="page-skeleton__today-coaching-card"><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>
-          <SkeletonPanel className="page-skeleton__today-coaching-card"><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>
-          <SkeletonPanel className="page-skeleton__today-coaching-card"><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>
+      <SkeletonPanel className="page-skeleton__session-hero">
+        <SkeletonBlock className="page-skeleton__session-kicker" />
+        <div className="page-skeleton__session-layout">
+          <div className="page-skeleton__session-workout">
+            <SkeletonBlock className="page-skeleton__session-title" />
+            <SkeletonLines count={2} />
+            <SkeletonBlock className="page-skeleton__session-target" />
+            <div className="page-skeleton__session-targets">{Array.from({ length: 2 }, (_, index) => <div key={index}><SkeletonBlock /><SkeletonBlock /></div>)}</div>
+            <div className="page-skeleton__session-actions"><SkeletonBlock /><SkeletonBlock /></div>
+          </div>
+          <div className="page-skeleton__session-timeline">
+            <SkeletonBlock className="page-skeleton__session-kicker" />
+            <SkeletonRows count={3} />
+          </div>
         </div>
-      </section>
-      <div className="today-run-plan-hero page-skeleton__today-plan-hero"><SkeletonPanel className="page-skeleton__today-command">
-        <div className="page-skeleton__today-command-copy">
-          <SkeletonBlock className="page-skeleton__today-kicker" />
-          <SkeletonBlock className="page-skeleton__today-title" />
-          <SkeletonBlock className="page-skeleton__today-briefing" />
-          <div className="page-skeleton__today-badges"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
-          <SkeletonStats count={4} className="page-skeleton__today-stats" />
-        </div>
-        <div className="page-skeleton__today-readiness-panel"><SkeletonBlock className="page-skeleton__today-card-kicker" /><div className="page-skeleton__today-readiness-grid"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div></div>
-      </SkeletonPanel></div>
-      <div className="today-run-plan-grid page-skeleton__today-plan-grid"><div className="today-run-plan-left page-skeleton__today-plan-left"><SkeletonPanel className="page-skeleton__today-blueprint"><SkeletonBlock className="page-skeleton__today-card-kicker" /><SkeletonBlock className="page-skeleton__panel-title" /><div className="page-skeleton__today-blueprint-steps">{Array.from({ length: 3 }, (_, index) => <SkeletonPanel key={index}><SkeletonBlock /><SkeletonBlock /><SkeletonLines count={2} /></SkeletonPanel>)}</div></SkeletonPanel></div><div className="today-run-plan-right page-skeleton__today-plan-right"><SkeletonPanel className="page-skeleton__today-coach"><div className="page-skeleton__today-coach-head"><SkeletonBlock className="page-skeleton__today-card-kicker" /><SkeletonBlock className="page-skeleton__today-coach-avatar" /></div><SkeletonBlock className="page-skeleton__today-coach-title" /><SkeletonLines count={3} /><div className="page-skeleton__today-coach-reasons">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div><div className="page-skeleton__today-coach-metrics">{Array.from({ length: 4 }, (_, index) => <SkeletonBlock key={index} />)}</div><SkeletonBlock className="page-skeleton__today-shoe-brief" /><div className="page-skeleton__today-coach-actions">{Array.from({ length: 2 }, (_, index) => <SkeletonBlock key={index} />)}</div></SkeletonPanel></div></div>
+      </SkeletonPanel>
+      <div className="page-skeleton__session-support">
+        <SkeletonPanel><SkeletonBlock className="page-skeleton__session-kicker" /><SkeletonBlock className="page-skeleton__session-score" /><SkeletonRows count={4} /><SkeletonLines count={2} /></SkeletonPanel>
+        <SkeletonPanel className="page-skeleton__today-coach"><SkeletonBlock className="page-skeleton__session-kicker" /><SkeletonRows count={1} /><SkeletonLines count={4} /><SkeletonBlock className="page-skeleton__session-disclosure" /><SkeletonRows count={1} /></SkeletonPanel>
+        {Array.from({ length: 2 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__session-context"><SkeletonBlock className="page-skeleton__session-kicker" /><SkeletonBlock className="page-skeleton__session-score" /><SkeletonLines count={1} /></SkeletonPanel>)}
+      </div>
     </RunnerFrame>;
   }
 
@@ -927,7 +932,7 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
   }
 
   if (variant === 'muscle-training') {
-    return <RunnerFrame variant={variant}>
+    return <RunnerFrame variant={variant}><div className="page-skeleton__muscle-content">
       <div className="page-skeleton__muscle-above-fold">
         <SkeletonPanel className="page-skeleton__muscle-selector">
           <SkeletonBlock className="page-skeleton__muscle-section-title" />
@@ -954,7 +959,7 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
         <SkeletonPanel><SkeletonBlock className="page-skeleton__muscle-card-kicker" /><SkeletonBlock className="page-skeleton__panel-title" /><div className="page-skeleton__muscle-filter-row">{Array.from({ length: 7 }, (_, index) => <SkeletonBlock key={index} />)}</div><SkeletonRows count={6} /></SkeletonPanel>
       </div>
       <div className="page-skeleton__muscle-bottom-grid"><SkeletonPanel className="page-skeleton__muscle-activity"><div className="page-skeleton__muscle-card-kicker" /><SkeletonBlock className="page-skeleton__panel-title" /><SkeletonBlock className="page-skeleton__muscle-activity-calendar" /><div className="page-skeleton__muscle-activity-legend"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div></SkeletonPanel></div>
-    </RunnerFrame>;
+    </div></RunnerFrame>;
   }
 
   if (variant === 'rewards') {
@@ -1141,61 +1146,57 @@ function AccountEntrySkeleton({ variant }) {
 }
 
 function AuthPageSkeleton({ variant = 'auth' }) {
+  const { lang } = useI18n();
   if (variant === 'auth' || variant === 'signup') return <AccountEntrySkeleton variant={variant} />;
   const isSignup = variant === 'signup';
   const isForgotPassword = variant === 'forgot-password';
   const isAdmin = variant === 'admin-login';
-  const fieldCount = isForgotPassword ? 1 : isSignup ? 4 : 2;
+  const fieldCount = isForgotPassword ? 1 : isSignup ? 3 : 2;
+  const legal = <footer className="auth-flow-legal page-skeleton__auth-legal" aria-hidden="true"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></footer>;
+  const pageClass = isSignup ? 'auth-page--signup' : isForgotPassword ? 'auth-page--forgot-password' : isAdmin ? 'auth-page--admin' : 'auth-page--login';
   return (
-    <div className={`page-skeleton page-skeleton--${variant}`} role="status" aria-live="polite" aria-busy="true" aria-label="Loading page">
+    <div className={`page-skeleton page-skeleton--${variant} auth-page ${pageClass}${isForgotPassword ? '' : ' auth-page--liquid-glass'}`} data-auth-redesign={isForgotPassword ? undefined : 'command-entry'} role="status" aria-live="polite" aria-busy="true" aria-label="Loading page">
       <div className="page-skeleton__auth-dot-field" aria-hidden="true" />
-      <section className="page-skeleton__auth-brand" aria-hidden="true">
-        <div className="page-skeleton__auth-brand-head">
-          <SkeletonBlock className="page-skeleton__auth-wordmark" />
-          <SkeletonBlock className="page-skeleton__auth-pulse" />
-        </div>
-        <div className="page-skeleton__auth-carousel">
-          <SkeletonBlock className="page-skeleton__auth-kicker" />
-          <SkeletonBlock className="page-skeleton__auth-title" />
-          <SkeletonBlock className="page-skeleton__auth-title page-skeleton__auth-title--short" />
-          <SkeletonLines count={3} className="page-skeleton__auth-copy" />
-          <div className="page-skeleton__auth-slide-details">
-            {Array.from({ length: 3 }, (_, index) => <div key={index}><SkeletonBlock /><SkeletonBlock /></div>)}
-          </div>
-          <div className="page-skeleton__auth-stats">
-            <div><SkeletonBlock /><SkeletonBlock /></div>
-            <div><SkeletonBlock /><SkeletonBlock /></div>
-          </div>
-          <div className="page-skeleton__auth-brand-actions"><SkeletonBlock /><SkeletonBlock /></div>
-          <div className="page-skeleton__auth-dots"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
-        </div>
-      </section>
-      <section className="page-skeleton__auth-formside" aria-hidden="true">
-        <div className="page-skeleton__auth-card">
-          <div className="page-skeleton__auth-header"><SkeletonBlock className="page-skeleton__auth-card-title" /><SkeletonBlock className="page-skeleton__auth-card-copy" /></div>
-          {!isAdmin && <SkeletonBlock className="page-skeleton__auth-divider" />}
-          <div className="page-skeleton__auth-form">
-            {Array.from({ length: fieldCount }, (_, index) => (
-              <div key={index} className="page-skeleton__auth-field-group">
-                <div className="page-skeleton__auth-label-row"><SkeletonBlock className="page-skeleton__auth-label" />{!isSignup && !isForgotPassword && index === 1 && <SkeletonBlock className="page-skeleton__auth-forgot" />}</div>
-                <SkeletonBlock className="page-skeleton__auth-field" />
+      <main className="auth-flow-shell page-skeleton__auth-shell" aria-hidden="true">
+        <section className="auth-flow-brand page-skeleton__auth-brand">
+          <div className="auth-flow-brand-inner">
+            <div className="auth-flow-wordmark-wrap page-skeleton__auth-brand-head">
+              <div className="page-skeleton__auth-wordmark-row"><SkeletonBlock className="page-skeleton__auth-brand-glyph" /><SkeletonBlock className="page-skeleton__auth-wordmark" /></div>
+              {!isForgotPassword && <SkeletonBlock className="page-skeleton__auth-pulse" />}
+            </div>
+            <div className="auth-flow-copy auth-flow-copy--carousel page-skeleton__auth-carousel">
+              <div className="auth-flow-slide-viewport">
+                <div className="auth-flow-slide">
+                  <h2 className="auth-flow-hero">{Array.from({ length: isForgotPassword ? 3 : lang === 'zh-CN' ? 4 : 5 }, (_, index) => <SkeletonBlock key={index} className={`page-skeleton__auth-title${index % 2 ? ' page-skeleton__auth-title--short' : ''}`} />)}</h2>
+                  <SkeletonLines count={3} className="auth-flow-text page-skeleton__auth-copy" />
+                </div>
               </div>
-            ))}
-            {isSignup && <SkeletonBlock className="page-skeleton__auth-strength" />}
-            <SkeletonBlock className="page-skeleton__auth-button" />
+            </div>
           </div>
-          {!isAdmin && (
-            <>
-              <div className="page-skeleton__auth-social">
-                <SkeletonBlock /><SkeletonBlock />
-                <SkeletonLines count={2} /><SkeletonLines count={2} />
-              </div>
-              <div className="page-skeleton__auth-signup"><SkeletonBlock /><SkeletonBlock /></div>
-            </>
-          )}
-        </div>
-        {!isAdmin && <footer className="page-skeleton__auth-legal"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></footer>}
-      </section>
+        </section>
+        <section className="auth-flow-formside page-skeleton__auth-formside">
+          <div className="auth-flow-card page-skeleton__auth-card">
+            <div className="auth-flow-header page-skeleton__auth-header">
+              <h3><SkeletonBlock className="page-skeleton__auth-card-title" />{isSignup && <SkeletonBlock className="page-skeleton__auth-card-title page-skeleton__auth-card-title--second" />}</h3>
+              <SkeletonLines count={isSignup ? 4 : 2} className="page-skeleton__auth-card-copy" />
+            </div>
+            <div className="auth-flow-form page-skeleton__auth-form">
+              {isSignup && <div className="page-skeleton__auth-strength-reserve" />}
+              {Array.from({ length: fieldCount }, (_, index) => (
+                <div key={index} className="form-group form-group--auth page-skeleton__auth-field-group">
+                  <div className="label-row label-row--auth page-skeleton__auth-label-row"><SkeletonBlock className="page-skeleton__auth-label" />{!isSignup && !isForgotPassword && index === 1 && <SkeletonBlock className="page-skeleton__auth-forgot" />}</div>
+                  <SkeletonBlock className="page-skeleton__auth-field" />
+                </div>
+              ))}
+              <SkeletonBlock className="auth-flow-btn page-skeleton__auth-button" />
+            </div>
+            {!isSignup && !isForgotPassword && !isAdmin && <div className="auth-flow-social auth-flow-social--reserved page-skeleton__auth-social"><SkeletonBlock /><SkeletonBlock /></div>}
+            {!isAdmin && <div className="signup-link signup-link--auth page-skeleton__auth-signup"><SkeletonBlock />{!isForgotPassword && <SkeletonBlock />}</div>}
+            {!isForgotPassword && !isAdmin && legal}
+          </div>
+          {isForgotPassword && legal}
+        </section>
+      </main>
     </div>
   );
 }
@@ -1206,7 +1207,11 @@ function LegalPageSkeleton() {
   );
 }
 
-export default function PageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
+export default function PageSkeleton({ variant = 'runner', activeTab = 'overview', pathname = typeof window === 'undefined' ? '' : window.location.pathname }) {
+  if (variant === 'analysis-insight') {
+    const key = pathname.replace(/\/+$/, '').split('/').pop();
+    variant = { 'load-balance': 'analysis-load', intensity: 'analysis-intensity', 'injury-risk': 'analysis-injury', 'coach-insight': 'analysis-coach' }[key] || variant;
+  }
   if (variant === 'landing') return <LandingPageSkeleton />;
   if (['auth', 'login', 'signup', 'forgot-password', 'admin-login'].includes(variant)) return <AuthPageSkeleton variant={variant === 'login' ? 'auth' : variant} />;
   if (variant === 'legal') return <LegalPageSkeleton />;

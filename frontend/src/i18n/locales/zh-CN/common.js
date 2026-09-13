@@ -2,6 +2,12 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "common": {
+    "mobile_navigation": "主导航",
+    "mobile_home": "主页",
+    "mobile_today": "今日训练",
+    "mobile_runs": "跑步记录",
+    "mobile_pages": "全部页面",
+    "mobile_close": "关闭菜单",
     "app_crashed_title": "页面暂时出了点问题",
     "app_crashed_body": "请刷新页面重试。如果问题持续出现，请稍后再回来。",
     "reload": "重新加载",

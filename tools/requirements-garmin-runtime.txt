@@ -1,0 +1,2 @@
+# The web workers use garth directly; the standalone GarminDB CLI is not needed.
+garth==0.8.0
