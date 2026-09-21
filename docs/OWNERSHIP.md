@@ -90,3 +90,79 @@ Paths are relative to the repo root. Feature pages live under `frontend/src/page
 - **Cut wake/first-paint API fan-out** → prefer `cachedApiJson` + idle deferral in the page; keep AbortController sharing on Profile dashboard unless a new RFC expands it.
 - **Change a label** → `i18n/locales/en/` + `zh-CN/` same key.
 - **Fix cold-start spinner copy** → `common.waking_server` + `PageSkeleton` `WakeRetryNote`.
+
+---
+
+## Backend
+
+Java / Spring Boot under `backend/src/main/java/com/hermes/backend/`. Only `BackendApplication` and `StartupPhaseDiagnosticsLogger` sit at the package root; everything else is a domain (or `infrastructure/*`) package. Tests mirror the same tree under `backend/src/test/java/com/hermes/backend/`. See also `docs/architecture/backend-package-migration.md` and `docs/architecture/repository-layout.md`.
+
+**Source for this map:** `com.hermes.backend` package tree as of GitHub `master` / local mirror (≈412 `.java` files). Sleep-profile knobs below also reflect the post-#111 `coach-enabled` wake gate when present on the working tree.
+
+### Packages under `com.hermes.backend`
+
+| Package | Role (one line) | Notable types |
+|---|---|---|
+| *(root)* | Boot + startup timeline | `BackendApplication`, `StartupPhaseDiagnosticsLogger` |
+| `activity` | Activities API, telemetry, analytics, JDBC data access | `ActivityController`, `ActivityRepository`, `ActivityDataAccess` |
+| `admin` | Operator HTTP, audit, background jobs, portals | `AdminController`, `AdminPortalService`, `AdminBackgroundJobService`, `ConfigStatusController` |
+| `auth` | Login, JWT, OAuth, filters, rate limits, encryption | `LoginController`, `OAuthController`, `SecurityConfig`, `AuthService`, `JwtAuthenticationFilter` |
+| `auth.mfa` | Admin passkeys / MFA challenges / recovery | `AdminMfaController`, `AdminMfaService`, `AdminWebAuthnService` |
+| `billing` | Stripe checkout/webhook, AI quotas | `BillingController`, `QuotaService`, `AiUsageService` |
+| `coaching` | Plans, readiness, wellness, injury risk, nightly 80/20 | `CoachController`, `AutomatedCoachService`, `Coach8020NightlyScheduler`, `ReadinessService`, `WellnessController` |
+| `imports` | Strava/Garmin/health sync + FIT/GPX/TCX ingest | `StravaAutoSyncScheduler`, `GarminWellnessSyncScheduler`, `StravaWebhookController`, `ImportController`, `GarminConnectController` |
+| `infrastructure.bootstrap` | Explicit local shared-runner seed | `LocalSharedRunnerBootstrapConfiguration` |
+| `infrastructure.cache` | TTL / Redis / fixed-window stores | `TtlCacheStore`, `AppRedisProperties` |
+| `infrastructure.config` | Jackson + configured-provider status | `JacksonConfig`, `SystemConfigService` |
+| `infrastructure.diagnostics` | DB/security startup + local console errors | `DatabaseDiagnosticsInitializer`, `LocalConsoleErrorController` |
+| `infrastructure.mail` | Transactional mail (Resend) | `ResendTransactionalMailSender` |
+| `infrastructure.web` | CORS, SPA forward, sanitizers, safe URL exec | `AppCorsConfig`, `SpaForwardingController`, `SafeUrlExecutor` |
+| `races` | Saved races, official courses, map extraction | `MarathonRoutePipelineService`, course catalogs, `OfficialCourseStartupSeedConfiguration` |
+| `races.model` | Shared race/course DTOs (no orchestration deps) | `RaceEventRequest`, `CourseMapCandidate`, … |
+| `rewards` | Digital cosmetics | `DigitalCosmeticsController`, `DigitalCosmeticsService` |
+| `routing` | Route planner + map-tile proxy/cache | `MapTileController`, `MapTileService`, `RoutePlannerController` |
+| `runner` | Profile, avatar, heatmap, weekly digest | `ProfileController`, `ProfileApplicationService`, `WeeklyDigestController` |
+| `runtime` | Railway **sleep** profile: wake catch-up only | `SleepModeConfiguration`, `SleepWakeCatchUp` |
+| `shoes` | Inventory, catalog, AI scan, images | `ShoeController`, `ShoeCatalogController`, `AiShoeScanService` |
+| `strength` | Muscle-training plans / check-ins | `MuscleTrainingController`, `PersonalizedStrengthPlanEngine` |
+| `weather` | Forecast + weather-adjusted fitness | `WeatherContextController`, `WeatherForecastService` |
+
+### Where to change X
+
+| Change this | Edit these files | Props / env | Tests |
+|---|---|---|---|
+| **Sleep / wake catch-up** | `runtime/SleepWakeCatchUp.java`, `runtime/SleepModeConfiguration.java` (`@Profile("sleep")`) | `backend/src/main/resources/application-sleep.properties`: `app.sleep.wake-catchup.delay-ms` (default `90000`), `app.sleep.wake-catchup.coach-enabled` (when present; sleep profile sets `false`), `app.background.polling.enabled=false`, `app.coach.nightly.cron=-`, Hikari idle knobs. Activate with `SPRING_PROFILES_ACTIVE=…,sleep`. Narrative: `docs/deployment/railway-sleep.md`. | `runtime/SleepWakeCatchUpTests`, `SleepModeConfigurationTests`, `SleepProfileTests`, `SleepPollingTests` |
+| **Strava sync scheduler** | `imports/StravaAutoSyncScheduler.java` (`@Scheduled` + `syncOnWake()`), work in `imports/StravaSyncService.java`, tokens in `imports/StravaTokenService.java` | `application.properties`: `strava.sync.enabled`, `strava.sync.interval-ms` (`STRAVA_SYNC_INTERVAL_MS`, default 10m), `strava.sync.max-pages-*`, `strava.sync.backoff-max-minutes`, `app.background.polling.enabled` | `imports/StravaAutoSyncSchedulerTests`, `StravaSyncServiceTests` |
+| **Garmin wellness sync scheduler** | `imports/GarminWellnessSyncScheduler.java` (`@Scheduled` + `syncOnWake()`), `imports/GarminWellnessImportService.java` | `garmin.wellness.sync.enabled`, `garmin.wellness.sync.interval-ms` (default 30m), `garmin.wellness.sync.days-back`, `garmin.wellness.sync.initial-days-back` | `imports/GarminWellnessImportServiceTest`, `GarminWellnessCompletionTests`, `GarminWellnessWatermarkTests` (+ `backend/src/test/python/test_garmin_wellness_download.py`) |
+| **Activities API / default limits** | `activity/ActivityController.java` (`/api/activities`) | `app.activities.default-limit` / `app.activities.max-limit` (`APP_ACTIVITIES_DEFAULT_LIMIT` / `APP_ACTIVITIES_MAX_LIMIT`, both default **500**) | `activity/ActivityControllerTests`, `ActivityDataAccessTests`, … |
+| **MapTile cache** | `routing/MapTileService.java` (in-process raw-byte cache), `routing/MapTileController.java` (`/api/maps/...`) | `app.map-tile.local-max-bytes` (`APP_MAP_TILE_LOCAL_MAX_BYTES`, default **24 MiB** / `25165824`) | `routing/MapTileServiceTests`, `MapTileControllerTests` |
+| **Auth / OAuth** | `auth/OAuthController.java` (`/api/auth/...` Strava+Google), `auth/LoginController.java`, `auth/SecurityConfig.java`, `auth/AuthService.java`, `auth/JwtAuthenticationFilter.java` | `strava.client.id/secret`, `app.strava.redirect-uri`, JWT/session props in `application.properties` / `.env` | `auth/OAuthControllerTests`, `OAuthProviderClientTests` (+ other `auth/*Tests`) |
+| **Strava webhook** | `imports/StravaWebhookController.java` (`/api/strava/webhook`), rate limit via `auth/WebhookRateLimitFilter.java` | `strava.webhook.verify-token` (`STRAVA_WEBHOOK_VERIFY_TOKEN`); prod hardening tied to `HERMES_ENV` / `hermes.environment` | `imports/StravaWebhookControllerTests` |
+| **Garmin Connect HTTP** | `imports/GarminConnectController.java` | Garmin session / rate-limit helpers in same package | `imports/GarminConnectControllerTests`, `GarminConnectImportServiceTest` |
+| **Coach** | `coaching/CoachController.java` (`/api/coach`), `coaching/AutomatedCoachService.java`, nightly `coaching/Coach8020NightlyScheduler.java`; readiness `ReadinessService`; wellness `WellnessController` | `app.coach.nightly.cron` (disabled under sleep profile) | `coaching/CoachControllerTests`, `AutomatedCoachServiceTests`, `CoachRouteServiceTests`, `CoachHrZoneClassifierTest` |
+| **Billing** | `billing/BillingController.java` (`/api/billing`), `billing/QuotaService.java`, `billing/AiUsageService.java` | `app.billing.stripe.*`, `app.billing.public-base-url`, price display label | `billing/BillingControllerTests` |
+| **Hikari / Tomcat / JVM** | Props: `backend/src/main/resources/application.properties`, sleep overlay `application-sleep.properties`, prod overlay `application-production.properties`. JVM flags: root `Dockerfile` `JAVA_OPTS`. Narrative: `docs/deployment/memory-budget.md`. | **Hikari:** `spring.datasource.hikari.maximumPoolSize` (`APP_DB_POOL_MAX`, default 4), `minimumIdle` (`APP_DB_POOL_MIN_IDLE`), `maxLifetime`, `keepaliveTime` (sleep profile forces `minimumIdle=0`, short `idleTimeout`, `keepaliveTime=0`). **Tomcat:** `server.tomcat.threads.max` (`APP_TOMCAT_MAX_THREADS`, default 16), `min-spare=4`. **JVM:** `JAVA_OPTS` default `-Xms64m -Xmx640m -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m …` (override at deploy without rebuild). | Runtime footprint / sleep tests under `runtime/`; broader stress tests at `backend/src/test/java/com/hermes/backend/` root when present |
+
+### Quick “I need to…” cheat sheet
+
+- **Tune Railway sleep wake** → `application-sleep.properties` + `runtime/SleepWakeCatchUp` / `SleepModeConfiguration`; do not re-enable idle polling in sleep.
+- **Change Strava pull cadence** → `strava.sync.interval-ms` / `StravaAutoSyncScheduler` (webhooks stay immediate).
+- **Raise activities page size** → `APP_ACTIVITIES_*_LIMIT` (still clamped in `ActivityController` until cursor pagination).
+- **Shrink map-tile RSS** → `APP_MAP_TILE_LOCAL_MAX_BYTES` (16–32 MiB guidance in props comments).
+- **Add an API** → domain controller + service in the matching package; keep auth in `auth`, mail in `infrastructure.mail`.
+- **Stripe / quotas** → `billing/*` only.
+
+---
+
+## Ops / deploy
+
+*(Stub — ops owner fills RFC-014 OPS section.)* Prefer sibling docs until then:
+
+| Topic | Start here |
+|---|---|
+| Railway sleep / wake | `docs/deployment/railway-sleep.md` |
+| Memory / `JAVA_OPTS` / pool sizing | `docs/deployment/memory-budget.md` |
+| Customer email / Resend | `docs/deployment/customer-email.md` |
+| Setup / env | `docs/setup.md`, `.env.example`, `Hermes.local.env.example.ps1` |
+| Container entry | root `Dockerfile` |
+| Admin security deploy notes | `docs/ADMIN_SECURITY_DEPLOYMENT.md` |
