@@ -12,7 +12,6 @@ import {
 import AppIcon from '../../components/AppIcon';
 import HermesMarkSvg from '../../components/HermesMarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
-import worldMapPoliticalDotted from '../../assets/generated/landing-world-map-political-dotted.webp';
 import shoeRunMaster from '../../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 import '../../styles/_split/landing.css';
 import '../../styles/landing-studio.css';
@@ -308,6 +307,7 @@ function LandingGlyph({ name, className = '' }) {
           <path d="M13 6l6 6-6 6" />
         </>
       )}
+      {name === 'chevron' && <path d="m10 6 6 6-6 6" />}
       {name === 'check' && <path d="M5 12.5l4.2 4.2L19 7" />}
       {name === 'minus' && <path d="M6 12h12" />}
       {name === 'close' && (
@@ -426,97 +426,6 @@ function VdotSpark() {
   );
 }
 
-const WORLD_MAP_GRATICULE = [
-  'M8 12.5H94',
-  'M6 25H96',
-  'M10 37.5H92',
-  'M25 3V47',
-  'M50 2V48',
-  'M75 3V47',
-];
-
-const ROBINSON_X_COEFFICIENTS = [
-  1,
-  0.9986,
-  0.9954,
-  0.99,
-  0.9822,
-  0.973,
-  0.96,
-  0.9427,
-  0.9216,
-  0.8962,
-  0.8679,
-  0.835,
-  0.7986,
-  0.7597,
-  0.7186,
-  0.6732,
-  0.6213,
-  0.5722,
-  0.5322,
-];
-
-const ROBINSON_Y_COEFFICIENTS = [
-  0,
-  0.062,
-  0.124,
-  0.186,
-  0.248,
-  0.31,
-  0.372,
-  0.434,
-  0.4958,
-  0.5571,
-  0.6176,
-  0.6769,
-  0.7346,
-  0.7903,
-  0.8435,
-  0.8936,
-  0.9394,
-  0.9761,
-  1,
-];
-
-function interpolateRobinsonCoefficient(coefficients, absLat) {
-  const clampedLat = Math.max(0, Math.min(90, absLat));
-  const lowerIndex = Math.min(Math.floor(clampedLat / 5), coefficients.length - 2);
-  const localT = (clampedLat - lowerIndex * 5) / 5;
-
-  return coefficients[lowerIndex] + ((coefficients[lowerIndex + 1] - coefficients[lowerIndex]) * localT);
-}
-
-function projectWorldPoint({ lat, lng }) {
-  const absLat = Math.abs(lat);
-  const xCoefficient = interpolateRobinsonCoefficient(ROBINSON_X_COEFFICIENTS, absLat);
-  const yCoefficient = interpolateRobinsonCoefficient(ROBINSON_Y_COEFFICIENTS, absLat);
-  const robinsonX = 50 + ((lng / 360) * 100 * xCoefficient);
-  const robinsonY = 25 - (lat >= 0 ? yCoefficient : -yCoefficient) * 25;
-
-  return {
-    x: robinsonX,
-    y: robinsonY,
-  };
-}
-
-const RACE_MAP_CITY_ANCHORS = {
-  'tokyo-marathon': { x: 83.65, y: 13.65 },
-  'boston-marathon': { x: 29.85, y: 11.60 },
-  'london-marathon': { x: 47.35, y: 8.95 },
-  'berlin-marathon': { x: 51.55, y: 8.55 },
-  'chicago-marathon': { x: 27.45, y: 12.15 },
-  'new-york-city-marathon': { x: 29.60, y: 12.15 },
-  'paris-marathon': { x: 49.45, y: 10.05 },
-  'valencia-marathon': { x: 47.10, y: 12.40 },
-  'sydney-marathon': { x: 85.25, y: 35.55 },
-  'comrades-marathon': { x: 55.50, y: 34.40 },
-};
-
-function resolveRaceMapPoint(race) {
-  return RACE_MAP_CITY_ANCHORS[race.id] ?? projectWorldPoint(race.geo);
-}
-
 function CompareGlyph({ value, label }) {
   const { t } = useI18n();
   const status = t(value === true ? 'landing.studio_compare_yes' : value === 'partial' ? 'landing.studio_compare_partial' : 'landing.studio_compare_no');
@@ -582,8 +491,8 @@ export default function Landing() {
   ];
 
 
-  // Showcase facts (months, distances, coordinates) come from the bundled
-  // world race catalog; only the display names localize through landing keys.
+  // Showcase facts (months, distances, race.geo coordinates) come from the
+  // bundled world race catalog; only the display names localize through landing keys.
   const races = useMemo(() => {
     const showcaseNames = {
       'berlin-marathon': t('landing.cinematic_race_berlin'),
@@ -613,7 +522,6 @@ export default function Landing() {
       ...race,
       name: showcaseNames[race.id] ?? race.catalogName,
       mapLabel: mapLabels[race.id] ?? race.city,
-      pin: resolveRaceMapPoint(race),
       date: formatRaceMonthLabel(race.nextOccurrence),
       days: getRaceCountdownDays(race.nextOccurrence.toISOString().slice(0, 10), raceCountdownNow),
       distance: formatRaceDistanceLabel(race.distanceKm),
@@ -655,7 +563,7 @@ export default function Landing() {
             {navLinks.map(([href, label]) => (
               <a key={href} href={href}>{label}</a>
             ))}
-            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} aria-label={t('landing.studio_language')}>{lang === 'en' ? '中文' : 'EN'}</button>
+            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} title={t('landing.studio_language')}><span lang={lang === 'en' ? 'zh-CN' : 'en'}>{lang === 'en' ? '中文' : 'EN'}</span></button>
           </nav>
 
           <div className="landing-cinematic-nav-actions">
@@ -682,6 +590,7 @@ export default function Landing() {
 
               <div className="landing-cinematic-hero-actions">
                 <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--primary is-large">{t('landing.studio_get_started')}<LandingGlyph name="arrow" /></Link>
+                <a href="#features" className="landing-cinematic-hero-alt-link">{t('landing.studio_explore')}<LandingGlyph name="arrow" /></a>
               </div>
 
             </div>
@@ -689,14 +598,14 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        <section className="landing-studio-integrations" aria-label={t('landing.studio_sources_label')}>
-          <PageWidth><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
+        <section className="landing-studio-integrations" aria-labelledby="landing-sources-label">
+          <PageWidth><p id="landing-sources-label">{t('landing.studio_sources_label')}</p><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
         </section>
 
         {/* One feature at a time. */}
         <section id="features" className="landing-command-deck">
           <PageWidth className="landing-command-deck-grid">
-            <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2></div>
+            <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2><p>{t('landing.studio_features_copy')}</p></div>
             <LandingFeatureOverview trend={<VdotSpark />} shoeSrc={shoeRunMaster} />
           </PageWidth>
         </section>
@@ -712,7 +621,7 @@ export default function Landing() {
             </RevealSection>
 
             <div className="landing-cinematic-race-stage is-flight-synced">
-              <LandingRaceMap races={races} mapImage={worldMapPoliticalDotted} graticule={WORLD_MAP_GRATICULE} />
+              <LandingRaceMap races={races} />
             </div>
           </PageWidth>
         </section>
@@ -721,7 +630,7 @@ export default function Landing() {
         <section id="compare" className="landing-cinematic-compare">
           <PageWidth>
             <details className="landing-minimal-disclosure landing-minimal-comparison">
-              <summary><span>{t('landing.minimal_compare')}</span><LandingGlyph name="arrow" /></summary>
+              <summary><span>{t('landing.minimal_compare')}<small>Hermes · {t('landing.cinematic_compare_social')} · {t('landing.cinematic_compare_device')}</small></span><LandingGlyph name="chevron" /></summary>
 
               <div className="landing-cinematic-compare-table">
                 <div className="landing-cinematic-compare-row is-head">
@@ -752,6 +661,7 @@ export default function Landing() {
             <RevealSection className="landing-cinematic-final-card landing-cinematic-final-card--minimal">
               <div className="landing-cinematic-final-copy">
                 <h2>{t('landing.studio_final_title')}</h2>
+                <p>{t('landing.studio_final_copy')}</p>
                 <div className="landing-cinematic-hero-actions">
                   <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
                     <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="lazy" decoding="async" />

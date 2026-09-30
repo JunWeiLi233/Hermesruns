@@ -55,7 +55,6 @@ assert.match(
 for (const assetPath of [
   "../../assets/generated/injury-knee-anatomy.webp",
   "../../assets/generated/load-balance-track.webp",
-  "../../assets/generated/landing-world-map-political-dotted.webp",
   "../../assets/generated/prediction-5k-hero.webp",
   "../../assets/generated/prediction-10k-hero.webp",
   "../../../public/images/races/boston-marathon-hero.webp",
@@ -68,6 +67,7 @@ for (const assetPath of [
 }
 
 for (const removedAsset of [
+  'generated/landing-world-map-political-dotted.webp',
   'generated/recent-runs-hero-overlay.jpg',
   'generated/run-gait-v2/evo-sl-side-master.png',
   'generated/prediction-5k-hero-1200.webp',

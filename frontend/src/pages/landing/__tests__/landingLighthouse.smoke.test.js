@@ -18,15 +18,20 @@ const securityHeadersSource = readFileSync(
   'utf8',
 );
 
-assert.match(
+assert.doesNotMatch(
   landingSource,
-  /import worldMapPoliticalDotted from '\.\.\/\.\.\/assets\/generated\/landing-world-map-political-dotted\.webp';/,
-  'Landing should serve the optimized WebP map asset.',
+  /landing-world-map-political-dotted/,
+  'Landing should draw its race globe from generated land dots instead of downloading a raster world map.',
 );
 
 assert.ok(
-  existsSync(path.join(frontendRoot, 'assets/generated/landing-world-map-political-dotted.webp')),
-  'The optimized landing map asset should exist.',
+  !existsSync(path.join(frontendRoot, 'assets/generated/landing-world-map-political-dotted.webp')),
+  'The retired flat landing map raster should stay removed.',
+);
+
+assert.ok(
+  statSync(path.join(frontendRoot, 'data/landingGlobeLand.js')).size < 5 * 1024,
+  'The landing globe land mask should stay below 5 KiB.',
 );
 
 assert.ok(
