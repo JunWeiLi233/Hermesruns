@@ -308,6 +308,7 @@ function LandingGlyph({ name, className = '' }) {
           <path d="M13 6l6 6-6 6" />
         </>
       )}
+      {name === 'chevron' && <path d="m10 6 6 6-6 6" />}
       {name === 'check' && <path d="M5 12.5l4.2 4.2L19 7" />}
       {name === 'minus' && <path d="M6 12h12" />}
       {name === 'close' && (
@@ -655,7 +656,7 @@ export default function Landing() {
             {navLinks.map(([href, label]) => (
               <a key={href} href={href}>{label}</a>
             ))}
-            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} lang={lang === 'en' ? 'zh-CN' : 'en'} title={t('landing.studio_language')}>{lang === 'en' ? '中文' : 'EN'}</button>
+            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} title={t('landing.studio_language')}><span lang={lang === 'en' ? 'zh-CN' : 'en'}>{lang === 'en' ? '中文' : 'EN'}</span></button>
           </nav>
 
           <div className="landing-cinematic-nav-actions">
@@ -722,7 +723,7 @@ export default function Landing() {
         <section id="compare" className="landing-cinematic-compare">
           <PageWidth>
             <details className="landing-minimal-disclosure landing-minimal-comparison">
-              <summary><span>{t('landing.minimal_compare')}<small>Hermes · {t('landing.cinematic_compare_social')} · {t('landing.cinematic_compare_device')}</small></span><LandingGlyph name="arrow" /></summary>
+              <summary><span>{t('landing.minimal_compare')}<small>Hermes · {t('landing.cinematic_compare_social')} · {t('landing.cinematic_compare_device')}</small></span><LandingGlyph name="chevron" /></summary>
 
               <div className="landing-cinematic-compare-table">
                 <div className="landing-cinematic-compare-row is-head">
