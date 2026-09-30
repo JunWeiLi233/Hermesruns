@@ -2,8 +2,8 @@
 
 :root {
   --hermes-skeleton-rail-width: clamp(156px, 9.2vw, 178px);
-  --hermes-admin-skeleton-rail-width: 304px;
-  --hermes-admin-skeleton-topbar-height: 80px;
+  --hermes-admin-skeleton-rail-width: 156px;
+  --hermes-admin-skeleton-topbar-height: 76px;
   --hermes-skeleton-base: rgba(116, 102, 91, 0.11);
   --hermes-skeleton-highlight: rgba(255, 255, 255, 0.76);
   --hermes-skeleton-surface: rgba(255, 252, 247, 0.76);
@@ -3630,4 +3630,109 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skel
   .page-skeleton__legal-head { padding: 28px 22px 32px; }
   .page-skeleton--legal .page-skeleton__legal-sections { margin: 0 22px; }
   .page-skeleton--legal .page-skeleton__legal-sections article { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* Admin shell parity with the live console: 156px rail with 42px nav items on
+   a 49px pitch, 76px top bar, and a 40px content gutter. */
+.page-skeleton--admin .page-skeleton__admin-sidebar { padding: 20px 8px 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { min-height: 60px; padding: 0 6px; }
+.page-skeleton--admin .page-skeleton__admin-wordmark { width: 82px; height: 14px; }
+.page-skeleton--admin .page-skeleton__admin-brand-copy { width: 64px; height: 6px; margin-top: 8px; }
+.page-skeleton--admin .page-skeleton__admin-nav { display: grid; gap: 7px; margin-top: 0; }
+.page-skeleton--admin .page-skeleton__admin-nav-item { display: flex; align-items: center; gap: 10px; min-height: 42px; height: 42px; padding: 0 10px; border-radius: 15px; box-sizing: border-box; }
+.page-skeleton--admin .page-skeleton__admin-nav-icon { width: 14px; height: 14px; border-radius: 4px; }
+.page-skeleton--admin .page-skeleton__admin-nav-label { display: block; width: 52px; height: 8px; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-nav-index { display: block; width: 10px; height: 6px; margin-left: auto; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-sidebar-action { position: absolute; left: 4px; right: 4px; bottom: 0; width: auto; height: 46px; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-content { width: auto; max-width: none; margin: 0; padding: 34px 40px 60px; }
+.page-skeleton--admin .page-skeleton__admin-sidebar { display: flex; flex-direction: column; justify-content: flex-start; gap: 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { flex: none; height: 60px; min-height: 0; }
+.page-skeleton--admin .page-skeleton__admin-nav { flex: none; align-content: start; }
+/* Overview rows use the live spacing: metrics, queues, charts, health/audit, actions. */
+.page-skeleton--admin .page-skeleton__admin-overview { display: grid; gap: 0; }
+.page-skeleton--admin .page-skeleton__admin-ops-metrics .page-skeleton__panel { min-height: 112px; height: 112px; }
+.page-skeleton--admin .page-skeleton__admin-ops-queues { margin-top: 64px; }
+.page-skeleton--admin .page-skeleton__admin-ops-queues .page-skeleton__panel { min-height: 104px; height: 104px; }
+.page-skeleton--admin .page-skeleton__admin-overview-charts { margin-top: 40px; }
+.page-skeleton--admin .page-skeleton__admin-overview-chart { min-height: 333px; height: 333px; }
+.page-skeleton--admin .page-skeleton__admin-overview-two-col { margin-top: 27px; }
+.page-skeleton--admin .page-skeleton__admin-overview-two-col > .page-skeleton__panel { min-height: 441px; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions { margin-top: 50px; row-gap: 12px; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__panel { min-height: 72px; height: 72px; padding: 14px 18px; display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; align-content: center; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__admin-action-icon { grid-row: span 2; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__admin-action-title { margin-top: 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { height: 80px; }
+/* Per-tab section sizes measured from the live console at 1440px. */
+.page-skeleton--admin .page-skeleton__admin-users { display: grid; gap: 16px; }
+.page-skeleton--admin .page-skeleton__admin-users-kpis .page-skeleton__panel { min-height: 134px; }
+.page-skeleton--admin .page-skeleton__admin-users-console { height: 615px; overflow: hidden; }
+.page-skeleton--admin .page-skeleton__admin-coursemaps-hero { min-height: 203px; }
+.page-skeleton--admin .page-skeleton__admin-coursemaps-grid { margin-top: 20px; }
+.page-skeleton--admin .page-skeleton__admin-hero { min-height: 288px; }
+.page-skeleton--admin .page-skeleton__admin-metric-grid .page-skeleton__panel,
+.page-skeleton--admin .page-skeleton__admin-metric-card { min-height: 199px; }
+.page-skeleton--admin .page-skeleton__admin-spotlight { min-height: 393px; }
+.page-skeleton--admin .page-skeleton__admin-audit { display: grid; gap: 26px; }
+.page-skeleton--admin .page-skeleton__admin-audit-hero { min-height: 288px; }
+.page-skeleton--admin .page-skeleton__admin-audit-metrics .page-skeleton__panel { min-height: 219px; }
+.page-skeleton--admin .page-skeleton__admin-audit-table { max-height: 520px; overflow: hidden; }
+.page-skeleton--admin .page-skeleton__admin-audit-ctas .page-skeleton__panel { min-height: 117px; }
+.page-skeleton--admin .page-skeleton__admin-settings { display: grid; gap: 26px; }
+.page-skeleton--admin .page-skeleton__admin-settings-hero { min-height: 398px; }
+.page-skeleton--admin .page-skeleton__admin-settings-grid .page-skeleton__panel { min-height: 378px; }
+.page-skeleton--admin .page-skeleton__admin-spotlight { height: 393px; overflow: hidden; }
+@media (max-width: 900px) {
+  /* On phones and tablets the live console stacks its brand, a one-column nav
+     and sign-out above the top bar. */
+  .page-skeleton--admin .page-skeleton__admin-sidebar { position: static; width: 100%; height: auto; padding: 72px 8px 0; box-sizing: border-box; }
+  .page-skeleton--admin .page-skeleton__admin-brand { height: 110px; }
+  .page-skeleton--admin .page-skeleton__admin-nav { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-sidebar-action { position: static; margin: 52px 0 0; }
+  .page-skeleton--admin .page-skeleton__admin-main { margin-left: 0; }
+  .page-skeleton--admin .page-skeleton__admin-topbar { min-height: 93px; }
+  .page-skeleton--admin .page-skeleton__admin-content { padding: 18px 16px 48px; }
+  .page-skeleton--admin .page-skeleton__admin-ops-metrics,
+  .page-skeleton--admin .page-skeleton__admin-overview-actions { grid-template-columns: 1fr 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-users-hero,
+  .page-skeleton--admin .page-skeleton__admin-settings-hero,
+  .page-skeleton--admin .page-skeleton__admin-coursemaps-grid { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-audit-metrics,
+  .page-skeleton--admin .page-skeleton__admin-metric-grid,
+  .page-skeleton--admin .page-skeleton__admin-users-kpis { grid-template-columns: 1fr 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-overview-charts,
+  .page-skeleton--admin .page-skeleton__admin-overview-two-col { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-ops-queues { margin-top: 56px; }
+}
+@media (max-width: 760px) {
+  .page-skeleton--admin .page-skeleton__admin-ops-queues { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  /* Tablet parity: these live pages already stack below ~900px. */
+  .page-skeleton--analysis-load .analysis-load-profile-evidence { grid-template-columns: 1fr; }
+  .page-skeleton__insight-split,
+  .page-skeleton__insight-dark-hero--coach { grid-template-columns: 1fr; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-hero { grid-template-columns: 1fr; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-grid { grid-template-columns: 1fr; }
+  .page-skeleton__import-page-head { grid-template-columns: 1fr; }
+  .page-skeleton__import-back { width: 111px; }
+  .page-skeleton--import-data .page-skeleton__import-hero { grid-template-columns: 1fr; }
+  .page-skeleton--import-data .page-skeleton__import-lanes { grid-template-columns: 1fr; }
+  .page-skeleton--prediction .page-skeleton__canvas { width: calc(100% - 60px) !important; }
+  .page-skeleton--prediction .page-skeleton__prediction-command { grid-template-columns: 1fr; padding: 24px; }
+  .page-skeleton--prediction .page-skeleton__prediction-time { min-height: 210px; border-radius: 16px; }
+  .page-skeleton--prediction .page-skeleton__prediction-weather,
+  .page-skeleton--prediction .page-skeleton__prediction-command-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .page-skeleton__runs-cockpit-primary { flex-direction: column; gap: 0; }
+  .page-skeleton__runs-actions { margin-top: 22px; }
+  .page-skeleton__runs-cockpit-rail { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+  .page-skeleton__runs-workbench { flex-direction: column; align-items: stretch; }
+  .page-skeleton__runs-search { width: 100%; }
+  .page-skeleton__runs-chip-row { justify-content: flex-start; }
+  .page-skeleton__run-detail-map { height: 480px; }
+}
+@media (max-width: 900px) {
+  .page-skeleton--run-detail .page-skeleton__topbar { background: transparent; border-bottom: 0; }
 }
