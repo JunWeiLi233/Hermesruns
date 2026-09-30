@@ -17,7 +17,7 @@ export default function LandingStudioScene({ shoe }) {
             <AppIcon name="timer" />
           </div>
           <div className="landing-studio-plan-content">
-            <h2>{t('landing.studio_easy_run')}</h2>
+            <p className="landing-studio-plan-title">{t('landing.studio_easy_run')}</p>
             <div className="landing-studio-distance">6.4 <span>km</span></div>
             <div className="landing-studio-session-bar" aria-hidden="true"><i /><i /><i /></div>
           </div>

@@ -655,7 +655,7 @@ export default function Landing() {
             {navLinks.map(([href, label]) => (
               <a key={href} href={href}>{label}</a>
             ))}
-            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} aria-label={t('landing.studio_language')}>{lang === 'en' ? '中文' : 'EN'}</button>
+            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} lang={lang === 'en' ? 'zh-CN' : 'en'} title={t('landing.studio_language')}>{lang === 'en' ? '中文' : 'EN'}</button>
           </nav>
 
           <div className="landing-cinematic-nav-actions">
@@ -682,6 +682,7 @@ export default function Landing() {
 
               <div className="landing-cinematic-hero-actions">
                 <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--primary is-large">{t('landing.studio_get_started')}<LandingGlyph name="arrow" /></Link>
+                <a href="#features" className="landing-cinematic-hero-alt-link">{t('landing.studio_explore')}<LandingGlyph name="arrow" /></a>
               </div>
 
             </div>
@@ -689,14 +690,14 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        <section className="landing-studio-integrations" aria-label={t('landing.studio_sources_label')}>
-          <PageWidth><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
+        <section className="landing-studio-integrations" aria-labelledby="landing-sources-label">
+          <PageWidth><p id="landing-sources-label">{t('landing.studio_sources_label')}</p><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
         </section>
 
         {/* One feature at a time. */}
         <section id="features" className="landing-command-deck">
           <PageWidth className="landing-command-deck-grid">
-            <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2></div>
+            <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2><p>{t('landing.studio_features_copy')}</p></div>
             <LandingFeatureOverview trend={<VdotSpark />} shoeSrc={shoeRunMaster} />
           </PageWidth>
         </section>
@@ -721,7 +722,7 @@ export default function Landing() {
         <section id="compare" className="landing-cinematic-compare">
           <PageWidth>
             <details className="landing-minimal-disclosure landing-minimal-comparison">
-              <summary><span>{t('landing.minimal_compare')}</span><LandingGlyph name="arrow" /></summary>
+              <summary><span>{t('landing.minimal_compare')}<small>Hermes · {t('landing.cinematic_compare_social')} · {t('landing.cinematic_compare_device')}</small></span><LandingGlyph name="arrow" /></summary>
 
               <div className="landing-cinematic-compare-table">
                 <div className="landing-cinematic-compare-row is-head">
@@ -752,6 +753,7 @@ export default function Landing() {
             <RevealSection className="landing-cinematic-final-card landing-cinematic-final-card--minimal">
               <div className="landing-cinematic-final-copy">
                 <h2>{t('landing.studio_final_title')}</h2>
+                <p>{t('landing.studio_final_copy')}</p>
                 <div className="landing-cinematic-hero-actions">
                   <button type="button" className="landing-cinematic-btn landing-cinematic-btn--primary landing-cinematic-btn--strava is-large" onClick={startStrava} aria-label={t('landing.cta_strava')}>
                     <img className="landing-strava-connect-button" src={stravaConnectButton} alt="" width="237" height="48" loading="lazy" decoding="async" />

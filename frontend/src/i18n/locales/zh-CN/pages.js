@@ -249,7 +249,7 @@ export default {
     "cinematic_race_sydney": "悉尼马拉松",
     "cinematic_race_comrades": "同志超级马拉松",
     "cinematic_races_kicker": "赛事管理",
-    "cinematic_races_title": "追踪你的参赛目标",
+    "cinematic_races_title": "追踪你的参赛目标。",
     "cinematic_races_copy": "管理你的比赛日历，设定完赛目标，倒计时到比赛日。从东京到纽约，你的每一场比赛都有据可依。",
     "cinematic_race_col_race": "赛事",
     "cinematic_race_col_date": "日期",

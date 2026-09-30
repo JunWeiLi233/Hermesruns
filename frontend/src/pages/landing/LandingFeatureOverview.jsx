@@ -49,7 +49,7 @@ export default function LandingFeatureOverview({ trend, shoeSrc }) {
           <p>{t(`landing.minimal_${active.id}_copy`)}</p>
         </div>
         <div className="landing-minimal-feature-example">
-          {selected === 'training' && <div className="landing-minimal-pace"><span>{t('landing.studio_easy')}</span><strong>5:42 <small>{t('landing.minimal_per_km')}</small></strong><div className="landing-studio-session-bar" aria-hidden="true"><i /><i /><i /></div></div>}
+          {selected === 'training' && <div className="landing-minimal-pace"><span>{t('landing.studio_easy')}</span><strong>5:42 <small>{t('landing.minimal_per_km')}</small></strong><div className="landing-studio-session-bar" aria-hidden="true"><i /><i /><i /></div><div className="landing-studio-session-labels" aria-hidden="true"><span>{t('landing.studio_warmup')}</span><span /><span>{t('landing.studio_cooldown')}</span></div></div>}
           {selected === 'progress' && <div className="landing-minimal-trend">{trend}<div className="landing-cinematic-vdot-row"><strong>58.4</strong><span>+1.2 / 30d</span></div></div>}
           {selected === 'shoes' && <div className="landing-minimal-shoe"><img src={shoeSrc} alt={t('landing.studio_daily_trainer')} width="300" height="170" loading="lazy" decoding="async" /><div><span>{t('landing.studio_logged')}</span><strong>248 km</strong></div></div>}
           <small className="landing-minimal-example-label">{t('landing.studio_example')}</small>

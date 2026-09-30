@@ -249,7 +249,7 @@ export default {
     "cinematic_race_sydney": "Sydney Marathon",
     "cinematic_race_comrades": "Comrades Marathon",
     "cinematic_races_kicker": "Race Management",
-    "cinematic_races_title": "Track Your Racing Goals",
+    "cinematic_races_title": "Track your racing goals.",
     "cinematic_races_copy": "Manage your race calendar, set finish goals, and count down to race day. From Tokyo to New York, every race has a plan.",
     "cinematic_race_col_race": "Race",
     "cinematic_race_col_date": "Date",
