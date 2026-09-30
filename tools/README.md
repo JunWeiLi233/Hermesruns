@@ -16,6 +16,7 @@ features. Run commands from the repository root.
 | Check compact agent context | `node tools/check-ai-context-budget.mjs` |
 | Generate tool command adapters | `node tools/generate-runtime-commands.mjs` |
 | Generate the test CSS compatibility bundle | `node tools/generate-legacy-style-bundle.mjs` |
+| Regenerate the landing globe land dots | `node tools/generate-landing-globe-land.mjs <world-atlas@2 land-110m.json>` |
 | Inspect an existing browser session | `node tools/auto-hermes-browser.mjs` |
 | Inspect a dedicated persistent QA browser | `node tools/auto-hermes-playwright.mjs` |
 | Audit course-map data explicitly | `node tools/audit-marathon-coursemaps.mjs` |

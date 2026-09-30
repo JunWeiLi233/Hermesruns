@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
-import { buildRaceFlight, getRaceFlightFrame, sampleRaceFlightLeg, RACE_FLIGHT_STEP_MS } from '../../utils/landingRaceFlight';
-import { clampMapCamera, layoutRaceMarkers, focusRaceCamera, mapUnit, zoomMapCamera, MAX_MAP_ZOOM, MAP_ZOOM_STEP } from '../../utils/landingRaceMap';
+import { GLOBE_KEY_STEP_DEG, GLOBE_MAX_ZOOM, GLOBE_MIN_ZOOM, GLOBE_ZOOM_STEP, labelSize } from '../../utils/landingGlobe';
+import { createRaceGlobeScene } from './landingRaceGlobeScene';
 
-const FIT_CAMERA = { zoom: 1, x: 0, y: 0 };
+const hasGeo = race => Number.isFinite(race.geo?.lat) && Number.isFinite(race.geo?.lng);
+const KEY_ROTATION = {
+  ArrowLeft: [0, -GLOBE_KEY_STEP_DEG],
+  ArrowRight: [0, GLOBE_KEY_STEP_DEG],
+  ArrowUp: [GLOBE_KEY_STEP_DEG, 0],
+  ArrowDown: [-GLOBE_KEY_STEP_DEG, 0],
+};
 
 function MapIcon({ name }) {
   const paths = {
@@ -13,58 +19,86 @@ function MapIcon({ name }) {
     pause: <path d="M8 5v14M16 5v14" />,
     plus: <path d="M5 12h14M12 5v14" />,
     minus: <path d="M5 12h14" />,
+    spin: <><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" /><path d="M19.5 4.5v4h-4" /></>,
     fit: <><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" /><circle cx="12" cy="12" r="3" /></>,
   };
   return <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-export default function LandingRaceMap({ races = [], mapImage, graticule = [] }) {
+// Visible text must be part of the accessible name (WCAG 2.5.3), e.g. "NYC".
+const markerName = race => (race.mapLabel && !race.name.includes(race.mapLabel) ? `${race.mapLabel}, ${race.name}` : race.name);
+
+// A dotted orthographic globe on a canvas with DOM label buttons, SVG callouts
+// and the SVG airliner layered above it. landingRaceGlobeScene paints every
+// frame; React only renders structure and UI state.
+export default function LandingRaceMap({ races = [] }) {
   const { t } = useI18n();
-  const racePins = useMemo(() => races.filter(race => Number.isFinite(race.pin?.x) && Number.isFinite(race.pin?.y)), [races]);
+  const racePins = useMemo(() => races.filter(hasGeo), [races]);
   const [selectedId, setSelectedId] = useState(racePins[0]?.id);
   const [playing, setPlaying] = useState(false);
-  const [travel, setTravel] = useState(null);
-  const [camera, setCamera] = useState(FIT_CAMERA);
-  const [size, setSize] = useState({ width: 800, height: 400 });
-  const [visible, setVisible] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
+  const [zoom, setZoom] = useState(GLOBE_MIN_ZOOM);
+  // null until the viewport is measured, so nothing paints at a placeholder size.
+  const [size, setSize] = useState(null);
+  const [onScreen, setOnScreen] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(() => !document.hidden);
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [spinning, setSpinning] = useState(true);
   const viewportRef = useRef(null);
+  const canvasRef = useRef(null);
   const aircraftRef = useRef(null);
-  const activeRouteRef = useRef(null);
+  const airlinerRef = useRef(null);
+  const markersRef = useRef(new Map());
+  const calloutsRef = useRef(new Map());
   const calendarRef = useRef(null);
-  const dragRef = useRef(null);
-  const frameRef = useRef(null);
-  const selectedRef = useRef(racePins[0]?.id);
-  const elapsedRef = useRef(0);
+  const zoomInRef = useRef(null);
+  const zoomOutRef = useRef(null);
+  const sceneRef = useRef(null);
   const selectedIndex = Math.max(0, racePins.findIndex(race => race.id === selectedId));
   const selected = racePins[selectedIndex];
-  const flight = useMemo(() => buildRaceFlight(racePins.map(race => race.pin)), [racePins]);
-  const markers = useMemo(() => layoutRaceMarkers(racePins, size, camera), [racePins, size, camera]);
+  const hasRaces = racePins.length > 0;
+  const label = labelSize(size?.width ?? 800);
+
+  useLayoutEffect(() => {
+    if (!hasRaces || !viewportRef.current) return undefined;
+    const scene = createRaceGlobeScene({
+      viewport: viewportRef.current,
+      canvas: canvasRef.current,
+      aircraft: aircraftRef.current,
+      airliner: airlinerRef.current,
+      markers: markersRef.current,
+      callouts: calloutsRef.current,
+      onActiveRace: setSelectedId,
+      onSpinChange: setSpinning,
+      onDragStart: () => setPlaying(false),
+    });
+    sceneRef.current = scene;
+    return () => { scene.destroy(); sceneRef.current = null; };
+  }, [hasRaces]);
+
+  useLayoutEffect(() => {
+    sceneRef.current?.update({ races: racePins, selectedId: selected?.id, playing, zoom, size, reducedMotion, active: onScreen && documentVisible });
+  }, [racePins, selected, playing, zoom, size, reducedMotion, onScreen, documentVisible]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return undefined;
     const measure = () => {
       const bounds = viewport.getBoundingClientRect();
-      if (bounds.width > 0 && bounds.height > 0) setSize({ width: bounds.width, height: bounds.height });
+      if (bounds.width > 0 && bounds.height > 0) {
+        setSize(current => (current?.width === bounds.width && current?.height === bounds.height ? current : { width: bounds.width, height: bounds.height }));
+      }
     };
     measure();
     const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
     resizeObserver?.observe(viewport);
     window.addEventListener('resize', measure);
-    const observer = typeof IntersectionObserver === 'function' ? new IntersectionObserver(entries => {
-      const onScreen = entries.some(entry => entry.isIntersecting);
-      setVisible(onScreen);
-      if (onScreen) setMapReady(true);
-    }) : null;
+    const observer = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(entries => setOnScreen(entries.some(entry => entry.isIntersecting)))
+      : null;
     if (observer) observer.observe(viewport);
-    else { setVisible(true); setMapReady(true); }
+    else setOnScreen(true);
     return () => { observer?.disconnect(); resizeObserver?.disconnect(); window.removeEventListener('resize', measure); };
-  }, []);
-
-  useEffect(() => setCamera(current => clampMapCamera(current, size)), [size]);
+  }, [hasRaces]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -75,127 +109,56 @@ export default function LandingRaceMap({ races = [], mapImage, graticule = [] })
     return () => { media.removeEventListener('change', updateMotion); document.removeEventListener('visibilitychange', updateVisibility); };
   }, []);
 
-  const paint = useCallback((frame, destination, phase = 'dwell') => {
-    frameRef.current = { ...frame, destination };
-    const pointer = aircraftRef.current;
-    if (pointer) {
-      pointer.setAttribute('transform', `translate(${frame.x.toFixed(6)} ${frame.y.toFixed(6)}) rotate(${frame.angle.toFixed(3)})`);
-      pointer.dataset.destination = destination;
-      pointer.dataset.flightPhase = phase;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!racePins.length) return undefined;
-    const parkedIndex = Math.max(0, racePins.findIndex(race => race.id === selectedRef.current));
-    const parkedRace = racePins[parkedIndex];
-    if (selectedRef.current !== parkedRace.id) {
-      selectedRef.current = parkedRace.id;
-      setSelectedId(parkedRace.id);
-    }
-    const park = () => paint({ ...parkedRace.pin, angle: frameRef.current?.angle ?? 0 }, parkedRace.id);
-    if (!visible || !documentVisible || (!playing && !travel)) {
-      if (!frameRef.current || frameRef.current.destination !== parkedRace.id) park();
-      if (travel && (!visible || !documentVisible)) setTravel(null);
-      return undefined;
-    }
-    let frameId;
-    let previousTime = null;
-    let manualElapsed = 0;
-    const target = travel && racePins.find(race => race.id === travel.id);
-    if (travel && !target) { park(); setTravel(null); return undefined; }
-    const manualLeg = target ? buildRaceFlight([travel.from, target.pin]).legs[0] : null;
-    const tick = timestamp => {
-      const delta = previousTime === null ? 0 : timestamp - previousTime;
-      previousTime = timestamp;
-      if (playing) {
-        elapsedRef.current += delta;
-        const frame = getRaceFlightFrame(flight.legs, elapsedRef.current);
-        const destination = racePins[frame.activeIndex];
-        paint(reducedMotion ? { ...destination.pin, angle: frame.angle } : frame, destination.id, !reducedMotion && frame.travelling ? 'travelling' : 'dwell');
-        if (activeRouteRef.current) {
-          activeRouteRef.current.setAttribute('d', flight.legs[frame.legIndex].path);
-          activeRouteRef.current.setAttribute('stroke-dashoffset', String(1 - frame.progress));
-        }
-        if (selectedRef.current !== destination.id) {
-          selectedRef.current = destination.id;
-          setSelectedId(destination.id);
-        }
-      } else if (manualLeg) {
-        manualElapsed += delta;
-        const progress = reducedMotion ? 1 : Math.min(1, manualElapsed / 750);
-        paint(sampleRaceFlightLeg(manualLeg, progress), target.id, progress < 1 ? 'travelling' : 'dwell');
-        if (activeRouteRef.current) {
-          activeRouteRef.current.setAttribute('d', manualLeg.path);
-          activeRouteRef.current.setAttribute('stroke-dashoffset', String(1 - progress));
-        }
-        if (progress === 1) { setTravel(null); return; }
-      }
-      frameId = window.requestAnimationFrame(tick);
-    };
-    frameId = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frameId);
-  }, [racePins, flight, playing, travel, visible, documentVisible, reducedMotion, paint]);
-
   const chooseRace = (id, returnToMap = false) => {
-    const race = racePins.find(item => item.id === id);
-    if (!race) return;
+    if (!racePins.some(race => race.id === id)) return;
     setPlaying(false);
-    selectedRef.current = id;
     setSelectedId(id);
-    elapsedRef.current = racePins.findIndex(item => item.id === id) * RACE_FLIGHT_STEP_MS;
-    const from = frameRef.current ?? race.pin;
-    if (Math.hypot(from.x - race.pin.x, from.y - race.pin.y) < 0.001) {
-      setTravel(null);
-      paint({ ...race.pin, angle: from.angle ?? 0 }, id);
-    } else setTravel({ id, from });
-    setCamera(current => focusRaceCamera(race.pin, size, current.zoom));
+    sceneRef.current?.flyTo(id);
     if (returnToMap) {
       if (calendarRef.current) calendarRef.current.open = false;
       viewportRef.current?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
       viewportRef.current?.focus({ preventScroll: true });
     }
   };
-
-  const zoomBy = amount => {
+  const zoomBy = (amount, event) => {
     setPlaying(false);
-    setCamera(current => {
-      const zoom = Math.max(1, Math.min(MAX_MAP_ZOOM, current.zoom + amount));
-      return current.zoom === 1 ? focusRaceCamera(selected.pin, size, zoom) : zoomMapCamera(current, size, zoom);
-    });
-  };
-  const resetView = () => { setPlaying(false); setCamera(FIT_CAMERA); };
-  const toggleTour = () => {
-    setTravel(null);
-    if (!playing) {
-      if (travel) paint({ ...selected.pin, angle: frameRef.current?.angle ?? 0 }, selected.id);
-      setCamera(FIT_CAMERA);
+    sceneRef.current?.interact();
+    const next = Math.max(GLOBE_MIN_ZOOM, Math.min(GLOBE_MAX_ZOOM, zoom + amount));
+    // The pressed button is about to be disabled at its limit: keep keyboard focus on the toolbar.
+    if (event?.currentTarget === document.activeElement && (next >= GLOBE_MAX_ZOOM || next <= GLOBE_MIN_ZOOM)) {
+      (next >= GLOBE_MAX_ZOOM ? zoomOutRef : zoomInRef).current?.focus();
     }
-    setPlaying(value => !value);
+    setZoom(next);
+  };
+  const resetView = () => {
+    setPlaying(false);
+    setZoom(GLOBE_MIN_ZOOM);
+    sceneRef.current?.recenter();
+  };
+  const toggleTour = () => setPlaying(value => !value);
+  const toggleSpin = () => {
+    setPlaying(false);
+    sceneRef.current?.setSpin(!spinning);
   };
   const startDrag = event => {
-    if (dragRef.current || event.isPrimary === false || event.target.closest('button') || event.button !== 0 || camera.zoom <= 1) return;
-    setPlaying(false);
-    dragRef.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, camera };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    if (event.target.closest('button')) return;
+    sceneRef.current?.beginDrag(event);
   };
-  const drag = event => {
-    const start = dragRef.current;
-    if (!start || start.pointer !== event.pointerId) return;
-    setCamera(clampMapCamera({ ...start.camera, x: start.camera.x + event.clientX - start.x, y: start.camera.y + event.clientY - start.y }, size));
+  const pointerMove = event => {
+    sceneRef.current?.moveDrag(event);
+    sceneRef.current?.hover(event);
   };
-  const endDrag = event => {
-    if (dragRef.current?.pointer !== event.pointerId) return;
-    dragRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-  };
-  const mapKeys = event => {
+  const globeKeys = event => {
     if (event.target !== event.currentTarget) return;
-    const step = { ArrowLeft: [40, 0], ArrowRight: [-40, 0], ArrowUp: [0, 40], ArrowDown: [0, -40] }[event.key];
-    if (step && camera.zoom > 1) {
-      event.preventDefault(); setPlaying(false);
-      setCamera(current => clampMapCamera({ ...current, x: current.x + step[0], y: current.y + step[1] }, size));
-    } else if (event.key === 'Home') { event.preventDefault(); resetView(); }
+    const rotation = KEY_ROTATION[event.key];
+    if (rotation) {
+      event.preventDefault();
+      setPlaying(false);
+      sceneRef.current?.rotateBy(...rotation);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      resetView();
+    }
   };
 
   if (!selected) return <p className="landing-map-empty">{t('landing.map_empty')}</p>;
@@ -204,26 +167,35 @@ export default function LandingRaceMap({ races = [], mapImage, graticule = [] })
     <>
       <div className="landing-race-explorer" role="region" aria-label={t('landing.map_label')}>
         <div className="landing-race-map-toolbar">
-          <span>{t(camera.zoom > 1 ? 'landing.map_drag_hint' : 'landing.map_hint')}</span>
+          <span>{t(zoom > GLOBE_MIN_ZOOM ? 'landing.map_drag_hint' : 'landing.map_hint')}</span>
           <div className="landing-race-map-tools">
-            <button type="button" onClick={() => zoomBy(MAP_ZOOM_STEP)} disabled={camera.zoom >= MAX_MAP_ZOOM} aria-label={t('landing.map_zoom_in')} title={t('landing.map_zoom_in')}><MapIcon name="plus" /></button>
-            <button type="button" onClick={() => zoomBy(-MAP_ZOOM_STEP)} disabled={camera.zoom <= 1} aria-label={t('landing.map_zoom_out')} title={t('landing.map_zoom_out')}><MapIcon name="minus" /></button>
+            {!reducedMotion && <button type="button" onClick={toggleSpin} aria-pressed={spinning} aria-label={t('landing.map_spin')} title={t('landing.map_spin')}><MapIcon name="spin" /></button>}
+            <button ref={zoomInRef} type="button" onClick={event => zoomBy(GLOBE_ZOOM_STEP, event)} disabled={zoom >= GLOBE_MAX_ZOOM} aria-label={t('landing.map_zoom_in')} title={t('landing.map_zoom_in')}><MapIcon name="plus" /></button>
+            <button ref={zoomOutRef} type="button" onClick={event => zoomBy(-GLOBE_ZOOM_STEP, event)} disabled={zoom <= GLOBE_MIN_ZOOM} aria-label={t('landing.map_zoom_out')} title={t('landing.map_zoom_out')}><MapIcon name="minus" /></button>
             <button type="button" onClick={resetView} aria-label={t('landing.map_reset')} title={t('landing.map_reset')}><MapIcon name="fit" /></button>
           </div>
         </div>
-        <div ref={viewportRef} className="landing-race-map-viewport" data-zoom={camera.zoom} style={{ touchAction: camera.zoom > 1 ? 'none' : 'pan-y pinch-zoom' }}
+        <div ref={viewportRef} className="landing-race-map-viewport landing-race-globe" data-zoom={zoom} style={{ touchAction: 'pan-y pinch-zoom' }}
           tabIndex={0} role="group" aria-label={t('landing.map_navigation')} aria-describedby="landing-race-current"
-          onPointerDown={startDrag} onPointerMove={drag} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={event => { if (dragRef.current?.pointer === event.pointerId) dragRef.current = null; }} onKeyDown={mapKeys}>
-          <svg className="landing-race-map-canvas" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}>
-            <g className="landing-cinematic-map-graticule">{graticule.map(path => <path key={path} d={path} />)}</g>
-            <image href={mapReady ? mapImage : undefined} width="100" height="50" preserveAspectRatio="none" />
-            <path d={flight.path} className="landing-race-map-route" />
-            <path ref={activeRouteRef} pathLength="1" className="landing-race-map-route-active" />
+          onPointerDown={startDrag} onPointerMove={pointerMove} onPointerUp={event => sceneRef.current?.endDrag(event)}
+          onPointerCancel={event => sceneRef.current?.endDrag(event)} onLostPointerCapture={event => sceneRef.current?.endDrag(event, true)}
+          onPointerEnter={event => sceneRef.current?.hover(event)} onPointerLeave={event => sceneRef.current?.leave(event)}
+          onFocus={() => sceneRef.current?.hold('focus', true)}
+          onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) sceneRef.current?.hold('focus', false); }}
+          onKeyDown={globeKeys}>
+          <canvas ref={canvasRef} className="landing-race-globe-canvas" aria-hidden="true" />
+          <svg className="landing-race-map-callouts" width={size?.width} height={size?.height} aria-hidden="true">
+            {racePins.map(race => <g key={race.id} data-race-id={race.id} className={race.id === selected.id ? 'is-active' : undefined}
+              ref={node => { if (node) calloutsRef.current.set(race.id, node); else calloutsRef.current.delete(race.id); }}>
+              <line />
+              <circle className="landing-race-map-pin-halo" r="11" />
+              <circle className="landing-race-map-pin" r={race.id === selected.id ? 5 : 4} />
+            </g>)}
           </svg>
-          <svg className="landing-race-map-canvas landing-race-map-aircraft-layer" viewBox="0 0 100 50" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}>
-            <g ref={aircraftRef} className="landing-cinematic-map-aircraft" transform={`translate(${racePins[0].pin.x} ${racePins[0].pin.y})`} aria-hidden="true">
-              {/* Keep the 40px airliner readable at every zoom; its nose stays at the flight coordinate. */}
-              <g className="landing-race-map-airliner" transform={`scale(${40 / (49 * (mapUnit(size) || 1) * camera.zoom)})`}>
+          <svg className="landing-race-map-aircraft-layer" width={size?.width} height={size?.height} aria-hidden="true">
+            <g ref={aircraftRef} className="landing-cinematic-map-aircraft" aria-hidden="true">
+              {/* The nose sits on the flight coordinate; the scene orients it along the arc's screen heading. */}
+              <g ref={airlinerRef} className="landing-race-map-airliner" transform="scale(0.62)">
                 <g transform="translate(-24 0)">
                   <path d="M 24 0 C 24 -1.8 21 -3.4 18 -3.4 H 7 L -8 -20 Q -9 -21 -10.5 -21 H -13 L -6 -3.4 L -18 -2.3 L -22 -9 H -25 L -22 -1.2 Q -24 0 -22 1.2 L -25 9 H -22 L -18 2.3 L -6 3.4 L -13 21 H -10.5 Q -9 21 -8 20 L 7 3.4 H 18 C 21 3.4 24 1.8 24 0 Z" className="landing-cinematic-map-aircraft-shape" />
                   <path d="M -4 -8.5 H 1 A 1.6 1.6 0 0 1 1 -11.7 H -4 A 1.6 1.6 0 0 0 -4 -8.5 Z M -4 8.5 H 1 A 1.6 1.6 0 0 0 1 11.7 H -4 A 1.6 1.6 0 0 1 -4 8.5 Z" className="landing-race-map-airliner-engines" />
@@ -233,16 +205,11 @@ export default function LandingRaceMap({ races = [], mapImage, graticule = [] })
               </g>
             </g>
           </svg>
-          <svg className="landing-race-map-callouts" width={size.width} height={size.height} aria-hidden="true">
-            {markers.map(marker => <g key={marker.key} className={marker.race.id === selected.id ? 'is-active' : undefined}>
-              <line x1={marker.anchorX} y1={marker.anchorY} x2={marker.x} y2={marker.y} />
-              <circle cx={marker.anchorX} cy={marker.anchorY} r="3.5" />
-            </g>)}
-          </svg>
-          {markers.map(marker => <button key={marker.key} type="button" className={`landing-race-map-marker${marker.race.id === selected.id ? ' is-active' : ''}`} data-races={marker.key}
-            style={{ width: marker.width, transform: `translate(${marker.x}px, ${marker.y}px) translate(-50%, -50%)` }} aria-label={marker.race.name} title={marker.race.name}
-            aria-pressed={marker.race.id === selected.id} onFocus={() => setPlaying(false)} onClick={() => chooseRace(marker.race.id)}>
-            <span>{marker.race.mapLabel ?? marker.race.name}</span>
+          {racePins.map(race => <button key={race.id} type="button" className={`landing-race-map-marker${race.id === selected.id ? ' is-active' : ''}`} data-race-id={race.id}
+            ref={node => { if (node) markersRef.current.set(race.id, node); else markersRef.current.delete(race.id); }}
+            style={{ width: label.width }} aria-label={markerName(race)} title={race.name}
+            aria-pressed={race.id === selected.id} onFocus={() => setPlaying(false)} onClick={() => chooseRace(race.id)}>
+            <span>{race.mapLabel ?? race.name}</span>
           </button>)}
         </div>
         <div className="landing-race-map-detail" aria-live={playing ? 'off' : 'polite'} aria-atomic="true" data-race-id={selected.id}>
