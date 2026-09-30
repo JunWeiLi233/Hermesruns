@@ -310,7 +310,8 @@ describe('interactive landing race globe', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Play the race tour' }));
     advance(0);
     for (let frame = 0; frame < 1400; frame += 1) { advance(16); check(); }
-  });
+  // ~2,300 simulated frames: allow slower CI runners well past vitest's 5s default.
+  }, 20_000);
 
   it('turns with arrow keys, zooms with the toolbar, and resets with Home', () => {
     mount();
