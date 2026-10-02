@@ -3,7 +3,7 @@ package com.hermes.backend.races;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hermes.backend.infrastructure.web.HtmlScanLimiter;
+import com.hermes.backend.infrastructure.web.HtmlTagScanner;
 import com.hermes.backend.races.model.AlignmentRatioWindow;
 import com.hermes.backend.races.model.PromptRaceType;
 import com.hermes.backend.routing.RoutePoint;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,9 +70,9 @@ public class RaceCourseMapBulkSeedService {
      *  鈥?driving routes pick up freeways and ramps that are illegal /
      *  impossible for marathon runners. */
     private static final String OSRM_FOOT_BASE_URL = "https://routing.openstreetmap.de/routed-foot";
-    private static final Pattern GPX_ROUTE_POINT_PATTERN = Pattern.compile(
-            "<(?:[a-z0-9_]+:)?(?:trkpt|rtept)\\b[^>]*\\blat=[\"']([^\"']+)[\"'][^>]*\\blon=[\"']([^\"']+)[\"']",
-            Pattern.CASE_INSENSITIVE);
+    // Attribute patterns run per <trkpt>/<rtept> tag (see HtmlTagScanner).
+    private static final Pattern GPX_LAT_PATTERN = Pattern.compile("\\blat=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern GPX_LON_PATTERN = Pattern.compile("\\blon=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
     private static final String SYNTHETIC_SUMMARY = "Hermes generated an OSRM-routed approximation of this course "
             + "(waypoints around the race location snapped to real streets via Open Source Routing Machine, then "
             + "elevation sampled from open-meteo / open-elevation DEM along that polyline) because no official "
@@ -1175,12 +1175,14 @@ public class RaceCourseMapBulkSeedService {
         if (gpxXml == null || gpxXml.isBlank()) {
             return List.of();
         }
-        Matcher matcher = GPX_ROUTE_POINT_PATTERN.matcher(HtmlScanLimiter.bounded(gpxXml));
         List<RoutePoint> routePoints = new ArrayList<>();
-        while (matcher.find()) {
+        for (String tag : HtmlTagScanner.startTags(gpxXml, Set.of("trkpt", "rtept"))) {
+            String rawLat = HtmlTagScanner.lastAttribute(tag, GPX_LAT_PATTERN);
+            String rawLng = HtmlTagScanner.lastAttribute(tag, GPX_LON_PATTERN);
+            if (rawLat == null || rawLng == null) continue;
             try {
-                double lat = Double.parseDouble(matcher.group(1));
-                double lng = Double.parseDouble(matcher.group(2));
+                double lat = Double.parseDouble(rawLat);
+                double lng = Double.parseDouble(rawLng);
                 routePoints.add(new RoutePoint(lat, lng, null));
             } catch (NumberFormatException ignored) {
                 // Ignore malformed points and keep parsing the rest of the GPX.

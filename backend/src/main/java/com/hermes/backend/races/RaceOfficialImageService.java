@@ -2,7 +2,7 @@ package com.hermes.backend.races;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
-import com.hermes.backend.infrastructure.web.HtmlScanLimiter;
+import com.hermes.backend.infrastructure.web.HtmlTagScanner;
 import com.hermes.backend.infrastructure.web.SafeUrlExecutor;
 import com.hermes.backend.infrastructure.web.SafeUrlValidator;
 import java.net.URI;
@@ -10,7 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -25,15 +25,13 @@ import org.springframework.web.client.RestTemplate;
 public class RaceOfficialImageService {
     private static final int MAX_URL_LENGTH = 500;
     private static final Duration CACHE_TTL = Duration.ofHours(12);
-    private static final Pattern META_IMAGE_PATTERN = Pattern.compile(
-            "<meta[^>]+(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"'][^>]+content=[\"']([^\"'#?]+(?:\\?[^\"']*)?)[\"'][^>]*>|"
-                    + "<meta[^>]+content=[\"']([^\"'#?]+(?:\\?[^\"']*)?)[\"'][^>]+(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"'][^>]*>",
+    // Attribute patterns run per tag (see HtmlTagScanner).
+    private static final Pattern META_IMAGE_PROPERTY_PATTERN = Pattern.compile(
+            "(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"']",
             Pattern.CASE_INSENSITIVE
     );
-    private static final Pattern IMG_PATTERN = Pattern.compile(
-            "<img[^>]+src=[\"']([^\"']+)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
-    );
+    private static final Pattern META_CONTENT_PATTERN = Pattern.compile("content=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IMG_SRC_PATTERN = Pattern.compile("src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
     private static final List<String> REJECT_HINTS = List.of("logo", "icon", "badge", "sprite", "favicon", "-fb.");
     private static final List<String> REJECT_HOST_HINTS = List.of(
             "tr.line.me",
@@ -105,19 +103,28 @@ public class RaceOfficialImageService {
     }
 
     private String firstMetaImage(String html, URI baseUri) {
-        Matcher matcher = META_IMAGE_PATTERN.matcher(HtmlScanLimiter.bounded(html));
-        while (matcher.find()) {
-            String raw = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+        for (String tag : HtmlTagScanner.startTags(html, Set.of("meta"))) {
+            if (!META_IMAGE_PROPERTY_PATTERN.matcher(tag).find()) continue;
+            String raw = HtmlTagScanner.lastAttribute(tag, META_CONTENT_PATTERN);
+            if (!isMetaImageContent(raw)) continue;
             String image = sanitizeCandidate(raw, baseUri);
             if (image != null) return image;
         }
         return null;
     }
 
+    /** A meta image URL needs a path before any query, and may only carry a fragment after that query. */
+    private static boolean isMetaImageContent(String raw) {
+        if (raw == null || raw.isEmpty()) return false;
+        int query = raw.indexOf('?');
+        int hash = raw.indexOf('#');
+        if (query < 0) return hash < 0;
+        return query > 0 && (hash < 0 || hash > query);
+    }
+
     private String firstInlineImage(String html, URI baseUri) {
-        Matcher matcher = IMG_PATTERN.matcher(HtmlScanLimiter.bounded(html));
-        while (matcher.find()) {
-            String image = sanitizeCandidate(matcher.group(1), baseUri);
+        for (String tag : HtmlTagScanner.startTags(html, Set.of("img"))) {
+            String image = sanitizeCandidate(HtmlTagScanner.lastAttribute(tag, IMG_SRC_PATTERN), baseUri);
             if (image != null) return image;
         }
         return null;
