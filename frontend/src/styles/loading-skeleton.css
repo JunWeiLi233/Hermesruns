@@ -2,13 +2,16 @@
 
 :root {
   --hermes-skeleton-rail-width: clamp(156px, 9.2vw, 178px);
-  --hermes-admin-skeleton-rail-width: 304px;
-  --hermes-admin-skeleton-topbar-height: 80px;
+  --hermes-admin-skeleton-rail-width: 156px;
+  --hermes-admin-skeleton-topbar-height: 76px;
   --hermes-skeleton-base: rgba(116, 102, 91, 0.11);
   --hermes-skeleton-highlight: rgba(255, 255, 255, 0.76);
   --hermes-skeleton-surface: rgba(255, 252, 247, 0.76);
   --hermes-skeleton-line: rgba(93, 75, 57, 0.12);
   --hermes-skeleton-shadow: 0 24px 70px rgba(105, 68, 48, 0.1);
+  --hermes-skeleton-map: #e3ddd4;
+  --hermes-skeleton-card-solid: #fffdf9;
+  --hermes-skeleton-hero-dark: rgba(28, 22, 20, 0.94);
 }
 
 body.theme-midnight,
@@ -18,6 +21,9 @@ body.theme-high-contrast {
   --hermes-skeleton-surface: rgba(31, 32, 36, 0.78);
   --hermes-skeleton-line: rgba(247, 240, 232, 0.12);
   --hermes-skeleton-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  --hermes-skeleton-map: #24262b;
+  --hermes-skeleton-card-solid: #1c1d21;
+  --hermes-skeleton-hero-dark: rgba(10, 10, 12, 0.92);
 }
 
 @keyframes hermesSkeletonShimmer {
@@ -767,20 +773,7 @@ body.theme-high-contrast {
 /* Runner route parity: keep the loading composition aligned with the live
  * section boundaries at the desktop/tablet breakpoint used by the app. */
 .page-skeleton--runs .page-skeleton__runs-shell { display: grid; gap: clamp(16px, 2vw, 24px); min-height: 0; max-width: none; margin: 0; padding: 0 0 56px; }
-.page-skeleton--runs .page-skeleton__runs-cockpit-shell { min-height: 0; margin-top: 0; }
-.page-skeleton--runs .page-skeleton__runs-cockpit { min-height: 288px; height: auto; overflow: visible; border-radius: 30px; }
-.page-skeleton--runs .page-skeleton__runs-glance { display: block; min-height: 0; }
-.page-skeleton--runs .page-skeleton__runs-stats { min-height: 0; margin: 0 0 14px; }
-.page-skeleton--runs .page-skeleton__runs-insight-strip { min-height: 0; height: auto; overflow: visible; }
-.page-skeleton--runs .page-skeleton__runs-workbench-shell { min-height: 0; margin-top: 0; }
-.page-skeleton--runs .page-skeleton__runs-workbench { min-height: 0; }
-.page-skeleton--runs .page-skeleton__runs-card-list { min-height: 0; }
-.page-skeleton--runs .page-skeleton__runs-history { min-height: 0; }
 
-.page-skeleton--analysis .page-skeleton__analysis-cockpit { min-height: 0; }
-.page-skeleton--analysis .page-skeleton__analysis-bento-grid { min-height: 0; }
-.page-skeleton--analysis .page-skeleton__analysis-table-grid { min-height: 0; }
-.page-skeleton--analysis .page-skeleton__analysis-injury { min-height: 0; }
 
 .page-skeleton--weather .page-skeleton__weather-hero-shell { min-height: 0; }
 .page-skeleton--weather .page-skeleton__weather-hero { min-height: 0; }
@@ -909,13 +902,7 @@ body.theme-high-contrast {
 /* Natural child content is intentionally clipped to the same route bands as
  * the live pages; this prevents generic skeleton internals from stretching a
  * route after its landmark dimensions have been established. */
-.page-skeleton--runs .page-skeleton__runs-card-list,
-.page-skeleton--runs .page-skeleton__runs-history { height: auto; min-height: 0; overflow: visible; }
 
-.page-skeleton--analysis .page-skeleton__analysis-cockpit { min-height: 0; height: auto; overflow: visible; }
-.page-skeleton--analysis .page-skeleton__analysis-bento-grid { min-height: 0; height: auto; overflow: visible; }
-.page-skeleton--analysis .page-skeleton__analysis-table-grid { min-height: 0; height: auto; overflow: visible; }
-.page-skeleton--analysis .page-skeleton__analysis-injury { min-height: 0; height: auto; overflow: visible; }
 
 .page-skeleton--weather .page-skeleton__weather-forecast-shell { height: auto; min-height: 262px; overflow: visible; }
 .page-skeleton--today-run .page-skeleton__today-coaching { height: auto; min-height: 148px; overflow: visible; }
@@ -982,17 +969,10 @@ body.theme-high-contrast {
 .page-skeleton--analysis-intensity .analysis-intensity-command-samples { display: grid; gap: 14px; height: auto; min-height: 0; overflow: visible; }
 .page-skeleton__analysis-intensity-sample-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .page-skeleton--analysis-injury .page-skeleton__analysis-injury-profile { display: grid; gap: 24px; height: auto; min-height: 0; overflow: visible; }
-.page-skeleton--analysis-injury .analysis-cinematic-card { height: auto; min-height: 220px; overflow: visible; }
-.page-skeleton--analysis-injury .analysis-cinematic-signal-row { height: auto; min-height: 0; margin: 0; padding: 0; border: 0; overflow: visible; }
-.page-skeleton--analysis-injury .analysis-cinematic-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.75fr); gap: 18px; height: auto; min-height: 0; overflow: visible; }
 .page-skeleton__analysis-injury-trend { display: grid; gap: 16px; align-content: start; min-height: 340px; }
 .page-skeleton__analysis-injury-support { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .page-skeleton__analysis-injury-support-card { display: grid; gap: 8px; min-height: 84px; padding: 14px; border: 1px solid var(--hermes-skeleton-line); border-radius: 12px; }
 .page-skeleton--analysis-coach .page-skeleton__analysis-coach { display: grid; gap: 24px; height: auto; min-height: 0; overflow: visible; }
-.page-skeleton--analysis-coach .analysis-profile-v2-header { height: auto; min-height: 96px; padding: 8px 0; border: 0; background: transparent; box-shadow: none; border-radius: 0; overflow: visible; }
-.page-skeleton--analysis-coach .analysis-coach-profile-decision { height: auto; min-height: 248px; border-radius: 18px; overflow: visible; }
-.page-skeleton--analysis-coach .analysis-coach-profile-workbench { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.75fr); gap: 18px; align-items: stretch; height: auto; min-height: 0; overflow: visible; }
-.page-skeleton--analysis-coach .analysis-coach-profile-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; height: auto; min-height: 0; overflow: visible; }
 
 @media (min-width: 861px) {
   .page-skeleton--rewards .page-skeleton__rewards-hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
@@ -2596,466 +2576,155 @@ body.theme-high-contrast {
   .race-detail-loading-image { min-height: 180px; }
 }
 
-/* Runs mirrors the live history cockpit: hero + signal rail, filter workbench,
-   summary metrics, coaching insight strip, then grouped run cards. */
-.page-skeleton__runs-cockpit {
-  display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr);
-  gap: clamp(16px, 2vw, 24px);
-  align-items: stretch;
-  min-height: 288px;
-  padding: clamp(20px, 2.4vw, 32px);
-}
-
-.page-skeleton__runs-cockpit-primary {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 28px;
-}
-
-.page-skeleton__runs-kicker {
-  width: 126px;
-  height: 22px;
-  border-radius: 999px;
-}
-
-.page-skeleton__runs-title {
-  width: min(540px, 92%);
-  height: clamp(54px, 6.2vw, 92px);
-  margin-top: 16px;
-  border-radius: 14px;
-}
-
-.page-skeleton__runs-copy {
-  width: min(540px, 92%);
-  margin-top: 18px;
-}
-
-.page-skeleton__runs-copy > .page-skeleton__block {
-  height: 13px;
-  border-radius: 999px;
-}
-
-.page-skeleton__runs-copy > .page-skeleton__block.page-skeleton__line--short { width: 70%; }
-
-.page-skeleton__runs-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.page-skeleton__runs-action {
-  width: 142px;
-  height: 44px;
-  border-radius: 999px;
-}
-
-.page-skeleton__runs-action--primary {
-  background: linear-gradient(105deg, rgba(24, 21, 18, 0.92) 20%, rgba(86, 75, 68, 0.5) 42%, rgba(24, 21, 18, 0.92) 64%);
-  background-size: 220% 100%;
-}
-
-.page-skeleton__runs-cockpit-rail {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-content: stretch;
-}
-
-.page-skeleton__runs-signal {
-  display: flex;
-  min-height: 124px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 22px;
-  box-shadow: none;
-}
-
-.page-skeleton__runs-signal--count {
-  background: rgba(25, 21, 18, 0.86);
-}
-
-.page-skeleton__runs-signal--status {
-  grid-column: 1 / -1;
-  min-height: 108px;
-  background: rgba(255, 241, 232, 0.76);
-}
-
-.page-skeleton__runs-signal-label { width: 54%; height: 9px; border-radius: 999px; }
-.page-skeleton__runs-signal-value { width: 68%; height: 30px; border-radius: 8px; }
-.page-skeleton__runs-signal-note { width: 86%; height: 9px; border-radius: 999px; }
-
-.page-skeleton__runs-workbench {
-  margin-top: 0;
-  padding: clamp(14px, 2vw, 18px);
-  border-radius: 24px;
-  box-shadow: none;
-}
-
-.page-skeleton__runs-search {
-  width: 100%;
-  height: 52px;
-  border-radius: 18px;
-}
-
-.page-skeleton__runs-filters { display: block; }
-
-.page-skeleton__runs-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.page-skeleton__runs-chip {
-  width: 64px;
-  height: 38px;
-  border-radius: 999px;
-}
-
-.page-skeleton__runs-chip:nth-child(2) { width: 52px; }
-.page-skeleton__runs-chip:nth-child(3) { width: 58px; }
-.page-skeleton__runs-chip:nth-child(4) { width: 62px; }
-.page-skeleton__runs-chip--active { background: linear-gradient(105deg, rgba(239, 106, 82, 0.32) 20%, rgba(255, 217, 205, 0.72) 42%, rgba(239, 106, 82, 0.32) 64%); background-size: 220% 100%; }
-.page-skeleton__runs-chip-row--secondary { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hermes-skeleton-line); }
-
-.page-skeleton__runs-stats { margin-top: 0; }
-.page-skeleton__runs-stats .page-skeleton__stat-card { min-height: 132px; padding: 18px 20px; border-radius: 18px; }
-.page-skeleton__runs-stats .page-skeleton__stat-value { width: 58%; height: 28px; margin-top: 18px; }
-
-.page-skeleton__runs-insight-strip {
-  display: grid;
-  grid-template-columns: minmax(1.18fr, 1.28fr) minmax(0, 0.9fr) minmax(0, 0.9fr);
-  gap: 14px;
-  margin-top: 0;
-}
-
-.page-skeleton__runs-insight {
-  display: flex;
-  min-height: 132px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 20px;
-  border-radius: 18px;
-  box-shadow: none;
-}
-
-.page-skeleton__runs-insight--primary {
-  min-height: 132px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(255, 248, 240, 0.96), rgba(246, 225, 210, 0.82) 46%, rgba(255, 251, 244, 0.92));
-}
-
-.page-skeleton__runs-insight-label { width: 42%; height: 9px; border-radius: 999px; }
-.page-skeleton__runs-insight-value { width: 58%; height: 32px; border-radius: 9px; }
-.page-skeleton__runs-insight-note { width: 78%; height: 10px; border-radius: 999px; }
-
-.page-skeleton__runs-history { margin-top: 0; }
-.page-skeleton__runs-month { margin-top: 16px; padding: 0 12px 12px; border-radius: 24px; box-shadow: none; }
-.page-skeleton__runs-month:first-child { margin-top: 0; }
-.page-skeleton__runs-month-header { display: flex; align-items: center; gap: 14px; min-height: auto; padding: 14px 18px 12px; }
-.page-skeleton__runs-month-chevron { width: 18px; height: 18px; border-radius: 5px; }
-.page-skeleton__runs-month-label { width: 116px; height: 12px; border-radius: 999px; }
-.page-skeleton__runs-month-meta { width: 150px; height: 9px; margin-left: auto; border-radius: 999px; }
-.page-skeleton__runs-card-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-.page-skeleton__runs-card { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; min-height: 220px; padding: 16px; border-radius: 8px; box-shadow: none; }
-.page-skeleton__runs-card-thumb { min-height: 190px; border-radius: 16px; }
-.page-skeleton__runs-card-copy { display: flex; min-width: 0; flex-direction: column; justify-content: space-between; gap: 18px; }
-.page-skeleton__runs-card-title { width: min(230px, 70%); height: 18px; border-radius: 8px; }
-.page-skeleton__runs-card-date { width: 140px; height: 9px; border-radius: 999px; }
-.page-skeleton__runs-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.page-skeleton__runs-card-metrics > .page-skeleton__block { height: auto; min-height: 58px; border-radius: 16px; }
-
-@media (max-width: 980px) {
-  .page-skeleton__runs-cockpit { grid-template-columns: 1fr; }
-  .page-skeleton__runs-cockpit-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .page-skeleton__runs-insight-strip,
-  .page-skeleton__runs-stats { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 680px) {
-  .page-skeleton__runs-cockpit { min-height: auto; padding: 20px; border-radius: 26px; }
-  .page-skeleton__runs-cockpit-rail { grid-template-columns: 1fr; }
-  .page-skeleton__runs-signal--status { grid-column: auto; }
-  .page-skeleton__runs-actions,
-  .page-skeleton__runs-action { width: 100%; }
-  .page-skeleton__runs-card { grid-template-columns: 1fr; }
-  .page-skeleton__runs-card-thumb { min-height: 126px; }
-  .page-skeleton__runs-card-metrics { grid-template-columns: 1fr; }
-}
-
-/* Analysis mirrors the live physiology cockpit: the VO2 trend card anchors
-   the page, the load/coach/trend rail sits beside it, and the bento/table
-   sections continue below the fold. */
-.page-skeleton__analysis-cockpit {
-  display: grid;
-  grid-template-columns: minmax(640px, 1.08fr) minmax(430px, 0.92fr);
-  gap: clamp(16px, 1.8vw, 28px);
-  align-items: stretch;
-}
-
-.page-skeleton__analysis-primary {
-  display: grid;
-  grid-template-rows: auto minmax(220px, 1fr) auto auto;
-  min-height: clamp(500px, 34rem, 560px);
-  padding: clamp(24px, 2.8vw, 42px);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(238, 244, 243, 0.62));
-}
-
-.page-skeleton__analysis-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.page-skeleton__analysis-legend > .page-skeleton__block { width: 72px; height: 10px; border-radius: 999px; }
-
-.page-skeleton__analysis-card-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
-  align-items: start;
-  gap: clamp(16px, 1.7vw, 24px);
-}
-
-.page-skeleton__analysis-kicker,
-.page-skeleton__analysis-reference-kicker,
-.page-skeleton__analysis-bento-kicker {
-  width: 108px;
-  height: 22px;
-  border-radius: 999px;
-}
-
-.page-skeleton__analysis-title {
-  width: min(440px, 86%);
-  height: clamp(94px, 8vw, 136px);
-  margin-top: 16px;
-  border-radius: 14px;
-}
-
-.page-skeleton__analysis-value {
-  width: 100%;
-  height: 148px;
-  border-radius: 8px;
-}
-
-.page-skeleton__analysis-bars {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: end;
-  gap: 10px;
-  min-height: 230px;
-  margin-top: clamp(24px, 3vw, 42px);
-  padding: 18px 14px 12px;
-  border: 1px solid var(--hermes-skeleton-line);
-  border-radius: 8px;
-  background: linear-gradient(var(--hermes-skeleton-line) 1px, transparent 1px), rgba(255, 255, 255, 0.32);
-  background-size: 100% 25%;
-}
-
-.page-skeleton__analysis-bar-column {
-  display: flex;
-  min-width: 0;
-  height: 100%;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: end;
-  gap: 10px;
-}
-
-.page-skeleton__analysis-bar {
-  min-height: 34px;
-  border-radius: 8px 8px 3px 3px;
-}
-
-.page-skeleton__analysis-bar-column:nth-child(1) .page-skeleton__analysis-bar,
-.page-skeleton__analysis-bar-column:nth-child(2) .page-skeleton__analysis-bar { height: 28%; }
-.page-skeleton__analysis-bar-column:nth-child(3) .page-skeleton__analysis-bar,
-.page-skeleton__analysis-bar-column:nth-child(4) .page-skeleton__analysis-bar { height: 88%; }
-.page-skeleton__analysis-bar-column:nth-child(5) .page-skeleton__analysis-bar { height: 76%; }
-.page-skeleton__analysis-bar-column:nth-child(6) .page-skeleton__analysis-bar { height: 34%; }
-
-.page-skeleton__analysis-bar-label {
-  width: 64%;
-  height: 8px;
-  align-self: center;
-  border-radius: 999px;
-}
-
-.page-skeleton__analysis-decision-spine {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.page-skeleton__analysis-decision-chip {
-  min-width: 0;
-  min-height: 64px;
-  padding: 12px;
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.page-skeleton__analysis-decision-label { width: 68%; height: 8px; border-radius: 999px; }
-.page-skeleton__analysis-decision-value { width: 78%; height: 22px; margin-top: 10px; border-radius: 7px; }
-
-.page-skeleton__analysis-reference-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, auto);
-  gap: clamp(12px, 1.4vw, 18px);
-}
-
-.page-skeleton__analysis-reference {
-  min-height: 200px;
-  padding: clamp(18px, 1.8vw, 24px);
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.page-skeleton__analysis-reference--load {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) minmax(128px, 168px) minmax(0, 0.75fr);
-  grid-template-areas:
-    "label gauge value"
-    "copy gauge status";
-  align-items: center;
-  column-gap: clamp(12px, 1.5vw, 20px);
-  row-gap: 10px;
-  min-height: clamp(156px, 12rem, 210px);
-  background: linear-gradient(135deg, rgba(225, 245, 241, 0.72), rgba(255, 255, 255, 0.72));
-}
-
-.page-skeleton__analysis-reference--load .page-skeleton__analysis-reference-kicker { grid-area: label; }
-.page-skeleton__analysis-reference--load .page-skeleton__analysis-gauge { grid-area: gauge; }
-.page-skeleton__analysis-reference--load .page-skeleton__analysis-reference-value { grid-area: value; justify-self: end; }
-.page-skeleton__analysis-reference--load .page-skeleton__analysis-reference-status { grid-area: status; justify-self: end; }
-.page-skeleton__analysis-reference--load .page-skeleton__analysis-reference-copy { grid-area: copy; }
-
-.page-skeleton__analysis-gauge {
-  width: 100%;
-  max-width: 156px;
-  aspect-ratio: 1.55;
-  justify-self: center;
-  border-radius: 999px 999px 0 0;
-  clip-path: inset(0 0 2% 0 round 999px 999px 0 0);
-}
-
-.page-skeleton__analysis-reference-value { width: 82%; height: 54px; border-radius: 10px; }
-.page-skeleton__analysis-reference-status { width: 76%; height: 22px; border-radius: 999px; }
-.page-skeleton__analysis-reference-copy { width: 92%; height: 28px; border-radius: 999px; }
-
-.page-skeleton__analysis-reference--coach,
-.page-skeleton__analysis-reference--trend {
-  display: flex;
-  min-height: 200px;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.page-skeleton__analysis-reference-lines { width: 100%; margin-top: 6px; }
-.page-skeleton__analysis-reference-lines > .page-skeleton__block { height: 18px; }
-.page-skeleton__analysis-coach-badge { width: min(190px, 100%); height: 46px; border-radius: 8px; }
-.page-skeleton__analysis-trend-title { width: 80%; height: 32px; border-radius: 8px; }
-.page-skeleton__analysis-trend-value { width: 48%; height: 34px; border-radius: 8px; }
-
-.page-skeleton__analysis-bento-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: clamp(14px, 1.6vw, 22px);
-  margin-top: 14px;
-}
-
-.page-skeleton__analysis-bento-card {
-  min-height: 250px;
-  padding: clamp(20px, 2vw, 28px);
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.page-skeleton__analysis-bento-card--intensity { grid-column: span 5; }
-.page-skeleton__analysis-bento-card--injury { grid-column: span 4; }
-.page-skeleton__analysis-bento-card--forecast { grid-column: span 3; }
-.page-skeleton__analysis-bento-kicker { width: 116px; height: 20px; border-radius: 999px; }
-.page-skeleton__analysis-bento-value { width: 70%; height: 42px; margin-top: 28px; border-radius: 9px; }
-.page-skeleton__analysis-bento-title { width: 84%; height: 34px; margin-top: 20px; border-radius: 9px; }
-.page-skeleton__analysis-intensity-bar,
-.page-skeleton__analysis-risk-meter { width: 100%; height: 14px; margin-top: 30px; border-radius: 999px; }
-.page-skeleton__analysis-bento-labels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
-.page-skeleton__analysis-bento-labels > .page-skeleton__block { height: 9px; border-radius: 999px; }
-.page-skeleton__analysis-risk-value { width: 50%; height: 38px; margin-top: 18px; border-radius: 9px; }
-.page-skeleton__analysis-bento-card .page-skeleton__lines { margin-top: 18px; }
-.page-skeleton__analysis-forecast-value { width: 92%; height: 60px; margin-top: 46px; border-radius: 10px; }
-.page-skeleton__analysis-forecast-note { width: 78%; height: 10px; margin-top: 22px; border-radius: 999px; }
-
-.page-skeleton__analysis-table-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.92fr);
-  gap: clamp(14px, 1.6vw, 24px);
-  margin-top: 16px;
-}
-
-.page-skeleton__analysis-table-card {
-  min-height: 330px;
-  padding: 0;
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.page-skeleton__analysis-table-title { width: 50%; height: 28px; margin: 20px clamp(20px, 2.2vw, 32px); border-radius: 8px; }
-.page-skeleton__analysis-table-head,
-.page-skeleton__analysis-table-row { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 16px; align-items: center; padding: 18px 24px; }
-.page-skeleton__analysis-table-head { border-top: 1px solid var(--hermes-skeleton-line); border-bottom: 1px solid var(--hermes-skeleton-line); }
-.page-skeleton__analysis-table-head > .page-skeleton__block { width: 72%; height: 8px; border-radius: 999px; }
-.page-skeleton__analysis-table-row { min-height: 48px; border-bottom: 1px solid var(--hermes-skeleton-line); }
-.page-skeleton__analysis-table-row > .page-skeleton__block { width: 78%; height: 10px; border-radius: 999px; }
-.page-skeleton__analysis-table-row > .page-skeleton__block:nth-child(2) { width: 62%; }
-.page-skeleton__analysis-table-row > .page-skeleton__block:nth-child(3) { width: 88%; }
-.page-skeleton__analysis-table-card .page-skeleton__runs-actions { padding: 16px clamp(20px, 2.2vw, 32px) 20px; }
-.page-skeleton__analysis-table-card .page-skeleton__runs-action { height: 38px; }
-
-.page-skeleton__analysis-injury {
-  margin-top: 24px;
-  padding: clamp(22px, 2.4vw, 34px);
-  border-radius: 8px;
-  box-shadow: none;
-}
-
-.page-skeleton__analysis-injury-heading { display: block; padding: 0 6px 16px; }
-.page-skeleton__analysis-injury-title { width: min(360px, 88%); height: 38px; border-radius: 9px; }
-.page-skeleton__analysis-injury-copy { width: min(420px, 70%); height: 12px; margin-top: 12px; border-radius: 999px; }
-.page-skeleton__analysis-injury-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
-.page-skeleton__analysis-injury-card { min-height: 220px; padding: 20px; border-radius: 8px; box-shadow: none; }
-.page-skeleton__analysis-injury-art { width: 92px; height: 92px; margin-top: 18px; border-radius: 50%; }
-
-@media (max-width: 1180px) {
-  .page-skeleton__analysis-cockpit,
-  .page-skeleton__analysis-table-grid { grid-template-columns: 1fr; }
-  .page-skeleton__analysis-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .page-skeleton__analysis-reference--load { grid-column: 1 / -1; }
-  .page-skeleton__analysis-bento-grid { grid-template-columns: 1fr; }
-  .page-skeleton__analysis-bento-card { grid-column: 1 / -1; }
-}
-
-@media (max-width: 1100px) {
-  .page-skeleton__analysis-injury-heading,
-  .page-skeleton__analysis-injury-grid { grid-template-columns: 1fr; }
-}
+/* Runs mirrors the live history ledger: a title card with its source meta row,
+   three stat cards, the rhythm strip, the search/filter bar, then a month of
+   full-width run rows. Sizes follow the rendered page at 1440px and 390px. */
+.page-skeleton--runs .page-skeleton__runs-shell { gap: 22px; }
+.page-skeleton__runs-cockpit { display: grid; gap: 24px; min-height: 214px; padding: 24px 24px 20px; border-radius: 20px; box-shadow: none; }
+.page-skeleton__runs-cockpit-primary { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.page-skeleton__runs-title { width: 190px; height: 34px; border-radius: 10px; }
+.page-skeleton__runs-copy { width: min(460px, 60vw); margin-top: 14px; }
+.page-skeleton__runs-copy > .page-skeleton__block { height: 11px; border-radius: 999px; }
+.page-skeleton__runs-copy > .page-skeleton__block.page-skeleton__line--short { width: 38%; }
+.page-skeleton__runs-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.page-skeleton__runs-action { width: 124px; height: 42px; border-radius: 999px; }
+.page-skeleton__runs-action--primary { width: 146px; background: linear-gradient(105deg, rgba(190, 72, 52, 0.55) 20%, rgba(240, 150, 130, 0.5) 42%, rgba(190, 72, 52, 0.55) 64%); background-size: 220% 100%; }
+.page-skeleton__runs-cockpit-rail { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 18px; border-top: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__runs-signal { display: grid; gap: 8px; }
+.page-skeleton__runs-signal-label { width: 84px; height: 9px; border-radius: 999px; }
+.page-skeleton__runs-signal-value { width: 64px; height: 11px; border-radius: 999px; }
+.page-skeleton__runs-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.page-skeleton__runs-stat { display: grid; align-content: start; gap: 12px; min-height: 128px; padding: 18px 16px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__runs-stat-head { display: flex; align-items: center; gap: 10px; }
+.page-skeleton__runs-stat-icon { width: 28px; height: 28px; border-radius: 8px; }
+.page-skeleton__runs-stat-label { width: 104px; height: 10px; border-radius: 999px; }
+.page-skeleton__runs-stat-value { width: 44%; height: 22px; border-radius: 7px; }
+.page-skeleton__runs-insight-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-height: 128px; padding: 20px 0; border-radius: 16px; box-shadow: none; }
+.page-skeleton__runs-insight { display: grid; align-content: center; gap: 9px; padding: 0 12px; }
+.page-skeleton__runs-insight + .page-skeleton__runs-insight { border-left: 1px solid var(--hermes-skeleton-line); padding-left: 16px; }
+.page-skeleton__runs-insight-label { width: 86px; height: 9px; border-radius: 999px; }
+.page-skeleton__runs-insight-value { width: 118px; height: 16px; border-radius: 6px; }
+.page-skeleton__runs-insight-note { width: 92px; height: 8px; border-radius: 999px; }
+.page-skeleton__runs-workbench { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 71px; padding: 12px; border-radius: 12px; box-shadow: none; }
+.page-skeleton__runs-search { width: min(359px, 40%); height: 47px; border-radius: 12px; }
+.page-skeleton__runs-chip-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.page-skeleton__runs-chip { width: 58px; height: 44px; border-radius: 999px; }
+.page-skeleton__runs-chip:nth-child(5) { margin-left: 8px; }
+.page-skeleton__runs-chip--active { background: linear-gradient(105deg, rgba(239, 106, 82, 0.24) 20%, rgba(255, 217, 205, 0.7) 42%, rgba(239, 106, 82, 0.24) 64%); background-size: 220% 100%; }
+.page-skeleton__runs-month { padding: 0 12px 12px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__runs-month-header { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 6px; }
+.page-skeleton__runs-month-chevron { width: 14px; height: 14px; border-radius: 4px; }
+.page-skeleton__runs-month-label { width: 118px; height: 13px; border-radius: 999px; }
+.page-skeleton__runs-month-meta { width: 108px; height: 10px; margin-left: auto; border-radius: 999px; }
+.page-skeleton__runs-card-grid { display: grid; gap: 10px; }
+.page-skeleton__runs-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 20px; min-height: 144px; padding: 16px; border: 1px solid var(--hermes-skeleton-line); border-radius: 12px; box-sizing: border-box; }
+.page-skeleton__runs-card-thumb { width: 112px; height: 112px; border-radius: 12px; }
+.page-skeleton__runs-card-copy { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.page-skeleton__runs-card-title { width: 120px; height: 16px; margin-top: 4px; border-radius: 6px; }
+.page-skeleton__runs-card-date { width: 110px; height: 9px; border-radius: 999px; }
+.page-skeleton__runs-card-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
+.page-skeleton__runs-card-metrics > div { display: grid; gap: 8px; }
+.page-skeleton__runs-card-metrics .page-skeleton__block { width: 64px; height: 9px; border-radius: 999px; }
+.page-skeleton__runs-card-metrics .page-skeleton__block + .page-skeleton__block { width: 84px; height: 18px; border-radius: 6px; }
 
 @media (max-width: 760px) {
-  .page-skeleton__analysis-primary { min-height: auto; padding: 20px; }
-  .page-skeleton__analysis-card-head,
-  .page-skeleton__analysis-reference-grid,
-  .page-skeleton__analysis-decision-spine,
-  .page-skeleton__analysis-reference--load { grid-template-columns: 1fr; }
-  .page-skeleton__analysis-reference-grid { grid-template-rows: auto; }
-  .page-skeleton__analysis-reference--load { grid-template-areas: "label" "gauge" "value" "status" "copy"; justify-items: start; }
-  .page-skeleton__analysis-reference--load :is(.page-skeleton__analysis-reference-value, .page-skeleton__analysis-reference-status) { justify-self: start; }
-  .page-skeleton__analysis-decision-chip { min-height: 58px; }
-  .page-skeleton__analysis-bars { min-height: 190px; }
+  .page-skeleton__runs-cockpit { min-height: 332px; padding: 20px; }
+  .page-skeleton__runs-cockpit-primary { flex-direction: column; gap: 0; }
+  .page-skeleton__runs-copy { width: 100%; }
+  .page-skeleton__runs-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin-top: 22px; }
+  .page-skeleton__runs-action,
+  .page-skeleton__runs-action--primary { width: 100%; height: 60px; }
+  .page-skeleton__runs-cockpit-rail { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+  .page-skeleton__runs-stats { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .page-skeleton__runs-stat { min-height: 112px; }
+  .page-skeleton__runs-stat:last-child { grid-column: 1 / -1; }
+  .page-skeleton__runs-insight-strip { grid-template-columns: 1fr; min-height: 288px; padding: 20px; }
+  .page-skeleton__runs-insight { padding: 0; }
+  .page-skeleton__runs-insight + .page-skeleton__runs-insight { border-left: 0; border-top: 1px solid var(--hermes-skeleton-line); padding: 18px 0 0; }
+  .page-skeleton__runs-workbench { flex-direction: column; align-items: stretch; min-height: 186px; }
+  .page-skeleton__runs-search { width: 100%; height: 52px; }
+  .page-skeleton__runs-chip-row { justify-content: flex-start; }
+  .page-skeleton__runs-card { grid-template-columns: 72px minmax(0, 1fr); gap: 14px; min-height: 158px; }
+  .page-skeleton__runs-card-thumb { width: 72px; height: 72px; }
+  .page-skeleton__runs-card-metrics { grid-column: 1 / -1; margin-top: 4px; }
+}
+
+/* Analysis mirrors the live overview: a full-width VO2 trend card, a 2x2 grid
+   (load, trend, injury, coach), a wide/narrow metric pair, two prediction
+   tables, then the injury-prevention trio. On phones everything stacks. */
+.page-skeleton__analysis-cockpit { display: grid; gap: 12px; }
+.page-skeleton__analysis-card-title { display: flex; align-items: center; gap: 8px; }
+.page-skeleton__analysis-card-icon { width: 16px; height: 16px; border-radius: 5px; }
+.page-skeleton__analysis-kicker { width: 118px; height: 13px; border-radius: 999px; }
+.page-skeleton__analysis-primary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.45fr); gap: 32px; min-height: 440px; padding: 24px 22px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__analysis-primary-copy { display: flex; flex-direction: column; justify-content: space-between; }
+.page-skeleton__analysis-primary-value { display: grid; gap: 10px; padding-bottom: 20px; }
+.page-skeleton__analysis-value-label { width: 108px; height: 9px; border-radius: 999px; }
+.page-skeleton__analysis-value { width: 150px; height: 34px; border-radius: 8px; }
+.page-skeleton__analysis-bars { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; padding-top: 110px; }
+.page-skeleton__analysis-bar-column { display: grid; gap: 12px; align-content: end; height: 100%; }
+.page-skeleton__analysis-bar { height: 34px; border-radius: 2px; }
+.page-skeleton__analysis-bar-column:nth-child(n + 4) .page-skeleton__analysis-bar { height: 212px; }
+.page-skeleton__analysis-bar-label { width: 26px; height: 8px; margin: 0 auto; border-radius: 999px; }
+.page-skeleton__analysis-reference-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 18px; }
+.page-skeleton__analysis-reference { display: grid; align-content: start; gap: 18px; min-height: 200px; padding: 22px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__analysis-reference-split { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; }
+.page-skeleton__analysis-reference-lines { width: min(300px, 100%); }
+.page-skeleton__analysis-reference-lines > .page-skeleton__block { height: 9px; border-radius: 999px; }
+.page-skeleton__analysis-gauge { width: 92px; height: 50px; border-radius: 92px 92px 0 0; }
+.page-skeleton__analysis-trend-value { width: 64px; height: 30px; border-radius: 8px; }
+.page-skeleton__analysis-risk-scale { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.page-skeleton__analysis-risk-scale > .page-skeleton__block { height: 28px; border-radius: 999px; }
+.page-skeleton__analysis-risk-scale--thin { margin-top: 0; }
+.page-skeleton__analysis-risk-scale--thin > .page-skeleton__block { height: 22px; }
+.page-skeleton__analysis-coach-title { width: 62%; height: 28px; border-radius: 8px; }
+.page-skeleton__analysis-bento-grid { display: grid; grid-template-columns: minmax(0, 1.68fr) minmax(0, 1fr); gap: 12px; }
+.page-skeleton__analysis-bento-card { display: grid; align-content: start; min-height: 250px; padding: 26px; border-radius: 28px; box-shadow: none; }
+.page-skeleton__analysis-bento-value { width: 46%; height: 40px; margin-top: 30px; border-radius: 9px; }
+.page-skeleton__analysis-intensity-bar { width: 100%; height: 12px; margin-top: 30px; border-radius: 999px; }
+.page-skeleton__analysis-bento-labels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.page-skeleton__analysis-bento-labels > .page-skeleton__block { height: 9px; border-radius: 999px; }
+.page-skeleton__analysis-table-grid { display: grid; gap: 14px; }
+.page-skeleton__analysis-table-card { padding: 0; min-height: 527px; border-radius: 28px; box-shadow: none; }
+.page-skeleton__analysis-table-title { display: grid; gap: 10px; min-height: 78px; padding: 20px 32px 0; box-sizing: border-box; }
+.page-skeleton__analysis-table-title > .page-skeleton__block { width: 90px; height: 9px; border-radius: 999px; }
+.page-skeleton__analysis-table-title > .page-skeleton__block + .page-skeleton__block { width: 220px; height: 18px; border-radius: 6px; }
+.page-skeleton__analysis-table-head,
+.page-skeleton__analysis-table-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: center; padding: 0 32px; }
+.page-skeleton__analysis-table-head { min-height: 48px; border-top: 1px solid var(--hermes-skeleton-line); border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__analysis-table-head > .page-skeleton__block { width: 64px; height: 8px; border-radius: 999px; }
+.page-skeleton__analysis-table-row { min-height: 88px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__analysis-table-row > .page-skeleton__block { width: 72%; height: 12px; border-radius: 999px; }
+.page-skeleton__analysis-table-actions { display: flex; justify-content: space-between; padding: 20px 32px; }
+.page-skeleton__analysis-table-actions > .page-skeleton__block { width: 110px; height: 36px; border-radius: 6px; }
+.page-skeleton__analysis-injury { min-height: 406px; padding: 34px; border-radius: 28px; box-shadow: none; }
+.page-skeleton__analysis-injury-heading { display: grid; gap: 10px; padding-bottom: 24px; }
+.page-skeleton__analysis-injury-title { width: 260px; height: 22px; border-radius: 7px; }
+.page-skeleton__analysis-injury-copy { width: min(420px, 70%); height: 10px; border-radius: 999px; }
+.page-skeleton__analysis-injury-grid { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: 12px; }
+.page-skeleton__analysis-injury-card { display: grid; align-content: start; gap: 14px; min-height: 279px; padding: 26px; border-radius: 28px; box-shadow: none; }
+.page-skeleton__analysis-bento-kicker { width: 110px; height: 10px; border-radius: 999px; }
+.page-skeleton__analysis-bento-title { width: 80%; height: 22px; border-radius: 7px; }
+.page-skeleton__analysis-injury-pill { width: 122px; height: 26px; margin-top: 14px; border-radius: 999px; }
+
+@media (max-width: 760px) {
+  .page-skeleton__analysis-cockpit { gap: 12px; padding: 20px; }
+  .page-skeleton__analysis-primary { grid-template-columns: 1fr; min-height: 524px; padding: 20px; }
+  .page-skeleton__analysis-primary-copy { gap: 24px; }
+  .page-skeleton__analysis-bars { padding-top: 0; min-height: 240px; }
+  .page-skeleton__analysis-reference-grid { grid-template-columns: 1fr; gap: 12px; }
+  .page-skeleton__analysis-reference--load { order: 1; min-height: 273px; }
+  .page-skeleton__analysis-reference--coach { order: 2; }
+  .page-skeleton__analysis-reference--injury { order: 3; min-height: 132px; }
+  .page-skeleton__analysis-reference--trend { order: 4; }
+  .page-skeleton__analysis-reference-split { grid-template-columns: 1fr; }
+  .page-skeleton__analysis-bento-grid,
   .page-skeleton__analysis-injury-grid { grid-template-columns: 1fr; }
+  .page-skeleton__analysis-table-card { min-height: 947px; border-radius: 22px; }
+  .page-skeleton__analysis-table-title { min-height: 114px; padding: 20px; }
+  .page-skeleton__analysis-table-head,
+  .page-skeleton__analysis-table-row { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 20px; }
+  .page-skeleton__analysis-injury { padding: 20px; }
 }
 
 /* Profile mirrors the loaded editorial dashboard rather than the older
@@ -3488,8 +3157,6 @@ body.theme-high-contrast .page-skeleton__wake-note {
 .page-skeleton--runs .page-skeleton__canvas { width: 100% !important; margin: 0 !important; padding: 28px clamp(24px, 5.3vw, 80px) 60px !important; }
 .page-skeleton--runs .page-skeleton__runs-shell { width: 100%; max-width: none; margin: 0; gap: 22px; }
 .page-skeleton--analysis .page-skeleton__canvas { width: calc(100% - 116px) !important; margin: 0 auto !important; padding: 47px 0 80px !important; gap: 12px !important; }
-.page-skeleton--analysis .page-skeleton__analysis-cockpit { gap: 12px; }
-.page-skeleton--analysis .page-skeleton__analysis-reference-grid { gap: 12px; }
 .page-skeleton--runner:is(.page-skeleton--analysis-load, .page-skeleton--analysis-intensity, .page-skeleton--analysis-injury, .page-skeleton--analysis-coach, .page-skeleton--analysis-insight) .page-skeleton__canvas {
   width: 100%; margin: 0; padding: 28px 36px 68px; gap: 28px;
 }
@@ -3512,7 +3179,6 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton:is(.page-skeleton-
 body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner :is(.page-skeleton__rail, .page-skeleton__topbar) { background: #232321; }
 body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skeleton__panel { background: var(--hermes-skeleton-surface); }
 @media (min-width: 1181px) {
-  .page-skeleton--analysis .page-skeleton__analysis-primary { min-height: 870px; }
 }
 .page-skeleton--muscle-training .page-skeleton__canvas { width: 100% !important; margin: 0 0 0 16px !important; padding: 0 !important; display: block !important; }
 .page-skeleton__muscle-content { display: flex; flex-direction: column; gap: 24px; padding: 28px clamp(20px, 3vw, 48px) 60px; }
@@ -3618,7 +3284,6 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skel
   .page-skeleton--runner:not(.page-skeleton--profile) .page-skeleton__canvas { width: calc(100% - 28px); margin: 0 auto; padding: 22px 0 64px; gap: 18px; }
   .page-skeleton--runs .page-skeleton__canvas { width: 100% !important; padding: 22px 16px 40px !important; }
   .page-skeleton--analysis .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 22px 0 64px !important; gap: 18px !important; }
-  .page-skeleton--analysis .page-skeleton__analysis-cockpit { padding: 20px; gap: 12px; }
   .page-skeleton--runner:is(.page-skeleton--analysis-load, .page-skeleton--analysis-intensity, .page-skeleton--analysis-injury, .page-skeleton--analysis-coach, .page-skeleton--analysis-insight) .page-skeleton__canvas { width: 100%; padding: 20px 16px 48px; }
   .page-skeleton--add-shoes .page-skeleton__canvas { width: calc(100% - 28px) !important; margin: 0 auto !important; padding: 14px 0 52px !important; gap: 16px !important; }
   .page-skeleton--settings .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 18px 16px 42px !important; }
@@ -3691,4 +3356,383 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skel
   .page-skeleton__landing-brand { width: 74px; }
   .page-skeleton__landing-brand-glyph { width: 28px; height: 28px; }
   .page-skeleton__landing-feature-preview > .page-skeleton__panel { min-height: 220px; }
+}
+
+/* Runner chrome parity: the live collapsed rail keeps its logo tile above the
+   divider, and the top bar sits on its own light band. */
+.page-skeleton--runner .page-skeleton__brand-row > .page-skeleton__brand { display: block; width: 22px; height: 22px; border-radius: 6px; background: var(--hermes-skeleton-strong, rgba(28, 32, 44, 0.78)); animation: none; }
+.page-skeleton--runner .page-skeleton__topbar { background: rgba(245, 245, 245, 0.92); border-bottom: 1px solid var(--hermes-skeleton-line); }
+
+/* Run detail opens on a full-bleed route map that stays behind every card;
+   the overview card starts below the visible route. */
+.page-skeleton--run-detail .page-skeleton__main { background: var(--hermes-skeleton-map); }
+.page-skeleton--run-detail .page-skeleton__panel { background: var(--hermes-skeleton-card-solid); }
+.page-skeleton--run-detail .page-skeleton__canvas { padding: 0 0 60px !important; }
+.page-skeleton__run-detail-map { height: 560px; margin: 0; background: transparent; animation: none; }
+.page-skeleton--run-detail .page-skeleton__run-detail-shell { gap: 24px; }
+.page-skeleton--run-detail .page-skeleton__run-detail-overview { margin-top: -8px; padding: 32px; border-radius: 20px; background: var(--hermes-skeleton-card-solid); box-shadow: 0 12px 32px rgba(40, 30, 20, 0.08); }
+.page-skeleton--run-detail .page-skeleton__run-detail-overview-head { border-bottom: 0; padding-bottom: 0; }
+
+@media (max-width: 760px) {
+  .page-skeleton--run-detail .page-skeleton__topbar { background: transparent; border-bottom: 0; }
+  .page-skeleton--run-detail .page-skeleton__canvas { padding: 0 0 40px !important; }
+  .page-skeleton__run-detail-map { height: 360px; }
+  .page-skeleton--run-detail .page-skeleton__run-detail-overview { padding: 20px; }
+  .page-skeleton--run-detail .page-skeleton__run-detail-stat-grid { grid-template-columns: 1fr; }
+  .page-skeleton--run-detail .page-skeleton__run-detail-stat { min-height: 92px; }
+  .page-skeleton--run-detail .page-skeleton__run-detail-stat + .page-skeleton__run-detail-stat { border-left: 0; border-top: 1px solid var(--hermes-skeleton-line); }
+}
+
+/* Analysis detail parity: load, injury and coach all open on a dark coach
+   hero; injury and coach then follow the measured live grids. */
+.page-skeleton--analysis-load .analysis-load-profile-decision { min-height: 386px; border: 0; background: linear-gradient(90deg, var(--hermes-skeleton-hero-dark) 0 66%, rgba(92, 24, 22, 0.9) 66%); }
+.page-skeleton--analysis-load .analysis-load-profile-decision .page-skeleton__block { background: rgba(255, 255, 255, 0.12); animation: none; }
+.page-skeleton__insight-dark-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.42fr); gap: 32px; min-height: 259px; padding: 28px; border: 0; border-radius: 20px; background: linear-gradient(90deg, var(--hermes-skeleton-hero-dark) 0 58%, rgba(34, 42, 72, 0.92)); box-shadow: none; }
+.page-skeleton__insight-dark-hero .page-skeleton__block { background: rgba(255, 255, 255, 0.12); animation: none; }
+.page-skeleton__insight-coach-id { display: flex; align-items: center; gap: 12px; align-self: start; }
+.page-skeleton__insight-coach-id > div { display: grid; gap: 7px; }
+.page-skeleton__insight-coach-id > div > .page-skeleton__block { width: 84px; height: 10px; border-radius: 999px; }
+.page-skeleton__insight-coach-id > div > .page-skeleton__block + .page-skeleton__block { width: 124px; height: 8px; }
+.page-skeleton__insight-avatar { width: 32px; height: 32px; border-radius: 50%; }
+.page-skeleton__insight-hero-verdict { display: grid; align-content: center; gap: 12px; }
+.page-skeleton__insight-hero-kicker { width: 110px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-hero-title { width: 82%; height: 30px; border-radius: 8px; }
+.page-skeleton__insight-hero-verdict .page-skeleton__lines > .page-skeleton__block { height: 10px; border-radius: 999px; }
+.page-skeleton__insight-hero-action { width: 110px; height: 34px; margin-top: 8px; border-radius: 999px; }
+.page-skeleton__insight-metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.page-skeleton__insight-metric { display: grid; align-content: start; gap: 14px; min-height: 129px; padding: 18px 16px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__insight-metric-row--tall .page-skeleton__insight-metric { min-height: 231px; }
+.page-skeleton__insight-metric-row--support .page-skeleton__insight-metric { min-height: 355px; }
+.page-skeleton__insight-metric-label { width: 96px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-metric-value { width: 84px; height: 24px; border-radius: 7px; }
+.page-skeleton__insight-metric-note { width: 92px; height: 8px; border-radius: 999px; }
+.page-skeleton__insight-metric .page-skeleton__lines > .page-skeleton__block { height: 9px; border-radius: 999px; }
+.page-skeleton__insight-split { display: grid; grid-template-columns: minmax(0, 765fr) minmax(0, 370fr); gap: 18px; align-items: start; }
+.page-skeleton__insight-split > .page-skeleton__panel,
+.page-skeleton__insight-column > .page-skeleton__panel { display: grid; align-content: start; gap: 16px; padding: 20px 18px; border-radius: 16px; box-shadow: none; }
+.page-skeleton__analysis-injury-trend { min-height: 387px; }
+.page-skeleton__analysis-injury-samples { min-height: 366px; }
+.page-skeleton__insight-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.page-skeleton__insight-card-head > div:first-child { display: grid; gap: 8px; }
+.page-skeleton__insight-card-head > div:first-child > .page-skeleton__block { width: 150px; height: 14px; border-radius: 6px; }
+.page-skeleton__insight-card-head > div:first-child > .page-skeleton__block + .page-skeleton__block { width: 210px; height: 8px; border-radius: 999px; }
+.page-skeleton__insight-legend { display: flex; gap: 12px; }
+.page-skeleton__insight-legend > .page-skeleton__block { width: 70px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-chart { width: 100%; height: 240px; border-radius: 12px; }
+.page-skeleton__insight-sample { display: grid; grid-template-columns: 32px minmax(0, 1fr) 44px; gap: 12px; align-items: center; min-height: 46px; padding: 0 10px; border: 1px solid var(--hermes-skeleton-line); border-radius: 12px; }
+.page-skeleton__insight-sample > div { display: grid; gap: 6px; justify-items: center; }
+.page-skeleton__insight-sample > div > .page-skeleton__block { width: 70px; height: 10px; border-radius: 999px; }
+.page-skeleton__insight-sample > div > .page-skeleton__block + .page-skeleton__block { width: 96px; height: 8px; }
+.page-skeleton__insight-sample-icon { width: 32px; height: 32px; border-radius: 10px; }
+.page-skeleton__insight-sample-value { width: 44px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-sample-link { width: 100%; height: 32px; border-radius: 10px; }
+.page-skeleton__insight-page-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 160px; }
+.page-skeleton__insight-page-head > div:first-child { display: grid; gap: 14px; width: min(520px, 100%); }
+.page-skeleton__insight-page-title { width: 300px; height: 30px; border-radius: 8px; }
+.page-skeleton__insight-page-head .page-skeleton__lines > .page-skeleton__block { height: 10px; border-radius: 999px; }
+.page-skeleton__insight-readiness { display: flex; align-items: center; gap: 16px; }
+.page-skeleton__insight-readiness > div { display: grid; gap: 7px; }
+.page-skeleton__insight-readiness > div > .page-skeleton__block { width: 128px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-ring { width: 144px; height: 144px; border-radius: 50%; }
+.page-skeleton__insight-dark-hero--coach { grid-template-columns: minmax(0, 1fr) 228px; min-height: 364px; padding: 28px 28px 28px 60px; background: var(--hermes-skeleton-hero-dark); }
+.page-skeleton__insight-hero-side { display: grid; align-content: center; gap: 12px; padding: 24px; border-radius: 4px; background: rgba(255, 255, 255, 0.04); }
+.page-skeleton__insight-hero-side > .page-skeleton__block { width: 44px; height: 8px; border-radius: 999px; }
+.page-skeleton__insight-hero-side > .page-skeleton__block:nth-child(2) { width: 88px; height: 20px; border-radius: 6px; }
+.page-skeleton__insight-split--coach { align-items: start; }
+.page-skeleton__insight-column { display: grid; gap: 14px; }
+.page-skeleton__insight-section-head { display: grid; gap: 10px; min-height: 58px; align-content: end; }
+.page-skeleton__insight-section-head > .page-skeleton__block { width: 230px; height: 20px; border-radius: 7px; }
+.page-skeleton__insight-section-head > .page-skeleton__block + .page-skeleton__block { width: 280px; height: 9px; border-radius: 999px; }
+.page-skeleton__insight-performance { min-height: 432px; }
+.page-skeleton__insight-big-value { width: 56px; height: 36px; border-radius: 8px; }
+.page-skeleton__insight-recent { min-height: 337px; }
+.page-skeleton__insight-plan { min-height: 388px; }
+
+.page-skeleton__analysis-injury-profile,
+.page-skeleton__analysis-coach { box-sizing: border-box; width: 100%; max-width: 1240px; margin: 0 auto; padding: 28px clamp(20px, 3vw, 48px) 60px; }
+
+/* Prediction spans the full canvas like the live forecast page. */
+.page-skeleton--prediction .page-skeleton__canvas { width: calc(100% - 150px) !important; max-width: none !important; margin: 0 auto !important; padding: 28px 0 60px !important; }
+.page-skeleton--prediction .page-skeleton__prediction-content { width: 100%; max-width: none; gap: 20px; }
+.page-skeleton--prediction .page-skeleton__prediction-command { display: grid; grid-template-columns: minmax(0, 1fr) 302px; min-height: 329px; padding: 0 0 0 44px; border-radius: 20px; box-shadow: none; }
+.page-skeleton--prediction .page-skeleton__prediction-command > div:first-child { display: grid; align-content: center; gap: 14px; }
+.page-skeleton--prediction .page-skeleton__prediction-time { justify-self: stretch; align-self: stretch; width: auto; height: auto; min-height: 329px; margin: 0; border-radius: 0 20px 20px 0; }
+.page-skeleton--prediction .page-skeleton__prediction-evidence-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.page-skeleton--prediction .page-skeleton__prediction-evidence-grid > .page-skeleton__panel { min-height: 148px; padding: 18px; border-radius: 16px; box-shadow: none; }
+.page-skeleton--prediction .page-skeleton__prediction-weather { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 24px; align-items: center; min-height: 135px; padding: 20px; border-radius: 20px; box-shadow: none; }
+.page-skeleton--prediction .page-skeleton__prediction-command-grid { display: grid; grid-template-columns: minmax(0, 771fr) minmax(0, 399fr); gap: 16px; }
+.page-skeleton--prediction .page-skeleton__prediction-command-grid > .page-skeleton__panel { min-height: 471px; padding: 28px; border-radius: 20px; box-shadow: none; }
+.page-skeleton--prediction .page-skeleton__prediction-profile-trend { min-height: 453px; padding: 28px; border-radius: 20px; box-shadow: none; }
+
+@media (max-width: 760px) {
+  .page-skeleton--analysis-load .analysis-load-profile-decision { min-height: 542px; grid-template-columns: 1fr; background: linear-gradient(180deg, var(--hermes-skeleton-hero-dark) 0 64%, rgba(92, 24, 22, 0.9) 64%); }
+  .page-skeleton__insight-dark-hero,
+  .page-skeleton__insight-dark-hero--coach { grid-template-columns: 1fr; min-height: 309px; padding: 22px; }
+  .page-skeleton__insight-dark-hero--coach { min-height: 544px; }
+  .page-skeleton__insight-metric-row,
+  .page-skeleton__insight-split { grid-template-columns: 1fr; }
+  .page-skeleton__insight-metric { min-height: 121px; }
+  .page-skeleton__insight-page-head { flex-direction: column; align-items: flex-start; min-height: 270px; }
+  .page-skeleton__insight-page-title { width: 80%; }
+  .page-skeleton__insight-ring { width: 112px; height: 112px; }
+  .page-skeleton__insight-performance { min-height: 585px; }
+  .page-skeleton__analysis-injury-samples { min-height: 722px; }
+  .page-skeleton--prediction .page-skeleton__canvas { width: calc(100% - 92px) !important; padding-top: 20px !important; }
+  .page-skeleton--prediction .page-skeleton__prediction-command { grid-template-columns: 1fr; min-height: 545px; padding: 24px; }
+  .page-skeleton--prediction .page-skeleton__prediction-time { min-height: 210px; border-radius: 16px; }
+  .page-skeleton--prediction .page-skeleton__prediction-actions { display: grid; gap: 10px; }
+  .page-skeleton--prediction .page-skeleton__prediction-actions > .page-skeleton__block { width: 100%; height: 44px; border-radius: 999px; }
+  .page-skeleton--prediction .page-skeleton__prediction-evidence-grid,
+  .page-skeleton--prediction .page-skeleton__prediction-weather,
+  .page-skeleton--prediction .page-skeleton__prediction-command-grid { grid-template-columns: 1fr; }
+  .page-skeleton--prediction .page-skeleton__prediction-evidence-grid > .page-skeleton__panel { min-height: 123px; }
+  .page-skeleton--prediction .page-skeleton__prediction-weather { min-height: 243px; }
+  .page-skeleton--prediction .page-skeleton__prediction-command-grid > .page-skeleton__panel:first-child { min-height: 582px; }
+  .page-skeleton--prediction .page-skeleton__prediction-command-grid > .page-skeleton__panel:last-child { min-height: 322px; }
+}
+
+/* Import data: back pill, page title and status card sit above the import card. */
+.page-skeleton--import-data .page-skeleton__import-shell { display: grid; gap: 28px; width: min(100%, 1180px); margin: 0 auto; padding-top: 28px; }
+.page-skeleton__import-page-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: start; min-height: 140px; }
+.page-skeleton__import-back { width: 111px; height: 49px; border-radius: 999px; }
+.page-skeleton__import-page-title { display: grid; gap: 12px; }
+.page-skeleton__import-page-title > .page-skeleton__block { width: 70px; height: 9px; border-radius: 999px; }
+.page-skeleton__import-page-title > .page-skeleton__block:nth-child(2) { width: min(340px, 90%); height: 38px; border-radius: 9px; }
+.page-skeleton__import-page-title .page-skeleton__lines { width: min(480px, 100%); }
+.page-skeleton__import-page-title .page-skeleton__lines > .page-skeleton__block { height: 11px; border-radius: 999px; }
+.page-skeleton__import-status { display: grid; align-content: center; gap: 8px; width: 246px; min-height: 71px; padding: 14px 18px; border-radius: 24px; box-shadow: none; box-sizing: border-box; }
+.page-skeleton__import-status > .page-skeleton__block { width: 70px; height: 8px; border-radius: 999px; }
+.page-skeleton__import-status > .page-skeleton__block + .page-skeleton__block { width: 180px; height: 12px; }
+.page-skeleton--import-data .page-skeleton__import-card { gap: 20px; padding: 27px; border-radius: 32px; box-shadow: none; }
+.page-skeleton--import-data .page-skeleton__import-hero { grid-template-columns: minmax(0, 1fr) 280px; min-height: 192px; padding: 24px; border-radius: 28px; border: 1px solid var(--hermes-skeleton-line); box-sizing: border-box; }
+.page-skeleton__import-hero-copy { display: grid; gap: 14px; }
+.page-skeleton__import-hero-copy > .page-skeleton__block { width: 140px; height: 9px; border-radius: 999px; }
+.page-skeleton__import-hero-copy > .page-skeleton__block:nth-child(2) { width: min(330px, 90%); height: 26px; border-radius: 8px; }
+.page-skeleton__import-hero-copy > .page-skeleton__block:nth-child(3) { width: min(340px, 90%); height: 10px; }
+.page-skeleton__import-hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.page-skeleton__import-hero-stats > div { display: grid; gap: 14px; min-height: 104px; padding: 12px; border: 1px solid var(--hermes-skeleton-line); border-radius: 14px; }
+.page-skeleton__import-hero-stats .page-skeleton__block { width: 70%; height: 8px; border-radius: 999px; }
+.page-skeleton__import-hero-stats .page-skeleton__block + .page-skeleton__block { width: 40%; height: 18px; border-radius: 6px; align-self: end; }
+.page-skeleton--import-data .page-skeleton__import-lanes { gap: 18px; }
+.page-skeleton--import-data .page-skeleton__import-source { display: grid; align-content: start; gap: 14px; min-height: 231px; border-radius: 24px; }
+.page-skeleton--import-data .page-skeleton__import-source:nth-child(n + 3) { min-height: 466px; }
+.page-skeleton__import-source--command { background: transparent; border-style: dashed; }
+.page-skeleton__import-source-head { display: flex; justify-content: space-between; gap: 12px; }
+.page-skeleton__import-source-head .page-skeleton__import-source-icon { width: 64px; height: 28px; border-radius: 999px; }
+.page-skeleton--import-data .page-skeleton__import-guide { min-height: 377px; border-radius: 24px; align-content: start; }
+
+/* Races opens on the dark photographic race-plan banner. */
+.page-skeleton--races .page-skeleton__races-hero { min-height: 348px; border-radius: 12px; background: var(--hermes-skeleton-hero-dark); box-shadow: none; }
+.page-skeleton--races .page-skeleton__races-hero .page-skeleton__block { background: rgba(255, 255, 255, 0.12); animation: none; }
+
+@media (max-width: 760px) {
+  .page-skeleton__import-page-head { grid-template-columns: 1fr; }
+  .page-skeleton__import-back,
+  .page-skeleton__import-status { width: 100%; }
+  .page-skeleton--import-data .page-skeleton__import-card { padding: 19px; border-radius: 24px; }
+  .page-skeleton--import-data .page-skeleton__import-hero { grid-template-columns: 1fr; min-height: 592px; }
+  .page-skeleton__import-hero-stats { grid-template-columns: 1fr; }
+  .page-skeleton--import-data .page-skeleton__import-source { min-height: 282px; }
+  .page-skeleton--import-data .page-skeleton__import-source:nth-child(n + 3) { min-height: 282px; }
+  .page-skeleton--import-data .page-skeleton__import-source--command { min-height: 746px; }
+}
+
+.page-skeleton--races .page-skeleton__races-discovery-head > div { flex: 1 1 auto; }
+/* The live greeting and readiness ring sit on their own white card. */
+.page-skeleton--profile .page-skeleton__profile-editorial-hero { border: 1px solid var(--hermes-skeleton-line); border-radius: 20px; background: var(--hermes-skeleton-card-solid); }
+@media (max-width: 760px) {
+  /* The phone race banner switches to its light stadium photo. */
+  .page-skeleton--races .page-skeleton__races-hero { min-height: 360px; background: var(--hermes-skeleton-surface); }
+  .page-skeleton--races .page-skeleton__races-hero .page-skeleton__block { background: var(--hermes-skeleton-base); }
+}
+@media (max-width: 760px) {
+  /* Phone parity: Add Shoes lists brands one per row; Intensity drops its hero
+     card for a plain heading with stacked stat cards. */
+  .page-skeleton__add-shoes-brand-deck { grid-template-columns: 1fr; }
+  .page-skeleton__add-shoes-brand-tile { justify-items: start; min-height: 124px; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-hero { grid-template-columns: 1fr; gap: 16px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  .page-skeleton__analysis-intensity-hero-stats { grid-template-columns: 1fr; }
+  .page-skeleton__analysis-intensity-hero-stats > .page-skeleton__block { min-height: 92px; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-grid { grid-template-columns: 1fr; }
+  .page-skeleton--analysis-load .analysis-load-profile-decision { background: linear-gradient(180deg, var(--hermes-skeleton-hero-dark) 0 64%, rgba(58, 20, 18, 0.95) 64%); }
+}
+
+/* Landing parity with the refreshed hero: white hero band, the plan card over
+   the grey orbit panel and the tilted brick sheet (shoe stays on the sheet),
+   the supported-sources strip, then the grey "before your next run" band. */
+.page-skeleton--landing { background: #ffffff; }
+.page-skeleton--landing .page-skeleton__landing-header { width: auto; min-height: 81px; margin: 0; padding: 0 48px; grid-template-columns: auto 1fr auto; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton--landing .page-skeleton__landing-nav { justify-content: flex-end; gap: 34px; padding-right: 22vw; }
+.page-skeleton--landing .page-skeleton__landing-brand-glyph { width: 22px; height: 22px; border-radius: 5px; }
+.page-skeleton--landing .page-skeleton__landing-actions .page-skeleton__block:first-child { width: 48px; height: 10px; border-radius: 999px; }
+.page-skeleton--landing .page-skeleton__landing-actions .page-skeleton__block:last-child { width: 112px; height: 44px; border-radius: 7px; background: rgba(160, 57, 42, 0.28); }
+.page-skeleton--landing .page-skeleton__landing-main { width: auto; margin: 0; }
+.page-skeleton--landing .page-skeleton__landing-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; min-height: 550px; padding: 0 48px; box-sizing: border-box; }
+.page-skeleton--landing .page-skeleton__landing-title { width: min(420px, 90%); height: 58px; border-radius: 10px; }
+.page-skeleton--landing .page-skeleton__landing-title--second { width: min(370px, 80%); }
+.page-skeleton--landing .page-skeleton__landing-title--accent { width: min(320px, 70%); }
+.page-skeleton--landing .page-skeleton__landing-copy { width: min(340px, 84%); margin-top: 24px; }
+.page-skeleton--landing .page-skeleton__landing-copy > .page-skeleton__block:last-child { display: none; }
+.page-skeleton--landing .page-skeleton__landing-hero-actions .page-skeleton__block:first-child { width: 183px; height: 55px; border-radius: 7px; background: rgba(160, 57, 42, 0.28); }
+.page-skeleton--landing .page-skeleton__landing-hero-actions .page-skeleton__block:last-child { width: 96px; height: 10px; }
+.page-skeleton--landing .page-skeleton__landing-art { position: relative; align-self: stretch; min-height: 466px; }
+.page-skeleton__landing-orbit { position: absolute; left: 4%; right: 0; top: 92px; height: 374px; border-radius: 2px; background: #ebe7e2; }
+.page-skeleton__landing-sheet { position: absolute; right: 0; top: 62px; width: 62%; height: 364px; background: #f2d4ca; transform: rotate(3deg); }
+.page-skeleton--landing .page-skeleton__landing-sheet .page-skeleton__landing-shoe { position: absolute; left: 34%; top: 32%; width: 46%; height: 30%; }
+.page-skeleton__landing-plan { position: absolute; left: 0; top: 125px; display: grid; align-content: start; gap: 18px; width: 54%; height: 326px; padding: 24px 22px; border-radius: 9px; background: #ffffff; box-shadow: 0 18px 40px rgba(40, 30, 20, 0.12); transform: rotate(-3deg); box-sizing: border-box; }
+.page-skeleton__landing-plan > .page-skeleton__block { width: 40%; height: 10px; border-radius: 999px; }
+.page-skeleton__landing-plan > .page-skeleton__block:nth-child(2) { width: 58%; height: 18px; margin-top: 18px; }
+.page-skeleton__landing-plan > .page-skeleton__block:nth-child(3) { width: 36%; height: 44px; border-radius: 8px; }
+.page-skeleton__landing-plan > .page-skeleton__block:nth-child(4) { width: 100%; height: 22px; background: rgba(160, 57, 42, 0.24); }
+.page-skeleton__landing-sources { display: flex; align-items: center; justify-content: space-between; min-height: 102px; margin: 0 48px; border-top: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__landing-sources > .page-skeleton__block { width: 150px; height: 10px; border-radius: 999px; }
+.page-skeleton__landing-sources > div { display: flex; gap: 48px; }
+.page-skeleton__landing-sources > div > .page-skeleton__block { width: 64px; height: 14px; border-radius: 5px; }
+.page-skeleton__landing-band { display: grid; gap: 16px; min-height: 420px; padding: 80px 48px; background: #f2f0ec; box-sizing: border-box; }
+.page-skeleton__landing-band-title { width: min(520px, 80%); height: 46px; border-radius: 10px; }
+.page-skeleton__landing-band .page-skeleton__lines { width: min(420px, 80%); }
+
+@media (max-width: 760px) {
+  .page-skeleton--landing .page-skeleton__landing-header { min-height: 101px; padding: 0 20px; grid-template-columns: 1fr auto; grid-template-rows: 60px 40px; }
+  .page-skeleton--landing .page-skeleton__landing-nav { display: flex; grid-row: 2; grid-column: 1 / -1; justify-content: flex-start; padding-right: 0; gap: 24px; }
+  .page-skeleton--landing .page-skeleton__landing-hero { grid-template-columns: 1fr; align-items: start; min-height: 849px; padding: 44px 20px 0; }
+  .page-skeleton--landing .page-skeleton__landing-title { height: 48px; }
+  .page-skeleton--landing .page-skeleton__landing-art { order: 0; min-height: 430px; margin: 0 -12px; }
+  .page-skeleton__landing-orbit { left: 24px; top: 30px; height: 400px; }
+  .page-skeleton__landing-sheet { width: 66%; height: 273px; top: 0; }
+  .page-skeleton__landing-plan { width: 64%; height: 315px; top: 115px; }
+  .page-skeleton__landing-sources { margin: 0 20px; min-height: 126px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 18px; }
+  .page-skeleton__landing-sources > div { gap: 28px; }
+  .page-skeleton__landing-band { padding: 60px 20px; }
+}
+
+/* Legal pages: cream canvas, back link + wordmark row, then one white card. */
+.page-skeleton--legal { width: auto; min-height: 100dvh; margin: 0; padding: 0 0 80px; background: #f7f4ee; }
+.page-skeleton__legal-frame { width: min(1040px, calc(100% - 32px)); margin: 0 auto; }
+.page-skeleton__legal-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 124px; padding: 0 36px; }
+.page-skeleton__legal-back { display: flex; align-items: center; gap: 12px; }
+.page-skeleton__legal-back > .page-skeleton__block { width: 26px; height: 18px; border-radius: 4px; }
+.page-skeleton__legal-back > .page-skeleton__block + .page-skeleton__block { width: 50px; height: 22px; }
+.page-skeleton__legal-brand { width: 76px; height: 12px; border-radius: 999px; }
+.page-skeleton__legal-card { border: 1px solid var(--hermes-skeleton-line); border-radius: 28px; background: var(--hermes-skeleton-card-solid); box-shadow: 0 24px 60px rgba(60, 45, 30, 0.08); overflow: hidden; }
+.page-skeleton__legal-head { display: grid; gap: 0; padding: 36px 38px 44px; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton--legal .page-skeleton__legal-kicker { width: 120px; height: 9px; }
+.page-skeleton--legal .page-skeleton__legal-title { width: min(540px, 80%); height: 52px; margin-top: 18px; }
+.page-skeleton--legal .page-skeleton__legal-intro { width: min(500px, 90%); margin-top: 20px; }
+.page-skeleton__legal-meta { width: 260px; height: 8px; margin-top: 22px; border-radius: 999px; }
+.page-skeleton--legal .page-skeleton__legal-sections { margin: 0 38px; border-top: 0; }
+.page-skeleton--legal .page-skeleton__legal-sections article { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 0; padding: 40px 0 32px; }
+.page-skeleton__legal-index { width: 60px; height: 9px; margin-top: 6px; border-radius: 999px; }
+.page-skeleton--legal .page-skeleton__legal-heading { width: min(300px, 60%); height: 20px; }
+.page-skeleton--legal .page-skeleton__legal-sections .page-skeleton__lines { width: min(520px, 100%); margin-top: 14px; }
+@media (max-width: 760px) {
+  .page-skeleton__legal-topbar { min-height: 92px; padding: 0 8px; }
+  .page-skeleton__legal-head { padding: 28px 22px 32px; }
+  .page-skeleton--legal .page-skeleton__legal-sections { margin: 0 22px; }
+  .page-skeleton--legal .page-skeleton__legal-sections article { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* Admin shell parity with the live console: 156px rail with 42px nav items on
+   a 49px pitch, 76px top bar, and a 40px content gutter. */
+.page-skeleton--admin .page-skeleton__admin-sidebar { padding: 20px 8px 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { min-height: 60px; padding: 0 6px; }
+.page-skeleton--admin .page-skeleton__admin-wordmark { width: 82px; height: 14px; }
+.page-skeleton--admin .page-skeleton__admin-brand-copy { width: 64px; height: 6px; margin-top: 8px; }
+.page-skeleton--admin .page-skeleton__admin-nav { display: grid; gap: 7px; margin-top: 0; }
+.page-skeleton--admin .page-skeleton__admin-nav-item { display: flex; align-items: center; gap: 10px; min-height: 42px; height: 42px; padding: 0 10px; border-radius: 15px; box-sizing: border-box; }
+.page-skeleton--admin .page-skeleton__admin-nav-icon { width: 14px; height: 14px; border-radius: 4px; }
+.page-skeleton--admin .page-skeleton__admin-nav-label { display: block; width: 52px; height: 8px; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-nav-index { display: block; width: 10px; height: 6px; margin-left: auto; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-sidebar-action { position: absolute; left: 4px; right: 4px; bottom: 0; width: auto; height: 46px; border-radius: 999px; }
+.page-skeleton--admin .page-skeleton__admin-content { width: auto; max-width: none; margin: 0; padding: 34px 40px 60px; }
+.page-skeleton--admin .page-skeleton__admin-sidebar { display: flex; flex-direction: column; justify-content: flex-start; gap: 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { flex: none; height: 60px; min-height: 0; }
+.page-skeleton--admin .page-skeleton__admin-nav { flex: none; align-content: start; }
+/* Overview rows use the live spacing: metrics, queues, charts, health/audit, actions. */
+.page-skeleton--admin .page-skeleton__admin-overview { display: grid; gap: 0; }
+.page-skeleton--admin .page-skeleton__admin-ops-metrics .page-skeleton__panel { min-height: 112px; height: 112px; }
+.page-skeleton--admin .page-skeleton__admin-ops-queues { margin-top: 64px; }
+.page-skeleton--admin .page-skeleton__admin-ops-queues .page-skeleton__panel { min-height: 104px; height: 104px; }
+.page-skeleton--admin .page-skeleton__admin-overview-charts { margin-top: 40px; }
+.page-skeleton--admin .page-skeleton__admin-overview-chart { min-height: 333px; height: 333px; }
+.page-skeleton--admin .page-skeleton__admin-overview-two-col { margin-top: 27px; }
+.page-skeleton--admin .page-skeleton__admin-overview-two-col > .page-skeleton__panel { min-height: 441px; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions { margin-top: 50px; row-gap: 12px; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__panel { min-height: 72px; height: 72px; padding: 14px 18px; display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; align-content: center; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__admin-action-icon { grid-row: span 2; }
+.page-skeleton--admin .page-skeleton__admin-overview-actions .page-skeleton__admin-action-title { margin-top: 0; }
+.page-skeleton--admin .page-skeleton__admin-brand { height: 80px; }
+/* Per-tab section sizes measured from the live console at 1440px. */
+.page-skeleton--admin .page-skeleton__admin-users { display: grid; gap: 16px; }
+.page-skeleton--admin .page-skeleton__admin-users-kpis .page-skeleton__panel { min-height: 134px; }
+.page-skeleton--admin .page-skeleton__admin-users-console { height: 615px; overflow: hidden; }
+.page-skeleton--admin .page-skeleton__admin-coursemaps-hero { min-height: 203px; }
+.page-skeleton--admin .page-skeleton__admin-coursemaps-grid { margin-top: 20px; }
+.page-skeleton--admin .page-skeleton__admin-hero { min-height: 288px; }
+.page-skeleton--admin .page-skeleton__admin-metric-grid .page-skeleton__panel,
+.page-skeleton--admin .page-skeleton__admin-metric-card { min-height: 199px; }
+.page-skeleton--admin .page-skeleton__admin-spotlight { min-height: 393px; }
+.page-skeleton--admin .page-skeleton__admin-audit { display: grid; gap: 26px; }
+.page-skeleton--admin .page-skeleton__admin-audit-hero { min-height: 288px; }
+.page-skeleton--admin .page-skeleton__admin-audit-metrics .page-skeleton__panel { min-height: 219px; }
+.page-skeleton--admin .page-skeleton__admin-audit-table { max-height: 520px; overflow: hidden; }
+.page-skeleton--admin .page-skeleton__admin-audit-ctas .page-skeleton__panel { min-height: 117px; }
+.page-skeleton--admin .page-skeleton__admin-settings { display: grid; gap: 26px; }
+.page-skeleton--admin .page-skeleton__admin-settings-hero { min-height: 398px; }
+.page-skeleton--admin .page-skeleton__admin-settings-grid .page-skeleton__panel { min-height: 378px; }
+.page-skeleton--admin .page-skeleton__admin-spotlight { height: 393px; overflow: hidden; }
+@media (max-width: 900px) {
+  /* On phones and tablets the live console stacks its brand, a one-column nav
+     and sign-out above the top bar. */
+  .page-skeleton--admin .page-skeleton__admin-sidebar { position: static; width: 100%; height: auto; padding: 72px 8px 0; box-sizing: border-box; }
+  .page-skeleton--admin .page-skeleton__admin-brand { height: 110px; }
+  .page-skeleton--admin .page-skeleton__admin-nav { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-sidebar-action { position: static; margin: 52px 0 0; }
+  .page-skeleton--admin .page-skeleton__admin-main { margin-left: 0; }
+  .page-skeleton--admin .page-skeleton__admin-topbar { min-height: 93px; }
+  .page-skeleton--admin .page-skeleton__admin-content { padding: 18px 16px 48px; }
+  .page-skeleton--admin .page-skeleton__admin-ops-metrics,
+  .page-skeleton--admin .page-skeleton__admin-overview-actions { grid-template-columns: 1fr 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-users-hero,
+  .page-skeleton--admin .page-skeleton__admin-settings-hero,
+  .page-skeleton--admin .page-skeleton__admin-coursemaps-grid { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-audit-metrics,
+  .page-skeleton--admin .page-skeleton__admin-metric-grid,
+  .page-skeleton--admin .page-skeleton__admin-users-kpis { grid-template-columns: 1fr 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-overview-charts,
+  .page-skeleton--admin .page-skeleton__admin-overview-two-col { grid-template-columns: 1fr; }
+  .page-skeleton--admin .page-skeleton__admin-ops-queues { margin-top: 56px; }
+}
+@media (max-width: 760px) {
+  .page-skeleton--admin .page-skeleton__admin-ops-queues { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  /* Tablet parity: these live pages already stack below ~900px. */
+  .page-skeleton--analysis-load .analysis-load-profile-evidence { grid-template-columns: 1fr; }
+  .page-skeleton__insight-split,
+  .page-skeleton__insight-dark-hero--coach { grid-template-columns: 1fr; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-hero { grid-template-columns: 1fr; padding: 0; border: 0; background: transparent; box-shadow: none; }
+  .page-skeleton--analysis-intensity .analysis-intensity-command-grid { grid-template-columns: 1fr; }
+  .page-skeleton__import-page-head { grid-template-columns: 1fr; }
+  .page-skeleton__import-back { width: 111px; }
+  .page-skeleton--import-data .page-skeleton__import-hero { grid-template-columns: 1fr; }
+  .page-skeleton--import-data .page-skeleton__import-lanes { grid-template-columns: 1fr; }
+  .page-skeleton--prediction .page-skeleton__canvas { width: calc(100% - 60px) !important; }
+  .page-skeleton--prediction .page-skeleton__prediction-command { grid-template-columns: 1fr; padding: 24px; }
+  .page-skeleton--prediction .page-skeleton__prediction-time { min-height: 210px; border-radius: 16px; }
+  .page-skeleton--prediction .page-skeleton__prediction-weather,
+  .page-skeleton--prediction .page-skeleton__prediction-command-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .page-skeleton__runs-cockpit-primary { flex-direction: column; gap: 0; }
+  .page-skeleton__runs-actions { margin-top: 22px; }
+  .page-skeleton__runs-cockpit-rail { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+  .page-skeleton__runs-workbench { flex-direction: column; align-items: stretch; }
+  .page-skeleton__runs-search { width: 100%; }
+  .page-skeleton__runs-chip-row { justify-content: flex-start; }
+  .page-skeleton__run-detail-map { height: 480px; }
+}
+@media (max-width: 900px) {
+  .page-skeleton--run-detail .page-skeleton__topbar { background: transparent; border-bottom: 0; }
 }
