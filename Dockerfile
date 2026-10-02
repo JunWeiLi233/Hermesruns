@@ -80,7 +80,7 @@ RUN python tools/check_garmin_runtime.py
 # uncommit heap after spikes. Deployments can override JAVA_OPTS without
 # rebuilding the image.
 ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
-    -XX:MaxMetaspaceSize=128m \
+    -XX:MaxMetaspaceSize=192m \
     -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:-ShrinkHeapInSteps \
     -XX:+ExitOnOutOfMemoryError"
 
