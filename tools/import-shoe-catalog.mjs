@@ -44,11 +44,12 @@ function normalizeWhitespace(value) {
 function decodeHtml(value) {
   return normalizeWhitespace(
     (value || '')
-      .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
+      // Decode &amp; last so "&amp;lt;" stays the literal text "&lt;".
+      .replace(/&amp;/g, '&')
   );
 }
 
