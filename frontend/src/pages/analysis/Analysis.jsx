@@ -6,79 +6,36 @@ import { useUnit } from '../../contexts/UnitContext';
 import { apiFetch, apiJson } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import Modal from '../../components/Modal';
+import ImportActivityModal from '../../components/ImportActivityModal';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
-import CoachIdentityBadge from '../../components/CoachIdentityBadge';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
-import { formatDuration } from '../../utils/format';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { preloadRoute } from '../../utils/routePreload';
-import { computeVdotTrend } from '../../utils/vdot';
-import { buildAnalysisSnapshot, normalizeAnalysisList } from '../../utils/analysisInsights';
+import { buildOrderedRacePredictions, computeVdotTrend, estimateCurrentVdot } from '../../utils/vdot';
+import { buildAnalysisSnapshot, buildVo2Bars, normalizeAnalysisList } from '../../utils/analysisInsights';
+import { formatDuration } from '../../utils/format';
 import PageSkeleton from '../../components/PageSkeleton';
-import '../../styles/analysis-summary.css';
-import fitnessTrendIcon from '../../assets/fitness-trend-icon-green.webp';
-import injuryRiskIcon from '../../assets/injury-risk-icon.webp';
-import coachAdviceIcon from '../../assets/coach-advice-icon.webp';
-import intensityDistributionCardIcon from '../../assets/intensity-distribution-card-icon.webp';
-import performanceForecastIcon from '../../assets/performance-forecast-icon.webp';
+import '../../styles/analysis-v2.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const ANALYSIS_DAY_MS = 24 * 60 * 60 * 1000;
-const TRAINING_ZONE_BASIS_STYLE = {
-  display: 'block',
-  marginTop: '0.42rem',
-  color: 'rgba(91, 74, 64, 0.72)',
-  fontSize: 'clamp(0.72rem, 0.74vw, 0.82rem)',
-  fontWeight: 750,
-  letterSpacing: '0.035em',
-  lineHeight: 1.35,
+const TRAINING_ZONE_CODES = { repetition: 'R', interval: 'I', threshold: 'T', marathon: 'M', easy: 'E' };
+const COACH_QUOTE_KEYS = {
+  REST: 'recovery', RECOVERY: 'recovery', CROSS_TRAIN: 'recovery',
+  TEMPO: 'quality', THRESHOLD: 'quality', INTERVAL: 'quality', INTERVALS: 'quality',
+  LONG_RUN: 'long',
 };
 
-function Gauge({ value, color }) {
-  const clamped = Math.max(0, Math.min(1.8, Number(value || 0)));
-  const progressPct = Math.max(0, Math.min((clamped / 1.8) * 100, 100));
-  const hasProgress = progressPct > 0;
-  const path = 'M 24 126 A 86 86 0 0 1 196 126';
-  return (
-    <svg viewBox="0 0 220 140" className="analysis-overview-gauge-svg" aria-hidden="true">
-      <path d={path} pathLength="100" className="analysis-overview-gauge-track" />
-      {hasProgress ? (
-        <path
-          d={path}
-          pathLength="100"
-          className="analysis-overview-gauge-progress"
-          style={{ stroke: color, strokeDasharray: `${progressPct} 100` }}
-        />
-      ) : null}
-    </svg>
-  );
-}
-
-function RiskRing({ score, color }) {
-  const radius = 35;
-  const circumference = 2 * Math.PI * radius;
-  const pct = Math.min(100, Math.max(0, Number(score) || 0));
-  const offset = circumference - (pct / 100) * circumference;
-  return (
-    <svg viewBox="0 0 100 100" className="analysis-injury-prevention-risk-ring-svg" aria-hidden="true">
-      <circle cx="50" cy="50" r={radius} className="analysis-injury-prevention-risk-ring-track" />
-      <circle
-        cx="50" cy="50"
-        r={radius}
-        className="analysis-injury-prevention-risk-ring-progress"
-        style={{ stroke: color, strokeDasharray: circumference, strokeDashoffset: offset }}
-      />
-      <text x="50" y="50" className="analysis-injury-prevention-risk-ring-center">
-        {score != null ? `${Math.round(score)}%` : '--'}
-      </text>
-    </svg>
-  );
+function orderedZonePace(label) {
+  return String(label).split(' - ').sort((a, b) => {
+    const seconds = (pace) => pace.split(':').reduce((total, value) => total * 60 + Number(value), 0);
+    return seconds(a) - seconds(b);
+  }).join('–');
 }
 
 function formatTrainingZoneBasisUpdated(value, t) {
@@ -121,7 +78,7 @@ function buildTrainingZoneBasisLabel(snapshot, t) {
 }
 
 export default function Analysis() {
-  const { isAuthenticated, email } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -202,18 +159,17 @@ export default function Analysis() {
 
   useEffect(() => () => clearVo2TouchTimer(), [clearVo2TouchTimer]);
   const [displayNameInput, setDisplayNameInput] = useState('');
-  const [fitExportFiles, setFitExportFiles] = useState(null);
-  const [corosFiles, setCorosFiles] = useState(null);
-  const [huaweiFiles, setHuaweiFiles] = useState(null);
-  const [importStatus, setImportStatus] = useState('idle');
-  const selectedFileCount = [fitExportFiles, corosFiles, huaweiFiles]
-    .reduce((total, files) => total + (files?.length ?? 0), 0);
-  const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
-  const coachSuggestionTitle = useMemo(() => {
+  const coachRecommendation = useMemo(() => {
     const personalized = resolvePersonalizedCoachRecommendation({ coachPayload: coachToday, t, lang, unit });
-    return personalized?.recommendation?.title || '';
+    return personalized?.recommendation || null;
   }, [coachToday, t, lang, unit]);
+  const coachQuote = coachRecommendation
+    ? t(`analysis.v2_coach_quote_${COACH_QUOTE_KEYS[coachRecommendation.workoutType] || 'base'}`)
+    : t('analysis.stitch_coach_quote');
   const vdotTrend = useMemo(() => computeVdotTrend(runs), [runs]);
+  const fitnessHeadline = vdotTrend.hasData
+    ? vdotTrend.direction === 'maintaining' ? 'stable' : vdotTrend.direction
+    : 'empty';
   const hasWeatherAdjustments = useMemo(() => runs.some((r) => (r.pacePenaltySecPerKm || 0) > 0), [runs]);
 
   // Bumping this counter invalidates results from superseded loads so a
@@ -286,20 +242,27 @@ export default function Analysis() {
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const bestVdot = snapshot.bestVdot;
-  const vo2Bars = normalizeAnalysisList(snapshot.vo2Bars);
+  const vo2Bars = useMemo(() => buildVo2Bars(snapshot.entries, lang, 12), [snapshot.entries, lang]);
   const trainingLoad = snapshot.trainingLoad;
   const loadZone = snapshot.loadZone;
   const analysisLoadTheme = loadZone.tone === 'danger' ? 'red' : loadZone.tone === 'warn' ? 'yellow' : 'green';
   const polarized = snapshot.polarized;
-  const injury = snapshot.injury;
+  const serverInjuryLevel = String(injuryStatus?.risk || '').toLowerCase();
+  const injury = ['low', 'moderate', 'high'].includes(serverInjuryLevel)
+    ? { ...snapshot.injury, level: serverInjuryLevel }
+    : snapshot.injury;
+  const injuryRecommendation = ['ready', 'caution', 'rest'].includes(injuryStatus?.recommendation)
+    ? injuryStatus.recommendation
+    : null;
   const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
-  const trainingZones = normalizeAnalysisList(snapshot.trainingZones);
-  const marathonRow = snapshot.marathonRow;
-  const marathonDelta = snapshot.marathonDeltaSeconds;
+  const priorPredictionRows = useMemo(() => {
+    const cutoff = Date.now() - 30 * ANALYSIS_DAY_MS;
+    const priorRuns = runs.filter((run) => new Date(run.startTime || run.startDate || 0).getTime() <= cutoff);
+    const priorVdot = estimateCurrentVdot(priorRuns, cutoff).representativeVdot;
+    return buildOrderedRacePredictions(priorVdot, priorRuns, { now: cutoff });
+  }, [runs]);
+  const trainingZones = [...normalizeAnalysisList(snapshot.trainingZones)].reverse();
   const hasRuns = runs.length > 0;
-  const currentVo2Bar = vo2Bars.find((bar) => bar.current) || vo2Bars[vo2Bars.length - 1] || null;
-  const currentVdotLabel = currentVo2Bar?.value != null ? currentVo2Bar.value.toFixed(1) : '--';
-  const adjustedVdotLabel = currentVo2Bar?.hasAdjustment ? currentVo2Bar.adjustedValue.toFixed(1) : '--';
   const trainingZoneBasisLabel = buildTrainingZoneBasisLabel(snapshot, t);
   useEffect(() => {
     if (!isAuthenticated) return undefined;
@@ -333,20 +296,12 @@ export default function Analysis() {
     };
   }, [isAuthenticated]);
 
-  const injuryLevelLabel = t(`analysis.stitch_injury_${injury.level}`);
   const latestSorenessLevel = String(
     sorenessLevelOverride ?? injuryStatus?.recentLogs?.[0]?.level ?? injuryStatus?.sorenessLevel ?? ''
   ).toLowerCase();
-  const hasSorenessLog = ['low', 'medium', 'high'].includes(latestSorenessLevel);
   const localizedCoachAdvice = injuryStatus?.risk === 'LOW'
     ? t('analysis.stitch_injury_prevention_coach_advice_low')
     : injuryStatus?.coachAdvice;
-  const injuryAcwrColor = useMemo(() => {
-    const acwr = Number(injuryStatus?.acwr) || 0;
-    if (acwr < 1.0) return '#38a35e';
-    if (acwr <= 1.2) return '#d98c3a';
-    return '#d94a3a';
-  }, [injuryStatus?.acwr]);
   const hoveredVo2Bar = vo2Bars.find((bar) => bar.key === hoveredVo2BarKey) || null;
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -355,51 +310,6 @@ export default function Analysis() {
     lang,
     activeKey: 'analysis',
   }), [lang, t]);
-
-  async function handleImport(event) {
-    event.preventDefault();
-    if (selectedFileCount === 0 || importStatus === 'uploading') return;
-
-    const formData = new FormData();
-    if (fitExportFiles) Array.from(fitExportFiles).forEach((file) => formData.append('exports', file));
-    if (corosFiles) Array.from(corosFiles).forEach((file) => formData.append('coros', file));
-    if (huaweiFiles) Array.from(huaweiFiles).forEach((file) => formData.append('huawei', file));
-
-    setImportStatus('uploading');
-    try {
-      await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-    } catch {
-      setImportStatus('error');
-      return;
-    }
-
-    setFitExportFiles(null);
-    setCorosFiles(null);
-    setHuaweiFiles(null);
-    setImportStatus('idle');
-    setImportModalOpen(false);
-    setRunsState('loading');
-    try {
-      invalidateResourceCache('/api/activities');
-      const activitiesData = await cachedApiJson('/api/activities/analysis');
-      const list = Array.isArray(activitiesData) ? activitiesData : [];
-      startTransition(() => {
-        setRuns(list);
-      });
-      setRunsState('ready');
-    } catch {
-      setRunsState('error');
-    }
-  }
-
-  function closeImportModal() {
-    if (importStatus === 'uploading') return;
-    setFitExportFiles(null);
-    setCorosFiles(null);
-    setHuaweiFiles(null);
-    setImportStatus('idle');
-    setImportModalOpen(false);
-  }
 
   async function handleSaveName(event) {
     event.preventDefault();
@@ -524,7 +434,7 @@ export default function Analysis() {
           </div>
         </header>
 
-        <div className="runner-shell-canvas">
+        <div className="runner-shell-canvas analysis-v2-content">
           {runsState === 'loading' ? (
             <section className="analysis-overview-empty-shell">
               <div className="premium-empty-state analysis-overview-empty-state premium-empty-state--loading">
@@ -571,19 +481,39 @@ export default function Analysis() {
             </section>
           ) : (
             <>
-              <section className="analysis-overview-grid analysis-overview-grid--hero analysis-profile-cockpit">
-                <article className="analysis-overview-card analysis-overview-card--vo2 analysis-profile-primary">
-                  <div className="analysis-overview-card-head">
-                    <h2 className="analysis-overview-vdot-title">
-                      <AppIcon name="load_balance_runner" className="analysis-overview-vdot-runner-icon" />
-                      {t('analysis.stitch_vo2_title')}
-                    </h2>
-                    <div className="analysis-overview-hero-value">
-                      <span className="analysis-overview-hero-value-label">{t('profile.analysis_current_vo2')}</span>
-                      <div className="analysis-overview-hero-value-row">
+              <section className="analysis-v2-intro">
+                <h1>{t(fitnessHeadline === 'improving' && loadZone.key === 'optimal' ? 'analysis.v2_headline_improving_balanced' : `analysis.v2_headline_${fitnessHeadline}`)}</h1>
+                <p>
+                  {[
+                    vdotTrend.hasData ? t('analysis.v2_status_vo2_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` }) : null,
+                    trainingLoad?.lastAcwr != null ? `ACWR ${trainingLoad.lastAcwr.toFixed(2)}` : null,
+                    t(`analysis.v2_status_injury_${injury.level || 'low'}`),
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              </section>
+
+              <section className="analysis-v2-hero">
+                <article className="analysis-overview-card analysis-overview-card--vo2 analysis-v2-vo2">
+                  <div className="analysis-v2-vo2-head">
+                    <div className="analysis-v2-vo2-title">
+                      <h2 className="analysis-overview-vdot-title">{t('analysis.stitch_vo2_title')}</h2>
+                      <div className="analysis-v2-vo2-value">
                         <strong>{bestVdot ? bestVdot.toFixed(1) : '--'}</strong>
-                        <span className="analysis-overview-hero-value-unit">{t('analysis.stitch_vo2_unit')}</span>
+                        <span>{t('analysis.stitch_vo2_unit')}</span>
+                        {vdotTrend.hasData ? (
+                          <span className={cx('analysis-v2-delta', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}>
+                            <AppIcon name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'} />
+                            {t('analysis.v2_delta_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })}
+                          </span>
+                        ) : null}
                       </div>
+                      <p className="analysis-v2-vo2-copy sr-only">
+                        {vdotTrend.hasData ? t(`analysis.vdot_trend_insight_copy_${vdotTrend.direction}`) : t('analysis.vdot_trend_empty_copy')}
+                      </p>
+                    </div>
+                    <div className="analysis-v2-current-month">
+                      <span>{t('analysis.v2_this_month')}</span>
+                      <strong>{snapshot.currentMonthVdot != null ? snapshot.currentMonthVdot.toFixed(1) : '--'}</strong>
                     </div>
                   </div>
                   <div className="analysis-overview-vo2-bars" ref={vo2BarsContainerRef}>
@@ -592,7 +522,7 @@ export default function Analysis() {
                         className="analysis-overview-vo2-tooltip"
                         aria-hidden="true"
                         style={{
-                          left: `${vo2Bars.findIndex((bar) => bar.key === hoveredVo2BarKey) * (100 / vo2Bars.length) + (100 / vo2Bars.length / 2)}%`,
+                          left: `clamp(90px, ${vo2Bars.findIndex((bar) => bar.key === hoveredVo2BarKey) * (100 / vo2Bars.length) + (100 / vo2Bars.length / 2)}%, calc(100% - 90px))`,
                         }}
                       >
                         <span>{hoveredVo2Bar.label}</span>
@@ -637,7 +567,7 @@ export default function Analysis() {
                             {null}
                           </div>
                         </div>
-                        <span className={cx('analysis-overview-vo2-label', bar.current && 'is-current')}>{bar.label}</span>
+                        <span className={cx('analysis-overview-vo2-label', bar.current && 'is-current')}>{bar.label.toLocaleLowerCase(lang)}</span>
                       </div>
                     ))}
                   </div>
@@ -649,383 +579,148 @@ export default function Analysis() {
                     {hasWeatherAdjustments && (
                       <div className="analysis-overview-vo2-legend-item">
                         <span className="analysis-overview-vo2-legend-dot is-adjusted" />
-                        <span>{t('analysis.vdot_weather_adjusted')}</span>
+                        <span>{t('analysis.v2_weather_uplift')}</span>
                       </div>
                     )}
                   </div>
-
                 </article>
 
-                <div className="analysis-overview-side-stack analysis-profile-reference-grid">
-                  <button
-                    type="button"
-                    className="analysis-overview-card analysis-overview-card--load analysis-profile-reference-card is-load analysis-overview-card--interactive"
-                    onClick={() => navigate('/analysis/load-balance')}
-                  >
-                    <span className="analysis-overview-card-kicker analysis-overview-card-kicker--load">
-                      <AppIcon name="load_balance" className="analysis-load-balance-icon" />
-                      <span>{t('analysis.stitch_acwr_title')}</span>
-                    </span>
-                    <div
-                      className="analysis-overview-gauge-stack"
-                      style={{ '--analysis-gauge-value-color': loadZone.color }}
-                    >
-                      <Gauge value={trainingLoad?.lastAcwr || 0} color={loadZone.color} />
-                      <div className="analysis-overview-gauge-value">{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</div>
-                    </div>
-                    <p>{t('analysis.stitch_acwr_copy')}</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="analysis-overview-card analysis-overview-card--coach analysis-profile-reference-card is-coach analysis-overview-card--interactive"
-                    onClick={() => navigate('/analysis/coach-insight')}
-                  >
-                    <div className="analysis-overview-coach-head">
-                      <div className="analysis-overview-coach-copy">
-                        <span className="analysis-overview-card-kicker">
-                          <img src={coachAdviceIcon} alt="" className="analysis-coach-advice-icon" />
-                          {t('analysis.stitch_coach_title')}
-                        </span>
-                        {coachSuggestionTitle ? (
-                          <h3 className="analysis-overview-coach-quote">{coachSuggestionTitle}</h3>
-                        ) : null}
-                        <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-overview-coach-badge" />
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--injury analysis-profile-reference-card is-injury analysis-overview-card--interactive"
-                    onClick={() => navigate('/analysis/injury-risk')}
-                  >
-                    <div className="analysis-overview-card-title-block">
-                      <span className="analysis-overview-card-kicker">
-                        <img src={injuryRiskIcon} alt="" className="analysis-injury-risk-icon" />
-                        {t('analysis.stitch_injury_title')}
-                      </span>
-                    </div>
-                    <div className="analysis-overview-risk-labels">
-                      <span>{t('analysis.stitch_injury_low')}</span>
-                      <span>{t('analysis.stitch_injury_moderate')}</span>
-                      <span>{t('analysis.stitch_injury_high')}</span>
-                    </div>
-                    <div className="analysis-overview-risk-meter">
-                      <span className={injury.level === 'low' ? 'is-on is-green' : ''} />
-                      <span className={injury.level === 'moderate' ? 'is-on is-warn' : ''} />
-                      <span className={injury.level === 'high' ? 'is-on is-danger' : ''} />
-                    </div>
-                  </button>
-
-                  <article
-                    className={cx(
-                      'analysis-overview-card analysis-overview-card--insight analysis-overview-card--vdot-insight analysis-profile-reference-card is-trend',
-                      !vdotTrend.hasData && 'is-empty',
-                    )}
-                  >
-                    {vdotTrend.hasData ? (
-                      <>
-                        <span className="analysis-overview-card-kicker analysis-vdot-trend-kicker">
-                          <img className="analysis-vdot-trend-icon" src={fitnessTrendIcon} alt="" aria-hidden="true" />
-                          <span>{t('analysis.vdot_trend_insight_title')}</span>
-                        </span>
-                        <div className="analysis-overview-trend-stack" aria-hidden={false}>
-                          <h3
-                            className={cx(
-                              'analysis-overview-vdot-trend-heading',
-                              vdotTrend.direction === 'improving' && 'is-positive',
-                              vdotTrend.direction === 'declining' && 'is-negative',
-                            )}
-                          >
-                            <AppIcon
-                              name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'}
-                              className={cx('runner-dashboard-side-link-icon', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}
-                            />
-                            <span>{t(`profile.vdot_trend_${vdotTrend.direction}`)}</span>
-                          </h3>
-                          <div className="analysis-overview-insight-delta">
-                            <strong>{vdotTrend.delta > 0 ? `+${vdotTrend.delta.toFixed(1)}` : vdotTrend.delta.toFixed(1)}</strong>
-                          </div>
-                        </div>
-                        <p className="analysis-overview-insight-copy">{t(`analysis.vdot_trend_insight_copy_${vdotTrend.direction}`)}</p>
-                      </>
-                    ) : (
-                      <>
-                        <span className="analysis-overview-card-kicker analysis-vdot-trend-kicker">
-                          <span>{t('profile.vdot_trend_label')}</span>
-                        </span>
-                        <div className="analysis-overview-trend-stack">
-                          <h3 className="analysis-overview-vdot-trend-heading">{t('analysis.vdot_trend_empty_title')}</h3>
-                          <div className="analysis-overview-insight-delta">
-                            <strong>--</strong>
-                          </div>
-                        </div>
-                        <p className="analysis-overview-insight-copy">{t('analysis.vdot_trend_empty_copy')}</p>
-                      </>
-                    )}
-                  </article>
-                </div>
+                <section className="analysis-v2-predictions" aria-labelledby="analysis-v2-predictions-title">
+                  <div className="analysis-v2-card-head">
+                    <h2 id="analysis-v2-predictions-title">{t('analysis.v2_predictions_title')}</h2>
+                    <span>{t('analysis.v2_predictions_basis')}</span>
+                  </div>
+                  <ul className="analysis-v2-prediction-list">
+                    {predictionRows.map((row) => {
+                      const priorRow = priorPredictionRows.find((candidate) => candidate.key === row.key);
+                      const deltaSeconds = priorRow?.timeMin != null && row.timeMin != null ? Math.round((row.timeMin - priorRow.timeMin) * 60) : null;
+                      return (
+                      <li key={row.key}>
+                        <Link className="analysis-v2-prediction-row" to={`/prediction/${row.key}`}>
+                          <span className="analysis-v2-prediction-copy">
+                            <strong>{row.label}</strong>
+                            <span>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</span>
+                          </span>
+                          <span className="analysis-v2-prediction-estimate">
+                            <strong className="analysis-v2-prediction-time">{row.timeLabel}</strong>
+                            {deltaSeconds != null ? (
+                              <span className={cx('analysis-v2-prediction-delta', deltaSeconds < 0 && 'is-faster', deltaSeconds > 0 && 'is-slower')} title={t('analysis.v2_prediction_change_basis')}>
+                                {deltaSeconds < 0 ? '−' : deltaSeconds > 0 ? '+' : ''}{formatDuration(Math.abs(deltaSeconds))}
+                              </span>
+                            ) : null}
+                          </span>
+                          <AppIcon name="chevron_right" aria-hidden="true" />
+                        </Link>
+                      </li>
+                      );
+                    })}
+                  </ul>
+                </section>
               </section>
 
-              <section className="analysis-overview-grid analysis-overview-grid--summary analysis-profile-bento-grid">
-                <button
-                  type="button"
-                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--intensity analysis-profile-bento-card analysis-overview-card--interactive"
-                  onClick={() => navigate('/analysis/intensity')}
-                >
-                  <span className="analysis-overview-card-kicker">
-                    <img src={intensityDistributionCardIcon} alt="" className="analysis-intensity-card-icon" />
-                    {t('analysis.stitch_intensity_title')}
+              <section className="analysis-v2-checks" aria-label={t('profile.dashboard_nav_analysis')}>
+                <button type="button" className="analysis-v2-check" onClick={() => navigate('/analysis/load-balance')}>
+                  <span className="analysis-v2-check-head"><span>{t('analysis.stitch_acwr_title')}</span><AppIcon name="chevron_right" /></span>
+                  <strong>{trainingLoad?.lastAcwr != null ? trainingLoad.lastAcwr.toFixed(2) : '--'}</strong>
+                  <span className="analysis-v2-acwr-scale" aria-hidden="true">
+                    {trainingLoad?.lastAcwr != null ? (
+                      <i style={{ left: `${Math.max(0, Math.min(100, (trainingLoad.lastAcwr - 0.5) / 1.1 * 100))}%` }} />
+                    ) : null}
                   </span>
-                  <div className="analysis-overview-intensity-row">
-                    <strong>
-                      {polarized
-                        ? `${polarized.easySharePct}/${polarized.moderateSharePct}/${polarized.hardSharePct}`
-                        : '--/--/--'}
-                    </strong>
-                    <AppIcon name="check_circle" className="runner-dashboard-side-link-icon" />
-                  </div>
-                  <div className="analysis-overview-intensity-bar">
-                    <span style={{ width: `${polarized?.easySharePct || 0}%` }} />
+                  <span className="analysis-v2-scale-labels"><span>0.8</span><span>{t('analysis.v2_productive')}</span><span>1.3</span></span>
+                  <p>{t('analysis.stitch_acwr_copy')}</p>
+                </button>
+
+                <button type="button" className="analysis-v2-check analysis-v2-check--intensity" onClick={() => navigate('/analysis/intensity')}>
+                  <span className="analysis-v2-check-head"><span>{t('analysis.stitch_intensity_title')}</span><AppIcon name="chevron_right" /></span>
+                  <strong>{polarized ? `${polarized.easySharePct} / ${polarized.moderateSharePct} / ${polarized.hardSharePct}` : '--'}</strong>
+                  <span className="analysis-v2-mix" aria-hidden="true">
+                    <span className="is-easy" style={{ width: `${polarized?.easySharePct || 0}%` }} />
                     <span className="is-moderate" style={{ width: `${polarized?.moderateSharePct || 0}%` }} />
                     <span className="is-hard" style={{ width: `${polarized?.hardSharePct || 0}%` }} />
-                  </div>
-                  <div className="analysis-overview-intensity-labels">
-                    <span>{t('analysis.stitch_low_intensity', { value: polarized?.easySharePct ?? 0 })}</span>
-                    <span>{t('analysis.stitch_moderate_intensity', { value: polarized?.moderateSharePct ?? 0 })}</span>
-                    <span>{t('analysis.stitch_high_intensity', { value: polarized?.hardSharePct ?? 0 })}</span>
-                  </div>
-                </button>
-
-
-                <button
-                  type="button"
-                  className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--forecast analysis-profile-bento-card analysis-overview-card--interactive"
-                  onClick={() => navigate('/prediction/marathon')}
-                >
-                  <span className="analysis-overview-card-kicker">
-                    <img src={performanceForecastIcon} alt="" className="analysis-performance-forecast-icon" />
-                    {t('analysis.stitch_forecast_title')}
                   </span>
-                  <strong>{marathonRow?.timeLabel || '--'}</strong>
-                  <div className="analysis-overview-forecast-footer">
-                    <span className={cx('analysis-overview-forecast-delta', marathonDelta != null && marathonDelta < 0 && 'is-positive')}>
-                      {marathonDelta == null ? t('analysis.stitch_no_delta') : `${marathonDelta < 0 ? '' : '+'}${formatDuration(Math.abs(marathonDelta))} ${t('analysis.stitch_vs_prev')}`}
-                    </span>
-                    <span className="analysis-overview-arrow-link" aria-hidden="true">
-                      <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-                    </span>
+                  <span className="analysis-v2-scale-labels">
+                    <span>{t('analysis.v2_intensity_easy')}</span>
+                    <span>{t('analysis.v2_intensity_moderate')}</span>
+                    <span>{t('analysis.v2_intensity_hard')}</span>
+                  </span>
+                  {polarized ? <p>{t(polarized.easySharePct >= 75 && polarized.hardSharePct <= 20 && injury.level === 'low' && loadZone.key === 'optimal' ? 'analysis.v2_intensity_balanced' : 'analysis.v2_intensity_build')}</p> : null}
+                </button>
+
+                <div className="analysis-v2-check analysis-v2-check--injury">
+                  <button type="button" className="analysis-v2-check-head is-link" onClick={() => navigate('/analysis/injury-risk')}>
+                    <span>{t('analysis.stitch_injury_title')}</span><AppIcon name="chevron_right" />
+                  </button>
+                  <div className="analysis-v2-injury-value">
+                    <strong>{t(`analysis.stitch_injury_${injury.level || 'low'}`)}</strong>
+                    {injuryStatus?.combinedRiskScore != null ? <span>{Math.round(injuryStatus.combinedRiskScore)} / 100</span> : null}
                   </div>
+                  <span className="analysis-v2-risk" aria-hidden="true">
+                    <span className={injury.level === 'low' ? 'is-on is-low' : ''} />
+                    <span className={injury.level === 'moderate' ? 'is-on is-moderate' : ''} />
+                    <span className={injury.level === 'high' ? 'is-on is-high' : ''} />
+                  </span>
+                  {injuryRecommendation ? <p><strong>{t(`analysis.stitch_injury_prevention_rec_${injuryRecommendation}`)}</strong></p> : null}
+                  <span className="analysis-v2-soreness-label">{t('analysis.v2_soreness_title')}</span>
+                  <div className="analysis-v2-soreness" role="group" aria-label={t('analysis.v2_soreness_title')}>
+                    {['low', 'medium', 'high'].map((level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        className={cx('analysis-v2-soreness-btn', `is-${level}`, latestSorenessLevel === level && 'is-active')}
+                        onClick={() => setSorenessModalLevel(level)}
+                        disabled={sorenessSubmitting || injuryStatusLoading}
+                        aria-pressed={latestSorenessLevel === level}
+                      >
+                        {t(`analysis.v2_soreness_${level}`)}
+                      </button>
+                    ))}
+                  </div>
+                  {sorenessError ? <p className="analysis-v2-check-error">{sorenessError}</p> : null}
+                  {injuryStatusError && !injuryStatusLoading ? <p className="analysis-v2-check-error">{t('analysis.stitch_injury_prevention_error')}</p> : null}
+                  {injuryStatus?.coachAdvice ? <p>{localizedCoachAdvice}</p> : null}
+                </div>
+
+                <button type="button" className="analysis-v2-check analysis-v2-check--coach" onClick={() => navigate('/analysis/coach-insight')}>
+                  <span className="analysis-v2-check-head"><span>{t('analysis.stitch_coach_title')}</span><AppIcon name="chevron_right" /></span>
+                  <strong className="analysis-v2-coach-quote">“{coachQuote}”</strong>
+                  {coachRecommendation?.purpose ? <span className="sr-only">{coachRecommendation.purpose}</span> : null}
+                  {coachRecommendation ? <span className="analysis-v2-coach-session">{t('analysis.v2_coach_today', { session: `${coachRecommendation.title} · ${coachRecommendation.distance}` })}</span> : null}
                 </button>
               </section>
 
-              <section className="analysis-profile-table-grid" aria-label={t('profile.dashboard_nav_analysis')}>
-                <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-overview-card--training-zones analysis-profile-table-card">
-                  <div className="analysis-overview-table-head">
-                    <h2>{t('analysis.stitch_training_zones_title')}</h2>
+              <section className="analysis-v2-zones" aria-labelledby="analysis-v2-zones-title">
+                <div className="analysis-v2-card-head">
+                  <h2 id="analysis-v2-zones-title">{t('analysis.v2_zones_title')}</h2>
+                  <span>{trainingZoneBasisLabel}</span>
+                </div>
+                <div className="analysis-v2-zone-ruler" aria-hidden="true">
+                  {trainingZones.map((zone) => (
+                    <span key={zone.key} className={`is-${zone.key}`}>{TRAINING_ZONE_CODES[zone.key]}</span>
+                  ))}
+                </div>
+                {trainingZones.length ? (
+                  <div className="analysis-v2-pace-direction" aria-hidden="true">
+                    <span>{orderedZonePace(trainingZones[0].paceLabel).split('–')[0]} /{unit === 'mile' ? 'mi' : 'km'} · {t('analysis.v2_faster')}</span>
+                    <span>{t('analysis.v2_slower')} · {orderedZonePace(trainingZones.at(-1).paceLabel).split('–').at(-1)} /{unit === 'mile' ? 'mi' : 'km'}</span>
                   </div>
-                  <div className="analysis-overview-table-wrap">
-                    <table className="analysis-overview-table">
-                      <thead>
-                        <tr>
-                          <th>{t('analysis.stitch_zone_label')}</th>
-                          <th>{t('analysis.stitch_zone_pace')}</th>
-                          <th>{t('analysis.stitch_zone_purpose')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {trainingZones.map((zone) => (
-                          <tr key={zone.key}>
-                            <td className="analysis-overview-zone-name">{t(`analysis.stitch_zone_${zone.key}`)}</td>
-                            <td className="is-accent">{zone.paceLabel}</td>
-                            <td>
-                              <span>{t(`analysis.stitch_zone_${zone.key}_purpose`)}</span>
-                              <span className="analysis-zone-basis-line" style={TRAINING_ZONE_BASIS_STYLE}>
-                                {trainingZoneBasisLabel}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                <section className="analysis-overview-card analysis-overview-card--prediction-table analysis-profile-table-card analysis-profile-table-card--predictions">
-                  <div className="analysis-overview-table-head">
-                    <h2>{t('analysis.stitch_predictions_title')}</h2>
-                  </div>
-                  <div className="analysis-overview-table-wrap">
-                    <table className="analysis-overview-table">
-                      <thead>
-                        <tr>
-                          <th>{t('analysis.stitch_event_distance')}</th>
-                          <th>{t('analysis.stitch_estimated_time')}</th>
-                          <th>{t(unit === 'mile' ? 'analysis.stitch_pace_per_mile' : 'analysis.stitch_pace_per_km')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {predictionRows.map((row) => (
-                          <tr
-                            key={row.key}
-                            className="clickable-row"
-                            onClick={(event) => {
-                              if (!event.target.closest('a, button')) navigate(`/prediction/${row.key}`);
-                            }}
-                          >
-                            <td>
-                              <Link className="analysis-prediction-link" to={`/prediction/${row.key}`}>
-                                <span>{row.label}</span>
-                                <AppIcon name="chevron_right" aria-hidden="true" />
-                              </Link>
-                            </td>
-                            <td className="is-accent">{row.timeLabel}</td>
-                            <td>{`${row.paceLabel} /${unit === 'mile' ? 'mi' : 'km'}`}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="analysis-overview-table-actions">
-                    <button type="button" className="runner-shell-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
-                    <button type="button" className="runner-shell-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
-                  </div>
-                </section>
+                ) : null}
+                <ul className="analysis-v2-zone-list">
+                  {trainingZones.map((zone) => (
+                    <li key={zone.key} className={`is-${zone.key}`}>
+                      <strong>{t(`analysis.v2_zone_${zone.key}`)}</strong>
+                      <span className="analysis-v2-zone-pace">{orderedZonePace(zone.paceLabel)} <small>{t(unit === 'mile' ? 'analysis.unit_pace_mile' : 'analysis.unit_pace_km')}</small></span>
+                      <span className="analysis-v2-zone-purpose">{t(`analysis.v2_zone_${zone.key}_purpose`)}</span>
+                    </li>
+                  ))}
+                </ul>
               </section>
-
-              {/* === Injury Prevention Dashboard === */}
-              {injuryStatusLoading && (
-                <section className="analysis-injury-prevention-section">
-                  <div className="analysis-injury-prevention-head">
-                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
-                  </div>
-                  <div className="analysis-injury-prevention-status-loading">{t('analysis.stitch_loading')}</div>
-                </section>
-              )}
-              {injuryStatusError && !injuryStatusLoading && (
-                <section className="analysis-injury-prevention-section">
-                  <div className="analysis-injury-prevention-head">
-                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
-                  </div>
-                  <div className="analysis-injury-prevention-status-error">{t('analysis.stitch_injury_prevention_error')}</div>
-                </section>
-              )}
-              {!injuryStatusLoading && !injuryStatusError && injuryStatus && (
-                <section className="analysis-injury-prevention-section" aria-label={t('analysis.stitch_injury_prevention_title')}>
-                  <div className="analysis-injury-prevention-head">
-                    <h2>{t('analysis.stitch_injury_prevention_title')}</h2>
-                    <p>{t('analysis.stitch_injury_prevention_subtitle')}</p>
-                  </div>
-                  <div className="analysis-overview-grid analysis-injury-prevention-grid">
-                    {/* Card 1: Combined Risk Score */}
-                    <button
-                      type="button"
-                      className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
-                      onClick={() => navigate('/analysis/injury-risk')}
-                    >
-                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_risk_title')}</h3>
-                      <div className="analysis-injury-prevention-risk-ring-wrap">
-                        <RiskRing score={injuryStatus?.combinedRiskScore} color={(Number(injuryStatus?.combinedRiskScore) || 0) < 30 ? '#38a35e' : (Number(injuryStatus?.combinedRiskScore) || 0) < 60 ? '#d98c3a' : '#d94a3a'} />
-                        <div className="analysis-injury-prevention-risk-meta">
-                          <span className="analysis-injury-prevention-risk-label">
-                            {t(`analysis.stitch_injury_prevention_rec_${injuryStatus?.recommendation || 'ready'}`)}
-                          </span>
-                          <span className={cx('analysis-injury-prevention-rec', `is-${injuryStatus?.recommendation || 'ready'}`)}>
-                            {t(`analysis.stitch_injury_prevention_rec_${injuryStatus?.recommendation || 'ready'}`)}
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Card 2: ACWR Monitor */}
-                    <button
-                      type="button"
-                      className="analysis-overview-card analysis-overview-card--metric analysis-overview-card--interactive"
-                      onClick={() => navigate('/analysis/load-balance')}
-                    >
-                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_acwr_title')}</h3>
-                      <div
-                        className="analysis-injury-prevention-acwr-body"
-                        style={{
-                          color: injuryAcwrColor,
-                          '--analysis-gauge-value-color': injuryAcwrColor,
-                        }}
-                      >
-                        <Gauge value={injuryStatus?.acwr || 0} color={injuryAcwrColor} />
-                        <div className="analysis-injury-prevention-acwr-value">
-                          {injuryStatus?.acwr != null ? injuryStatus.acwr.toFixed(2) : '--'}
-                        </div>
-                        <div className={cx('analysis-injury-prevention-acwr-trend', injuryStatus?.acwrTrend === 'up' && 'is-up', injuryStatus?.acwrTrend === 'down' && 'is-down')}>
-                          <AppIcon name={injuryStatus?.acwrTrend === 'up' ? 'trending_up' : injuryStatus?.acwrTrend === 'down' ? 'trending_down' : 'trending_flat'} className="runner-dashboard-side-link-icon" />
-                          <span>{t(`analysis.stitch_injury_prevention_acwr_trend_${injuryStatus?.acwrTrend || 'flat'}`)}</span>
-                        </div>
-                        <div className="analysis-injury-prevention-acwr-zones">
-                          <span className={((Number(injuryStatus?.acwr) || 0) < 1.0) ? 'is-active' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_safe')}</span>
-                          <span className={((Number(injuryStatus?.acwr) || 0) >= 1.0 && (Number(injuryStatus?.acwr) || 0) <= 1.2) ? 'is-active-warn' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_caution')}</span>
-                          <span className={((Number(injuryStatus?.acwr) || 0) > 1.2) ? 'is-active-danger' : ''}>{t('analysis.stitch_injury_prevention_acwr_zone_danger')}</span>
-                        </div>
-                      </div>
-                    </button>
-
-                    {/* Card 3: Daily Soreness Check-in + Coach Advice */}
-                    <div className="analysis-overview-card analysis-overview-card--metric">
-                      <h3 className="analysis-overview-metric-title">{t('analysis.stitch_injury_prevention_soreness_title')}</h3>
-                      <div className="analysis-injury-prevention-soreness-actions">
-                        <button
-                          type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-low', latestSorenessLevel === 'low' && 'is-active-low')}
-                          onClick={() => setSorenessModalLevel('low')}
-                          disabled={sorenessSubmitting}
-                          aria-pressed={latestSorenessLevel === 'low'}
-                        >
-                          {t('analysis.stitch_injury_prevention_soreness_low')}
-                        </button>
-                        <button
-                          type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-medium', latestSorenessLevel === 'medium' && 'is-active-medium')}
-                          onClick={() => setSorenessModalLevel('medium')}
-                          disabled={sorenessSubmitting}
-                          aria-pressed={latestSorenessLevel === 'medium'}
-                        >
-                          {t('analysis.stitch_injury_prevention_soreness_medium')}
-                        </button>
-                        <button
-                          type="button"
-                          className={cx('analysis-injury-prevention-soreness-btn', 'is-high', latestSorenessLevel === 'high' && 'is-active-high')}
-                          onClick={() => setSorenessModalLevel('high')}
-                          disabled={sorenessSubmitting}
-                          aria-pressed={latestSorenessLevel === 'high'}
-                        >
-                          {t('analysis.stitch_injury_prevention_soreness_high')}
-                        </button>
-                      </div>
-                      {sorenessError && (
-                        <div className="analysis-injury-prevention-log-error">{sorenessError}</div>
-                      )}
-                      {hasSorenessLog ? (
-                        <div className="analysis-injury-prevention-soreness-meta">
-                          {t('analysis.stitch_injury_prevention_soreness_logged', { level: t(`analysis.stitch_injury_prevention_soreness_${latestSorenessLevel}`) })}
-                        </div>
-                      ) : (
-                        <div className="analysis-injury-prevention-soreness-empty">
-                          {t('analysis.stitch_injury_prevention_coach_empty')}
-                        </div>
-                      )}
-                      {injuryStatus?.coachAdvice ? (
-                        <div className="analysis-injury-prevention-coach-advice">
-                          {localizedCoachAdvice}
-                        </div>
-                      ) : (
-                        <div className="analysis-injury-prevention-coach-empty">
-                          {t('analysis.stitch_injury_prevention_coach_empty')}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </section>
-              )}
 
               <footer className="runner-shell-footer">
+                <div className="analysis-v2-prediction-actions">
+                  <button type="button" className="runner-shell-inline-btn" onClick={() => setImportModalOpen(true)}>{t('analysis.stitch_import_data')}</button>
+                  <button type="button" className="runner-shell-inline-btn" onClick={() => navigate('/runs')}>{t('analysis.stitch_open_runs')}</button>
+                </div>
                 <FooterNavLinks />
                 <p>{t('landing.stitch_footer_copy')}</p>
               </footer>
@@ -1051,7 +746,7 @@ export default function Analysis() {
         title={t('analysis.stitch_injury_prevention_soreness_modal_title')}
         headerContent={sorenessModalLevel ? (
           <div className={cx('analysis-soreness-modal-level', `is-${sorenessModalLevel}`)}>
-            {t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`)}
+            {t(`analysis.v2_soreness_${sorenessModalLevel}`)}
           </div>
         ) : null}
         shellClassName="analysis-soreness-modal-shell"
@@ -1061,7 +756,7 @@ export default function Analysis() {
           <p className="analysis-soreness-modal-copy">
             {sorenessModalLevel
               ? t('analysis.stitch_injury_prevention_soreness_modal_copy', {
-                level: t(`analysis.stitch_injury_prevention_soreness_${sorenessModalLevel}`),
+                level: t(`analysis.v2_soreness_${sorenessModalLevel}`),
               })
               : ''}
           </p>
@@ -1078,133 +773,12 @@ export default function Analysis() {
         </div>
       </Modal>
 
-      <Modal
+      <ImportActivityModal
         isOpen={importModalOpen}
-        onClose={closeImportModal}
-        title={t('profile.import_modal_title')}
-        icon={<AppIcon name="upload_file" className="profile-import-modal-icon" />}
-        shellClassName="profile-import-modal-shell"
-        cardClassName="profile-import-modal-card"
-      >
-        <form className="profile-import-modal-form" onSubmit={handleImport}>
-          <header className="import-upload-heading">
-            <span>{t('profile.import_upload_kicker')}</span>
-            <h3>{t('profile.import_upload_title')}</h3>
-            <p className="modal-help">{t('profile.import_hint')}</p>
-          </header>
-          <div className="import-source-grid">
-            <section className={`import-source-card${fitExportFiles?.length ? ' is-selected' : ''}`}>
-              <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">01</span>
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.fit_export_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.fit_export_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">FIT/GPX</span>
-              </div>
-              <label className="modal-label" htmlFor="analysis-fit-export-files">{t('profile.fit_export_file_label')}</label>
-              <input
-                id="analysis-fit-export-files"
-                type="file"
-                accept=".gpx,.tcx,.fit,.zip"
-                multiple
-                aria-describedby="analysis-fit-export-selection"
-                onChange={(event) => {
-                  setFitExportFiles(event.target.files);
-                  setImportStatus('idle');
-                }}
-              />
-              <p id="analysis-fit-export-selection" className="selected-file-name">
-                {fitExportFiles?.length
-                  ? t('profile.selected_files_count', { count: fitExportFiles.length })
-                  : t('profile.no_file_selected')}
-              </p>
-            </section>
-            <section className={`import-source-card${corosFiles?.length ? ' is-selected' : ''}`}>
-              <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">02</span>
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.coros_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.coros_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">COROS</span>
-              </div>
-              <label className="modal-label" htmlFor="analysis-coros-files">{t('profile.coros_file_label')}</label>
-              <input
-                id="analysis-coros-files"
-                type="file"
-                accept=".gpx,.tcx,.fit,.zip"
-                multiple
-                aria-describedby="analysis-coros-selection"
-                onChange={(event) => {
-                  setCorosFiles(event.target.files);
-                  setImportStatus('idle');
-                }}
-              />
-              <p id="analysis-coros-selection" className="selected-file-name">
-                {corosFiles?.length
-                  ? t('profile.selected_files_count', { count: corosFiles.length })
-                  : t('profile.no_file_selected')}
-              </p>
-            </section>
-            <section className={`import-source-card${huaweiFiles?.length ? ' is-selected' : ''}`}>
-              <div className="import-source-header">
-                <span className="import-source-index" aria-hidden="true">03</span>
-                <div className="import-source-copy">
-                  <span className="import-source-title">{t('profile.huawei_source_title')}</span>
-                  <span className="import-source-hint">{t('profile.huawei_source_hint')}</span>
-                </div>
-                <span className="import-source-tag">HUAWEI</span>
-              </div>
-              <label className="modal-label" htmlFor="analysis-huawei-files">{t('profile.huawei_file_label')}</label>
-              <input
-                id="analysis-huawei-files"
-                type="file"
-                accept=".gpx,.tcx,.fit,.zip"
-                multiple
-                aria-describedby="analysis-huawei-selection"
-                onChange={(event) => {
-                  setHuaweiFiles(event.target.files);
-                  setImportStatus('idle');
-                }}
-              />
-              <p id="analysis-huawei-selection" className="selected-file-name">
-                {huaweiFiles?.length
-                  ? t('profile.selected_files_count', { count: huaweiFiles.length })
-                  : t('profile.no_file_selected')}
-              </p>
-            </section>
-          </div>
-          <div className="import-summary-line">
-            <strong>{t('profile.import_selected_total', { count: selectedFileCount })}</strong>
-            <span>{t('profile.import_batch_hint')}</span>
-          </div>
-          {importStatus === 'error' ? (
-            <p className="modal-status is-error" role="alert" aria-live="polite">
-              {t('profile.import_batch_failed')}
-            </p>
-          ) : null}
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="btn-secondary modal-button"
-              disabled={importStatus === 'uploading'}
-              onClick={closeImportModal}
-            >
-              {t('profile.cancel')}
-            </button>
-            <button
-              type="submit"
-              className="btn-primary modal-button"
-              disabled={selectedFileCount === 0 || importStatus === 'uploading'}
-            >
-              {importStatus === 'uploading'
-                ? t('profile.import_uploading')
-                : t('profile.upload_file_count', { count: selectedFileCount })}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => setImportModalOpen(false)}
+        onImported={loadAnalysisData}
+        t={t}
+      />
     </div>
   );
 }

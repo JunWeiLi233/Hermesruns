@@ -11,7 +11,7 @@ const branchEnd = source.indexOf(") : insightKey === 'injury-risk' ? (", branchS
 const coachBranch = source.slice(branchStart, branchEnd);
 
 assert.ok(branchStart >= 0 && branchEnd > branchStart, 'Coach Insight branch should remain addressable.');
-assert.match(source, /function buildLoadChartGeometry\(loadDashboard\)/, 'ACWR chart geometry should be shared with Load Balance.');
+assert.match(source, /function buildLoadChartGeometry\(loadDashboard, layoutWidth = 920, withBand = false\)/, 'ACWR chart geometry should be shared with Load Balance and accept a responsive width.');
 assert.match(source, /const coachLoadDashboard = useMemo\([\s\S]*buildLoadBalanceDashboardModel\([\s\S]*coachPerformanceWindow/, 'Coach Insight should derive ACWR data from the selected window.');
 assert.match(source, /const coachLoadChartGeometry = useMemo\([\s\S]*buildLoadChartGeometry\(coachLoadDashboard\)/, 'Coach Insight should use the shared ACWR geometry.');
 assert.match(coachBranch, /analysis-coach-command-acwr-chart-svg/, 'Coach Insight should use the Load Balance ACWR chart renderer.');

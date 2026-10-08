@@ -2,65 +2,18 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 const here = path.dirname(fileURLToPath(import.meta.url));
-const read = (relativePath) => readFileSync(path.join(here, '../../..', relativePath), 'utf8');
-
-const insightSource = read('pages/analysis/AnalysisInsightDetail.jsx');
-const styleSource = read('styles/analysis-load-balance-profile-alignment.css');
-
-assert.match(
-  insightSource,
-  /import loadBalanceTrack from '\.\.\/\.\.\/assets\/generated\/load-balance-track\.webp';/,
-  'Load Balance must import the supplied track image as a bundled asset.',
-);
-assert.match(
-  insightSource,
-  /className="analysis-load-profile-visual" aria-hidden="true"[\s\S]*<img src=\{loadBalanceTrack\} alt=""(?:\s+[^>]*)?\/>/,
-  'The Load Balance hero must render the track image as a decorative visual layer.',
-);
-assert.match(
-  styleSource,
-  /\.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-visual\s*\{/,
-  'Load Balance must own the hero visual layer styling.',
-);
-assert.match(
-  styleSource,
-  /\.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-visual img\s*\{/,
-  'The supplied track image must be cropped and treated as a hero image.',
-);
-
-const loadDecisionTextRule = styleSource.match(
-  /\.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-decision :is\(\s*\.coach-identity-copy strong,\s*h2,\s*\.analysis-load-profile-window strong\s*\)\s*\{([\s\S]*?)\}/,
-);
-assert.ok(loadDecisionTextRule, 'Load Balance coach decision text must have an explicit readability rule.');
-assert.match(
-  loadDecisionTextRule[1],
-  /color:\s*#fff8f1\s*!important;/,
-  'Load Balance coach identity and decision title must remain white on the dark focus card.',
-);
-
-const lightLoadCoachTextRule = styleSource.match(
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-decision \.coach-identity-copy strong\s*\{([\s\S]*?)\}/,
-);
-assert.ok(lightLoadCoachTextRule, 'Load Balance light-theme coach identity text must have an explicit readability rule.');
-assert.match(
-  lightLoadCoachTextRule[1],
-  /color:\s*#fff8f1\s*!important;/,
-  'Load Balance coach identity must stay white when the dark focus card is rendered in the light theme.',
-);
-
-const loadDecisionTitleCascadeRule = styleSource.match(
-  /body #root \.analysis-insight-detail-page\.is-load-balance \.analysis-load-profile-decision h2\s*\{([\s\S]*?)\}/,
-);
-assert.ok(
-  loadDecisionTitleCascadeRule,
-  'Load Balance decision title must have a high-specificity route rule.',
-);
-assert.match(
-  loadDecisionTitleCascadeRule[1],
-  /color:\s*#fff8f1\s*!important;/,
-  'Load Balance decision title must win over shared Profile heading styles.',
-);
-
-console.log('[PASS] Load Balance hero media guardrails passed.');
+const source = readFileSync(path.join(here, '../AnalysisInsightDetail.jsx'), 'utf8');
+const styles = readFileSync(path.join(here, '../../../styles/analysis-load-balance-v2.css'), 'utf8');
+const start = source.indexOf(") : insightKey === 'load-balance' && loadDashboard ? (");
+const end = source.indexOf(") : insightKey === 'intensity' && intensityDashboard ? (", start);
+assert.ok(start >= 0 && end > start);
+const branch = source.slice(start, end);
+assert.doesNotMatch(branch, /loadBalanceTrack|analysis-load-profile-visual|<picture>/, 'The v2 verdict must omit the decorative track image.');
+for (const marker of ['analysis-load-v2-verdict', 'analysis-load-v2-window', 'CoachIdentityBadge', 'loadDashboard.ratioValue', 'loadDashboard.judgmentTitle']) {
+  assert.ok(branch.includes(marker), 'The verdict must preserve ' + marker);
+}
+assert.match(styles, /background:\s*var\(--lb-card\)/, 'The verdict must use the theme-aware card surface.');
+assert.match(styles, /color:\s*var\(--lb-ink\)\s*!important/, 'The verdict title must remain readable on its card.');
+assert.match(styles, /theme-midnight/, 'The v2 cards must support dark mode.');
+console.log('[PASS] Load Balance v2 verdict and theme guardrails passed.');

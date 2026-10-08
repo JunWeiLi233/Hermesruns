@@ -13,16 +13,16 @@ assert.ok(
   'The generated performance-forecast icon should be stored in the frontend asset tree.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
   /import performanceForecastIcon from ['"]\.\.\/\.\.\/assets\/performance-forecast-icon\.webp['"];?/,
-  'Analysis should import the generated performance-forecast icon.',
+  'The predictions list should not load the retired forecast-card icon.',
 );
 
 assert.match(
   analysisSource,
-  /<span className="analysis-overview-card-kicker">\s*<img src=\{performanceForecastIcon\} alt="" className="analysis-performance-forecast-icon" \/>\s*\{t\('analysis\.stitch_forecast_title'\)\}/,
-  'The performance-forecast icon should sit beside the localized card label.',
+  /predictionRows\.map\(\(row\) => \{[\s\S]*?<Link className="analysis-v2-prediction-row" to=\{`\/prediction\/\$\{row\.key\}`\}/,
+  'Every race prediction should link to its existing detail route.',
 );
 
 assert.match(

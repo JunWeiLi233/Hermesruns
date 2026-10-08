@@ -77,10 +77,10 @@ for (const source of [insightSource, predictionSource]) {
 }
 
 for (const marker of [
-  'analysis-load-profile-decision',
-  'analysis-load-profile-evidence',
-  'analysis-load-profile-metrics',
-  'analysis-load-profile-ledger',
+  'analysis-load-v2-verdict',
+  'analysis-load-v2-chart',
+  'analysis-load-v2-metrics',
+  'analysis-load-v2-drivers',
 ]) {
   assert.ok(insightSource.includes(marker), `Load Balance is missing ${marker}.`);
 }
@@ -92,7 +92,7 @@ assert.doesNotMatch(
 );
 
 assert.ok(
-  insightSource.indexOf('analysis-load-profile-decision') < insightSource.indexOf('analysis-load-profile-evidence'),
+  insightSource.indexOf('analysis-load-v2-verdict') < insightSource.indexOf('analysis-load-v2-chart'),
   'The coaching decision must precede analytical evidence.',
 );
 assert.match(insightSource, /onPointerMove=\{handleLoadPointerMove\}/);

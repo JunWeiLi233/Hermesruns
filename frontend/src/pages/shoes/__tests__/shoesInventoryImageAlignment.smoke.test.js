@@ -7,7 +7,7 @@ const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, "../../../..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
-const shoesStyles = read('./src/styles/shoes-atelier-redesign.css');
+const shoesStyles = read('./src/styles/shoes-v2.css');
 const shoesPage = read('./src/pages/shoes/Shoes.jsx');
 
 const assertIncludes = (source, needle, label) => {
@@ -17,15 +17,15 @@ const assertIncludes = (source, needle, label) => {
 };
 
 [
-  'shoe-inventory-card-image',
+  'shoe-v2-photo',
   'shoe-img-clickable',
 ].forEach((className) => assertIncludes(shoesPage, className, 'Shoes page image hook'));
 
 [
-  '#root .shoes-atelier-redesign .shoe-inventory-card-image {',
+  '#root .shoe-v2-photo {',
   'display: grid;',
   'place-items: center;',
-  '#root .shoes-atelier-redesign .shoe-inventory-card-image .shoe-img {',
+  '#root .shoe-v2-photo .shoe-img {',
   'object-position: center;',
 ].forEach((selector) => assertIncludes(shoesStyles, selector, 'Shoe image alignment selector'));
 

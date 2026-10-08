@@ -16,6 +16,7 @@ import FooterNavLinks from '../../components/FooterNavLinks';
 import { formatDate, formatDistance, formatDuration, formatPace } from '../../utils/format';
 import HermesLogo from '../../components/HermesLogo';
 import Modal from '../../components/Modal';
+import ImportActivityModal from '../../components/ImportActivityModal';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { preloadRoute } from '../../utils/routePreload';
@@ -500,37 +501,53 @@ async function fetchRoutePreviewBatch(ids) {
   return normalizeRoutePreviewBatch(data);
 }
 
-function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDelete }) {
+function RunRow({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDelete, badge, groupedByDate }) {
   const provider = run.provider || t('runs.manual_import');
   const runName = run.name || t('runs.default_run_name');
   const pointPreview = routePreviewFallbacks[run.id];
   const preview = pointPreview || run.routePreview || null;
-  // Bbox priority: explicit override (cached from a previous fallback fetch) →
-  // bbox embedded in the preview (today only happens via the fallback path).
   const bbox = routeBboxes[run.id] || readBboxFromPreview(pointPreview) || readBboxFromPreview(run.routePreview);
+  const started = runDate(run);
+  const valid = !Number.isNaN(started.getTime());
+  const locale = lang || 'en';
+  const safeFormat = (options) => {
+    if (!valid) return '';
+    try { return new Intl.DateTimeFormat(locale, options).format(started); } catch { return ''; }
+  };
+  const dayLabel = valid ? String(started.getDate()).padStart(2, '0') : '--';
+  const subLabel = safeFormat(groupedByDate ? { weekday: 'short' } : { month: 'short' });
+  const timeLabel = safeFormat({ hour: 'numeric', minute: '2-digit' });
+  const distanceKm = Number(run.distanceKm || 0);
+  const movingTimeSeconds = Number(run.movingTimeSeconds || 0);
+  const distanceText = formatDistance(distanceKm, 1, lang);
+  const paceText = formatPace(distanceKm, movingTimeSeconds, lang);
+  const movingTimeText = formatDuration(movingTimeSeconds);
 
   return (
-    <div className="recent-runs-card-shell">
-      <button type="button" className="recent-runs-card" data-run-id={run.id || ''} onClick={() => onOpen(run)}>
+    <div className="recent-runs-card-shell runs-ledger-row-shell">
+      <button type="button" className="recent-runs-card runs-ledger-row" data-run-id={run.id || ''} onClick={() => onOpen(run)}>
+        <span className="runs-ledger-row__date">
+          <strong>{dayLabel}</strong>
+          <span>{subLabel}</span>
+        </span>
         <RoutePreviewThumb preview={preview} provider={provider} runName={runName} bbox={bbox} />
-        <div className="recent-runs-card-body">
-          <div className="recent-runs-card-top">
-            <div>
-              <h3>{runName}</h3>
-              <p className="recent-runs-card-date"><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" />{formatDate(run.startTime || run.startDate, lang)}</p>
-            </div>
-          </div>
-          <div className="recent-runs-card-metrics">
-            <div className="recent-runs-card-metric recent-runs-card-metric--accent"><span>{t('runs.metric_distance')}</span><strong>{formatDistance(Number(run.distanceKm || 0), 1, lang)}</strong></div>
-            <div className="recent-runs-card-metric"><span>{t('runs.metric_average_pace')}</span><strong>{formatPace(Number(run.distanceKm || 0), Number(run.movingTimeSeconds || 0), lang)}</strong></div>
-            <div className="recent-runs-card-metric"><span>{t('runs.metric_moving_time')}</span><strong>{formatDuration(run.movingTimeSeconds)}</strong></div>
-          </div>
-        </div>
+        <span className="runs-ledger-row__title">
+          <strong>{runName}</strong>
+          <span className="runs-ledger-row__meta">
+            <span className="runs-ledger-row__source">{provider}</span>
+            {valid ? <time className="runs-ledger-row__full-date" dateTime={started.toISOString()}>{formatDate(run.startTime || run.startDate, lang)}</time> : null}
+            {timeLabel ? <span>{timeLabel}</span> : null}
+            {badge ? <span className="runs-ledger-row__badge">{badge}</span> : null}
+          </span>
+        </span>
+        <span className="runs-ledger-row__num runs-ledger-row__num--distance" aria-label={`${t('runs.metric_distance')} ${distanceText}`}>{distanceText}</span>
+        <span className="runs-ledger-row__num" aria-label={`${t('runs.metric_average_pace')} ${paceText}`}>{paceText}</span>
+        <span className="runs-ledger-row__num" aria-label={`${t('runs.metric_moving_time')} ${movingTimeText}`}>{movingTimeText}</span>
       </button>
       {onDelete && (
         <button
           type="button"
-          className="recent-runs-card-delete"
+          className="recent-runs-card-delete runs-ledger-row__delete"
           aria-label={t('runs.delete')}
           title={t('runs.delete')}
           onClick={(e) => { e.stopPropagation(); onDelete(run); }}
@@ -541,6 +558,9 @@ function RunCard({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onD
     </div>
   );
 }
+
+const RUNS_VIEW_STORAGE_KEY = 'hermes_runs_view';
+const RUNS_WEEKLY_VOLUME_WEEKS = 12;
 
 const Runs = memo(function Runs() {
   const { isAuthenticated, email } = useAuth();
@@ -563,12 +583,6 @@ const Runs = memo(function Runs() {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [fitExportFiles, setFitExportFiles] = useState(null);
-  const [corosFiles, setCorosFiles] = useState(null);
-  const [huaweiFiles, setHuaweiFiles] = useState(null);
-  const [importStatus, setImportStatus] = useState('');
-  const selectedImportFileCount = [fitExportFiles, corosFiles, huaweiFiles]
-    .reduce((total, files) => total + (files?.length ?? 0), 0);
   const [routePreviewFallbacks, setRoutePreviewFallbacks] = useState({});
   // Per-run geographic bbox keyed by run id. Seeded from localStorage so a
   // repeat page load does not need to re-fetch preview metadata for the same runs.
@@ -827,29 +841,6 @@ const Runs = memo(function Runs() {
     setStravaLinking(false);
   }
 
-  async function handleImport(event) {
-    event.preventDefault();
-    const formData = new FormData();
-    let hasFiles = false;
-    [[fitExportFiles, 'exports'], [corosFiles, 'coros'], [huaweiFiles, 'huawei']].forEach(([files, field]) => {
-      if (!files) return;
-      Array.from(files).forEach((file) => {
-        formData.append(field, file);
-        hasFiles = true;
-      });
-    });
-    if (!hasFiles) return;
-    setImportStatus('');
-    try {
-      const response = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-      if (!response.ok) throw new Error();
-      setImportModalOpen(false);
-      refreshRuns();
-    } catch {
-      setImportStatus(t('profile.import_failed'));
-    }
-  }
-
   const filteredRuns = useMemo(() => {
     const now = new Date();
     let result = [...allRuns];
@@ -935,7 +926,6 @@ const Runs = memo(function Runs() {
     ? formatStravaSyncLabel(stravaStatus, t)
     : t('runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
-  const countText = filteredRuns.length === 0 ? t('runs.count_zero') : t('runs.count_label', { count: filteredRuns.length });
   const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
   const filteredTimeSeconds = filteredRuns.reduce((sum, run) => sum + Number(run.movingTimeSeconds || 0), 0);
   const totalDistanceText = formatDistance(filteredDistanceKm, 1, lang);
@@ -943,14 +933,6 @@ const Runs = memo(function Runs() {
   const avgPaceText = filteredRuns.length > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
     : t('runs.pace_zero');
-  const latestRun = allRuns.reduce((latest, run) => {
-    const runTime = runDate(run).getTime();
-    if (Number.isNaN(runTime)) return latest;
-    if (!latest) return run;
-    const latestTime = runDate(latest).getTime();
-    return Number.isNaN(latestTime) || runTime > latestTime ? run : latest;
-  }, null);
-  const latestSource = latestRun?.provider || t('runs.no_data');
 
   const visibleRuns = useMemo(
     () => filteredRuns.slice(0, visibleRunsCount),
@@ -971,6 +953,18 @@ const Runs = memo(function Runs() {
   const runsByMonth = useMemo(() => {
     const groups = [];
     const groupByKey = new Map();
+    const totalsByKey = new Map();
+    filteredRuns.forEach((run) => {
+      const started = runDate(run);
+      if (Number.isNaN(started.getTime())) return;
+      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      const totals = totalsByKey.get(key) || { count: 0, totalKm: 0, totalSeconds: 0 };
+      totals.count += 1;
+      totals.totalKm += Number(run.distanceKm || 0)
+        || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
+      totals.totalSeconds += Number(run.movingTimeSeconds || 0);
+      totalsByKey.set(key, totals);
+    });
     const monthLabelFormatter = (() => {
       try {
         return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long' });
@@ -990,17 +984,15 @@ const Runs = memo(function Runs() {
             ? monthLabelFormatter.format(started)
             : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
           runs: [],
-          totalKm: 0,
+          ...totalsByKey.get(key),
         };
         groupByKey.set(key, group);
         groups.push(group);
       }
       group.runs.push(run);
-      group.totalKm += Number(run.distanceKm || 0)
-        || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
     });
     return groups;
-  }, [visibleRuns, lang]);
+  }, [filteredRuns, visibleRuns, lang]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -1023,6 +1015,32 @@ const Runs = memo(function Runs() {
       return best;
     }, null)
   ), [filteredRuns]);
+
+  const [runsView, setRunsView] = useState(() => {
+    try { return localStorage.getItem(RUNS_VIEW_STORAGE_KEY) === 'grid' ? 'grid' : 'list'; } catch { return 'list'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(RUNS_VIEW_STORAGE_KEY, runsView); } catch { /* ignore */ }
+  }, [runsView]);
+  const weeklyVolume = useMemo(() => {
+    const weekMs = 7 * 86400000;
+    const now = new Date();
+    const mondayOffset = (now.getDay() + 6) % 7;
+    const currentWeek = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
+    const buckets = Array.from({ length: RUNS_WEEKLY_VOLUME_WEEKS }, () => 0);
+    allRuns.forEach((run) => {
+      const started = runDate(run);
+      if (Number.isNaN(started.getTime()) || started > now) return;
+      const day = Date.UTC(started.getFullYear(), started.getMonth(), started.getDate());
+      const index = Math.floor((currentWeek + weekMs - 1 - day) / weekMs);
+      const distance = Number(run.distanceKm || 0);
+      if (index >= 0 && index < RUNS_WEEKLY_VOLUME_WEEKS && Number.isFinite(distance) && distance > 0) {
+        buckets[RUNS_WEEKLY_VOLUME_WEEKS - 1 - index] += distance;
+      }
+    });
+    return buckets;
+  }, [allRuns]);
+  const weeklyPeakKm = Math.max(0, ...weeklyVolume);
 
   const timeFilterOptions = [
     { key: 'all', label: t('runs.filter_all') },
@@ -1186,69 +1204,6 @@ const Runs = memo(function Runs() {
     ));
   }
 
-  function renderImportModal() {
-    return (
-      <Modal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        title={t('profile.import_modal_title')}
-        icon={<AppIcon name="upload_file" className="profile-import-modal-icon" />}
-        closeLabel={t('profile.close')}
-        shellClassName="profile-import-modal-shell"
-        cardClassName="profile-import-modal-card"
-      >
-        <form className="profile-import-modal-form" onSubmit={handleImport}>
-          <header className="import-upload-heading">
-            <span>{t('profile.import_upload_kicker')}</span>
-            <h3>{t('profile.import_upload_title')}</h3>
-            <p className="modal-help">{t('profile.import_hint')}</p>
-          </header>
-          <div className="import-source-grid">
-            {[
-              ['fit', 'FIT/GPX', fitExportFiles, setFitExportFiles, 'profile.fit_export_source_title', 'profile.fit_export_source_hint', 'profile.fit_export_file_label'],
-              ['coros', 'COROS', corosFiles, setCorosFiles, 'profile.coros_source_title', 'profile.coros_source_hint', 'profile.coros_file_label'],
-              ['huawei', 'HUAWEI', huaweiFiles, setHuaweiFiles, 'profile.huawei_source_title', 'profile.huawei_source_hint', 'profile.huawei_file_label'],
-            ].map(([key, tag, files, setter, titleKey, hintKey, labelKey], index) => (
-              <section key={key} className={`import-source-card${files?.length ? ' is-selected' : ''}`}>
-                <div className="import-source-header">
-                  <span className="import-source-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="import-source-copy">
-                    <span className="import-source-title">{t(titleKey)}</span>
-                    <span className="import-source-hint">{t(hintKey)}</span>
-                  </div>
-                  <span className="import-source-tag">{tag}</span>
-                </div>
-                <label className="modal-label" htmlFor={`runs-import-${key}`}>{t(labelKey)}</label>
-                <input
-                  id={`runs-import-${key}`}
-                  type="file"
-                  accept=".gpx,.tcx,.fit,.zip"
-                  multiple
-                  aria-describedby={`runs-import-${key}-selection`}
-                  onChange={(event) => setter(event.target.files)}
-                />
-                <p id={`runs-import-${key}-selection`} className="selected-file-name">
-                  {files?.length ? t('profile.selected_files_count', { count: files.length }) : t('profile.no_file_selected')}
-                </p>
-              </section>
-            ))}
-          </div>
-          <div className="import-summary-line">
-            <strong>{t('profile.import_selected_total', { count: selectedImportFileCount })}</strong>
-            <span>{t('profile.import_batch_hint')}</span>
-          </div>
-          {importStatus ? <div className="modal-status is-error" role="alert">{importStatus}</div> : null}
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setImportModalOpen(false)}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button" disabled={selectedImportFileCount === 0}>
-              {t('profile.upload_file_count', { count: selectedImportFileCount })}
-            </button>
-          </div>
-        </form>
-      </Modal>
-    );
-  }
-
   if (loadState === 'loading') return <PageSkeleton variant="runs" />;
 
   if (isAwaitingData) {
@@ -1410,7 +1365,12 @@ const Runs = memo(function Runs() {
             </div>
           </div>
         </main>
-        {renderImportModal()}
+        <ImportActivityModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onImported={refreshRuns}
+          t={t}
+        />
       </div>
     );
   }
@@ -1486,186 +1446,205 @@ const Runs = memo(function Runs() {
         </header>
 
         <div className="runner-shell-canvas">
-          <div className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign">
-            <section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">
-              <div className="runs-profile-cockpit__primary">
-                <div className="runs-profile-cockpit__heading">
-                  <h1 id="runs-profile-title">{t('runs.heading')}</h1>
-                  <p>{t('runs.page_copy')}</p>
-                </div>
-                <div className="runs-profile-cockpit__actions">
-                  <button
-                    type="button"
-                    className="runs-profile-primary-action"
-                    onClick={handleStravaConnect}
-                    disabled={stravaLinking}
-                  >
-                    <AppIcon name="sync" className="runner-dashboard-side-link-icon" />
-                    {awaitingPrimaryAction}
-                  </button>
-                  <button
-                    type="button"
-                    className="runs-profile-secondary-action"
-                    onClick={() => setImportModalOpen(true)}
-                  >
-                    <AppIcon name="folder_open" className="runner-dashboard-side-link-icon" />
-                    {t('runs.awaiting_import_files')}
-                  </button>
-                </div>
+          <div className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign runs-ledger-v2">
+            <header className="runs-ledger-v2__header">
+              <div className="runs-ledger-v2__heading">
+                <p className={`runs-ledger-v2__status runs-ledger-v2__status--${integrationNotice ? integrationNoticeTone : (stravaLinked ? 'active' : 'muted')}`}>
+                  <span className="runs-ledger-v2__status-dot" aria-hidden="true" />
+                  {awaitingStatus}
+                </p>
+                <h1 id="runs-profile-title">{t('runs.heading')}</h1>
               </div>
-              <div className="runs-profile-cockpit__rail" aria-label={t('runs.stitch_pattern_title')}>
-                <article className="runs-profile-signal runs-profile-signal--count">
-                  <span>{t('runs.result_count_label')}</span>
-                  <strong>{countText}</strong>
-                </article>
-                <article className="runs-profile-signal">
-                      <span>{t('runs.latest_source')}</span>
-                      <strong>{latestSource}</strong>
-                    </article>
-                <article className={`runs-profile-signal runs-profile-signal--status${stravaLinked ? ' is-live' : ' is-muted'}`}>
-                  <span>{t(stravaLinked ? 'runs.awaiting_error_code_linked' : 'runs.awaiting_error_code_disconnected')}</span>
-                  <strong>{stravaLinked ? t('runs.awaiting_pipeline_strava') : t('runs.awaiting_pipeline_manual')}</strong>
-                </article>
+              <div className="runs-ledger-v2__actions">
+                <button type="button" className="runs-ledger-v2__btn" onClick={() => setImportModalOpen(true)}>
+                  <AppIcon name="upload_file" className="runs-ledger-v2__btn-icon" />
+                  {t('runs.awaiting_import_files')}
+                </button>
+                <button type="button" className="runs-ledger-v2__btn runs-ledger-v2__btn--primary" onClick={handleStravaConnect} disabled={stravaLinking}>
+                  <AppIcon name="sync" className="runs-ledger-v2__btn-icon" />
+                  {awaitingPrimaryAction}
+                </button>
               </div>
-            </section>
-            <section className="runs-profile-glance" aria-label={t('runs.stitch_pattern_title')}>
-              <section className="recent-runs-stats-grid">
-                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="route" className="runs-profile-metric-icon" />{t('runs.total_distance')}</span><strong>{totalDistanceText}</strong></article>
-                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="speed" className="runs-profile-metric-icon" />{t('runs.average_pace')}</span><strong>{avgPaceText}</strong></article>
-                <article className="recent-runs-stat-card"><span className="runs-profile-metric-kicker"><AppIcon name="timer" className="runs-profile-metric-icon" />{t('runs.metric_moving_time')}</span><strong>{totalTimeText}</strong></article>
-              </section>
-              {filteredRuns.length > 0 ? (
-                <section className="recent-runs-insight-strip" aria-label={t('runs.stitch_pattern_title')}>
-                  <article className="recent-runs-insight-card recent-runs-insight-card--primary">
-                    <span>{t('runs.stitch_pattern_title')}</span>
-                    <strong>{t('runs.insight_runs_count', { count: filteredRuns.length })}</strong>
-                    <p>{t('runs.insight_active_days', { count: activeDaysCount })}</p>
-                  </article>
-                  <article className="recent-runs-insight-card">
-                    <span>{t('runs.insight_fastest_label')}</span>
-                    <strong>{fastestRun ? formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang) : '--'}</strong>
-                    <p>{fastestRun?.run?.name || t('runs.default_run_name')}</p>
-                  </article>
-                  <article className="recent-runs-insight-card">
-                    <span>{t('runs.insight_longest_label')}</span>
-                    <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
-                    <p>{longestRun?.name || t('runs.default_run_name')}</p>
-                  </article>
-                </section>
-              ) : null}
-            </section>
-            <section id="recent-runs-filters" className="recent-runs-chip-stack runs-profile-workbench">
-              <div className="recent-runs-search-bar">
-                <div className="recent-runs-search-input-wrap">
-                  <AppIcon name="search" className="recent-runs-search-icon" />
-                  <input
-                    type="text"
-                    className="recent-runs-search-input"
-                    placeholder={t('runs.search_placeholder')}
-                    aria-label={t('runs.search_placeholder')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('runs.clear_search')}>
-                      <AppIcon name="close" />
-                    </button>
-                  )}
+            </header>
+
+            <section className="runs-ledger-v2__summary" aria-label={t('runs.stitch_pattern_title')}>
+              <div className="runs-ledger-v2__figures">
+                <div className="runs-ledger-v2__figure">
+                  <span>{t('runs.summary_runs')}</span>
+                  <strong>{filteredRuns.length}</strong>
+                  <small>{t('runs.insight_active_days', { count: activeDaysCount })}</small>
+                </div>
+                <div className="runs-ledger-v2__figure">
+                  <span>{t('runs.total_distance')}</span>
+                  <strong>{totalDistanceText}</strong>
+                  <small>{filteredRuns.length ? t('runs.summary_avg_distance', { value: formatDistance(filteredDistanceKm / filteredRuns.length, 1, lang) }) : '--'}</small>
+                </div>
+                <div className="runs-ledger-v2__figure">
+                  <span>{t('runs.metric_moving_time')}</span>
+                  <strong>{totalTimeText}</strong>
+                </div>
+                <div className="runs-ledger-v2__figure">
+                  <span>{t('runs.average_pace')}</span>
+                  <strong>{avgPaceText}</strong>
+                  <small>{fastestRun ? `${t('runs.insight_fastest_label')} · ${formatPace(Number(fastestRun.run.distanceKm || 0), Number(fastestRun.run.movingTimeSeconds || 0), lang)}` : '--'}</small>
+                </div>
+                <div className="runs-ledger-v2__figure">
+                  <span>{t('runs.insight_longest_label')}</span>
+                  <strong>{longestRun ? formatDistance(Number(longestRun.distanceKm || 0), 1, lang) : '--'}</strong>
+                  <small>{longestRun?.name || ''}</small>
                 </div>
               </div>
-              <div className="runs-profile-workbench__filters">
-                <div className="recent-runs-chip-row" role="group" aria-label={t('runs.filter_group_label')}>
-                  {timeFilterOptions.map((option) => (
-                    <button key={option.key} type="button" className={`recent-runs-chip${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
-                      setActiveMode(option.key);
-                      setSelectedYear(null);
-                      setSelectedMonth(null);
-                    }} aria-pressed={activeMode === option.key}>
-                      {option.label}
-                    </button>
+              <figure className="runs-ledger-v2__volume">
+                <figcaption>
+                  <span>{t('runs.weekly_volume')}</span>
+                  <span>{t('runs.weekly_peak', { value: formatDistance(weeklyPeakKm, 0, lang) })}</span>
+                </figcaption>
+                <div className="runs-ledger-v2__bars" role="img" aria-label={`${t('runs.weekly_volume')}: ${weeklyVolume.map((km) => formatDistance(km, 1, lang)).join(', ')}`}>
+                  {weeklyVolume.map((km, index) => (
+                    <span
+                      key={index}
+                      className={`runs-ledger-v2__bar${index === weeklyVolume.length - 1 ? ' is-current' : ''}`}
+                      style={{ height: `${Math.max(4, weeklyPeakKm > 0 ? (km / weeklyPeakKm) * 100 : 0)}%` }}
+                      title={formatDistance(km, 1, lang)}
+                    />
                   ))}
                 </div>
-                <div
-                  className="recent-runs-chip-row recent-runs-chip-row--secondary"
-                  role="group"
-                  aria-label={activeMode === 'year' || activeMode === 'month'
-                    ? t('runs.filter_group_label')
-                    : t('runs.sort_group_label')}
-                >
+              </figure>
+            </section>
+
+            <section id="recent-runs-filters" className="runs-ledger-v2__toolbar">
+              <div className="recent-runs-search-input-wrap runs-ledger-v2__search">
+                <AppIcon name="search" className="recent-runs-search-icon" />
+                <input
+                  type="text"
+                  className="recent-runs-search-input"
+                  placeholder={t('runs.search_placeholder')}
+                  aria-label={t('runs.search_placeholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('runs.clear_search')}>
+                    <AppIcon name="close" />
+                  </button>
+                )}
+              </div>
+              <div className="runs-ledger-v2__segmented" role="group" aria-label={t('runs.filter_group_label')}>
+                {timeFilterOptions.map((option) => (
+                  <button key={option.key} type="button" className={`runs-ledger-v2__seg${activeMode === option.key ? ' is-active' : ''}`} onClick={() => {
+                    setActiveMode(option.key);
+                    setSelectedYear(null);
+                    setSelectedMonth(null);
+                  }} aria-pressed={activeMode === option.key}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {activeMode === 'year' || activeMode === 'month' ? (
+                <div className="runs-ledger-v2__chips" role="group" aria-label={t('runs.filter_group_label')}>
                   {renderSecondaryFilterRow()}
                 </div>
+              ) : null}
+              <div className="runs-ledger-v2__sort" role="group" aria-label={t('runs.sort_group_label')}>
+                <span>{t('runs.sort_label')}</span>
+                {sortOptions.map((option) => (
+                  <button key={option.key} type="button" className={`runs-ledger-v2__sort-btn${runsSort === option.key ? ' is-active' : ''}`} onClick={() => setRunsSort(option.key)} aria-pressed={runsSort === option.key}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="runs-ledger-v2__segmented runs-ledger-v2__view" role="group" aria-label={t('runs.view_group_label')}>
+                <button type="button" className={`runs-ledger-v2__seg${runsView === 'list' ? ' is-active' : ''}`} onClick={() => setRunsView('list')} aria-pressed={runsView === 'list'} aria-label={t('runs.view_list')} title={t('runs.view_list')}>
+                  <AppIcon name="menu" />
+                </button>
+                <button type="button" className={`runs-ledger-v2__seg${runsView === 'grid' ? ' is-active' : ''}`} onClick={() => setRunsView('grid')} aria-pressed={runsView === 'grid'} aria-label={t('runs.view_grid')} title={t('runs.view_grid')}>
+                  <AppIcon name="dashboard" />
+                </button>
               </div>
             </section>
-            <section className="recent-runs-card-list" aria-label={t('runs.full_history')}>
-          {loadState === 'loading' ? <div className="recent-runs-status recent-runs-status--loading">{t('runs.loading')}</div> : null}
-          {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
-          {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
-          {loadState === 'ready' && filteredRuns.length > 0 ? (
-              <>
-                <div className="recent-runs-page-list">
-                  {runsByMonth.map((group) => {
-                    const collapsed = collapsedMonthKeys.has(group.key);
-                    const panelId = `recent-runs-month-${group.key}`;
-                    return (
-                      <section
-                        key={group.key}
-                        className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
-                        aria-label={group.label}
-                      >
-                        <h2 className="recent-runs-month-heading"><button
-                          type="button"
-                          className="recent-runs-month-header recent-runs-month-toggle"
-                          aria-expanded={!collapsed}
-                          aria-controls={panelId}
-                          onClick={() => toggleMonthFold(group.key)}
+
+            <section className={`recent-runs-card-list runs-ledger-v2__list is-${runsView}`} aria-label={t('runs.full_history')}>
+              {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
+              {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
+              {loadState === 'ready' && filteredRuns.length > 0 ? (
+                <>
+                  <div className="recent-runs-page-list">
+                    {runsByMonth.map((group) => {
+                      const collapsed = collapsedMonthKeys.has(group.key);
+                      const panelId = `recent-runs-month-${group.key}`;
+                      return (
+                        <section
+                          key={group.key}
+                          className={`recent-runs-month-group${collapsed ? ' is-collapsed' : ''}`}
+                          aria-label={group.label}
                         >
-                          <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
-                            <AppIcon name={collapsed ? 'expand_more' : 'expand_less'} />
-                          </span>
-                          <span className="recent-runs-month-title">{group.label}</span>
-                          <span className="recent-runs-month-meta">
-                            {t('runs.count_label', { count: group.runs.length })}
-                            {' · '}
-                            {formatDistance(group.totalKm, 1, lang)}
-                          </span>
-                        </button></h2>
-                        <div
-                          id={panelId}
-                          className="recent-runs-month-grid"
-                          hidden={collapsed}
-                        >
-                          {group.runs.map((run) => (
-                            <RunCard
-                              key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
-                              run={run}
-                              t={t}
-                              lang={lang}
-                              routePreviewFallbacks={routePreviewFallbacks}
-                              routeBboxes={routeBboxes}
-                              onOpen={openRun}
-                              onDelete={confirmDeleteRun}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
-                {hasMoreRuns ? (
-                  <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
-                    {typeof IntersectionObserver === 'undefined' ? (
-                      <button
-                        type="button"
-                        className="recent-runs-load-more"
-                        onClick={() => setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length))}
-                      >
-                        {t('runs.load_more')}
-                      </button>
-                    ) : <span>{t('runs.loading')}</span>}
+                          <h2 className="recent-runs-month-heading"><button
+                            type="button"
+                            className="recent-runs-month-header recent-runs-month-toggle"
+                            aria-expanded={!collapsed}
+                            aria-controls={panelId}
+                            onClick={() => toggleMonthFold(group.key)}
+                          >
+                            <span className="recent-runs-month-toggle-chevron" aria-hidden="true">
+                              <AppIcon name={collapsed ? 'chevron_right' : 'expand_more'} />
+                            </span>
+                            <span className="recent-runs-month-title">{group.label}</span>
+                            <span className="recent-runs-month-meta">
+                              <span>{t('runs.count_label', { count: group.count })}</span>
+                              <span>{formatDistance(group.totalKm, 1, lang)}</span>
+                              <span>{formatDuration(group.totalSeconds)}</span>
+                            </span>
+                          </button></h2>
+                          <div id={panelId} className="recent-runs-month-grid" hidden={collapsed}>
+                            {runsView === 'list' ? (
+                              <div className="runs-ledger-v2__columns" aria-hidden="true">
+                                <span>{t('runs.col_date')}</span>
+                                <span />
+                                <span>{t('runs.col_run')}</span>
+                                <span>{t('runs.metric_distance')}</span>
+                                <span>{t('runs.metric_average_pace')}</span>
+                                <span>{t('runs.metric_moving_time')}</span>
+                              </div>
+                            ) : null}
+                            {group.runs.map((run) => {
+                              let badge = null;
+                              if (fastestRun && run === fastestRun.run) badge = t('runs.badge_fastest');
+                              else if (longestRun && run === longestRun) badge = t('runs.badge_longest');
+                              return (
+                                <RunRow
+                                  key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
+                                  run={run}
+                                  t={t}
+                                  lang={lang}
+                                  routePreviewFallbacks={routePreviewFallbacks}
+                                  routeBboxes={routeBboxes}
+                                  onOpen={openRun}
+                                  onDelete={confirmDeleteRun}
+                                  badge={filteredRuns.length > 1 ? badge : null}
+                                  groupedByDate={runsSort === 'date'}
+                                />
+                              );
+                            })}
+                          </div>
+                        </section>
+                      );
+                    })}
                   </div>
-                ) : null}
-              </>
-            ) : null}
+                  {hasMoreRuns ? (
+                    <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
+                      {typeof IntersectionObserver === 'undefined' ? (
+                        <button
+                          type="button"
+                          className="recent-runs-load-more"
+                          onClick={() => setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length))}
+                        >
+                          {t('runs.load_more')}
+                        </button>
+                      ) : <span>{t('runs.loading')}</span>}
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
             </section>
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
@@ -1673,7 +1652,12 @@ const Runs = memo(function Runs() {
           </div>
         </div>
       </main>
-      {renderImportModal()}
+      <ImportActivityModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImported={refreshRuns}
+        t={t}
+      />
       <Modal
         isOpen={!!deleteTarget}
         onClose={closeDeleteModal}

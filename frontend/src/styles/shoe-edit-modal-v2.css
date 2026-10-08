@@ -1,0 +1,218 @@
+/* Edit shoe modal v2 (design 19a). Load last in app.css. */
+
+#root .modal-card.edit-v2-card {
+  --ed-ink: #1c1917;
+  --ed-muted: #625c56;
+  --ed-faint: #746e68;
+  --ed-line: rgba(28, 25, 23, 0.1);
+  --ed-soft: #faf8f5;
+  --ed-accent: #a0392a;
+  --ed-accent-soft: rgba(160, 57, 42, 0.12);
+  width: min(480px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  padding: 0 !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px) !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  color: var(--ed-ink) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.edit-v2-card {
+  --ed-ink: #f8f4ef;
+  --ed-muted: #c0b8ad;
+  --ed-faint: #a69e93;
+  --ed-line: rgba(255, 248, 238, 0.14);
+  --ed-soft: rgba(255, 255, 255, 0.05);
+  --ed-accent: #ffb4a7;
+  --ed-accent-soft: rgba(240, 117, 97, 0.18);
+  background: var(--profile-night-solid, #1e1b18) !important;
+}
+
+#root .edit-v2-card .modal-header {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px !important;
+  border-bottom: 1px solid var(--ed-line) !important;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+#root .edit-v2-card .modal-header-main {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+#root .edit-v2-thumb { grid-column: 1; grid-row: 1 / span 3; width: 64px; height: 64px; overflow: hidden; border-radius: 14px; background: var(--ed-soft); }
+#root .edit-v2-thumb :is(img, .shoe-img-placeholder) { width: 100%; height: 100%; object-fit: contain; }
+#root .edit-v2-kicker { grid-column: 2; grid-row: 1; color: var(--ed-faint); font-size: 0.75rem; font-weight: 600; }
+
+#root .edit-v2-card .modal-header h3 {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ed-ink) !important;
+  font-family: var(--font-display) !important;
+  font-size: 1.3rem !important;
+  font-style: italic !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1;
+  transform: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .edit-v2-card .modal-header::before,
+#root .edit-v2-card .modal-header h3::after { display: none !important; }
+#root .edit-v2-card .modal-close { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 999px; background: rgba(28, 25, 23, 0.05); color: var(--ed-ink); }
+#root .edit-v2-card .modal-form { padding: 0 !important; min-height: 0; max-height: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: auto; }
+
+#root .edit-v2 { display: flex; flex-direction: column; gap: 16px; padding: 20px 20px 0; }
+#root .edit-v2-meta { grid-column: 2; grid-row: 3; margin: 2px 0 0; color: var(--ed-muted); font-size: 0.8rem; line-height: 1.35; overflow-wrap: anywhere; }
+#root .edit-v2-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; }
+#root .edit-v2-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; letter-spacing: normal; text-transform: none; }
+#root .edit-v2-field > span { color: var(--ed-muted); font-size: 0.75rem; font-weight: 700; }
+#root .edit-v2-field em { color: var(--ed-faint); font-style: normal; font-weight: 500; }
+
+#root .edit-v2-field input {
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--ed-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ed-ink);
+  font: inherit;
+  font-size: 0.9rem;
+  box-shadow: none;
+}
+
+#root .edit-v2-field input:focus { border-color: var(--ed-accent); outline: none; box-shadow: 0 0 0 3px var(--ed-accent-soft); }
+
+#root .edit-v2-limit { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: var(--ed-soft); }
+#root .edit-v2-limit-head { display: flex; align-items: baseline; justify-content: space-between; }
+#root .edit-v2-limit-head > span { color: var(--ed-muted); font-size: 0.75rem; font-weight: 700; }
+#root .edit-v2-limit-head strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+#root .edit-v2-limit-head em { margin-left: 3px; color: var(--ed-faint); font-size: 0.75rem; font-style: normal; }
+#root .edit-v2-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+
+#root .edit-v2-presets button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ed-ink);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--ed-line);
+}
+
+#root .edit-v2-presets button strong { font-size: 0.78rem; }
+#root .edit-v2-presets button span { color: var(--ed-faint); font-size: 0.68rem; }
+#root .edit-v2-presets button.is-active { background: #fff; box-shadow: inset 0 0 0 1.5px var(--ed-accent); }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-presets button.is-active { background: rgba(255, 255, 255, 0.08); }
+#root .edit-v2-presets button.is-active strong { color: var(--ed-accent); }
+#root .edit-v2-range { width: 100%; accent-color: #a0392a; }
+#root .edit-v2-usage { display: flex; flex-direction: column; gap: 6px; }
+#root .edit-v2-usage-bar { height: 8px; overflow: hidden; border-radius: 4px; background: var(--ed-line); }
+#root .edit-v2-usage-bar i { display: block; height: 100%; border-radius: 4px; }
+#root .edit-v2-usage-bar .is-good { background: #5f9a73; }
+#root .edit-v2-usage-bar .is-warning { background: #e9b44c; }
+#root .edit-v2-usage-bar .is-critical { background: #e0685a; }
+#root .edit-v2-usage span { color: var(--ed-muted); font-size: 0.75rem; }
+
+#root .edit-v2-primary {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 14px;
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--ed-soft);
+  cursor: pointer;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+#root .edit-v2-primary.is-on { background: rgba(160, 57, 42, 0.05); box-shadow: inset 0 0 0 1.5px rgba(160, 57, 42, 0.35); }
+#root .edit-v2-primary input { position: absolute; width: 1px; height: 1px; padding: 0; margin: 0; opacity: 0; }
+#root .edit-v2-primary-copy { display: flex; flex-direction: column; gap: 2px; }
+#root .edit-v2-primary-copy strong { font-size: 0.875rem; }
+#root .edit-v2-primary-copy span { color: var(--ed-muted); font-size: 0.75rem; font-weight: 400; line-height: 1.45; }
+#root .edit-v2-switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: rgba(28, 25, 23, 0.18); transition: background 150ms ease; }
+
+#root .edit-v2-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: left 150ms ease;
+}
+
+#root .edit-v2-primary input:checked + .edit-v2-switch { background: #a0392a; }
+#root .edit-v2-primary input:checked + .edit-v2-switch::after { left: 21px; }
+#root .edit-v2-primary input:focus-visible + .edit-v2-switch { outline: 2px solid var(--ed-accent); outline-offset: 2px; }
+
+#root .edit-v2-footer { display: flex; align-items: center; gap: 10px; margin: 0 -20px; padding: 14px 20px; border-top: 1px solid var(--ed-line); }
+#root .edit-v2-dirty { flex: 1; color: var(--ed-faint); font-size: 0.75rem; }
+#root .edit-v2-dirty.is-dirty { color: #a15c00; }
+#root .edit-v2-footer button { min-height: 42px; padding: 0 18px; border-radius: 12px; font: inherit; font-size: 0.875rem; font-weight: 700; font-style: normal; cursor: pointer; }
+#root .edit-v2-cancel { border: 1px solid var(--ed-line); background: transparent; color: var(--ed-ink); }
+#root .edit-v2-save { padding: 0 22px !important; border: 0; background: linear-gradient(135deg, #a0392a, #e0685a); color: #fff; }
+#root .edit-v2-save:disabled { background: rgba(28, 25, 23, 0.06); color: var(--ed-faint); cursor: not-allowed; }
+
+#root .shoe-edit-modal-shell.edit-v2-shell { align-items: center; padding: 16px; background: rgba(28, 25, 23, 0.46); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#root .edit-v2-card .modal-header-main { flex: 1; margin-right: 44px; }
+#root .edit-v2-card .modal-close { position: absolute; width: 44px; height: 44px; top: 20px; right: 20px; border-radius: 999px; }
+#root .edit-v2-field input { min-width: 0; width: 100%; font-weight: 400; letter-spacing: normal; text-transform: none; }
+#root .edit-v2-range { padding: 0; height: 20px; min-height: 0; border: 0; background: transparent; box-shadow: none; cursor: pointer; }
+#root .edit-v2-thumb-placeholder { display: grid; width: 100%; height: 100%; place-items: center; color: var(--ed-faint); background: var(--ed-soft); }
+#root .edit-v2-thumb-placeholder svg { width: 40px; height: 40px; opacity: 0.8; }
+#root .edit-v2-card :is(button, input[type="range"]):focus-visible { outline: 2px solid var(--ed-accent); outline-offset: 3px; }
+#root .edit-v2-error { margin: 0; color: #b33427; font-size: 0.8rem; line-height: 1.4; }
+#root .edit-v2-footer { position: sticky; bottom: 0; z-index: 1; background: #fff; }
+#root .edit-v2-primary:has(input:disabled), #root .edit-v2-presets button:disabled { cursor: wait; opacity: 0.7; }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-footer { background: var(--profile-night-solid, #1e1b18); }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-error { color: #ffb4a7; }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-dirty.is-dirty { color: #ffcf7a; }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-switch { background: rgba(255, 248, 238, 0.24); }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-card .modal-close { background: rgba(255, 248, 238, 0.08); color: var(--ed-ink) !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .edit-v2-save:disabled { background: rgba(255, 248, 238, 0.06) !important; color: var(--ed-faint) !important; }
+@media (prefers-reduced-motion: reduce) {
+  #root .edit-v2-switch, #root .edit-v2-switch::after { transition: none; }
+}
+
+@media (max-width: 440px) {
+  #root .edit-v2-card .modal-header-main { grid-template-columns: 48px minmax(0, 1fr); column-gap: 12px; }
+  #root .edit-v2-thumb { width: 48px; height: 48px; }
+  #root .edit-v2-card .modal-header h3 { white-space: normal; overflow-wrap: anywhere; font-size: 1.15rem !important; }
+  #root .edit-v2-row { grid-template-columns: minmax(0, 1fr); }
+  #root .edit-v2-meta { margin-left: 0; }
+  #root .edit-v2-dirty { flex-basis: 100%; }
+  #root .edit-v2-footer { flex-wrap: wrap; }
+  #root .edit-v2-footer button { flex: 1; }
+}

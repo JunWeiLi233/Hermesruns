@@ -1,0 +1,203 @@
+/* Shoe delete modal v2 (design 9a). Load last in app.css.
+   Scoped to .shoe-delete-modal-card so the Runs delete modal keeps its look. */
+
+#root .runner-shell-page .modal-card.shoe-delete-modal-card,
+#root .modal-card.shoe-delete-modal-card,
+.modal-card.shoe-delete-modal-card {
+  --sdm-ink: #1c1917;
+  --sdm-muted: #625c56;
+  --sdm-line: rgba(28, 25, 23, 0.1);
+  --sdm-fill: rgba(28, 25, 23, 0.035);
+  --sdm-danger: #d70015;
+  --sdm-danger-button-ink: #fff;
+  --sdm-retire-button-ink: #fff;
+  --sdm-danger-soft: rgba(255, 59, 48, 0.1);
+  width: min(420px, calc(100vw - 32px)) !important;
+  max-width: none !important;
+  max-height: calc(100vh - 32px) !important;
+  max-height: calc(100dvh - 32px) !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background: #fff !important;
+  color: var(--sdm-ink) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28) !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page .modal-card.shoe-delete-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.shoe-delete-modal-card,
+body:is(.theme-midnight, .theme-high-contrast) .modal-card.shoe-delete-modal-card {
+  --sdm-ink: #f8f4ef;
+  --sdm-muted: #c0b8ad;
+  --sdm-line: rgba(255, 248, 238, 0.14);
+  --sdm-fill: rgba(255, 255, 255, 0.06);
+  --sdm-danger: #ff6b5e;
+  --sdm-danger-button-ink: #1c1917;
+  --sdm-retire-button-ink: #1c1917;
+  --sdm-danger-soft: rgba(255, 107, 94, 0.14);
+  background: var(--profile-night-solid, #1e1b18) !important;
+}
+
+/* Header: small icon chip · title · close */
+.shoe-delete-modal-shell {
+  padding: 16px;
+}
+
+.shoe-delete-modal-card .modal-header {
+  display: grid !important;
+  grid-template-columns: 44px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  padding: 24px 24px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.shoe-delete-modal-card .modal-header-icon {
+  display: grid;
+  width: 44px !important;
+  height: 44px !important;
+  place-items: center;
+  margin: 0 !important;
+  border-radius: 14px;
+  background: var(--sdm-danger-soft) !important;
+  color: var(--sdm-danger) !important;
+}
+
+.shoe-delete-modal-card .modal-header-icon svg,
+.shoe-delete-modal-card .shoe-delete-modal-icon { width: 22px !important; height: 22px !important; }
+
+.shoe-delete-modal-card .modal-header h3 {
+  grid-column: auto;
+  margin: 0;
+  padding: 0;
+  color: var(--sdm-ink) !important;
+  font-family: inherit !important;
+  font-size: 1.25rem !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+  text-transform: none !important;
+}
+
+.shoe-delete-modal-card .modal-close {
+  position: static;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sdm-fill);
+  color: var(--sdm-ink);
+  font-size: 1.1rem;
+}
+
+.shoe-delete-modal-card .modal-close:hover {
+  background: var(--sdm-fill);
+  color: var(--sdm-ink);
+}
+
+.shoe-delete-modal-card .modal-form { padding: 0 !important; }
+
+/* Body */
+.shoe-delete-modal { display: flex; flex-direction: column; gap: 16px; padding: 10px 24px 24px; }
+.shoe-delete-modal :is(p, ul) { margin: 0; }
+.shoe-delete-modal-lede { color: var(--sdm-muted); font-size: 0.875rem; line-height: 1.55; }
+
+.shoe-delete-modal-shoe {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--sdm-fill);
+}
+
+.shoe-delete-modal-thumb { width: 56px; height: 56px; overflow: hidden; border-radius: 10px; background: #fff; }
+.shoe-delete-modal-thumb :is(img, .shoe-img-placeholder) { width: 100%; height: 100%; object-fit: contain; }
+.shoe-delete-modal-shoe-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.shoe-delete-modal-shoe-copy strong { overflow: hidden; font-size: 0.94rem; text-overflow: ellipsis; white-space: nowrap; }
+.shoe-delete-modal-shoe-copy span { color: var(--sdm-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+.shoe-delete-modal-consequences { display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none; }
+
+.shoe-delete-modal-consequences li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--sdm-ink);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.shoe-delete-modal-consequences li::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 9px;
+  background: var(--sdm-danger);
+}
+
+.shoe-delete-modal-retire {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--sdm-line);
+  border-radius: 12px;
+}
+
+.shoe-delete-modal-retire span { color: var(--sdm-muted); font-size: 0.8rem; line-height: 1.4; }
+
+.shoe-delete-modal-retire-btn {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sdm-ink);
+  color: var(--sdm-retire-button-ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.shoe-delete-modal-error { color: var(--sdm-danger); font-size: 0.8rem; }
+
+.shoe-delete-modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+.shoe-delete-modal-actions button {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: none;
+  transform: none;
+  cursor: pointer;
+}
+
+.shoe-delete-modal-cancel { border: 1px solid var(--sdm-line); background: transparent; color: var(--sdm-ink); }
+.shoe-delete-modal-confirm { border: 0; background: var(--sdm-danger); color: var(--sdm-danger-button-ink); }
+.shoe-delete-modal-confirm:hover:not(:disabled) { filter: brightness(0.94); }
+.shoe-delete-modal-actions button:disabled,
+.shoe-delete-modal-retire-btn:disabled { opacity: 0.6; cursor: progress; }
+.shoe-delete-modal-actions button:focus-visible,
+.shoe-delete-modal-retire-btn:focus-visible { outline: 2px solid var(--sdm-danger); outline-offset: 2px; }
+
+@media (max-width: 420px) {
+  .shoe-delete-modal-retire { flex-direction: column; align-items: stretch; }
+  .shoe-delete-modal-retire-btn { min-height: 40px; }
+}

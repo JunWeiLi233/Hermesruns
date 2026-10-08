@@ -130,15 +130,24 @@ assert.ok(
 for (const behaviorMarker of [
   'analysis-coach-profile',
   'coachSystem.title',
-  'analysis-coach-command-primary-plan',
-  'analysis-cinematic-sample-list',
+  'analysis-coach-bento__today',
+  'analysis-injury-v2-runs',
   'analysis-cinematic-card--trend',
   'injuryTrend.primaryPath',
-  'analysis-load-command-chart-card',
-  'analysis-load-command-sample-list',
+  'analysis-load-v2-chart',
+  'analysis-load-v2-driver-list',
 ]) {
   assert.ok(insightSource.includes(behaviorMarker), `Existing analysis behavior marker ${behaviorMarker} must remain.`);
 }
+
+assert.match(insightSource, /analysis-coach-bento__today[\s\S]*?coachPrimarySession\?\.title[\s\S]*?coachPrimarySession\.target[\s\S]*?coachPrimarySession\?\.why[\s\S]*?navigate\('\/today-run'\)/, 'The coach today tile must preserve its plan data and primary action.');
+const injuryRuns = insightSource.match(/<aside className="analysis-injury-v2-runs">[\s\S]*?<\/aside>/)?.[0];
+assert.ok(injuryRuns, 'Injury Risk must retain its recent-run list.');
+for (const binding of ['row.title', 'row.dateLabel', 'row.distanceLabel', 'row.cadence', 'row.averageHeartRate', 'row.paceLabel']) {
+  assert.ok(injuryRuns.includes(binding), `Injury recent runs must retain ${binding}.`);
+}
+assert.match(injuryRuns, /disabled=\{!row\.id\}[\s\S]*?row\.id && navigate\(buildRunDetailPath\(row\.id\)\)/, 'Injury recent runs must retain guarded run navigation.');
+assert.match(injuryRuns, /navigate\('\/runs'\)/, 'Injury recent runs must retain the view-all action.');
 
 assert.doesNotMatch(
   insightSource,

@@ -1,0 +1,467 @@
+/* Races v2 (design 7a): countdown hero + race plan side by side, 12-month
+   season strip, PB cards, then discovery. Load last in app.css. Extends the
+   existing race-center classes; only .race-center-v2-* hooks are new. */
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content {
+  --rc-card: #fff;
+  --rc-ink: #1c1917;
+  --rc-muted: #625c56;
+  --rc-faint: #a8a29e;
+  --rc-line: rgba(28, 25, 23, 0.08);
+  --rc-fill: rgba(28, 25, 23, 0.04);
+  --rc-accent: #a0392a;
+  --rc-accent-soft: rgba(160, 57, 42, 0.09);
+  --rc-registered: #a0392a;
+  --rc-registered-ink: #fff;
+  --rc-applied: #f3c9c1;
+  --rc-applied-ink: #5c2a20;
+  --rc-interested: rgba(28, 25, 23, 0.08);
+  --rc-interested-ink: #1c1917;
+  display: flex;
+  flex-direction: column;
+  gap: 20px !important;
+  width: 100%;
+  max-width: none;
+  padding: 0 0 48px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-page.races-dashboard-page .race-center-content {
+  --rc-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --rc-ink: #f8f4ef;
+  --rc-muted: #c0b8ad;
+  --rc-faint: #a69e93;
+  --rc-line: rgba(255, 248, 238, 0.12);
+  --rc-fill: rgba(255, 255, 255, 0.06);
+  --rc-accent: #ffb4a7;
+  --rc-accent-soft: rgba(240, 117, 97, 0.14);
+  --rc-registered: #f07561;
+  --rc-registered-ink: #2b1b14;
+  --rc-applied: rgba(240, 117, 97, 0.28);
+  --rc-applied-ink: #ffe4dc;
+  --rc-interested: rgba(255, 255, 255, 0.1);
+  --rc-interested-ink: #f8f4ef;
+}
+
+/* Shared card surface for v2 sections */
+body #root .runner-shell-page.races-dashboard-page .race-center-content :is(.race-center-v2-plan, .race-center-v2-season, .race-center-v2-discovery) {
+  margin: 0 !important;
+  padding: 24px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: var(--rc-card) !important;
+  box-shadow: none !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content :is(.race-center-v2-plan, .race-center-v2-season, .race-center-v2-discovery, .race-center-v2-pbs) .race-center-section-divider { display: none !important; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content :is(.race-center-v2-plan, .race-center-v2-season, .race-center-v2-discovery, .race-center-v2-pbs) .race-center-section-head h2 {
+  margin: 0;
+  color: var(--rc-ink) !important;
+  font-family: var(--font-display);
+  font-size: 1.375rem !important;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-section-subtitle { margin: 4px 0 0; color: var(--rc-muted) !important; font-size: 0.8rem; line-height: 1.4; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-section-head { margin: 0 !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-section-head h2 { text-transform: none !important; line-height: 1.2; letter-spacing: -0.02em !important; }
+
+/* Top row */
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-hero.race-center-v2-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 460px !important;
+  margin: 0 !important;
+  overflow: hidden;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-hero-overlay {
+  background: linear-gradient(180deg, rgba(20, 17, 15, 0.05) 0%, rgba(20, 17, 15, 0.35) 40%, rgba(20, 17, 15, 0.88) 100%) !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-v2-hero-body {
+  position: relative;
+  inset: auto;
+  flex: 1;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0 !important;
+  justify-content: flex-end !important;
+  align-items: stretch !important;
+  padding: 30px !important;
+  color: #fff;
+  text-align: left;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero-tag {
+  align-self: flex-start;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero h1.race-center-v2-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px;
+  margin: 0;
+  max-width: 100%;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  color: #fff !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero h1.race-center-hero-title--empty {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.8rem, 3.2vw, 3rem);
+  text-align: left;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown > strong {
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 8vw, 7rem);
+  font-weight: 800;
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; padding-bottom: 8px; letter-spacing: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-copy .race-center-hero-accent { margin: 0; color: #ffd9d1 !important; font-size: 0.94rem; font-style: normal; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 2.8vw, 2.4rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero-meta { display: flex; flex-wrap: wrap; gap: 8px 28px; color: #e8e1d8; font-size: 0.8rem; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero-meta strong { color: #fff; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero-body > p { max-width: 56ch; margin: 0; color: #e8e1d8 !important; font-size: 0.85rem; line-height: 1.5; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+
+/* Keep the photo hero readable through shared light and dark theme rules. */
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero .race-center-v2-hero-body :is(h1, strong, span, p) { -webkit-text-fill-color: currentColor !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero .race-center-v2-hero-body :is(h1, h1 strong, .race-center-hero-title--empty span, .race-center-v2-countdown-copy, .race-center-v2-countdown-name, .race-center-v2-hero-tag) { color: #fff !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-v2-hero-body .race-center-hero-accent { color: #ffd9d1 !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-v2-hero-meta span { color: #e8e1d8 !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-v2-hero-meta strong { color: #fff !important; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero :is(.race-center-primary-btn, .race-center-secondary-btn) {
+  min-height: 42px;
+  padding: 0 18px !important;
+  border-radius: 999px !important;
+  font-size: 0.85rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-primary-btn { background: #fff !important; color: #1c1917 !important; border: 0 !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-secondary-btn { background: transparent !important; color: #fff !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+
+/* Plan list (AgendaRow) */
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan { display: flex; flex-direction: column; gap: 12px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-inline-link {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--rc-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rc-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda { display: flex; flex-direction: column; gap: 0; border: 0; border-radius: 0; background: transparent !important; box-shadow: none !important; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-row {
+  display: grid !important;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 81px;
+  padding: 12px 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--rc-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-chip {
+  display: inline-grid;
+  place-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--rc-fill);
+  color: var(--rc-ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-name { color: var(--rc-ink); font-size: 0.94rem; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-sub { margin: 3px 0 0; color: var(--rc-muted); font-size: 0.78rem; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-side { display: flex; align-items: center; gap: 8px; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-status {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--rc-accent-soft);
+  color: var(--rc-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-chevron { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--rc-faint); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-chevron:hover { background: var(--rc-fill); color: var(--rc-ink); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-chevron svg { width: 16px; height: 16px; }
+
+/* Season strip */
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season { display: flex; flex-direction: column; gap: 14px; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 170px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  background: var(--rc-fill);
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month.is-current { background: var(--rc-accent-soft); }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--rc-faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month.is-current .race-center-v2-season-label { color: var(--rc-accent); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-label small { font-size: 0.65rem; font-weight: 600; letter-spacing: 0; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 6px 7px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-season .race-center-v2-season-race :is(strong, span) { min-width: 0; max-width: 100%; color: inherit !important; -webkit-text-fill-color: currentColor !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race strong { overflow: hidden; font-size: 0.72rem; line-height: 1.25; overflow-wrap: anywhere; white-space: normal; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race span { font-size: 0.65rem; opacity: 0.8; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race:focus-visible { outline: 2px solid var(--rc-accent); outline-offset: 2px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race.is-registered,
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race.is-completed { background: var(--rc-registered); color: var(--rc-registered-ink); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race:is(.is-applied, .is-waitlist) { background: var(--rc-applied); color: var(--rc-applied-ink); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race.is-interested { background: var(--rc-interested); color: var(--rc-interested-ink); }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--rc-muted); font-size: 0.75rem; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend span { display: inline-flex; align-items: center; gap: 6px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend span::before { content: ""; width: 10px; height: 10px; border-radius: 3px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend .is-registered::before { background: var(--rc-registered); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend .is-applied::before { background: var(--rc-applied); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-legend .is-interested::before { background: var(--rc-interested); }
+
+/* PB cards */
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-pbs { margin: 0 !important; padding: 0 !important; background: transparent !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-section-head { display: none; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0 !important;
+  padding: 18px 20px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: var(--rc-card) !important;
+  color: var(--rc-ink) !important;
+  box-shadow: none !important;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-distance { color: var(--rc-muted) !important; font-size: 0.75rem; font-weight: 700; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-time {
+  color: var(--rc-ink) !important;
+  font-size: 1.75rem !important;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-race-meta { margin: 0; overflow: hidden; color: var(--rc-muted) !important; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Responsive */
+/* Date tiles and compact discovery cards from the 7a reference. */
+body #root .runner-shell-page.races-dashboard-page .race-center-content { padding: 0 0 48px !important; width: 100% !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero h1.race-center-v2-countdown { max-width: 100%; flex-wrap: nowrap; line-height: 1; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero .race-center-hero-actions { margin-top: 4px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero .race-center-hero-image { object-position: center; filter: none; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-section-head { align-items: center; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-plan .race-center-inline-link { border-radius: 999px !important; background: transparent !important; color: var(--rc-ink) !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-date {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px;
+  width: 56px; height: 56px; padding: 0; border: 0; border-radius: 14px;
+  background: var(--rc-fill); color: var(--rc-ink); font: inherit; cursor: pointer;
+}
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-date span { color: inherit !important; font-size: 0.65rem; font-weight: 700; line-height: 1.2; text-transform: uppercase; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-date strong { color: inherit !important; font-size: 1.25rem; line-height: 1.1; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .is-next .race-center-agenda-date { background: #1c1917; color: #fff; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-name { max-width: 100%; padding: 0; border: 0; background: transparent; color: var(--rc-ink) !important; font: inherit; font-size: 0.94rem; font-weight: 700; line-height: 1.3; text-align: left; text-transform: none; letter-spacing: 0; white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-sub { color: var(--rc-muted) !important; font-size: 0.75rem; line-height: 1.4; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-status { line-height: 1.25; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-status.is-interested { color: var(--rc-muted) !important; background: var(--rc-fill); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-status:is(.is-registered, .is-completed) { color: var(--rc-accent) !important; background: var(--rc-accent-soft); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-status:is(.is-applied, .is-waitlist) { color: #9b5a0b !important; background: #fff0dc; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-chevron { width: 24px; height: 24px; color: var(--rc-faint); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-strip { min-width: 0; max-width: 100%; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month { box-sizing: border-box; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-label { color: var(--rc-muted) !important; letter-spacing: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month.is-current .race-center-v2-season-label { color: var(--rc-accent) !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-race strong { font-size: 0.68rem; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-pbs .race-center-pb-card { gap: 6px; border-radius: 20px !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-v2-pb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-v2-pb-source { color: var(--rc-faint) !important; font-size: 0.65rem; white-space: nowrap; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-time { font-family: inherit !important; font-weight: 700 !important; line-height: 1.2; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-distance { text-transform: none; letter-spacing: 0; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-discovery { display: flex; flex-direction: column; gap: 16px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-section-head { margin: 0; align-items: flex-end; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery-meta { display: flex; align-items: center; gap: 16px; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery-meta > span { padding: 0; border: 0; background: transparent !important; color: var(--rc-muted) !important; font-size: 0.75rem; font-weight: 400; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-country-select { max-width: 150px; min-height: 30px; border: 0; background: transparent; color: var(--rc-muted); font: inherit; font-size: 0.75rem; cursor: pointer; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-country-select option { background: var(--rc-card); color: var(--rc-ink); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery-controls { display: flex; align-items: center; gap: 10px; min-width: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-toolbar { position: relative; flex: 1; min-width: 200px; margin: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-toolbar .race-center-v2-search-icon { position: absolute; left: 14px; top: 13px; display: block; width: 16px; height: 16px; color: var(--rc-muted); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-toolbar input { width: 100%; height: 42px; padding: 0 14px 0 42px; border: 0 !important; border-radius: 12px; background: var(--rc-fill) !important; color: var(--rc-ink) !important; font: inherit; font-size: 0.8rem; box-shadow: none !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-strip { position: static; flex: 0 1 650px; display: flex; flex-direction: row; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent !important; box-shadow: none !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 4px; min-width: 0; margin: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--distance { flex: 0 0 auto; padding: 3px; border-radius: 12px; background: var(--rc-fill); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--months { flex: 1; overflow-x: auto; scrollbar-width: none; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-chip { flex: 0 0 auto; min-height: 34px; padding: 0 10px; border: 0 !important; border-radius: 999px; background: var(--rc-fill) !important; color: var(--rc-muted) !important; font-size: 0.8rem; font-weight: 700; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--distance .race-center-filter-chip { border-radius: 9px; background: transparent !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--distance .race-center-filter-chip.is-active { background: var(--rc-card) !important; color: var(--rc-ink) !important; box-shadow: 0 1px 3px var(--rc-line); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--months .race-center-filter-chip.is-active { background: #1c1917 !important; color: #fff !important; }
+
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--rc-line) !important; border-radius: 18px !important; background: var(--rc-card) !important; box-shadow: none !important; transform: none; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-image-wrap { position: relative; display: block; width: 100%; height: 130px; min-height: 0; padding: 0 !important; aspect-ratio: auto; border: 0; border-radius: 0; background: var(--rc-fill); }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-photo-placeholder { position: absolute; inset: 0; display: grid; place-items: center; background: repeating-linear-gradient(135deg, var(--rc-fill) 0 8px, transparent 8px 16px); color: var(--rc-muted) !important; font-size: 0.65rem; font-weight: 600; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-tag { position: absolute; top: 12px; left: 12px; padding: 4px 9px; border: 0; border-radius: 999px; background: var(--rc-card) !important; color: var(--rc-ink) !important; font-size: 0.65rem; font-weight: 700; line-height: 1.2; text-transform: none; letter-spacing: 0; box-shadow: none; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-body { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 14px !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-meta { margin: 0; line-height: 1.2; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-month { color: var(--rc-accent) !important; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-name { margin: 0; color: var(--rc-ink) !important; font-family: inherit; font-size: 0.94rem; font-style: normal; font-weight: 700; line-height: 1.3; letter-spacing: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-location { margin: 0 0 6px; color: var(--rc-muted) !important; font-size: 0.75rem; line-height: 1.4; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-cta { width: 100%; min-height: 34px; margin-top: auto; padding: 0 12px !important; border: 0 !important; border-radius: 999px; background: #1c1917 !important; color: #fff !important; font-size: 0.8rem; font-weight: 700; line-height: 1.2; text-transform: none; letter-spacing: 0; }
+body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-card-cta[data-in-plan=true] { background: var(--rc-accent-soft) !important; color: var(--rc-accent) !important; }
+body #root .runner-shell-page.races-dashboard-page .race-center-content :is(button, input, select):focus-visible { outline: 2px solid var(--rc-accent); outline-offset: 3px; }
+
+@media (min-width: 961px) {
+  body #root .runner-shell-page.races-dashboard-page .runner-shell-canvas { width: calc(100% - 128px) !important; padding-top: 0 !important; padding-inline: 0 !important; }
+}
+
+@media (max-width: 1180px) {
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-top { grid-template-columns: minmax(0, 1fr); }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery-controls { flex-direction: column; align-items: stretch; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-strip { flex-basis: auto; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-strip { grid-auto-flow: column; grid-auto-columns: minmax(120px, 1fr); grid-template-columns: none; overflow-x: auto; scroll-snap-type: x proximity; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-season-month { min-height: 120px; scroll-snap-align: start; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-pb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-content :is(.race-center-v2-plan, .race-center-v2-season, .race-center-v2-discovery) { padding: 18px !important; border-radius: 20px !important; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-row { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-countdown { display: none; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-date { width: 48px; height: 52px; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-plan .race-center-agenda-side { flex-direction: column; gap: 2px; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-strip { flex-direction: column; align-items: stretch; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-filter-row--distance { align-self: flex-start; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery-meta { align-items: flex-end; flex-direction: column; gap: 0; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero { min-height: 400px !important; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero .race-center-hero-image { object-position: 70% center; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-hero .race-center-v2-hero-body { padding: 24px !important; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown > strong { font-size: 4.5rem; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-name { font-size: 1.8rem; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-pbs .race-center-v2-pb-head { flex-direction: column; gap: 2px; }
+}
+
+@media (max-width: 480px) {
+  body #root .runner-shell-page.races-dashboard-page .race-center-content .race-center-v2-hero h1.race-center-v2-countdown { flex-wrap: wrap; gap: 10px 18px; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-copy { display: contents; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-copy .race-center-hero-accent { padding-bottom: 8px; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-countdown-name { flex-basis: 100%; font-size: 1.6rem; }
+  body #root .runner-shell-page.races-dashboard-page .race-center-v2-discovery .race-center-discovery-grid { grid-template-columns: minmax(0, 1fr); }
+}
