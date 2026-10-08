@@ -221,9 +221,6 @@ export default function RunDetail() {
   const { t, lang } = useI18n();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [isCompactMapLayout, setIsCompactMapLayout] = useState(() => (
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 860px)').matches
-  ));
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [profile, setProfile] = useState(null);
   const [run, setRun] = useState(() => readSelectedRunFromSession(id));
@@ -253,17 +250,6 @@ export default function RunDetail() {
     lang,
     activeKey: 'activities',
   }), [lang, t]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const mediaQuery = window.matchMedia('(max-width: 860px)');
-    const syncCompactMapLayout = () => setIsCompactMapLayout(mediaQuery.matches);
-    syncCompactMapLayout();
-    mediaQuery.addEventListener('change', syncCompactMapLayout);
-
-    return () => mediaQuery.removeEventListener('change', syncCompactMapLayout);
-  }, []);
 
   useEffect(() => {
     const cachedRun = readSelectedRunFromSession(id);
@@ -486,14 +472,7 @@ export default function RunDetail() {
       const focusRouteAtTop = () => {
         const mapHeight = mapRef.current?.clientHeight || 0;
         if (mapHeight < 64) return;
-        const routeRevealHeight = isCompactMapLayout
-          ? Math.min(460, Math.max(320, window.innerWidth * 0.82))
-          : Math.min(680, Math.max(420, window.innerHeight * 0.58));
-        const bottomPadding = Math.max(24, mapHeight - routeRevealHeight + 24);
-        map.fitBounds(line.getBounds(), {
-          paddingTopLeft: [24, 24],
-          paddingBottomRight: [24, bottomPadding],
-        });
+        map.fitBounds(line.getBounds(), { padding: [32, 32], animate: false });
       };
 
       L.circleMarker(points[0], { radius: 6, color: '#121212', fillColor: '#121212', fillOpacity: 1, weight: 2 })
@@ -523,7 +502,7 @@ export default function RunDetail() {
         mapInstanceRef.current = null;
       }
     };
-  }, [insights, isCompactMapLayout, points, t]);
+  }, [insights, points, t]);
 
   useEffect(() => {
     if (!mapInstanceRef.current || typeof window === 'undefined') return undefined;
@@ -531,6 +510,20 @@ export default function RunDetail() {
       mapInstanceRef.current?.invalidateSize({ pan: false });
     });
     return () => window.cancelAnimationFrame(frameId);
+  }, [isMapExpanded]);
+
+  useEffect(() => {
+    if (!isMapExpanded) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsMapExpanded(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isMapExpanded]);
 
   const distKm = useMemo(() => {
@@ -864,7 +857,7 @@ export default function RunDetail() {
     showSections = false,
   } = {}) {
     return (
-      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page${points.length > 0 ? ' has-route-map-page-background' : ''}${isMapExpanded ? ' is-route-map-expanded' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+      <div className={`runner-shell-page runner-dashboard-page runs-dashboard-page run-detail-runner-page run-detail-v2-page${isMapExpanded ? ' is-route-map-expanded' : ''}${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
         <RunsSubpageNav
           collapsed={isSidebarCollapsed}
           hasCoachReview={hasCoachReview}
@@ -880,12 +873,6 @@ export default function RunDetail() {
         />
 
         <main className="runner-shell-main">
-          {points.length > 0 && (
-            <div className="run-detail-map-background">
-              <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
-            </div>
-          )}
-
           <header className="runner-shell-topbar runner-dashboard-shell-topbar">
             <div className="runner-shell-topbar-left">
               <RunnerShellTopNav
@@ -941,18 +928,13 @@ export default function RunDetail() {
   }
 
   const dateText = formatLongDate(run.startTime || run.startDate, lang);
-  const startDate = new Date(run.startTime || run.startDate || 0);
   const metaSeparator = t('run_detail.meta_separator');
   const distanceUnitLabel = t('run_detail.unit_km');
   const paceUnitLabel = t('run_detail.unit_pace');
   const heartRateUnitLabel = t('run_detail.unit_bpm');
   const elevationUnitLabel = t('run_detail.unit_meter');
-  const timeText = Number.isNaN(startDate.getTime())
-    ? null
-    : startDate.toLocaleTimeString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { hour: 'numeric', minute: '2-digit' });
   const heroMetaText = [
     dateText,
-    timeText,
     run.locationCity || run.city || run.locationName || run.location,
   ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
 
@@ -991,112 +973,256 @@ export default function RunDetail() {
   const aerobicEffect = Number(trainingEffect?.aerobic);
   const anaerobicEffect = Number(trainingEffect?.anaerobic);
   const trainingEffectAvailable = Boolean(trainingEffect?.available && Number.isFinite(aerobicEffect) && Number.isFinite(anaerobicEffect));
+  const elevationProfile = Array.isArray(analytics?.elevationProfile) ? analytics.elevationProfile : [];
+  const totalElevationGain = elevationProfile.length > 1
+    ? elevationProfile.reduce((sum, point, index) => {
+      if (index === 0) return sum;
+      const current = point?.elevationMeters;
+      const previous = elevationProfile[index - 1]?.elevationMeters;
+      if (current == null || previous == null || !Number.isFinite(Number(current)) || !Number.isFinite(Number(previous))) return sum;
+      const delta = Number(current) - Number(previous);
+      return delta > 0 ? sum + delta : sum;
+    }, 0)
+    : null;
+  const averageCadence = analytics?.averageCadence ?? run.averageCadence;
+  const cadenceValue = averageCadence != null && Number.isFinite(Number(averageCadence)) && Number(averageCadence) > 0
+    ? Math.round(Number(averageCadence))
+    : null;
+  const secondaryMetrics = [
+    { key: 'avgHr', label: t('run_detail.average_hr'), value: run.averageHeartRate != null ? Math.round(run.averageHeartRate) : null, unit: heartRateUnitLabel },
+    { key: 'maxHr', label: t('run_detail.max_hr'), value: run.maxHeartRate != null ? Math.round(run.maxHeartRate) : null, unit: heartRateUnitLabel },
+    { key: 'elev', label: t('run_detail.perf_elevation_gain'), value: totalElevationGain != null ? Math.round(totalElevationGain) : null, unit: elevationUnitLabel },
+    { key: 'cadence', label: t('run_detail.average_cadence'), value: cadenceValue, unit: t('run_detail.unit_spm') },
+  ];
+  const visibleLapPaces = visibleLapRows.map(lapPaceSeconds);
+  const knownLapPaces = lapRows.map(lapPaceSeconds).filter((value) => value != null);
+  const slowestLapPace = knownLapPaces.length ? Math.max(...knownLapPaces) : null;
+  const fastestLapPace = knownLapPaces.length ? Math.min(...knownLapPaces) : null;
+  const lapBarWidth = (seconds) => {
+    if (seconds == null || slowestLapPace == null) return 0;
+    const span = Math.max(1, slowestLapPace - fastestLapPace);
+    return Math.round(35 + ((slowestLapPace - seconds) / span) * 65);
+  };
+  const telemetryBounds = hasTelemetryData ? getTelemetryValueBounds(activeTelemetrySamples) : null;
+  const effectSegments = (value) => [1, 2, 3, 4, 5].map((step) => Number.isFinite(value) && value >= step - 0.5);
   return renderRunnerShell(
-    <div className={`run-detail-page run-detail-profile-cockpit run-detail-profile-minimal${points.length > 0 ? ' has-route-map-background' : ''}`}>
-      {points.length === 0 && (
-        <div className="run-detail-topbar">
-          <div className="run-detail-topbar-left">
-            <Link to="/runs" className="run-detail-icon-btn" aria-label={t('run_detail.back_to_runs')}>
-              <span aria-hidden="true">&larr;</span>
-            </Link>
-            <div className="run-detail-heading">
-              <span className="run-detail-eyebrow">{t('run_detail.hero_eyebrow')}</span>
-              <h1>{run.name || t('run_detail.detail_title')}</h1>
-              <p>{heroMetaText}</p>
-            </div>
-          </div>
-          <div className="run-detail-topbar-actions">
-            <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
-              {run.provider && <div className="run-detail-provider-pill">{run.provider}</div>}
-              {run.provider === 'STRAVA' && (
-                <button type="button" className="run-detail-action-btn" disabled={syncDisabled} onClick={handleResync}>
-                  {syncBtnText || t('run_detail.resync_strava')}
+    <div className="run-detail-page run-detail-profile-cockpit run-detail-profile-minimal run-detail-v2">
+      <div className="run-detail-shell run-detail-v2__shell">
+        <section id="run-detail-overview" className="run-detail-v2__hero">
+          <div className={`run-detail-v2__map${points.length > 0 ? '' : ' is-empty'}`}>
+            {points.length > 0 ? (
+              <>
+                <div className="run-detail-map-background run-detail-v2__map-canvas">
+                  <div ref={mapRef} id="route-map" style={{ width: '100%', height: '100%' }} />
+                </div>
+                <button type="button" className="run-detail-v2__map-expand" onClick={() => setIsMapExpanded((current) => !current)} aria-pressed={isMapExpanded}>
+                  <AppIcon name={isMapExpanded ? 'close' : 'map'} />
+                  {isMapExpanded ? t('run_detail.map_collapse') : t('run_detail.map_expand')}
                 </button>
-              )}
-              <button type="button" className="run-detail-icon-btn is-text" onClick={handleShare} aria-label={t('run_detail.share')}>
-                <span>{shareFeedback || t('run_detail.share')}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="run-detail-shell">
-        {points.length === 0 && (
-          <section className="run-detail-hero-grid run-detail-profile-hero">
-            <div className="run-detail-map-card run-detail-profile-map">
+              </>
+            ) : (
               <div className="run-detail-no-map">{t('run_detail.no_map')}</div>
+            )}
+          </div>
+
+          <div className="run-detail-v2__summary">
+            <div className="run-detail-v2__heading">
+              <p className="run-detail-v2__meta">{heroMetaText}</p>
+              <h1>{run.name || t('run_detail.detail_title')}</h1>
+              <div className="run-detail-v2__actions">
+                {run.provider && <span className="run-detail-provider-pill run-detail-v2__provider">{run.provider}</span>}
+                {run.provider === 'STRAVA' && (
+                  <button type="button" className="run-detail-v2__btn" disabled={syncDisabled} onClick={handleResync}>
+                    <AppIcon name="sync" />
+                    {syncBtnText || t('run_detail.resync_strava')}
+                  </button>
+                )}
+                <button type="button" className="run-detail-v2__btn" onClick={handleShare} aria-label={t('run_detail.share')}>
+                  <AppIcon name="upload" />
+                  {shareFeedback || t('run_detail.share')}
+                </button>
+              </div>
+            </div>
+
+            <div className="run-detail-v2__primary">
+              <div className="run-detail-v2__stat">
+                <span>{t('run_detail.metric_distance')}</span>
+                <strong>{distanceValue}<em>{distanceUnitLabel}</em></strong>
+              </div>
+              <div className="run-detail-v2__stat">
+                <span>{t('run_detail.metric_average_pace')}</span>
+                <strong>{paceMetricValue}{paceMetricValue !== '--' ? <em>{paceUnitLabel}</em> : null}</strong>
+              </div>
+              <div className="run-detail-v2__stat">
+                <span>{t('run_detail.metric_moving_time')}</span>
+                <strong>{timeValue}</strong>
+              </div>
+            </div>
+
+            <div className="run-detail-v2__secondary">
+              {secondaryMetrics.map((metric) => (
+                <div key={metric.key} className="run-detail-v2__mini">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value ?? '--'}{metric.value != null ? <em>{metric.unit}</em> : null}</strong>
+                </div>
+              ))}
+            </div>
+
+            {runComparison && (
+              <div id="run-detail-comparison" className={`run-detail-v2__comparison is-${runComparison.direction}`}>
+                <AppIcon name={runComparison.direction === 'slower' ? 'trending_down' : runComparison.direction === 'faster' ? 'trending_up' : 'trending_flat'} />
+                <div>
+                  <strong>
+                    {runComparison.direction === 'faster'
+                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                      : runComparison.direction === 'slower'
+                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                  </strong>
+                  <p>
+                    {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
+                      : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
+                        : t('run_detail.run_comparison_stable')}
+                    {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {analytics?.debrief && (
+          <section id="run-detail-coach" className="run-detail-v2__coach">
+            <div className="run-detail-v2__coach-score">
+              <span>{t('run_detail.coach_debrief_title')}</span>
+              <strong>{analytics.debrief.readinessScore}<small>%</small></strong>
+              <em>{t('run_detail.pre_run_readiness')}</em>
+            </div>
+            <p className="run-detail-v2__coach-read">{analytics.debrief.interpretation}</p>
+            <div className="run-detail-v2__coach-next">
+              <span>{t('run_detail.next_day_guidance')}</span>
+              <p>{analytics.debrief.nextDayGuidance}</p>
             </div>
           </section>
         )}
 
-        <section id="run-detail-overview" className="run-detail-overview-card">
-          <div className="run-detail-overview-head">
-            <h2>{t('run_detail.overview_title')}</h2>
+        <section id="run-detail-telemetry" className="run-detail-v2__card run-detail-v2__telemetry">
+          <div className="run-detail-v2__card-head">
+            <h2>{t('run_detail.telemetry_title')}</h2>
+            <div className="run-detail-v2__tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
+              {telemetryTabDefinitions.map((definition) => {
+                const displaySample = definition.displaySample;
+                const isActive = definition.key === activeTelemetryDefinition.key;
+                return (
+                  <button
+                    key={definition.key}
+                    type="button"
+                    className={`run-detail-v2__tab${isActive ? ' is-active' : ''}`}
+                    style={isActive ? { '--tab-color': definition.color } : undefined}
+                    onClick={() => setActiveTelemetryKey(definition.key)}
+                    role="tab"
+                    aria-selected={isActive}
+                  >
+                    <span>{definition.label}</span>
+                    <strong>
+                      {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
+                      {displaySample && <em>{definition.unit}</em>}
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          <div className="run-detail-overview-stat-grid">
-            <article className="run-detail-overview-stat">
-              <span>{t('run_detail.metric_distance')}</span>
-              <strong>{distanceValue}<em>{distanceUnitLabel}</em></strong>
-            </article>
-            <article className="run-detail-overview-stat">
-              <span>{t('run_detail.metric_average_pace')}</span>
-              <strong>{paceMetricValue}{paceMetricValue !== '--' ? <em>{paceUnitLabel}</em> : null}</strong>
-            </article>
-            <article className="run-detail-overview-stat">
-              <span>{t('run_detail.metric_moving_time')}</span>
-              <strong>{timeValue}</strong>
-            </article>
+          <div className="run-detail-v2__telemetry-stage">
+            <div className="run-detail-v2__readout" style={{ '--tab-color': activeTelemetryDefinition.color }}>
+              <span>{activeTelemetryDefinition.label}</span>
+              <strong>
+                {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
+                <em>{activeTelemetryDefinition.unit}</em>
+              </strong>
+              <p>
+                {focusTelemetryPoint
+                  ? t('run_detail.telemetry_focus_copy', {
+                    time: formatTelemetryInteractionTime(focusTelemetryPoint.t),
+                    distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
+                  })
+                  : t('run_detail.telemetry_no_stream')}
+              </p>
+              {telemetryBounds ? (
+                <dl className="run-detail-v2__bounds">
+                  <div><dt>{t('run_detail.telemetry_min')}</dt><dd>{formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} {activeTelemetryDefinition.unit}</dd></div>
+                  <div><dt>{t('run_detail.telemetry_max')}</dt><dd>{formatTelemetryValue(telemetryBounds.max, activeTelemetryDefinition.key)} {activeTelemetryDefinition.unit}</dd></div>
+                </dl>
+              ) : null}
+            </div>
+            <div className="run-detail-telemetry-chart run-detail-v2__chart">
+              {telemetryChartData ? (
+                <Line data={telemetryChartData} options={telemetryChartOptions} />
+              ) : (
+                <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
+              )}
+            </div>
           </div>
+          {elevationStatus?.flagged && (
+            <div className="run-detail-warning">
+              <p>{t('run_detail.elevation_warning')}</p>
+              {elevationStatus?.canRecalibrate && (
+                <button type="button" className="run-detail-link-btn run-detail-warning-action" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
+                  {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
+                </button>
+              )}
+            </div>
+          )}
+        </section>
 
-          <div className="run-detail-overview-content-grid">
-            {analytics?.debrief && (
-              <section id="run-detail-coach" className="run-detail-overview-section run-detail-debrief-section">
-                <h3>{t('run_detail.coach_debrief_title')}</h3>
-                <div className="run-detail-panel run-detail-debrief-panel">
-                  <div className="run-detail-debrief-header">
-                    <div className="run-detail-debrief-readiness">
-                      <span>{t('run_detail.pre_run_readiness')}</span>
-                      <strong>{analytics.debrief.readinessScore}%</strong>
-                    </div>
-                  </div>
-                  <div className="run-detail-debrief-content">
-                    <p className="run-detail-debrief-interpretation">{analytics.debrief.interpretation}</p>
-                    <div className="run-detail-debrief-guidance">
-                      <span className="run-detail-debrief-guidance-label">{t('run_detail.next_day_guidance')}</span>
-                      <p>{analytics.debrief.nextDayGuidance}</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            )}
+        <div className="run-detail-v2__lower">
+          <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">
+            <div className="run-detail-v2__card-head">
+              <h2>{t('run_detail.splits')}</h2>
+              {lapRows.length > 5 && (
+                <button type="button" className="run-detail-v2__link" onClick={() => setShowAllSplits((prev) => !prev)}>
+                  {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+                </button>
+              )}
+            </div>
+            <table className="run-detail-splits-table run-detail-v2__splits-table">
+              <thead>
+                <tr>
+                  <th>{t('run_detail.split_unit')}</th>
+                  <th colSpan="2">{t('run_detail.split_pace')}</th>
+                  <th>{t('run_detail.split_elev')}</th>
+                  <th>{t('run_detail.split_hr')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
+                  const lapGain = lapElevationGains ? lapElevationGains[index] : null;
+                  return (
+                    <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
+                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                      <td className="run-detail-v2__pace-bar" aria-hidden="true"><span style={{ width: `${lapBarWidth(visibleLapPaces[index])}%` }} /></td>
+                      <td className="run-detail-v2__pace">{lap.pace || '--'}</td>
+                      <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
+                      <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan="5" className="is-empty">{t('run_detail.no_lap_data')}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
 
-            <section className="run-detail-overview-section run-detail-gear-section">
-              <h3>{t('run_detail.gear_linked')}</h3>
-              <div className="run-detail-panel run-detail-gear-panel">
-                <div className="run-detail-gear-row">
-                  <div className="run-detail-gear-art">
-                    {linkedShoe?.photoUrl ? (
-                      <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} width="800" height="800" loading="lazy" decoding="async" />
-                    ) : (
-                      <div className="run-detail-gear-placeholder">H</div>
-                    )}
-                  </div>
-                  <div className="run-detail-gear-copy">
-                    <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
-                    <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
-                    {linkedShoeUsage != null && (
-                      <div className="run-detail-gear-usage">
-                        <div style={{ width: `${linkedShoeUsage}%` }} />
-                      </div>
-                    )}
-                  </div>
-                </div>
+          <aside className="run-detail-v2__side">
+            <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
+              <div className="run-detail-v2__card-head">
+                <h3>{t('run_detail.gear_linked')}</h3>
                 <div className="run-detail-gear-actions">
                   <button
                     type="button"
-                    className="run-detail-link-btn"
+                    className="run-detail-v2__link"
                     disabled={assigningShoeId != null}
                     onClick={() => {
                       setShoeActionMessage('');
@@ -1108,218 +1234,88 @@ export default function RunDetail() {
                       : run.shoeId ? t('run_detail.change_shoe') : t('run_detail.link_shoe')}
                   </button>
                   {run.shoeId && (
-                    <button type="button" className="run-detail-link-btn is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
+                    <button type="button" className="run-detail-v2__link is-danger" disabled={assigningShoeId != null} onClick={() => assignShoe(0)}>
                       {t('run_detail.unlink_shoe')}
                     </button>
                   )}
                 </div>
-                {shoeDropdownOpen && (
-                  <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
-                    {activeShoes.length > 0 ? activeShoes.map((shoe) => (
-                      <button
-                        key={shoe.id}
-                        type="button"
-                        className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
-                        disabled={assigningShoeId != null}
-                        onClick={() => assignShoe(shoe.id)}
-                      >
-                        {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
-                      </button>
-                    )) : (
-                      <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
-                    )}
-                  </div>
-                )}
-                {shoeActionMessage && (
-                  <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
-                )}
               </div>
-            </section>
-          </div>
-
-          <div className="run-detail-overview-summary-grid">
-            {runComparison && (
-              <section id="run-detail-comparison" className="run-detail-overview-section run-detail-comparison-section">
-                <h3>{t('run_detail.run_comparison_title')}</h3>
-                <div className="run-detail-panel run-detail-comparison-panel">
-                  <div className="run-detail-comparison-signal">
-                    <div>
-                      <strong>
-                        {runComparison.direction === 'faster'
-                          ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                          : runComparison.direction === 'slower'
-                            ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                            : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
-                      </strong>
-                      <p>
-                        {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
-                          : runComparison.paceTrend === 'declining' ? t('run_detail.run_comparison_declining')
-                            : t('run_detail.run_comparison_stable')}
-                        {' '}{t('run_detail.run_comparison_basis', { count: runComparison.recentRuns })}
-                      </p>
+              <div className="run-detail-gear-row">
+                <div className="run-detail-gear-art">
+                  {linkedShoe?.photoUrl ? (
+                    <img src={linkedShoe.photoUrl} alt={linkedShoeName || t('run_detail.shoe')} width="800" height="800" loading="lazy" decoding="async" />
+                  ) : (
+                    <div className="run-detail-gear-placeholder">H</div>
+                  )}
+                </div>
+                <div className="run-detail-gear-copy">
+                  <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
+                  <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
+                  {linkedShoeUsage != null && (
+                    <div className="run-detail-gear-usage">
+                      <div style={{ width: `${linkedShoeUsage}%` }} />
                     </div>
+                  )}
+                </div>
+              </div>
+              {shoeDropdownOpen && (
+                <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
+                  {activeShoes.length > 0 ? activeShoes.map((shoe) => (
+                    <button
+                      key={shoe.id}
+                      type="button"
+                      className={`shoe-run-option${String(shoe.id) === String(run.shoeId) ? ' active' : ''}`}
+                      disabled={assigningShoeId != null}
+                      onClick={() => assignShoe(shoe.id)}
+                    >
+                      {formatShoeDisplayName({ brand: shoe.brand, model: shoe.model, nickname: shoe.nickname, lang })}
+                    </button>
+                  )) : (
+                    <div className="shoe-run-empty">{t('run_detail.no_active_shoes')}</div>
+                  )}
+                </div>
+              )}
+              {shoeActionMessage && (
+                <p className="run-detail-gear-status" aria-live="polite">{shoeActionMessage}</p>
+              )}
+            </section>
+
+            <section className="run-detail-v2__card run-detail-v2__effect">
+              <h3>{t('run_detail.training_effect_title')}</h3>
+              {[
+                ['aerobic', t('run_detail.aerobic_effect'), aerobicEffect],
+                ['anaerobic', t('run_detail.anaerobic_effect'), anaerobicEffect],
+              ].map(([key, label, value]) => (
+                <div key={key} className="run-detail-v2__effect-row">
+                  <div className="run-detail-v2__effect-head">
+                    <span>{label}</span>
+                    <strong>{trainingEffectAvailable ? value.toFixed(1) : '--'}</strong>
+                  </div>
+                  <div className="run-detail-v2__effect-scale" aria-hidden="true">
+                    {effectSegments(trainingEffectAvailable ? value : NaN).map((filled, index) => (
+                      <span key={index} className={filled ? 'is-filled' : ''} />
+                    ))}
                   </div>
                 </div>
-              </section>
-            )}
+              ))}
+              {!trainingEffectAvailable && <p className="run-detail-v2__muted">{t('run_detail.training_effect_unavailable')}</p>}
+            </section>
 
-          </div>
-        </section>
-
-        <section id="run-detail-telemetry" className="run-detail-section run-detail-telemetry-section">
-          <div className="run-detail-panel run-detail-telemetry-panel">
-            <div className="run-detail-section-head run-detail-telemetry-heading">
-              <div>
-                <h2>{t('run_detail.telemetry_title')}</h2>
+            <section className="run-detail-v2__card run-detail-v2__form">
+              <h3>{t('run_detail.form_title')}</h3>
+              <div className="run-detail-v2__form-grid">
+                <div className="run-detail-v2__mini">
+                  <span>{t('run_detail.ground_contact_time')}</span>
+                  <strong>{latestGroundContact ? <>{formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')}<em>ms</em></> : t('run_detail.not_captured')}</strong>
+                </div>
+                <div className="run-detail-v2__mini">
+                  <span>{t('run_detail.vertical_oscillation')}</span>
+                  <strong>{latestVerticalOscillation ? <>{formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')}<em>cm</em></> : t('run_detail.not_captured')}</strong>
+                </div>
               </div>
-            </div>
-            <div className="run-detail-telemetry-tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
-              {telemetryTabDefinitions.map((definition) => {
-                const displaySample = definition.displaySample;
-                const isActive = definition.key === activeTelemetryDefinition.key;
-                return (
-                  <button
-                    key={definition.key}
-                    type="button"
-                    className={`run-detail-telemetry-tab${isActive ? ' is-active' : ''}`}
-                    onClick={() => setActiveTelemetryKey(definition.key)}
-                    role="tab"
-                    aria-selected={isActive}
-                  >
-                    <span className="run-detail-telemetry-tab-label">
-                      {definition.icon && !isActive && (
-                        <AppIcon
-                          name={definition.icon}
-                          className="run-detail-telemetry-tab-icon"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {definition.label}
-                    </span>
-                    <strong>
-                      {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
-                      {displaySample && <em>{definition.unit}</em>}
-                    </strong>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="run-detail-telemetry-stage">
-              <div className="run-detail-telemetry-readout">
-                <span>{activeTelemetryDefinition.label}</span>
-                <strong>
-                  {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
-                  <em>{activeTelemetryDefinition.unit}</em>
-                </strong>
-                <p>
-                  {focusTelemetryPoint
-                    ? t('run_detail.telemetry_focus_copy', {
-                      time: formatTelemetryInteractionTime(focusTelemetryPoint.t),
-                      distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
-                    })
-                    : t('run_detail.telemetry_no_stream')}
-                </p>
-              </div>
-              <div className="run-detail-telemetry-chart">
-                {telemetryChartData ? (
-                  <Line data={telemetryChartData} options={telemetryChartOptions} />
-                ) : (
-                  <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
-                )}
-              </div>
-            </div>
-
-            <div className="run-detail-chip-row run-detail-telemetry-chip-row">
-              <span className="run-detail-chip">
-                {t('run_detail.average_hr')}: {run.averageHeartRate != null ? `${Math.round(run.averageHeartRate)} ${heartRateUnitLabel}` : '--'}
-              </span>
-              <span className="run-detail-chip">
-                {t('run_detail.max_hr')}: {run.maxHeartRate != null ? `${Math.round(run.maxHeartRate)} ${heartRateUnitLabel}` : '--'}
-              </span>
-            </div>
-
-            <div className="run-detail-training-effect-grid">
-              <article>
-                <span>{t('run_detail.aerobic_effect')}</span>
-                <strong>{trainingEffectAvailable ? aerobicEffect.toFixed(1) : '--'}</strong>
-                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
-              </article>
-              <article>
-                <span>{t('run_detail.anaerobic_effect')}</span>
-                <strong>{trainingEffectAvailable ? anaerobicEffect.toFixed(1) : '--'}</strong>
-                {!trainingEffectAvailable && <p>{t('run_detail.training_effect_unavailable')}</p>}
-              </article>
-            </div>
-
-            <div className="run-detail-unavailable-grid">
-              <div>
-                <span>{t('run_detail.ground_contact_time')}</span>
-                <strong>
-                  {latestGroundContact ? `${formatTelemetryValue(latestGroundContact.value, 'groundContactTimeMs')} ms` : t('run_detail.not_captured')}
-                </strong>
-              </div>
-              <div>
-                <span>{t('run_detail.vertical_oscillation')}</span>
-                <strong>
-                  {latestVerticalOscillation ? `${formatTelemetryValue(latestVerticalOscillation.value, 'verticalOscillationCm')} cm` : t('run_detail.not_captured')}
-                </strong>
-              </div>
-            </div>
-
-            {elevationStatus?.flagged && (
-              <div className="run-detail-warning">
-                <p>{t('run_detail.elevation_warning')}</p>
-                {elevationStatus?.canRecalibrate && (
-                  <button type="button" className="run-detail-link-btn run-detail-warning-action" disabled={recalibratingElevation} onClick={handleElevationRecalibration}>
-                    {recalibratingElevation ? t('run_detail.recalibrating') : t('run_detail.recalibrate')}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section id="run-detail-splits" className="run-detail-section run-detail-splits-section">
-          <div className="run-detail-panel run-detail-table-panel">
-            <div className="run-detail-section-head">
-              <h2>{t('run_detail.splits')}</h2>
-              {lapRows.length > 5 && (
-                <button type="button" className="run-detail-link-btn" onClick={() => setShowAllSplits((prev) => !prev)}>
-                  {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
-                </button>
-              )}
-            </div>
-            <table className="run-detail-splits-table">
-              <thead>
-                <tr>
-                  <th>{t('run_detail.split_unit')}</th>
-                  <th>{t('run_detail.split_pace')}</th>
-                  <th>{t('run_detail.split_elev')}</th>
-                  <th>{t('run_detail.split_hr')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleLapRows.length > 0 ? visibleLapRows.map((lap, index) => {
-                  const lapGain = lapElevationGains ? lapElevationGains[index] : null;
-                  return (
-                    <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
-                      <td>{lap.pace || '--'}</td>
-                      <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
-                      <td>{lap.averageHeartRate ? Math.round(lap.averageHeartRate) : '--'}</td>
-                    </tr>
-                  );
-                }) : (
-                  <tr>
-                    <td colSpan="4" className="is-empty">{t('run_detail.no_lap_data')}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
+            </section>
+          </aside>
+        </div>
       </div>
       <footer className="runner-shell-footer runner-dashboard-footer run-detail-footer">
         <FooterNavLinks />

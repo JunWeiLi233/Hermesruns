@@ -9,8 +9,8 @@ const summaryStyle = readFileSync(path.join(here, '../../../styles/analysis-summ
 
 assert.match(
   analysisSource,
-  /<article className="analysis-overview-card analysis-overview-card--vo2 analysis-profile-primary">/,
-  'Analysis VO2 trend grid should keep rendering as a static profile-cockpit article.',
+  /<article className="analysis-overview-card analysis-overview-card--vo2 analysis-v2-vo2">/,
+  'Analysis VO2 trend should remain a static article in the v2 hero.',
 );
 
 assert.doesNotMatch(
@@ -27,8 +27,8 @@ assert.match(
 
 assert.match(
   analysisSource,
-  /const hasProgress = progressPct > 0;[\s\S]*\{hasProgress \? \([\s\S]*className="analysis-overview-gauge-progress"/,
-  'The load gauge should not render a progress stroke when its value is zero.',
+  /trainingLoad\?\.lastAcwr != null \? \([\s\S]*?<i style=/,
+  'The load scale should not render a marker without an ACWR measurement.',
 );
 
 assert.match(

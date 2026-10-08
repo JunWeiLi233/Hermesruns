@@ -223,6 +223,24 @@ public class ProfileController {
         Runner runner = runnerOptional.get();
         return ResponseEntity.ok(heatmapService.heatmap(runner, offset, limit, coverage, sample));
     }
+    @GetMapping("/profile/heatmap/viewport")
+    public ResponseEntity<?> heatmapViewport(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam("south") double south,
+            @RequestParam("west") double west,
+            @RequestParam("north") double north,
+            @RequestParam("east") double east,
+            @RequestParam("zoom") int zoom
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) return unauthorized();
+        try {
+            return ResponseEntity.ok(heatmapService.viewport(runnerOptional.get(), south, west, north, east, zoom));
+        } catch (IllegalArgumentException invalidViewport) {
+            return error(HttpStatus.BAD_REQUEST, invalidViewport.getMessage());
+        }
+    }
+
     @GetMapping("/profile/personal-records")
     public ResponseEntity<?> personalRecords(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader

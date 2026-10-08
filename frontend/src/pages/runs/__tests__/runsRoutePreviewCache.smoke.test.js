@@ -271,7 +271,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /setImportModalOpen\(false\);\s*refreshRuns\(\);/,
+  /<ImportActivityModal[\s\S]*?onImported=\{refreshRuns\}/,
   'Successful activity import should use the route-preview reset refresh path.',
 );
 
@@ -319,13 +319,13 @@ assert.match(
 
 assert.match(
   runsSource,
-  /runsByMonth\.map\(\(group\) =>[\s\S]*group\.runs\.map\(\(run\) => \(/,
+  /runsByMonth\.map\(\(group\) =>[\s\S]*group\.runs\.map\(\(run\) => \{[\s\S]*<RunRow/,
   'Runs history should render normal page-flow cards grouped by month, rather than a nested virtual scroller.',
 );
 
 assert.match(
   runsSource,
-  /runs-profile-history[\s\S]*runs-profile-cockpit[\s\S]*recent-runs-card-list/,
+  /runs-profile-history[\s\S]*runs-ledger-v2__header[\s\S]*recent-runs-card-list/,
   'Runs should keep the profile-aligned page shell while preserving the normal history list.',
 );
 

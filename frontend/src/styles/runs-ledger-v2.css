@@ -1,0 +1,573 @@
+/* Runs ledger v2: one header, a summary strip, a sticky toolbar, then a dense
+   month-grouped ledger. Scoped to .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 inside the existing Runs shell;
+   sidebar and top bar keep their current styles. Loaded last in app.css because
+   the earlier ledger rules use !important. */
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 {
+  --v2-card: var(--runs-page-card, #fff);
+  --v2-ink: var(--runs-page-ink, #1c1917);
+  --v2-muted: var(--runs-page-muted, #625c56);
+  --v2-line: var(--runs-page-line, rgba(28, 25, 23, 0.08));
+  --v2-fill: var(--runs-page-input, rgba(28, 25, 23, 0.04));
+  --v2-accent: var(--runs-page-accent, #a0392a);
+  --v2-accent-soft: var(--runs-page-accent-soft, rgba(160, 57, 42, 0.08));
+  --v2-seg-active: #fff;
+  --v2-primary: #1c1917;
+  --v2-primary-ink: #fff;
+  --v2-thumb: #2b2e33;
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 {
+  --v2-seg-active: rgba(255, 255, 255, 0.12);
+  --v2-primary: #f8f4ef;
+  --v2-primary-ink: #1c1917;
+}
+
+/* Header */
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding-top: 8px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--v2-muted) !important;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__status-dot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--v2-muted);
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__status--active .runs-ledger-v2__status-dot { background: #34c759; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__status--alert .runs-ledger-v2__status-dot { background: #ff3b30; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__header h1 {
+  margin: 8px 0 0;
+  color: var(--v2-ink) !important;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: 999px !important;
+  background: var(--v2-card) !important;
+  color: var(--v2-ink) !important;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn--primary {
+  border-color: transparent !important;
+  background: var(--v2-primary) !important;
+  color: var(--v2-primary-ink) !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn:disabled { opacity: 0.6; cursor: progress; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn-icon { width: 17px; height: 17px; }
+
+/* Summary strip */
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
+  align-items: end;
+  gap: 32px;
+  padding: 24px 28px;
+  border-radius: 20px;
+  background: var(--v2-card) !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figures {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 20px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure:first-child { padding-left: 0; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure + .runs-ledger-v2__figure { border-left: 1px solid var(--v2-line); }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure > span,
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure > small {
+  overflow: hidden;
+  color: var(--v2-muted) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure > small { font-weight: 400; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure > strong {
+  color: var(--v2-ink) !important;
+  font-size: clamp(1.25rem, 1.9vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__volume {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__volume figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--v2-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__volume figcaption span:first-child { font-weight: 600; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 64px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__bar {
+  flex: 1;
+  border-radius: 3px;
+  background: var(--v2-accent-soft);
+  background: color-mix(in srgb, var(--v2-accent) 24%, transparent);
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__bar.is-current { background: var(--v2-accent); }
+
+/* Toolbar */
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__toolbar {
+  position: sticky;
+  top: 88px;
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--v2-card) 88%, transparent) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 1px 0 var(--v2-line);
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__search {
+  display: flex;
+  flex: 1 1 260px;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px !important;
+  background: var(--v2-fill) !important;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__search .recent-runs-search-icon { width: 17px; height: 17px; color: var(--v2-muted) !important; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__search:focus-within {
+  box-shadow: 0 0 0 2px var(--v2-accent) !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__search .recent-runs-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--v2-ink) !important;
+  font: inherit;
+  font-size: 0.875rem;
+  outline: none;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-ledger-v2__segmented, .runs-ledger-v2__chips) {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--v2-fill);
+}
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-ledger-v2__seg, .runs-ledger-v2__sort-btn, .runs-ledger-v2__chips .recent-runs-chip) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--v2-muted) !important;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-ledger-v2__seg, .runs-ledger-v2__chips .recent-runs-chip).is-active {
+  background: var(--v2-seg-active) !important;
+  color: var(--v2-ink) !important;
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.12) !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__sort {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--v2-muted);
+  font-size: 0.8rem;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__sort > span { padding: 0 6px; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__sort-btn.is-active { background: var(--v2-accent-soft) !important; color: var(--v2-accent) !important; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__view .runs-ledger-v2__seg { width: 36px; padding: 0; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__view svg { width: 17px; height: 17px; }
+
+/* Month groups */
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list .recent-runs-page-list { display: grid; gap: 16px; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-group {
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--v2-card) !important;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-heading { margin: 0; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-header {
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px 20px !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--v2-ink) !important;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-group:not(.is-collapsed) .recent-runs-month-header { box-shadow: inset 0 -1px 0 var(--v2-line) !important; }
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-toggle-chevron svg { width: 18px; height: 18px; color: var(--v2-muted); }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-title {
+  color: var(--v2-ink) !important;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-meta {
+  display: flex;
+  gap: 18px;
+  color: var(--v2-muted) !important;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ledger rows (list view) */
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 {
+  --v2-cols: 80px 64px minmax(0, 1fr) 120px 120px 120px 48px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-grid {
+  display: block !important;
+  padding: 0 !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-grid[hidden] {
+  display: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__columns {
+  display: grid;
+  grid-template-columns: var(--v2-cols);
+  padding: 10px 20px 6px;
+  color: var(--v2-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__columns > span:nth-child(3) { padding-left: 16px; }
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__columns > span:nth-child(n + 4) { text-align: right; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row-shell {
+  position: relative;
+  contain-intrinsic-size: auto 88px;
+  border-top: 1px solid var(--v2-line) !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 button.recent-runs-card.runs-ledger-row {
+  display: grid !important;
+  grid-template-columns: var(--v2-cols);
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 20px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--v2-ink) !important;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 button.runs-ledger-row:is(:hover, :focus-visible) { background: var(--v2-fill) !important; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__date { display: flex; flex-direction: column; gap: 2px; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__date strong {
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__date span {
+  color: var(--v2-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row .recent-runs-thumb {
+  position: relative;
+  width: 64px !important;
+  height: 64px !important;
+  min-height: 64px !important;
+  overflow: hidden;
+  border-radius: 10px !important;
+  background: var(--v2-thumb);
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row :is(.recent-runs-thumb-badge, .recent-runs-thumb-map-label) { display: none !important; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__title {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 16px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__title > strong {
+  overflow: hidden;
+  font-size: 0.94rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--v2-muted);
+  font-size: 0.75rem;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__full-date { display: none; }
+
+#root .runs-dashboard-page.runs-ledger-page :is(.runs-ledger-row__source, .runs-ledger-row__badge) {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--v2-fill);
+  font-weight: 600;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__badge { background: var(--v2-accent-soft); color: var(--v2-accent); font-weight: 700; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__num {
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-ledger-row__num--distance { font-weight: 700; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row__delete {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--v2-muted) !important;
+  opacity: 0.6;
+  transform: translateY(-50%);
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row__delete svg { width: 16px; height: 16px; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row__delete:is(:hover, :focus-visible) {
+  background: var(--v2-accent-soft) !important;
+  color: var(--v2-accent) !important;
+  opacity: 1;
+}
+
+/* Grid view */
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .recent-runs-month-grid:not([hidden]) {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)) !important;
+  gap: 12px;
+  padding: 16px 20px 20px !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row-shell {
+  overflow: hidden;
+  contain-intrinsic-size: auto 280px;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: 12px;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid button.recent-runs-card.runs-ledger-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas:
+    "thumb thumb thumb"
+    "title title title"
+    "dist pace time";
+  gap: 8px 10px;
+  padding: 0 0 12px !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__date { display: none; }
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__full-date { display: inline; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row .recent-runs-thumb {
+  grid-area: thumb;
+  width: 100% !important;
+  height: 140px !important;
+  border-radius: 0 !important;
+}
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__title { grid-area: title; padding: 4px 14px 0; }
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__num { font-size: 0.85rem; text-align: left; }
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__num--distance { grid-area: dist; padding-left: 14px; }
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__num:last-child { padding-right: 14px; }
+
+#root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-grid .runs-ledger-row__delete {
+  top: 8px;
+  right: 8px;
+  transform: none;
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: #fff !important;
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__summary { grid-template-columns: minmax(0, 1fr); }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 { --v2-cols: 64px 56px minmax(0, 1fr) 96px 96px 96px 44px; }
+}
+
+@media (max-width: 860px) {
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__toolbar { top: 0; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figures { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 0; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure:nth-child(odd) { padding-left: 0; border-left: 0; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__figure:last-child { grid-column: 1 / -1; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__summary { padding: 20px; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__columns { display: none; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .recent-runs-month-meta > span:last-child { display: none; }
+
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list button.recent-runs-card.runs-ledger-row {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "thumb title title"
+      "thumb dist pace";
+    gap: 4px 12px;
+    padding: 12px 56px 12px 16px !important;
+  }
+
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__date { display: none; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row-shell { contain-intrinsic-size: auto 104px; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__full-date { display: inline; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row .recent-runs-thumb { grid-area: thumb; width: 56px !important; height: 56px !important; min-height: 56px !important; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__title { grid-area: title; padding-left: 0; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__num { font-size: 0.85rem; text-align: left; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__num--distance { grid-area: dist; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__num:nth-of-type(4) { grid-area: pace; color: var(--v2-muted); }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-v2__list.is-list .runs-ledger-row__num:last-child { display: none; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row__delete { right: 8px; width: 44px; height: 44px; }
+}
+
+@media (max-width: 640px) {
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__actions,
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn { flex: 1 1 auto; justify-content: center; }
+  #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__sort > span { display: none; }
+}

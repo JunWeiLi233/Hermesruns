@@ -622,13 +622,21 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
   }
 
   if (variant === 'analysis') {
-    const cardHead = <div className="page-skeleton__analysis-card-title"><SkeletonBlock className="page-skeleton__analysis-card-icon" /><SkeletonBlock className="page-skeleton__analysis-kicker" /></div>;
     return <RunnerFrame variant={variant}>
       <div className="page-skeleton__analysis-cockpit">
         <SkeletonPanel className="page-skeleton__analysis-primary">
-          <div className="page-skeleton__analysis-primary-copy">
-            {cardHead}
-            <div className="page-skeleton__analysis-primary-value"><SkeletonBlock className="page-skeleton__analysis-value-label" /><SkeletonBlock className="page-skeleton__analysis-value" /></div>
+          <div className="page-skeleton__analysis-card-head">
+            <div className="page-skeleton__analysis-heading">
+              <SkeletonBlock className="page-skeleton__analysis-kicker" />
+              <SkeletonBlock className="page-skeleton__analysis-title" />
+            </div>
+            <div className="page-skeleton__analysis-value">
+              <SkeletonBlock className="page-skeleton__analysis-value-label" />
+              <div className="page-skeleton__analysis-value-row">
+                <SkeletonBlock className="page-skeleton__analysis-value-number" />
+                <SkeletonBlock className="page-skeleton__analysis-value-unit" />
+              </div>
+            </div>
           </div>
           <div className="page-skeleton__analysis-bars">
             {Array.from({ length: 6 }, (_, index) => (
@@ -642,48 +650,72 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
 
         <div className="page-skeleton__analysis-reference-grid">
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--load">
-            {cardHead}
-            <div className="page-skeleton__analysis-reference-split"><SkeletonLines count={3} className="page-skeleton__analysis-reference-lines" /><SkeletonBlock className="page-skeleton__analysis-gauge" /></div>
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-gauge-stack">
+              <SkeletonBlock className="page-skeleton__analysis-gauge" />
+              <SkeletonBlock className="page-skeleton__analysis-gauge-value" />
+            </div>
+            <SkeletonLines count={2} className="page-skeleton__analysis-reference-copy" />
           </SkeletonPanel>
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--trend">
-            {cardHead}
-            <div className="page-skeleton__analysis-reference-split"><SkeletonLines count={4} className="page-skeleton__analysis-reference-lines" /><SkeletonBlock className="page-skeleton__analysis-trend-value" /></div>
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-trend-content">
+              <SkeletonLines count={3} className="page-skeleton__analysis-trend-copy" />
+              <div className="page-skeleton__analysis-trend-stack">
+                <SkeletonBlock className="page-skeleton__analysis-trend-title" />
+                <SkeletonBlock className="page-skeleton__analysis-trend-value" />
+              </div>
+            </div>
           </SkeletonPanel>
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--injury">
-            {cardHead}
-            <div className="page-skeleton__analysis-risk-scale">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
-            <div className="page-skeleton__analysis-risk-scale page-skeleton__analysis-risk-scale--thin">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-risk-labels">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+            <div className="page-skeleton__analysis-risk-meter">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
           </SkeletonPanel>
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--coach">
-            {cardHead}
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
             <SkeletonBlock className="page-skeleton__analysis-coach-title" />
-            <SkeletonLines count={2} className="page-skeleton__analysis-reference-lines" />
           </SkeletonPanel>
         </div>
       </div>
 
       <div className="page-skeleton__analysis-bento-grid">
-        {Array.from({ length: 2 }, (_, index) => (
-          <SkeletonPanel key={index} className="page-skeleton__analysis-bento-card">
-            {cardHead}
-            <SkeletonBlock className="page-skeleton__analysis-bento-value" />
-            <SkeletonBlock className="page-skeleton__analysis-intensity-bar" />
-            <div className="page-skeleton__analysis-bento-labels"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
-          </SkeletonPanel>
-        ))}
+        <SkeletonPanel className="page-skeleton__analysis-bento-card page-skeleton__analysis-bento-card--intensity">
+          <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+          <SkeletonBlock className="page-skeleton__analysis-bento-value" />
+          <SkeletonBlock className="page-skeleton__analysis-intensity-bar" />
+          <div className="page-skeleton__analysis-bento-labels"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
+        </SkeletonPanel>
+        <SkeletonPanel className="page-skeleton__analysis-bento-card page-skeleton__analysis-bento-card--forecast">
+          <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+          <SkeletonBlock className="page-skeleton__analysis-forecast-value" />
+          <SkeletonBlock className="page-skeleton__analysis-forecast-note" />
+        </SkeletonPanel>
       </div>
 
       <div className="page-skeleton__analysis-table-grid">
         {Array.from({ length: 2 }, (_, tableIndex) => (
           <SkeletonPanel key={tableIndex} className="page-skeleton__analysis-table-card">
-            <div className="page-skeleton__analysis-table-title"><SkeletonBlock /><SkeletonBlock /></div>
-            <div className="page-skeleton__analysis-table-head">{Array.from({ length: 4 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+            <SkeletonBlock className="page-skeleton__analysis-table-title" />
+            <div className="page-skeleton__analysis-table-head"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
             <div className="page-skeleton__analysis-table-rows">
-              {Array.from({ length: 4 }, (_, rowIndex) => (
-                <div key={rowIndex} className="page-skeleton__analysis-table-row">{Array.from({ length: 4 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+              {Array.from({ length: tableIndex === 0 ? 5 : 4 }, (_, rowIndex) => (
+                <div key={rowIndex} className="page-skeleton__analysis-table-row"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
               ))}
             </div>
-            {tableIndex === 1 && <div className="page-skeleton__analysis-table-actions"><SkeletonBlock /><SkeletonBlock /></div>}
+            {tableIndex === 1 && <div className="page-skeleton__runs-actions"><SkeletonBlock /><SkeletonBlock /></div>}
           </SkeletonPanel>
         ))}
       </div>
@@ -691,7 +723,20 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
       <SkeletonPanel className="page-skeleton__analysis-injury">
         <div className="page-skeleton__analysis-injury-heading"><SkeletonBlock className="page-skeleton__analysis-injury-title" /><SkeletonBlock className="page-skeleton__analysis-injury-copy" /></div>
         <div className="page-skeleton__analysis-injury-grid">
-          {Array.from({ length: 3 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__analysis-injury-card"><SkeletonBlock className="page-skeleton__analysis-bento-kicker" /><SkeletonBlock className="page-skeleton__analysis-bento-title" /><SkeletonLines count={2} /><SkeletonBlock className="page-skeleton__analysis-injury-pill" /></SkeletonPanel>)}
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--risk">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-injury-ring-row"><SkeletonBlock className="page-skeleton__analysis-injury-ring" /><SkeletonLines count={2} /></div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--load">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-injury-gauge"><SkeletonBlock className="page-skeleton__analysis-injury-gauge-arc" /><SkeletonBlock className="page-skeleton__analysis-injury-gauge-value" /></div>
+            <div className="page-skeleton__analysis-injury-zones"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--checkin">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-soreness-actions"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
+            <SkeletonLines count={3} />
+          </SkeletonPanel>
         </div>
       </SkeletonPanel>
     </RunnerFrame>;

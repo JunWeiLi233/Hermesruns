@@ -204,7 +204,7 @@
 /* Full-width color panels and roomy product explanations. */
 #root .landing-page--studio .landing-command-deck { padding: var(--studio-section-y) 0; background: var(--studio-paper) !important; }
 #root .landing-page--studio .landing-studio-section-intro { display: flex; flex-direction: column; align-items: flex-start; gap: 0; margin-bottom: var(--studio-head-gap); }
-#root .landing-page--studio .landing-studio-section-intro h2 { white-space: pre-line; margin: 0; font-size: var(--type-h2); line-height: 1.06; letter-spacing: var(--track-heading); font-weight: 600; text-wrap: balance; }
+#root .landing-page--studio .landing-studio-section-intro h2 { white-space: pre-line; margin: 0; font-size: var(--type-h2); line-height: 1.06; letter-spacing: var(--track-heading); font-weight: 600; font-style: normal !important; text-wrap: balance; }
 #root .landing-page--studio .landing-studio-section-intro > p { max-width: 560px; margin: 14px 0 0; color: var(--studio-muted); font-size: var(--type-lead); line-height: 1.55; }
 #root .landing-page--studio .landing-command-card-stack { gap: 20px; }
 #root .landing-page--studio .landing-command-card { min-height: 286px; padding: 30px; background: var(--studio-accent-wash) !important; border: 0 !important; border-radius: 4px; box-shadow: none !important; transition: transform .25s; }

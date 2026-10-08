@@ -452,7 +452,7 @@ function CompareGlyph({ value, label }) {
 
 export default function Landing() {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [raceCountdownNow, setRaceCountdownNow] = useState(() => new Date());
@@ -563,7 +563,6 @@ export default function Landing() {
             {navLinks.map(([href, label]) => (
               <a key={href} href={href}>{label}</a>
             ))}
-            <button type="button" className="landing-studio-language" onClick={() => setLang(lang === 'en' ? 'zh-CN' : 'en')} title={t('landing.studio_language')}><span lang={lang === 'en' ? 'zh-CN' : 'en'}>{lang === 'en' ? '中文' : 'EN'}</span></button>
           </nav>
 
           <div className="landing-cinematic-nav-actions">

@@ -9,7 +9,7 @@ const styles = readFileSync(path.join(here, "../../../styles/analysis-load-balan
 
 assert.match(
   source,
-  /<div className="analysis-load-command-legend">\s*<span><i className="is-acute" \/>\{loadDashboard\.chartLegendAcute\}<\/span>\s*<span><i className="is-chronic" \/>\{loadDashboard\.chartLegendChronic\}<\/span>/,
+  /<div className="analysis-load-command-legend">\s*<span><i className="is-acute" \/>\{loadDashboard\.chartLegendAcute\}[\s\S]*?<\/span>\s*<span><i className="is-chronic" \/>\{loadDashboard\.chartLegendChronic\}[\s\S]*?<\/span>/,
   'Load-balance legend should keep the acute and chronic labels paired with their marker dots.',
 );
 assert.match(

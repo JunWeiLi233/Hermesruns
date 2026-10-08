@@ -4,20 +4,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const styles = readFileSync(join(here, "../../../styles/analysis-profile-visual-alignment.css"), 'utf8');
+const styles = readFileSync(join(here, "../../../styles/analysis-coach-bento.css"), 'utf8');
 const source = readFileSync(join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
-const selector = 'body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-command-recent-card';
-const stripReset = styles.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')} \\{[\\s\\S]*?\\n\\}`))?.[0];
-const titleReset = styles.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')} \\.analysis-coach-command-panel-head \\{[\\s\\S]*?\\n\\}`))?.[0];
+const stripReset = styles.match(/#root \.analysis-coach-bento > section,\s*#root \.analysis-coach-bento__signal\s*\{[^}]*\}/)?.[0];
+const titleReset = styles.match(/#root \.analysis-coach-bento :is\(\.analysis-coach-bento__phase, \.analysis-coach-bento__reasons, \.analysis-coach-bento__recent\) h3\s*\{[^}]*\}/)?.[0];
 
 assert.ok(stripReset, 'Coach Insight recent panel should retain a route-scoped panel surface.');
-assert.match(stripReset, /background:\s*var\(--analysis-v2-card\)\s*!important;/, 'Recent panel background should remain visible.');
+assert.match(stripReset, /background:\s*var\(--bento-card\);/, 'Recent panel background should remain visible.');
 assert.ok(titleReset, 'Coach Insight recent title should have a route-scoped strip reset.');
-assert.match(titleReset, /background:\s*transparent\s*!important;/, 'Recent title strip background should be transparent.');
-assert.match(titleReset, /box-shadow:\s*none\s*!important;/, 'Recent title strip shadow should be removed.');
+assert.doesNotMatch(titleReset, /(?:background|border|box-shadow)\s*:/, 'The recent title should retain plain heading styling without a panel strip.');
+assert.match(stripReset, /box-shadow:\s*none;/, 'Recent panel should retain its unshadowed surface.');
 assert.match(
   source,
-  /analysis-coach-command-recent-card[\s\S]*?t\('analysis\.coach_dashboard_recent_title'\)/,
+  /<section className="analysis-coach-bento__recent">\s*<h3>\{t\('analysis\.coach_dashboard_recent_title'\)\}<\/h3>/,
   'Coach Insight should keep the recent-training title rendered.',
 );
 

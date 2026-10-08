@@ -31,6 +31,10 @@ assert.match(
   'Settings atlas should group profile, preferences, setup, services, and wellness sections explicitly.',
 );
 
+const dataServices = layoutSource.slice(layoutSource.indexOf('<section className="st-services">'), layoutSource.indexOf('{/* ── Wellness ── */}'));
+assert.ok(dataServices.indexOf('st-sync-section') < dataServices.indexOf('st-services-grid'),
+  'The Strava and Garmin cards should follow Sync health at the bottom of Data services.');
+
 assert.doesNotMatch(
   layoutSource,
   /settings\.danger_title/,

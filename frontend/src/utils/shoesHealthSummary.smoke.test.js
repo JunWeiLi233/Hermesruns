@@ -1,11 +1,11 @@
 /**
- * Smoke test: Shoes health summary row is wired into the locker.
+ * Smoke test: Shoes health summary is wired into the rotation header.
  *
  * Verifies that:
- * 1. Shoes.jsx uses the shoe-inventory-summary-strip class (the summary strip exists).
- * 2. Shoes.jsx references the health_summary_active translation key.
- * 3. Shoes.jsx references the health_summary_retire_soon key.
- * 4. The brand filter state and locker brand bar are present.
+ * 1. Shoes.jsx renders the rotation header.
+ * 2. Shoes.jsx references the v2_active_pairs translation key.
+ * 3. Shoes.jsx references the v2_retire_soon key.
+ * 4. The brand filter state and select are present.
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -17,20 +17,20 @@ const shoesSource = readFileSync(path.join(here, "../pages/shoes/Shoes.jsx"), 'u
 
 assert.match(
   shoesSource,
-  /shoe-inventory-summary-strip/,
-  'Shoes.jsx should render the shoe-inventory-summary-strip element.'
+  /shoe-v2-head-copy/,
+  'Shoes.jsx should render the rotation summary in the page header.'
 );
 
 assert.match(
   shoesSource,
-  /t\('shoes\.health_summary_active'/,
-  'Shoes.jsx should use the health_summary_active translation key.'
+  /t\('shoes\.v2_active_pairs'/,
+  'Shoes.jsx should use the active-pairs summary translation key.'
 );
 
 assert.match(
   shoesSource,
-  /t\('shoes\.health_summary_retire_soon'/,
-  'Shoes.jsx should use the health_summary_retire_soon translation key.'
+  /t\('shoes\.v2_retire_soon'/,
+  'Shoes.jsx should use the retiring-soon summary translation key.'
 );
 
 assert.match(
@@ -41,8 +41,8 @@ assert.match(
 
 assert.match(
   shoesSource,
-  /shoe-locker-brandbar/,
-  'Shoes.jsx should render the shoe-locker-brandbar for owned-brand filtering.'
+  /<select[^>]*value=\{lockerBrandFilter\}/,
+  'Shoes.jsx should render a select for owned-brand filtering.'
 );
 
 console.log('[PASS] Shoes health summary + brand filter smoke test passed.');

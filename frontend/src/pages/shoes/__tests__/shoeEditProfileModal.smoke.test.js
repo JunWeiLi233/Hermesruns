@@ -1,54 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const shoesSource = fs.readFileSync(new URL('../Shoes.jsx', import.meta.url), 'utf8');
-const shoesStyles = fs.readFileSync(new URL('../../../styles/shoes-atelier-redesign.css', import.meta.url), 'utf8');
-
-assert.match(
-  shoesSource,
-  /shellClassName="shoe-edit-modal-shell"[\s\S]*cardClassName="shoe-edit-modal-card"/,
-  'The shoe editor should opt into a scoped profile-style modal shell.',
-);
-assert.match(
-  shoesSource,
-  /className="shoe-edit-modal-form"[\s\S]*className="shoe-edit-modal-fields"/,
-  'The shoe editor should use a bounded responsive form layout.',
-);
-assert.match(
-  shoesSource,
-  /className="shoe-edit-primary-toggle shoe-checkbox-label"[\s\S]*className="shoe-edit-modal-toggle-control"/,
-  'The primary-shoe choice should use the atelier toggle treatment.',
-);
-assert.match(
-  shoesSource,
-  /className="shoe-edit-modal-actions modal-actions"/,
-  'The shoe editor should use a dedicated balanced action footer.',
-);
-
-assert.match(
-  shoesStyles,
-  /#root \.shoe-edit-modal-shell\s*\{[\s\S]*backdrop-filter:\s*blur\(18px\)/,
-  'The edit modal should use the atelier warm blurred overlay.',
-);
-assert.match(
-  shoesStyles,
-  /#root \.shoe-edit-modal-card\s*\{[\s\S]*width:\s*min\(640px,[\s\S]*border-radius:\s*12px;[\s\S]*linear-gradient\(145deg/,
-  'The edit modal card should use the bounded atelier sheet geometry and surface.',
-);
-assert.match(
-  shoesStyles,
-  /#root \.shoe-edit-modal-fields\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/,
-  'The edit form should pair fields in two columns on wide screens.',
-);
-assert.match(
-  shoesStyles,
-  /@media \(max-width:\s*760px\)\s*\{[\s\S]*#root \.shoe-edit-modal-fields,[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
-  'The edit form should collapse to one column on small screens.',
-);
-assert.match(
-  shoesStyles,
-  /#root \.shoe-edit-modal-actions\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*0\.8fr\) minmax\(0,\s*1\.2fr\)/,
-  'The edit modal should keep the primary action visually dominant on wide screens.',
-);
-
-console.log('[PASS] Shoe edit profile-modal guardrails passed.');
+const source = fs.readFileSync(new URL('../Shoes.jsx', import.meta.url), 'utf8');
+const styles = fs.readFileSync(new URL('../../../styles/shoe-edit-modal-v2.css', import.meta.url), 'utf8');
+assert.match(source, /shellClassName="shoe-edit-modal-shell edit-v2-shell"[\s\S]*cardClassName="shoe-edit-modal-card edit-v2-card"/, 'The editor should opt into its scoped v2 modal styles.');
+assert.match(source, /className="shoe-edit-modal-form edit-v2"[\s\S]*className="edit-v2-row"/, 'The editor should retain its responsive form.');
+assert.match(source, /type="checkbox" role="switch"[\s\S]*className="edit-v2-switch"/, 'The primary control should remain an accessible checkbox switch.');
+assert.match(source, /className="edit-v2-footer"/, 'The editor should retain its action footer.');
+assert.match(styles, /\.modal-card\.edit-v2-card\s*\{[^}]*width:\s*min\(480px,[^}]*max-height:\s*calc\(100dvh - 32px\)/, 'The card should fit its viewport.');
+assert.match(styles, /\.edit-v2-card \.modal-form\s*\{[^}]*overflow-y:\s*auto/, 'Short viewports should scroll the form.');
+assert.match(styles, /\.edit-v2-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(0, 1\.4fr\)/, 'Wide forms should pair brand and model.');
+assert.match(styles, /@media \(max-width: 440px\)[\s\S]*\.edit-v2-row\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/, 'Phone forms should stack brand and model.');
+console.log('[PASS] Shoe edit modal v2 guardrails passed.');

@@ -9,8 +9,8 @@ const styleSource = readFileSync(path.join(here, "../../../styles/_split/races.c
 
 assert.match(
   pageSource,
-  /className="race-center-hero-image"[\s\S]*?src="\/images\/races\/dashboard-hero\.webp"/,
-  'The races dashboard should use the approved running hero image.',
+  /className="race-center-hero-image"[\s\S]*?src="\/images\/races\/race-plan-dawn-v3\.webp"/,
+  'The races dashboard should use the generated dawn-running image.',
 );
 
 assert.match(

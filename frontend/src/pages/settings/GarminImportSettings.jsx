@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { apiFetch, apiJson } from '../../api';
+import { invalidateResourceCache } from '../../api/resourceCache';
 import AuthenticatedPageChrome from '../../components/AuthenticatedPageChrome';
 import Modal from '../../components/Modal';
 import { useI18n } from '../../contexts/I18nContext';
@@ -24,8 +25,11 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
 
   const [garminEmail, setGarminEmail] = useState('');
   const [garminPassword, setGarminPassword] = useState('');
+  const [garminShowPassword, setGarminShowPassword] = useState(false);
   const [garminLimit, setGarminLimit] = useState(50);
   const [garminImporting, setGarminImporting] = useState(false);
+  const [garminStarting, setGarminStarting] = useState(false);
+  const [garminImportDone, setGarminImportDone] = useState(false);
   const [garminStatus, setGarminStatus] = useState('');
   const [garminStatusType, setGarminStatusType] = useState('');
   const [garminWellnessSyncEnabled, setGarminWellnessSyncEnabled] = useState(false);
@@ -33,6 +37,44 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
   const [garminWellnessStatus, setGarminWellnessStatus] = useState('');
   const [garminWellnessLastSynced, setGarminWellnessLastSynced] = useState(null);
   const [garminCredentialsSaved, setGarminCredentialsSaved] = useState(false);
+  const [garminWellnessLoading, setGarminWellnessLoading] = useState(true);
+  const [garminWellnessSaving, setGarminWellnessSaving] = useState(false);
+  const mountedRef = useRef(false);
+  const importingRef = useRef(false);
+  const startingRef = useRef(false);
+  const wellnessSavingRef = useRef(false);
+  const wellnessImportingRef = useRef(false);
+  const pollTimersRef = useRef(new Set());
+
+  useEffect(() => {
+    mountedRef.current = true;
+    let cancelled = false;
+    const timers = pollTimersRef.current;
+    apiJson('/api/garmin/connect/wellness/status')
+      .then((data) => {
+        if (cancelled) return;
+        setGarminWellnessSyncEnabled(Boolean(data.wellnessSyncEnabled));
+        setGarminCredentialsSaved(Boolean(data.credentialsSaved));
+        setGarminWellnessLastSynced(data.lastSyncedAt || null);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setGarminWellnessLoading(false); });
+    return () => {
+      cancelled = true;
+      mountedRef.current = false;
+      timers.forEach(clearTimeout);
+      timers.clear();
+    };
+  }, []);
+
+  function schedulePoll(callback, delay) {
+    if (!mountedRef.current) return;
+    const timer = setTimeout(() => {
+      pollTimersRef.current.delete(timer);
+      if (mountedRef.current) void callback();
+    }, delay);
+    pollTimersRef.current.add(timer);
+  }
 
   const garminTone = garminImporting ? 'active' : (garminStatus ? garminStatusType || 'info' : 'ready');
   const garminStatusLabel = garminImporting ? t('profile.garmin_connect_importing') : (garminStatus || t('settings.stitch_garmin_ready'));
@@ -45,34 +87,48 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
     tone: garminTone,
     limitLabel: t('profile.garmin_connect_limit_label'),
     limitValue: garminLimit,
-    credentialsNote: t('profile.garmin_connect_credentials_note'),
+    credentialsNote: t(garminCredentialsSaved ? 'profile.garmin_v2_saved_note' : 'profile.garmin_connect_credentials_note'),
     primaryAction: garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_connect_start'),
-  }), [garminImporting, garminLimit, garminStatusLabel, garminTone, t]);
+  }), [garminCredentialsSaved, garminImporting, garminLimit, garminStatusLabel, garminTone, t]);
 
   const syncSummary = garminWellnessLastSynced
     ? `${t('profile.garmin_wellness_last_synced')}: ${new Date(garminWellnessLastSynced).toLocaleString()}`
     : t('profile.garmin_wellness_never_synced');
 
-  const closeGarminImport = onClose || (() => navigate('/settings'));
+  function closeGarminImport() {
+    if (startingRef.current || wellnessSavingRef.current || wellnessImportingRef.current) return;
+    if (importingRef.current) invalidateResourceCache('/api/activities');
+    if (onClose) onClose();
+    else navigate('/settings');
+  }
 
   async function handleGarminSaveCredentials() {
-    if (!garminEmail.trim() || !garminPassword.trim()) return;
+    if (!garminEmail.trim() || !garminPassword.trim()) return false;
     try {
       await apiJson('/api/garmin/connect/wellness/credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ garminEmail: garminEmail.trim(), garminPassword }),
       });
-      setGarminCredentialsSaved(true);
+      if (mountedRef.current) setGarminCredentialsSaved(true);
+      return true;
     } catch {
-      setGarminCredentialsSaved(false);
+      if (mountedRef.current) {
+        setGarminCredentialsSaved(false);
+        setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
+      }
+      return false;
     }
   }
 
   async function handleGarminImport(event) {
     event.preventDefault();
-    if (!garminEmail.trim() || !garminPassword.trim()) return;
+    if (importingRef.current || wellnessSavingRef.current || !garminEmail.trim() || !garminPassword.trim()) return;
 
+    importingRef.current = true;
+    startingRef.current = true;
+    setGarminStarting(true);
+    setGarminImportDone(false);
     setGarminImporting(true);
     setGarminStatus('');
     setGarminStatusType('');
@@ -87,20 +143,22 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
           limit: garminLimit,
         }),
       });
+      if (!mountedRef.current) return;
 
       if (response.status === 409) {
         setGarminStatus(t('profile.garmin_connect_already_running'));
         setGarminStatusType('warn');
         setGarminImporting(false);
+        importingRef.current = false;
         return;
       }
-
-      void handleGarminSaveCredentials();
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || t('profile.garmin_connect_failed'));
       }
+      startingRef.current = false;
+      setGarminStarting(false);
 
       let attempts = 0;
       const maxAttempts = 120;
@@ -110,25 +168,30 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
           setGarminStatus(t('profile.garmin_connect_failed'));
           setGarminStatusType('error');
           setGarminImporting(false);
+          importingRef.current = false;
           return;
         }
         attempts += 1;
 
         try {
           const statusData = await apiJson('/api/garmin/connect/import/status');
+          if (!mountedRef.current) return;
           if (statusData.active) {
             setGarminStatus(
               statusData.importedRuns > 0
-                ? t('profile.garmin_connect_progress_count', { count: statusData.importedRuns })
+                ? t(embedded ? 'profile.garmin_v2_progress_count' : 'profile.garmin_connect_progress_count', { count: statusData.importedRuns })
                 : t('profile.garmin_connect_importing'),
             );
             setGarminStatusType('info');
-            setTimeout(poll, 2000);
+            schedulePoll(poll, 2000);
             return;
           }
 
           setGarminImporting(false);
+          importingRef.current = false;
           if (statusData.status === 'COMPLETED') {
+            setGarminImportDone(true);
+            invalidateResourceCache('/api/activities');
             if (statusData.importedRuns > 0) {
               setGarminStatus(
                 t('profile.garmin_connect_success')
@@ -143,74 +206,105 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
           } else if (statusData.status === 'FAILED') {
             setGarminStatus(statusData.message || t('profile.garmin_connect_failed'));
             setGarminStatusType('error');
+          } else {
+            setGarminStatus(t('profile.garmin_connect_failed'));
+            setGarminStatusType('error');
           }
         } catch {
-          setTimeout(poll, 3000);
+          schedulePoll(poll, 3000);
         }
       };
 
-      setTimeout(poll, 3000);
+      schedulePoll(poll, 3000);
     } catch (error) {
+      importingRef.current = false;
+      if (!mountedRef.current) return;
       setGarminStatus(error.message || t('profile.garmin_connect_failed'));
       setGarminStatusType('error');
       setGarminImporting(false);
+    } finally {
+      startingRef.current = false;
+      if (mountedRef.current) setGarminStarting(false);
     }
   }
 
   async function handleGarminWellnessToggle() {
+    if (wellnessSavingRef.current || garminWellnessLoading || importingRef.current) return;
+    const enabled = !garminWellnessSyncEnabled;
+    wellnessSavingRef.current = true;
+    setGarminWellnessSaving(true);
+    setGarminWellnessStatus('');
     try {
+      if (enabled && garminEmail.trim() && garminPassword.trim()) {
+        if (!await handleGarminSaveCredentials()) return;
+      } else if (enabled && !garminCredentialsSaved) {
+        setGarminWellnessStatus(t('profile.garmin_v2_credentials_required'));
+        return;
+      }
       await apiJson('/api/garmin/connect/wellness/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !garminWellnessSyncEnabled }),
+        body: JSON.stringify({ enabled }),
       });
-      setGarminWellnessSyncEnabled(!garminWellnessSyncEnabled);
+      if (mountedRef.current) setGarminWellnessSyncEnabled(enabled);
     } catch {
-      // Keep the surface stable if toggle fails.
+      if (mountedRef.current) setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
+    } finally {
+      wellnessSavingRef.current = false;
+      if (mountedRef.current) setGarminWellnessSaving(false);
     }
   }
 
   async function handleGarminWellnessSync() {
-    if (garminWellnessImporting) return;
+    if (wellnessImportingRef.current) return;
+    wellnessImportingRef.current = true;
     setGarminWellnessImporting(true);
     setGarminWellnessStatus('');
     try {
-      await apiFetch('/api/garmin/connect/wellness/import', {
+      const response = await apiFetch('/api/garmin/connect/wellness/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ daysBack: 30 }),
       });
+      if (!response.ok) throw new Error('Wellness import failed');
+      if (!mountedRef.current) return;
       let attempts = 0;
       const maxAttempts = 120;
       const poll = async () => {
         if (attempts >= maxAttempts) {
           setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
           setGarminWellnessImporting(false);
+          wellnessImportingRef.current = false;
           return;
         }
         attempts += 1;
         try {
           const data = await apiJson('/api/garmin/connect/wellness/status');
-          if (data.active) {
+          if (!mountedRef.current) return;
+          const status = data.syncStatus || {};
+          if (status.active) {
             setGarminWellnessStatus(t('profile.garmin_wellness_syncing'));
-            setTimeout(poll, 2500);
+            schedulePoll(poll, 2500);
             return;
           }
           setGarminWellnessImporting(false);
-          if (data.status === 'COMPLETED') {
+          wellnessImportingRef.current = false;
+          if (status.status === 'COMPLETED') {
             setGarminWellnessStatus(t('profile.garmin_wellness_success'));
-            if (data.lastSynced) setGarminWellnessLastSynced(data.lastSynced);
-          } else if (data.status === 'FAILED') {
+            if (data.lastSyncedAt) setGarminWellnessLastSynced(data.lastSyncedAt);
+          } else if (status.status === 'FAILED') {
             setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
-          } else if (data.status === 'NO_DATA') {
+          } else if (status.status === 'NO_DATA') {
             setGarminWellnessStatus(t('profile.garmin_wellness_no_data'));
           }
         } catch {
-          setTimeout(poll, 3000);
+          schedulePoll(poll, 3000);
         }
       };
-      setTimeout(poll, 2500);
+      schedulePoll(poll, 2500);
     } catch {
+      wellnessImportingRef.current = false;
+      if (!mountedRef.current) return;
       setGarminWellnessStatus(t('profile.garmin_wellness_failed'));
       setGarminWellnessImporting(false);
     }
@@ -348,19 +442,121 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
     </div>
   );
 
+  const garminCloseLocked = garminStarting || garminWellnessSaving || garminWellnessImporting;
+  const garminModalContent = (
+    <form className="garmin-v2" onSubmit={handleGarminImport}>
+      <div className="garmin-v2-privacy">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+          <rect x="5" y="10" width="14" height="11" rx="2" />
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+        </svg>
+        <span>{garminLane.credentialsNote}</span>
+      </div>
+
+      {garminImporting || garminImportDone || garminStatus ? (
+        <div
+          className={`garmin-v2-progress${garminImporting ? ' is-running' : ''}${garminStatusType === 'error' ? ' is-error' : ''}`}
+          role={garminStatusType === 'error' ? 'alert' : 'status'}
+          aria-live={garminStatusType === 'error' ? 'assertive' : 'polite'}
+        >
+          <strong>{garminStatus || t('profile.garmin_connect_importing')}</strong>
+          {garminImporting || garminImportDone ? <div className="garmin-v2-progress-bar" aria-hidden="true"><i /></div> : null}
+          {garminImporting && !garminStarting ? <small>{t('profile.garmin_v2_background_hint')}</small> : null}
+        </div>
+      ) : null}
+
+      {!garminImporting && !garminImportDone ? (
+        <>
+          <div className="garmin-v2-field">
+            <label htmlFor="garmin-v2-email">{t('profile.garmin_connect_email_label')}</label>
+            <input
+              id="garmin-v2-email"
+              type="email"
+              value={garminEmail}
+              onChange={(event) => setGarminEmail(event.target.value)}
+              placeholder="you@example.com"
+              autoComplete="username"
+              disabled={garminWellnessSaving}
+              required
+            />
+          </div>
+          <div className="garmin-v2-field">
+            <label htmlFor="garmin-v2-password">{t('profile.garmin_connect_password_label')}</label>
+            <span className="garmin-v2-password">
+              <input
+                id="garmin-v2-password"
+                type={garminShowPassword ? 'text' : 'password'}
+                value={garminPassword}
+                onChange={(event) => setGarminPassword(event.target.value)}
+                autoComplete="current-password"
+                disabled={garminWellnessSaving}
+                required
+              />
+              <button type="button" aria-pressed={garminShowPassword} aria-controls="garmin-v2-password" onClick={() => setGarminShowPassword((value) => !value)}>
+                {t(garminShowPassword ? 'profile.garmin_v2_hide' : 'profile.garmin_v2_show')}
+              </button>
+            </span>
+          </div>
+          <div className="garmin-v2-limit">
+            <div><span>{t('profile.garmin_connect_limit_label')}</span><small>{t('profile.garmin_v2_skip_hint')}</small></div>
+            <div className="garmin-v2-segmented" role="group" aria-label={t('profile.garmin_connect_limit_label')}>
+              {GARMIN_LIMIT_OPTIONS.map((value) => (
+                <button key={value} type="button" className={garminLimit === value ? 'is-active' : ''} aria-pressed={garminLimit === value} onClick={() => setGarminLimit(value)} disabled={garminWellnessSaving}>
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      <label className={`garmin-v2-wellness${garminWellnessSyncEnabled ? ' is-on' : ''}`}>
+        <span className="garmin-v2-wellness-copy">
+          <strong>{t('profile.garmin_v2_wellness_title')}</strong>
+          <span>{t('profile.garmin_v2_wellness_hint')}</span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          aria-label={t('profile.garmin_v2_wellness_title')}
+          checked={garminWellnessSyncEnabled}
+          onChange={handleGarminWellnessToggle}
+          disabled={garminWellnessLoading || garminWellnessSaving || garminImporting || (!garminWellnessSyncEnabled && !garminCredentialsSaved && (!garminEmail.trim() || !garminPassword.trim()))}
+        />
+        <span className="garmin-v2-switch" aria-hidden="true" />
+      </label>
+      {garminWellnessStatus ? <p className="garmin-v2-note" role="status" aria-live="polite">{garminWellnessStatus}</p> : null}
+
+      <div className="garmin-v2-footer">
+        <button type="button" className="garmin-v2-cancel" onClick={closeGarminImport} disabled={garminCloseLocked}>
+          {t(garminImporting ? 'profile.garmin_v2_continue_background' : garminImportDone ? 'profile.close' : 'profile.cancel')}
+        </button>
+        {garminImportDone ? (
+          <button type="button" className="garmin-v2-primary" disabled={garminCloseLocked} onClick={() => { closeGarminImport(); navigate('/runs'); }}>
+            {t('profile.garmin_v2_view_runs')}
+          </button>
+        ) : (
+          <button type="submit" className="garmin-v2-primary" disabled={garminImporting || garminWellnessSaving || !garminEmail.trim() || !garminPassword.trim()}>
+            {garminImporting ? t('profile.garmin_connect_importing') : t('profile.garmin_v2_start_count', { count: garminLimit })}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+
   if (embedded) {
     return (
       <Modal
         isOpen={embedded}
-        onClose={() => {
-          if (!garminImporting && !garminWellnessImporting) closeGarminImport();
-        }}
+        onClose={closeGarminImport}
         title={t('profile.garmin_connect_modal_title')}
         closeLabel={t('profile.close')}
-        shellClassName="settings-garmin-import-modal-shell"
-        cardClassName="settings-garmin-import-modal-card"
+        headerContent={<><div className="garmin-v2-mark" aria-hidden="true"><GarminMark /></div><span className="garmin-v2-kicker">{t('profile.garmin_v2_subtitle')}</span></>}
+        shellClassName="settings-garmin-import-modal-shell garmin-v2-shell"
+        cardClassName="settings-garmin-import-modal-card garmin-v2-card"
+        portalToBody
       >
-        <div className="settings-garmin-import-modal-content">{garminImportContent}</div>
+        {garminModalContent}
       </Modal>
     );
   }

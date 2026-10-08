@@ -69,13 +69,13 @@ assertMatches(
 [
   'shoe-inventory-grid',
   'shoe-inventory-card',
-  'shoe-inventory-card-metrics',
-  'shoe-inventory-card-side',
-  'shoe-inventory-manage-grid',
+  'shoe-v2-mileage',
+  'shoe-v2-menu-wrap',
+  'shoe-v2-toolbar',
   'shoes-profile-workspace',
-  'shoe-inventory-summary-strip',
-  'shoe-inventory-workspace-head',
-  'shoe-inventory-toolbar',
+  'shoe-v2-head-copy',
+  'shoe-v2-head',
+  'shoe-v2-search',
 ].forEach((className) => assertIncludes(shoesPage, className, 'Shoes page class hook'));
 
 assertIncludes(

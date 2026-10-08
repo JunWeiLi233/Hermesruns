@@ -15,15 +15,11 @@ export function AuthGoogleMark() {
 }
 
 export default function AuthPageLayout({ variant, title, description, children }) {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className={`auth-page auth-page--${variant} auth-page--liquid-glass auth-page--refined`} data-auth-redesign="command-entry">
       <AuthDotField />
-      <button type="button" className="auth-refined-language" aria-label={t('landing.studio_language')}
-          onClick={() => setLang(lang === 'zh-CN' ? 'en' : 'zh-CN')}>
-          {lang === 'zh-CN' ? 'EN' : '中文'}
-      </button>
       <main className="auth-flow-shell">
         <section className="auth-flow-brand">
           <div className="auth-flow-brand-inner">

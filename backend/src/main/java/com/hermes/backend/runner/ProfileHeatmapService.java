@@ -10,6 +10,7 @@ import com.hermes.backend.runner.ProfileModels.HeatmapBounds;
 import com.hermes.backend.runner.ProfileModels.HeatmapDiagnostics;
 import com.hermes.backend.runner.ProfileModels.HeatmapPage;
 import com.hermes.backend.runner.ProfileModels.HeatmapResponse;
+import com.hermes.backend.runner.ProfileModels.HeatmapViewportResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +36,8 @@ public class ProfileHeatmapService {
     private static final int HEATMAP_BOUNDS_SAMPLE_LIMIT = 20000;
     private static final int HEATMAP_BOUNDS_MIN_SAMPLES_FOR_TRIM = 50;
     private static final double HEATMAP_BOUNDS_TRIM_FRACTION = 0.02;
+    private static final double HEATMAP_VIEWPORT_CELL_PIXELS = 12;
+    private static final double MERCATOR_LATITUDE_LIMIT = 85.051129;
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
@@ -196,6 +199,21 @@ public class ProfileHeatmapService {
         return response;
     }
 
+    public HeatmapViewportResponse viewport(Runner runner, double south, double west, double north, double east, int zoom) {
+        if (!Double.isFinite(south) || !Double.isFinite(west) || !Double.isFinite(north) || !Double.isFinite(east)
+                || south < -MERCATOR_LATITUDE_LIMIT || north > MERCATOR_LATITUDE_LIMIT
+                || west < -180 || east > 180 || south >= north || west >= east || zoom < 0 || zoom > 20) {
+            throw new IllegalArgumentException("Invalid heatmap viewport bounds or zoom.");
+        }
+        double longitudeCellSize = 360.0 * HEATMAP_VIEWPORT_CELL_PIXELS / (256.0 * Math.pow(2, zoom));
+        double latitudeCellSize = longitudeCellSize * Math.cos(Math.toRadians((south + north) / 2));
+        List<Object[]> rows = activityPointRepository.findHeatmapSpatialPointsByRunnerAndType(
+                runner.getId(), ActivityType.RUN.name(), south, west, north, east,
+                latitudeCellSize, longitudeCellSize, DEFAULT_HEATMAP_SAMPLE_LIMIT / 2, DEFAULT_HEATMAP_SAMPLE_LIMIT
+        );
+        return new HeatmapViewportResponse(buildHeatPoints(filterValidHeatmapRows(rows)));
+    }
+
     private HeatmapBounds buildRobustBoundsFromSamples(List<Object[]> points) {
         if (points == null || points.isEmpty()) {
             return null;
@@ -333,7 +351,8 @@ public class ProfileHeatmapService {
                     toNullableDouble(point[1]),
                     toNullableDouble(point[2]),
                     1.0,
-                    speedRatio
+                    speedRatio,
+                    point.length > 6 ? Math.max(1, toLong(point[6])) : 0
             ));
         }
 
@@ -343,6 +362,12 @@ public class ProfileHeatmapService {
     private Double extractSegmentSpeed(Object[] point, boolean sameActivity, Double previousDistance, Integer previousElapsed) {
         if (point == null || point.length < 5) {
             return null;
+        }
+        // Spatial samples carry speed from the actual adjacent recorded point,
+        // rather than averaging across gaps between selected samples.
+        if (point.length > 7) {
+            Double segmentSpeed = toNullableDouble(point[7]);
+            return segmentSpeed != null && segmentSpeed > 0 ? segmentSpeed : null;
         }
         Double pointDistance = extractPointDistance(point);
         Integer pointElapsed = extractPointElapsed(point);

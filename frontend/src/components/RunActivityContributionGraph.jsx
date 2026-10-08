@@ -11,18 +11,23 @@ function formatMonth(date, lang) {
   return date ? date.toLocaleDateString(lang, { month: 'short' }) : '';
 }
 
-export default function RunActivityContributionGraph({ runs, status = 'ready', lang, t, action = null, activityType = 'run' }) {
+export default function RunActivityContributionGraph({ runs, status = 'ready', lang, t, action = null, activityType = 'run', weeks = 53, compact = false, referenceDate = null }) {
   const { unit } = useUnit();
-  const calendar = useMemo(() => buildRunActivityCalendar(runs), [runs]);
+  const calendarOptions = useMemo(() => ({
+    weeks,
+    ...(referenceDate ? { now: new Date(`${referenceDate}T12:00:00`) } : {}),
+  }), [referenceDate, weeks]);
+  const calendar = useMemo(() => buildRunActivityCalendar(runs, calendarOptions), [calendarOptions, runs]);
   const isMuscleActivity = activityType === 'muscle';
   const activeCalendar = useMemo(() => {
     if (!isMuscleActivity) return calendar;
     return buildRunActivityCalendar(runs, {
+      ...calendarOptions,
       resolveDate: (entry) => entry?.trainingDate ? new Date(`${entry.trainingDate}T12:00:00`) : null,
       resolveDistanceKm: () => 1,
       resolveLevel: (distanceKm, count) => (count > 0 ? 4 : 0),
     });
-  }, [calendar, isMuscleActivity, runs]);
+  }, [calendar, calendarOptions, isMuscleActivity, runs]);
   const copyKeys = isMuscleActivity
     ? {
       kicker: 'muscle_training.activity_kicker',
@@ -74,14 +79,14 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
   }, []);
 
   return (
-    <section className="st-activity-graph" aria-labelledby="st-run-activity-title">
+    <section className={`st-activity-graph${compact ? ' is-compact' : ''}`} aria-labelledby="st-run-activity-title">
       <div className="st-activity-graph-head">
         <div>
-          <p className="st-activity-kicker">{t(copyKeys.kicker)}</p>
-          <h2 id="st-run-activity-title" className="st-activity-title">{t(copyKeys.title)}</h2>
+          {!compact && <p className="st-activity-kicker">{t(copyKeys.kicker)}</p>}
+          <h2 id="st-run-activity-title" className="st-activity-title">{compact ? t('muscle_training.v3_history_title', { weeks }) : t(copyKeys.title)}</h2>
         </div>
         <div className="st-activity-head-actions">
-          <p className="st-activity-summary" aria-live="polite">{summary}</p>
+          <p className={`st-activity-summary${compact && !isLoading && !isUnavailable ? ' is-visually-hidden' : ''}`} aria-live="polite">{summary}</p>
           {action}
         </div>
       </div>
@@ -94,17 +99,17 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
             role="img"
             aria-label={`${t(copyKeys.title)}: ${summary}`}
           >
-            <div className="st-activity-weekday-labels" aria-hidden="true">
+            {!compact && <div className="st-activity-weekday-labels" aria-hidden="true">
               {weekdayLabels.map((label, index) => (
                 <span key={label}>{index % 2 === 0 ? label : ''}</span>
               ))}
-            </div>
+            </div>}
             <div>
-              <div className="st-activity-months" aria-hidden="true">
+              {!compact && <div className="st-activity-months" aria-hidden="true">
                 {activeCalendar.monthLabels.map((month, index) => (
                   <span key={`${activeCalendar.weeks[index].key}-month`}>{formatMonth(month, lang)}</span>
                 ))}
-              </div>
+              </div>}
               <div className="st-activity-weeks" aria-hidden="true">
                 {activeCalendar.weeks.map((week) => (
                   <div key={week.key} className="st-activity-week">
@@ -140,11 +145,11 @@ export default function RunActivityContributionGraph({ runs, status = 'ready', l
         </div>
       )}
 
-      <div className="st-activity-legend" aria-hidden="true">
+      {!compact && <div className="st-activity-legend" aria-hidden="true">
         <span>{t(copyKeys.less)}</span>
         {[0, 1, 2, 3, 4].map((level) => <span key={level} className="st-activity-cell" data-level={level} />)}
         <span>{t(copyKeys.more)}</span>
-      </div>
+      </div>}
     </section>
   );
 }

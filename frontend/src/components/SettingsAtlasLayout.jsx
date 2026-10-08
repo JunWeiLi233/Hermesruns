@@ -312,6 +312,28 @@ export default function SettingsAtlasLayout({
           </div>
         </div>
 
+        {/* Sync health */}
+        <div className="st-sync-section">
+          <strong className="st-sync-title">{t('settings.stitch_sync_health_title')}</strong>
+          <div className="st-sync-list">
+            {syncHealthItems.map((item) => (
+              <div key={item.key} className="st-sync-row">
+                <div className="st-sync-copy">
+                  <strong>{item.label}</strong>
+                  <span>{item.value}</span>
+                </div>
+                <span className={`st-sync-pill is-${item.tone}`}>
+                  {item.tone === 'live'
+                    ? t('settings.stitch_connected_short')
+                    : item.tone === 'ready'
+                      ? t('settings.stitch_ready_short')
+                      : t('settings.stitch_review')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="st-services-grid">
           {/* Strava */}
           <div className={`st-service-card${stravaConnected ? ' is-connected' : ''}`}>
@@ -323,6 +345,8 @@ export default function SettingsAtlasLayout({
                 <strong>STRAVA</strong>
                 <span>{stravaLabel}</span>
               </div>
+            </div>
+            <div className="st-service-actions">
               <button
                 type="button"
                 className={`settings-atlas-service-action${stravaConnected ? '' : ' is-connect'}`}
@@ -346,13 +370,6 @@ export default function SettingsAtlasLayout({
                 <strong>{garminLane.title}</strong>
                 <span>{garminLane.summary}</span>
               </div>
-              <button
-                type="button"
-                className="st-service-btn is-connect"
-                onClick={onOpenGarminImport}
-              >
-                {garminLane.primaryAction}
-              </button>
             </div>
             <div className="st-service-meta">
               <div className="st-service-stat">
@@ -368,30 +385,18 @@ export default function SettingsAtlasLayout({
                 <strong>{garminLane.manualValue}</strong>
               </button>
             </div>
+            <div className="st-service-actions">
+              <button
+                type="button"
+                className="st-service-btn is-connect"
+                onClick={onOpenGarminImport}
+              >
+                {garminLane.primaryAction}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Sync health */}
-        <div className="st-sync-section">
-          <strong className="st-sync-title">{t('settings.stitch_sync_health_title')}</strong>
-          <div className="st-sync-list">
-            {syncHealthItems.map((item) => (
-              <div key={item.key} className="st-sync-row">
-                <div className="st-sync-copy">
-                  <strong>{item.label}</strong>
-                  <span>{item.value}</span>
-                </div>
-                <span className={`st-sync-pill is-${item.tone}`}>
-                  {item.tone === 'live'
-                    ? t('settings.stitch_connected_short')
-                    : item.tone === 'ready'
-                      ? t('settings.stitch_ready_short')
-                      : t('settings.stitch_review')}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ── Wellness ── */}

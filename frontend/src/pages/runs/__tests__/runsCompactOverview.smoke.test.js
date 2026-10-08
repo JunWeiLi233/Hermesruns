@@ -10,8 +10,8 @@ const finalCascadeStyle = readFileSync(path.join(here, "../../../styles/analysis
 
 assert.match(
   runsSource,
-  /runs-profile-cockpit__heading[\s\S]*runs-profile-glance[\s\S]*runs-profile-workbench__filters[\s\S]*recent-runs-card-list/,
-  'Runs should present a compact command header, glance rail, unified filters, and history in that order.',
+  /runs-ledger-v2__heading[\s\S]*runs-ledger-v2__summary[\s\S]*runs-ledger-v2__toolbar[\s\S]*recent-runs-card-list/,
+  'Runs should present the header, summary, unified filters, and history in that order.',
 );
 
 assert.match(

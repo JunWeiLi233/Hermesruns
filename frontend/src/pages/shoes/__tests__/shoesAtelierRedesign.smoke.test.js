@@ -83,23 +83,23 @@ assert.match(
 );
 
 [
-  'shellClassName="shoe-edit-modal-shell"',
-  'cardClassName="shoe-edit-modal-card"',
-  'className="shoe-edit-modal-form"',
-  'className="shoe-edit-modal-fields"',
-  'className="shoe-edit-field shoe-edit-field--wide"',
-  'className="shoe-edit-primary-toggle shoe-checkbox-label"',
-  'className="shoe-edit-modal-actions modal-actions"',
+  'shellClassName="shoe-edit-modal-shell edit-v2-shell"',
+  'cardClassName="shoe-edit-modal-card edit-v2-card"',
+  'className="shoe-edit-modal-form edit-v2"',
+  'className="edit-v2-row"',
+  'className="edit-v2-field"',
+  'className="edit-v2-switch"',
+  'className="edit-v2-footer"',
 ].forEach((snippet) => assertIncludes(shoesSource, snippet, 'Shoes edit modal redesign JSX'));
 
 [
   'shellClassName="shoe-photo-modal-shell"',
-  'cardClassName="shoe-photo-modal-card"',
-  'className="shoe-photo-studio"',
-  'className="shoe-photo-studio-layout"',
-  'className="shoe-photo-studio-preview-panel"',
-  'className="shoe-photo-studio-tool-panel"',
-  'className="shoe-photo-studio-search-panel"',
+  'cardClassName="shoe-photo-modal-card shoe-photo-picker-card"',
+  'className="shoe-photo-picker"',
+  'className="shoe-photo-picker-tabbar"',
+  'className="shoe-photo-picker-body"',
+  'className="shoe-photo-picker-footer"',
+  'className="shoe-photo-picker-search"',
 ].forEach((snippet) => assertIncludes(shoesSource, snippet, 'Shoes photo modal redesign JSX'));
 
 assert.doesNotMatch(

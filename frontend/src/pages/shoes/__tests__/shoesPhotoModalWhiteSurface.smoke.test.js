@@ -6,38 +6,12 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (relativePath) => readFileSync(path.join(here, relativePath), 'utf8');
 const source = read('../Shoes.jsx');
-const whiteSurfaceStyles = read('../../../styles/grid-cards-white.css');
+const pickerStyles = read('../../../styles/shoe-photo-picker-v2.css');
 
-assert.match(source, /className="shoe-photo-studio-hero"/, 'Shoes photo modal should keep its hero grid hook');
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card\s*\{[\s\S]*background: #fff !important;[\s\S]*background-image: none !important;/,
-  'Shoes photo modal should use a solid white light-theme surface',
-);
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card \.shoe-photo-studio-hero\s*\{[\s\S]*background: #fff !important;[\s\S]*background-image: none !important;/,
-  'Shoes photo modal hero grid should use a solid white light-theme surface',
-);
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card \.shoe-photo-studio-input\s*\{[\s\S]*background: #eef0f1 !important;[\s\S]*background-image: none !important;/,
-  'Shoes photo modal inputs should use a light-grey light-theme surface',
-);
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card \.shoe-photo-studio-title h3\s*\{[\s\S]*color: var\(--runner-profile-ink, #2c2f30\) !important;/,
-  'Shoes photo modal hero title should remain readable on the white surface',
-);
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card \.shoe-photo-studio-hero::after\s*\{[\s\S]*content: none !important;[\s\S]*display: none !important;[\s\S]*background: none !important;/,
-  'Shoes photo modal hero should not render the decorative circle on the white surface',
-);
-assert.match(
-  whiteSurfaceStyles,
-  /body:is\(\.theme-light, \.theme-high-contrast-light\) #root \.shoe-photo-modal-card \.shoe-photo-studio-upload\s*\{[\s\S]*background: #eef0f1 !important;[\s\S]*background-image: none !important;/,
-  'Shoes photo modal local-upload card should use a solid light-grey surface',
-);
+assert.match(source, /cardClassName="shoe-photo-modal-card shoe-photo-picker-card"/, 'Shoes should retain the v2 photo picker');
+assert.match(pickerStyles, /\.shoe-photo-modal-card\.shoe-photo-picker-card\s*\{[^}]*--picker-surface:\s*#fff;[^}]*background:\s*var\(--picker-surface\);/, 'The light-theme picker should have a white surface');
+assert.match(pickerStyles, /\.shoe-photo-picker-input\s*\{[^}]*background:\s*var\(--picker-fill\);/, 'Picker inputs should retain their contrasting fill');
+assert.match(pickerStyles, /\.shoe-photo-picker-card \.modal-header h3\s*\{[^}]*color:\s*var\(--picker-ink\);/, 'Picker headings should retain readable theme colors');
+assert.match(pickerStyles, /body:not\(\.theme-light\):not\(\.theme-high-contrast-light\)[\s\S]*?--picker-surface:\s*var\(--profile-night-solid/, 'Dark mode should retain its solid picker surface');
 
 console.log('shoesPhotoModalWhiteSurface smoke test passed');

@@ -90,6 +90,7 @@ if (-not (Test-Path -Path $MAVEN_M2_PATH)) {
 
 $MAVEN_WRAPPER_DISTS = $null
 $MAVEN_M2_TARGET = (Get-Item $MAVEN_M2_PATH).Target
+$MAVEN_M2_TARGET = @($MAVEN_M2_TARGET) | Select-Object -First 1
 if (-not $MAVEN_M2_TARGET) {
   $MAVEN_WRAPPER_DISTS = "$MAVEN_M2_PATH/wrapper/dists"
 } else {

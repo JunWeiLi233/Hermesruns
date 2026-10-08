@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { apiJson } from '../../api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,14 +8,13 @@ import { useUnit } from '../../contexts/UnitContext';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
-import MuscleHeatmap from '../../components/MuscleHeatmap';
 import RunActivityContributionGraph from '../../components/RunActivityContributionGraph';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import PageSkeleton from '../../components/PageSkeleton';
-import { muscleSlugsForExercise } from '../../utils/muscleSlugMapper';
+import { buildStrengthWeekCoverage, summarizeStrengthActivity } from './strengthWeek';
 import targetArmsUrl from '../../assets/muscle-training/target-arms.webp';
 import targetBackUrl from '../../assets/muscle-training/target-back.webp';
 import targetChestUrl from '../../assets/muscle-training/target-chest.webp';
@@ -198,24 +197,6 @@ const TOP_MUSCLE_SELECTOR_SLUG_TARGETS = new Map([
   ['adductors', 'legs'],
   ['tibialis', 'legs'],
 ]);
-
-function buildTopMuscleSelectorData(activeTarget) {
-  const activeSlugs = TOP_MUSCLE_SELECTOR_GROUPS[activeTarget] || TOP_MUSCLE_SELECTOR_GROUPS.legs;
-  return activeSlugs.map((slug) => ({
-    slug,
-    intensity: 3,
-    styles: {
-      fill: 'var(--mtpa-muscle-active-fill)',
-      stroke: 'var(--mtpa-muscle-active-stroke)',
-      strokeWidth: 1.65,
-      opacity: 0.94,
-    },
-  }));
-}
-
-function resolveTopMuscleTargetFromSlug(slug) {
-  return TOP_MUSCLE_SELECTOR_SLUG_TARGETS.get(slug) || '';
-}
 
 const EXERCISE_VIDEO_EMBEDS = {
   'barbell-bench-press': 'https://www.youtube-nocookie.com/embed/0cXAp6WhSj4',
@@ -828,38 +809,6 @@ function getProtocolItemKey(item) {
   return `${item.block?.title || 'block'}-${item.exercise?.name || 'exercise'}-${item.globalIndex ?? item.exerciseIndex ?? 0}`;
 }
 
-function createLibraryProtocolItem(targetKey, definition, exerciseIndex, globalIndex = 0) {
-  return {
-    source: 'library',
-    targetKey,
-    libraryKey: definition.key,
-    block: { title: 'COMPOUND_LIBRARY' },
-    blockIndex: 999,
-    exercise: definition.exercise,
-    exerciseIndex,
-    globalIndex,
-    libraryContent: definition.content,
-  };
-}
-
-function exerciseMatchesTargetArea(exercise, isZh, targetKey) {
-  if (targetKey === 'all') return true;
-  const group = TARGET_AREA_GROUPS.find((item) => item.key === targetKey);
-  if (!group) return false;
-  const exerciseCopy = getExerciseCardContent(exercise, isZh);
-  const haystack = [
-    exercise?.name,
-    exercise?.equipment,
-    exercise?.equipmentNeeded,
-    exercise?.intent,
-    exercise?.tempoOrIntent,
-    ...(exerciseCopy?.muscles || []),
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return group.match.test(haystack);
-}
-
 const EXERCISE_LIBRARY = {
   'Hip airplanes': {
     name: { zh: '髋飞机', en: 'Hip airplanes' },
@@ -1451,10 +1400,11 @@ function pickLabel(map, key, fallback = '-') {
   return map[key] || fallback || key;
 }
 
-function pickStrengthSessionLabel(copy, sessionType, fallback = '') {
+function pickStrengthSessionLabel(copy, sessionType, fallback = '', compact = false) {
   const custom = parseCustomStrengthSessionType(sessionType);
-  if (!custom) return pickLabel(copy.sessionEmphasis, sessionType, fallback);
+  if (!custom) return pickLabel(copy.sessionTypes, sessionType, fallback);
   const focusLabel = pickLabel(copy.strengthFocusOptions, custom.focus, custom.focus);
+  if (compact) return pickLabel(copy.weekStrengthFocus, custom.focus, focusLabel);
   const doseLabel = pickLabel(copy.strengthDoseOptions, custom.dose, custom.dose);
   return [focusLabel, doseLabel].filter(Boolean).join(' · ');
 }
@@ -1535,17 +1485,11 @@ function getExerciseContentForItem(item, isZh) {
   return getExerciseCardContent(item?.exercise, isZh);
 }
 
-function getExerciseHeatmapSlugs(item, exerciseCopy) {
-  const possibleKeys = [
-    item?.libraryKey,
-    normalizeExerciseName(item?.exercise?.name),
-    slugExerciseName(item?.exercise?.name),
-  ].filter(Boolean);
-  const explicitSlugs = possibleKeys.map((key) => EXERCISE_HEATMAP_SLUGS[key]).find(Boolean);
-  return explicitSlugs || muscleSlugsForExercise(exerciseCopy.muscles || []);
-}
-
 function getExerciseVideoUrl(name) {
+  const videoEmbed = EXERCISE_VIDEO_EMBEDS[slugExerciseName(name)];
+  if (videoEmbed) {
+    return `https://www.youtube.com/watch?v=${videoEmbed.split('/').pop()}`;
+  }
   const queries = {
     'Hip airplanes': 'hip airplanes exercise demo',
     'Calf raises (slow tempo)': 'slow tempo calf raise exercise demo',
@@ -1594,21 +1538,6 @@ function resolveExerciseReferenceImage(item, fallbackImage = targetLegsUrl) {
   return imageKey ? EXERCISE_REFERENCE_IMAGES[imageKey] : fallbackImage;
 }
 
-function getExerciseVideoEmbedUrl(item) {
-  if (!item) return '';
-  if (item.source === 'library' && item.libraryKey) {
-    return EXERCISE_VIDEO_EMBEDS[item.libraryKey] || '';
-  }
-  return EXERCISE_VIDEO_EMBEDS[slugExerciseName(item.exercise?.name)] || '';
-}
-
-function resolveTargetAreaKeyForItem(item, isZh) {
-  if (item?.targetKey) return item.targetKey;
-  const exercise = item?.exercise;
-  const targetGroup = TARGET_AREA_GROUPS.find((group) => exerciseMatchesTargetArea(exercise, isZh, group.key));
-  return targetGroup?.key || 'legs';
-}
-
 export default function MuscleTraining() {
   const { isAuthenticated } = useAuth();
   const { lang, t } = useI18n();
@@ -1626,13 +1555,11 @@ export default function MuscleTraining() {
   const [muscleActivityState, setMuscleActivityState] = useState('loading');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [shellProfile, setShellProfile] = useState(null);
-  const [activeTarget, setActiveTarget] = useState('all');
-  const [selectedExerciseKey, setSelectedExerciseKey] = useState('');
-  const [expandedExerciseIdx, setExpandedExerciseIdx] = useState(null);
-  const [selectedMuscleTarget, setSelectedMuscleTarget] = useState('legs');
   const [recommendedArea, setRecommendedArea] = useState(null);
   const [recommendedReasonCode, setRecommendedReasonCode] = useState(null);
-  const userOverrideRef = useRef(false);
+  const [selectedWeekDate, setSelectedWeekDate] = useState(null);
+  const [openWeekExerciseKey, setOpenWeekExerciseKey] = useState(null);
+  const [isSessionStarted, setIsSessionStarted] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1684,6 +1611,13 @@ export default function MuscleTraining() {
       MICRO: t('muscle_training.strength_dose_micro'),
       STANDARD: t('muscle_training.strength_dose_standard'),
       STRONG: t('muscle_training.strength_dose_strong'),
+    },
+    weekStrengthFocus: {
+      LEG_DAY: t('muscle_training.v3_session_legs_hips'),
+      POSTERIOR_CHAIN: t('muscle_training.v3_session_posterior_chain'),
+      CALVES_ANKLES: t('muscle_training.v3_session_calves_ankles'),
+      CORE_STABILITY: t('muscle_training.v3_session_core'),
+      MOBILITY_RESET: t('muscle_training.v3_session_mobility'),
     },
     planSourceLabel: t('muscle_training.plan_source_label'),
     sourcePills: {
@@ -1876,31 +1810,52 @@ export default function MuscleTraining() {
     [plan],
   );
   const todayPlan = useMemo(() => (plan?.days || [])[0] || null, [plan]);
+  useEffect(() => { setIsSessionStarted(false); }, [todayPlan?.date]);
   const gridStrengthDay = strengthCoachDecision?.appliedDate
     ? (plan?.days || []).find((day) => (
       day.date === strengthCoachDecision.appliedDate && day.strength
     )) || todayPlan
     : todayPlan;
   const featuredDay = todayPlan;
-  const featuredSession = useMemo(
-    () => (gridStrengthDay?.strength ? sessionByType.get(gridStrengthDay.strength.sessionType) : null),
-    [gridStrengthDay, sessionByType],
-  );
-  const protocolItems = useMemo(() => {
+  // Strength week (v2): the 7-day plan window with runs + strength slots.
+  const weekPlanDays = useMemo(() => (plan?.days || []).map((day, index) => {
+    const session = day.strength ? sessionByType.get(day.strength.sessionType) : null;
     const items = [];
-    (featuredSession?.blocks || []).forEach((block, blockIndex) => {
+    (session?.blocks || []).forEach((block, blockIndex) => {
       (block.exercises || []).forEach((exercise, exerciseIndex) => {
-        items.push({
-          block,
-          blockIndex,
-          exercise,
-          exerciseIndex,
-          globalIndex: items.length,
-        });
+        items.push({ block, blockIndex, exercise, exerciseIndex, globalIndex: items.length });
       });
     });
-    return items;
-  }, [featuredSession]);
+    let weekday;
+    try {
+      weekday = new Intl.DateTimeFormat(displayLang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'short' }).format(new Date(`${day.date}T12:00:00`));
+    } catch { weekday = ''; }
+    return {
+      date: day.date,
+      isToday: index === 0,
+      weekday,
+      dateLabel: new Date(`${day.date}T12:00:00`).getDate(),
+      runLabel: day.run
+        ? [pickLabel(copy.workoutTypes, day.run.workoutType, ''), day.run.plannedDistanceKm ? formatDistance(day.run.plannedDistanceKm, isZh, isMile) : null].filter(Boolean).join(' ')
+        : null,
+      strength: day.strength
+        ? {
+          label: pickStrengthSessionLabel(copy, day.strength.sessionType, day.strength.sessionType, true),
+          minutes: day.strength.durationMinutes || null,
+        }
+        : null,
+      items,
+    };
+  }), [copy, displayLang, isMile, isZh, plan, sessionByType]);
+
+  const activeWeekDay = useMemo(() => {
+    if (!weekPlanDays.length) return null;
+    return weekPlanDays.find((day) => day.date === selectedWeekDate)
+      || weekPlanDays.find((day) => day.date === gridStrengthDay?.date)
+      || weekPlanDays[0];
+  }, [gridStrengthDay, selectedWeekDate, weekPlanDays]);
+
+  const weekStrengthCount = weekPlanDays.filter((day) => day.strength).length;
   const stitchCopy = useMemo(() => ({
     dashboard: t('muscle_training.stitch_dashboard'),
     analysis: t('muscle_training.stitch_analysis'),
@@ -2026,6 +1981,16 @@ export default function MuscleTraining() {
     recommendedLabel: t('muscle_training.stitch_recommended_label'),
   }), [t]);
 
+  const weekCoverage = useMemo(() => buildStrengthWeekCoverage(
+    weekPlanDays,
+    (item) => getExerciseContentForItem(item, isZh).muscles,
+  ).map((area) => ({ ...area, label: t(`muscle_training.v3_coverage_${area.key}`) })), [isZh, t, weekPlanDays]);
+  const weekCoverageMax = Math.max(1, weekStrengthCount);
+  const activitySummary = useMemo(
+    () => summarizeStrengthActivity(muscleCheckIns, todayPlan?.date),
+    [muscleCheckIns, todayPlan?.date],
+  );
+
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey: 'muscle' }),
     [t, lang],
@@ -2086,178 +2051,11 @@ export default function MuscleTraining() {
     return t('muscle_training.coach_narrative_no_strength_default');
   }, [copy, displayLang, featuredDay, isZh, t, isMile, plan]);
 
-  const targetAreaCards = useMemo(() => {
-    return TARGET_AREA_GROUPS.map((group) => ({
-      ...group,
-      label: stitchCopy[group.copyKey],
-      planCount: protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, group.key)).length,
-      libraryCount: COMPOUND_TARGET_LIBRARY[group.key]?.length || 0,
-      count: protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, group.key)).length
-        + (COMPOUND_TARGET_LIBRARY[group.key]?.length || 0),
-    }));
-  }, [isZh, protocolItems, stitchCopy]);
-
-  const filteredProtocolItems = useMemo(() => {
-    if (activeTarget === 'all') return protocolItems;
-    return protocolItems.filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, activeTarget));
-  }, [activeTarget, isZh, protocolItems]);
-
-  const libraryProtocolItems = useMemo(() => {
-    const targetKeys = activeTarget === 'all'
-      ? TARGET_AREA_GROUPS.map((group) => group.key)
-      : [activeTarget];
-    let globalIndex = protocolItems.length;
-    return targetKeys.flatMap((targetKey) => (COMPOUND_TARGET_LIBRARY[targetKey] || [])
-      .map((definition, exerciseIndex) => createLibraryProtocolItem(
-        targetKey,
-        definition,
-        exerciseIndex,
-        globalIndex++,
-      )));
-  }, [activeTarget, protocolItems.length]);
-
-  const visibleExerciseItems = useMemo(() => [
-    ...filteredProtocolItems.map((item) => ({ ...item, source: 'plan' })),
-    ...libraryProtocolItems,
-  ], [filteredProtocolItems, libraryProtocolItems]);
-
-  const buildTopRecommendationItems = useCallback((targetKey) => {
-    const planItems = protocolItems
-      .filter(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey))
-      .map((item) => ({ ...item, source: 'plan', targetKey }));
-    const libraryItems = (COMPOUND_TARGET_LIBRARY[targetKey] || [])
-      .map((definition, exerciseIndex) => createLibraryProtocolItem(
-        targetKey,
-        definition,
-        exerciseIndex,
-        protocolItems.length + exerciseIndex,
-      ));
-    return [...planItems, ...libraryItems].slice(0, 5);
-  }, [isZh, protocolItems]);
-
-  const topRecommendationItems = useMemo(
-    () => buildTopRecommendationItems(selectedMuscleTarget),
-    [buildTopRecommendationItems, selectedMuscleTarget],
-  );
-
-  const topMuscleSelectorData = useMemo(
-    () => buildTopMuscleSelectorData(selectedMuscleTarget),
-    [selectedMuscleTarget],
-  );
-
-  const selectedProtocolItem = useMemo(() => (
-    visibleExerciseItems.find((item) => getProtocolItemKey(item) === selectedExerciseKey)
-    || visibleExerciseItems[0]
-    || null
-  ), [selectedExerciseKey, visibleExerciseItems]);
-
-  const selectedExerciseCopy = useMemo(
-    () => (selectedProtocolItem ? getExerciseContentForItem(selectedProtocolItem, isZh) : null),
-    [isZh, selectedProtocolItem],
-  );
-
-  const selectedExerciseVideoUrl = useMemo(
-    () => getExerciseVideoEmbedUrl(selectedProtocolItem),
-    [selectedProtocolItem],
-  );
-
-  const selectedRailTargetKey = useMemo(
-    () => resolveTargetAreaKeyForItem(selectedProtocolItem, isZh),
-    [isZh, selectedProtocolItem],
-  );
-
-  const selectedMuscleTargetCard = useMemo(
-    () => targetAreaCards.find((target) => target.key === selectedMuscleTarget) || targetAreaCards.find((target) => target.key === 'legs'),
-    [selectedMuscleTarget, targetAreaCards],
-  );
-
-  const selectedRailTargetCard = useMemo(
-    () => targetAreaCards.find((target) => target.key === selectedRailTargetKey)
-      || targetAreaCards.find((target) => target.key === selectedMuscleTarget)
-      || targetAreaCards.find((target) => target.key === 'legs'),
-    [selectedMuscleTarget, selectedRailTargetKey, targetAreaCards],
-  );
-
-  const topReferenceImage = resolveExerciseReferenceImage(
-    selectedProtocolItem,
-    selectedMuscleTargetCard?.image || targetLegsUrl,
-  );
-
-  const selectedExerciseReferenceImage = useMemo(
-    () => resolveExerciseReferenceImage(
-      selectedProtocolItem,
-      selectedRailTargetCard?.image || targetLegsUrl,
-    ),
-    [selectedProtocolItem, selectedRailTargetCard],
-  );
-
-  function handleTargetAreaSelect(targetKey) {
-    const nextTargetKey = targetKey === 'all' ? 'legs' : targetKey;
-    setActiveTarget(targetKey);
-    setSelectedMuscleTarget(nextTargetKey);
-    setExpandedExerciseIdx(null);
-    const nextPlanItem = targetKey === 'all'
-      ? protocolItems[0]
-      : protocolItems.find(({ exercise }) => exerciseMatchesTargetArea(exercise, isZh, targetKey));
-    const nextLibraryDefinition = targetKey === 'all'
-      ? COMPOUND_TARGET_LIBRARY[TARGET_AREA_GROUPS[0].key]?.[0]
-      : COMPOUND_TARGET_LIBRARY[targetKey]?.[0];
-    const nextItem = nextPlanItem || (
-      nextLibraryDefinition
-        ? createLibraryProtocolItem(targetKey === 'all' ? TARGET_AREA_GROUPS[0].key : targetKey, nextLibraryDefinition, 0, protocolItems.length)
-        : null
-    );
-    const nextKey = getProtocolItemKey(nextItem);
-    setSelectedExerciseKey(nextKey);
-    window.setTimeout(() => {
-      if (nextKey) document.getElementById(`mt-exercise-${nextKey}`)?.focus();
-    }, 0);
-  }
-
-  function handleExerciseSelect(item) {
-    const nextTargetKey = resolveTargetAreaKeyForItem(item, isZh);
-    if (nextTargetKey !== 'all') {
-      setSelectedMuscleTarget(nextTargetKey);
-    }
-    setSelectedExerciseKey(getProtocolItemKey(item));
-  }
-
-  function handleTopMuscleSelect(targetKey) {
-    userOverrideRef.current = true;
-    const nextItems = buildTopRecommendationItems(targetKey);
-    setSelectedMuscleTarget(targetKey);
-    setActiveTarget(targetKey);
-    setExpandedExerciseIdx(null);
-    if (nextItems[0]) {
-      setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
-    }
-  }
-
-  function handleTopExerciseSelect(item) {
-    const nextTargetKey = item.targetKey || selectedMuscleTarget;
-    setSelectedMuscleTarget(nextTargetKey);
-    setActiveTarget(nextTargetKey);
-    setSelectedExerciseKey(getProtocolItemKey(item));
-  }
-
-  useEffect(() => {
-    if (activeTarget === 'all') return;
-    if (targetAreaCards.some((target) => target.key === activeTarget)) return;
-    setActiveTarget('all');
-  }, [activeTarget, targetAreaCards]);
-
-  useEffect(() => {
-    if (selectedExerciseKey && visibleExerciseItems.some((item) => getProtocolItemKey(item) === selectedExerciseKey)) return;
-    setSelectedExerciseKey(getProtocolItemKey(visibleExerciseItems[0]));
-  }, [selectedExerciseKey, visibleExerciseItems]);
-
   const applyLoadedData = useCallback((nextPlan) => {
     setPlan(nextPlan);
     setCheckInDraft(buildCheckInDraft(nextPlan));
 
-    // Today's recommended muscle area comes from the backend plan. Apply it as
-    // the default anatomy selection on first load (so the heatmap + chip auto-
-    // highlight the coach's pick) unless the user has already chosen manually.
+    // Keep the recommendation banner aligned with the backend coach decision.
     const coachDecision = resolveStrengthCoachGridDecision(nextPlan);
     const area = coachDecision.displayFocus;
     const reason = area === nextPlan?.recommendedMuscleArea
@@ -2265,17 +2063,6 @@ export default function MuscleTraining() {
       : null;
     setRecommendedArea(area || null);
     setRecommendedReasonCode(reason || null);
-    if (area && !userOverrideRef.current) {
-      const targetKey = coachDecision.targetKey;
-      const nextItems = buildTopRecommendationItems(targetKey);
-      setSelectedMuscleTarget(targetKey);
-      setActiveTarget(targetKey);
-      setExpandedExerciseIdx(null);
-      if (nextItems[0]) {
-        setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- buildTopRecommendationItems omitted to prevent infinite re-render loop
   }, []);
 
   function applyPlanOnly(nextPlan) {
@@ -2288,16 +2075,6 @@ export default function MuscleTraining() {
     setCheckInDraft(buildCheckInDraft(nextPlan, isMile));
     setRecommendedArea(area || null);
     setRecommendedReasonCode(reason || null);
-    userOverrideRef.current = false;
-    if (area) {
-      const nextItems = buildTopRecommendationItems(coachDecision.targetKey);
-      setSelectedMuscleTarget(coachDecision.targetKey);
-      setActiveTarget(coachDecision.targetKey);
-      setExpandedExerciseIdx(null);
-      if (nextItems[0]) {
-        setSelectedExerciseKey(getProtocolItemKey(nextItems[0]));
-      }
-    }
   }
 
   useEffect(() => {
@@ -2362,6 +2139,7 @@ export default function MuscleTraining() {
         apiJson('/api/training/muscle/check-ins').catch(() => null),
       ]);
       applyPlanOnly(nextPlan);
+      setIsSessionStarted(false);
       if (Array.isArray(nextCheckIns)) setMuscleCheckIns(nextCheckIns);
       setCheckInNotice(copy.checkInSaved);
     } catch (cause) {
@@ -2448,7 +2226,7 @@ export default function MuscleTraining() {
           <div className="mt-content">
 
         {loading && <div className="muscle-training-loading-skeleton" role="status" aria-live="polite" aria-busy="true">{copy.loading}</div>}
-        {!loading && error && <div className="error-alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
+        {!loading && error && !plan && <div className="error-alert" role="alert" style={{ display: 'block', marginTop: 18 }}>{error}</div>}
 
         {!loading && !error && !plan && (
           <div className="mt-coach-empty">
@@ -2458,387 +2236,193 @@ export default function MuscleTraining() {
           </div>
         )}
 
-        {!loading && !error && plan && (
+        {!loading && plan && (
           <>
             <section
-              className="mt-top-workbench"
-              aria-labelledby="mt-top-muscle-title"
+              className="mt-top-workbench mt-week-v2"
+              aria-labelledby="mt-week-title"
               data-strength-algorithm={strengthCoachDecision?.algorithmVersion || undefined}
               data-strength-focus={strengthCoachDecision?.appliedFocus || undefined}
               data-strength-dose={strengthCoachDecision?.appliedDose || undefined}
               data-strength-safety-action={strengthCoachDecision?.safetyAction || undefined}
+              data-strength-recommended-area={recommendedArea || undefined}
+              data-strength-recommendation-reason={recommendedReasonCode || undefined}
             >
-              <article className="mt-top-panel mt-top-muscle-card">
-                <div className="mt-top-panel-head">
-                  <h2 id="mt-top-muscle-title">{stitchCopy.topMuscleTitle}</h2>
+              <div className="mt-week-v2-head">
+                <div>
+                  <span className="mt-kicker">{t('muscle_training.v3_week_kicker', { date: formatShortDate(weekPlanDays[0]?.date, displayLang), count: weekStrengthCount })}</span>
+                  <h1 id="mt-week-title">{t('muscle_training.v2_week_title')}</h1>
                 </div>
-                <div className="mt-muscle-visual-shell">
-                  <div className="mt-muscle-visual mt-muscle-visual--svg">
-                    <MuscleHeatmap
-                      data={topMuscleSelectorData}
-                      side="both"
-                      scale={0.64}
-                      ariaLabel={stitchCopy.topMuscleTitle}
-                      frontLabel={t('common.heatmap_front')}
-                      backLabel={t('common.heatmap_back')}
-                      onMuscleClick={(part) => {
-                        const targetKey = resolveTopMuscleTargetFromSlug(part?.slug);
-                        if (targetKey) handleTopMuscleSelect(targetKey);
-                      }}
-                    />
-                  </div>
-                </div>
-                {recommendedArea && (
-                  <p className="mt-recommended-area-banner" role="note">
-                    <span>{t('muscle_training.recommended_area_label')}</span>
-                    <strong>{pickLabel(copy.strengthFocusOptions, recommendedArea, recommendedArea)}</strong>
-                    {recommendedReasonCode && (
-                      <span>{t(`muscle_training.recommended_area_reason_${recommendedReasonCode.toLowerCase()}`)}</span>
-                    )}
-                  </p>
+                {muscleActivityState === 'ready' && (
+                  <p className="mt-week-v2-streak" role="status">{t('muscle_training.v3_streak', { weeks: activitySummary.streakWeeks, count: activitySummary.completedThisWeek })}</p>
                 )}
-                <div className="mt-muscle-target-buttons" role="group" aria-label={stitchCopy.topMuscleHint}>
-                  {targetAreaCards.map((target) => {
-                    const isActive = selectedMuscleTarget === target.key;
-                    return (
+              </div>
+
+              <ol className="mt-week-v2-strip">
+                {weekPlanDays.map((day) => {
+                  const isActive = activeWeekDay?.date === day.date;
+                  return (
+                    <li key={day.date}>
                       <button
-                        key={`top-target-${target.key}`}
                         type="button"
-                        className={`mt-muscle-target-button mt-muscle-target-button--${target.key}${isActive ? ' is-active' : ''}`}
-                        onClick={() => handleTopMuscleSelect(target.key)}
+                        className={`mt-week-v2-day${isActive ? ' is-active' : ''}${day.strength ? ' has-strength' : ''}`}
+                        onClick={() => { setSelectedWeekDate(day.date); setOpenWeekExerciseKey(null); }}
                         aria-pressed={isActive}
                       >
-                        <span>{target.label}</span>
+                        <span className="mt-week-v2-day-head">
+                          <strong>{day.weekday} {day.dateLabel}</strong>
+                          {day.isToday ? <em>{t('muscle_training.v2_today')}</em> : null}
+                        </span>
+                        <span className="mt-week-v2-run">{t('muscle_training.v3_run', { run: day.runLabel || t('muscle_training.v2_run_rest') })}</span>
+                        <span className="mt-week-v2-strength">
+                          {day.strength
+                            ? `${day.strength.label}${day.strength.minutes ? ` ${formatMinutes(day.strength.minutes, isZh)}` : ''}`
+                            : '—'}
+                        </span>
+                        {activitySummary.completedDates.has(day.date) || (day.isToday && plan.todayCheckIn?.entryState === 'ACTUAL') ? (
+                          <span className="mt-week-v2-done">✓ {t('muscle_training.v3_done')}</span>
+                        ) : null}
                       </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-top-muscle-hint">{stitchCopy.topMuscleHint}</p>
-              </article>
-
-              <article className="mt-top-panel mt-top-actions-card">
-                <div className="mt-top-actions-head">
-                  <h2>{stitchCopy.topActionsTitle}</h2>
-                  <span>{pickLabel(copy.strengthDoseOptions, strengthCoachDecision?.appliedDose, stitchCopy.topActionsSelected)}</span>
-                </div>
-                <div className="mt-top-action-list" role="group" aria-label={stitchCopy.topActionsTitle}>
-                  {topRecommendationItems.map((item) => {
-                    const itemKey = getProtocolItemKey(item);
-                    const isLibrary = item.source === 'library';
-                    const exerciseCopy = getExerciseContentForItem(item, isZh);
-                    const targetImage = targetAreaCards.find((target) => target.key === (item.targetKey || selectedMuscleTarget))?.image || targetLegsUrl;
-                    const exerciseImage = resolveExerciseReferenceImage(item, targetImage);
-                    const isSelected = selectedExerciseKey === itemKey;
-                    return (
-                      <button
-                        key={`top-action-${itemKey}`}
-                        type="button"
-                        className={`mt-top-action-card${isSelected ? ' is-selected' : ''}`}
-                        onClick={() => handleTopExerciseSelect(item)}
-                        aria-pressed={isSelected}
-                      >
-                        <span className="mt-top-action-thumb">
-                          <img src={exerciseImage} alt="" aria-hidden="true" width="900" height="600" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
-                          {isLibrary && <i>{stitchCopy.topLibraryBadge}</i>}
-                        </span>
-                        <span className="mt-top-action-copy">
-                          <strong>{exerciseCopy.name}</strong>
-                          <em>{exerciseCopy.muscles.slice(0, 2).join(' · ') || formatLocalizedExercisePrescription(item.exercise, isZh)}</em>
-                        </span>
-                        {!isLibrary && <small>{stitchCopy.topPlanBadge}</small>}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-top-actions-note">{stitchCopy.topActionsHint}</p>
-              </article>
-
-              <aside className="mt-top-reference" aria-labelledby="mt-top-reference-title">
-                <div className="mt-top-reference-head">
-                  <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
-                  <h2 id="mt-top-reference-title">{stitchCopy.topReferenceTitle}</h2>
-                </div>
-                <div className="mt-top-reference-card">
-                  <figure className="mt-top-reference-media">
-                    <img src={topReferenceImage} alt="" aria-hidden="true" width="900" height="600" loading="lazy" decoding="async" referrerPolicy="no-referrer" />
-                    <figcaption>
-                      <strong>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</strong>
-                      <span>{selectedProtocolItem?.exercise ? formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh) : ''}</span>
-                    </figcaption>
-                  </figure>
-                  <div className="mt-top-reference-body">
-                    <h3>{selectedExerciseCopy?.name || selectedMuscleTargetCard?.label}</h3>
-                    <p>{selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}</p>
-                    {selectedExerciseCopy?.steps?.length > 0 && (
-                      <ul>
-                        {selectedExerciseCopy.steps.slice(0, 2).map((step) => (
-                          <li key={step}>
-                            <span>i</span>
-                            {step}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {selectedExerciseCopy?.muscles?.length > 0 && (
-                      <div className="mt-top-reference-muscles">
-                        <span>{stitchCopy.targetMusclesLabel}</span>
-                        <div>
-                          {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
-                            <em key={muscle}>{muscle}</em>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </aside>
-            </section>
-
-            {/* ── Exercise List ── */}
-            <section className="mt-exercises" aria-labelledby="mt-exercises-title">
-              <div className="mt-exercises-head">
-                <div>
-                  <span className="mt-kicker">{t('muscle_training.stitch_mt_exercises_kicker')}</span>
-                  <h2 id="mt-exercises-title" className="mt-card-title">{stitchCopy.protocolWorkspaceTitle}</h2>
-                </div>
-              </div>
-              <div className="mt-exercises-filter" role="group" aria-label={stitchCopy.targetAreasTitle}>
-                <button
-                  type="button"
-                  className={`mt-chip mt-chip--filter${activeTarget === 'all' ? ' is-active' : ''}`}
-                  onClick={() => handleTargetAreaSelect('all')}
-                  aria-pressed={activeTarget === 'all'}
-                >
-                  {stitchCopy.allTargets}
-                  <small>({visibleExerciseItems.length})</small>
-                </button>
-                {targetAreaCards.map((ta) => (
-                  <button
-                    key={ta.key}
-                    type="button"
-                    className={`mt-chip mt-chip--filter${activeTarget === ta.key ? ' is-active' : ''}`}
-                    onClick={() => handleTargetAreaSelect(ta.key)}
-                    aria-pressed={activeTarget === ta.key}
-                  >
-                    <span>{ta.label}</span>
-                    <span className="mt-filter-visual" aria-hidden="true">
-                      <img src={ta.image} alt="" width="900" height="600" loading="lazy" decoding="async" />
-                    </span>
-                    <small>({ta.planCount})</small>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-exercise-list" role="list">
-                {visibleExerciseItems.map((item, idx) => {
-                  const isLibrary = item.source === 'library';
-                  const exerciseCopy = getExerciseContentForItem(item, isZh);
-                  const exercisePrescription = formatLocalizedExercisePrescription(item.exercise, isZh);
-                  const itemKey = getProtocolItemKey(item);
-                  const isSelected = selectedExerciseKey === itemKey;
-                  const isExpanded = expandedExerciseIdx === idx;
-                  return (
-                    <div key={itemKey} className={`mt-exercise-row${isSelected ? ' is-selected' : ''}`} role="listitem">
-                      <div
-                        className="mt-exercise-main"
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={isExpanded}
-                        aria-controls={`mt-ex-detail-${idx}`}
-                        onClick={() => {
-                          handleExerciseSelect(item);
-                          setExpandedExerciseIdx(isExpanded ? null : idx);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleExerciseSelect(item);
-                            setExpandedExerciseIdx(isExpanded ? null : idx);
-                          }
-                          if (e.key === 'Escape') {
-                            setExpandedExerciseIdx(null);
-                          }
-                        }}
-                      >
-                        <span className="mt-exercise-num">{String(idx + 1).padStart(2, '0')}</span>
-                        <div className="mt-exercise-info">
-                          <strong>{exerciseCopy.name}</strong>
-                          <span className="mt-exercise-meta">
-                            {exercisePrescription}
-                            {exerciseCopy.muscles.length > 0 && (
-                              <>&nbsp;·&nbsp;{exerciseCopy.muscles.slice(0, 2).join(' / ')}</>
-                            )}
-                          </span>
-                        </div>
-                        <span className={`mt-exercise-badge${isLibrary ? ' is-library' : ' is-plan'}`}>
-                          {isLibrary ? 'OPT' : 'PLAN'}
-                        </span>
-                        <span className="mt-exercise-chevron" aria-hidden="true">
-                          <AppIcon name={isExpanded ? 'expand_less' : 'expand_more'} />
-                        </span>
-                      </div>
-                      {isExpanded && (
-                        <div id={`mt-ex-detail-${idx}`} className="mt-exercise-detail">
-                          <div className="mt-exercise-detail-layout">
-                            <div className="mt-exercise-record">
-                              <p className="mt-exercise-record-prescription">{exercisePrescription}</p>
-                              {exerciseCopy.steps.length > 0 && (
-                                <ol className="mt-exercise-steps">
-                                  {exerciseCopy.steps.map((step, si) => (
-                                    <li key={si} className="mt-exercise-step">{step}</li>
-                                  ))}
-                                </ol>
-                              )}
-                              {exerciseCopy.intent && (
-                                <p className="mt-exercise-intent">{exerciseCopy.intent}</p>
-                              )}
-                            </div>
-                            {(() => {
-                              const heatmapSlugs = getExerciseHeatmapSlugs(item, exerciseCopy);
-                              if (heatmapSlugs.length === 0) return null;
-                              const heatmapData = heatmapSlugs.map((slug) => ({ slug, intensity: 2 }));
-                              const muscleLabel = exerciseCopy.muscles.join(' / ');
-                              return (
-                                <div className="mt-exercise-anatomy-panel">
-                                  <figure
-                                    className="mt-exercise-heatmap"
-                                    aria-label={`${exerciseCopy.name}${muscleLabel ? ': ' + muscleLabel : ''}`}
-                                  >
-                                    <MuscleHeatmap
-                                      data={heatmapData}
-                                      frontLabel={isZh ? '正面' : 'Front'}
-                                      backLabel={isZh ? '背面' : 'Back'}
-                                    />
-                                  </figure>
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    </li>
                   );
                 })}
-                {visibleExerciseItems.length === 0 && (
-                  <div className="mt-exercise-empty">
-                    <strong>{stitchCopy.noAreaPlanExercises}</strong>
-                    <p>{stitchCopy.targetCardsHint}</p>
-                  </div>
-                )}
-              </div>
+              </ol>
             </section>
 
-            {/* Side rail: video + exercise reference */}
-            <div className="mt-side-grid mt-media-rail">
-              <div className="mt-media-rail-sticky">
-                <article className="mt-card mt-video-card" aria-labelledby="mt-video-title">
-                  <div className="mt-card-head">
-                    <span className="mt-kicker">{stitchCopy.topReferenceKicker}</span>
-                    <h2 id="mt-video-title" className="mt-card-title">{stitchCopy.videoDemoTitle}</h2>
-                  </div>
-                  {selectedExerciseVideoUrl ? (
-                    <div className="mt-video-frame">
-                      <iframe
-                        src={selectedExerciseVideoUrl}
-                        title={`${selectedExerciseCopy?.name || stitchCopy.noExerciseSelected} ${stitchCopy.videoDemoTitle}`}
-                        loading="lazy"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                      />
-                    </div>
-                  ) : (
-                    <div className="mt-video-missing">
-                      <p>{stitchCopy.videoUnavailable}</p>
-                      <a href={getExerciseVideoUrl(selectedProtocolItem?.exercise?.name)} target="_blank" rel="noreferrer">
-                        {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
-                      </a>
-                    </div>
-                  )}
-                </article>
-
-                <article className="mt-card mt-reference-card" aria-labelledby="mt-reference-title">
-                  <figure className="mt-reference-media">
-                    <img
-                      src={selectedExerciseReferenceImage}
-                      alt={selectedExerciseCopy?.name || selectedRailTargetCard?.label || stitchCopy.noExerciseSelected}
-                      width="900"
-                      height="600"
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                    />
-                    <figcaption>
-                      <span>{selectedRailTargetCard?.label || stitchCopy.targetLegs}</span>
-                      <strong>{selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}</strong>
-                    </figcaption>
-                  </figure>
-                  <div className="mt-reference-body">
-                    <span className="mt-kicker">{stitchCopy.professionalTips}</span>
-                    <h2 id="mt-reference-title" className="mt-card-title">
-                      {selectedExerciseCopy?.name || stitchCopy.noExerciseSelected}
+            <div className="mt-week-v2-body">
+              <section id="muscle-controls" className="mt-week-v2-day-panel" aria-labelledby="mt-week-day-title">
+                <div className="mt-week-v2-day-panel-head">
+                  <div>
+                    <h2 id="mt-week-day-title">
+                      {activeWeekDay
+                        ? `${activeWeekDay.weekday} · ${activeWeekDay.strength ? `${activeWeekDay.strength.label}${activeWeekDay.strength.minutes ? ` ${formatMinutes(activeWeekDay.strength.minutes, isZh)}` : ''}` : t('muscle_training.v2_no_strength')}`
+                        : stitchCopy.emptyStateTitle}
                     </h2>
-                    {selectedProtocolItem?.exercise && (
-                      <p className="mt-reference-prescription">
-                        {formatLocalizedExercisePrescription(selectedProtocolItem.exercise, isZh)}
-                      </p>
-                    )}
-                    <p className="mt-reference-intent">
-                      {selectedExerciseCopy?.intent || todayCoachNarrative || stitchCopy.guideSubtitle}
-                    </p>
-                    {selectedExerciseCopy?.steps?.length > 0 && (
-                      <ul className="mt-reference-steps">
-                        {selectedExerciseCopy.steps.slice(0, 3).map((step) => (
-                          <li key={step}>
-                            <span>i</span>
-                            {step}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {selectedExerciseCopy?.muscles?.length > 0 && (
-                      <div className="mt-reference-muscles">
-                        <span>{stitchCopy.targetMusclesLabel}</span>
-                        <div>
-                          {selectedExerciseCopy.muscles.slice(0, 4).map((muscle) => (
-                            <em key={muscle}>{muscle}</em>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <p>{activeWeekDay?.isToday ? (todayCoachNarrative || stitchCopy.guideSubtitle) : (activeWeekDay?.runLabel ? t('muscle_training.v2_day_run', { run: activeWeekDay.runLabel }) : stitchCopy.guideSubtitle)}</p>
                   </div>
-                </article>
-              </div>
-            </div>
-          </>
-        )}
-
-        {!loading && !error && plan && (
-          <>
-            <section id="muscle-controls" className="strength-plan-control-deck muscle-activity-deck">
-              <RunActivityContributionGraph
-                runs={muscleCheckIns}
-                status={muscleActivityState}
-                lang={displayLang}
-                t={t}
-                activityType="muscle"
-                action={(
-                  <div className="muscle-activity-checkin-action">
+                  {activeWeekDay?.isToday && activeWeekDay.strength ? (
                     <button
                       type="button"
-                      className="muscle-activity-checkin-btn"
+                      className="mt-week-v2-start muscle-activity-checkin-btn"
                       disabled={checkInSaving || plan.todayCheckIn?.entryState === 'ACTUAL'}
-                      onClick={handleDailyCheckIn}
+                      onClick={() => {
+                        if (isSessionStarted) {
+                          handleDailyCheckIn();
+                        } else {
+                          setIsSessionStarted(true);
+                          setOpenWeekExerciseKey(activeWeekDay.items[0] ? getProtocolItemKey(activeWeekDay.items[0]) : null);
+                        }
+                      }}
                     >
+                      {!isSessionStarted && plan.todayCheckIn?.entryState !== 'ACTUAL' ? <AppIcon name="play_arrow" aria-hidden="true" /> : null}
                       {checkInSaving
                         ? copy.checkInSaving
                         : plan.todayCheckIn?.entryState === 'ACTUAL'
                           ? copy.checkInDone
-                          : copy.checkInSave}
+                          : t(isSessionStarted ? 'muscle_training.v3_complete_session' : 'muscle_training.v3_start_session')}
                     </button>
-                    {checkInNotice && <span className="muscle-activity-checkin-notice" role="status">{checkInNotice}</span>}
+                  ) : null}
+                </div>
+                {checkInNotice && activeWeekDay?.isToday ? <p className="muscle-activity-checkin-notice" role="status">{checkInNotice}</p> : null}
+                {error && activeWeekDay?.isToday ? <p className="muscle-activity-checkin-notice" role="alert">{error}</p> : null}
+
+                {activeWeekDay?.items.length ? (
+                  <ol className="mt-week-v2-exercises">
+                    {activeWeekDay.items.map((item, index) => {
+                      const exerciseCopy = getExerciseContentForItem(item, isZh);
+                      const itemKey = getProtocolItemKey(item);
+                      const isOpen = openWeekExerciseKey === itemKey;
+                      const videoUrl = getExerciseVideoUrl(item.exercise?.name);
+                      return (
+                        <li key={itemKey} className={isOpen ? 'is-open' : ''}>
+                          <button
+                            type="button"
+                            className="mt-week-v2-exercise"
+                            aria-expanded={isOpen}
+                            aria-controls={`mt-week-exercise-detail-${index}`}
+                            onClick={() => setOpenWeekExerciseKey(isOpen ? null : itemKey)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') setOpenWeekExerciseKey(null);
+                            }}
+                          >
+                            <span className="mt-week-v2-num">{index + 1}</span>
+                            <span className="mt-week-v2-thumb" aria-hidden="true">
+                            {resolveExerciseReferenceImage(item, '') ? <img
+                              src={resolveExerciseReferenceImage(item, '')}
+                              alt=""
+                              aria-hidden="true"
+                              width="900"
+                              height="600"
+                              loading="lazy"
+                              decoding="async"
+                              referrerPolicy="no-referrer"
+                              onError={(event) => {
+                                event.currentTarget.hidden = true;
+                              }}
+                            /> : null}
+                            </span>
+                            <span className="mt-week-v2-exercise-copy">
+                              <strong>{exerciseCopy.name}</strong>
+                              <span>{exerciseCopy.muscles.slice(0, 2).join(' · ')}</span>
+                            </span>
+                            <strong className="mt-week-v2-rx">{item.exercise.sets} × {formatLocalizedExercisePrescriptionValue(item.exercise.repsOrDuration, isZh)}</strong>
+                            <AppIcon name={isOpen ? 'expand_less' : 'expand_more'} className="mt-week-v2-chevron" />
+                          </button>
+                          {isOpen && (
+                            <div id={`mt-week-exercise-detail-${index}`} className="mt-week-v2-exercise-detail">
+                              <p className="mt-week-v2-detail-rx">{formatLocalizedExercisePrescription(item.exercise, isZh)}</p>
+                              {exerciseCopy.intent ? <p>{exerciseCopy.intent}</p> : null}
+                              {exerciseCopy.steps.length > 0 && (
+                                <ol>
+                                  {exerciseCopy.steps.map((step) => <li key={step}>{step}</li>)}
+                                </ol>
+                              )}
+                              {videoUrl ? <a href={videoUrl} target="_blank" rel="noreferrer">{stitchCopy.videoDemoTitle}</a> : null}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <div className="mt-week-v2-empty">
+                    <strong>{t('muscle_training.v2_no_strength')}</strong>
+                    <span>{stitchCopy.noAreaPlanExercises}</span>
                   </div>
                 )}
-              />
-            </section>
+              </section>
+
+              <aside className="mt-week-v2-side">
+                <section className="mt-week-v2-coverage" aria-labelledby="mt-week-coverage-title">
+                  <div className="mt-week-v2-side-head">
+                    <h2 id="mt-week-coverage-title">{t('muscle_training.v2_coverage_title')}</h2>
+                    <span>{t('muscle_training.v3_coverage_unit')}</span>
+                  </div>
+                  <ul>
+                    {weekCoverage.map((area) => (
+                      <li key={area.key} className={area.sessions === 0 ? 'is-empty' : area.sessions === weekStrengthCount ? 'is-full' : ''}>
+                        <span>{area.label}</span>
+                        <span className="mt-week-v2-bar" aria-hidden="true"><i style={{ width: `${(area.sessions / weekCoverageMax) * 100}%` }} /></span>
+                        <strong aria-label={t('muscle_training.v3_coverage_count', { area: area.label, count: area.sessions, total: weekStrengthCount })}>{area.sessions}{weekStrengthCount ? `/${weekStrengthCount}` : ''}</strong>
+                      </li>
+                    ))}
+                  </ul>
+
+                <div className="strength-plan-control-deck muscle-activity-deck mt-week-v2-activity">
+                  <RunActivityContributionGraph
+                    runs={muscleCheckIns}
+                    status={muscleActivityState}
+                    lang={displayLang}
+                    t={t}
+                    activityType="muscle"
+                    weeks={12}
+                    compact
+                    referenceDate={todayPlan?.date}
+                  />
+                </div>
+                </section>
+              </aside>
+            </div>
           </>
         )}
           </div>

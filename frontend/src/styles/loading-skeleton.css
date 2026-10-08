@@ -3736,3 +3736,277 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--runner .page-skel
 @media (max-width: 900px) {
   .page-skeleton--run-detail .page-skeleton__topbar { background: transparent; border-bottom: 0; }
 }
+
+
+/* Analysis mirrors analysis-summary.css: VO2 hero, paired reference cards,
+   metric cards, tables, then injury-prevention status. */
+.page-skeleton--analysis {
+  --hermes-skeleton-base: rgba(60, 60, 67, 0.08);
+  --hermes-skeleton-highlight: rgba(255, 255, 255, 0.8);
+  --hermes-skeleton-surface: #ffffff;
+  --hermes-skeleton-line: rgba(60, 60, 67, 0.12);
+  --hermes-skeleton-shadow: 0 8px 24px rgba(60, 60, 67, 0.045);
+  background: #f2f2f7;
+}
+.page-skeleton--analysis .page-skeleton__rail { background: rgba(255, 255, 255, 0.72); box-shadow: none; }
+.page-skeleton--analysis .page-skeleton__topbar { background: #f5f5f7; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton--analysis .page-skeleton__topbar { min-height: 88px; }
+.page-skeleton--analysis .page-skeleton__topbar-pill { width: 44px; height: 18px; border-radius: 5px; box-shadow: none; }
+.page-skeleton--analysis .page-skeleton__canvas {
+  width: calc(100% - 116px) !important;
+  margin: 0 auto !important;
+  padding: 47px 0 80px !important;
+  gap: 12px !important;
+}
+.page-skeleton--analysis .page-skeleton__analysis-cockpit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+}
+.page-skeleton--analysis .page-skeleton__analysis-primary {
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(320px, 0.34fr) minmax(0, 0.66fr);
+  grid-template-rows: auto minmax(190px, 1fr) auto;
+  column-gap: clamp(22px, 2.6vw, 42px);
+  width: 100%;
+  height: 440px;
+  min-height: 440px;
+  max-height: 440px;
+  padding: 32px;
+  border-radius: 16px;
+  background: var(--hermes-skeleton-surface);
+  box-shadow: var(--hermes-skeleton-shadow);
+  overflow: hidden;
+}
+.page-skeleton__analysis-card-head { display: contents; }
+.page-skeleton__analysis-heading {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.page-skeleton__analysis-kicker { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 6px; }
+.page-skeleton__analysis-title { width: 132px; height: 20px; margin: 0; border-radius: 6px; }
+.page-skeleton__analysis-value {
+  display: grid;
+  grid-column: 1;
+  grid-row: 2;
+  align-content: end;
+  justify-items: start;
+  gap: 8px;
+  align-self: end;
+  justify-self: start;
+  width: auto;
+  height: auto;
+  padding: 0;
+  background: transparent;
+}
+.page-skeleton__analysis-value-label { width: 82px; height: 10px; border-radius: 4px; }
+.page-skeleton__analysis-value-row { display: flex; align-items: baseline; gap: 8px; }
+.page-skeleton__analysis-value-number { width: 106px; height: 48px; border-radius: 8px; }
+.page-skeleton__analysis-value-unit { width: 62px; height: 10px; border-radius: 4px; }
+.page-skeleton__analysis-bars {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-self: end;
+  justify-self: end;
+  width: min(72%, 640px);
+  height: 74%;
+  min-height: 180px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+}
+.page-skeleton__analysis-bar-column { height: 100%; }
+.page-skeleton__analysis-bar { border-radius: 2px 2px 0 0; }
+.page-skeleton__analysis-bar-label { height: 8px; }
+.page-skeleton__analysis-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, 200px);
+  grid-template-areas: "load trend" "injury coach";
+  gap: 18px;
+  align-content: start;
+}
+.page-skeleton__analysis-reference {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 200px;
+  height: 200px;
+  padding: 24px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--hermes-skeleton-surface);
+  box-shadow: var(--hermes-skeleton-shadow);
+}
+.page-skeleton__analysis-reference-heading { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.page-skeleton__analysis-reference-icon { width: 20px; height: 20px; flex: 0 0 20px; border-radius: 5px; }
+.page-skeleton__analysis-reference-kicker { width: 132px; height: 18px; border-radius: 5px; }
+.page-skeleton__analysis-reference--load {
+  display: grid;
+  grid-area: load;
+  grid-column: auto;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 168px);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "label gauge" "copy gauge";
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 10px;
+}
+.page-skeleton__analysis-reference--load .page-skeleton__analysis-reference-heading { grid-area: label; }
+.page-skeleton__analysis-gauge-stack {
+  position: relative;
+  display: grid;
+  grid-area: gauge;
+  align-self: center;
+  justify-self: center;
+  width: min(100%, 156px);
+  aspect-ratio: 220 / 140;
+}
+.page-skeleton__analysis-gauge {
+  grid-area: 1 / 1;
+  width: 100%;
+  max-width: 156px;
+  aspect-ratio: 1.55;
+  border-radius: 999px 999px 0 0;
+  clip-path: inset(0 0 2% 0 round 999px 999px 0 0);
+}
+.page-skeleton__analysis-gauge-value {
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: center;
+  width: 68px;
+  height: 30px;
+  margin-bottom: 1px;
+  border-radius: 7px;
+}
+.page-skeleton__analysis-reference-copy { grid-area: copy; width: 100%; margin: 0; gap: 8px; }
+.page-skeleton__analysis-reference-copy > .page-skeleton__block { height: 10px; border-radius: 999px; }
+.page-skeleton__analysis-reference-copy > .page-skeleton__block:last-child { width: 72%; }
+.page-skeleton__analysis-reference--trend { grid-area: trend; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+.page-skeleton__analysis-trend-content { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 0; flex: 1; }
+.page-skeleton__analysis-trend-copy { align-self: end; width: 100%; gap: 8px; }
+.page-skeleton__analysis-trend-copy > .page-skeleton__block { height: 10px; border-radius: 999px; }
+.page-skeleton__analysis-trend-copy > .page-skeleton__block:last-child { width: 72%; }
+.page-skeleton__analysis-trend-stack { display: grid; justify-items: end; gap: 8px; }
+.page-skeleton__analysis-trend-title { width: 62px; height: 16px; border-radius: 5px; }
+.page-skeleton__analysis-trend-value { width: 78px; height: 42px; border-radius: 8px; }
+.page-skeleton__analysis-reference--injury { grid-area: injury; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+.page-skeleton__analysis-risk-labels,
+.page-skeleton__analysis-risk-meter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.page-skeleton__analysis-risk-labels > .page-skeleton__block { height: 28px; border-radius: 999px; }
+.page-skeleton__analysis-risk-meter > .page-skeleton__block { height: 28px; border-radius: 999px; }
+.page-skeleton__analysis-reference--coach { grid-area: coach; display: flex; flex-direction: column; gap: 16px; }
+.page-skeleton__analysis-coach-title { width: min(88%, 320px); height: 40px; margin-top: 8px; border-radius: 8px; }
+.page-skeleton__analysis-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+  margin-top: 14px;
+}
+.page-skeleton__analysis-bento-card { box-sizing: border-box; min-height: 250px; padding: clamp(20px, 2vw, 28px); border: 0; border-radius: 16px; box-shadow: var(--hermes-skeleton-shadow); }
+.page-skeleton__analysis-bento-card--intensity { grid-column: span 5; }
+.page-skeleton__analysis-bento-card--forecast { grid-column: span 3; }
+.page-skeleton__analysis-table-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(380px, 0.88fr);
+  gap: clamp(14px, 1.6vw, 24px);
+  margin-top: 0;
+}
+.page-skeleton__analysis-table-card { min-height: 330px; border: 0; border-radius: 16px; box-shadow: var(--hermes-skeleton-shadow); }
+.page-skeleton__analysis-injury {
+  margin-top: 24px;
+  padding: clamp(22px, 2.4vw, 34px);
+  border: 0;
+  border-radius: 16px;
+  box-shadow: var(--hermes-skeleton-shadow);
+}
+.page-skeleton__analysis-injury-heading { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(280px, 0.3fr); align-items: end; gap: 18px; padding: 0 6px 16px; }
+.page-skeleton__analysis-injury-title { width: min(360px, 88%); height: 30px; border-radius: 8px; }
+.page-skeleton__analysis-injury-copy { width: min(420px, 100%); height: 10px; margin: 0; border-radius: 999px; }
+.page-skeleton__analysis-injury-grid { display: grid; grid-template-columns: minmax(0, 0.86fr) minmax(0, 0.86fr) minmax(0, 1.28fr); gap: clamp(14px, 1.6vw, 22px); margin-top: 0; }
+.page-skeleton__analysis-injury-card { box-sizing: border-box; min-width: 0; min-height: 220px; padding: 20px; border: 0; border-radius: 16px; box-shadow: var(--hermes-skeleton-shadow); }
+.page-skeleton__analysis-injury-ring-row { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
+.page-skeleton__analysis-injury-ring { width: 88px; height: 88px; flex: 0 0 88px; border-radius: 50%; }
+.page-skeleton__analysis-injury-gauge { position: relative; display: grid; width: min(100%, 156px); aspect-ratio: 220 / 140; margin: 10px auto; }
+.page-skeleton__analysis-injury-gauge-arc { grid-area: 1 / 1; width: 100%; border-radius: 999px 999px 0 0; clip-path: inset(0 0 2% 0 round 999px 999px 0 0); }
+.page-skeleton__analysis-injury-gauge-value { grid-area: 1 / 1; align-self: end; justify-self: center; width: 64px; height: 26px; border-radius: 6px; }
+.page-skeleton__analysis-injury-zones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.page-skeleton__analysis-injury-zones > .page-skeleton__block { height: 14px; border-radius: 999px; }
+.page-skeleton__analysis-soreness-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-block: 18px 12px; }
+.page-skeleton__analysis-soreness-actions > .page-skeleton__block { height: 34px; border-radius: 999px; }
+.page-skeleton__analysis-injury-card--checkin .page-skeleton__lines { gap: 8px; }
+.page-skeleton__analysis-injury-card--checkin .page-skeleton__lines > .page-skeleton__block { height: 10px; border-radius: 999px; }
+
+@media (max-width: 1180px) {
+  .page-skeleton--analysis .page-skeleton__analysis-cockpit { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__analysis-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto; grid-template-areas: none; }
+  .page-skeleton__analysis-reference--load { grid-column: 1 / -1; grid-area: auto; }
+  .page-skeleton__analysis-reference--trend,
+  .page-skeleton__analysis-reference--injury,
+  .page-skeleton__analysis-reference--coach { grid-area: auto; }
+  .page-skeleton__analysis-bento-grid,
+  .page-skeleton__analysis-table-grid,
+  .page-skeleton__analysis-injury-heading,
+  .page-skeleton__analysis-injury-grid { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__analysis-bento-card { grid-column: 1 / -1; }
+  .page-skeleton__analysis-table-grid { gap: 14px; }
+  .page-skeleton__analysis-injury-heading { gap: 10px; }
+  .page-skeleton__analysis-injury-card { min-height: 210px; }
+}
+
+@media (max-width: 860px) {
+  .page-skeleton--analysis .page-skeleton__topbar { min-height: 64px; }
+  .page-skeleton--analysis .page-skeleton__canvas { width: calc(100% - 28px) !important; padding: 22px 0 64px !important; }
+  .page-skeleton--analysis .page-skeleton__analysis-primary {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 22px;
+  }
+  .page-skeleton__analysis-heading { grid-column: 1; grid-row: 1; }
+  .page-skeleton__analysis-value { grid-column: 1; grid-row: 2; margin-top: 26px; }
+  .page-skeleton__analysis-bars { grid-column: 1; grid-row: 3; justify-self: stretch; width: 100%; height: 220px; min-height: 200px; margin-top: 24px; }
+  .page-skeleton__analysis-reference-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; gap: 12px; }
+  .page-skeleton__analysis-reference,
+  .page-skeleton__analysis-reference--load,
+  .page-skeleton__analysis-reference--trend,
+  .page-skeleton__analysis-reference--injury,
+  .page-skeleton__analysis-reference--coach { grid-column: 1 / -1; grid-area: auto; height: auto; min-height: 180px; }
+  .page-skeleton__analysis-reference--load { grid-template-columns: minmax(0, 1fr) minmax(112px, 156px); }
+  .page-skeleton__analysis-table-card { min-height: 300px; }
+  .page-skeleton__analysis-injury-card--checkin { min-height: 240px; }
+}
+
+@media (max-width: 640px) {
+  .page-skeleton__analysis-reference--load { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; grid-template-areas: "label" "gauge" "copy"; justify-items: start; }
+  .page-skeleton__analysis-gauge-stack { justify-self: start; width: min(100%, 180px); }
+  .page-skeleton__analysis-reference-copy { width: min(100%, 30ch); }
+  .page-skeleton__analysis-trend-content { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .page-skeleton__analysis-trend-stack { justify-self: start; }
+  .page-skeleton__analysis-injury-card { padding: 20px; }
+  .page-skeleton__analysis-injury-ring-row { align-items: flex-start; }
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis {
+  --hermes-skeleton-base: rgba(247, 240, 232, 0.11);
+  --hermes-skeleton-highlight: rgba(255, 255, 255, 0.2);
+  --hermes-skeleton-surface: rgba(31, 32, 36, 0.92);
+  --hermes-skeleton-line: rgba(247, 240, 232, 0.12);
+  --hermes-skeleton-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  background: #17191d;
+}
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis .page-skeleton__rail,
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis .page-skeleton__topbar { background: #232321; }

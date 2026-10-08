@@ -4803,7 +4803,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-checklist-item:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .st-avatar-field {
@@ -4873,7 +4873,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-checklist-item:hover {
 .settings-atlas-canvas .st-services-grid {
   width: min(100%, 960px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0 auto 20px;
+  margin: 20px auto 0;
 }
 
 .st-service-card {
@@ -4991,16 +4991,26 @@ body:is(.theme-midnight, .theme-high-contrast) .st-service-card {
   color: var(--text-strong);
 }
 
-/* Keep the two provider cards on the same horizontal service-grid contract.
-   The generic Atlas action wants a full row; within this compact grid that
-   collapses the provider copy into a one-character column. */
-.settings-atlas-canvas .st-service-head .settings-atlas-service-action {
+/* Keep provider actions aligned at the bottom of the two service cards. */
+.settings-atlas-canvas .st-service-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.settings-atlas-canvas .st-service-actions :is(.settings-atlas-service-action, .st-service-btn) {
   display: inline-flex;
   width: auto;
-  min-width: fit-content;
-  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 44px;
+  flex: 0 1 auto;
   align-self: center;
-  white-space: nowrap;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .settings-atlas-canvas .st-service-head .st-service-info {
@@ -5015,8 +5025,8 @@ body:is(.theme-midnight, .theme-high-contrast) .st-service-card {
 
 /* ── Sync health ── */
 .st-sync-section {
-  padding-top: 18px;
-  border-top: 1px solid var(--line-soft, rgba(0,0,0,0.06));
+  padding-top: 0;
+  border-top: 0;
 }
 
 .st-sync-title {
@@ -5319,6 +5329,7 @@ body.theme-midnight .settings-load-back,
   .st-main-grid,
   .st-services-grid,
   .st-bottom-grid { grid-template-columns: 1fr; }
+  .settings-atlas-canvas .st-services-grid { grid-template-columns: minmax(0, 1fr); }
   .st-pref-row { flex-direction: column; align-items: flex-start; }
   .st-hero-right { min-width: 0; width: 100%; }
 }
@@ -5583,8 +5594,7 @@ body:is(.theme-midnight, .theme-high-contrast) .st-activity-cell[data-level="3"]
     max-width: 100%;
   }
 
-  .settings-atlas-canvas .st-service-head :is(.settings-atlas-service-action, .st-service-btn) {
-    grid-column: 1 / -1;
+  .settings-atlas-canvas .st-service-actions :is(.settings-atlas-service-action, .st-service-btn) {
     width: 100%;
     min-width: 0;
     min-height: 44px;

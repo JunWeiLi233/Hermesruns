@@ -82,13 +82,15 @@ const flags = JSON.parse(javaOptions[0].slice('ENV JAVA_OPTS='.length)).split(/\
 assert.deepEqual(flags, [
   '-Xms64m',
   '-Xmx640m',
-  '-XX:+UseSerialGC',
+  '-XX:+UseG1GC',
+  '-XX:G1PeriodicGCInterval=60000',
+  '-XX:ParallelGCThreads=2',
+  '-XX:ConcGCThreads=1',
   '-XX:MaxMetaspaceSize=192m',
   '-XX:MinHeapFreeRatio=5',
   '-XX:MaxHeapFreeRatio=10',
-  '-XX:-ShrinkHeapInSteps',
   '-XX:+ExitOnOutOfMemoryError',
-], 'Preserve bounded heap/metaspace, SerialGC, heap shrinking, and fail-fast OOM defaults.')
+], 'Preserve bounded heap/metaspace, periodic G1 reclamation, limited GC workers, and fail-fast OOM defaults.')
 
 const entrypoints = runtime.instructions.filter((line) => line.startsWith('ENTRYPOINT '))
 assert.equal(entrypoints.length, 1, 'Keep exactly one runtime ENTRYPOINT.')

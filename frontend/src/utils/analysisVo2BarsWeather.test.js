@@ -26,6 +26,10 @@ const entries = [
 ];
 
 const bars = buildVo2Bars(entries, 'en');
+assert.equal(bars.length, 6, 'existing chart consumers should retain the six-month default');
+const annualBars = buildVo2Bars(entries, 'en', 12);
+assert.equal(annualBars.length, 12, 'the overview should support a full year of monthly columns');
+assert.deepEqual(annualBars.slice(-6), bars, 'extending the history must preserve existing month values and geometry');
 const currentKey = `${now.getFullYear()}-${now.getMonth()}`;
 const previousDate = monthDate(-1, 8);
 const previousKey = `${previousDate.getFullYear()}-${previousDate.getMonth()}`;

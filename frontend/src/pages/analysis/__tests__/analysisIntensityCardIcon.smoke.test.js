@@ -13,16 +13,16 @@ assert.ok(
   'The generated intensity-distribution card icon should be stored in the frontend asset tree.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
   /import intensityDistributionCardIcon from ['"]\.\.\/\.\.\/assets\/intensity-distribution-card-icon\.webp['"];?/,
-  'Analysis should import the generated intensity-distribution card icon.',
+  'The v2 intensity tile should not load the retired overview icon.',
 );
 
 assert.match(
   analysisSource,
-  /<span className="analysis-overview-card-kicker">\s*<img src=\{intensityDistributionCardIcon\} alt="" className="analysis-intensity-card-icon" \/>\s*\{t\('analysis\.stitch_intensity_title'\)\}/,
-  'The intensity-distribution icon should sit beside the localized card label.',
+  /analysis-v2-check--intensity[\s\S]*?navigate\('\/analysis\/intensity'\)[\s\S]*?stitch_intensity_title/,
+  'The intensity tile should retain its localized link to the detail page.',
 );
 
 assert.match(

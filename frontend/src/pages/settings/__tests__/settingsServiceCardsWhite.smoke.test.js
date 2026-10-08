@@ -7,6 +7,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const whiteGridStyleSource = readFileSync(path.join(here, "../../../styles/grid-cards-white.css"), 'utf8');
 const indexStyleSource = readFileSync(path.join(here, "../../../index.css"), 'utf8');
 const settingsStyleSource = readFileSync(path.join(here, "../../../styles/_split/settings.css"), 'utf8');
+assert.match(settingsStyleSource, /@media \(max-width: 960px\)[\s\S]*?\.settings-atlas-canvas \.st-services-grid \{ grid-template-columns: minmax\(0, 1fr\); \}/,
+  'The scoped desktop provider columns must switch to one column on smaller screens.');
 
 assert.match(
   whiteGridStyleSource,
@@ -44,8 +46,8 @@ assert.match(
 
 assert.match(
   phoneServiceLayoutSource,
-  /\.settings-atlas-canvas \.st-service-head :is\(\.settings-atlas-service-action, \.st-service-btn\)\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/,
-  'Phone Strava and Garmin actions should stack below service copy and wrap within a 44px touch target.',
+  /\.settings-atlas-canvas \.st-service-actions :is\(\.settings-atlas-service-action, \.st-service-btn\)\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;/,
+  'Phone Strava and Garmin actions should sit in their card footers and wrap within a 44px touch target.',
 );
 
 assert.match(

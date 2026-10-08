@@ -167,13 +167,15 @@ public class GarminConnectController {
             return error(HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
         }
 
+        Runner runner = runnerOpt.get();
         GarminWellnessImportService.WellnessSyncStatus status =
-                wellnessImportService.getStatus(runnerOpt.get().getId());
+                wellnessImportService.getStatus(runner.getId());
 
         Map<String, Object> response = new HashMap<>();
         response.put("syncStatus", status);
-        response.put("wellnessSyncEnabled", runnerOpt.get().isGarminWellnessSyncEnabled());
-        response.put("lastSyncedAt", runnerOpt.get().getGarminWellnessLastSyncedAt());
+        response.put("wellnessSyncEnabled", runner.isGarminWellnessSyncEnabled());
+        response.put("credentialsSaved", hasStoredCredentials(runner));
+        response.put("lastSyncedAt", runner.getGarminWellnessLastSyncedAt());
 
         return ResponseEntity.ok(response);
     }
@@ -202,7 +204,7 @@ public class GarminConnectController {
 
         Runner runner = runnerOpt.get();
 
-        if (enabled && (runner.getGarminConnectEmail() == null || runner.getGarminConnectEmail().isBlank())) {
+        if (enabled && !hasStoredCredentials(runner)) {
             return error(HttpStatus.BAD_REQUEST, "Cannot enable wellness sync without stored Garmin credentials. Save credentials first via /api/garmin/connect/wellness/credentials.");
         }
 
@@ -252,6 +254,13 @@ public class GarminConnectController {
         response.put("status", "SAVED");
         response.put("message", "Garmin Connect credentials saved. Wellness sync can now be enabled.");
         return ResponseEntity.ok(response);
+    }
+
+    private boolean hasStoredCredentials(Runner runner) {
+        String email = runner.getGarminConnectEmail();
+        String encryptedPassword = runner.getGarminConnectPasswordEncrypted();
+        return email != null && !email.isBlank()
+                && encryptedPassword != null && !encryptedPassword.isBlank();
     }
 
     private ResponseEntity<Map<String, String>> error(HttpStatus status, String message) {

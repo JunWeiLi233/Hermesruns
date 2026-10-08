@@ -13,16 +13,16 @@ assert.ok(
   'The generated coach-advice icon should be stored in the frontend asset tree.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
   /import coachAdviceIcon from ['"]\.\.\/\.\.\/assets\/coach-advice-icon\.webp['"];?/,
-  'Analysis should import the generated coach-advice icon.',
+  'The v2 coach tile should not load the retired overview icon.',
 );
 
 assert.match(
   analysisSource,
-  /<span className="analysis-overview-card-kicker">\s*<img src=\{coachAdviceIcon\} alt="" className="analysis-coach-advice-icon" \/>\s*\{t\('analysis\.stitch_coach_title'\)\}/,
-  'The coach-advice icon should sit beside the localized coach label.',
+  /analysis-v2-check--coach[\s\S]*?stitch_coach_title[\s\S]*?coachRecommendation\?\.purpose[\s\S]*?v2_coach_today/,
+  'The coach tile should retain its localized heading, recommendation, and today session.',
 );
 
 assert.match(

@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, "../TodayRun.jsx"), 'utf8');
+const v2Styles = readFileSync(path.join(here, '../../../styles/today-run-v2.css'), 'utf8');
+assert.match(v2Styles, /--tr-ink:\s*#1c1917/);
+assert.match(v2Styles, /--tr-gate-ink:\s*#1f3a2a/);
+assert.match(v2Styles, /\.theme-midnight, \.theme-high-contrast[\s\S]*--tr-ink:\s*#f8f4ef/);
+assert.match(v2Styles, /:focus-visible\s*\{\s*outline:\s*2px solid var\(--tr-accent\)/);
 const styleSource = readFileSync(path.join(here, "../../../styles/_split/today-run.css"), 'utf8');
 const finalStyleSource = readFileSync(path.join(here, "../../../styles/all-pages-liquid-glass.css"), 'utf8');
 const lightThemeStart = styleSource.lastIndexOf('body:is(.theme-light, .theme-high-contrast-light) .today-run-command-page .today-run-command-hero {');
@@ -106,7 +111,7 @@ for (const metric of ['sleep', 'hrv', 'rhr', 'stress']) {
   assert.ok(pageSource.includes(`metric: '${metric}'`), `The readiness list must include ${metric}.`);
 }
 assert.match(pageSource, /wellnessSignals\.map/);
-assert.match(pageSource, /score != null\s*\? <span className="tr-session-meter"/);
+assert.match(pageSource, /score != null\s*\? <span className="tr-v2-signal-meter"/);
 for (const attribute of ['aria-valuemin={0}', 'aria-valuemax={100}', 'aria-valuenow={score}']) {
   assert.equal(
     pageSource.split(attribute).length - 1,

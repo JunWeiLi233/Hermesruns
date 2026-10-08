@@ -4,24 +4,22 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const atelier = readFileSync(path.join(here, "../../../styles/shoes-atelier-redesign.css"), 'utf8');
+const shelf = readFileSync(path.join(here, "../../../styles/shoes-v2.css"), 'utf8');
 const shoesSource = readFileSync(path.join(here, "../Shoes.jsx"), 'utf8');
 
-// The shoe card markup stacks card-top (art/copy/side row) → metrics →
-// actions. The atelier 3-track card grid assumed the old flat
-// structure and squeezed the whole card-top into one narrow column.
+// Keep media above the card details and preserve the full-width grid at all sizes.
 assert.match(
   shoesSource,
-  /shoe-inventory-card-top[\s\S]*?shoe-inventory-card-art[\s\S]*?shoe-inventory-card-copy[\s\S]*?shoe-inventory-card-side/,
-  'Shoe card markup should wrap art/copy/side inside card-top.',
+  /shoe-v2-media[\s\S]*?shoe-v2-photo[\s\S]*?shoe-v2-body[\s\S]*?shoe-v2-mileage/,
+  'Shoe cards should stack the photo above their details and mileage.',
 );
 assert.match(
-  atelier,
-  /#root \.shoes-atelier-redesign \.shoe-inventory-card\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/,
-  'Atelier card should stack rows in a single column.',
+  shelf,
+  /\.shoe-inventory-card\.shoe-v2-card\s*\{[^}]*flex-direction:\s*column/,
+  'Rotation cards should stack their media and details.',
 );
 assert.doesNotMatch(
-  atelier,
+  shelf,
   /\.shoe-inventory-card\s*\{[^}]*grid-template-columns:\s*1\d\dpx/,
   'The atelier stylesheet should not keep a pixel-leading card grid track.',
 );

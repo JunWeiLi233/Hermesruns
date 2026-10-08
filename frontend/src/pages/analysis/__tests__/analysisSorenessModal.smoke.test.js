@@ -15,16 +15,14 @@ assert.match(
   /const \[sorenessModalLevel, setSorenessModalLevel\] = useState\(null\);/,
   'Analysis should track the soreness level awaiting confirmation.',
 );
-for (const level of ['low', 'medium', 'high']) {
-  assert.match(
-    analysisSource,
-    new RegExp(`onClick=\\{\\(\\) => setSorenessModalLevel\\('${level}'\\)\\}`),
-    `${level} soreness should open the confirmation modal before saving.`,
-  );
-}
+assert.match(
+  analysisSource,
+  /\['low', 'medium', 'high'\]\.map\(\(level\) => \([\s\S]*?onClick=\{\(\) => setSorenessModalLevel\(level\)\}/,
+  'Each soreness level should open the confirmation modal before saving.',
+);
 assert.doesNotMatch(
   analysisSource,
-  /className=\{cx\('analysis-injury-prevention-soreness-btn',[\s\S]*?onClick=\{\(\) => handleSorenessLog\('/,
+  /className=\{cx\('analysis-v2-soreness-btn',[\s\S]*?onClick=\{\(\) => handleSorenessLog\(/,
   'Soreness buttons should not submit directly without confirmation.',
 );
 assert.match(

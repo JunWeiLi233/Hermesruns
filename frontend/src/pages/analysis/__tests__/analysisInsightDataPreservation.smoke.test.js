@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLoadBalanceZoneKey } from '../loadBalancePresentation.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
@@ -64,9 +65,18 @@ const requireSource = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
+const coachTodaySource = coachBranch.match(/<section className="analysis-coach-bento__today"[^>]*>[\s\S]*?<\/section>/)?.[0] || '';
+requireSource(Boolean(coachTodaySource), 'Coach primary plan must retain its dedicated today tile');
+for (const field of ['slot', 'title', 'target', 'detail', 'why']) {
+  requireSource(
+    new RegExp(`\\{coachPrimarySession(?:\\?\\.|\\.)${field}(?:\\s*\\|\\|[^}]+)?\\s*\\}`).test(coachTodaySource),
+    `Coach primary plan must render ${field}`,
+  );
+}
 requireSource(
-  /\{coachPrimarySession \? \([\s\S]*?coachPrimarySession\.slot[\s\S]*?coachPrimarySession\.title[\s\S]*?coachPrimarySession\.target[\s\S]*?coachPrimarySession\.why/.test(coachBranch),
-  'Coach primary plan must render slot, title, target, and rationale',
+  /coachPrimarySession\?\.title \|\| coachSystem\.keyWorkout/.test(coachTodaySource)
+    && /coachPrimarySession\?\.why \|\| coachSystem\.copy\.blockCopy/.test(coachTodaySource),
+  'Coach primary plan must preserve its workout and rationale fallbacks',
 );
 requireSource(
   !/coachSecondarySessions\.map|analysis-coach-command-secondary-plan/.test(coachBranch),
@@ -136,8 +146,9 @@ const buildLoadBalanceDashboardModel = new Function(
   'clamp',
   'resolveLoadTrendDirection',
   'resolveLoadTrendIcon',
+  'getLoadBalanceZoneKey',
   `return (${loadModelSource});`,
-)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon);
+)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon, getLoadBalanceZoneKey);
 const t = (key) => key;
 
 for (const historyLength of [7, 13, 19, 24]) {

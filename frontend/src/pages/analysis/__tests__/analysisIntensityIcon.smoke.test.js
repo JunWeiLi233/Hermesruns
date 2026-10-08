@@ -13,16 +13,16 @@ assert.ok(
   'The generated intensity-distribution icon should be stored in the frontend asset tree.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
   /import intensityDistributionCardIcon from ['"]\.\.\/\.\.\/assets\/intensity-distribution-card-icon\.webp['"];?/,
-  'Analysis should import the generated intensity-distribution icon.',
+  'The v2 intensity tile should not load the retired overview icon.',
 );
 
 assert.match(
   analysisSource,
-  /<img\s+src=\{intensityDistributionCardIcon\}\s+alt=""\s+className="analysis-intensity-card-icon"\s*\/>/,
-  'The intensity-distribution icon should be decorative because the adjacent localized label names the card.',
+  /analysis-v2-check--intensity[\s\S]*?polarized\.easySharePct[\s\S]*?polarized\.moderateSharePct[\s\S]*?polarized\.hardSharePct/,
+  'The intensity tile should keep all three intensity shares visible.',
 );
 
 assert.match(
