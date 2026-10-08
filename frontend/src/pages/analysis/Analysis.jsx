@@ -247,7 +247,13 @@ export default function Analysis() {
   const loadZone = snapshot.loadZone;
   const analysisLoadTheme = loadZone.tone === 'danger' ? 'red' : loadZone.tone === 'warn' ? 'yellow' : 'green';
   const polarized = snapshot.polarized;
-  const injury = snapshot.injury;
+  const serverInjuryLevel = String(injuryStatus?.risk || '').toLowerCase();
+  const injury = ['low', 'moderate', 'high'].includes(serverInjuryLevel)
+    ? { ...snapshot.injury, level: serverInjuryLevel }
+    : snapshot.injury;
+  const injuryRecommendation = ['ready', 'caution', 'rest'].includes(injuryStatus?.recommendation)
+    ? injuryStatus.recommendation
+    : null;
   const predictionRows = normalizeAnalysisList(snapshot.predictionRows);
   const priorPredictionRows = useMemo(() => {
     const cutoff = Date.now() - 30 * ANALYSIS_DAY_MS;
@@ -654,6 +660,7 @@ export default function Analysis() {
                     <span className={injury.level === 'moderate' ? 'is-on is-moderate' : ''} />
                     <span className={injury.level === 'high' ? 'is-on is-high' : ''} />
                   </span>
+                  {injuryRecommendation ? <p><strong>{t(`analysis.stitch_injury_prevention_rec_${injuryRecommendation}`)}</strong></p> : null}
                   <span className="analysis-v2-soreness-label">{t('analysis.v2_soreness_title')}</span>
                   <div className="analysis-v2-soreness" role="group" aria-label={t('analysis.v2_soreness_title')}>
                     {['low', 'medium', 'high'].map((level) => (

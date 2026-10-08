@@ -54,7 +54,7 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
       .then((data) => {
         if (cancelled) return;
         setGarminWellnessSyncEnabled(Boolean(data.wellnessSyncEnabled));
-        setGarminCredentialsSaved(Boolean(data.wellnessSyncEnabled));
+        setGarminCredentialsSaved(Boolean(data.credentialsSaved));
         setGarminWellnessLastSynced(data.lastSyncedAt || null);
       })
       .catch(() => {})
@@ -521,7 +521,7 @@ export default function GarminImportSettings({ embedded = false, onClose = null 
           aria-label={t('profile.garmin_v2_wellness_title')}
           checked={garminWellnessSyncEnabled}
           onChange={handleGarminWellnessToggle}
-          disabled={garminWellnessLoading || garminWellnessSaving || garminImporting || (!garminCredentialsSaved && (!garminEmail.trim() || !garminPassword.trim()))}
+          disabled={garminWellnessLoading || garminWellnessSaving || garminImporting || (!garminWellnessSyncEnabled && !garminCredentialsSaved && (!garminEmail.trim() || !garminPassword.trim()))}
         />
         <span className="garmin-v2-switch" aria-hidden="true" />
       </label>

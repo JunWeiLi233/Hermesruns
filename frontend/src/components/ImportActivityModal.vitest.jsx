@@ -43,6 +43,7 @@ describe('ImportActivityModal', () => {
       ['exports', 'morning.fit'], ['coros', 'coros.gpx'], ['huawei', 'huawei.tcx'],
     ]);
     expect(invalidateResourceCache).toHaveBeenCalledWith('/api/activities');
+    expect(invalidateResourceCache.mock.invocationCallOrder[0]).toBeLessThan(onImported.mock.invocationCallOrder[0]);
     expect(onClose).toHaveBeenCalledOnce();
   });
 

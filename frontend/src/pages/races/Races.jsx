@@ -216,6 +216,10 @@ const AgendaRow = memo(function AgendaRow({
   const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
   const raceName = getLocalizedRaceLabel(race, lang);
   const statusKey = race.registrationStatus ? race.registrationStatus.toLowerCase() : 'interested';
+  const isClosed = race.registrationStatus === 'COMPLETED' || race.registrationStatus === 'CANCELED';
+  const countdownLabel = isClosed
+    ? formatRaceDate(race.eventDate, lang)
+    : t(countdownDays < 0 ? 'races.countdown_past' : 'races.v2_in_days', { days: Math.abs(countdownDays) });
 
   return (
     <article className={`race-center-agenda-row${isNext ? ' is-next' : ''}`}>
@@ -225,7 +229,7 @@ const AgendaRow = memo(function AgendaRow({
       </button>
       <div className="race-center-agenda-info">
         <button type="button" className="race-center-agenda-name" onClick={() => onEdit(race)}>{raceName}</button>
-        <p className="race-center-agenda-sub">{distanceLabel} · {getLocalizedRaceLocation(race, lang)} · {t('races.v2_in_days', { days: countdownDays })}</p>
+        <p className="race-center-agenda-sub">{distanceLabel} · {getLocalizedRaceLocation(race, lang)} · {countdownLabel}</p>
       </div>
       <div className="race-center-agenda-side">
         <span className={`race-center-agenda-status is-${statusKey}`}>{t(`races.status_${statusKey}`)}</span>
@@ -380,7 +384,8 @@ const Races = memo(function Races() {
 
   const upcomingRaces = useMemo(() => (
     races
-      .filter((race) => race.registrationStatus !== 'CANCELED' && Number(race.countdownDays) >= 0)
+      .filter((race) => race.registrationStatus !== 'CANCELED'
+        && race.registrationStatus !== 'COMPLETED' && Number(race.countdownDays) >= 0)
       .sort((a, b) => Number(a.countdownDays) - Number(b.countdownDays))
   ), [races]);
 
@@ -472,7 +477,12 @@ const Races = memo(function Races() {
     };
   }, [visibleCards, officialDiscoveryImages]);
 
-  const selectedCalendar = useMemo(() => upcomingRaces.slice(0, 5), [upcomingRaces]);
+  const selectedCalendar = useMemo(() => {
+    const upcomingSet = new Set(upcomingRaces);
+    const history = races.filter((race) => !upcomingSet.has(race))
+      .sort((a, b) => parseRaceDate(b.eventDate || 0) - parseRaceDate(a.eventDate || 0));
+    return [...upcomingRaces, ...history];
+  }, [races, upcomingRaces]);
 
   // Next 12 months, each with the tracked races that fall in it (season strip).
   const seasonMonths = useMemo(() => {
@@ -751,7 +761,7 @@ const Races = memo(function Races() {
                   <div className="race-center-section-head">
                     <div>
                       <h2>{t('races.v2_plan_title')}</h2>
-                      <p className="race-center-section-subtitle">{t('races.v2_plan_count', { count: upcomingRaces.length })}</p>
+                      <p className="race-center-section-subtitle">{t('races.v2_plan_count', { count: selectedCalendar.length })}</p>
                     </div>
                     <button type="button" className="race-center-inline-link" onClick={openCreateModal} aria-label={t('races.add_button')}>
                       + {t('races.add_button')}
@@ -763,7 +773,7 @@ const Races = memo(function Races() {
                         <span className="race-center-agenda-empty-text">{t('races.agenda_empty')}</span>
                       </div>
                     ) : (
-                      selectedCalendar.map((race, index) => (
+                      selectedCalendar.map((race) => (
                         <AgendaRow
                           key={race.id || race.name}
                           race={race}
@@ -771,7 +781,7 @@ const Races = memo(function Races() {
                           t={t}
                           onEdit={openEditModal}
                           onRemove={handleDeleteRace}
-                          isNext={index === 0}
+                          isNext={race === nextRace}
                         />
                       ))
                     )}

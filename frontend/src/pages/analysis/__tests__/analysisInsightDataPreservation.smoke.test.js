@@ -65,9 +65,18 @@ const requireSource = (condition, message) => {
   if (!condition) failures.push(message);
 };
 
+const coachTodaySource = coachBranch.match(/<section className="analysis-coach-bento__today"[^>]*>[\s\S]*?<\/section>/)?.[0] || '';
+requireSource(Boolean(coachTodaySource), 'Coach primary plan must retain its dedicated today tile');
+for (const field of ['slot', 'title', 'target', 'detail', 'why']) {
+  requireSource(
+    new RegExp(`\\{coachPrimarySession(?:\\?\\.|\\.)${field}(?:\\s*\\|\\|[^}]+)?\\s*\\}`).test(coachTodaySource),
+    `Coach primary plan must render ${field}`,
+  );
+}
 requireSource(
-  /\{coachPrimarySession \? \([\s\S]*?coachPrimarySession\.slot[\s\S]*?coachPrimarySession\.title[\s\S]*?coachPrimarySession\.target[\s\S]*?coachPrimarySession\.why/.test(coachBranch),
-  'Coach primary plan must render slot, title, target, and rationale',
+  /coachPrimarySession\?\.title \|\| coachSystem\.keyWorkout/.test(coachTodaySource)
+    && /coachPrimarySession\?\.why \|\| coachSystem\.copy\.blockCopy/.test(coachTodaySource),
+  'Coach primary plan must preserve its workout and rationale fallbacks',
 );
 requireSource(
   !/coachSecondarySessions\.map|analysis-coach-command-secondary-plan/.test(coachBranch),
