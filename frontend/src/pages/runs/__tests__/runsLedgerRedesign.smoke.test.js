@@ -38,7 +38,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign"/,
+  /className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign runs-ledger-v2"/,
   'The history Runs state should use the ledger redesign surface.',
 );
 

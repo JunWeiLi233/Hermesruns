@@ -13,16 +13,16 @@ assert.ok(
   'The generated injury-risk icon should be stored in the frontend asset tree.',
 );
 
-assert.match(
+assert.doesNotMatch(
   analysisSource,
   /import injuryRiskIcon from ['"]\.\.\/\.\.\/assets\/injury-risk-icon\.webp['"];?/,
-  'Analysis should import the generated injury-risk icon.',
+  'The v2 injury tile should not load the retired overview icon.',
 );
 
 assert.match(
   analysisSource,
-  /<img\s+src=\{injuryRiskIcon\}\s+alt=""\s+className="analysis-injury-risk-icon"\s*\/>[\s\S]*analysis\.stitch_injury_title/,
-  'The injury-risk icon should be decorative because the adjacent localized label names the card.',
+  /analysis-v2-check--injury[\s\S]*?navigate\('\/analysis\/injury-risk'\)[\s\S]*?analysis\.stitch_injury_title/,
+  'The injury tile should retain its localized link to the detail page.',
 );
 
 assert.match(

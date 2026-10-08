@@ -153,6 +153,7 @@ export function buildTrainingLoad(runs, bestVdot) {
     chronicSeries,
     acwrSeries,
     days,
+    dailyLoads: days.map((day) => daily[day] || 0),
   };
 }
 
@@ -255,13 +256,13 @@ export function buildInjuryInsight(runs, trainingLoad) {
   };
 }
 
-export function buildVo2Bars(entries, lang) {
+export function buildVo2Bars(entries, lang, monthCount = 6) {
   const safeEntries = normalizeAnalysisList(entries);
   const fmt = new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'short' });
   const now = new Date();
   const bars = [];
 
-  for (let i = 5; i >= 0; i -= 1) {
+  for (let i = monthCount - 1; i >= 0; i -= 1) {
     const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
     const monthEntries = safeEntries.filter((entry) => entry.date >= start && entry.date < end);
@@ -517,6 +518,7 @@ export function buildRunInsightRows(runs, bestVdot, unit, lang, limit = 6) {
       const distanceValue = unit === 'mile' ? distanceKm / KM_TO_MILE : distanceKm;
       return {
         id: run.id,
+        trainingDate: new Date(run.startTime || run.startDate || 0).toISOString().slice(0, 10),
         title: run.name || run.title || (lang === 'zh-CN' ? '训练记录' : 'Training session'),
         dateLabel: dateFormatter.format(new Date(run.startTime || run.startDate || 0)),
         distanceLabel: `${distanceValue.toFixed(1)} ${unit === 'mile' ? 'mi' : 'km'}`,

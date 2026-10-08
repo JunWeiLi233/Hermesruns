@@ -41,6 +41,18 @@ for (const [route, branch] of [
   ['injury', injuryBranch],
   ['load', loadBranch],
 ]) {
+  if (route === 'load') {
+    for (const marker of ['analysis-load-v2', 'analysis-load-v2-verdict', 'analysis-load-v2-chart', 'analysis-load-v2-metrics']) {
+      assert.ok(branch.includes(marker), `Load balance must include ${marker}.`);
+    }
+    continue;
+  }
+  if (route === 'injury') {
+    for (const marker of ['analysis-injury-v2-verdict', 'analysis-injury-v2-signals', 'analysis-injury-v2-evidence']) {
+      assert.ok(branch.includes(marker), `Injury Risk must include ${marker}.`);
+    }
+    continue;
+  }
   assert.ok(branch.includes(`analysis-profile-v2--${route}`), `${route} must use its shared Profile v2 route marker.`);
   const requiredMarkers = [
     'analysis-profile-v2-focus',
@@ -73,18 +85,17 @@ for (const [route, branch, behaviorMarkers] of [
   ]],
   ['injury', injuryBranch, [
     'analysis-cinematic-card--trend',
-    'analysis-cinematic-sample-list',
+    'analysis-injury-v2-runs',
     'onPointerMove={handleInjuryPointerMove}',
     'onPointerLeave={handleInjuryPointerLeave}',
-    "navigate('/analysis/vo2max')",
-    "navigate('/analysis/intensity')",
-    "navigate('/prediction/marathon')",
+    "navigate('/today-run')",
+    'navigate(buildRunDetailPath(row.id))',
     "navigate('/runs')",
   ]],
   ['load', loadBranch, [
     'onPointerMove={handleLoadPointerMove}',
     'onPointerLeave={handleLoadPointerLeave}',
-    'analysis-load-command-sample-list',
+    'analysis-load-v2-driver-list',
     "navigate('/today-run')",
     "navigate('/runs')",
   ]],

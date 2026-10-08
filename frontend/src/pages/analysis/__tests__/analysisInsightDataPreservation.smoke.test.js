@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLoadBalanceZoneKey } from '../loadBalancePresentation.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
@@ -136,8 +137,9 @@ const buildLoadBalanceDashboardModel = new Function(
   'clamp',
   'resolveLoadTrendDirection',
   'resolveLoadTrendIcon',
+  'getLoadBalanceZoneKey',
   `return (${loadModelSource});`,
-)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon);
+)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon, getLoadBalanceZoneKey);
 const t = (key) => key;
 
 for (const historyLength of [7, 13, 19, 24]) {

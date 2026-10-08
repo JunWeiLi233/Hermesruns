@@ -1,0 +1,122 @@
+/* Prediction v2 (design 21a). Load last in app.css. */
+
+body:is(.theme-light, .theme-high-contrast-light) #root .prediction-v2-page { background: #f2f2f8 !important; }
+#root .prediction-v2-page::before,
+#root .prediction-v2-page .runner-shell-canvas::before { content: none !important; }
+body #root .prediction-v2-page .runner-shell-main { background: transparent !important; }
+
+#root .prediction-v2 {
+  --pv-card: #fff;
+  --pv-ink: #1c1917;
+  --pv-muted: #625c56;
+  --pv-faint: #8a837c;
+  --pv-line: rgba(28, 25, 23, 0.08);
+  --pv-fill: rgba(28, 25, 23, 0.05);
+  --pv-accent: #a0392a;
+  display: flex !important;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--pv-ink);
+  max-width: 1344px;
+  padding: 28px clamp(24px, 4.5vw, 64px) 48px;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2 {
+  --pv-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --pv-ink: #f8f4ef;
+  --pv-muted: #c0b8ad;
+  --pv-faint: #a69e93;
+  --pv-line: rgba(255, 248, 238, 0.12);
+  --pv-fill: rgba(255, 255, 255, 0.06);
+  --pv-accent: #ffb4a7;
+}
+
+#root .prediction-v2 :is(h1, h2, p, ul) { margin: 0; }
+#root .prediction-v2 :is(.prediction-v2-hero, .prediction-v2-ladder, .prediction-v2-lever) { min-width: 0; border-radius: 24px; background: var(--pv-card); }
+#root .prediction-v2-top { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 20px; }
+#root .prediction-v2-hero { display: flex; flex-direction: column; gap: 16px; padding: 28px; }
+#root .prediction-v2-kicker, #root .prediction-v2-label { color: var(--pv-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+#root .prediction-v2-label { color: var(--pv-muted); letter-spacing: 0.06em; }
+#root .prediction-v2-title { color: var(--pv-muted) !important; font-size: 0.94rem !important; font-weight: 600 !important; }
+#root .prediction-v2-time-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 24px; }
+
+#root .prediction-v2 .prediction-forecast-time {
+  color: var(--pv-ink) !important;
+  font-family: var(--font-display);
+  font-size: clamp(3.5rem, 7vw, 6rem) !important;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .prediction-v2-time-meta { display: flex; flex-direction: column; gap: 6px; max-width: 42ch; padding-bottom: 8px; color: var(--pv-muted); font-size: 0.85rem; line-height: 1.45; }
+#root .prediction-v2-delta { align-self: flex-start; padding: 5px 11px; border-radius: 999px; background: var(--pv-fill); color: var(--pv-ink); font-size: 0.8rem; font-weight: 700; }
+#root .prediction-v2-delta.is-faster { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .prediction-v2-confidence { display: flex; flex-direction: column; gap: 6px; }
+#root .prediction-v2-confidence > div { display: flex; justify-content: space-between; color: var(--pv-muted); font-size: 0.78rem; font-weight: 600; }
+#root .prediction-v2-confidence strong { color: var(--pv-ink); }
+#root .prediction-v2-bar { display: block; height: 8px; overflow: hidden; border-radius: 4px; background: var(--pv-fill); }
+#root .prediction-v2-bar i { display: block; height: 100%; border-radius: 4px; background: var(--pv-accent); }
+#root .prediction-v2-weather { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 149, 0, 0.08); font-size: 0.8rem; }
+#root .prediction-v2-weather > span { color: #a15c00; font-weight: 700; }
+#root .prediction-v2-weather > div { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--pv-muted); }
+#root .prediction-v2-weather strong { color: var(--pv-ink); font-variant-numeric: tabular-nums; }
+#root .prediction-v2-coach { max-width: 62ch; color: var(--pv-ink) !important; font-size: 0.94rem; line-height: 1.6; text-wrap: pretty; }
+#root .prediction-v2-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+#root .prediction-v2-primary { min-height: 42px; padding: 0 18px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #a0392a, #e0685a); color: #fff; font: inherit; font-size: 0.85rem; font-weight: 800; cursor: pointer; }
+#root .prediction-v2-link { padding: 0 8px; border: 0; background: none; color: var(--pv-muted); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+
+#root .prediction-v2-ladder { display: flex; flex-direction: column; gap: 6px; padding: 24px; }
+#root .prediction-v2-ladder ul { display: flex; flex-direction: column; margin-top: 6px; padding: 0; list-style: none; }
+#root .prediction-v2-ladder li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--pv-line); }
+#root .prediction-v2-ladder li .prediction-v2-bar { grid-column: 1 / -1; height: 6px; }
+#root .prediction-v2-ladder-copy { display: flex; flex-direction: column; gap: 2px; }
+#root .prediction-v2-ladder-copy strong { font-size: 0.875rem; }
+#root .prediction-v2-ladder-copy span { color: var(--pv-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+#root .prediction-v2-ladder-time { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+
+#root .prediction-v2-levers { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+#root .prediction-v2-lever { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; }
+#root .prediction-v2-lever span { color: var(--pv-muted); font-size: 0.75rem; font-weight: 700; }
+#root .prediction-v2-lever strong { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+#root .prediction-v2-lever p { color: var(--pv-ink); font-size: 0.82rem; line-height: 1.5; }
+
+#root .prediction-v2 .prediction-trend-card { border: 0 !important; border-radius: 24px !important; background: var(--pv-card) !important; box-shadow: none !important; }
+
+/* Keep the trend card on the same flat surface as the supplied forecast cards. */
+body #root .prediction-v2-page .prediction-v2 .prediction-trend-card {
+  padding: 24px 28px;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+#root .prediction-v2 .prediction-trend-card::before,
+#root .prediction-v2 .prediction-trend-card::after { content: none !important; }
+#root .prediction-v2 .prediction-section-heading h2 {
+  color: var(--pv-ink) !important;
+  font-size: 1.5rem;
+  font-style: italic;
+  letter-spacing: -0.03em;
+}
+#root .prediction-v2 .prediction-section-heading :is(p, span) { color: var(--pv-muted) !important; }
+#root .prediction-v2 .prediction-trend-chart {
+  height: 320px;
+  min-height: 0;
+  padding: 0;
+  background: transparent !important;
+}
+#root .prediction-v2 .prediction-v2-actions { margin-top: auto; }
+#root .prediction-v2 :is(button, a):focus-visible { outline: 3px solid var(--pv-accent); outline-offset: 4px; }
+body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2-delta.is-faster { color: #9cdda8; }
+body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2-weather > span { color: #f6c887; }
+
+@media (max-width: 1100px) { #root .prediction-v2-top { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  #root .prediction-v2 { padding: 24px 16px 32px; gap: 16px; }
+  #root .prediction-v2-top { gap: 16px; }
+  #root .prediction-v2 :is(.prediction-v2-hero, .prediction-v2-ladder) { padding: 20px; border-radius: 20px; }
+  #root .prediction-v2-levers { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #root .prediction-v2 .prediction-forecast-time { font-size: clamp(2.6rem, 13vw, 3.5rem) !important; }
+  body #root .prediction-v2-page .prediction-v2 .prediction-trend-card { padding: 20px; border-radius: 20px !important; }
+  #root .prediction-v2 .prediction-trend-chart { height: 280px; }
+}

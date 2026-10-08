@@ -134,8 +134,8 @@ for (const behaviorMarker of [
   'analysis-cinematic-sample-list',
   'analysis-cinematic-card--trend',
   'injuryTrend.primaryPath',
-  'analysis-load-command-chart-card',
-  'analysis-load-command-sample-list',
+  'analysis-load-v2-chart',
+  'analysis-load-v2-driver-list',
 ]) {
   assert.ok(insightSource.includes(behaviorMarker), `Existing analysis behavior marker ${behaviorMarker} must remain.`);
 }

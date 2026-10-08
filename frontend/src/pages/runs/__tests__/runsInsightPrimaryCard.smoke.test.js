@@ -32,8 +32,8 @@ function blockForMatching(source, selector, matcher, label, message) {
 
 assert.match(
   runsSource,
-  /<article className="recent-runs-insight-card recent-runs-insight-card--primary">[\s\S]*runs\.insight_runs_count/,
-  'Runs should keep the recent-runs primary insight card wired to the filtered run count.',
+  /className="runs-ledger-v2__figure"[\s\S]*runs\.summary_runs[\s\S]*\{filteredRuns\.length\}/,
+  'Runs should keep the summary wired to the filtered run count.',
 );
 
 for (const [label, source] of [

@@ -23,14 +23,14 @@ const fill = (password, confirmation = password) => {
   fireEvent.change(screen.getByLabelText('signup.confirm_password_label'), { target: { value: confirmation } });
 };
 
-it('only offers configured providers while keeping account and language navigation', async () => {
+it('only offers configured providers and account navigation without a manual language switcher', async () => {
   apiJson.mockResolvedValue({ googleConfigured: true, stravaConfigured: false });
   await mount();
   expect(screen.getByRole('button', { name: 'signup.google' })).toBeEnabled();
   expect(screen.queryByRole('button', { name: /Strava/ })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'signup.signin_link' })).toHaveAttribute('href', '/login');
-  fireEvent.click(screen.getByRole('button', { name: 'landing.studio_language' }));
-  expect(setLang).toHaveBeenCalledWith('zh-CN');
+  expect(screen.queryByRole('button', { name: 'landing.studio_language' })).not.toBeInTheDocument();
+  expect(setLang).not.toHaveBeenCalled();
 });
 
 it('shows password guidance after its field and prevents invalid submissions', async () => {

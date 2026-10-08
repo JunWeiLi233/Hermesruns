@@ -11,19 +11,6 @@ import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
-import predictionFiveKHeroImage from '../../assets/generated/prediction-5k-hero.webp';
-import predictionFiveKHeroAvif640 from '../../assets/generated/prediction-5k-hero-640.avif';
-import predictionFiveKHeroAvif960 from '../../assets/generated/prediction-5k-hero-960.avif';
-import predictionFiveKHeroAvif1200 from '../../assets/generated/prediction-5k-hero-1200.avif';
-import predictionFiveKHeroWebp640 from '../../assets/generated/prediction-5k-hero-640.webp';
-import predictionFiveKHeroWebp960 from '../../assets/generated/prediction-5k-hero-960.webp';
-import predictionTenKHeroImage from '../../assets/generated/prediction-10k-hero.webp';
-import predictionTenKHeroAvif640 from '../../assets/generated/prediction-10k-hero-640.avif';
-import predictionTenKHeroAvif1280 from '../../assets/generated/prediction-10k-hero-1280.avif';
-import predictionTenKHeroAvif1600 from '../../assets/generated/prediction-10k-hero-1600.avif';
-import predictionTenKHeroWebp640 from '../../assets/generated/prediction-10k-hero-640.webp';
-import predictionTenKHeroWebp1280 from '../../assets/generated/prediction-10k-hero-1280.webp';
-import predictionHalfHeroImage from '../../assets/generated/prediction-half-hero.webp';
 import {
   collectAllVdotEntries,
   computeRollingRepresentativeSeries,
@@ -341,16 +328,6 @@ export default function PredictionDetail() {
   const weatherRecoveredSeconds = useWeatherAdjustedPrediction
     ? Math.max(0, (rawRacePredictionMinutes - adjustedRacePredictionMinutes) * 60)
     : 0;
-  const weatherImpactSamples = trendPredictions
-    .filter((point) => point.hasAdjustment)
-    .map((point) => Math.max(0, (point.raw - point.adjusted) * 60))
-    .filter((seconds) => seconds >= 1);
-  const averageWeatherRecoverySeconds = weatherImpactSamples.length
-    ? weatherImpactSamples.reduce((sum, seconds) => sum + seconds, 0) / weatherImpactSamples.length
-    : 0;
-  const peakWeatherRecoverySeconds = weatherImpactSamples.length
-    ? Math.max(...weatherImpactSamples)
-    : 0;
   const racePace = racePredictionMinutes ? formatPaceSeconds((racePredictionMinutes * 60) / (distance.meters / 1000)) : '--';
   const trendDelta = trendPredictions.length > 1
     ? trendPredictions[trendPredictions.length - 1][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
@@ -382,7 +359,7 @@ export default function PredictionDetail() {
   ];
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page prediction-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`} style={{ '--prediction-accent': DIST_COLORS[distKey] || '#f07561' }}>
+    <div className={`runner-shell-page runner-dashboard-page prediction-detail-page prediction-v2-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`} style={{ '--prediction-accent': DIST_COLORS[distKey] || '#f07561' }}>
       <AnalysisSubpageNav
         activePredictionKey={distKey}
         collapsed={isSidebarCollapsed}
@@ -415,159 +392,74 @@ export default function PredictionDetail() {
         </header>
 
         <div className="runner-shell-canvas">
-          <div className="prediction-profile-content prediction-forecast-cockpit">
-            <section className={`prediction-forecast-hero${showConfidencePanel ? '' : ' is-confidence-removed'}${distance?.key === '5k' ? ' is-five-k' : distance?.key === '10k' ? ' is-ten-k' : distance?.key === 'half' ? ' is-half' : ''}`}>
-              <div className="prediction-forecast-hero-copy">
-                <span className="prediction-forecast-kicker">{t('analysis.pred_cockpit_kicker')}</span>
-                <h1>{t('analysis.pred_cockpit_title', { dist: title })}</h1>
-                <strong className="prediction-forecast-time">{primaryTime}</strong>
-                <p>
-                  {confidenceBasis
-                    ? t('analysis.pred_cockpit_basis_recent', { km: confidenceBasis.km, date: confidenceBasis.date, pace: confidenceBasis.pace })
-                    : forecastVdot > 0
-                      ? t('analysis.pred_cockpit_basis_vdot', { vdot: forecastVdot.toFixed(1), runs: runs.length })
-                      : t('analysis.pred_cockpit_basis_empty')}
-                </p>
-                <div className="prediction-forecast-actions">
-                  <button type="button" className="prediction-forecast-action is-primary" onClick={() => navigate('/today-run')}>
-                    {t('analysis.pred_open_today')}
-                  </button>
-                  <button type="button" className="prediction-forecast-action" onClick={() => navigate('/analysis')}>
-                    {t('analysis.pred_open_analysis')}
-                  </button>
+          <div className="prediction-profile-content prediction-forecast-cockpit prediction-v2">
+            <section className="prediction-v2-top">
+              <div className="prediction-v2-hero">
+                <span className="prediction-v2-kicker">{title} · {t('analysis.pred_cockpit_kicker')}</span>
+                <h1 className="prediction-v2-title">{t('analysis.pred_cockpit_title', { dist: title })}</h1>
+                <div className="prediction-v2-time-row">
+                  <strong className="prediction-forecast-time">{primaryTime}</strong>
+                  <div className="prediction-v2-time-meta">
+                    {trendDelta != null ? <span className={`prediction-v2-delta${trendDelta < 0 ? ' is-faster' : ''}`}>{formatTrendDelta(trendDelta, t)}</span> : null}
+                    <span>
+                      {confidenceBasis
+                        ? t('analysis.pred_cockpit_basis_recent', { km: confidenceBasis.km, date: confidenceBasis.date, pace: confidenceBasis.pace })
+                        : forecastVdot > 0
+                          ? t('analysis.pred_cockpit_basis_vdot', { count: currentVdot.usedTopN || 0 })
+                          : t('analysis.pred_cockpit_basis_empty')}
+                    </span>
+                  </div>
+                </div>
+                {showConfidencePanel ? (
+                  <div className="prediction-v2-confidence" aria-label={t('analysis.pred_cockpit_confidence')}>
+                    <div><span>{t('analysis.pred_cockpit_confidence')}</span><strong>{confidenceScore}%</strong></div>
+                    <span className="prediction-v2-bar" aria-hidden="true"><i style={{ width: `${confidenceScore}%` }} /></span>
+                  </div>
+                ) : null}
+                {useWeatherAdjustedPrediction ? (
+                  <div className="prediction-v2-weather">
+                    <span>{t('analysis.pred_weather_title')}</span>
+                    <div>
+                      <span>{t('analysis.vdot_raw')} <strong>{rawPrimaryTime}</strong></span>
+                      <span>{t('analysis.vdot_weather_adjusted')} <strong>{adjustedPrimaryTime}</strong></span>
+                      <span>{t('analysis.pred_weather_gain_label')} <strong>{formatPredictedTime(weatherRecoveredSeconds)}</strong></span>
+                    </div>
+                  </div>
+                ) : null}
+                {coachRecommendation ? <p className="prediction-v2-coach">{coachRecommendation}</p> : null}
+                <div className="prediction-v2-actions">
+                  <button type="button" className="prediction-v2-primary" onClick={() => navigate('/today-run')}>{t('analysis.pred_open_today')}</button>
+                  <button type="button" className="prediction-v2-link" onClick={() => navigate('/analysis')}>{t('analysis.pred_open_analysis')} ›</button>
                 </div>
               </div>
 
-              {distance?.key === '5k' || distance?.key === '10k' || distance?.key === 'half' ? (
-                <div className="prediction-forecast-hero-media" aria-hidden="true">
-                  <picture>
-                    {distance?.key !== 'half' && (
-                      <>
-                        <source
-                          type="image/avif"
-                          srcSet={distance?.key === '10k'
-                            ? `${predictionTenKHeroAvif640} 640w, ${predictionTenKHeroAvif1280} 1280w, ${predictionTenKHeroAvif1600} 1600w`
-                            : `${predictionFiveKHeroAvif640} 640w, ${predictionFiveKHeroAvif960} 960w, ${predictionFiveKHeroAvif1200} 1200w`}
-                          sizes="(max-width: 900px) 100vw, 52vw"
-                        />
-                        <source
-                          type="image/webp"
-                          srcSet={distance?.key === '10k'
-                            ? `${predictionTenKHeroWebp640} 640w, ${predictionTenKHeroWebp1280} 1280w, ${predictionTenKHeroImage} 1600w`
-                            : `${predictionFiveKHeroWebp640} 640w, ${predictionFiveKHeroWebp960} 960w, ${predictionFiveKHeroImage} 1200w`}
-                          sizes="(max-width: 900px) 100vw, 52vw"
-                        />
-                      </>
-                    )}
-                    <img
-                      src={distance?.key === 'half'
-                        ? predictionHalfHeroImage
-                        : distance?.key === '10k' ? predictionTenKHeroImage : predictionFiveKHeroImage}
-                      alt=""
-                      width={distance?.key === 'half' || distance?.key === '10k' ? 1600 : 1200}
-                      height={distance?.key === 'half' ? 550 : distance?.key === '10k' ? 901 : 650}
-                      loading="eager"
-                      fetchPriority="high"
-                      decoding="async"
-                    />
-                  </picture>
-                </div>
-              ) : null}
-
-              {showConfidencePanel ? (
-                <div className="prediction-forecast-hero-panel" aria-label={t('analysis.pred_cockpit_confidence')}>
-                  <span>{t('analysis.pred_cockpit_confidence')}</span>
-                  <strong>{confidenceScore}%</strong>
-                  <div className="prediction-forecast-confidence-bar">
-                    <div style={{ width: `${confidenceScore}%` }} />
-                  </div>
-                  <p>{formatTrendDelta(trendDelta, t)}</p>
-                </div>
-              ) : null}
+              <aside className="prediction-v2-ladder">
+                <span className="prediction-v2-label">{t('analysis.pred_effort_title')}</span>
+                {effortPredictions.length > 0 ? (
+                  <ul>
+                    {effortPredictions.map((level) => (
+                      <li key={level.key} className={level.cssClass}>
+                        <span className="prediction-v2-ladder-copy"><strong>{level.label}</strong><span>{level.paceDisplay}{t('analysis.pred_cockpit_pace_unit')}</span></span>
+                        <strong className="prediction-v2-ladder-time">{level.timeDisplay}</strong>
+                        <span className="prediction-v2-bar" aria-hidden="true"><i style={{ width: `${level.fill}%` }} /></span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="prediction-detail-empty"><strong>{t('analysis.pred_detail_empty_title')}</strong><p>{t('analysis.pred_detail_empty_copy')}</p></div>
+                )}
+              </aside>
             </section>
 
-            <section className="prediction-evidence-grid prediction-profile-metric-strip" aria-label={t('analysis.pred_evidence_title')}>
+            <section className="prediction-v2-levers" aria-label={t('analysis.pred_evidence_title')}>
               {evidenceTiles.map((tile) => (
-                <div key={tile.label} className="prediction-evidence-tile">
+                <article key={tile.label} className="prediction-v2-lever">
                   <span>{tile.label}</span>
                   <strong>{tile.value}</strong>
                   <p>{tile.helper}</p>
-                </div>
+                </article>
               ))}
             </section>
-
-            <section className={`prediction-weather-card${useWeatherAdjustedPrediction ? ' is-active' : ' is-empty'}`}>
-              <div className="prediction-section-heading">
-                <span>{t('analysis.pred_weather_kicker')}</span>
-                <h2>{t('analysis.pred_weather_title')}</h2>
-                <p>{t('analysis.pred_weather_copy')}</p>
-                {useWeatherAdjustedPrediction ? (
-                  <div className="prediction-weather-meta">
-                    <span>{t('analysis.pred_weather_samples', { count: weatherImpactSamples.length })}</span>
-                    <span>{t('analysis.pred_weather_avg', { value: formatPredictedTime(averageWeatherRecoverySeconds) })}</span>
-                    <span>{t('analysis.pred_weather_peak', { value: formatPredictedTime(peakWeatherRecoverySeconds) })}</span>
-                  </div>
-                ) : null}
-              </div>
-              {useWeatherAdjustedPrediction ? (
-                <div className="prediction-weather-comparison">
-                  <div>
-                    <span>{t('analysis.vdot_raw')}</span>
-                    <strong>{rawPrimaryTime}</strong>
-                  </div>
-                  <div className="is-adjusted">
-                    <span>{t('analysis.vdot_weather_adjusted')}</span>
-                    <strong>{adjustedPrimaryTime}</strong>
-                  </div>
-                  <div className="is-gain">
-                    <span>{t('analysis.pred_weather_gain_label')}</span>
-                    <strong>{formatPredictedTime(weatherRecoveredSeconds)}</strong>
-                  </div>
-                </div>
-              ) : (
-                <p className="prediction-weather-empty">{t('analysis.pred_weather_empty')}</p>
-              )}
-            </section>
-
-            <div className="prediction-profile-training-grid">
-              <section className="prediction-effort-ladder">
-                <div className="prediction-section-heading">
-                  <span>{t('analysis.pred_effort_kicker')}</span>
-                  <h2>{t('analysis.pred_effort_title')}</h2>
-                  <p>{t('analysis.pred_effort_copy')}</p>
-                </div>
-                <div className="prediction-effort-rows">
-                  {effortPredictions.length > 0 ? effortPredictions.map((level) => (
-                    <div key={level.key} className={`prediction-effort-row ${level.cssClass}`}>
-                      <div>
-                        <span>{level.label}</span>
-                        <strong>{level.timeDisplay}</strong>
-                      </div>
-                      <div className="prediction-effort-meter">
-                        <div style={{ width: `${level.fill}%` }} />
-                      </div>
-                      <span className="prediction-effort-pace">{level.paceDisplay}{t('analysis.pred_cockpit_pace_unit')}</span>
-                    </div>
-                  )) : (
-                    <div className="prediction-detail-empty">
-                      <strong>{t('analysis.pred_detail_empty_title')}</strong>
-                      <p>{t('analysis.pred_detail_empty_copy')}</p>
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              <aside className="prediction-coach-rail">
-                <span className="prediction-forecast-kicker">{t('analysis.pred_coach_kicker')}</span>
-                <h2>{t('analysis.pred_coach_title')}</h2>
-                <p>{coachRecommendation}</p>
-                <div className="prediction-coach-points">
-                  <span>{t('analysis.pred_coach_point_vdot')}</span>
-                  <span>{t('analysis.pred_coach_point_evidence')}</span>
-                  <span>{t('analysis.pred_coach_point_execution')}</span>
-                </div>
-              </aside>
-            </div>
 
             <section className="prediction-trend-card">
               <div className="prediction-section-heading prediction-trend-heading">

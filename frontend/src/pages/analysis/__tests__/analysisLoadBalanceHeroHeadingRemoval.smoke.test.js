@@ -15,12 +15,12 @@ assert.doesNotMatch(
 );
 assert.match(
   source,
-  /className="analysis-load-profile-decision analysis-profile-v2-focus"/,
+  /className="analysis-load-v2-verdict"/,
   'Load Balance should keep the coaching decision surface after removing the hero heading.',
 );
 assert.match(
   source,
-  /className="analysis-load-profile-evidence analysis-profile-v2-evidence-grid"/,
+  /className="analysis-load-v2-chart"/,
   'Load Balance should keep the evidence charts after removing the hero heading.',
 );
 for (const localeSource of [enSource, zhSource]) {

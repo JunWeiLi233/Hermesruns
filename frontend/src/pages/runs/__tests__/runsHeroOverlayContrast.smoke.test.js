@@ -12,25 +12,25 @@ const darkModeCohesion = readFileSync(path.join(here, "../../../styles/dark-mode
 
 assert.match(
   runsSource,
-  /<section className="runs-profile-cockpit" aria-labelledby="runs-profile-title">/,
-  'Runs should render the profile-aligned cockpit as the current top surface.',
+  /<header className="runs-ledger-v2__header">/,
+  'Runs should render the ledger header as the current top surface.',
 );
 
 assert.match(
   runsSource,
-  /className="runs-profile-cockpit"/,
-  'Runs should use the profile-aligned cockpit instead of the retired generated-photo hero.',
+  /className="runs-ledger-v2__heading"/,
+  'Runs should use a compact ledger heading.',
 );
 
 assert.match(
   runsSource,
-  /className="recent-runs-chip-stack runs-profile-workbench"/,
-  'Runs filters should sit in the profile-aligned workbench rail.',
+  /className="runs-ledger-v2__toolbar"/,
+  'Runs filters should sit in the ledger toolbar.',
 );
 
 assert.match(
   runsSource,
-  /<button type="button" className="recent-runs-card"[^>]*onClick=\{\(\) => onOpen\(run\)\}>/,
+  /<button type="button" className="recent-runs-card runs-ledger-row"[^>]*onClick=\{\(\) => onOpen\(run\)\}>/,
   'Run cards should be real buttons so the whole card click target is keyboard-accessible.',
 );
 
@@ -42,8 +42,8 @@ assert.doesNotMatch(
 
 assert.match(
   runsSource,
-  /<div className="runs-profile-cockpit__heading">[\s\S]*?<p>\{t\('runs\.page_copy'\)\}<\/p>/,
-  'The main Runs cockpit should retain its localized explanatory paragraph beneath the heading.',
+  /runs-ledger-v2__status[\s\S]*?\{awaitingStatus\}[\s\S]*?<h1 id="runs-profile-title">\{t\('runs\.heading'\)\}/,
+  'The ledger heading should retain its localized sync status.',
 );
 
 for (const [label, source] of [

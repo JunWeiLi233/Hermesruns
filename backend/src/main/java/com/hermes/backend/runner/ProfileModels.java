@@ -45,9 +45,16 @@ public final class ProfileModels {
     public record ProfilePreferencesResponse(String mantra, boolean weeklyDigestEnabled) {
     }
 
-    public record HeatPoint(long activityId, double latitude, double longitude, double intensity, double speedRatio) {
+    public record HeatPoint(long activityId, double latitude, double longitude, double intensity, double speedRatio, long visitCount) {
+        public HeatPoint(long activityId, double latitude, double longitude, double intensity, double speedRatio) {
+            this(activityId, latitude, longitude, intensity, speedRatio, 0);
+        }
+
         @JsonValue
         public Object[] toJson() {
+            if (visitCount > 0) {
+                return new Object[]{activityId, latitude, longitude, intensity, speedRatio, visitCount};
+            }
             return new Object[]{activityId, latitude, longitude, speedRatio};
         }
 
@@ -62,9 +69,13 @@ public final class ProfileModels {
                     values[1],
                     values[2],
                     hasIntensity ? values[3] : 0.0,
-                    values[values.length - 1]
+                    hasIntensity ? values[4] : values[3],
+                    values.length > 5 ? (long) values[5] : 0
             );
         }
+    }
+
+    public record HeatmapViewportResponse(List<HeatPoint> points) {
     }
 
     public record HeatmapBounds(
