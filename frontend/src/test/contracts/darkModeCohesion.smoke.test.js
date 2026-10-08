@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import postcss from 'postcss';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.resolve(here, "../..");
@@ -29,11 +30,64 @@ assert(
 );
 
 for (const sourcePath of ['styles/app.css', 'styles/profile-entry.css']) {
-  const source = read(sourcePath);
-  assert(
-    source.trimEnd().endsWith("@import './dark-mode-final-fixes.css';"),
-    `${sourcePath} must finish with the Profile-derived midnight palette.`,
-  );
+  const imports = [];
+  postcss.parse(read(sourcePath)).walkAtRules('import', ({ params }) => imports.push(params.slice(1, -1)));
+  const palette = './dark-mode-final-fixes.css';
+  assert(imports.filter((file) => file === palette).length === 1, `${sourcePath} must load the Profile-derived palette exactly once.`);
+  for (const owner of [
+    './_split/runner-shell.css', './_split/light-theme-overrides.css',
+    './all-pages-liquid-glass.css', './dark-mode-cohesion.css',
+    './grid-cards-white.css', './runner-shell-workout-button.css', './mobile.css',
+    ...(sourcePath === 'styles/app.css' ? ['./runs-ledger-v2.css', './run-detail-v2.css', './analysis-v2.css'] : []),
+  ]) {
+    assert(imports.includes(owner), `${sourcePath} must retain ${owner}.`);
+    assert(imports.indexOf(palette) > imports.lastIndexOf(owner), `${sourcePath} must load the Profile palette after ${owner}.`);
+  }
+}
+
+// New route owners intentionally follow the shared palette. Their dark token
+// overrides must stay on their own page/dialog and preserve Profile ink.
+const appImports = [];
+postcss.parse(read('styles/app.css')).walkAtRules('import', ({ params }) => appImports.push(params.slice(1, -1)));
+for (const [file, owner, token, scope] of [
+  ['races-v2.css', '.race-center-content', '--rc-ink', /\.(?:race-center-|races-dashboard-page)/],
+  ['shoe-delete-modal-v2.css', '.shoe-delete-modal-card', '--sdm-ink', /\.shoe-delete-modal/],
+  ['muscle-training-week-v2.css', '.mt-week-v2', '--mw-ink', /\.mt-/],
+  ['analysis-load-balance-v2.css', '.analysis-load-v2', '--lb-ink', /\.analysis-load-v2|\.analysis-insight-detail-page\.is-load-balance/],
+  ['import-modal-v2.css', '.import-v2-card', '--im-ink', /\.import-v2/],
+  ['today-run-v2.css', '.today-run-command-canvas', '--tr-ink', /\.today-run-session-page|\.tr-v2/],
+  ['shoes-v2.css', '.shoe-v2-stage', '--sv-ink', /\.shoe-v2|\.shoe-inventory-/],
+  ['shoe-scan-modal-v2.css', '.scan-v2-card', '--sc-ink', /\.scan-v2|\.shoe-scan-modal/],
+  ['analysis-injury-v2.css', '.analysis-injury-v2', '--ir-ink', /\.analysis-injury-v2|\.analysis-insight-detail-page\.is-injury-risk/],
+  ['shoe-edit-modal-v2.css', '.edit-v2-card', '--ed-ink', /\.edit-v2/],
+  ['garmin-import-modal-v2.css', '.garmin-v2-card', '--gv-ink', /\.garmin-v2/],
+  ['prediction-v2.css', '.prediction-v2', '--pv-ink', /\.prediction-v2/],
+]) {
+  assert(appImports.filter((item) => item === `./${file}`).length === 1, `Load ${file} exactly once.`);
+  assert(appImports.indexOf(`./${file}`) > appImports.indexOf('./dark-mode-final-fixes.css'), `${file} must load after the shared palette it specializes.`);
+  const sheet = postcss.parse(read(`styles/${file}`));
+  const darkRules = [];
+  sheet.walkRules((rule) => {
+    if (rule.nodes.some((node) => node.type === 'decl' && /^(?:--|background|color$|border.*color|box-shadow)/.test(node.prop))) {
+      assert(rule.selectors.every((selector) => scope.test(selector)), `${file} must scope palette rules to its route/dialog: ${rule.selector}`);
+    }
+    if (rule.selectors.every((selector) => selector.startsWith('body:is(.theme-midnight, .theme-high-contrast)') && selector.includes(owner))
+      && rule.nodes.some((node) => node.prop === token)) {
+      darkRules.push(rule);
+    }
+  });
+  const darkRule = darkRules.at(-1);
+  assert(darkRule?.nodes.some((node) => node.prop === token && node.value === '#f8f4ef'), `${file} must define Profile dark ink within both dark themes and its ${owner} owner.`);
+  const surface = darkRule.nodes.find((node) => node.prop === token.replace(/-ink$/, '-card') || node.prop === 'background');
+  assert(surface && /^var\(--profile-night-(?:card|solid|solid-raised),/.test(surface.value), `${file} must inherit its dark surface from the Profile palette.`);
+  if (surface.prop === 'background') {
+    assert(surface.important, `${file} must preserve dark dialog precedence over its important light surface.`);
+  }
+}
+for (const file of appImports.slice(appImports.indexOf('./dark-mode-final-fixes.css') + 1)) {
+  postcss.parse(read(`styles/${file}`)).walkDecls(/^--profile-night-/, ({ prop }) => {
+    assert(false, `${file} must specialize its route tokens instead of replacing the shared ${prop} palette.`);
+  });
 }
 
 assert(

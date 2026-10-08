@@ -1,0 +1,263 @@
+/* Injury risk v2 (design 18a). Load last in app.css. Same visual language as analysis-load-balance-v2. */
+
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail-page.is-injury-risk { background: #f2f2f8 !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .runner-shell-main { background: transparent !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .runner-shell-canvas.analysis-insight-detail-canvas { padding: 28px clamp(16px, 4.2vw, 80px) 64px !important; background: transparent !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .runner-shell-canvas::before { display: none !important; }
+body #root .analysis-insight-detail-page.is-injury-risk::before { display: none !important; }
+
+#root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 {
+  --ir-card: var(--analysis-v2-card, #fff);
+  --ir-ink: #1c1917;
+  --ir-muted: #625c56;
+  --ir-faint: #8a837c;
+  --ir-line: rgba(28, 25, 23, 0.08);
+  --ir-fill: rgba(28, 25, 23, 0.04);
+  --ir-accent: #a0392a;
+  --ir-accent-soft: rgba(160, 57, 42, 0.09);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--ir-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 {
+  --ir-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --ir-ink: #f8f4ef;
+  --ir-muted: #c0b8ad;
+  --ir-faint: #a69e93;
+  --ir-line: rgba(255, 248, 238, 0.12);
+  --ir-fill: rgba(255, 255, 255, 0.06);
+  --ir-accent: #ffb4a7;
+  --ir-accent-soft: rgba(240, 117, 97, 0.14);
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 :is(h1, h2, p, ol, ul) { margin: 0; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 :is(.analysis-injury-v2-verdict, .analysis-injury-v2-todo, .analysis-injury-v2-signal, .analysis-injury-v2-chart, .analysis-injury-v2-runs) {
+  min-width: 0;
+  border: 0;
+  border-radius: 24px;
+  background: var(--ir-card);
+  box-shadow: none;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-label { color: var(--ir-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-low { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-moderate { background: rgba(255, 149, 0, 0.14); color: #a15c00; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-high { background: rgba(255, 59, 48, 0.1); color: #c4261a; }
+
+/* Top */
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-top { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 20px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-verdict { display: flex; flex-direction: column; gap: 18px; padding: 28px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach { display: flex; align-items: center; gap: 10px; color: var(--ir-muted); font-size: 0.8rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-score { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-score > div:last-child { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-number { display: flex; align-items: baseline; gap: 6px; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-number strong {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 7vw, 6rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-number span { color: var(--ir-faint); font-size: 1rem; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-score h1 {
+  color: var(--ir-ink) !important;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.2vw, 1.9rem) !important;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale { display: flex; flex-direction: column; gap: 8px; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #9cd2aa 0 46%, #ffd38a 46% 72%, #ff9b87 72% 100%);
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-track i {
+  position: absolute;
+  top: -6px;
+  width: 6px;
+  height: 26px;
+  border-radius: 3px;
+  background: #1c1917;
+  box-shadow: 0 0 0 3px var(--ir-card);
+  transform: translateX(-50%);
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-labels { display: grid; grid-template-columns: 46% 26% 28%; color: var(--ir-muted); font-size: 0.75rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-labels span:nth-child(2) { text-align: center; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-labels span:last-child { text-align: right; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-verdict > p { max-width: 62ch; color: var(--ir-ink) !important; font-size: 0.94rem; line-height: 1.6; text-wrap: pretty; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-cta {
+  align-self: flex-start;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a0392a, #e0685a);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-todo { display: flex; flex-direction: column; gap: 14px; padding: 24px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-todo ol { display: flex; flex-direction: column; gap: 12px; padding: 0; list-style: none; counter-reset: todo; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-todo li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; font-size: 0.9rem; line-height: 1.5; counter-increment: todo; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-todo li::before {
+  content: counter(todo);
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--ir-accent-soft);
+  color: var(--ir-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-todo-note { margin-top: auto !important; padding: 12px 14px; border-radius: 12px; background: var(--ir-fill); color: var(--ir-muted); font-size: 0.8rem; line-height: 1.5; }
+
+/* Signals */
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signal { display: flex; flex-direction: column; gap: 8px; padding: 20px 22px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signal > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signal > div > span { color: var(--ir-muted); font-size: 0.75rem; font-weight: 700; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signal > strong { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signal > p { color: var(--ir-ink); font-size: 0.82rem; line-height: 1.5; }
+
+/* Evidence */
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-evidence { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart { display: flex; flex-direction: column; gap: 14px; padding: 24px 28px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-head h2 {
+  color: var(--ir-ink) !important;
+  font-family: var(--font-display);
+  font-size: 1.375rem !important;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-head p { margin-top: 4px; color: var(--ir-muted) !important; font-size: 0.8rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-chart { position: relative; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-link { padding: 0; border: 0; background: none; color: var(--ir-accent); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs { display: flex; flex-direction: column; padding: 22px 24px 10px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs ul { display: flex; flex-direction: column; margin-top: 6px; padding: 0; list-style: none; }
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs li button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 11px 0;
+  border: 0;
+  border-top: 1px solid var(--ir-line);
+  background: none;
+  color: var(--ir-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs li button:hover strong:first-child { color: var(--ir-accent); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-copy strong { overflow: hidden; font-size: 0.875rem; text-overflow: ellipsis; white-space: nowrap; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-copy span { color: var(--ir-muted); font-size: 0.75rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-cad { font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-cad.is-low { color: #c4261a; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-hr { color: var(--ir-muted); font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1100px) {
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-top,
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-evidence { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 720px) {
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-signals { grid-template-columns: minmax(0, 1fr); }
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 :is(.analysis-injury-v2-verdict, .analysis-injury-v2-todo, .analysis-injury-v2-chart, .analysis-injury-v2-runs) { padding: 20px; border-radius: 20px; }
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-labels { font-size: 0.68rem; }
+}
+
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 :is(h1, h2, p, strong, span, em) { -webkit-text-fill-color: currentColor; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 :is(.analysis-injury-v2-verdict, .analysis-injury-v2-todo, .analysis-injury-v2-signal, .analysis-injury-v2-chart, .analysis-injury-v2-runs) { background: var(--ir-card) !important; color: var(--ir-ink); box-shadow: none !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach .coach-identity-avatar { width: 28px !important; height: 28px !important; border-radius: 50%; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach .coach-identity-copy { display: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach .coach-identity-badge { margin: 0; padding: 0; background: none; border: 0; box-shadow: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach > span { min-width: 0; line-height: 1.5; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-coach > span strong { color: var(--ir-ink); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-unavailable { color: var(--ir-muted); background: var(--ir-fill); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-scale-track i { background: var(--ir-ink); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness { margin-top: auto; padding: 14px; border-radius: 14px; background: var(--ir-fill); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness > span { display: block; margin-bottom: 6px; color: var(--ir-muted); font-size: 0.75rem; font-weight: 700; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness button { min-height: 36px; padding: 6px; border: 1px solid transparent; border-radius: 10px; background: var(--ir-card); color: var(--ir-muted); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness button[aria-pressed="true"] { background: var(--ir-accent-soft); border-color: var(--ir-accent); color: var(--ir-accent); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 button:disabled { cursor: default; opacity: 0.55; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-soreness p[role="alert"] { margin-top: 8px; color: #c4261a; font-size: 0.75rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 button:focus-visible { outline: 2px solid var(--ir-accent); outline-offset: 3px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-latest { display: flex; flex-wrap: wrap; gap: 8px 20px; color: var(--ir-muted); font-size: 0.75rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-latest strong { color: var(--ir-ink); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart { grid-column: auto !important; grid-row: auto !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-chart { --analysis-cinematic-accent: var(--ir-accent); height: auto; aspect-ratio: 1000 / 300; min-height: 120px; margin: 10px 0 0; background: none; border-radius: 0; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-chart svg { height: 100%; overflow: visible; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-primary-line { stroke: var(--ir-accent); stroke-width: 2.5; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-comparison-line { stroke: #78a5f8; stroke-width: 2; stroke-dasharray: 8 5; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-grid-line { stroke: var(--ir-line); stroke-dasharray: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-legend span { color: var(--ir-muted); font-size: 0.75rem; letter-spacing: 0; text-transform: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-legend i { width: 14px; height: 3px; border-radius: 1px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-legend i.is-primary { background: var(--ir-accent); }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-cinematic-legend i.is-muted { height: 0; border-top: 2px dashed #78a5f8; background: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart :is(.analysis-cinematic-point, .analysis-cinematic-axis) { display: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-injury-chart-tooltip { display: none; width: 180px; min-width: 0; max-width: calc(100% - 12px); box-sizing: border-box; padding: 12px; border: 1px solid var(--ir-line); border-radius: 12px; background: var(--ir-card); color: var(--ir-ink); box-shadow: 0 8px 24px rgba(0,0,0,0.12); transform: translateX(-50%) !important; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-chart .analysis-injury-chart-tooltip.is-scrubbing { display: block; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-head { margin-bottom: 8px; color: var(--ir-muted); font-size: 0.75rem; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-metrics { display: grid; gap: 6px; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-metric { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-metric i { display: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-metric span { color: var(--ir-muted); font-size: 0.7rem; letter-spacing: 0; text-transform: none; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-chart-tooltip-metric strong { color: var(--ir-ink); font-size: 0.8rem; white-space: nowrap; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs li button { min-height: 58px; }
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-low { color: #85dfa2; }
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-moderate { color: #ffce83; }
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-high { color: #ffa99e; }
+@media (max-width: 760px) {
+  body #root .analysis-insight-detail-page.is-injury-risk .runner-shell-canvas.analysis-insight-detail-canvas { padding: 24px 16px 40px !important; }
+}
+@media (max-width: 480px) {
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-score { gap: 16px; }
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs li button { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-copy { grid-row: span 2; }
+  body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-cad, body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-run-hr { text-align: right; }
+}

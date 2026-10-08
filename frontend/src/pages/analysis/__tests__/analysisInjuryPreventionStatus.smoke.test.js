@@ -50,7 +50,7 @@ assert.match(
 
 assert.match(
   analysisSource,
-  /Card 1: Combined Risk Score[\s\S]*?<button[\s\S]*?analysis-overview-card--interactive[\s\S]*?onClick=\{\(\) => navigate\('\/analysis\/injury-risk'\)\}[\s\S]*?stitch_injury_prevention_risk_title[\s\S]*?<\/button>/,
+  /analysis-v2-check--injury[\s\S]*?<button[\s\S]*?onClick=\{\(\) => navigate\('\/analysis\/injury-risk'\)\}[\s\S]*?stitch_injury_title[\s\S]*?<\/button>/,
   'The injury risk card should open the existing injury-risk detail page.',
 );
 
@@ -80,13 +80,13 @@ assert.doesNotMatch(
 
 assert.match(
   analysisSource,
-  /Card 2: ACWR Monitor[\s\S]*?<button[\s\S]*?analysis-overview-card--interactive[\s\S]*?onClick=\{\(\) => navigate\('\/analysis\/load-balance'\)\}[\s\S]*?stitch_injury_prevention_acwr_title[\s\S]*?<\/button>/,
+  /<button[^>]*className="analysis-v2-check"[\s\S]*?onClick=\{\(\) => navigate\('\/analysis\/load-balance'\)\}[\s\S]*?stitch_acwr_title[\s\S]*?<\/button>/,
   'The ACWR card should open the existing load-balance detail page.',
 );
 
 assert.match(
   analysisSource,
-  /className=\{cx\('analysis-injury-prevention-soreness-btn', 'is-low'[\s\S]*?aria-pressed=\{latestSorenessLevel === 'low'\}/,
+  /className=\{cx\('analysis-v2-soreness-btn',[\s\S]*?aria-pressed=\{latestSorenessLevel === level\}/,
   'The daily check-in controls should expose their selected state.',
 );
 

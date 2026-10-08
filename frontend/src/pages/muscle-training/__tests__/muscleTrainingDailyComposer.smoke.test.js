@@ -18,7 +18,7 @@ assert.match(
 
 assert.match(
   pageSource,
-  /className="strength-plan-control-deck muscle-activity-deck"[\s\S]*?<RunActivityContributionGraph[\s\S]*?runs=\{muscleCheckIns\}[\s\S]*?status=\{muscleActivityState\}[\s\S]*?activityType="muscle"/,
+  /className="strength-plan-control-deck muscle-activity-deck mt-week-v2-activity"[\s\S]*?<RunActivityContributionGraph[\s\S]*?runs=\{muscleCheckIns\}[\s\S]*?status=\{muscleActivityState\}[\s\S]*?activityType="muscle"/,
   'The old two-column control deck should be replaced by the reusable activity graph.',
 );
 
@@ -30,8 +30,8 @@ assert.match(
 
 assert.match(
   pageSource,
-  /className="muscle-activity-checkin-btn"[\s\S]*?onClick=\{handleDailyCheckIn\}/,
-  'The activity surface should expose a dedicated daily check-in action.',
+  /className="mt-week-v2-day-panel"[\s\S]*?activeWeekDay\?\.isToday && activeWeekDay\.strength[\s\S]*?className="mt-week-v2-start muscle-activity-checkin-btn"[\s\S]*?if \(isSessionStarted\)[\s\S]*?handleDailyCheckIn\(\)/,
+  'Only today\'s strength panel should expose the daily check-in action.',
 );
 
 assert.match(

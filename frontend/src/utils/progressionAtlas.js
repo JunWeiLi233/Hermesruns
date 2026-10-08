@@ -9,9 +9,9 @@ function startOfNMonthsAgo(date, months) {
 
 function resolveRunDistanceKm(run) {
   const km = Number(run?.distanceKm || 0);
-  if (km > 0) return km;
+  if (Number.isFinite(km) && km > 0) return km;
   const meters = Number(run?.distanceMeters || 0);
-  return meters > 0 ? meters / 1000 : 0;
+  return Number.isFinite(meters) && meters > 0 ? meters / 1000 : 0;
 }
 
 function resolveRunElevationMeters(run) {
@@ -48,7 +48,7 @@ function endOfCurrentDay(date) {
 }
 
 function getRunStartedAt(run) {
-  return new Date(run?.startTime || run?.startDate || 0);
+  return new Date(run?.startTime || run?.startDate || NaN);
 }
 
 function formatProgressionWindowLabel(start, end, timeframe, lang) {
@@ -93,36 +93,25 @@ function formatProgressionAxisLabel(date, timeframe, lang) {
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
-function buildSmoothPath(points) {
+function buildLinearPath(points) {
   if (!Array.isArray(points) || points.length === 0) return '';
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-
-  let path = `M ${points[0].x} ${points[0].y}`;
-
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const previous = points[index - 1] || points[index];
-    const current = points[index];
-    const next = points[index + 1];
-    const nextNext = points[index + 2] || next;
-
-    const controlPointOneX = current.x + ((next.x - previous.x) / 6);
-    const controlPointOneY = current.y + ((next.y - previous.y) / 6);
-    const controlPointTwoX = next.x - ((nextNext.x - current.x) / 6);
-    const controlPointTwoY = next.y - ((nextNext.y - current.y) / 6);
-
-    path += ` C ${controlPointOneX} ${controlPointOneY}, ${controlPointTwoX} ${controlPointTwoY}, ${next.x} ${next.y}`;
-  }
-
-  return path;
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
 }
 
-function buildSmoothAreaPath(points, baselineY) {
+function buildLinearAreaPath(points, baselineY) {
   if (!Array.isArray(points) || points.length === 0) return '';
   if (points.length === 1) {
     return `M ${points[0].x} ${baselineY} L ${points[0].x} ${points[0].y} L ${points[0].x} ${baselineY} Z`;
   }
 
-  return `${buildSmoothPath(points)} L ${points[points.length - 1].x} ${baselineY} L ${points[0].x} ${baselineY} Z`;
+  return `${buildLinearPath(points)} L ${points[points.length - 1].x} ${baselineY} L ${points[0].x} ${baselineY} Z`;
+}
+
+function getDistanceAxisMax(distanceKm) {
+  if (distanceKm <= 0) return 1;
+  const magnitude = 10 ** Math.floor(Math.log10(distanceKm));
+  const factor = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((value) => value * magnitude >= distanceKm);
+  return factor * magnitude;
 }
 
 export function getNearestProgressionPointIndex(points, xPercent) {
@@ -197,47 +186,69 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
     return map;
   }, new Map());
 
-  let cumulativeDistance = 0;
-  // SVG viewBox in ProfileDashboard.jsx is `0 0 400 120` with
-  // preserveAspectRatio="none". The path coordinates below must use that
-  // 400×120 space so the chart line/area stretch to the full width of the
-  // rendered SVG (which itself spans the full hd-progression grid row).
-  // The earlier values (chartLeft=6, chartRight=94) lived in a 100×100
-  // coordinate space that no longer matches — they squeezed the entire
-  // chart into the leftmost ~23.5% of the viewBox and left the rest of
-  // the chart area blank up to the "26年5月" / end-of-range label.
-  const chartBaseLine = 86;
-  const chartLeft = 0;
-  const chartRight = 400;
-  const chartHeight = 56;
+  // Daily totals are joined linearly at day boundaries. Keeping zero-run
+  // days avoids spreading a later run's growth across an inactive interval.
+  const chartBaseLine = 210;
+  const chartHeight = 200;
   const rangeSpanMs = Math.max(1, rangeEnd.getTime() - rangeStart.getTime());
-  const groupedSeries = Array.from(grouped.values())
-    .sort((a, b) => a.date - b.date)
-    .map((entry, index, source) => {
-      cumulativeDistance += entry.distanceKm;
-      // Time-spaced x: each day's position reflects when it happened inside
-      // the window, not its index in the list of run-days. Days with zero
-      // runs leave a visible gap (flat line) instead of getting compressed
-      // out, so the chart shape honestly reflects training cadence.
-      const rawRatio = (entry.date.getTime() - rangeStart.getTime()) / rangeSpanMs;
-      const ratio = source.length === 1
-        ? 1
-        : Math.min(1, Math.max(0, rawRatio));
-      return {
-        ...entry,
+  const timeToX = (date) => 400 * Math.min(1, Math.max(0, (date.getTime() - rangeStart.getTime()) / rangeSpanMs));
+  const axisMaxKm = getDistanceAxisMax(totalDistanceKm);
+  const distanceToY = (distanceKm) => chartBaseLine - (distanceKm / axisMaxKm) * chartHeight;
+  const yTicks = Array.from({ length: 5 }, (_, index) => {
+    const valueKm = axisMaxKm * (1 - index / 4);
+    return { valueKm, y: distanceToY(valueKm) };
+  });
+  const xTicks = Array.from({ length: 5 }, (_, index) => {
+    const date = new Date(rangeStart.getTime() + rangeSpanMs * index / 4);
+    return { x: timeToX(date), date, label: formatProgressionAxisLabel(date, timeframe, lang) };
+  });
+  const chartSeries = [];
+  const chartPoints = [];
+  let cumulativeDistance = 0;
+  if (filteredAsc.length > 0) {
+    chartSeries.push({ key: 'baseline', date: rangeStart, distanceKm: 0, sessions: 0, cumulativeDistance: 0, x: 0, y: chartBaseLine });
+    for (const date = new Date(rangeStart); date <= rangeEnd; date.setDate(date.getDate() + 1)) {
+      const key = date.toISOString().slice(0, 10);
+      const entry = grouped.get(key);
+      cumulativeDistance += entry?.distanceKm || 0;
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const point = {
+        key,
+        date: new Date(date),
+        distanceKm: entry?.distanceKm || 0,
+        sessions: entry?.sessions || 0,
         cumulativeDistance,
-        x: chartLeft + ((chartRight - chartLeft) * ratio),
+        x: timeToX(new Date(Math.min(nextDay.getTime(), rangeEnd.getTime()))),
+        y: distanceToY(cumulativeDistance),
+        label: formatProgressionAxisLabel(date, timeframe, lang),
       };
-    });
+      chartSeries.push(point);
+      if (entry) chartPoints.push(point);
+    }
+  }
+  const chartLine = buildLinearPath(chartSeries);
+  const chartArea = buildLinearAreaPath(chartSeries, chartBaseLine);
 
-  const maxCumulativeDistance = Math.max(1, ...groupedSeries.map((entry) => entry.cumulativeDistance));
-  const chartPoints = groupedSeries.map((entry) => ({
-    ...entry,
-    y: chartBaseLine - ((entry.cumulativeDistance / maxCumulativeDistance) * chartHeight),
-    label: formatProgressionAxisLabel(entry.date, timeframe, lang),
-  }));
-  const chartLine = buildSmoothPath(chartPoints);
-  const chartArea = buildSmoothAreaPath(chartPoints, chartBaseLine);
+  const weeklyTotals = new Map();
+  for (const entry of grouped.values()) {
+    const weekKey = startOfIsoWeek(entry.date).getTime();
+    weeklyTotals.set(weekKey, (weeklyTotals.get(weekKey) || 0) + entry.distanceKm);
+  }
+  const weeklyBars = [];
+  for (const week = startOfIsoWeek(rangeStart); week <= rangeEnd; week.setDate(week.getDate() + 7)) {
+    const nextWeek = new Date(week);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const start = new Date(Math.max(rangeStart.getTime(), week.getTime()));
+    const end = new Date(Math.min(rangeEnd.getTime(), nextWeek.getTime() - 1));
+    weeklyBars.push({
+      key: week.getTime(), start, end,
+      distanceKm: weeklyTotals.get(week.getTime()) || 0,
+      x: timeToX(start), width: timeToX(new Date(Math.min(nextWeek.getTime(), rangeEnd.getTime()))) - timeToX(start),
+      label: formatProgressionWindowLabel(start, end, 'week', lang),
+    });
+  }
+  const maxWeeklyDistanceKm = Math.max(0, ...weeklyBars.map((bar) => bar.distanceKm));
 
   return {
     hasData: filteredAsc.length > 0,
@@ -249,8 +260,13 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
     shareOfDistance,
     averagePaceSeconds,
     chartPoints,
+    chartSeries,
     chartLine,
     chartArea,
+    yTicks,
+    xTicks,
+    weeklyBars,
+    maxWeeklyDistanceKm,
     latestPoint: chartPoints[chartPoints.length - 1] || null,
     // Chart-edge labels mirror the true window boundaries, not the first/last
     // run's date — so the visible time-axis matches the cumulative line shape.

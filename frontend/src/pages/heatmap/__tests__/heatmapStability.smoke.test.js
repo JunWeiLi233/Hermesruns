@@ -62,8 +62,8 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /function getGpsDotStyle\(speedRatio\) \{[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity: 0\.92,[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
-  'Heatmap GPS dot style should use a stable screen-space radius and opacity instead of changing dot design when the zoom level changes.',
+  /function getGpsDotStyle\(speedRatio, visitCount = 1\) \{[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity:[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
+  'Heatmap GPS dots should keep their screen-space radius while allowing repeat visits to increase visibility.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -87,8 +87,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  /function normalizeRawHeatPoint\(point\) \{[\s\S]*?Array\.isArray\(point\)[\s\S]*?activityId: Number\(point\[0\]\)[\s\S]*?latitude: Number\(point\[1\]\)[\s\S]*?longitude: Number\(point\[2\]\)[\s\S]*?speedRatio: Number\(point\[3\]\)/,
-  'Heatmap should accept compact backend GPS point arrays without dropping coordinates.',
+  /function normalizeRawHeatPoint\(point\) \{[\s\S]*?Array\.isArray\(point\)[\s\S]*?activityId: Number\(point\[0\]\)[\s\S]*?latitude: Number\(point\[1\]\)[\s\S]*?longitude: Number\(point\[2\]\)[\s\S]*?speedRatio: Number\(point\.length > 4 \? point\[4\] : point\[3\]\)[\s\S]*?visitCount: point\.length > 5 \? Number\(point\[5\]\) : 0/,
+  'Heatmap should accept both compact GPS arrays and viewport arrays with distinct-run counts.',
 );
 assert.match(
   heatmapSource,
@@ -157,7 +157,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500[\s\S]*?HEATMAP_FULL_RENDER_POINT_LIMIT = 12000[\s\S]*?latestFullRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_FULL_RENDER_POINT_LIMIT\);[\s\S]*?latestPreviewRenderPointsRef\.current = buildHeatmapRenderPointPool\([\s\S]*?latestFullRenderPointsRef\.current,[\s\S]*?HEATMAP_PREVIEW_RENDER_POINT_LIMIT,?[\s\S]*?\);[\s\S]*?const renderPoints = renderMode === 'preview'[\s\S]*?latestPreviewRenderPointsRef\.current[\s\S]*?latestFullRenderPointsRef\.current[\s\S]*?for \(const point of renderPoints\)/,
+  /HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500[\s\S]*?HEATMAP_FULL_RENDER_POINT_LIMIT = 12000[\s\S]*?latestFullRenderPointsRef\.current = buildHeatmapRenderPointPool\(points, HEATMAP_FULL_RENDER_POINT_LIMIT\);[\s\S]*?latestPreviewRenderPointsRef\.current = buildHeatmapRenderPointPool\([\s\S]*?latestFullRenderPointsRef\.current,[\s\S]*?HEATMAP_PREVIEW_RENDER_POINT_LIMIT,?[\s\S]*?\);[\s\S]*?const bootstrapPoints = renderMode === 'preview'[\s\S]*?latestPreviewRenderPointsRef\.current[\s\S]*?latestFullRenderPointsRef\.current[\s\S]*?for \(const point of renderPoints\)/,
   'Heatmap canvas should draw from capped preview/full render pools so zoom never scans the full GPS array, and build the full-array pool only once per update.',
 );
 assert.match(
@@ -291,7 +291,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const scheduleMoveEnd = \(\) => \{[\s\S]*?skipNextMovePreview = false;[\s\S]*?return;[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);[\s\S]*?map\.on\('resize', \(\) => scheduleRouteDots\('preview'\)\);[\s\S]*?scheduleRouteDots\('preview'\);/,
+  /const scheduleMoveEnd = \(\) => \{[\s\S]*?skipNextMovePreview = false;[\s\S]*?return;[\s\S]*?scheduleRouteDots\('preview'\);[\s\S]*?map\.on\('moveend', scheduleMoveEnd\);[\s\S]*?map\.on\('resize', \(\) => \{ scheduleRouteDots\('preview'\); scheduleViewportRequest\(\); \}\);[\s\S]*?scheduleRouteDots\('preview'\);/,
   'Heatmap should keep ordinary map movement redraws on the lightweight preview pool without replacing the post-zoom full repaint.',
 );
 assert.doesNotMatch(
@@ -374,7 +374,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const projectedPoints = \[\];[\s\S]*?latLngToLayerPoint\(\[point\.latitude, point\.longitude\]\)\.subtract\(canvasLayerOrigin\)[\s\S]*?drawProjectedPoint\(bufferContext, projectedPoints\[pointIndex\], 'full'\)/,
+  /const projectedCandidates = \[\];[\s\S]*?latLngToLayerPoint\(\[point\.latitude, point\.longitude\]\)\.subtract\(canvasLayerOrigin\)[\s\S]*?const projectedPoints = buildHeatmapViewportPointPool\(projectedCandidates,[\s\S]*?drawProjectedPoint\(bufferContext, projectedPoints\[pointIndex\], 'full'\)/,
   'Heatmap chunked full redraws should draw precomputed layer-space positions so idle callbacks interrupted by zoom or pan cannot mix two view states into one frame.',
 );
 assert.doesNotMatch(
@@ -385,8 +385,8 @@ assert.doesNotMatch(
 
 assert.match(
   heatmapSource,
-  /function getGpsDotStyle\(speedRatio\) \{[\s\S]*?const speedBand = getSpeedBand\(speedRatio\);[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity: 0\.92,[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
-  'Heatmap should derive visible dot color from speed ratio while keeping radius, opacity, and stroke stable across zoom levels.',
+  /function getGpsDotStyle\(speedRatio, visitCount = 1\) \{[\s\S]*?const speedBand = getSpeedBand\(speedRatio\);[\s\S]*?radius: 1\.65,[\s\S]*?fillOpacity:[\s\S]*?opacity: 0\.38,[\s\S]*?weight: 0\.48,/,
+  'Heatmap should derive dot color from speed ratio while keeping radius and stroke stable across zoom levels.',
 );
 assert.doesNotMatch(
   heatmapSource,

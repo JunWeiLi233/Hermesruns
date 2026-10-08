@@ -34,8 +34,8 @@ assert.match(
 );
 assert.match(
   source,
-  /name=\{loadDashboard\.ratioTrendIcon\}/,
-  'Load Balance ratio card should render the computed trend icon.',
+  /loadRatioPosition != null && <i style=\{\{ left: `\$\{loadRatioPosition\}%` \}\} \/>/,
+  'Load Balance should show its current ratio on the zone scale only when it is available.',
 );
 assert.doesNotMatch(
   source,
