@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -60,6 +61,7 @@ public class ActivityDataAccess {
     // Optional collaborators, injected by Spring. They stay unset in tests that build this class by hand.
     private List<ActivityDeletionHook> deletionHooks = List.of();
     private DeletedActivityTombstoneRepository tombstones;
+    private ApplicationEventPublisher events;
 
     public ActivityDataAccess(ActivityRepository activityRepository,
                               ActivityPointRepository activityPointRepository,
@@ -77,6 +79,11 @@ public class ActivityDataAccess {
     @Autowired(required = false)
     void setTombstones(DeletedActivityTombstoneRepository tombstones) {
         this.tombstones = tombstones;
+    }
+
+    @Autowired(required = false)
+    void setEvents(ApplicationEventPublisher events) {
+        this.events = events;
     }
 
     public List<Activity> findRunsForRunner(Runner runner) {
@@ -260,6 +267,50 @@ public class ActivityDataAccess {
         return activityPointRepository.findHrSamplesByActivityIdOrdered(activityId);
     }
 
+    /** A run's heart-rate samples as parallel arrays, in order: seconds from the start, and beats per minute. */
+    public record HeartRateStream(int[] elapsedSeconds, int[] heartRates, int size) {
+    }
+
+    /**
+     * Every heart-rate sample of an activity, oldest first, with no cap on the number of samples (a run is
+     * stored with at most 100 000 points). Filled straight from the result set into primitive arrays, so a
+     * long run does not become a hundred thousand boxed values.
+     *
+     * <p>Caller-verified ownership (see the ActivityPoint rule): the caller has already established that the
+     * activity belongs to the runner the result is for.</p>
+     */
+    public HeartRateStream findHeartRateStream(Long activityId) {
+        return jdbcTemplate.query(
+                "select elapsed_seconds, heart_rate from activity_points "
+                        + "where activity_id = ? and heart_rate is not null and elapsed_seconds is not null "
+                        + "order by sequence_index asc",
+                rows -> {
+                    int[] elapsed = new int[1024];
+                    int[] heartRate = new int[1024];
+                    int size = 0;
+                    while (rows.next()) {
+                        if (size == elapsed.length) {
+                            elapsed = java.util.Arrays.copyOf(elapsed, size * 2);
+                            heartRate = java.util.Arrays.copyOf(heartRate, size * 2);
+                        }
+                        elapsed[size] = rows.getInt(1);
+                        heartRate[size] = rows.getInt(2);
+                        size++;
+                    }
+                    return new HeartRateStream(elapsed, heartRate, size);
+                },
+                activityId);
+    }
+
+    /** Whether any stored point of the activity carries a heart rate. Caller-verified ownership, as above. */
+    public boolean hasHeartRatePoints(Long activityId) {
+        Integer found = jdbcTemplate.queryForObject(
+                "select count(*) from (select 1 from activity_points where activity_id = ? and heart_rate is not null limit 1) t",
+                Integer.class,
+                activityId);
+        return found != null && found > 0;
+    }
+
     public List<Object[]> findLatLngByActivityId(Long activityId) {
         return activityPointRepository.findLatLngByActivityIdOrdered(activityId);
     }
@@ -287,6 +338,11 @@ public class ActivityDataAccess {
             point.setActivity(lockedActivity);
         }
         jdbcTemplate.batchUpdate(INSERT_POINT_SQL, points, POINT_INSERT_BATCH_SIZE, ActivityDataAccess::bindPointInsert);
+        if (events != null && lockedActivity.getRunner() != null) {
+            // The run was saved before its stream was fetched, so what is computed from the points has to be
+            // computed again now that they are here. Listeners wait for this transaction to commit.
+            events.publishEvent(new ActivityPointsStoredEvent(lockedActivity.getRunner().getId(), activityId));
+        }
         return true;
     }
 

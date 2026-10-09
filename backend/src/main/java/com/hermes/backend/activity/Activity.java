@@ -51,11 +51,25 @@ public class Activity extends ActivityRelationshipFields {
     @ColumnDefault("false")
     private boolean stravaApiSourced = false;
 
+    /**
+     * How hard the runner says the run felt, 1 (very easy) to 10 (maximal). Used for the effort score when
+     * there is no heart-rate stream. Null when the runner has not rated the run.
+     */
+    private Integer perceivedExertion;
+
     @PrePersist
     public void prePersist() {
         if (getCreatedAt() == null) {
             setCreatedAt(LocalDateTime.now());
         }
+    }
+
+    public Integer getPerceivedExertion() {
+        return perceivedExertion;
+    }
+
+    public void setPerceivedExertion(Integer perceivedExertion) {
+        this.perceivedExertion = perceivedExertion;
     }
 
     public String getGpsStreamState() {
