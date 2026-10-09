@@ -54,9 +54,12 @@ public class ActivityPaceProfileController {
         }
         Activity activity = found.get();
         List<Object[]> rows = activityDataAccess.findAnalyticsSamplesByActivityId(activity.getId());
+        if (rows.size() < 2) {
+            return ResponseEntity.ok(PaceProfileResponse.noStream(PaceProfileResponse.NO_POINTS));
+        }
         List<Object[]> timed = rows.stream().filter(row -> row != null && row.length > 2 && row[2] != null).toList();
         if (timed.size() < Math.max(2, rows.size() / 2)) {
-            return ResponseEntity.ok(PaceProfileResponse.noStream());
+            return ResponseEntity.ok(PaceProfileResponse.noStream(PaceProfileResponse.NO_TIMES));
         }
         List<ActivityAnalyticsHelper.SamplePoint> points = ActivityTelemetryResponseBuilder.buildAnalyticsSamplePoints(timed, activity);
         return ResponseEntity.ok(PaceProfileCalculator.compute(points));

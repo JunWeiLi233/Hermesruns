@@ -18,8 +18,8 @@ import java.util.function.Function;
  *       metres a watch drifts while standing, so a pace is moving seconds over metres run.</li>
  *   <li><b>Grade.</b> Elevation is cleaned (median of five readings, then an average over 40 m of the run) and the grade
  *       at a point is the rise over the 80 m around it, so a GPS altitude that jumps a few metres does not read as a
- *       hill. Beyond 30% it counts as 30%.</li>
- *   <li><b>Grade-adjusted pace.</b> Each stretch is worth {@link GradeAdjustedPace#costRatio} times its length in
+ *       hill. A climb beyond 30% counts as 30% and a descent beyond 20% as 20%.</li>
+ *   <li><b>Grade-adjusted pace.</b> Each stretch is worth {@link GradeAdjustedPace#effortRatio} times its length in
  *       flat-equivalent metres, so a split's grade-adjusted pace is its moving seconds per flat-equivalent kilometre.</li>
  * </ul>
  */
@@ -61,8 +61,8 @@ final class PaceProfileCalculator {
      */
     static PaceProfileResponse compute(List<SamplePoint> points) {
         Track track = Track.of(points);
-        if (track == null) {
-            return PaceProfileResponse.noStream();
+        if (track.problem() != null) {
+            return PaceProfileResponse.noStream(track.problem());
         }
         int n = track.n();
         double[] t = track.t();
@@ -79,7 +79,7 @@ final class PaceProfileCalculator {
             double seconds = t[i] - t[i - 1];
             double meters = d[i] - d[i - 1];
             boolean running = meters / seconds >= STOPPED_SPEED_MPS;
-            double ratio = terrain == null ? 1.0 : GradeAdjustedPace.costRatio(terrain.grade((d[i - 1] + d[i]) / 2.0));
+            double ratio = terrain == null ? 1.0 : GradeAdjustedPace.effortRatio(terrain.grade((d[i - 1] + d[i]) / 2.0));
             moving[i] = moving[i - 1] + (running ? seconds : 0.0);
             runMeters[i] = runMeters[i - 1] + (running ? meters : 0.0);
             equivalent[i] = equivalent[i - 1] + (running ? meters * ratio : 0.0);
@@ -105,7 +105,7 @@ final class PaceProfileCalculator {
                 : new PaceProfileResponse.Markers(paceMarker, gapMarker);
 
         return new PaceProfileResponse(true, terrain != null, summary, splits, markers,
-                series(t, d, moving, runMeters, equivalent, n, terrain));
+                series(t, d, moving, runMeters, equivalent, n, terrain), null);
     }
 
     // ----- splits -----
@@ -210,17 +210,26 @@ final class PaceProfileCalculator {
 
     // ----- the cleaned stream -----
 
-    /** Time and distance from the first reading, and elevation where there was one (NaN where there was none). */
-    private record Track(double[] t, double[] d, double[] z, int n) {
+    /**
+     * Time and distance from the first reading, and elevation where there was one (NaN where there was none). When the
+     * stream cannot be used, {@code problem} says why (one of the reasons in {@link PaceProfileResponse}) and the rest is
+     * empty.
+     */
+    private record Track(double[] t, double[] d, double[] z, int n, String problem) {
+
+        private static Track unusable(String problem) {
+            return new Track(null, null, null, 0, problem);
+        }
 
         static Track of(List<SamplePoint> points) {
             if (points == null || points.size() < 2) {
-                return null;
+                return unusable(PaceProfileResponse.NO_POINTS);
             }
             double[] t = new double[points.size()];
             double[] d = new double[points.size()];
             double[] z = new double[points.size()];
             int n = 0;
+            int usable = 0;
             for (SamplePoint p : points) {
                 if (p == null || p.elapsedSeconds() == null || p.distanceMeters() == null) {
                     continue;
@@ -230,6 +239,7 @@ final class PaceProfileCalculator {
                 if (!Double.isFinite(distance) || distance < 0) {
                     continue;
                 }
+                usable++;
                 double elevation = p.elevationMeters() == null || !Double.isFinite(p.elevationMeters())
                         ? Double.NaN
                         : p.elevationMeters();
@@ -252,8 +262,11 @@ final class PaceProfileCalculator {
                 z[n] = elevation;
                 n++;
             }
+            if (usable < 2) {
+                return unusable(PaceProfileResponse.NO_POINTS);
+            }
             if (n < 2 || d[n - 1] - d[0] < MIN_STREAM_METERS || t[n - 1] - t[0] < MIN_STREAM_SECONDS) {
-                return null;
+                return unusable(PaceProfileResponse.TOO_SHORT);
             }
             double t0 = t[0];
             double d0 = d[0];
@@ -263,7 +276,7 @@ final class PaceProfileCalculator {
                 tt[i] = t[i] - t0;
                 dd[i] = d[i] - d0;
             }
-            return new Track(tt, dd, Arrays.copyOf(z, n), n);
+            return new Track(tt, dd, Arrays.copyOf(z, n), n, null);
         }
     }
 

@@ -130,7 +130,9 @@ and two readings in the same second become one. Time and distance are counted fr
 say when they were recorded are used: the other analytics spread a time evenly along the distance for readings without
 one, which would draw an even pace the runner never ran, so a run where fewer than half of the readings carry a time
 (a GPX file of a route) has no pace profile. A run needs at least 100 m and 10 s of stream to have a profile, which also
-means every profile has at least one split.
+means every profile has at least one split. When there is no profile the answer says why in `reason`, and the card
+says it in words: `no_points` (no readings with a time and a distance, such as a run entered by hand), `no_times` (the
+positions are there but fewer than half say when, such as a planned route) or `too_short` (under 100 m or 10 s).
 
 Between two readings the runner counts as **moving** when they covered 0.5 m/s or more. Every pace on the card is
 moving seconds divided by the metres run in those stretches, so time standing at a crossing, or paused on the watch, is
@@ -161,55 +163,79 @@ Elevation is the corrected elevation if the run has one, else the raw elevation,
 usable elevation when at least 10 readings, covering at least 80% of the stream and 200 m of distance, are there;
 otherwise there is no grade-adjusted pace at all (the card says so), not a guess. Elevation is cleaned before it is
 used: each reading becomes the median of the five around it, then the average of those within 20 m of it along the
-run. The grade at a point is the rise over the 80 m around it (40 m each way), as a fraction, and a grade beyond +/-30%
-counts as 30%. This keeps GPS altitude that wanders by a couple of metres from reading as hills.
+run. The grade at a point is the rise over the 80 m around it (40 m each way), as a fraction; a climb beyond 30% counts
+as 30% and a descent beyond 20% as 20%. This keeps GPS altitude that wanders by a couple of metres from reading as
+hills.
 
 ### Grade-adjusted pace
 
-The energy cost of running one metre at a slope, from Minetti et al. (2002), who measured it on a treadmill from -45% to
-+45%, in J per kg per metre with the slope `s` as a fraction:
+The flat pace that is worth the same effort as the pace run on a slope. Strava does not publish its formula. Its model
+is described as a fit to the pace runners held at the same heart rate on different grades, from the data of hundreds of
+thousands of athletes (Strava's 2017 engineering post, "An Improved GAP Model", as summarised at
+[pickletech.eu](https://pickletech.eu/blog-gap/); the post itself could not be read when this was written). Hermes uses a
+quadratic that approximates how that model behaves, with the slope `s` as a fraction:
 
 ```
-cost(s) = 155.4 s^5 - 30.4 s^4 - 43.3 s^3 + 46.3 s^2 + 19.5 s + 3.6
-ratio   = cost(s) / 3.6                         (3.6 is the cost on the flat)
-descent: ratio = 1 - 0.5 x (1 - ratio)          (only for s < 0 where the ratio is below 1)
+ratio(s) = 1 + 2.896 s + 15.14 s^2      (a climb beyond 30% counts as 30%, a descent beyond 20% as 20%)
 ```
 
-The ratio says how many times dearer a metre is on that slope than on the flat. Each stretch between two readings is
-worth `ratio x its length` in flat-equivalent metres, and the grade-adjusted pace of a split, a window or the whole run
-is its moving seconds divided by its flat-equivalent kilometres. The same effort on a 5% climb is therefore worth
-a faster flat pace than the pace run:
+The quadratic is the rough fit published by [Fellrnr](https://fellrnr.com/wiki/Grade_Adjusted_Pace). It agrees with
+what is public about Strava's numbers, and `GradeAdjustedPaceTests` holds it to each of these:
 
-| grade | ratio | 5:00 per km run on it is worth |
+| what is public | where | the quadratic |
 |---|---|---|
-| +10% | 1.66 | 3:01 |
-| +5% | 1.30 | 3:51 |
-| 0 | 1.00 | 5:00 |
-| -5% | 0.88 | 5:40 |
-| -10% | 0.80 | 6:16 |
-| -20% | 0.75 | 6:40 |
+| the downhill adjustment peaks around -10% | [Strava's help centre](https://support.strava.com/en-us/articles/15402117-grade-adjusted-pace-gap) | easiest at -9.6%, where a metre is worth 0.86 of a flat one |
+| the adjusted pace is no longer slower than the pace run on a descent of about -18% | [an analysis of a Strava data export](https://aaron-schroeder.github.io/reverse-engineering/grade-adjusted-pace.html) | crosses 1 at -19.1% |
+| the pace that matches 3:30 per km on the flat is 5:08 per km on a 10% climb | Strava's 2017 post, as quoted at [pickletech.eu](https://pickletech.eu/blog-gap/) | 5:03 |
 
-Two choices are Hermes' own, not Minetti's. A grade beyond 30% counts as 30%. And on a descent only half of the saving
-Minetti measured is counted: his runners held a steady effort on a treadmill, while a runner on a road or a trail brakes
-and takes the impact on the way down. With his full figure a 5:00 per km run down a 10% hill would be worth 8:21 on the
-flat. These figures will not match Strava's, whose model is its own fit to heart-rate data. The card says so.
+The ratio says how many flat metres of effort one metre at that slope is worth. Each stretch between two readings counts
+`ratio x its length` in flat-equivalent metres, and the grade-adjusted pace of a split, a window or the whole run is its
+moving seconds divided by its flat-equivalent kilometres. A 5:00 per km run is worth this on the flat:
+
+| grade | ratio | worth |
+|---|---|---|
+| +20% | 2.18 | 2:17 |
+| +10% | 1.44 | 3:28 |
+| +5% | 1.18 | 4:14 |
+| 0 | 1.00 | 5:00 |
+| -5% | 0.89 | 5:36 |
+| -10% | 0.86 | 5:48 |
+| -15% | 0.91 | 5:31 |
+| -20% and steeper | 1.03 | 4:52 |
+
+The numbers will be close to Strava's, not the same. Strava's model is also reported to adjust a fast runner's climbs
+more than a slow runner's, and this one does not depend on pace, so for a slower runner it reads a little fast on a
+climb. Strava takes elevation from its own terrain data; Hermes uses the run's own elevation (the corrected one after
+"Recalibrate"). The quadratic is a third party's fit, not Strava's formula. The card says all of this in a line.
+
+The first version of M2 used the energy cost of running from Minetti et al. (2002), measured on a treadmill, with half of
+the descent saving counted. It made a 10% climb 1.66 times a flat metre, against 1.47 in Strava's own example (5:08 per
+km for 3:30 on the flat), and a steep descent worth far more than anyone runs, so it was replaced.
 
 ### Pace zones
 
 The browser works the pace zones out the way the Analysis page works out the training paces. The VDOT of the runner's
 best recent runs gives the pace at 59%, 75%, 83%, 92% and 105% of VO2max (Daniels' oxygen-cost equation), which
 are the edges of six zones: recovery, easy, marathon, threshold, interval and repetition (the table under Daniels'
-Training Zones). Time at each zone is counted on pace, or on grade-adjusted pace when that is switched on. The zones are
-today's zones, so a run from last year is read against the runner's fitness now. A runner without a VDOT yet (a few
-runs of 3 km or more in the last 90 days are needed) sees the chart without zones.
+Training Zones). Time at each zone is counted on pace, or on grade-adjusted pace when that is switched on. The zones
+are the ones the runner had going into the run: the VDOT comes from their best runs in the 90 days before it, and the run
+itself is left out, so a personal best does not pull its own pace into a harder zone. A run with nothing to go on before
+it (the first of a history, or after a break of more than 90 days) is read against today's zones instead, and the card
+says which it used. A runner without any VDOT (runs of at least 1.5 km are needed, and 3 km or more are preferred) sees
+the chart without zones.
 
 ### Known limits
 
 - A GPS jump in the distance stream moves the split boundaries after it, as it inflates the run's distance; the
   smoothed line shows no pace for a window with an impossible one.
-- Elevation from a GPS-only watch is noisy. The cleaning above keeps the grade-adjusted pace of a flat run within about 1% of
-  its pace when every reading is off by 1.7 m (standard deviation), and within about 2% at 3 m, always on the faster
-  side, because a climb is dearer than a descent is cheap. On such a run the figure is an estimate.
+- Elevation from a GPS-only watch is noisy. The cleaning above keeps the grade-adjusted pace of a flat run within 0.2% of
+  its pace when every reading is off by 1.7 m (standard deviation), within 0.5% at 3 m and within 1.3% at 5 m (measured
+  over twelve random runs of 30 minutes each), always on the faster side, because the ratio bends upwards: random ups
+  and downs net out to a slightly faster pace.
+- Where only some readings carry a distance of their own, the others get theirs from the GPS positions, and the stretch
+  is scaled to fit between the distances the watch gave on either side of it (`ActivityAnalyticsHelper.normalizeSamples`).
+  Before, hops that added up to more than the watch measured left the later readings behind the earlier ones, and the
+  later ones were dropped.
 - A stream with a reading only every 30 seconds works but is coarse. A treadmill or no-GPS run has no stream.
 - A Strava run's stream is fetched when its run page first opens; the pace card waits for that instead of fetching it a
   second time.
@@ -248,7 +274,7 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 | **Effort** (run page) | Time in heart-rate zones weighted 1 to 5 (or the rating or pace estimate when there is no heart rate). A different scale from the Effort Score above. |
 | **Heart-rate zone** | One of five bands of heart rate set from the max heart rate or by the runner. |
 | **Moving pace** | Moving seconds per kilometre: time spent standing still is left out. Every pace on the run page's pace card is one. |
-| **Grade-adjusted pace (GAP)** | The flat pace that would cost about the same energy as the pace run on the slope: faster than the pace run on a climb, slower on a descent. Hermes' own estimate (Minetti 2002, half the descent saving). |
+| **Grade-adjusted pace (GAP)** | The flat pace that is worth about the same effort as the pace run on the slope: faster than the pace run on a climb, slower on a gentle descent. Hermes uses a quadratic that approximates how Strava describes its own GAP, so it is close to Strava's numbers but not the same. |
 
 ## Related Docs
 
