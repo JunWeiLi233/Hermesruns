@@ -16,6 +16,13 @@
   --v2-good-soft: rgba(52, 199, 89, 0.1);
   --v2-map: #d9d3c9;
   --v2-seg-active: #fff;
+  --v2-on-accent: #fff;
+  --v2-error: #c4261a;
+  --v2-zone-1: #9db8ad;
+  --v2-zone-2: #5f8f7e;
+  --v2-zone-3: #c99a2e;
+  --v2-zone-4: #d46a2f;
+  --v2-zone-5: #a0392a;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-runner-page .run-detail-page.run-detail-v2 {
@@ -25,6 +32,13 @@ body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-runner-page .ru
   --v2-good-soft: rgba(156, 210, 170, 0.12);
   --v2-map: #2a2622;
   --v2-seg-active: rgba(255, 255, 255, 0.12);
+  --v2-on-accent: #1c1917;
+  --v2-error: #ff9b87;
+  --v2-zone-1: #7da596;
+  --v2-zone-2: #6fae9b;
+  --v2-zone-3: #e0b84f;
+  --v2-zone-4: #ee8a4e;
+  --v2-zone-5: #f07561;
 }
 
 #root .run-detail-runner-page .run-detail-page.run-detail-v2 .run-detail-shell.run-detail-v2__shell {
@@ -528,6 +542,104 @@ body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-runner-page .ru
 
 #root .run-detail-v2 .run-detail-v2__form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 
+/* Effort and heart-rate zones */
+#root .run-detail-v2 .run-detail-v2__training {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+#root .run-detail-v2 .run-detail-v2__training-state { grid-column: 1 / -1; align-items: flex-start; }
+#root .run-detail-v2 .run-detail-v2__muted { line-height: 1.5; }
+#root .run-detail-v2 .run-detail-v2__muted.is-error { color: var(--v2-error); }
+
+#root .run-detail-v2 .run-detail-v2__effort-score { display: flex; align-items: center; gap: 18px; }
+
+#root .run-detail-v2 .run-detail-v2__effort-score > strong {
+  color: var(--v2-ink);
+  font-size: clamp(2.5rem, 4vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .run-detail-v2 .run-detail-v2__effort-score > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#root .run-detail-v2 .run-detail-v2__effort-score > div > span { color: var(--v2-accent); font-size: 0.85rem; font-weight: 700; }
+
+#root .run-detail-v2 .run-detail-v2__rating-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--v2-line);
+}
+
+#root .run-detail-v2 .run-detail-v2__rating { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+
+#root .run-detail-v2 .run-detail-v2__rating-btn {
+  min-width: 0;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: var(--v2-fill);
+  color: var(--v2-ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+#root .run-detail-v2 .run-detail-v2__rating-btn:hover { background: var(--v2-accent-soft); }
+#root .run-detail-v2 .run-detail-v2__rating-btn.is-selected { background: var(--v2-accent); color: var(--v2-on-accent); }
+#root .run-detail-v2 .run-detail-v2__rating[aria-busy="true"] .run-detail-v2__rating-btn { cursor: progress; }
+#root .run-detail-v2 .run-detail-v2__rating-btn:focus-visible,
+#root .run-detail-v2 .run-detail-v2__link:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+
+#root .run-detail-v2 .run-detail-v2__rating-scale { display: flex; justify-content: space-between; color: var(--v2-faint); font-size: 0.7rem; }
+#root .run-detail-v2 .run-detail-v2__rating-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+#root .run-detail-v2 .run-detail-v2__rating-foot .run-detail-v2__link { flex: 0 0 auto; }
+#root .run-detail-v2 .run-detail-v2__effort-note { margin-top: auto; padding-top: 4px; }
+
+#root .run-detail-v2 .run-detail-v2__zones { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+#root .run-detail-v2 .run-detail-v2__zone {
+  display: grid;
+  grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) 58px 40px;
+  grid-template-areas: "name track time share";
+  align-items: center;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .run-detail-v2 .run-detail-v2__zone-name { grid-area: name; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#root .run-detail-v2 .run-detail-v2__zone-name strong { color: var(--v2-ink); font-size: 0.82rem; font-weight: 700; }
+#root .run-detail-v2 .run-detail-v2__zone-name small { color: var(--v2-muted); font-size: 0.72rem; }
+
+#root .run-detail-v2 .run-detail-v2__zone-track {
+  grid-area: track;
+  display: block;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--v2-fill);
+}
+
+#root .run-detail-v2 .run-detail-v2__zone-track i { display: block; height: 100%; border-radius: 6px; background: var(--zone-color, var(--v2-accent)); }
+#root .run-detail-v2 .run-detail-v2__zone-time { grid-area: time; color: var(--v2-ink); font-size: 0.85rem; font-weight: 600; text-align: right; }
+#root .run-detail-v2 .run-detail-v2__zone-share { grid-area: share; color: var(--v2-muted); font-size: 0.78rem; text-align: right; }
+
+#root .run-detail-v2 .run-detail-v2__zone.is-zone-1 { --zone-color: var(--v2-zone-1); }
+#root .run-detail-v2 .run-detail-v2__zone.is-zone-2 { --zone-color: var(--v2-zone-2); }
+#root .run-detail-v2 .run-detail-v2__zone.is-zone-3 { --zone-color: var(--v2-zone-3); }
+#root .run-detail-v2 .run-detail-v2__zone.is-zone-4 { --zone-color: var(--v2-zone-4); }
+#root .run-detail-v2 .run-detail-v2__zone.is-zone-5 { --zone-color: var(--v2-zone-5); }
+
+#root .run-detail-v2 .run-detail-v2__zones-foot { display: grid; gap: 4px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--v2-line); }
+
 /* Responsive */
 @media (max-width: 1200px) {
   #root .run-detail-v2 .run-detail-v2__hero,
@@ -547,4 +659,20 @@ body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-runner-page .ru
   #root .run-detail-v2 .run-detail-v2__primary { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   #root .run-detail-v2 .run-detail-v2__stat + .run-detail-v2__stat { padding-left: 0; border-left: 0; }
   #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__splits-table .run-detail-v2__pace-bar { width: 32px; padding-right: 6px !important; }
+}
+
+@media (max-width: 1200px) {
+  #root .run-detail-v2 .run-detail-v2__training { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 520px) {
+  #root .run-detail-v2 .run-detail-v2__zone {
+    grid-template-columns: minmax(0, 1fr) 58px 40px;
+    grid-template-areas: "name time share" "track track track";
+    gap: 6px 12px;
+  }
+
+  /* Two rows of five, so each rating is a comfortable thumb target instead of a 24px sliver. */
+  #root .run-detail-v2 .run-detail-v2__rating { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  #root .run-detail-v2 .run-detail-v2__rating-btn { height: 44px; }
 }
