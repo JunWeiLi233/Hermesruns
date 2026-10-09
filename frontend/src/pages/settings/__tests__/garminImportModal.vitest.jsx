@@ -30,7 +30,7 @@ beforeEach(() => {
   apiFetch.mockReset();
   apiJson.mockReset();
   apiFetch.mockResolvedValue({ ok: true, status: 200 });
-  apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: false, syncStatus: { active: false } } : {});
+  apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: false, credentialsSaved: false, syncStatus: { active: false }, lastSyncedAt: null } : {});
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -56,7 +56,7 @@ describe('Garmin import modal', () => {
   it('polls the server job, treats duplicate-only completion as success, and opens Runs', async () => {
     vi.useFakeTimers();
     apiJson.mockImplementation(async (url) => {
-      if (url.endsWith('/wellness/status')) return { wellnessSyncEnabled: false };
+      if (url.endsWith('/wellness/status')) return { wellnessSyncEnabled: false, credentialsSaved: false };
       return { active: false, status: 'COMPLETED', importedRuns: 0, importedPoints: 0 };
     });
     renderModal();
@@ -73,7 +73,7 @@ describe('Garmin import modal', () => {
 
   it('stops polling after closing while the server-side job continues', async () => {
     vi.useFakeTimers();
-    apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: false } : { active: true, importedRuns: 3 });
+    apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: false, credentialsSaved: false } : { active: true, importedRuns: 3 });
     const onClose = vi.fn();
     const view = renderModal({ onClose });
     fireEvent.change(screen.getByLabelText('Garmin Connect email'), { target: { value: 'preview@example.test' } });
@@ -134,7 +134,7 @@ describe('Garmin import modal', () => {
 
   it('loads the existing health-sync setting and can disable it without saving credentials', async () => {
     const user = userEvent.setup();
-    apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: true } : { wellnessSyncEnabled: false });
+    apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status') ? { wellnessSyncEnabled: true, credentialsSaved: true } : { wellnessSyncEnabled: false });
     renderModal();
     const toggle = screen.getByRole('switch', { name: 'Auto-sync wellness data' });
     await waitFor(() => expect(toggle).toBeChecked());
@@ -143,10 +143,90 @@ describe('Garmin import modal', () => {
     expect(apiJson.mock.calls.some(([url]) => url.endsWith('/wellness/credentials'))).toBe(false);
   });
 
+  it('keeps stored credentials saved after disabling sync and reopening, allowing re-enable without re-entry', async () => {
+    const user = userEvent.setup();
+    let wellnessSyncEnabled = true;
+    apiJson.mockImplementation(async (url, options) => {
+      if (url.endsWith('/wellness/status')) return { wellnessSyncEnabled, credentialsSaved: true, syncStatus: { active: false }, lastSyncedAt: null };
+      if (url.endsWith('/wellness/toggle')) {
+        wellnessSyncEnabled = JSON.parse(options.body).enabled;
+        return { wellnessSyncEnabled };
+      }
+      return {};
+    });
+    const view = renderModal();
+    let toggle = screen.getByRole('switch', { name: 'Auto-sync wellness data' });
+    await waitFor(() => expect(toggle).toBeChecked());
+    await user.click(toggle);
+    await waitFor(() => expect(toggle).not.toBeChecked());
+    expect(screen.getByText(t('profile.garmin_v2_saved_note'))).toBeInTheDocument();
+    view.unmount();
+
+    renderModal();
+    toggle = screen.getByRole('switch', { name: 'Auto-sync wellness data' });
+    expect(await screen.findByText(t('profile.garmin_v2_saved_note'))).toBeInTheDocument();
+    expect(toggle).not.toBeChecked();
+    expect(toggle).toBeEnabled();
+    expect(screen.getByLabelText('Garmin Connect email')).toHaveValue('');
+    expect(screen.getByLabelText('Garmin Connect password')).toHaveValue('');
+    await user.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+    const writes = apiJson.mock.calls.filter(([, options]) => options?.method === 'POST');
+    expect(writes.map(([url]) => url)).toEqual(['/api/garmin/connect/wellness/toggle', '/api/garmin/connect/wellness/toggle']);
+    expect(writes.map(([, options]) => JSON.parse(options.body))).toEqual([{ enabled: false }, { enabled: true }]);
+  });
+
+  it.each([false, true])('uses explicit unsaved credential status independently of sync enabled=%s', async (wellnessSyncEnabled) => {
+    const user = userEvent.setup();
+    apiJson.mockResolvedValue({ wellnessSyncEnabled, credentialsSaved: false, syncStatus: { active: false }, lastSyncedAt: null });
+    renderModal();
+    const toggle = screen.getByRole('switch', { name: 'Auto-sync wellness data' });
+    await waitFor(() => expect(toggle).toHaveProperty('checked', wellnessSyncEnabled));
+    expect(screen.getByText(t('profile.garmin_connect_credentials_note'))).toBeInTheDocument();
+    expect(screen.queryByText(t('profile.garmin_v2_saved_note'))).not.toBeInTheDocument();
+    if (wellnessSyncEnabled) {
+      expect(toggle).toBeEnabled();
+      await user.click(toggle);
+      await waitFor(() => expect(toggle).not.toBeChecked());
+      expect(apiJson).toHaveBeenCalledWith('/api/garmin/connect/wellness/toggle', expect.objectContaining({ body: JSON.stringify({ enabled: false }) }));
+      expect(apiJson.mock.calls.some(([url]) => url.endsWith('/wellness/credentials'))).toBe(false);
+    }
+  });
+
+  it('cannot enable auto-sync without saved or entered credentials', async () => {
+    const user = userEvent.setup();
+    const view = renderModal();
+    await waitFor(() => expect(apiJson).toHaveBeenCalledWith('/api/garmin/connect/wellness/status'));
+    const toggle = screen.getByRole('switch', { name: 'Auto-sync wellness data' });
+    expect(toggle).toBeDisabled();
+    await user.click(toggle);
+    expect(toggle).not.toBeChecked();
+    view.unmount();
+
+    render(<GarminImportSettings />);
+    await user.click(screen.getByRole('button', { name: t('profile.garmin_wellness_auto_sync'), exact: true }));
+    expect(await screen.findByText(t('profile.garmin_v2_credentials_required'))).toBeInTheDocument();
+    expect(apiJson.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
+  });
+
+  it('can re-enable full-page auto-sync with stored credentials while sync is disabled', async () => {
+    const user = userEvent.setup();
+    apiJson.mockImplementation(async (url) => url.endsWith('/wellness/status')
+      ? { wellnessSyncEnabled: false, credentialsSaved: true, syncStatus: { active: false }, lastSyncedAt: null }
+      : { wellnessSyncEnabled: true });
+    render(<GarminImportSettings />);
+    expect(await screen.findByRole('button', { name: t('profile.garmin_wellness_credentials_saved') })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: t('profile.garmin_wellness_auto_sync'), exact: true }));
+    expect(await screen.findByText(t('profile.garmin_wellness_enabled'), { selector: '.garmin-import-pill' })).toBeInTheDocument();
+    const writes = apiJson.mock.calls.filter(([, options]) => options?.method === 'POST');
+    expect(writes.map(([url]) => url)).toEqual(['/api/garmin/connect/wellness/toggle']);
+    expect(JSON.parse(writes[0][1].body)).toEqual({ enabled: true });
+  });
+
   it('shows a health-sync failure without changing the switch to enabled', async () => {
     const user = userEvent.setup();
     apiJson.mockImplementation(async (url) => {
-      if (url.endsWith('/wellness/status')) return { wellnessSyncEnabled: false };
+      if (url.endsWith('/wellness/status')) return { wellnessSyncEnabled: false, credentialsSaved: false };
       throw new Error('Fixture failure');
     });
     renderModal();
@@ -158,8 +238,8 @@ describe('Garmin import modal', () => {
     expect(toggle).not.toBeChecked();
   });
 
-  it('retains the full-page form and explicit wellness actions', () => {
-    render(<GarminImportSettings />);
+  it('retains the full-page form and explicit wellness actions', async () => {
+    await act(async () => { render(<GarminImportSettings />); });
     expect(document.querySelector('.garmin-profile-main-grid')).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toHaveValue('50');
     expect(screen.getByRole('button', { name: 'Sync Now' })).toBeInTheDocument();
@@ -169,7 +249,7 @@ describe('Garmin import modal', () => {
 
   it('reads the nested wellness status when the full-page sync completes', async () => {
     vi.useFakeTimers();
-    apiJson.mockResolvedValue({ wellnessSyncEnabled: true, syncStatus: { active: false, status: 'COMPLETED' }, lastSyncedAt: '2026-10-07T12:00:00Z' });
+    apiJson.mockResolvedValue({ wellnessSyncEnabled: true, credentialsSaved: true, syncStatus: { active: false, status: 'COMPLETED' }, lastSyncedAt: '2026-10-07T12:00:00Z' });
     render(<GarminImportSettings />);
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Sync Now' })); });
     await poll(2500);

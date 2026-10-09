@@ -31,7 +31,7 @@ class ActivityPointHeatmapSpatialQueryTests {
         if (postgres && !url.matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/postgres")) {
             throw new IllegalArgumentException("Query tests require a dedicated loopback PostgreSQL server");
         }
-        connection = DriverManager.getConnection(postgres ? url : "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL",
+        connection = DriverManager.getConnection(postgres ? url : "jdbc:h2:mem:" + UUID.randomUUID(),
                 postgres ? "postgres" : "sa", "");
         jdbc = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
         jdbc.setQueryTimeout(15);

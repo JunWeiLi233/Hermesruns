@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import postcss from 'postcss';
 import en from '../../../i18n/locales/en/components.js';
 import zh from '../../../i18n/locales/zh-CN/components.js';
 
@@ -40,7 +41,24 @@ assert.match(page, /v3_coverage_count/);
 assert.match(page, /weeks=\{12\}[\s\S]*?compact/);
 assert.match(page, /v3_streak/);
 
-assert.ok(appCss.trimEnd().endsWith("@import './muscle-training-week-v2.css';"), 'Load the redesign after existing theme overrides.');
+const styleImports = [];
+postcss.parse(appCss).walkAtRules('import', ({ params }) => styleImports.push(params.slice(1, -1)));
+const weekStyles = './muscle-training-week-v2.css';
+assert.equal(styleImports.filter((file) => file === weekStyles).length, 1, 'Load the strength-week stylesheet exactly once.');
+for (const owner of [
+  './_split/muscle-training.css', './_split/light-theme-overrides.css',
+  './muscle-training-hermes-redesign.css', './muscle-training-profile-alignment.css',
+  './all-pages-liquid-glass.css', './muscle-training-action-list.css',
+  './mobile.css', './dark-mode-final-fixes.css',
+]) {
+  assert.ok(styleImports.includes(owner), `Keep the existing ${owner} cascade owner.`);
+  assert.ok(styleImports.indexOf(weekStyles) > styleImports.lastIndexOf(owner), `Load strength-week styles after ${owner}.`);
+}
+const weekDarkRule = postcss.parse(css).nodes.find((rule) => rule.selector === 'body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page:has(.mt-week-v2)');
+assert.ok(weekDarkRule, 'Scope both dark themes to the strength-week page.');
+const weekDarkTokens = Object.fromEntries(weekDarkRule.nodes.filter((node) => node.type === 'decl').map(({ prop, value }) => [prop, value]));
+assert.match(weekDarkTokens['--mw-card'], /^var\(--profile-night-card,/);
+assert.equal(weekDarkTokens['--mw-ink'], '#f8f4ef', 'Keep readable Profile-derived ink after the shared palette loads.');
 assert.match(css, /grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
 assert.match(css, /theme-midnight, \.theme-high-contrast/);
 assert.match(css, /:focus-visible/);

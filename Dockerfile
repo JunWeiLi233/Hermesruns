@@ -72,16 +72,17 @@ USER hermes
 # Missing scripts, dependencies, or incompatible provider APIs fail the build.
 RUN python tools/check_garmin_runtime.py
 
-# Lean JVM footprint for small containers. Without these flags the JVM sizes
-# its heap from container ergonomics, grows toward that ceiling, and never
-# returns RSS - Railway reported 1.6 GB for this app. The heap/GC/metaspace
-# settings follow the locally proven profile (tools/run-backend.*, without
-# the devtools-driven metaspace headroom); the free-ratio pair makes the JVM
-# uncommit heap after spikes. Deployments can override JAVA_OPTS without
-# rebuilding the image.
-ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseSerialGC \
-    -XX:MaxMetaspaceSize=128m \
-    -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 -XX:-ShrinkHeapInSteps \
+# Reclaim unused heap between traffic bursts while keeping the service online.
+# Serial GC left import garbage resident until another full collection. G1's
+# periodic concurrent cycles reclaim it during idle periods. Keep the existing
+# 640 MiB import headroom and bound GC workers for this small web workload.
+# Class metadata needs separate headroom for full catalog initialization;
+# its ceiling does not preallocate that memory.
+# Deployments can override JAVA_OPTS without rebuilding the image.
+ENV JAVA_OPTS="-Xms64m -Xmx640m -XX:+UseG1GC \
+    -XX:G1PeriodicGCInterval=60000 -XX:ParallelGCThreads=2 -XX:ConcGCThreads=1 \
+    -XX:MaxMetaspaceSize=192m \
+    -XX:MinHeapFreeRatio=5 -XX:MaxHeapFreeRatio=10 \
     -XX:+ExitOnOutOfMemoryError"
 
 EXPOSE 8080

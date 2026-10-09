@@ -10,6 +10,7 @@ const read = (relativePath) => readFileSync(path.join(srcRoot, relativePath), 'u
 const pageSource = read('./pages/analysis/AnalysisInsightDetail.jsx');
 const profileSource = read('./pages/profile/ProfileDashboard.jsx');
 const styleSource = read('./styles/analysis-profile-visual-alignment.css');
+const coachStyles = read('./styles/analysis-coach-bento.css');
 const indexSource = read('./index.css');
 
 const sliceBranch = (startMarker, endMarker) => {
@@ -53,12 +54,14 @@ for (const [route, branch] of [
     }
     continue;
   }
-  assert.ok(branch.includes(`analysis-profile-v2--${route}`), `${route} must use its shared Profile v2 route marker.`);
+  assert.ok(branch.includes('analysis-coach-profile analysis-coach-bento'), 'Coach must retain its Profile route scope and current bento layout marker.');
   const requiredMarkers = [
-    'analysis-profile-v2-focus',
-    ...(route === 'coach' ? [] : ['analysis-profile-v2-metric-strip']),
+    'analysis-coach-bento__verdict',
+    'analysis-coach-bento__today',
+    'analysis-coach-bento__signals',
+    'analysis-coach-bento__phase',
+    'analysis-coach-bento__reasons',
   ];
-  if (route === 'coach') requiredMarkers.push('analysis-profile-v2-header');
   for (const marker of requiredMarkers) {
     assert.ok(branch.includes(marker), `${route} must include ${marker}.`);
   }
@@ -77,9 +80,11 @@ assert.doesNotMatch(
 
 for (const [route, branch, behaviorMarkers] of [
   ['coach', coachBranch, [
-    'analysis-coach-command-chart-shell',
-    'analysis-coach-command-session-list',
-    'analysis-coach-command-primary-plan',
+    '<CoachLoadChart',
+    'analysis-coach-bento__recent-list',
+    'analysis-coach-bento__today',
+    'coachPrimarySession.target',
+    'coachPrimarySession?.why',
     'navigate(buildRunDetailPath(row.id))',
     "navigate('/today-run')",
   ]],
@@ -156,26 +161,44 @@ const desktopAuthority = desktopAuthorityStart >= 0
   : '';
 const tabletAuthority = styleSource.slice(tabletAuthorityStart, compactAuthorityStart);
 const compactAuthority = styleSource.slice(compactAuthorityStart, reducedMotionStart);
-const coachWorkbenchSelector = 'body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-profile-workbench';
 const loadEvidenceSelector = 'body #root .analysis-insight-detail-page.is-load-balance .analysis-profile-v2--load .analysis-load-profile-evidence';
-const coachDialSelector = 'body #root .analysis-insight-detail-page.is-coach-insight .analysis-profile-v2--coach .analysis-coach-profile-readiness-dial';
 const loadDialSelector = 'body #root .analysis-insight-detail-page.is-load-balance .analysis-profile-v2--load .analysis-load-profile-ring';
 
+const coachTabletStart = coachStyles.indexOf('@media (max-width: 1180px)');
+const coachCompactStart = coachStyles.indexOf('@media (max-width: 860px)');
+const coachNarrowStart = coachStyles.indexOf('@media (max-width: 640px)');
+requireCascade(coachTabletStart >= 0 && coachCompactStart > coachTabletStart && coachNarrowStart > coachCompactStart, 'Coach bento must retain its ordered tablet, compact, and narrow breakpoints');
+const coachTablet = coachStyles.slice(coachTabletStart, coachCompactStart);
+const coachCompact = coachStyles.slice(coachCompactStart, coachNarrowStart);
+
 requireCascade(
-  desktopAuthority.includes(coachWorkbenchSelector) && /grid-template-columns:\s*minmax\(0,\s*1\.55fr\)\s+minmax\(290px,\s*0\.75fr\)/.test(desktopAuthority),
-  'v2 must override the legacy 1180px coach stack above 960px with a route-scoped desktop grid',
+  /#root \.analysis-insight-detail-page\.is-coach-insight \.analysis-coach-bento\s*\{[^}]*grid-template-columns:\s*repeat\(12,\s*minmax\(0,\s*1fr\)\);/.test(coachStyles),
+  'Coach bento must define its route-scoped desktop grid',
 );
 requireCascade(
   desktopAuthority.includes(loadEvidenceSelector) && /grid-template-columns:\s*minmax\(0,\s*1\.6fr\)\s+minmax\(270px,\s*0\.6fr\)/.test(desktopAuthority),
   'v2 must override the legacy 1180px load stack above 960px with a route-scoped desktop grid',
 );
 requireCascade(
-  tabletAuthority.includes(coachWorkbenchSelector) && tabletAuthority.includes(loadEvidenceSelector),
-  'v2 <=960px collapse selectors must be route-scoped and more specific than legacy breakpoints',
+  tabletAuthority.includes(loadEvidenceSelector),
+  'Load v2 <=960px collapse selectors must be route-scoped and more specific than legacy breakpoints',
 );
 requireCascade(
-  compactAuthority.includes(coachDialSelector) && compactAuthority.includes(loadDialSelector),
-  'v2 <=760px dial sizing must be route-scoped and more specific than legacy compact rules',
+  /#root \.analysis-coach-bento__today,\s*#root \.analysis-coach-bento__recent\s*\{\s*grid-column:\s*1 \/ -1;\s*grid-row:\s*auto;/.test(coachTablet),
+  'Coach bento today and recent tiles must release their desktop spans on tablet',
+);
+requireCascade(
+  /#root \.analysis-coach-bento > \*,[\s\S]*?\.analysis-coach-bento__reasons\s*\{\s*grid-column:\s*1 \/ -1 !important;/.test(coachCompact)
+    && /#root \.analysis-coach-bento__signals\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(coachCompact),
+  'Coach bento tiles and signals must collapse to one column on compact screens',
+);
+requireCascade(
+  /#root \.analysis-insight-detail-page\.is-coach-insight \.analysis-coach-bento \.analysis-coach-bento__ring\s*\{[^}]*width:\s*140px;[^}]*height:\s*140px;/.test(coachCompact),
+  'Coach bento readiness ring must retain equal compact dimensions in its route scope',
+);
+requireCascade(
+  compactAuthority.includes(loadDialSelector),
+  'Load v2 <=760px dial sizing must be route-scoped and more specific than legacy compact rules',
 );
 requireCascade(
   /width:\s*68px;[\s\S]*height:\s*68px;/.test(compactAuthority),

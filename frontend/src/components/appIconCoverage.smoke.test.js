@@ -22,7 +22,7 @@ function* walk(dir) {
     if (stat.isDirectory()) {
       if (entry === 'node_modules' || entry.startsWith('.')) continue;
       yield* walk(full);
-    } else if (/\.(jsx|js|tsx|ts)$/i.test(entry) && !/\.test\.[jt]sx?$/i.test(entry)) {
+    } else if (/\.(jsx|js|tsx|ts)$/i.test(entry) && !/\.(?:test|vitest)\.[jt]sx?$/i.test(entry)) {
       yield full;
     }
   }

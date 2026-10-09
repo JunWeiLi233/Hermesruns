@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const source = fs.readFileSync(path.join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
-const styles = fs.readFileSync(path.join(here, "../../../styles/_split/analysis.css"), 'utf8');
+const styles = fs.readFileSync(path.join(here, "../../../styles/analysis-coach-bento.css"), 'utf8');
 const visualStyles = fs.readFileSync(path.join(here, "../../../styles/analysis-profile-visual-alignment.css"), 'utf8');
 
 const branchStart = source.indexOf("{insightKey === 'coach-insight' && coachSystem ? (");
@@ -17,11 +17,13 @@ const coachBranch = source.slice(branchStart, branchEnd);
 
 [
   'analysis-coach-profile',
-  'analysis-coach-profile-decision',
-  'analysis-coach-profile-workbench',
-  'analysis-coach-profile-blueprint',
-  'analysis-coach-profile-recent',
-  'analysis-coach-profile-evidence',
+  'analysis-coach-bento__verdict',
+  'analysis-coach-bento__load',
+  'analysis-coach-bento__today',
+  'analysis-coach-bento__signals',
+  'analysis-coach-bento__recent',
+  'analysis-coach-bento__phase',
+  'analysis-coach-bento__reasons',
 ].forEach((className) => {
   assert.match(coachBranch, new RegExp(className), `coach insight should render ${className}`);
 });
@@ -33,6 +35,7 @@ const coachBranch = source.slice(branchStart, branchEnd);
   'coachPrimarySession',
   'coachSystem.phases',
   'coachSystem.reasons',
+  'coachSystem.focusCards',
 ].forEach((binding) => {
   assert.match(coachBranch, new RegExp(binding.replaceAll('.', '\\.')), `coach insight should preserve ${binding}`);
 });
@@ -87,190 +90,101 @@ assert.doesNotMatch(
 );
 assert.match(
   coachBranch,
-  /analysis-coach-command-phase-card[\s\S]*analysis-coach-command-phase-row/,
+  /analysis-coach-bento__phase[\s\S]*analysis-coach-bento__phase-track/,
   'the Coach Insight phase grid should have a dedicated surface scope',
 );
 assert.match(
   coachBranch,
-  /analysis-coach-command-support-card--schedule[\s\S]*analysis-coach-command-focus-grid/,
+  /analysis-coach-bento__signals[\s\S]*coachSystem\.focusCards\.map[\s\S]*analysis-coach-bento__signal/,
   'the Coach Insight training-planning grid should have a dedicated surface scope',
 );
 
-const styleStart = styles.indexOf('/* Coach insight Profile-aligned redesign */');
-assert.ok(styleStart >= 0, 'coach insight redesign styles should have an explicit section marker');
+// Assert the live bento surfaces; legacy Profile selectors remain only for
+// cached-chunk removal guards above and below.
+const rule = (selector) => {
+  const block = styles.match(new RegExp(selector.replaceAll('.', '\\.') + '\\s*\\{([^}]*)\\}'));
+  assert.ok(block, 'Coach Insight should style ' + selector);
+  return block[1];
+};
 
-const coachStyles = styles.slice(styleStart);
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-profile/,
-  'coach insight tokens should be scoped to the route',
-);
-const currentHeroIndex = styles.indexOf(
-  '.analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-copy {',
-  styleStart,
-);
-assert.ok(currentHeroIndex >= 0, 'coach insight should have a current hero surface rule');
-const lightSurfaceStart = styles.indexOf('/* Keep the current coach-insight hero readable as a Profile surface. */');
-assert.ok(lightSurfaceStart > currentHeroIndex, 'coach insight light surface override should follow the dark base rule');
-assert.match(
-  styles.slice(lightSurfaceStart, lightSurfaceStart + 700),
-  /background:[\s\S]*#fffdf9/,
-  'coach insight hero should use the white Profile surface instead of the dark grid',
-);
-assert.match(coachStyles, /@media\s*\(max-width:\s*1180px\)/, 'workbench should stack on smaller desktops');
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-profile-workbench\s*\{[\s\S]*--coach-profile-top-row-height:\s*clamp\(380px,\s*30vw,\s*454px\);/,
-  'desktop coach workbench should define one shared top-row height for aligned cards',
-);
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-command-performance-card,\s*\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-command-primary-plan\s*\{[^}]*\n\s+height:\s*var\(--coach-profile-top-row-height\);/,
-  'performance and primary plan cards should share the same desktop grid row height',
-);
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-profile-workbench\s*\{[^}]*\n\s+align-items:\s*stretch;/,
-  'desktop coach workbench columns should stretch to the tallest plan stack',
-);
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-profile-main\s*\{[^}]*\n\s+grid-template-rows:\s*auto\s+var\(--coach-profile-top-row-height\)\s+minmax\(0,\s*1fr\);/,
-  'left coach column should reserve the top row and use the remaining track for recent training',
-);
-assert.match(
-  coachStyles,
-  /\.analysis-insight-detail-page\.is-coach-insight\s+\.analysis-coach-profile-recent\s*\{[^}]*\n\s+height:\s*100%;/,
-  'recent training should fill the remaining left column track',
-);
-assert.match(coachStyles, /@media\s*\(max-width:\s*760px\)/, 'metrics and evidence should stack on mobile');
-assert.match(coachStyles, /@media\s*\(max-width:\s*640px\)/, 'session rows and actions should compact on narrow screens');
-assert.match(coachStyles, /:focus-visible/, 'interactive controls should retain visible keyboard focus');
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-profile-v2-focus-title\s*\{[\s\S]*color:\s*#fff\s*!important;/,
-  'the visible coach decision title should stay white on the dark decision surface',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-session-row\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*#f1f2f2\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/,
-  'the Coach Insight recent-run grids should use the same light-grey fill without borders or shadows as the preparation tile',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-profile-decision \.analysis-coach-profile-coach \.coach-identity-copy\s*\{[\s\S]*display:\s*flex;[\s\S]*align-items:\s*baseline;[\s\S]*gap:/,
-  'the Coach Insight name and role should share one horizontal line',
-);
-assert.match(
-  coachBranch,
-  /<div className="analysis-coach-profile-coach-stack">[\s\S]*<CoachIdentityBadge[\s\S]*<span className="analysis-profile-v2-focus-kicker">/,
-  'the Coach Insight kicker should be grouped with the coach identity stack',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-profile-coach-stack\s*\{[\s\S]*display:\s*grid;[\s\S]*gap:/,
-  'the Coach Insight identity stack should place the kicker below the badge',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-profile-coach-stack \.analysis-profile-v2-focus-kicker\s*\{[\s\S]*margin-left:\s*calc\(44px \+ 12px\);/,
-  'the Coach Insight kicker should align with the name copy instead of the avatar',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-performance-body\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
-  'the Coach Insight ACWR chart should use the full performance-card width after removing the copy block',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-performance-copy\s*\{[\s\S]*display:\s*none\s*!important;/,
-  'stale Coach Insight chunks should not remount the removed performance copy block',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-phase-card\s*\{[\s\S]*background:\s*var\(--analysis-v2-card\)\s*!important;/,
-  'the Coach Insight phase grid should not inherit the themed panel strip',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-phase-card \.analysis-coach-command-panel-head\s*\{[\s\S]*background:\s*transparent\s*!important;/,
-  'the phase grid panel header should remain transparent',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-phase-card \.analysis-coach-command-phase-chip\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*#f1f2f2\s*!important;/,
-  'the Coach Insight phase grids should use a light-grey fill without borders',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-reason-list p\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*#f1f2f2\s*!important;/,
-  'the Coach Insight evidence rows should use a light-grey fill without borders',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--reasons\s*\{[\s\S]*background:\s*var\(--analysis-v2-card\)\s*!important;/,
-  'the Coach Insight reasons card should retain its background surface',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--reasons \.analysis-coach-command-panel-head\s*\{[\s\S]*background:\s*transparent\s*!important;[\s\S]*border:\s*0\s*!important;/,
-  'the Coach Insight reasons title panel should be transparent without removing the card background',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--reasons \.analysis-coach-command-reason-list\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
-  'the Coach Insight reasons should use the same two-column tile layout as the training-planning grid',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--reasons \.analysis-coach-command-reason-list p\s*\{[\s\S]*padding:\s*12px 12px 12px 30px\s*!important;[\s\S]*border-radius:\s*12px\s*!important;[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*#f1f2f2\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/,
-  'the Coach Insight reasons should use the same gray rounded tile treatment as the training-planning grid',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--reasons \.analysis-coach-command-reason-list p::before\s*\{[\s\S]*left:\s*12px\s*!important;/,
-  'the Coach Insight reason numbers should have an inset from the tile edge',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--schedule \.analysis-coach-command-focus-tile\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*#f1f2f2\s*!important;[\s\S]*box-shadow:\s*none\s*!important;/,
-  'the Coach Insight training-planning grid tiles should use the same light-grey layer as the phase grid',
-);
-assert.match(
-  visualStyles,
-  /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-support-card--schedule\s*\{[\s\S]*padding:\s*22px\s*!important;[\s\S]*border:\s*0\s*!important;[\s\S]*border-radius:\s*16px\s*!important;[\s\S]*background:\s*var\(--analysis-v2-card\)\s*!important;[\s\S]*box-shadow:\s*var\(--analysis-v2-shadow-md\)\s*!important;/,
-  'the Coach Insight training-planning grid should use the same rounded white panel layer as the phase grid',
-);
+const rootStyles = rule('#root .analysis-insight-detail-page.is-coach-insight .analysis-coach-bento');
+assert.match(rootStyles, /--bento-card:\s*var\(--analysis-v2-card,\s*#fff\);/, 'coach tiles should retain the shared Profile card token');
+assert.match(rootStyles, /--bento-ink:\s*var\(--analysis-v2-ink,\s*#1c1917\);/, 'coach tiles should retain the shared Profile ink token');
+assert.match(rootStyles, /display:\s*grid;[\s\S]*grid-template-columns:\s*repeat\(12,\s*minmax\(0,\s*1fr\)\);/, 'coach desktop layout should align tiles on a shared twelve-column grid');
+assert.match(rootStyles, /gap:\s*16px;/, 'coach tiles should retain space between their surfaces');
 
-const primaryPlanSurfaceStart = visualStyles.indexOf(
-  '/* Keep Coach Insight primary plan aligned with neighboring cards. */',
-);
-assert.ok(primaryPlanSurfaceStart >= 0, 'Coach Insight primary plan should have a dedicated neutral surface override');
-const primaryPlanSurfaceStyles = visualStyles.slice(primaryPlanSurfaceStart, primaryPlanSurfaceStart + 5200);
-assert.match(
-  primaryPlanSurfaceStyles,
-  /body:not\(\.theme-midnight\):not\(\.theme-high-contrast\) #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-primary-plan\s*\{[\s\S]*background:\s*var\(--analysis-v2-card\)\s*!important;[\s\S]*border:\s*1px solid rgba\(28,\s*25,\s*23,\s*0\.1\)\s*!important;[\s\S]*color:\s*var\(--analysis-v2-ink\)\s*!important;/,
-  'the light Coach Insight primary plan should use the same neutral card surface and dark ink as neighboring cards',
-);
-assert.match(
-  primaryPlanSurfaceStyles,
-  /body:not\(\.theme-midnight\):not\(\.theme-high-contrast\) #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-why-card\s*\{[\s\S]*border:\s*0\s*!important;[\s\S]*background:\s*var\(--analysis-v2-coral-soft\)\s*!important;/,
-  'the Coach Insight rationale block should use the soft-coral fill without an accent line',
-);
-assert.doesNotMatch(
-  primaryPlanSurfaceStyles,
-  /border-left:\s*3px solid var\(--analysis-v2-coral\)/,
-  'the neutral Coach Insight card treatment should not reintroduce a coral left border',
-);
-assert.match(
-  primaryPlanSurfaceStyles,
-  /analysis-coach-command-primary-plan\s+:is\([\s\S]*color:\s*var\(--analysis-v2-ink\)\s*!important;/,
-  'all primary Coach Insight plan text should resolve to the dark ink token',
-);
-assert.match(
-  primaryPlanSurfaceStyles,
-  /body:not\(\.theme-midnight\):not\(\.theme-high-contrast\) #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-primary-plan\s*\{[\s\S]*height:\s*auto\s*!important;[\s\S]*min-height:\s*0\s*!important;[\s\S]*align-self:\s*start;/,
-  'the light Coach Insight primary plan should size to its content instead of showing a large empty lower half',
-);
+const runtimeStyles = fs.readFileSync(path.join(here, "../../../styles/app.css"), 'utf8');
+const bentoImport = runtimeStyles.indexOf("@import './analysis-coach-bento.css';");
+assert.ok(bentoImport > runtimeStyles.indexOf("@import './analysis-profile-visual-alignment.css';"), 'live bento rules should load after the legacy Profile alignment layer');
+assert.ok(bentoImport < runtimeStyles.indexOf("@import './dark-mode-final-fixes.css';"), 'final theme fixes should retain cascade authority');
 
-console.log('analysis coach insight Profile redesign smoke test passed');
+assert.match(styles, /#root \.analysis-coach-bento > section,\s*#root \.analysis-coach-bento__signal\s*\{[^}]*padding:\s*22px 24px;[^}]*border:\s*0;[^}]*border-radius:\s*22px;[^}]*background:\s*var\(--bento-card\);[^}]*box-shadow:\s*none;/, 'coach phase, reasons, recent, and signal tiles should retain padded neutral surfaces');
+
+const verdictStyles = rule('#root .analysis-coach-bento__verdict');
+assert.match(verdictStyles, /grid-column:\s*span 8;/, 'decision should occupy the wide desktop tile');
+assert.match(verdictStyles, /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+180px;/, 'decision and readiness should retain separate desktop columns');
+assert.match(rule('#root .analysis-coach-bento__verdict h1'), /color:\s*var\(--bento-ink\)\s*!important;/, 'decision text should remain readable on its neutral surface');
+assert.match(rule('#root .analysis-coach-bento__verdict p'), /color:\s*var\(--bento-muted\)\s*!important;/, 'decision explanation should retain readable muted text');
+assert.match(coachBranch, /analysis-coach-bento__verdict-copy[\s\S]*?<CoachIdentityBadge coach=\{assignedCoach\} lang=\{lang\}[\s\S]*?<span className="analysis-coach-bento__kicker">/, 'the decision should retain assigned coach identity above its kicker');
+assert.match(rule('#root .analysis-coach-bento__verdict-copy'), /display:\s*flex;[^}]*flex-direction:\s*column;[^}]*gap:\s*10px;/, 'coach identity, kicker, and decision should retain vertical spacing');
+
+const todayStyles = rule('#root .analysis-coach-bento__today');
+assert.match(todayStyles, /grid-column:\s*span 4;[\s\S]*grid-row:\s*span 2;/, 'today should retain the tall desktop tile beside the decision and signals');
+assert.match(todayStyles, /display:\s*flex;[\s\S]*flex-direction:\s*column;[\s\S]*gap:\s*14px;/, 'today plan should space its content vertically');
+assert.match(todayStyles, /background:\s*var\(--bento-dark\)\s*!important;[\s\S]*color:\s*var\(--bento-dark-ink\);/, 'today plan should retain its dark surface and readable light ink');
+assert.doesNotMatch(todayStyles, /(?:height|min-height):/, 'today plan should size with its content and grid track rather than a fixed empty card height');
+assert.match(rule('#root .analysis-insight-detail-page.is-coach-insight .analysis-coach-bento .analysis-coach-bento__today h2'), /color:\s*var\(--bento-dark-ink\)\s*!important;/, 'today title should remain readable after shared heading rules');
+assert.match(rule('#root .analysis-coach-bento__session'), /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/, 'target and pace should retain two columns');
+assert.match(rule('#root .analysis-coach-bento__session dd'), /color:\s*var\(--bento-dark-ink\);/, 'today session values should retain light ink');
+assert.match(rule('#root .analysis-coach-bento__why'), /padding:\s*14px;[\s\S]*border-radius:\s*14px;[\s\S]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.06\);/, 'rationale should retain its inset rounded surface');
+assert.doesNotMatch(rule('#root .analysis-coach-bento__why'), /border-left:/, 'rationale should not reintroduce an accent border');
+assert.match(rule('#root .analysis-coach-bento__why p'), /color:\s*#e8e1d8\s*!important;/, 'rationale should retain readable light text');
+assert.match(rule('#root .analysis-coach-bento__cta'), /margin-top:\s*auto;[\s\S]*min-height:\s*46px;/, 'today action should remain reachable at the bottom of the plan');
+
+const signalStyles = rule('#root .analysis-coach-bento__signals');
+assert.match(signalStyles, /grid-column:\s*span 8;[\s\S]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/, 'training signals should retain their dedicated desktop grid');
+assert.match(coachBranch, /coachSystem\.focusCards\.map[\s\S]*?\{card\.label\}[\s\S]*?\{card\.value\}[\s\S]*?\{card\.detail\}/, 'every training signal should retain its label, value, and detail');
+
+assert.match(rule('#root .analysis-coach-bento__load'), /grid-column:\s*span 8;/, 'load evidence should retain the wide chart tile');
+const chart = fs.readFileSync(path.join(here, '../CoachLoadChart.jsx'), 'utf8');
+assert.match(rule('#root .analysis-coach-bento .coach-load-chart__plot'), /position:\s*relative;[\s\S]*width:\s*100%;/, 'The load chart should fit its measured tile width.');
+assert.match(coachBranch, /<CoachLoadChart key=\{coachPerformanceWindow\} dashboard=\{coachLoadDashboard\}/, 'The route should supply the selected load window to the chart.');
+assert.match(chart, /onPointerMove=\{selectPoint\}/, 'The load chart should retain interactive pointer tracking.');
+assert.match(chart, /onPointerLeave=/, 'The load chart should retain pointer reset.');
+assert.match(chart, /data-analysis-history="coach"[\s\S]*?dashboard\.chartWindow\.map/, 'The load chart should retain its accessible data history.');
+assert.match(visualStyles, /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-performance-copy\s*\{[\s\S]*display:\s*none\s*!important;/, 'cached legacy chunks should not remount the removed performance copy block');
+
+assert.match(rule('#root .analysis-coach-bento__recent'), /grid-column:\s*span 4;[\s\S]*gap:\s*6px;/, 'recent training should retain its adjacent desktop tile and title spacing');
+assert.match(rule('#root .analysis-coach-bento__recent-list'), /display:\s*flex;[^}]*flex-direction:\s*column;/, 'recent sessions should retain a vertical list');
+assert.match(rule('#root .analysis-coach-bento__recent-row'), /grid-template-columns:\s*8px\s+minmax\(0,\s*1fr\)\s+auto;[\s\S]*gap:\s*12px;[\s\S]*padding:\s*10px 0;[\s\S]*border:\s*0;[\s\S]*border-top:\s*1px solid var\(--bento-line\);[\s\S]*background:\s*none;/, 'recent rows should retain spaced data columns and light separators without a nested panel strip');
+
+assert.match(rule('#root .analysis-coach-bento__reasons'), /grid-column:\s*span 6;[\s\S]*gap:\s*14px;/, 'phase and reasons should share half-width desktop tiles with title spacing');
+assert.match(rule('#root .analysis-coach-bento__phase-track'), /display:\s*grid;[^}]*grid-auto-flow:\s*column;[^}]*grid-auto-columns:\s*1fr;[^}]*gap:\s*6px;/, 'phase progression should retain aligned steps');
+assert.match(coachBranch, /coachSystem\.phases\.map[\s\S]*?aria-current=\{phase\.active \? 'step' : undefined\}[\s\S]*?phase\.active && 'is-active'[\s\S]*?\{phase\.label\}/, 'phase progression should retain active state and accessible labels');
+assert.match(rule('#root .analysis-coach-bento__phase-step.is-active i'), /background:\s*var\(--bento-accent\);/, 'current phase should retain its visible accent');
+assert.match(rule('#root .analysis-coach-bento__phase-step.is-active strong'), /color:\s*var\(--bento-ink\);/, 'current phase label should retain readable ink');
+assert.match(rule('#root .analysis-coach-bento__reasons ol'), /gap:\s*10px;[\s\S]*counter-reset:\s*reason;/, 'reasons should retain spacing and ordered numbering');
+assert.match(rule('#root .analysis-coach-bento__reasons li'), /gap:\s*10px;[\s\S]*color:\s*var\(--bento-ink\);[\s\S]*counter-increment:\s*reason;/, 'each evidence point should retain readable text and its number');
+assert.match(rule('#root .analysis-coach-bento__reasons li::before'), /content:\s*counter\(reason\);[\s\S]*flex:\s*0 0 20px;[\s\S]*background:\s*var\(--bento-accent-soft\);/, 'evidence numbers should retain inset space and an accent surface');
+
+const tabletStart = styles.indexOf('@media (max-width: 1180px)');
+const compactStart = styles.indexOf('@media (max-width: 860px)');
+const narrowStart = styles.indexOf('@media (max-width: 640px)');
+assert.ok(tabletStart >= 0 && compactStart > tabletStart && narrowStart > compactStart, 'coach responsive overrides should retain their tablet, compact, and narrow order');
+const tabletStyles = styles.slice(tabletStart, compactStart);
+const compactStyles = styles.slice(compactStart, narrowStart);
+const narrowStyles = styles.slice(narrowStart);
+assert.match(tabletStyles, /analysis-coach-bento__load\s*\{\s*grid-column:\s*1 \/ -1;/, 'wide evidence tiles should span the tablet grid');
+assert.match(tabletStyles, /analysis-coach-bento__recent\s*\{\s*grid-column:\s*1 \/ -1;\s*grid-row:\s*auto;/, 'today and recent tiles should release their desktop rows on tablet');
+assert.match(compactStyles, /analysis-coach-bento__reasons\s*\{\s*grid-column:\s*1 \/ -1\s*!important;/, 'all coach tiles should stack on compact screens');
+assert.match(compactStyles, /analysis-coach-bento__verdict\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'decision copy and readiness should stack on compact screens');
+assert.match(compactStyles, /analysis-coach-bento__signals\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'training signals should stack on compact screens');
+assert.match(narrowStyles, /analysis-coach-bento__load\s*\{\s*padding:\s*20px 16px;/, 'Narrow chart tiles should retain usable side padding.');
+assert.match(styles, /coach-load-chart__plot svg\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;/, 'The complete chart should fit narrow screens.');
+assert.match(styles, /coach-load-chart__plot svg text\s*\{[^}]*font:\s*11px/, 'Chart labels should keep their native readable size.');
+assert.doesNotMatch(styles, /min-width:\s*560px/, 'Phone charts should not require horizontal scrolling.');
+assert.match(styles, /analysis-coach-bento__cta:focus-visible\s*\{[^}]*outline:\s*2px solid #ffb4a7;[^}]*outline-offset:\s*3px;/, 'today action should retain visible keyboard focus');
+assert.match(styles, /:is\(\.analysis-coach-bento__recent-row, \.analysis-coach-bento__toggle button\):focus-visible\s*\{[^}]*outline:\s*2px solid var\(--bento-accent\);/, 'recent sessions and chart windows should retain visible keyboard focus');
+assert.match(styles, /body:is\(\.theme-midnight, \.theme-high-contrast\) #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-coach-bento\s*\{[^}]*--bento-card:[^}]*--bento-ink:\s*#f8f4ef;/, 'coach tiles should retain theme-specific readable surfaces');
+
+console.log('analysis coach insight bento redesign smoke test passed');

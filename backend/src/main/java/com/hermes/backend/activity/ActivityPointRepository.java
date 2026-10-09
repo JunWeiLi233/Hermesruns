@@ -236,7 +236,7 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                 where a.runner_id = :runnerId and a.activity_type = :activityType
                   and ap.latitude between :south and :north
                   and ap.longitude between :west and :east
-                group by 1, 2
+                group by latitude_subcell, longitude_subcell
             ), cell_visits as (
                 select floor(ap.latitude / cast(:latitudeCellSize as double precision)) as latitude_cell,
                        floor(ap.longitude / cast(:longitudeCellSize as double precision)) as longitude_cell,
@@ -246,7 +246,7 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                 where a.runner_id = :runnerId and a.activity_type = :activityType
                   and ap.latitude between :south and :north
                   and ap.longitude between :west and :east
-                group by 1, 2
+                group by latitude_cell, longitude_cell
             ), ranked_cells as (
                 select f.*, c.visit_count,
                        row_number() over (
