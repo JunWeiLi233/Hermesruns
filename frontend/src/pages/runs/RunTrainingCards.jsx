@@ -9,12 +9,18 @@ import useTrainingMetrics from './useTrainingMetrics';
  */
 export default function RunTrainingCards({ runId }) {
   const { t } = useI18n();
-  const { status, data, reload } = useTrainingMetrics(runId);
+  const { status, data, stale, reload } = useTrainingMetrics(runId);
 
   let body;
   if (data) {
     body = (
       <>
+        {stale ? (
+          <p className="run-detail-v2__muted is-error run-detail-v2__training-notice" role="status">
+            {t('run_detail.numbers_stale')}{' '}
+            <button type="button" className="run-detail-v2__link" onClick={reload}>{t('run_detail.training_retry')}</button>
+          </p>
+        ) : null}
         <RunEffortCard runId={runId} effort={data.effort} onRatingSaved={reload} />
         <RunZonesCard heartRate={data.heartRate} />
       </>

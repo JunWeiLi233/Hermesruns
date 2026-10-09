@@ -317,6 +317,21 @@ describe('loading and failing', () => {
     expect(screen.queryByRole('region', { name: 'Effort' })).not.toBeInTheDocument();
   });
 
+  it('says the numbers may be out of date after a rating whose refresh failed, and a retry brings them back', async () => {
+    const user = userEvent.setup();
+    renderCards();
+    await screen.findByRole('region', { name: 'Effort' });
+
+    next = Object.assign(new Error('Request failed'), { status: 500 });
+    await user.click(screen.getByRole('button', { name: '6 out of 10' }));
+    expect(await screen.findByText(t('run_detail.numbers_stale'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '6 out of 10' })).toHaveAttribute('aria-pressed', 'true');
+
+    next = metrics({ effort: { perceivedExertion: 6 } });
+    await user.click(screen.getByRole('button', { name: t('run_detail.training_retry') }));
+    await waitFor(() => expect(screen.queryByText(t('run_detail.numbers_stale'))).not.toBeInTheDocument());
+  });
+
   it('keeps showing the numbers when a refresh fails', async () => {
     const user = userEvent.setup();
     renderCards();
