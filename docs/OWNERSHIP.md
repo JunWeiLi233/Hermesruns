@@ -104,7 +104,7 @@ Java / Spring Boot under `backend/src/main/java/com/hermes/backend/`. Only `Back
 | Package | Role (one line) | Notable types |
 |---|---|---|
 | *(root)* | Boot + startup timeline | `BackendApplication`, `StartupPhaseDiagnosticsLogger` |
-| `activity` | Activities API, telemetry, analytics, JDBC data access | `ActivityController`, `ActivityRepository`, `ActivityDataAccess` |
+| `activity` | Activities API, telemetry, analytics, JDBC data access, deleted-run tombstones, deletion hooks | `ActivityController`, `ActivityRepository`, `ActivityDataAccess`, `DeletedActivityTombstone`, `ActivityDeletionHook` |
 | `admin` | Operator HTTP, audit, background jobs, portals | `AdminController`, `AdminPortalService`, `AdminBackgroundJobService`, `ConfigStatusController` |
 | `auth` | Login, JWT, OAuth, filters, rate limits, encryption | `LoginController`, `OAuthController`, `SecurityConfig`, `AuthService`, `JwtAuthenticationFilter` |
 | `auth.mfa` | Admin passkeys / MFA challenges / recovery | `AdminMfaController`, `AdminMfaService`, `AdminWebAuthnService` |
@@ -121,7 +121,7 @@ Java / Spring Boot under `backend/src/main/java/com/hermes/backend/`. Only `Back
 | `races.model` | Shared race/course DTOs (no orchestration deps) | `RaceEventRequest`, `CourseMapCandidate`, ... |
 | `rewards` | Digital cosmetics | `DigitalCosmeticsController`, `DigitalCosmeticsService` |
 | `routing` | Route planner + map-tile proxy/cache | `MapTileController`, `MapTileService`, `RoutePlannerController` |
-| `runner` | Profile, avatar, heatmap, weekly digest | `ProfileController`, `ProfileApplicationService`, `WeeklyDigestController` |
+| `runner` | Profile, avatar, heatmap, weekly digest, account export and deletion | `ProfileController`, `ProfileApplicationService`, `WeeklyDigestController`, `AccountController`, `AccountDeletionService` |
 | `runtime` | Railway **sleep** profile: wake catch-up only | `SleepModeConfiguration`, `SleepWakeCatchUp` |
 | `shoes` | Inventory, catalog, AI scan, images | `ShoeController`, `ShoeCatalogController`, `AiShoeScanService` |
 | `strength` | Muscle-training plans / check-ins | `MuscleTrainingController`, `PersonalizedStrengthPlanEngine` |
@@ -138,6 +138,8 @@ Java / Spring Boot under `backend/src/main/java/com/hermes/backend/`. Only `Back
 | **MapTile cache** | `routing/MapTileService.java` (in-process raw-byte cache), `routing/MapTileController.java` (`/api/maps/...`) | `app.map-tile.local-max-bytes` (`APP_MAP_TILE_LOCAL_MAX_BYTES`, default **24 MiB** / `25165824`) | `routing/MapTileServiceTests`, `MapTileControllerTests` |
 | **Auth / OAuth** | `auth/OAuthController.java` (`/api/auth/...` Strava+Google), `auth/LoginController.java`, `auth/SecurityConfig.java`, `auth/AuthService.java`, `auth/JwtAuthenticationFilter.java` | `strava.client.id/secret`, `app.strava.redirect-uri`, JWT/session props in `application.properties` / `.env` | `auth/OAuthControllerTests`, `OAuthProviderClientTests` (+ other `auth/*Tests`) |
 | **Strava webhook** | `imports/StravaWebhookController.java` (`/api/strava/webhook`), rate limit via `auth/WebhookRateLimitFilter.java` | `strava.webhook.verify-token` (`STRAVA_WEBHOOK_VERIFY_TOKEN`); prod hardening tied to `HERMES_ENV` / `hermes.environment` | `imports/StravaWebhookControllerTests` |
+| **Disconnect Strava / Strava retention** | `imports/StravaAccountService.java` (unlink, deauthorization purge, retention), `imports/StravaRetentionJob.java`, `auth/OAuthController.java` (`DELETE /api/auth/strava/unlink`), `imports/StravaTokenService.java` (`revokeAtStrava`, `probeAuthorization`) | `app.strava.retention-days` (`APP_STRAVA_RETENTION_DAYS`, default `0` = off) | `imports/StravaAccountServiceIntegrationTests`, `StravaRetentionJobTests`, `StravaAuthorizationProbeTests`, `auth/OAuthControllerUnlinkTests` |
+| **Account export / delete; what a deleted run takes with it** | `runner/AccountController.java` (`/api/account/export`, `DELETE /api/account`), `runner/AccountExportService.java`, `runner/AccountDeletionService.java`, one `*RunnerDataPurger` per domain package, `activity/ActivityDeletionHook.java` implementors | none | `runner/AccountEndpointsMvcTests`, `AccountDeletionIntegrationTests`, `AccountExportIntegrationTests`, `DataLifecycleCoverageTests`, `activity/ActivityDeletionIntegrationTests` |
 | **Garmin Connect HTTP** | `imports/GarminConnectController.java` | Garmin session / rate-limit helpers in same package | `imports/GarminConnectControllerTests`, `GarminConnectImportServiceTest` |
 | **Coach** | `coaching/CoachController.java` (`/api/coach`), `coaching/AutomatedCoachService.java`, nightly `coaching/Coach8020NightlyScheduler.java`; readiness `ReadinessService`; wellness `WellnessController` | `app.coach.nightly.cron` (disabled under sleep profile) | `coaching/CoachControllerTests`, `AutomatedCoachServiceTests`, `CoachRouteServiceTests`, `CoachHrZoneClassifierTest` |
 | **Billing** | `billing/BillingController.java` (`/api/billing`), `billing/QuotaService.java`, `billing/AiUsageService.java` | `app.billing.stripe.*`, `app.billing.public-base-url`, price display label | `billing/BillingControllerTests` |
@@ -150,6 +152,8 @@ Java / Spring Boot under `backend/src/main/java/com/hermes/backend/`. Only `Back
 - **Raise activities page size** → `APP_ACTIVITIES_*_LIMIT` (still clamped in `ActivityController` until cursor pagination).
 - **Shrink map-tile RSS** → `APP_MAP_TILE_LOCAL_MAX_BYTES` (16-32 MiB guidance in props comments).
 - **Add an API** → domain controller + service in the matching package; keep auth in `auth`, mail in `infrastructure.mail`.
+- **Add a table that references a runner** → add a `RunnerDataPurger` in the owning package; `DataLifecycleCoverageTests` fails until you do. A table that references `activities` also needs an `ActivityDeletionHook`, or deleting a run fails on the foreign key.
+- **Change the production schema** → there is no migration tool and production runs `validate`; write the SQL into a note under `docs/deployment/` (see `m0-schema-upgrade.md`) and run it before deploying.
 - **Stripe / quotas** → `billing/*` only.
 
 ---

@@ -12,7 +12,9 @@ import com.hermes.backend.runner.Runner;
 import com.hermes.backend.weather.AcclimatizationService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
@@ -40,8 +43,9 @@ public class ActivityImportService {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final AcclimatizationService acclimatizationService;
 
+    private static final String GZIP_SUFFIX = ".gz";
     private static final int MAX_ZIP_ENTRIES = 200;
-    private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
+    private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry, and per file once a .gz is expanded
     private static final long MAX_ZIP_TOTAL_BYTES = 50L * 1024L * 1024L; // 50MB total extracted
 
     private static final int POINTS_BATCH_SIZE = 500;
@@ -81,6 +85,9 @@ public class ActivityImportService {
             if ("ZIP".equalsIgnoreCase(extension)) {
                 return importZipArchive(runner, provider, fileName, fileBytes);
             }
+            if (isGzipName(fileName)) {
+                return importGzippedWorkout(runner, provider, fileName, fileBytes);
+            }
 
             return importWorkoutBytes(runner, provider, fileName, fileBytes);
         } catch (IOException exception) {
@@ -104,8 +111,9 @@ public class ActivityImportService {
                 if (entryName.contains("..") || entryName.contains("/..") || entryName.contains("..\\")) {
                     continue;
                 }
-                String entryExtension = fileExtension(entryName);
-                if (!supportsImportExtension(entryExtension)) {
+                boolean gzipped = isGzipName(entryName);
+                String workoutName = gzipped ? withoutGzipSuffix(entryName) : entryName;
+                if (!supportsImportExtension(fileExtension(workoutName))) {
                     continue;
                 }
 
@@ -117,11 +125,14 @@ public class ActivityImportService {
                 supportedEntries++;
 
                 byte[] entryBytes = readEntryBytesWithLimits(zipInputStream, MAX_ZIP_ENTRY_BYTES);
+                if (gzipped) {
+                    entryBytes = gunzipWithLimits(entryBytes, MAX_ZIP_ENTRY_BYTES);
+                }
                 extractedTotalBytes += entryBytes.length;
                 if (extractedTotalBytes > MAX_ZIP_TOTAL_BYTES) {
                     throw new IllegalArgumentException("ZIP archive is too large to import (extracted data limit).");
                 }
-                aggregate = aggregate.merge(importWorkoutBytes(runner, provider, entryName, entryBytes));
+                aggregate = aggregate.merge(importWorkoutBytes(runner, provider, workoutName, entryBytes));
             }
         } catch (ZipException exception) {
             throw new IllegalArgumentException("Invalid ZIP archive.", exception);
@@ -148,12 +159,60 @@ public class ActivityImportService {
         );
     }
 
+    /**
+     * A single {@code .fit.gz}, {@code .gpx.gz} or {@code .tcx.gz}: the form Strava's account export gives
+     * activity files in. It is expanded and imported as the file it holds, so its checksum, name and
+     * duplicate checks are those of the plain file: the same run imported both ways is one run.
+     */
+    private ImportResult importGzippedWorkout(Runner runner, ImportProvider provider, String fileName, byte[] gzipBytes) {
+        String workoutName = withoutGzipSuffix(fileName);
+        if (!supportsImportExtension(fileExtension(workoutName))) {
+            throw new IllegalArgumentException(
+                    "A .gz file must hold a GPX, TCX, or FIT workout file (for example run.fit.gz).");
+        }
+        return importWorkoutBytes(runner, provider, workoutName, gunzipWithLimits(gzipBytes, MAX_ZIP_ENTRY_BYTES));
+    }
+
+    private static boolean isGzipName(String fileName) {
+        return fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(GZIP_SUFFIX);
+    }
+
+    private static String withoutGzipSuffix(String fileName) {
+        return fileName.substring(0, fileName.length() - GZIP_SUFFIX.length());
+    }
+
+    /**
+     * Expands gzip data, refusing to produce more than {@code maxBytes}. A few kilobytes of gzip can
+     * expand to gigabytes, so the output is counted as it is written and the expansion stops at the limit.
+     */
+    private static byte[] gunzipWithLimits(byte[] gzipBytes, int maxBytes) {
+        try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(gzipBytes))) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(Math.min(1024 * 1024, maxBytes));
+            byte[] buffer = new byte[8 * 1024];
+            int read;
+            int total = 0;
+            while ((read = in.read(buffer)) >= 0) {
+                total += read;
+                if (total > maxBytes) {
+                    throw new IllegalArgumentException(
+                            "The .gz file is too large to import (max " + (maxBytes / (1024 * 1024)) + "MB once expanded).");
+                }
+                out.write(buffer, 0, read);
+            }
+            return out.toByteArray();
+        } catch (ZipException | EOFException exception) {
+            throw new IllegalArgumentException("Invalid or corrupt .gz file.", exception);
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Unable to read the .gz file.", exception);
+        }
+    }
+
     private ImportResult importWorkoutBytes(Runner runner, ImportProvider provider, String fileName, byte[] fileBytes) {
         String extension = fileExtension(fileName);
         ActivityFileParser parser = fileParsers.stream()
                 .filter(candidate -> candidate.supports(extension))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported file type. Please upload GPX, TCX, FIT, or ZIP."));
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported file type. Please upload GPX, TCX, FIT, ZIP, or a .gz of one workout file."));
 
         String checksum = sha256(fileBytes);
         if (activityRepository.existsByRunnerAndProviderAndSourceChecksum(runner, provider, checksum)) {

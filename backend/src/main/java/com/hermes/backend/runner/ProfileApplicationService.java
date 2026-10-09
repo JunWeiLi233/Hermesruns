@@ -61,6 +61,12 @@ public class ProfileApplicationService {
         return profile(runner);
     }
 
+    public ProfileResponse updateTimeZone(Runner runner, String timeZone) {
+        runner.setTimeZone(timeZone);
+        runnerRepository.save(runner);
+        return profile(runner);
+    }
+
     public ProfilePreferencesResponse updatePreferences(Runner runner, String mantra, boolean weeklyDigestEnabled) {
         runner.setSettingsMantra(mantra);
         runner.setWeeklyDigestEnabled(weeklyDigestEnabled);
@@ -79,7 +85,8 @@ public class ProfileApplicationService {
                 runner.getDisplayName(),
                 avatarService.avatarDataUrl(runner),
                 stravaLinked,
-                showLanguageSettingsHint
+                showLanguageSettingsHint,
+                runner.getTimeZone()
         );
     }
 

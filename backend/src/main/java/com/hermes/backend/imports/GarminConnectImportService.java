@@ -26,6 +26,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -41,6 +43,10 @@ public class GarminConnectImportService {
     private final ActivityDataAccess activityDataAccess;
     private final FitActivityFileParser fitParser;
     private final ObjectMapper objectMapper;
+
+    // Optional collaborator, injected by Spring; unset in tests that build this service by hand.
+    private ApplicationEventPublisher eventPublisher;
+
     private final ConcurrentMap<Long, GarminSyncTracker> syncStates = new ConcurrentHashMap<>();
 
     private final ExecutorService executor = Executors.newFixedThreadPool(
@@ -64,6 +70,11 @@ public class GarminConnectImportService {
         this.activityDataAccess = activityDataAccess;
         this.fitParser = fitParser;
         this.objectMapper = objectMapper;
+    }
+
+    @Autowired(required = false)
+    void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -253,6 +264,12 @@ public class GarminConnectImportService {
 
         if (!batch.isEmpty()) {
             activityDataAccess.savePoints(batch);
+        }
+
+        // Strava and file imports announce every new run so the coach and rewards can react; this path did
+        // not. It is not transactional, so publish only now that the points are saved.
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.hermes.backend.activity.ActivityIngestedEvent(runner.getId(), saved.getId()));
         }
 
         tracker.addImported(1, kept);

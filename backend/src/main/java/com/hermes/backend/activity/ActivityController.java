@@ -6,7 +6,6 @@ import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.coaching.ReadinessService;
 import com.hermes.backend.imports.ActivityStravaStreamService;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
-import com.hermes.backend.runner.HeatmapCacheKey;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.weather.AcclimatizationService;
 import java.time.Clock;
@@ -36,7 +35,7 @@ public class ActivityController {
     private static final int MAX_ROUTE_PREVIEW_BATCH_SIZE = 50;
     private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
     private static final Duration ACTIVITY_READ_CACHE_TTL = Duration.ofMinutes(10);
-    private static final String ACTIVITY_HEATMAP_CACHE_NAMESPACE = "activity-heatmap";
+    private static final String ACTIVITY_HEATMAP_CACHE_NAMESPACE = ActivityCaches.ACTIVITY_HEATMAP_NAMESPACE;
 
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
@@ -740,11 +739,10 @@ public class ActivityController {
         if (!deleted) {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
-        cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(activeUser.get().getId()));
         // Year-keyed activity-heatmap entries are intentionally left to TTL expiry:
         // the all-time entry is the hot read path, and ownership 404s protect the
         // year variants from cross-runner access.
-        cacheStore.evict(ACTIVITY_HEATMAP_CACHE_NAMESPACE, activeUser.get().getId() + ":all");
+        ActivityCaches.evictForRunner(cacheStore, activeUser.get().getId());
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 

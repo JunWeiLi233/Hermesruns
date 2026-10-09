@@ -1,12 +1,15 @@
 package com.hermes.backend.activity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hermes.backend.shoes.Shoe;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(
@@ -23,7 +26,8 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_activity_runner_start_time", columnList = "runner_id, startTime"),
                 @Index(name = "idx_activity_provider_checksum", columnList = "provider, source_checksum"),
                 @Index(name = "idx_activity_strava_id", columnList = "stravaId"),
-                @Index(name = "idx_activity_shoe", columnList = "shoe_id")
+                @Index(name = "idx_activity_shoe", columnList = "shoe_id"),
+                @Index(name = "idx_activity_strava_api_created", columnList = "stravaApiSourced, createdAt")
         }
 )
 public class Activity extends ActivityRelationshipFields {
@@ -36,6 +40,16 @@ public class Activity extends ActivityRelationshipFields {
 
     /** When the GPS stream state was last verified; drives the no-GPS retry window. */
     private LocalDateTime gpsStreamCheckedAt;
+
+    /**
+     * True when this run was fetched from the Strava API. Runs the runner imported from their own
+     * files, Garmin or COROS are false. Strava's API Policy limits how long API data may be kept and
+     * requires deleting it when the runner disconnects, so retention and unlink key on this flag.
+     * Not serialised: it is an internal compliance marker, not part of the API response.
+     */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean stravaApiSourced = false;
 
     @PrePersist
     public void prePersist() {
@@ -50,6 +64,15 @@ public class Activity extends ActivityRelationshipFields {
 
     public void setGpsStreamState(String gpsStreamState) {
         this.gpsStreamState = gpsStreamState;
+    }
+
+    @JsonIgnore
+    public boolean isStravaApiSourced() {
+        return stravaApiSourced;
+    }
+
+    public void setStravaApiSourced(boolean stravaApiSourced) {
+        this.stravaApiSourced = stravaApiSourced;
     }
 
     public LocalDateTime getGpsStreamCheckedAt() {
