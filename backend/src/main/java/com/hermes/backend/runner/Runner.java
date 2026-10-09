@@ -69,6 +69,13 @@ public class Runner {
     /** Optional resting HR for readiness checks (bpm). */
     private Integer restingHeartRateBpm;
 
+    /**
+     * IANA time-zone id (for example {@code America/New_York}) the runner trains in. Used to turn the
+     * UTC timestamps in FIT/GPX/TCX files into the runner's local calendar day. Null means unknown.
+     */
+    @Column(length = 64)
+    private String timeZone;
+
     private Long stravaAthleteId;
 
     private String stravaUsername;
@@ -249,6 +256,14 @@ public class Runner {
 
     public void setRestingHeartRateBpm(Integer restingHeartRateBpm) {
         this.restingHeartRateBpm = restingHeartRateBpm;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(String timeZone) {
+        this.timeZone = timeZone;
     }
 
     public Long getStravaAthleteId() {

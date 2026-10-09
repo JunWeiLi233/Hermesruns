@@ -149,6 +149,8 @@ Generate a fresh key (`openssl rand -hex 32`) and keep it stable across restarts
 **Database migration fails on startup**
 In production, `APP_JPA_DDL_AUTO=validate` rejects schema drift. Run a manual migration
 or temporarily set `APP_JPA_DDL_AUTO=update` for a controlled upgrade, then revert.
+The release that adds account export/delete and Strava disconnect changes the schema: run the SQL in
+[deployment/m0-schema-upgrade.md](deployment/m0-schema-upgrade.md) first.
 
 **Email verification links not arriving**
 Confirm `SPRING_MAIL_HOST` is set and `APP_PUBLIC_BASE_URL` matches your domain.

@@ -8,6 +8,8 @@ import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.ActivityTypeResolver;
+import com.hermes.backend.activity.DeletedActivityTombstone;
+import com.hermes.backend.activity.DeletedActivityTombstoneRepository;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.billing.AiUsageService;
 import com.hermes.backend.coaching.AutomatedCoachService;
@@ -31,8 +33,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -65,6 +69,11 @@ public class StravaSyncService {
     private final AiUsageService aiUsageService;
     private final StravaTokenService stravaTokenService;
     private final ActivityDataAccess activityDataAccess;
+
+    // Optional collaborators, injected by Spring. They stay null in tests that build this class by hand,
+    // in which case the sync behaves as it did before they existed.
+    private StravaAccountService stravaAccountService;
+    private DeletedActivityTombstoneRepository deletedActivityTombstones;
 
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
@@ -117,9 +126,32 @@ public class StravaSyncService {
         this.activityDataAccess = activityDataAccess;
     }
 
+    @Autowired(required = false)
+    void setStravaAccountService(StravaAccountService stravaAccountService) {
+        this.stravaAccountService = stravaAccountService;
+    }
+
+    @Autowired(required = false)
+    void setDeletedActivityTombstones(DeletedActivityTombstoneRepository deletedActivityTombstones) {
+        this.deletedActivityTombstones = deletedActivityTombstones;
+    }
+
     @PreDestroy
     void shutdown() {
         stravaBackgroundExecutor.shutdownNow();
+    }
+
+    /** Stops a sync that is already running for a runner who just disconnected Strava. */
+    @EventListener
+    void onStravaAccountUnlinked(StravaAccountUnlinkedEvent event) {
+        cancelSync(event.runnerId());
+    }
+
+    void cancelSync(Long runnerId) {
+        StravaSyncTracker tracker = stravaSyncStates.get(runnerId);
+        if (tracker != null) {
+            tracker.cancel();
+        }
     }
 
     public enum SyncLaunchResult {
@@ -138,6 +170,8 @@ public class StravaSyncService {
 
     private enum StravaActivitySyncResult {
         SKIPPED_NON_RUN,
+        SKIPPED_DELETED,
+        CANCELLED,
         NEW_OR_UPDATED_RUN,
         DUPLICATE_RUN
     }
@@ -170,6 +204,7 @@ public class StravaSyncService {
         private String error;
         private String trigger = "none";
         private boolean recentOnly;
+        private volatile boolean cancelled;
         private long lastUpdatedMs = System.currentTimeMillis();
 
         synchronized void resetForNewSync(String nextTrigger, boolean nextRecentOnly) {
@@ -182,7 +217,16 @@ public class StravaSyncService {
             error = null;
             trigger = nextTrigger == null || nextTrigger.isBlank() ? "unknown" : nextTrigger;
             recentOnly = nextRecentOnly;
+            cancelled = false;
             lastUpdatedMs = System.currentTimeMillis();
+        }
+
+        void cancel() {
+            cancelled = true;
+        }
+
+        boolean isCancelled() {
+            return cancelled;
         }
 
         synchronized boolean tryBeginSync(String nextTrigger, boolean nextRecentOnly) {
@@ -349,6 +393,14 @@ public class StravaSyncService {
 
                     if (refreshedAccessToken == null || refreshedAccessToken.isBlank()
                             || Objects.equals(refreshedAccessToken, currentAccessToken)) {
+                        // A 401 on a token that is not expired is how a revoked app looks. Ask Strava
+                        // before deleting anything; only a clear "refresh token invalid" answer purges.
+                        if (stravaAccountService != null
+                                && stravaAccountService.confirmRevocationAndPurge(runnerId)
+                                == StravaAccountService.RevocationOutcome.PURGED) {
+                            tracker.markFailed("Strava access was revoked, so your Strava data was removed. Reconnect Strava to sync again.");
+                            return;
+                        }
                         tracker.markFailed(stravaListFetchFailureMessage(unauthorized));
                         return;
                     }
@@ -375,6 +427,10 @@ public class StravaSyncService {
                 tracker.incrementProcessedPages();
                 lastPageSize = activities.size();
                 for (Map<String, Object> activityData : activities) {
+                    if (tracker.isCancelled()) {
+                        tracker.markFailed("Strava was disconnected.");
+                        return;
+                    }
                     StravaActivitySyncResult r = syncSingleStravaActivity(
                             runner, tracker, activityData, gpsRateLimited, restTemplate, headers, currentAccessToken);
                     if (r == StravaActivitySyncResult.SKIPPED_NON_RUN) {
@@ -465,6 +521,33 @@ public class StravaSyncService {
     private StravaActivitySyncResult syncSingleStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
                                                               boolean[] gpsRateLimited, RestTemplate restTemplate, HttpHeaders headers,
                                                               String accessToken) {
+        try {
+            return writeStravaActivity(runner, tracker, activityData, gpsRateLimited, restTemplate, headers, accessToken);
+        } finally {
+            removeRunsWrittenAfterDisconnect(runner.getId(), tracker);
+        }
+    }
+
+    /**
+     * The runner may disconnect between this sync's last cancellation check and its write, so the write can
+     * land after the disconnect has already swept. If the sync was told to stop, it removes what it may have
+     * just written: whichever of the sync and the disconnect finishes last cleans up.
+     */
+    private void removeRunsWrittenAfterDisconnect(Long runnerId, StravaSyncTracker tracker) {
+        if (!tracker.isCancelled() || stravaAccountService == null) {
+            return;
+        }
+        try {
+            stravaAccountService.purgeStravaRunsOfDisconnectedRunner(runnerId);
+        } catch (RuntimeException exception) {
+            log.warn("Could not clean up after a Strava sync that was stopped for runner {} ({})",
+                    runnerId, exception.getClass().getSimpleName());
+        }
+    }
+
+    private StravaActivitySyncResult writeStravaActivity(Runner runner, StravaSyncTracker tracker, Map<String, Object> activityData,
+                                                         boolean[] gpsRateLimited, RestTemplate restTemplate, HttpHeaders headers,
+                                                         String accessToken) {
         ActivityType activityType = ActivityTypeResolver.fromSportLabels(
                 stringValue(activityData.get("sport_type")),
                 stringValue(activityData.get("type")),
@@ -480,6 +563,16 @@ public class StravaSyncService {
         if (stravaId == null || stravaId.isBlank()) {
             tracker.incrementSkippedNonRuns();
             return StravaActivitySyncResult.SKIPPED_NON_RUN;
+        }
+
+        if (tracker.isCancelled()) {
+            return StravaActivitySyncResult.CANCELLED;
+        }
+        if (deletedActivityTombstones != null && deletedActivityTombstones.existsByRunnerAndProviderAndExternalId(
+                runner, DeletedActivityTombstone.PROVIDER_STRAVA, stravaId)) {
+            // The runner deleted this run in Hermes; do not bring it back.
+            tracker.incrementSkippedDuplicates();
+            return StravaActivitySyncResult.SKIPPED_DELETED;
         }
 
         String checksum = "STRAVA_" + stravaId;
@@ -507,6 +600,7 @@ public class StravaSyncService {
 
         activity.setActivityType(ActivityType.RUN);
         activity.setStravaId(stravaId);
+        activity.setStravaApiSourced(true);
         activity.setName(activityName);
         activity.setDistanceMeters(distanceMeters > 0d ? distanceMeters : null);
         activity.setDistanceKm(distanceMeters > 0d ? distanceMeters / 1000d : 0d);
@@ -779,10 +873,38 @@ public class StravaSyncService {
         String checksum = "STRAVA_" + stravaActivityId;
         activityRepository.findByRunnerAndProviderAndSourceChecksum(runner, ImportProvider.STRAVA, checksum)
                 .ifPresent(activity -> {
-                    activityDataAccess.deletePointsForActivity(activity.getId());
-                    activityRepository.delete(activity);
+                    // purgeActivities clears the points and anything pointing at the run (cosmetic drops).
+                    activityDataAccess.purgeActivities(runner, List.of(activity.getId()));
                     automatedCoachService.reaggregateRunner(runner.getId());
                 });
+    }
+
+    /**
+     * Strava's webhook events are not signed, so a delete event is only a hint. This deletes the local
+     * copy only when Strava itself says the activity no longer exists (404). Returns true when it did.
+     */
+    public boolean deleteStravaActivityIfGone(Runner runner, long stravaActivityId) {
+        String accessToken = stravaTokenService.resolveRunnerStravaAccessToken(runner);
+        if (accessToken == null || accessToken.isBlank()) {
+            return false;
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        try {
+            restTemplate.exchange(
+                    "https://www.strava.com/api/v3/activities/" + stravaActivityId,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    new ParameterizedTypeReference<Map<String, Object>>() {});
+            return false;
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound gone) {
+            deleteStravaActivity(runner, stravaActivityId);
+            return true;
+        } catch (Exception other) {
+            log.info("Strava delete event for activity {} could not be confirmed ({}); keeping the local copy",
+                    stravaActivityId, other.getClass().getSimpleName());
+            return false;
+        }
     }
 
     @Scheduled(fixedDelay = 600_000)
