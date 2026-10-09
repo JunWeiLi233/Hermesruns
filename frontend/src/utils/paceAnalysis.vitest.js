@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { vdotToPaceSecondsPerKm } from './vdot';
+import { estimateCurrentVdot, vdotToPaceSecondsPerKm } from './vdot';
 import {
   PACE_ZONE_KEYS,
   areaPath,
   distanceTicks,
+  elapsedPaceSecPerKm,
   linePath,
   nearestIndex,
   paceDomain,
@@ -11,6 +12,7 @@ import {
   paceZoneBands,
   timeInPaceZones,
   zoneIndexForPace,
+  zonesVdot,
 } from './paceAnalysis';
 
 describe('paceZoneBands', () => {
@@ -93,6 +95,92 @@ describe('timeInPaceZones', () => {
   it('is all zeros without a series or bands', () => {
     expect(timeInPaceZones(null, bands).seconds).toEqual([0, 0, 0, 0, 0, 0]);
     expect(timeInPaceZones({ stepSeconds: 5, paceSecPerKm: [300] }, []).seconds).toEqual([]);
+  });
+});
+
+describe('zonesVdot', () => {
+  const run = (id, startTime, movingTimeSeconds) => ({ id, startTime, distanceKm: 5, movingTimeSeconds });
+  const slowRun = run(1, '2026-09-01T08:00:00', 1500); // 5 km in 25:00
+  const fastLaterRun = run(3, '2026-10-10T08:00:00', 1200); // 5 km in 20:00, after the run being looked at
+  const runStart = '2026-10-01T10:00:00';
+  const runStartMs = new Date(runStart).getTime();
+  const now = new Date('2026-10-12T12:00:00').getTime();
+  const vdotOf = (runs, at) => Number(estimateCurrentVdot(runs, at).representativeVdot);
+
+  it('is the VDOT of the runner\'s best runs in the 90 days before the run, and says it is the one from before', () => {
+    const result = zonesVdot([slowRun, fastLaterRun], runStart, now);
+
+    expect(result.basis).toBe('before');
+    expect(result.vdot).toBe(vdotOf([slowRun], runStartMs));
+    expect(result.vdot).toBeGreaterThan(30);
+  });
+
+  it('finds the zones of a run that has only a date, no exact start time', () => {
+    const result = zonesVdot([slowRun, fastLaterRun], '2026-10-01', now);
+
+    expect(result.basis).toBe('before');
+    expect(result.vdot).toBe(vdotOf([slowRun], new Date('2026-10-01').getTime()));
+  });
+
+  it('does not let fitness the runner gained after the run leak back into its zones', () => {
+    const result = zonesVdot([slowRun, fastLaterRun], runStart, now);
+
+    expect(vdotOf([fastLaterRun], now)).toBeGreaterThan(result.vdot + 5);
+  });
+
+  it('leaves the run itself out, so a personal best does not pull its own pace into a harder zone', () => {
+    const itself = run(9, runStart, 1000);
+
+    expect(zonesVdot([slowRun, itself], runStart, now)).toEqual(zonesVdot([slowRun], runStart, now));
+  });
+
+  it('ignores runs from more than 90 days before the run', () => {
+    const tooOld = run(2, '2026-06-01T08:00:00', 1200);
+
+    expect(zonesVdot([tooOld, slowRun], runStart, now).vdot).toBe(vdotOf([slowRun], runStartMs));
+  });
+
+  it('uses today\'s VDOT, and says so, when nothing comes before the run', () => {
+    const result = zonesVdot([fastLaterRun], runStart, now);
+
+    expect(result.basis).toBe('today');
+    expect(result.vdot).toBe(vdotOf([fastLaterRun], now));
+  });
+
+  it('looks back 90 days from the date it is given when it falls back to today\'s VDOT', () => {
+    // 20 months after the only run: far outside the 90 days, whatever the clock says.
+    const muchLater = new Date('2028-06-01T12:00:00').getTime();
+
+    expect(zonesVdot([fastLaterRun], runStart, muchLater)).toEqual({ vdot: null, basis: null });
+  });
+
+  it('uses today\'s VDOT when the run has no start time or an unreadable one', () => {
+    expect(zonesVdot([slowRun], undefined, now)).toEqual({ vdot: vdotOf([slowRun], now), basis: 'today' });
+    expect(zonesVdot([slowRun], '', now).basis).toBe('today');
+    expect(zonesVdot([slowRun], 'not a date', now).basis).toBe('today');
+  });
+
+  it('has none for a runner with no run that can give a VDOT', () => {
+    expect(zonesVdot([], runStart, now)).toEqual({ vdot: null, basis: null });
+    expect(zonesVdot(null, runStart, now)).toEqual({ vdot: null, basis: null });
+    expect(zonesVdot('nope', runStart, now)).toEqual({ vdot: null, basis: null });
+    expect(zonesVdot([run(5, '2026-09-20T08:00:00', 0), { id: 6 }], runStart, now)).toEqual({ vdot: null, basis: null });
+  });
+});
+
+describe('elapsedPaceSecPerKm', () => {
+  it('is the elapsed seconds over the kilometres of the whole stream, standing still counted', () => {
+    expect(elapsedPaceSecPerKm({ distanceMeters: 3350, elapsedSeconds: 1110 })).toBeCloseTo(331.34, 2);
+    expect(elapsedPaceSecPerKm({ distanceMeters: 1000, elapsedSeconds: 300 })).toBe(300);
+  });
+
+  it('is nothing when there is no distance or time to divide', () => {
+    expect(elapsedPaceSecPerKm({ distanceMeters: 0, elapsedSeconds: 300 })).toBeNull();
+    expect(elapsedPaceSecPerKm({ distanceMeters: 1000, elapsedSeconds: 0 })).toBeNull();
+    expect(elapsedPaceSecPerKm({ distanceMeters: -5, elapsedSeconds: 300 })).toBeNull();
+    expect(elapsedPaceSecPerKm({})).toBeNull();
+    expect(elapsedPaceSecPerKm(null)).toBeNull();
+    expect(elapsedPaceSecPerKm(undefined)).toBeNull();
   });
 });
 

@@ -1208,7 +1208,7 @@ export default function RunDetail() {
         </section>
 
         {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
-        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
         <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
 

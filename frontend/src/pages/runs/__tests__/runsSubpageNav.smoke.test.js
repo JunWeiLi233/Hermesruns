@@ -31,8 +31,8 @@ for (const sectionId of [
 assert.ok(navSource.includes("'run-detail-pace'"), 'Runs subpage navigation is missing run-detail-pace.');
 assert.match(
   runDetailSource,
-  /<RunPaceAnalysis key=\{`pace-\$\{run\.id\}`\} runId=\{run\.id\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh\} \/>/,
-  'Run Detail should render the pace analysis for the open run, ready only once its stream has been fetched.',
+  /<RunPaceAnalysis key=\{`pace-\$\{run\.id\}`\} runId=\{run\.id\} startTime=\{run\.startTime \|\| run\.startDate\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh\} \/>/,
+  'Run Detail should render the pace analysis for the open run, with when it started (for the zones it had), ready only once its stream has been fetched.',
 );
 // Keyed siblings with the same key are duplicated or dropped when the page updates (seen live: the pace card twice).
 const detailKeys = [...runDetailSource.matchAll(/<(RunPaceAnalysis|RunTrainingCards) key=\{([^}]+)\}/g)].map((match) => match[2]);

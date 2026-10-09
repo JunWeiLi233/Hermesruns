@@ -68,12 +68,25 @@ describe('loading', () => {
     expect(screen.queryByText(t('run_detail.pace_loading'))).not.toBeInTheDocument();
   });
 
-  it('says so when the run has no stream', async () => {
-    profile = NO_STREAM;
+  it.each([
+    ['no_points', 'run_detail.pace_no_stream_no_points'],
+    ['no_times', 'run_detail.pace_no_stream_no_times'],
+    ['too_short', 'run_detail.pace_no_stream_too_short'],
+    [undefined, 'run_detail.pace_no_stream'],
+    ['a_reason_from_a_newer_server', 'run_detail.pace_no_stream'],
+  ])('says so, in words that fit the reason (%s), when the run has no stream', async (reason, key) => {
+    profile = { ...NO_STREAM, reason };
     renderCard();
-    expect(await screen.findByText(t('run_detail.pace_no_stream'))).toBeInTheDocument();
+    expect(await screen.findByText(t(key))).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: t('run_detail.pace_chart_label') })).not.toBeInTheDocument();
     expect(cachedApiJson).not.toHaveBeenCalled();
+  });
+
+  it('gives each reason its own words in Chinese too', async () => {
+    state.lang = 'zh-CN';
+    profile = { ...NO_STREAM, reason: 'no_times' };
+    renderCard();
+    expect(await screen.findByText('这次跑步的文件只有位置、没有时间戳（例如规划好的路线），因此无法判断跑得多快。')).toBeInTheDocument();
   });
 
   it('shows an error with a retry, and draws the card once a retry works', async () => {
@@ -161,9 +174,39 @@ describe('the splits view', () => {
     expect(screen.getByText(new RegExp(t('run_detail.pace_basis_moving')))).toBeInTheDocument();
     expect(screen.queryByText(/Standing still: /)).not.toBeInTheDocument();
 
-    profile = paceProfile({ summary: { ...paceProfile().summary, stoppedSeconds: 75.0 } });
+    profile = paceProfile({ summary: { ...paceProfile().summary, elapsedSeconds: 1110.0, stoppedSeconds: 75.0 } });
     rerender(<RunPaceAnalysis runId={9} streamReady refreshToken={1} />);
     expect(await screen.findByText(/Standing still: 1:15\./)).toBeInTheDocument();
+  });
+
+  it('gives the average pace with the stops counted, which is the elapsed time over the whole distance', async () => {
+    profile = paceProfile({ summary: { ...paceProfile().summary, elapsedSeconds: 1110.0, stoppedSeconds: 75.0 } });
+    renderCard();
+    // 1110 s over 3.35 km is 331 s per km.
+    expect(await screen.findByText(t('run_detail.pace_stopped', { time: '1:15', pace: '5:31 /km' }), { exact: false })).toBeInTheDocument();
+  });
+
+  it('says that the pace counting the stops is not grade adjusted when the grade adjustment is on', async () => {
+    const user = userEvent.setup();
+    profile = paceProfile({ summary: { ...paceProfile().summary, elapsedSeconds: 1110.0, stoppedSeconds: 75.0 } });
+    renderCard();
+    await screen.findByRole('group', { name: t('run_detail.pace_chart_label') });
+
+    await user.click(screen.getByRole('switch', { name: t('run_detail.pace_gap_toggle') }));
+
+    expect(screen.getByText(t('run_detail.pace_stopped_adjusted', { time: '1:15', pace: '5:31 /km' }), { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.pace_stopped', { time: '1:15', pace: '5:31 /km' }), { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('describes the grade-adjusted pace as an approximation of Strava, not as a measurement', async () => {
+    const user = userEvent.setup();
+    renderCard();
+    await screen.findByRole('group', { name: t('run_detail.pace_chart_label') });
+    await user.click(screen.getByRole('switch', { name: t('run_detail.pace_gap_toggle') }));
+
+    const note = screen.getByText(t('run_detail.pace_gap_note'));
+    expect(note).toHaveTextContent(/close to Strava's numbers but not the same/);
+    expect(note).not.toHaveTextContent(/Minetti/);
   });
 });
 
@@ -386,6 +429,46 @@ describe('time at each pace', () => {
     expect(screen.getByText(t('run_detail.pace_zones_basis', { vdot: 50 }))).toBeInTheDocument();
     expect(screen.getByText(t('run_detail.pace_zones_basis_pace'))).toBeInTheDocument();
     expect(cachedApiJson).toHaveBeenCalledWith('/api/activities/analysis');
+  });
+
+  it('cuts the zones from the runner\'s best runs before this run, leaving the run itself and later ones out', async () => {
+    const runs = [
+      { id: 1, startTime: '2026-08-01T08:00:00' },
+      { id: 9, startTime: '2026-10-01T10:00:00' },
+      { id: 3, startTime: '2026-10-05T08:00:00' },
+    ];
+    cachedApiJson.mockResolvedValue(runs);
+    const { container } = renderCard({ startTime: '2026-10-01T10:00:00' });
+    await waitFor(() => expect(rows(container)).toHaveLength(6));
+
+    expect(estimateCurrentVdot).toHaveBeenCalledTimes(1);
+    expect(estimateCurrentVdot).toHaveBeenCalledWith([runs[0]], new Date('2026-10-01T10:00:00').getTime());
+    expect(screen.getByText(t('run_detail.pace_zones_basis_before', { vdot: 50 }))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.pace_zones_basis', { vdot: 50 }))).not.toBeInTheDocument();
+  });
+
+  it('uses today\'s zones, and says so, when nothing before the run gives a VDOT', async () => {
+    const runs = [{ id: 3, startTime: '2026-10-05T08:00:00' }];
+    cachedApiJson.mockResolvedValue(runs);
+    estimateCurrentVdot.mockReset();
+    estimateCurrentVdot.mockReturnValueOnce({ representativeVdot: 0 }).mockReturnValueOnce({ representativeVdot: 48.5 });
+    const { container } = renderCard({ startTime: '2026-10-01T10:00:00' });
+    await waitFor(() => expect(rows(container)).toHaveLength(6));
+
+    expect(estimateCurrentVdot).toHaveBeenCalledTimes(2);
+    expect(estimateCurrentVdot.mock.calls[0][0]).toEqual([]);
+    expect(estimateCurrentVdot.mock.calls[1][0]).toEqual(runs);
+    expect(screen.getByText(t('run_detail.pace_zones_basis', { vdot: 48.5 }))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.pace_zones_basis_before', { vdot: 48.5 }))).not.toBeInTheDocument();
+  });
+
+  it('goes straight to today\'s zones for a run with no start time', async () => {
+    const { container } = renderCard();
+    await waitFor(() => expect(rows(container)).toHaveLength(6));
+
+    expect(estimateCurrentVdot).toHaveBeenCalledTimes(1);
+    expect(estimateCurrentVdot.mock.calls[0][0]).toEqual([{ id: 1 }]);
+    expect(screen.getByText(t('run_detail.pace_zones_basis', { vdot: 50 }))).toBeInTheDocument();
   });
 
   it('counts on the grade-adjusted pace when that is switched on', async () => {

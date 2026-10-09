@@ -30,12 +30,12 @@ function rangeLabel(band, t) {
  * Time spent at each pace zone, fastest zone first, counted on the pace or the grade-adjusted pace. The zones come
  * from the runner's VDOT (see usePaceZones); without one the card says what it needs.
  *
- * @param zones { status, vdot, bands } from usePaceZones
+ * @param zones { status, vdot, basis, bands } from usePaceZones
  */
 export default function PaceDistribution({ series, adjusted, zones }) {
   const { t } = useI18n();
   const metric = adjusted ? 'gap' : 'pace';
-  const { bands, vdot, status } = zones;
+  const { bands, vdot, status, basis } = zones;
   const { seconds, moving } = timeInPaceZones(series, bands, metric);
 
   let body;
@@ -59,7 +59,9 @@ export default function PaceDistribution({ series, adjusted, zones }) {
         </ul>
         <div className="run-detail-v2__zones-foot">
           <p className="run-detail-v2__muted">{adjusted ? t('run_detail.pace_zones_basis_gap') : t('run_detail.pace_zones_basis_pace')}</p>
-          <p className="run-detail-v2__muted">{t('run_detail.pace_zones_basis', { vdot: Math.round(vdot * 10) / 10 })}</p>
+          <p className="run-detail-v2__muted">
+            {t(basis === 'before' ? 'run_detail.pace_zones_basis_before' : 'run_detail.pace_zones_basis', { vdot: Math.round(vdot * 10) / 10 })}
+          </p>
         </div>
       </>
     );

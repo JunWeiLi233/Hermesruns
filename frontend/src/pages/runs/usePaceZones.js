@@ -1,37 +1,40 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cachedApiJson } from '../../api/resourceCache';
-import { paceZoneBands } from '../../utils/paceAnalysis';
-import { estimateCurrentVdot } from '../../utils/vdot';
+import { paceZoneBands, zonesVdot } from '../../utils/paceAnalysis';
 
 /**
- * The runner's pace zones, worked out in the browser the way the Analysis page works out its training paces: the
- * VDOT of their best recent runs, turned into Daniels paces. They are today's zones, so a run from last year is read
- * against the runner's fitness now. Loads the run list (shared with the Analysis page through the resource cache)
- * only once `enabled`, so the pace card's first paint does not wait for it.
+ * The pace zones of one run, worked out in the browser the way the Analysis page works out its training paces: the
+ * VDOT of the runner's best runs, turned into Daniels paces. They are the zones the runner had going into the run
+ * (their best runs in the 90 days before it), or today's when there is nothing before it to go on (see zonesVdot).
+ * Loads the run list (shared with the Analysis page through the resource cache) only once `enabled`, so the pace
+ * card's first paint does not wait for it.
  *
- * status: 'idle' | 'loading' | 'ready' | 'error'. A runner with too few recent runs is 'ready' with no bands.
+ * status: 'idle' | 'loading' | 'ready' | 'error'. A runner with no VDOT is 'ready' with no bands.
+ * basis: 'before' | 'today' | null, where the VDOT comes from.
  */
-export default function usePaceZones(enabled) {
-  const [state, setState] = useState({ status: 'idle', vdot: null });
+export default function usePaceZones(enabled, startTime) {
+  const [state, setState] = useState({ status: 'idle', runs: null });
 
   useEffect(() => {
     if (!enabled) return undefined;
     let cancelled = false;
-    setState((current) => (current.status === 'ready' ? current : { status: 'loading', vdot: null }));
+    setState((current) => (current.status === 'ready' ? current : { status: 'loading', runs: null }));
     cachedApiJson('/api/activities/analysis')
       .then((runs) => {
-        if (cancelled) return;
-        const vdot = Array.isArray(runs) ? Number(estimateCurrentVdot(runs).representativeVdot) : null;
-        setState({ status: 'ready', vdot: vdot > 0 ? vdot : null });
+        if (!cancelled) setState({ status: 'ready', runs: Array.isArray(runs) ? runs : [] });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: 'error', vdot: null });
+        if (!cancelled) setState({ status: 'error', runs: null });
       });
     return () => {
       cancelled = true;
     };
   }, [enabled]);
 
-  const bands = useMemo(() => paceZoneBands(state.vdot), [state.vdot]);
-  return { status: state.status, vdot: state.vdot, bands };
+  const zones = useMemo(
+    () => (state.status === 'ready' ? zonesVdot(state.runs, startTime) : { vdot: null, basis: null }),
+    [state.status, state.runs, startTime],
+  );
+  const bands = useMemo(() => paceZoneBands(zones.vdot), [zones.vdot]);
+  return { status: state.status, vdot: zones.vdot, basis: zones.basis, bands };
 }
