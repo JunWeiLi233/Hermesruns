@@ -29,6 +29,7 @@ Backend paths in this table are relative to
 | `/rewards` | [rewards/Rewards.jsx](rewards/Rewards.jsx) | `rewards/DigitalCosmeticsController.java` | `_split/rewards.css`, `rewards-profile-alignment.css` |
 | `/settings`, `/settings/import-data` | [settings/Settings.jsx](settings/Settings.jsx), [ImportDataSettings.jsx](settings/ImportDataSettings.jsx) | `runner/`, `auth/`, `imports/`, `coaching/WellnessController.java` | `_split/settings.css`, `settings-fullwidth.css` |
 | Garmin import dialog in settings | [settings/GarminImportSettings.jsx](settings/GarminImportSettings.jsx) | `imports/GarminConnectController.java` | `_split/integrations.css` |
+| Strava disconnect, account delete, data export and time zone in settings | [settings/StravaDisconnectDialog.jsx](settings/StravaDisconnectDialog.jsx), [DeleteAccountDialog.jsx](settings/DeleteAccountDialog.jsx), `components/SettingsDataCard.jsx`, `components/SettingsTimeZoneRow.jsx` | `imports/StravaAccountService.java`, `runner/AccountController.java`, `runner/ProfileController.java` | `settings-v2.css` |
 | `/dashboard/*` | [admin/Dashboard.jsx](admin/Dashboard.jsx) | `admin/` controllers and `admin/AdminPortalService.java` | `_split/admin.css`, `admin-monitoring-dashboard.css` |
 | `/terms`, `/privacy` | [legal/LegalPage.jsx](legal/LegalPage.jsx) | Static SPA response | `_split/auth.css`, `auth-liquid-glass.css` |
 

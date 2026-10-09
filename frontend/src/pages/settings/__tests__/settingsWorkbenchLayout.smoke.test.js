@@ -13,7 +13,7 @@ for (const group of ['profile', 'preferences', 'connections', 'notifications', '
   assert.match(layoutSource, new RegExp(`id="st-v2-${group}"`), `Settings should retain its ${group} group.`);
   assert.ok(layoutSource.includes(`hidden={activeSection !== '${group}'}`), `Settings should hide the inactive ${group} group.`);
 }
-for (const handler of ['saveProfile', 'setUnit', 'setLang', 'setTheme', 'connectStrava', 'disconnectStrava', 'toggleDigest', 'logout']) {
+for (const handler of ['saveProfile', 'setUnit', 'setLang', 'setTheme', 'connectStrava', 'requestStravaDisconnect', 'onRequestDeleteAccount', 'toggleDigest', 'logout']) {
   assert.match(layoutSource, new RegExp(handler), `Settings must preserve ${handler}.`);
 }
 assert.match(styles, /\.st-v2-layout\s*\{[^}]*grid-template-columns:\s*260px minmax\(0, 1fr\)/, 'Desktop should pair the section index with a settings column that fills the available width.');

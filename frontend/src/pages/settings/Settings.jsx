@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { apiFetch, apiJson } from '../../api';
+import { apiJson } from '../../api';
+import { invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
@@ -8,7 +9,9 @@ import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import SettingsAtlasLayout from '../../components/SettingsAtlasLayout';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import DeleteAccountDialog from './DeleteAccountDialog';
 import GarminImportModal from './GarminImportSettings';
+import StravaDisconnectDialog from './StravaDisconnectDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -87,6 +90,9 @@ export default function Settings() {
   const [runActivities, setRunActivities] = useState([]);
   const [runActivityState, setRunActivityState] = useState('loading');
   const [garminImportModalOpen, setGarminImportModalOpen] = useState(false);
+  const [stravaDisconnectOpen, setStravaDisconnectOpen] = useState(false);
+  const [stravaNotice, setStravaNotice] = useState('');
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -273,13 +279,30 @@ export default function Settings() {
     setStravaLinking(false);
   }
 
-  async function disconnectStrava() {
-    try {
-      await apiFetch('/api/auth/strava/unlink', { method: 'DELETE' });
-      setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
-    } catch {
-      setNameMsg(t('settings.stitch_strava_disconnect_error'));
+  function handleStravaDisconnected(result) {
+    const removed = Number(result?.removedActivities) || 0;
+    const notice = [removed > 0
+      ? t('settings.strava_disconnected_notice', { count: removed })
+      : t('settings.strava_disconnected_plain')];
+    if (result?.revokedAtStrava === false) {
+      notice.push(t('settings.strava_revoke_unconfirmed'));
     }
+    setStravaDisconnectOpen(false);
+    setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
+    setStravaNotice(notice.join(' '));
+    // The runs Hermes synced from Strava are gone, so pages that cached them must ask again.
+    invalidateResourceCache('/api/activities');
+    invalidateResourceCache('/api/profile/dashboard');
+    if (removed > 0) {
+      apiJson('/api/activities')
+        .then((activities) => setRunActivities(Array.isArray(activities) ? activities : []))
+        .catch(() => {});
+    }
+  }
+
+  function handleAccountDeleted() {
+    invalidateResourceCache();
+    logout();
   }
 
   function toggleDigest() {
@@ -483,8 +506,12 @@ export default function Settings() {
           stravaStatus={stravaStatus}
           stravaLabel={stravaLabel}
           stravaLinking={stravaLinking}
+          stravaNotice={stravaNotice}
           connectStrava={connectStrava}
-          disconnectStrava={disconnectStrava}
+          requestStravaDisconnect={() => setStravaDisconnectOpen(true)}
+          timeZone={profile?.timeZone || ''}
+          onTimeZoneSaved={(zone) => setProfile((current) => ({ ...(current || {}), timeZone: zone }))}
+          onRequestDeleteAccount={() => setDeleteAccountOpen(true)}
           toggleDigest={toggleDigest}
           logout={logout}
           saveProfile={saveProfile}
@@ -520,6 +547,18 @@ export default function Settings() {
             onClose={() => setGarminImportModalOpen(false)}
           />
         )}
+        <StravaDisconnectDialog
+          t={t}
+          isOpen={stravaDisconnectOpen}
+          onClose={() => setStravaDisconnectOpen(false)}
+          onDisconnected={handleStravaDisconnected}
+        />
+        <DeleteAccountDialog
+          t={t}
+          isOpen={deleteAccountOpen}
+          onClose={() => setDeleteAccountOpen(false)}
+          onDeleted={handleAccountDeleted}
+        />
       </main>
     </div>
   );

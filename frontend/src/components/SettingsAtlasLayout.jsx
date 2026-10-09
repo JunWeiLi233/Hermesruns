@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import AppIcon from './AppIcon';
 import FooterNavLinks from './FooterNavLinks';
 import RunActivityContributionGraph from './RunActivityContributionGraph';
+import SettingsDataCard from './SettingsDataCard';
+import SettingsTimeZoneRow from './SettingsTimeZoneRow';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
-   Same props as the previous SettingsAtlasLayout, so Settings.jsx does not change. */
+   Disconnecting Strava and deleting the account only ask here (requestStravaDisconnect,
+   onRequestDeleteAccount): the confirmation dialogs live in Settings.jsx, outside .st-v2. */
 
 export default function SettingsAtlasLayout({
   t,
@@ -20,8 +23,12 @@ export default function SettingsAtlasLayout({
   stravaStatus,
   stravaLabel,
   stravaLinking,
+  stravaNotice,
   connectStrava,
-  disconnectStrava,
+  requestStravaDisconnect,
+  timeZone,
+  onTimeZoneSaved,
+  onRequestDeleteAccount,
   toggleDigest,
   logout,
   saveProfile,
@@ -263,6 +270,7 @@ export default function SettingsAtlasLayout({
                   <button type="button" className={lang === 'zh-CN' ? 'is-active' : ''} aria-pressed={lang === 'zh-CN'} onClick={() => setLang('zh-CN')}>简体中文</button>
                 </div>
               </div>
+              <SettingsTimeZoneRow t={t} timeZone={timeZone} onSaved={onTimeZoneSaved} />
             </div>
           </section>
 
@@ -275,15 +283,16 @@ export default function SettingsAtlasLayout({
                   <div className="st-v2-row-copy">
                     <strong>Strava</strong>
                     <span className="st-v2-status"><i className={stravaConnected ? 'is-on' : ''} />{stravaLabel}</span>
+                    {stravaNotice ? <span role="status">{stravaNotice}</span> : null}
                   </div>
                 </div>
                 <button
                   type="button"
                   className={stravaConnected ? 'st-v2-btn' : 'st-v2-btn is-dark'}
-                  onClick={stravaConnected ? disconnectStrava : connectStrava}
+                  onClick={stravaConnected ? requestStravaDisconnect : connectStrava}
                   disabled={stravaLinking}
                 >
-                  {stravaConnected ? t('settings.stitch_manage') : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
+                  {stravaConnected ? t('settings.strava_disconnect') : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
                 </button>
               </div>
               <div className="st-v2-row">
@@ -373,6 +382,7 @@ export default function SettingsAtlasLayout({
                 <AppIcon name="chevron_right" />
               </button>
             </div>
+            <SettingsDataCard t={t} onRequestDeleteAccount={onRequestDeleteAccount} />
             <p className="st-v2-meta">{[resolvedUnitLabel, resolvedLanguageLabel, activeThemeLabel].filter(Boolean).join(' · ')}</p>
           </section>
         </div>
