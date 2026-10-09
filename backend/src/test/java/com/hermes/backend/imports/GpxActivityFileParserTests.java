@@ -86,4 +86,21 @@ class GpxActivityFileParserTests {
         assertEquals(20, data.points().get(1).elapsedSeconds());
         assertFalse(data.points().isEmpty());
     }
+
+    @Test
+    void trackPointsCarryCumulativeDistanceEndingAtActivityDistance() {
+        ParsedActivityData data = parse("""
+                <trk><name>Morning Run</name><trkseg>
+                  <trkpt lat="31.230000" lon="121.470000"><time>2026-07-01T07:00:00</time></trkpt>
+                  <trkpt lat="31.231000" lon="121.470000"><time>2026-07-01T07:00:30</time></trkpt>
+                  <trkpt lat="31.232000" lon="121.470000"><time>2026-07-01T07:01:00</time></trkpt>
+                </trkseg></trk>
+                """, "export.gpx");
+
+        assertEquals(0d, data.points().get(0).distanceMeters(), 1e-9);
+        // 0.001 degrees of latitude is about 111.2 m.
+        assertEquals(111.2d, data.points().get(1).distanceMeters(), 0.1);
+        assertEquals(2 * data.points().get(1).distanceMeters(), data.points().get(2).distanceMeters(), 0.01);
+        assertEquals(data.distanceMeters(), data.points().get(2).distanceMeters(), 0.5);
+    }
 }

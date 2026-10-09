@@ -194,6 +194,10 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("offsetValue") long offsetValue
     );
 
+    // Rows are sampled in spatial order, so consecutive rows are not consecutive
+    // in time. Segment speed is taken from the previous recorded point of the
+    // same run before striding (same column layout as the spatial query below),
+    // which keeps speed colours independent of the direction a run was heading.
     @Query(value = """
             with ordered_points as (
                 select ap.activity_id,
@@ -201,6 +205,9 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                        ap.longitude,
                        ap.distance_meters,
                        ap.elapsed_seconds,
+                       ap.sequence_index,
+                       lag(ap.distance_meters) over (partition by ap.activity_id order by ap.sequence_index asc) as previous_distance_meters,
+                       lag(ap.elapsed_seconds) over (partition by ap.activity_id order by ap.sequence_index asc) as previous_elapsed_seconds,
                        row_number() over (order by ap.longitude asc, ap.latitude asc, ap.activity_id desc, ap.sequence_index asc) as point_ordinal
                 from activity_points ap
                 join activities a on a.id = ap.activity_id
@@ -211,7 +218,13 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
                   and ap.latitude between -90 and 90
                   and ap.longitude between -180 and 180
             )
-            select activity_id, latitude, longitude, distance_meters, elapsed_seconds
+            select activity_id, latitude, longitude, distance_meters, elapsed_seconds,
+                   sequence_index, null as visit_count,
+                   case when distance_meters > previous_distance_meters
+                         and elapsed_seconds > previous_elapsed_seconds
+                       then (distance_meters - previous_distance_meters) /
+                            (elapsed_seconds - previous_elapsed_seconds)
+                       else null end as segment_speed
             from ordered_points
             where mod(point_ordinal - 1, :strideValue) = 0
             order by longitude asc, latitude asc, activity_id desc

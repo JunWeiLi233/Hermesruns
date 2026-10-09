@@ -127,7 +127,7 @@ assert.match(
 );
 assert.match(
   heatmapCacheSource,
-  /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:v2:\$\{normalizedEmail\}/,
+  /function getHeatmapCacheKey\(accountEmail\) \{[\s\S]*?typeof accountEmail === 'string'[\s\S]*?accountEmail\.trim\(\)\.toLowerCase\(\)[\s\S]*?profile-heatmap:v3:\$\{normalizedEmail\}/,
   'Heatmap cache should be keyed from the authenticated account email so every official-site user gets an isolated cache.',
 );
 assert.match(

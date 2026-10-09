@@ -26,6 +26,10 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
         List<ParsedTrackPoint> points = new ArrayList<>();
         LocalDateTime startTime = null;
         LocalDateTime endTime = null;
+        // GPX has no distance stream, so each point carries the running track
+        // length; without it, per-point pace (heatmap speed colours) is unknown.
+        double cumulativeDistanceMeters = 0;
+        ParsedTrackPoint previousPoint = null;
 
         for (Element trackPoint : trackPoints) {
             Double latitude = parseDouble(trackPoint.getAttribute("lat"));
@@ -60,17 +64,23 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
             Double verticalOscillationMm = parseFirstPositiveDouble(trackPoint,
                     "VerticalOscillation", "VerticalOscillationMm", "vertical_oscillation");
 
-            points.add(new ParsedTrackPoint(
+            if (previousPoint != null) {
+                cumulativeDistanceMeters += haversineMeters(
+                        previousPoint.latitude(), previousPoint.longitude(), latitude, longitude);
+            }
+            ParsedTrackPoint parsedPoint = new ParsedTrackPoint(
                     latitude,
                     longitude,
                     elapsedSeconds,
-                    null,
+                    cumulativeDistanceMeters,
                     elevationMeters,
                     heartRate,
                     cadence,
                     groundContactTimeMs,
                     verticalOscillationMm
-            ));
+            );
+            points.add(parsedPoint);
+            previousPoint = parsedPoint;
         }
 
         if (points.isEmpty()) {

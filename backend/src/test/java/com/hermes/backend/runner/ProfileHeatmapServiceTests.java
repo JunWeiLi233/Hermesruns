@@ -3,6 +3,7 @@ package com.hermes.backend.runner;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
+import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.imports.ActivityNormalizationService;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import com.hermes.backend.runner.ProfileModels.HeatPoint;
@@ -46,6 +47,30 @@ class ProfileHeatmapServiceTests {
     }
 
     @Test
+    void sampledHeatmapUsesPrecomputedSegmentSpeedAndStaysCompact() throws Exception {
+        ActivityRepository activities = mock(ActivityRepository.class);
+        ActivityPointRepository points = mock(ActivityPointRepository.class);
+        Runner runner = new Runner(); runner.setId(1L);
+        when(activities.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(1L);
+        when(points.countHeatmapPointsByRunnerAndType(1L, "RUN")).thenReturn(3L);
+        // Spatial (longitude) order of a west-bound run: later points come first,
+        // so distance/elapsed deltas between adjacent rows are negative.
+        when(points.findHeatmapCoveragePointsByRunnerAndType(1L, "RUN", 1, 12000)).thenReturn(List.of(
+                new Object[]{7L, 30.0, 119.9980, 400.0, 120, 2, null, 2.0},
+                new Object[]{7L, 30.0, 119.9990, 300.0, 100, 1, null, 5.0},
+                new Object[]{7L, 30.0, 120.0000, 0.0, 0, 0, null, null}
+        ));
+        ProfileHeatmapService service = new ProfileHeatmapService(activities, points,
+                mock(ActivityNormalizationService.class), mock(TtlCacheStore.class));
+
+        HeatmapResponse response = service.heatmap(runner, null, null, null, true);
+
+        assertThat(response.points().get(0).speedRatio()).isLessThan(response.points().get(1).speedRatio());
+        assertThat(response.points()).extracting(HeatPoint::visitCount).containsOnly(0L);
+        assertThat(new ObjectMapper().writeValueAsString(response.points().get(0))).isEqualTo("[7,30.0,119.998,0.0]");
+    }
+
+    @Test
     void rejectsInvalidViewportBeforeQueryingGps() {
         ActivityPointRepository points = mock(ActivityPointRepository.class);
         ProfileHeatmapService service = new ProfileHeatmapService(mock(ActivityRepository.class), points,
@@ -86,11 +111,11 @@ class ProfileHeatmapServiceTests {
         HeatmapResponse response = service.heatmap(runner, null, null, null, null);
 
         assertThat(response.points()).isEqualTo(List.of());
-        verify(cacheStore).put(eq("profile-heatmap"), eq("all-points-paged-v4:1"),
+        verify(cacheStore).put(eq("profile-heatmap"), eq("all-points-paged-v5:1"),
                 any(HeatmapResponse.class), eq(Duration.ofMinutes(5)));
         when(clock.instant()).thenReturn(now.plusSeconds(299));
-        assertThat(cacheStore.get("profile-heatmap", "all-points-paged-v4:1", HeatmapResponse.class)).contains(response);
+        assertThat(cacheStore.get("profile-heatmap", "all-points-paged-v5:1", HeatmapResponse.class)).contains(response);
         when(clock.instant()).thenReturn(now.plusSeconds(301));
-        assertThat(cacheStore.get("profile-heatmap", "all-points-paged-v4:1", HeatmapResponse.class)).isEmpty();
+        assertThat(cacheStore.get("profile-heatmap", "all-points-paged-v5:1", HeatmapResponse.class)).isEmpty();
     }
 }

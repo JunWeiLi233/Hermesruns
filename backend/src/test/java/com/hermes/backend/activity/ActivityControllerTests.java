@@ -1123,7 +1123,7 @@ class ActivityControllerTests {
         ResponseEntity<?> response = controller.deleteActivity(101L, "Bearer session-token");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(cacheStore).evict("profile-heatmap", "all-points-paged-v4:42");
+        verify(cacheStore).evict("profile-heatmap", "all-points-paged-v5:42");
         // The activities/heatmap read cache must also be invalidated on delete.
         verify(cacheStore).evict("activity-heatmap", "42:all");
     }

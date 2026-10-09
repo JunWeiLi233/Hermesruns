@@ -352,7 +352,7 @@ public class ProfileHeatmapService {
                     toNullableDouble(point[2]),
                     1.0,
                     speedRatio,
-                    point.length > 6 ? Math.max(1, toLong(point[6])) : 0
+                    point.length > 6 && point[6] != null ? Math.max(1, toLong(point[6])) : 0
             ));
         }
 

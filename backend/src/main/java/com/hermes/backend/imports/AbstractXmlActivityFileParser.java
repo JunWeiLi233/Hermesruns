@@ -140,7 +140,7 @@ abstract class AbstractXmlActivityFileParser implements ActivityFileParser {
         return Math.max(seconds, 0);
     }
 
-    private double haversineMeters(double startLat, double startLon, double endLat, double endLon) {
+    protected double haversineMeters(double startLat, double startLon, double endLat, double endLon) {
         final double earthRadius = 6_371_000d;
         double latitudeDelta = Math.toRadians(endLat - startLat);
         double longitudeDelta = Math.toRadians(endLon - startLon);

@@ -546,7 +546,7 @@ class ProfileControllerTests {
         Runner runner = runner();
         cacheStore.put(
                 "profile-heatmap",
-                "all-points-paged-v4:" + runner.getId(),
+                "all-points-paged-v5:" + runner.getId(),
                 new ProfileModels.HeatmapResponse(
                         List.of(new ProfileModels.HeatPoint(99L, 1.0, 2.0, 1.0, 0.5)),
                         3L,

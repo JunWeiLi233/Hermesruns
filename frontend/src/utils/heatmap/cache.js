@@ -15,7 +15,9 @@ export function getHeatmapCacheKey(accountEmail) {
   // v2: the backend now computes bounds from trimmed coordinate samples, so
   // every client must drop payloads cached with the old world-stretched
   // bounds (a stray GPS point pinned the map at world zoom for up to a week).
-  return normalizedEmail ? `profile-heatmap:v2:${normalizedEmail}` : null;
+  // v3: speed colours are now taken from each point's previous recorded point,
+  // so payloads cached with direction-dependent flat colours must be dropped.
+  return normalizedEmail ? `profile-heatmap:v3:${normalizedEmail}` : null;
 }
 
 export function getHeatmapCacheFreshnessTier(savedAt, now = Date.now()) {
