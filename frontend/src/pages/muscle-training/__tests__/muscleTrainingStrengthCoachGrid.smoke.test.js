@@ -20,8 +20,8 @@ assert.match(
 
 assert.match(
   pageSource,
-  /const gridStrengthDay = strengthCoachDecision\?\.appliedDate[\s\S]*?day\.date === strengthCoachDecision\.appliedDate[\s\S]*?: todayPlan;[\s\S]*?gridStrengthDay\?\.strength[\s\S]*?sessionByType\.get\(gridStrengthDay\.strength\.sessionType\)/,
-  'The top action and reference panels should use the session assigned on the backend applied date.',
+  /const gridStrengthDay = strengthCoachDecision\?\.appliedDate[\s\S]*?day\.date === strengthCoachDecision\.appliedDate[\s\S]*?: todayPlan;[\s\S]*?sessionByType\.get\(day\.strength\.sessionType\)[\s\S]*?weekPlanDays\.find\(\(day\) => day\.date === selectedWeekDate\)[\s\S]*?weekPlanDays\.find\(\(day\) => day\.date === gridStrengthDay\?\.date\)/,
+  'The week should resolve each day\'s own session and default to the backend applied date until a day is selected.',
 );
 
 assert.ok(
@@ -31,14 +31,14 @@ assert.ok(
 
 assert.match(
   pageSource,
-  /className="mt-top-workbench"[\s\S]*?data-strength-algorithm=\{strengthCoachDecision\?\.algorithmVersion \|\| undefined\}[\s\S]*?data-strength-focus=\{strengthCoachDecision\?\.appliedFocus \|\| undefined\}[\s\S]*?data-strength-dose=\{strengthCoachDecision\?\.appliedDose \|\| undefined\}/,
+  /className="mt-top-workbench mt-week-v2"[\s\S]*?data-strength-algorithm=\{strengthCoachDecision\?\.algorithmVersion \|\| undefined\}[\s\S]*?data-strength-focus=\{strengthCoachDecision\?\.appliedFocus \|\| undefined\}[\s\S]*?data-strength-dose=\{strengthCoachDecision\?\.appliedDose \|\| undefined\}/,
   'The existing top grid should expose the backend algorithm, applied focus, and applied dose.',
 );
 
 assert.match(
   pageSource,
-  /pickLabel\(copy\.strengthDoseOptions, strengthCoachDecision\?\.appliedDose, stitchCopy\.topActionsSelected\)/,
-  'The top action panel should visibly label the backend applied dose.',
+  /pickStrengthSessionLabel\(copy, day\.strength\.sessionType, day\.strength\.sessionType, true\)[\s\S]*?minutes: day\.strength\.durationMinutes/,
+  'Each week card should display its planned session and duration from the backend.',
 );
 
 console.log('[PASS] Muscle Training strength coach grid wiring guardrails passed.');

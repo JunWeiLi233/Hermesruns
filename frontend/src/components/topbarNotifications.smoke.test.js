@@ -10,7 +10,7 @@ const profileStyleSource = readFileSync(path.join(here, '../styles/all-pages-liq
 
 assert.match(
   componentSource,
-  /runner-shell-notification-popover is-zh/,
+  /tips-v2\$\{lang === 'zh-CN' \? ' is-zh'/,
   'TopbarNotifications should keep the Chinese notification popover variant hook.'
 );
 
@@ -46,19 +46,19 @@ assert.match(
 
 assert.match(
   componentSource,
-  /className="runner-shell-notification-delete"/,
+  /className="tips-v2-icon-btn tips-v2-dismiss"/,
   'Each topbar notification message should expose a delete button.'
 );
 
 assert.match(
   componentSource,
-  /runner-shell-notification-heading-icon/,
-  'The notification header should provide a compact visual anchor.'
+  /tips-v2-head-copy/,
+  'The notification header should retain the title and count.'
 );
 
 assert.match(
   componentSource,
-  /runner-shell-notification-card-icon/,
+  /className="tips-v2-icon"/,
   'Each notification row should provide a contextual leading icon.'
 );
 

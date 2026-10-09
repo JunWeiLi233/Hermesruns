@@ -119,8 +119,8 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailSource,
-  /className="race-detail-lower-stack"/,
-  'RacesDetail should replace the old side-by-side lower grid with a stacked map-first layout.',
+  /className="rd-v2-course"/,
+  'RacesDetail should stack the live map and elevation profile beside the race card.',
 );
 
 assert.match(
@@ -179,20 +179,20 @@ assert.match(
 
 assert.match(
   racesDetailStyles,
-  /\.race-detail-lower-stack\s*\{/,
-  'Race detail styles should define the stacked lower layout that keeps the map stage as the sole lower content block.',
+  /\.rd-v2-course\s*\{/,
+  'Race detail styles should define the stacked course column.',
 );
 
 assert.match(
   racesDetailStyles,
-  /\.race-detail-lower-stack\s*\{[\s\S]*grid-template-columns:\s*1fr;/,
-  'Race detail styles should let the lower stack collapse to a single column so the map owns the full row.',
+  /\.rd-v2-course\s*\{[^}]*flex-direction:\s*column/,
+  'Race detail should keep the elevation profile below the full-width interactive map.',
 );
 
 assert.doesNotMatch(
   racesDetailStyles,
-  /\.race-detail-lower-stack\s*\{[\s\S]*1\.85fr/,
-  'Race detail styles should not keep the older desktop split-grid columns once the map stage becomes the dominant block.',
+  /\.rd-v2-course\s*\{[^}]*1\.85fr/,
+  'Race detail should keep the course panels in one column.',
 );
 
 assert.match(
@@ -209,8 +209,8 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailStyles,
-  /\.race-detail-map-stage\s*\{[\s\S]*(?:min-height|height):\s*clamp\(/,
-  'Race detail styles should give the map stage a taller immersive height once it owns the full row.',
+  /\.rd-v2-map \.race-detail-map-stage\s*\{[^}]*height:\s*auto !important;[^}]*min-height:\s*0 !important;/,
+  'Race detail should clear the legacy map height so the chips stay inside the live map.',
 );
 
 assert.match(

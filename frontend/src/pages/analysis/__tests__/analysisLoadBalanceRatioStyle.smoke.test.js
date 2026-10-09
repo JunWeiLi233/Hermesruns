@@ -50,8 +50,8 @@ assert.doesNotMatch(
 
 assert.match(
   detailSource,
-  /name=\{loadDashboard\.ratioTrendIcon\} className=\{cx\('runner-dashboard-side-link-icon', 'analysis-load-command-ratio-icon'\)\}/,
-  'Load Balance ACWR ratio should use the computed trend icon with its dedicated class.',
+  /className="analysis-load-v2-ratio"[\s\S]*?\{loadDashboard\.ratioValue\}/,
+  'Load Balance should render its live ratio in the v2 verdict card.',
 );
 const ratioIconRule = routeStyles.match(/\.analysis-insight-detail-page\.is-load-balance \.analysis-load-command-ratio-value \.analysis-load-command-ratio-icon\s*\{[^}]*\}/s)?.[0];
 assert.ok(ratioIconRule, 'Load Balance ACWR ratio trend icon should have a route-specific sizing rule.');

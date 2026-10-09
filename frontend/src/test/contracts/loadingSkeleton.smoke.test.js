@@ -97,7 +97,9 @@ assert(
     && skeletonSource.includes('page-skeleton__session-timeline')
     && skeletonSource.includes('page-skeleton__session-support')
     && skeletonSource.includes('page-skeleton__mobile-nav')
-    && skeletonSource.includes('page-skeleton__rewards-hero-card')
+    && skeletonSource.includes('page-skeleton__rewards-v2-hero')
+    && skeletonSource.includes('page-skeleton__rewards-v2-ring')
+    && skeletonSource.includes('page-skeleton__rewards-v2-track')
     && skeletonSource.includes('page-skeleton__settings-identity-hero')
     && skeletonSource.includes('page-skeleton__settings-content-grid')
     && skeletonSource.includes('page-skeleton__settings-preferences')
@@ -252,8 +254,8 @@ assert(
     '.page-skeleton__today-coach',
     '.page-skeleton__muscle-above-fold',
     '.page-skeleton__muscle-workbench-grid',
-    '.page-skeleton__rewards-hero-card',
-    '.page-skeleton__rewards-catalog-grid',
+    '.page-skeleton__rewards-v2-hero',
+    '.page-skeleton__rewards-v2-track',
     '.page-skeleton__settings-content-grid',
     '.page-skeleton__settings-bottom-grid',
     '.page-skeleton__settings-identity-hero',

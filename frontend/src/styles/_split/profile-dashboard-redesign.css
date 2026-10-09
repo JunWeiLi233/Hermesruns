@@ -849,29 +849,234 @@ body #root .profile-dashboard-page .hd-content .hd-metric-strip .hd-metric-card 
 
 .hd-progression-chart-area {
   position: relative;
-  /* Bleed edge-to-edge across the whole .hd-progression section by negating
-     its 28px horizontal padding so the chart line runs the full grid width. */
-  margin: 0 -28px;
+  min-width: 0;
+  margin: 4px 0 0;
+  --hd-progression-axis-width: 64px;
+}
+
+.hd-progression-chart-caption,
+.hd-progression-volume-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 0.7rem;
+  color: var(--hd-text-secondary);
+}
+
+.hd-progression-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--hd-text-primary);
+}
+
+.hd-progression-legend i {
+  width: 18px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--hd-accent);
+}
+
+.hd-progression-legend.is-volume i {
+  width: 7px;
+  height: 10px;
+  background: var(--hd-coral);
+}
+
+.hd-progression-readout {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--hd-text-secondary);
+}
+
+.hd-progression-readout > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+}
+
+.hd-progression-readout strong {
+  font-size: 1.15rem;
+  color: var(--hd-text-primary);
+  letter-spacing: -0.025em;
+}
+
+.hd-progression-readout b {
+  margin-left: 5px;
+  color: var(--hd-accent);
+}
+
+.hd-progression-plot-frame,
+.hd-progression-volume-frame {
+  display: grid;
+  grid-template-columns: var(--hd-progression-axis-width) minmax(0, 1fr);
+}
+
+.hd-progression-plot-frame {
+  margin-top: 16px;
+}
+
+.hd-progression-plot,
+.hd-progression-y-axis {
+  position: relative;
+}
+
+.hd-progression-y-axis > span {
+  position: absolute;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--hd-text-secondary);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hd-progression-y-axis .hd-progression-axis-unit {
+  top: -12px;
+  color: var(--hd-text-tertiary);
+  font-size: 0.62rem;
 }
 
 .hd-progression-svg {
   width: 100%;
-  height: 180px;
+  height: 270px;
   display: block;
 }
 
-.hd-progression-range {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.62rem;
-  color: var(--hd-text-tertiary);
-  margin-top: 8px;
-  padding: 0 28px;
+.hd-progression-grid-line {
+  stroke: var(--hd-line-strong);
+  stroke-width: 1;
 }
 
-@media (max-width: 960px) {
-  .hd-progression-chart-area { margin: 0 -20px; }
-  .hd-progression-range { padding: 0 20px; }
+.hd-progression-grid-line.is-vertical {
+  stroke: var(--hd-line);
+  stroke-dasharray: 3 5;
+}
+
+.hd-progression-line {
+  stroke: var(--hd-accent);
+}
+
+.hd-progression-cursor {
+  stroke: var(--hd-text-tertiary);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.hd-progression-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--hd-accent);
+  box-shadow: 0 0 0 3px var(--hd-bg-card);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.hd-progression-scrubber {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: crosshair;
+}
+
+.hd-progression-plot:has(.hd-progression-scrubber:focus-visible) {
+  outline: 2px solid var(--hd-accent);
+  outline-offset: 5px;
+  border-radius: 3px;
+}
+
+.hd-progression-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--hd-text-secondary);
+  font-size: 0.82rem;
+}
+
+.hd-progression-volume-head {
+  margin-top: 16px;
+  padding-left: var(--hd-progression-axis-width);
+}
+
+.hd-progression-volume-frame {
+  margin-top: 12px;
+}
+
+.hd-progression-volume-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 4px 14px 0 0;
+  color: var(--hd-text-secondary);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hd-progression-volume-svg {
+  display: block;
+  width: 100%;
+  height: 72px;
+}
+
+.hd-progression-volume-bar {
+  fill: var(--hd-coral);
+  opacity: 0.75;
+}
+
+.hd-progression-volume-bar.is-active {
+  fill: var(--hd-accent);
+  opacity: 1;
+}
+
+.hd-progression-volume-bar.is-empty {
+  fill: var(--hd-line-strong);
+  opacity: 1;
+}
+
+.hd-progression-range {
+  position: relative;
+  height: 20px;
+  margin-left: var(--hd-progression-axis-width);
+  margin-top: 8px;
+  font-size: 0.68rem;
+  color: var(--hd-text-secondary);
+}
+
+.hd-progression-range span {
+  position: absolute;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.hd-progression-range span:first-child {
+  transform: none;
+}
+
+.hd-progression-range span:last-child {
+  transform: translateX(-100%);
+}
+
+@media (max-width: 600px) {
+  .hd-progression-chart-area { --hd-progression-axis-width: 48px; }
+  .hd-progression-svg { height: 220px; }
+  .hd-progression-range .is-intermediate { display: none; }
+  .hd-progression-volume-head { padding-left: 0; }
+  .hd-progression-chart-caption,
+  .hd-progression-volume-head { font-size: 0.65rem; }
+  .hd-progression-y-axis > span { right: 10px; font-size: 0.62rem; }
 }
 
 /* ── Bottom Grid ── */
@@ -1165,18 +1370,19 @@ body #root .profile-dashboard-page .hd-content .hd-metric-strip .hd-metric-card 
 }
 
 .hd-rewards-next-icon {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
-  background: var(--hd-coral-soft);
-  color: var(--hd-coral);
+  border-radius: 50%;
 }
 
-.hd-rewards-next-icon .material-symbols-outlined {
-  font-size: 18px;
+.hd-rewards-next-icon .reward-illustration,
+.hd-rewards-badge-icon .reward-illustration {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .hd-rewards-next-title {
@@ -1248,31 +1454,13 @@ body #root .profile-dashboard-page .hd-content .hd-metric-strip .hd-metric-card 
 }
 
 .hd-rewards-badge-icon {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  color: var(--hd-text-primary);
+  border-radius: 50%;
   flex-shrink: 0;
-  background: var(--hd-coral-soft);
-}
-
-[data-theme="light"] .hd-rewards-badge-icon,
-body.theme-light .hd-rewards-badge-icon {
-  background: color-mix(in srgb, var(--badge-color, #f07561) 14%, white);
-  color: var(--badge-color, #a0392a);
-}
-
-[data-theme="midnight"] .hd-rewards-badge-icon,
-body.theme-midnight .hd-rewards-badge-icon {
-  background: color-mix(in srgb, var(--badge-color, #f07561) 18%, transparent);
-  color: color-mix(in srgb, var(--badge-color, #f07561) 80%, white);
-}
-
-.hd-rewards-badge-icon .material-symbols-outlined {
-  font-size: 18px;
 }
 
 .hd-rewards-badge-info {

@@ -10,6 +10,7 @@ const source = read('../AnalysisInsightDetail.jsx');
 const zhLocale = read('../../../i18n/locales/zh-CN/pages.js');
 const enLocale = read('../../../i18n/locales/en/pages.js');
 const styles = read('../../../styles/analysis-load-balance-profile-alignment.css');
+const v2Styles = read('../../../styles/analysis-load-balance-v2.css');
 const sharedGlassStyles = read('../../../styles/all-pages-liquid-glass.css');
 
 const failures = [];
@@ -118,15 +119,11 @@ if (metricRenderAddressable) {
   );
   requirePattern(
     metricRender,
-    /<article\b[^>]*analysis-load-command-metric-card[^>]*>/,
+    /<article\b[^>]*analysis-load-v2-metric[^>]*>/,
     'mapped render should keep the metric card article wrapper',
   );
-  for (const className of [
-    'analysis-load-command-metric-card-label',
-    'analysis-load-command-metric-card-definition',
-    'analysis-load-command-metric-card-detail',
-  ]) {
-    requirePattern(metricRender, new RegExp(className), `mapped load metric render should contain ${className}`);
+  for (const value of ['metric.label', 'metric.value', 'metric.detail', 'metric.definition']) {
+    requireCondition(metricRender.includes(`{${value}}`), `mapped load metric render should preserve ${value}`);
   }
   requirePattern(metricRender, /\{metric\.definition\}/, 'mapped load metric render should display metric definitions');
 }
@@ -153,6 +150,7 @@ requirePattern(
   /body #root \.analysis-insight-detail-page\.is-load-balance \.analysis-profile-v2--load \.analysis-load-command-metric-card\s*\{[^{}]*display:\s*grid;[^{}]*grid-template-rows:\s*auto auto auto 1fr;/s,
   'load-balance metric cards should reserve the same label, definition, value, and detail rows',
 );
+requirePattern(v2Styles, /\.analysis-load-v2-metric\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/, 'The v2 cards must keep labels, values, details, and definitions in separate rows.');
 
 requireCondition(
   !/\.analysis-load-command-metric-card(?![-\w])[^{}]*:{1,2}before\b/.test(styles),

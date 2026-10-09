@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
@@ -12,7 +12,7 @@ import Modal from '../../components/Modal';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { formatDuration, formatPace } from '../../utils/format';
+import { formatDuration, formatPace, formatPaceSeconds } from '../../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../../utils/profileIdentity';
 import {
   getLocalizedCountryLabel,
@@ -23,10 +23,48 @@ import {
 } from '../../utils/raceLocalization';
 import { preloadRoute } from '../../utils/routePreload';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
-import { standardCityRoadMarathonCatalog, worldRaceCountries } from '../../data/worldRaceCatalog';
+import worldRaceCatalog, { worldRaceCountries } from '../../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, rememberLoadedRaceImage } from '../../utils/raceImage';
+import { estimateCurrentVdot, predictRaceTimeCalibrated } from '../../utils/vdot';
+import { resolveRaceIntel } from '../../utils/raceIntel';
+import '../../styles/races-v2.css';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
+const DISTANCE_PRESETS = [
+  { key: '5k', km: 5 },
+  { key: '10k', km: 10 },
+  { key: 'half', km: 21.0975 },
+  { key: 'full', km: 42.195 },
+];
+
+function formatGoalInput(seconds) {
+  const total = Math.round(Number(seconds));
+  if (!Number.isFinite(total) || total <= 0) return '';
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
+function parseGoalInput(text) {
+  const value = String(text || '').trim();
+  if (!value) return { seconds: '', valid: true };
+  if (!/^\d{1,2}(:\d{1,2}){0,2}$/.test(value)) return { seconds: '', valid: false };
+  const parts = value.split(':').map(Number);
+  if (parts.slice(1).some((part) => part > 59)) return { seconds: '', valid: false };
+  const seconds = parts.reduce((total, part) => total * 60 + part, 0) * (parts.length === 1 ? 60 : 1);
+  return seconds > 0 ? { seconds: String(seconds), valid: true } : { seconds: '', valid: false };
+}
+
+function getRaceFormCountdown(eventDate) {
+  if (!eventDate) return null;
+  const event = parseRaceDate(eventDate);
+  if (Number.isNaN(event.getTime())) return null;
+  const today = new Date();
+  // Calendar days, not elapsed hours: daylight saving must not shift the pill.
+  return Math.round((Date.UTC(event.getFullYear(), event.getMonth(), event.getDate())
+    - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+}
 
 const RACE_TARGETS = [
   { key: '5k', km: 5, icon: 'timer' },
@@ -47,19 +85,6 @@ const DEFAULT_FORM = {
   nyrrNinePlusOneEligible: false,
 };
 
-const DISCOVERY_VISUALS = [
-  {
-    image: '/images/races/boston-marathon-hero.webp',
-    tag: 'Majors',
-    meta: 'Editorial',
-  },
-  {
-    image: '/images/races/discovery-offroad.webp',
-    tag: 'Off-Road',
-    meta: 'Deep Dive',
-  },
-];
-
 const OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST = new Set(['boston-marathon']);
 
 const DISTANCE_FILTERS = [
@@ -73,13 +98,11 @@ const DISTANCE_FILTERS = [
 const MONTH_LABELS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_LABELS_ZH = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
-const PAGE_SIZE_FEATURED = 1;
-const PAGE_SIZE_INITIAL = 7; // 1 featured + 6 grid cards
-const PAGE_SIZE_GRID_INITIAL = 6; // cards shown in grid below featured
+const PAGE_SIZE_INITIAL = 12;
 const PAGE_SIZE_MORE = 8;
 
 function getRaceCardImage(race, officialDiscoveryImages) {
-  if (!race) return DISCOVERY_VISUALS[0].image;
+  if (!race) return '';
   if (!OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST.has(race.id) && officialDiscoveryImages?.[race.id]) {
     return officialDiscoveryImages[race.id];
   }
@@ -87,14 +110,7 @@ function getRaceCardImage(race, officialDiscoveryImages) {
   if (!OFFICIAL_DISCOVERY_IMAGE_BLOCKLIST.has(race.id) && cached?.imageUrl) {
     return cached.imageUrl;
   }
-  return race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image;
-}
-
-function extractRaceFocusLabelSafe(race, t) {
-  const raw = String(race?.location || race?.name || '').trim();
-  if (!raw) return t('races.focus_fallback');
-  const pieces = raw.split(/[,.·]/).map((part) => part.trim()).filter(Boolean);
-  return (pieces[0] || raw).toUpperCase();
+  return race.heroImage || race.image || '';
 }
 
 function formatDistanceLabelSafe(distanceKm, t, lang) {
@@ -133,22 +149,26 @@ function getDefaultProviderLabel(t) {
   return t('races.default_provider_label');
 }
 
-function getCountryToggleLabel(isExpanded, t) {
-  return isExpanded ? t('races.country_toggle_less') : t('races.country_toggle_more');
+function parseRaceDate(value) {
+  // Race event dates are calendar dates, so keep them in the local month.
+  const dateValue = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T00:00:00`
+    : value;
+  return new Date(dateValue);
 }
 
 function formatRaceDate(value, lang, options = { month: 'short', day: 'numeric', year: 'numeric' }) {
   if (!value) return '--';
-  const date = new Date(value);
+  const date = parseRaceDate(value);
   if (Number.isNaN(date.getTime())) return '--';
   return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-CN', options);
 }
 
-function getDiscoveryTag(race, fallbackTag) {
-  if (race?.program) return race.program;
-  if (race?.distanceKm >= 42) return fallbackTag;
-  if (race?.distanceKm >= 21) return 'Road';
-  return fallbackTag;
+function findPlannedRace(race, upcomingRaces) {
+  return upcomingRaces.find((planned) => (
+    String(planned.name || '').trim().toLowerCase() === String(race.name || '').trim().toLowerCase()
+    && Math.abs(Number(planned.distanceKm) - Number(race.distanceKm)) < 0.5
+  ));
 }
 
 // Memoized race card component to avoid rerenders on filter/pagination changes
@@ -161,6 +181,7 @@ const RaceCard = memo(function RaceCard({
   onAddToPlan,
   onImageError,
   onImageLoad,
+  plannedRace,
 }) {
   const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
   const raceName = getLocalizedRaceLabel(race, lang);
@@ -169,7 +190,9 @@ const RaceCard = memo(function RaceCard({
   const monthLabel = lang === 'en'
     ? MONTH_LABELS_EN[(race.month || 1) - 1]
     : MONTH_LABELS_ZH[(race.month || 1) - 1];
-  const discoveryTagLabel = t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`);
+  const now = new Date();
+  const year = plannedRace ? parseRaceDate(plannedRace.eventDate).getFullYear()
+    : now.getFullYear() + (Number(race.month) < now.getMonth() + 1 ? 1 : 0);
 
   return (
     <article className="race-center-card" data-race-card>
@@ -177,9 +200,10 @@ const RaceCard = memo(function RaceCard({
         type="button"
         className="race-center-card-image-wrap"
         onClick={() => onNavigate(race, imgSrc)}
-        aria-label={`${discoveryTagLabel}. ${t('races.detail_open_card', { name: raceName })}`}
+        aria-label={t('races.detail_open_card', { name: raceName })}
       >
-        <img
+        <span className="race-center-card-photo-placeholder" aria-hidden="true">{t('races.v2_race_photo')}</span>
+        {imgSrc ? <img
           className="race-center-card-image"
           src={imgSrc}
           alt={raceName}
@@ -189,91 +213,25 @@ const RaceCard = memo(function RaceCard({
           decoding="async"
           onLoad={(event) => onImageLoad(event, race)}
           onError={(e) => onImageError(e, race)}
-        />
+        /> : null}
         <span className="race-center-card-tag">
-          {discoveryTagLabel}
+          {distanceLabel}
         </span>
       </button>
       <div className="race-center-card-body">
         <div className="race-center-card-meta">
-          <span className="race-center-card-distance">{distanceLabel}</span>
-          <span className="race-center-card-month">{monthLabel}</span>
+          <span className="race-center-card-month">{monthLabel} {year}</span>
         </div>
         <h3 className="race-center-card-name">{raceName}</h3>
         <p className="race-center-card-location">{raceLocation}</p>
         <button
           type="button"
           className="race-center-card-cta"
+          data-in-plan={Boolean(plannedRace)}
           onClick={() => onAddToPlan(race)}
-          aria-label={t('races.add_from_catalog')}
+          aria-label={plannedRace ? `${t('races.edit_button')}: ${raceName}` : `${t('races.v2_add_to_plan')}: ${raceName}`}
         >
-          {t('races.add_from_catalog')}
-        </button>
-      </div>
-    </article>
-  );
-});
-
-// Memoized featured race card — editorial hero card for discovery section
-const FeaturedRaceCard = memo(function FeaturedRaceCard({
-  race,
-  officialDiscoveryImages,
-  lang,
-  t,
-  onNavigate,
-  onAddToPlan,
-  onImageError,
-  onImageLoad,
-}) {
-  const imgSrc = getRaceCardImage(race, officialDiscoveryImages);
-  const raceName = getLocalizedRaceLabel(race, lang);
-  const raceLocation = getLocalizedRaceLocation(race, lang);
-  const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
-  const monthLabel = lang === 'en'
-    ? MONTH_LABELS_EN[(race.month || 1) - 1]
-    : MONTH_LABELS_ZH[(race.month || 1) - 1];
-  const discoveryTagLabel = t(`races.discovery_tag_${getDiscoveryTag(race, race.visual?.tag || 'Road').toLowerCase().replace(/[^a-z0-9]+/g, '_')}`);
-
-  return (
-    <article className="race-center-featured-card">
-      <button
-        type="button"
-        className="race-center-featured-image-wrap"
-        onClick={() => onNavigate(race, imgSrc)}
-        title={t('races.detail_open_card', { name: raceName })}
-      >
-        <img
-          className="race-center-featured-image"
-          src={imgSrc}
-          alt={raceName}
-          width="1200"
-          height="800"
-          loading="eager"
-          decoding="async"
-          onLoad={(event) => onImageLoad(event, race)}
-          onError={(e) => onImageError(e, race)}
-        />
-        <div className="race-center-featured-overlay" aria-hidden="true" />
-        <span className="race-center-featured-tag">
-          {discoveryTagLabel}
-        </span>
-        <div className="race-center-featured-body">
-          <div className="race-center-featured-meta">
-            <span className="race-center-featured-distance">{distanceLabel}</span>
-            <span className="race-center-featured-month">{monthLabel}</span>
-          </div>
-          <h3 className="race-center-featured-name">{raceName}</h3>
-          <p className="race-center-featured-location">{raceLocation}</p>
-        </div>
-      </button>
-      <div className="race-center-featured-footer">
-        <button
-          type="button"
-          className="race-center-card-cta"
-          onClick={() => onAddToPlan(race)}
-          aria-label={t('races.add_from_catalog')}
-        >
-          {t('races.add_from_catalog')}
+          {plannedRace ? `✓ ${t('races.v2_in_plan')}` : `+ ${t('races.v2_add_to_plan')}`}
         </button>
       </div>
     </article>
@@ -286,43 +244,33 @@ const AgendaRow = memo(function AgendaRow({
   lang,
   t,
   onEdit,
-  onAddCatalog,
+  onRemove,
+  isNext,
 }) {
-  const isTrackedRace = race.id != null;
   const countdownDays = Number(race.countdownDays || 0);
-  const dateLabel = isTrackedRace
-    ? formatRaceDate(race.eventDate, lang)
-    : t('races.typical_month', { month: race.month });
   const distanceLabel = formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang);
   const raceName = getLocalizedRaceLabel(race, lang);
   const statusKey = race.registrationStatus ? race.registrationStatus.toLowerCase() : 'interested';
 
-  const countdownChip = isTrackedRace && countdownDays >= 0
-    ? (lang === 'en' ? `T-${countdownDays} days` : `T-${countdownDays}天`)
-    : null;
-
   return (
-    <article className="race-center-agenda-row">
-      {countdownChip ? (
-        <div className="race-center-agenda-countdown">
-          <span className="race-center-agenda-chip">{countdownChip}</span>
-        </div>
-      ) : (
-        <div className="race-center-agenda-countdown" aria-hidden="true" />
-      )}
+    <article className={`race-center-agenda-row${isNext ? ' is-next' : ''}`}>
+      <button type="button" className="race-center-agenda-date" onClick={() => onEdit(race)} aria-label={t('races.detail_open_card', { name: raceName })}>
+        <span>{formatRaceDate(race.eventDate, lang, { month: 'short' })}</span>
+        <strong>{formatRaceDate(race.eventDate, lang, { day: 'numeric' })}</strong>
+      </button>
       <div className="race-center-agenda-info">
-        <strong className="race-center-agenda-name">{raceName}</strong>
-        <p className="race-center-agenda-sub">{distanceLabel} · {dateLabel}</p>
+        <button type="button" className="race-center-agenda-name" onClick={() => onEdit(race)}>{raceName}</button>
+        <p className="race-center-agenda-sub">{distanceLabel} · {getLocalizedRaceLocation(race, lang)} · {t('races.v2_in_days', { days: countdownDays })}</p>
       </div>
       <div className="race-center-agenda-side">
-        <span className="race-center-agenda-status">{t(`races.status_${statusKey}`)}</span>
+        <span className={`race-center-agenda-status is-${statusKey}`}>{t(`races.status_${statusKey}`)}</span>
         <button
           type="button"
           className="race-center-chevron"
-          onClick={() => (isTrackedRace ? onEdit(race) : onAddCatalog(race))}
-          aria-label={isTrackedRace ? t('races.edit_button') : t('races.add_from_catalog')}
+          onClick={() => onRemove(race)}
+          aria-label={t('races.v2_remove_race', { name: raceName })}
         >
-          <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
+          <AppIcon name="close" className="runner-dashboard-side-link-icon" />
         </button>
       </div>
     </article>
@@ -344,48 +292,28 @@ const Races = memo(function Races() {
   const [editingRace, setEditingRace] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [formStatus, setFormStatus] = useState('');
+  const [goalText, setGoalText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [selectedDistance, setSelectedDistance] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(0); // 0 = all months
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE_INITIAL);
   const [officialDiscoveryImages, setOfficialDiscoveryImages] = useState({});
-  const [isCountryStripExpanded, setIsCountryStripExpanded] = useState(false);
-  const [countryStripMetrics, setCountryStripMetrics] = useState({ collapsed: 0, expanded: 0 });
-  const countryStripRef = useRef(null);
-  const countryChipRefs = useRef([]);
+
+  const goal = parseGoalInput(goalText);
+  const kmValue = Number(form.distanceKm);
+  const matchedPreset = DISTANCE_PRESETS.find((preset) => Math.abs(preset.km - kmValue) < 0.01);
+  const distanceValid = form.distanceKm === '' || (Number.isFinite(kmValue) && kmValue >= 1);
+  const paceSeconds = goal.valid && goal.seconds && kmValue > 0 ? Number(goal.seconds) / kmValue : null;
+  const daysToGo = getRaceFormCountdown(form.eventDate);
+  const canSubmit = Boolean(form.name.trim() && form.eventDate && goal.valid && distanceValid && !isSaving);
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
   }, []);
-
-  useLayoutEffect(() => {
-    function measureCountryStrip() {
-      const strip = countryStripRef.current;
-      const chips = countryChipRefs.current.filter(Boolean);
-      if (!strip || chips.length === 0) return;
-
-      const firstTop = chips[0].offsetTop;
-      const firstRowBottom = chips.reduce((max, chip) => {
-        if (chip.offsetTop !== firstTop) return max;
-        return Math.max(max, chip.offsetTop + chip.offsetHeight);
-      }, 0);
-
-      setCountryStripMetrics({
-        collapsed: firstRowBottom,
-        expanded: strip.scrollHeight,
-      });
-    }
-
-    const frame = window.requestAnimationFrame(measureCountryStrip);
-    window.addEventListener('resize', measureCountryStrip);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener('resize', measureCountryStrip);
-    };
-  }, [lang]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -418,6 +346,7 @@ const Races = memo(function Races() {
   function openCreateModal() {
     setEditingRace(null);
     setForm(DEFAULT_FORM);
+    setGoalText('');
     setFormStatus('');
     setModalOpen(true);
   }
@@ -439,6 +368,7 @@ const Races = memo(function Races() {
       notes: catalogRace.program || '',
       nyrrNinePlusOneEligible: catalogRace.program === 'NYRR 9+1',
     });
+    setGoalText('');
     setFormStatus('');
     setModalOpen(true);
   }
@@ -456,18 +386,21 @@ const Races = memo(function Races() {
       notes: race.notes || '',
       nyrrNinePlusOneEligible: !!race.nyrrNinePlusOneEligible,
     });
+    setGoalText(formatGoalInput(race.goalTimeSeconds));
     setFormStatus('');
     setModalOpen(true);
   }
 
   async function handleSaveRace(event) {
     event.preventDefault();
+    if (!canSubmit) return;
     setFormStatus('');
+    setIsSaving(true);
     try {
       const payload = {
         ...form,
         distanceKm: form.distanceKm ? Number(form.distanceKm) : null,
-        goalTimeSeconds: form.goalTimeSeconds ? Number(form.goalTimeSeconds) : null,
+        goalTimeSeconds: goal.seconds ? Number(goal.seconds) : null,
       };
       const url = editingRace ? `/api/races/${editingRace.id}` : '/api/races';
       const method = editingRace ? 'PUT' : 'POST';
@@ -482,6 +415,8 @@ const Races = memo(function Races() {
       loadData();
     } catch (error) {
       setFormStatus(error.message || t('races.save_failed'));
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -505,7 +440,7 @@ const Races = memo(function Races() {
 
   // Build month filter options from actual catalog months
   const availableMonths = useMemo(() => {
-    const monthSet = new Set(standardCityRoadMarathonCatalog.map((r) => r.month));
+    const monthSet = new Set(worldRaceCatalog.map((r) => r.month));
     return Array.from(monthSet).sort((a, b) => a - b);
   }, []);
 
@@ -513,7 +448,7 @@ const Races = memo(function Races() {
     const query = catalogQuery.trim().toLowerCase();
     const distFilter = DISTANCE_FILTERS.find((d) => d.key === selectedDistance);
 
-    return standardCityRoadMarathonCatalog.filter((race) => {
+    return worldRaceCatalog.filter((race) => {
       // Country filter
       if (selectedCountry !== 'All' && race.country !== selectedCountry) return false;
       // Distance filter
@@ -547,16 +482,8 @@ const Races = memo(function Races() {
     setVisibleCount(PAGE_SIZE_INITIAL);
   }, [selectedCountry, selectedDistance, selectedMonth, catalogQuery]);
 
-  const discoveryCards = useMemo(() => {
-    return filteredCatalog.map((race, index) => ({
-      ...race,
-      visual: DISCOVERY_VISUALS[index % DISCOVERY_VISUALS.length],
-    }));
-  }, [filteredCatalog]);
-
-  // Featured card = first card; grid cards = next (visibleCount - 1)
-  const featuredCard = useMemo(() => discoveryCards[0] || null, [discoveryCards]);
-  const visibleCards = useMemo(() => discoveryCards.slice(1, visibleCount), [discoveryCards, visibleCount]);
+  const discoveryCards = filteredCatalog;
+  const visibleCards = useMemo(() => discoveryCards.slice(0, visibleCount), [discoveryCards, visibleCount]);
 
   const remainingCount = discoveryCards.length - visibleCount;
   const loadMoreCount = Math.min(remainingCount, PAGE_SIZE_MORE);
@@ -577,17 +504,9 @@ const Races = memo(function Races() {
     ]
   ), [lang, t]);
 
-  const shouldShowCountryToggle = countryStripMetrics.expanded > countryStripMetrics.collapsed + 8;
-  const countryStripStyle = shouldShowCountryToggle
-    ? {
-      maxHeight: `${isCountryStripExpanded ? countryStripMetrics.expanded : countryStripMetrics.collapsed}px`,
-    }
-    : undefined;
-
   useEffect(() => {
     let cancelled = false;
-    const allVisible = featuredCard ? [featuredCard, ...visibleCards] : visibleCards;
-    const candidates = allVisible.filter((race) => !(race.id in officialDiscoveryImages));
+    const candidates = visibleCards.filter((race) => !(race.id in officialDiscoveryImages));
     if (candidates.length === 0) return undefined;
 
     async function loadOfficialImages() {
@@ -603,11 +522,31 @@ const Races = memo(function Races() {
     return () => {
       cancelled = true;
     };
-  }, [visibleCards, featuredCard, officialDiscoveryImages]);
+  }, [visibleCards, officialDiscoveryImages]);
 
-  const selectedCalendar = useMemo(() => {
-    return races.slice(0, 3);
-  }, [races]);
+  const selectedCalendar = useMemo(() => upcomingRaces.slice(0, 5), [upcomingRaces]);
+
+  // Next 12 months, each with the tracked races that fall in it (season strip).
+  const seasonMonths = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    return Array.from({ length: 12 }, (_, offset) => {
+      const monthStart = new Date(start.getFullYear(), start.getMonth() + offset, 1);
+      const monthRaces = upcomingRaces.filter((race) => {
+        const date = parseRaceDate(race.eventDate);
+        return !Number.isNaN(date.getTime())
+          && date.getFullYear() === monthStart.getFullYear()
+          && date.getMonth() === monthStart.getMonth();
+      });
+      return {
+        key: `${monthStart.getFullYear()}-${monthStart.getMonth() + 1}`,
+        label: (lang === 'en' ? MONTH_LABELS_EN : MONTH_LABELS_ZH)[monthStart.getMonth()],
+        yearLabel: monthStart.getMonth() === 0 ? `'${String(monthStart.getFullYear()).slice(-2)}` : null,
+        isCurrent: offset === 0,
+        races: monthRaces,
+      };
+    });
+  }, [lang, upcomingRaces]);
 
   const raceTargets = useMemo(() => {
     return RACE_TARGETS.map((target) => {
@@ -664,9 +603,14 @@ const Races = memo(function Races() {
   }, [runs]);
 
   const heroLabel = nextRace ? `${Math.max(0, Number(nextRace.countdownDays || 0))}` : null;
-  const heroFocus = nextRace
-    ? extractRaceFocusLabelSafe({ ...nextRace, location: getLocalizedRaceLocation(nextRace, lang) }, t)
-    : null;
+  const heroForecast = useMemo(() => {
+    const vdot = estimateCurrentVdot(runs).representativeVdot;
+    if (!nextRace || !(vdot > 0) || !(Number(nextRace.distanceKm) > 0)) return null;
+    const minutes = predictRaceTimeCalibrated(vdot, Math.round(Number(nextRace.distanceKm) * 1000), runs);
+    if (!(minutes > 0)) return null;
+    const penalty = resolveRaceIntel(nextRace).predictionPenaltyPct || 0;
+    return formatDuration(Math.round(minutes * 60 * (1 + penalty / 100)));
+  }, [runs, nextRace]);
   const heroSummary = buildHeroSummarySafe(nextRace, monthlyVolumeChange, t, lang);
   const displayName = resolveProfileDisplayName(profile, t('profile.default_name'), email);
   const initials = resolveProfileInitial(profile, t('profile.default_name'), email);
@@ -684,16 +628,17 @@ const Races = memo(function Races() {
   }, [navigate]);
 
   const handleAddToPlan = useCallback((race) => {
-    addCatalogRace(race);
-  // addCatalogRace only uses state setters (stable refs); omitting it is intentional
-  }, []);
+    const planned = findPlannedRace(race, upcomingRaces);
+    if (planned) openEditModal(planned);
+    else addCatalogRace(race);
+  }, [upcomingRaces]);
 
   const handleImageError = useCallback((e, race) => {
     e.target.onerror = null;
-    e.target.src = race.heroImage || race.image || race.visual?.image || DISCOVERY_VISUALS[0].image;
+    e.currentTarget.style.visibility = 'hidden';
     setOfficialDiscoveryImages((prev) => {
       const next = { ...prev };
-      delete next[race.id];
+      next[race.id] = '';
       return next;
     });
     invalidateRaceImageCache(race);
@@ -805,56 +750,177 @@ const Races = memo(function Races() {
           <div className="runner-shell-canvas">
             <div className="race-center-content">
 
-              {/* Hero — countdown + training summary */}
-              <section className="race-center-hero">
-                <img
-                  className="race-center-hero-image"
-                  src="/images/races/dashboard-hero.webp"
-                  alt={t('races.stitch_hero_image_alt')}
-                  width="1600"
-                  height="900"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                />
-                <div className="race-center-hero-overlay" />
-                <div className="race-center-hero-body">
-                  <h1 className={nextRace ? undefined : 'race-center-hero-title--empty'}>
+              {/* Season board — countdown + race plan */}
+              <div className="race-center-v2-top">
+                <section className="race-center-hero race-center-v2-hero">
+                  <img
+                    className="race-center-hero-image"
+                    src="/images/races/race-plan-dawn-v3.webp"
+                    alt={t('races.stitch_hero_image_alt')}
+                    width="1774"
+                    height="887"
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                  <div className="race-center-hero-overlay" />
+                  <div className="race-center-hero-body race-center-v2-hero-body">
                     {nextRace ? (
                       <>
-                        <span>{heroLabel}</span>
-                        <span className="race-center-hero-accent">{t('races.stitch_days_to')}</span>
-                        <span>{heroFocus}</span>
+                        <span className="race-center-v2-hero-tag">
+                          {t('races.v2_next_race')} · {t(`races.status_${(nextRace.registrationStatus || 'INTERESTED').toLowerCase()}`)}
+                        </span>
+                        <h1 className="race-center-v2-countdown">
+                          <strong>{heroLabel}</strong>
+                          <span className="race-center-v2-countdown-copy">
+                            <span className="race-center-hero-accent">{t('races.stitch_days_to')}</span>
+                            <span className="race-center-v2-countdown-name">{getLocalizedRaceLabel(nextRace, lang)}</span>
+                          </span>
+                        </h1>
+                        <div className="race-center-v2-hero-meta">
+                          <span>{formatRaceDate(nextRace.eventDate, lang, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          <span>{formatDistanceLabelSafe(Number(nextRace.distanceKm || 0), t, lang)} · {Number(nextRace.distanceKm).toFixed(1)} km</span>
+                          {nextRace.goalTimeSeconds ? <span>{t('races.v2_goal')} <strong>{formatDuration(nextRace.goalTimeSeconds)}</strong></span> : null}
+                          {heroForecast ? <span>{t('races.v2_forecast')} <strong>{heroForecast}</strong></span> : null}
+                        </div>
                       </>
                     ) : (
-                      <span>{t('races.stitch_hero_empty_title')}</span>
+                      <h1 className="race-center-hero-title--empty"><span>{t('races.stitch_hero_empty_title')}</span></h1>
                     )}
-                  </h1>
+                    <p className={nextRace ? 'sr-only' : undefined}>{heroSummary}</p>
+                    <div className="race-center-hero-actions">
+                      <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')} aria-label={t('races.stitch_view_training_plan')}>
+                        {t('races.stitch_view_training_plan')}
+                      </button>
+                      <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())} aria-label={nextRace ? t('races.stitch_race_details') : t('races.add_button')}>
+                        {nextRace ? t('races.stitch_race_details') : t('races.add_button')}
+                      </button>
+                    </div>
+                  </div>
+                </section>
 
-                  <p>{heroSummary}</p>
-
-                  <div className="race-center-hero-actions">
-                    <button type="button" className="race-center-primary-btn" onClick={() => navigate('/schedule')} aria-label={t('races.stitch_view_training_plan')}>
-                      {t('races.stitch_view_training_plan')}
-                    </button>
-                    <button type="button" className="race-center-secondary-btn" onClick={() => (nextRace ? openEditModal(nextRace) : openCreateModal())} aria-label={nextRace ? t('races.stitch_race_details') : t('races.add_button')}>
-                      {nextRace ? t('races.stitch_race_details') : t('races.add_button')}
+                <section id="race-center-calendar" className="race-center-section race-center-calendar race-center-v2-plan">
+                  <div className="race-center-section-head">
+                    <div>
+                      <h2>{t('races.v2_plan_title')}</h2>
+                      <p className="race-center-section-subtitle">{t('races.v2_plan_count', { count: upcomingRaces.length })}</p>
+                    </div>
+                    <button type="button" className="race-center-inline-link" onClick={openCreateModal} aria-label={t('races.add_button')}>
+                      + {t('races.add_button')}
                     </button>
                   </div>
+                  <div className="race-center-agenda">
+                    {selectedCalendar.length === 0 ? (
+                      <div className="race-center-agenda-empty">
+                        <span className="race-center-agenda-empty-text">{t('races.agenda_empty')}</span>
+                      </div>
+                    ) : (
+                      selectedCalendar.map((race, index) => (
+                        <AgendaRow
+                          key={race.id || race.name}
+                          race={race}
+                          lang={lang}
+                          t={t}
+                          onEdit={openEditModal}
+                          onRemove={handleDeleteRace}
+                          isNext={index === 0}
+                        />
+                      ))
+                    )}
+                  </div>
+                </section>
+              </div>
+
+              {/* Season at a glance — next 12 months */}
+              <section className="race-center-section race-center-v2-season" aria-labelledby="race-center-season-title">
+                <div className="race-center-section-head">
+                  <div>
+                    <h2 id="race-center-season-title">{t('races.v2_season_title')}</h2>
+                    <p className="race-center-section-subtitle">{t('races.v2_season_subtitle')}</p>
+                  </div>
+                </div>
+                <ol className="race-center-v2-season-strip">
+                  {seasonMonths.map((month) => (
+                    <li key={month.key} className={`race-center-v2-season-month${month.isCurrent ? ' is-current' : ''}`}>
+                      <span className="race-center-v2-season-label">
+                        {month.label}
+                        {month.yearLabel ? <small>{month.yearLabel}</small> : null}
+                      </span>
+                      {month.races.map((race) => {
+                        const statusKey = (race.registrationStatus || 'INTERESTED').toLowerCase();
+                        return (
+                          <button
+                            key={race.id || race.name}
+                            type="button"
+                            className={`race-center-v2-season-race is-${statusKey}`}
+                            onClick={() => openEditModal(race)}
+                            title={getLocalizedRaceLabel(race, lang)}
+                            aria-label={`${getLocalizedRaceLabel(race, lang)} · ${formatRaceDate(race.eventDate, lang)} · ${t(`races.status_${statusKey}`)}`}
+                          >
+                            <strong>{getLocalizedRaceLabel(race, lang).replace(/\s+Marathon$|(?:全程)?马拉松$/i, '')}</strong>
+                            <span>{formatRaceDate(race.eventDate, lang, { day: 'numeric' })} · {formatDistanceLabelSafe(Number(race.distanceKm || 0), t, lang)}</span>
+                          </button>
+                        );
+                      })}
+                    </li>
+                  ))}
+                </ol>
+                <div className="race-center-v2-season-legend">
+                  <span className="is-registered">{t('races.status_registered')}</span>
+                  <span className="is-applied">{t('races.status_applied')} / {t('races.status_waitlist')}</span>
+                  <span className="is-interested">{t('races.status_interested')}</span>
                 </div>
               </section>
 
-              {/* Discovery section — editorial hero + 2-col grid */}
-              <section className="race-center-section race-center-discovery">
+              {/* Personal bests — scoreboard data tiles, no photos */}
+              <section className="race-center-section race-center-pb-section race-center-v2-pbs">
+                <div className="race-center-section-divider" aria-hidden="true" />
+                <div className="race-center-section-head">
+                  <div>
+                    <h2>{t('races.stitch_personal_bests')}</h2>
+                    <p className="race-center-section-subtitle">{t('races.pb_subtitle')}</p>
+                  </div>
+                  <span className="race-center-section-verified">{t('races.stitch_verified_data')}</span>
+                </div>
+
+                <div className="race-center-pb-grid">
+                  {raceTargets.map((target) => (
+                    <article key={target.key} className={`race-center-pb-card${target.key === 'marathon' ? ' race-center-pb-card--featured' : ''}`}>
+                      <div className="race-center-v2-pb-head">
+                        <span className="race-center-pb-distance">{t('races.v2_pb_label', { distance: target.key === 'half' ? t('races.filter_dist_half') : target.label })}</span>
+                        <span className="race-center-v2-pb-source">{t('races.v2_pb_source')}</span>
+                      </div>
+                      <strong className="race-center-pb-time">
+                        {target.best ? formatDuration(target.best.timeSeconds) : '--'}
+                      </strong>
+                      <p className="race-center-pb-race-meta">
+                        {target.best
+                          ? `${target.best.runName} · ${formatRaceDate(target.best.date, lang, { month: 'short', year: 'numeric' })}`
+                          : t('races.stitch_pb_empty_meta')}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              {/* Discovery section — compact race cards */}
+              <section className="race-center-section race-center-discovery race-center-v2-discovery">
                 <div className="race-center-section-head race-center-section-head--split">
                   <div>
                     <h2>{t('races.stitch_discovery_title')}</h2>
                     <p className="race-center-section-subtitle">{t('races.discovery_subtitle')}</p>
                   </div>
+                  <div className="race-center-v2-discovery-meta">
+                    <select className="race-center-v2-country-select" value={selectedCountry} onChange={(event) => handleCountryChip(event.target.value)} aria-label={t('races.map_aria')}>
+                      {countryFilterOptions.map((country) => <option key={country.key} value={country.key}>{country.label}</option>)}
+                    </select>
+                    <span>{t('races.v2_race_count', { count: discoveryCards.length })}</span>
+                  </div>
                 </div>
 
-                {/* Search bar */}
+                <div className="race-center-v2-discovery-controls">
                 <div className="race-center-discovery-toolbar">
+                  <AppIcon name="search" className="race-center-v2-search-icon" />
                   <input
                     type="text"
                     value={catalogQuery}
@@ -866,48 +932,8 @@ const Races = memo(function Races() {
 
                 {/* Pinned filter strip */}
                 <div className="race-center-filter-strip" role="group" aria-label={t('races.filter_strip_label')}>
-                  {/* Country chips */}
-                  <div className="race-center-filter-group">
-                    <div
-                      ref={countryStripRef}
-                      className={`race-center-country-strip${isCountryStripExpanded ? ' is-expanded' : ' is-collapsed'}`}
-                      style={countryStripStyle}
-                    >
-                      {countryFilterOptions.map((country, index) => (
-                        <button
-                          key={country.key}
-                          ref={(node) => {
-                            countryChipRefs.current[index] = node;
-                          }}
-                          type="button"
-                          className={`race-center-country-chip${selectedCountry === country.key ? ' is-active' : ''}`}
-                          onClick={() => handleCountryChip(country.key)}
-                          aria-label={country.label}
-                          aria-pressed={selectedCountry === country.key}
-                        >
-                          {country.label}
-                        </button>
-                      ))}
-                    </div>
-                    {shouldShowCountryToggle ? (
-                      <button
-                        type="button"
-                        className="race-center-country-toggle"
-                        onClick={() => setIsCountryStripExpanded((current) => !current)}
-                        aria-expanded={isCountryStripExpanded}
-                        aria-label={getCountryToggleLabel(isCountryStripExpanded, t)}
-                      >
-                        <span>{getCountryToggleLabel(isCountryStripExpanded, t)}</span>
-                        <AppIcon
-                          name={isCountryStripExpanded ? 'expand_less' : 'expand_more'}
-                          className="runner-dashboard-side-link-icon"
-                        />
-                      </button>
-                    ) : null}
-                  </div>
-
                   {/* Distance chips */}
-                  <div className="race-center-filter-row" role="group" aria-label={t('races.filter_distance_label')}>
+                  <div className="race-center-filter-row race-center-filter-row--distance" role="group" aria-label={t('races.filter_distance_label')}>
                     {DISTANCE_FILTERS.map((dist) => (
                       <button
                         key={dist.key}
@@ -917,13 +943,13 @@ const Races = memo(function Races() {
                         aria-pressed={selectedDistance === dist.key}
                         aria-label={t(dist.labelKey)}
                       >
-                        {t(dist.labelKey)}
+                        {t(dist.key === 'all' ? 'races.v2_filter_all' : dist.labelKey)}
                       </button>
                     ))}
                   </div>
 
                   {/* Month chips */}
-                  <div className="race-center-filter-row" role="group" aria-label={t('races.filter_month_label')}>
+                  <div className="race-center-filter-row race-center-filter-row--months" role="group" aria-label={t('races.filter_month_label')}>
                     <button
                       type="button"
                       className={`race-center-filter-chip${selectedMonth === 0 ? ' is-active' : ''}`}
@@ -931,7 +957,7 @@ const Races = memo(function Races() {
                       aria-pressed={selectedMonth === 0}
                       aria-label={t('races.filter_month_all')}
                     >
-                      {t('races.filter_month_all')}
+                      {t('races.v2_any_month')}
                     </button>
                     {availableMonths.map((month) => {
                       const label = lang === 'en' ? MONTH_LABELS_EN[month - 1] : MONTH_LABELS_ZH[month - 1];
@@ -950,29 +976,14 @@ const Races = memo(function Races() {
                     })}
                   </div>
                 </div>
+                </div>
 
-                {/* Editorial grid: featured hero + 2-col grid */}
-                {!featuredCard ? (
+                {visibleCards.length === 0 ? (
                   <div className="race-center-calendar-empty">
                     <strong>{t('races.catalog_empty')}</strong>
                     <p>{discoverySummary}</p>
                   </div>
                 ) : (
-                  <>
-                    {/* Featured hero card */}
-                    <FeaturedRaceCard
-                      race={featuredCard}
-                      officialDiscoveryImages={officialDiscoveryImages}
-                      lang={lang}
-                      t={t}
-                      onNavigate={handleNavigateToRace}
-                      onAddToPlan={handleAddToPlan}
-                      onImageError={handleImageError}
-                      onImageLoad={handleImageLoad}
-                    />
-
-                    {/* 2-col grid of remaining cards */}
-                    {visibleCards.length > 0 && (
                       <div className="race-center-discovery-grid">
                         {visibleCards.map((race) => (
                           <RaceCard
@@ -985,11 +996,10 @@ const Races = memo(function Races() {
                             onAddToPlan={handleAddToPlan}
                             onImageError={handleImageError}
                             onImageLoad={handleImageLoad}
+                            plannedRace={findPlannedRace(race, upcomingRaces)}
                           />
                         ))}
                       </div>
-                    )}
-                  </>
                 )}
 
                 {/* Load more */}
@@ -1007,66 +1017,6 @@ const Races = memo(function Races() {
                 )}
               </section>
 
-              {/* Saved calendar — agenda list, no photos */}
-              <section id="race-center-calendar" className="race-center-section race-center-calendar">
-                <div className="race-center-section-divider" aria-hidden="true" />
-                <div className="race-center-section-head">
-                  <div>
-                    <h2>{t('races.stitch_selected_calendar')}</h2>
-                    <p className="race-center-section-subtitle">{t('races.calendar_subtitle')}</p>
-                  </div>
-                  <button type="button" className="race-center-inline-link" onClick={openCreateModal} aria-label={t('races.add_button')}>
-                    {t('races.add_button')}
-                  </button>
-                </div>
-
-                <div className="race-center-agenda">
-                  {selectedCalendar.length === 0 ? (
-                    <div className="race-center-agenda-empty">
-                      <span className="race-center-agenda-empty-text">{t('races.agenda_empty')}</span>
-                    </div>
-                  ) : (
-                    selectedCalendar.map((race) => (
-                      <AgendaRow
-                        key={race.id || race.name}
-                        race={race}
-                        lang={lang}
-                        t={t}
-                        onEdit={openEditModal}
-                        onAddCatalog={addCatalogRace}
-                      />
-                    ))
-                  )}
-                </div>
-              </section>
-
-              {/* Personal bests — scoreboard data tiles, no photos */}
-              <section className="race-center-section race-center-pb-section">
-                <div className="race-center-section-divider" aria-hidden="true" />
-                <div className="race-center-section-head">
-                  <div>
-                    <h2>{t('races.stitch_personal_bests')}</h2>
-                    <p className="race-center-section-subtitle">{t('races.pb_subtitle')}</p>
-                  </div>
-                  <span className="race-center-section-verified">{t('races.stitch_verified_data')}</span>
-                </div>
-
-                <div className="race-center-pb-grid">
-                  {raceTargets.map((target) => (
-                    <article key={target.key} className={`race-center-pb-card${target.key === 'marathon' ? ' race-center-pb-card--featured' : ''}`}>
-                      <span className="race-center-pb-distance">{target.label}</span>
-                      <strong className="race-center-pb-time">
-                        {target.best ? formatDuration(target.best.timeSeconds) : '--'}
-                      </strong>
-                      <p className="race-center-pb-race-meta">
-                        {target.best
-                          ? `${target.best.runName} · ${formatRaceDate(target.best.date, lang, { month: 'short', year: 'numeric' })}`
-                          : t('races.stitch_pb_empty_meta')}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </section>
 
               <footer className="runner-shell-footer runner-dashboard-footer">
                 <FooterNavLinks />
@@ -1079,59 +1029,114 @@ const Races = memo(function Races() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingRace ? t('races.edit_title') : t('races.add_title')}
-        icon={<AppIcon name="flag" className="race-center-modal-header-icon" />}
-        shellClassName="race-center-modal-shell"
-        cardClassName="race-center-modal-card"
+        title={editingRace ? (form.name.trim() || t('races.edit_title')) : t('races.add_title')}
+        headerContent={<>
+          <span className="race-form-v2-mark" aria-hidden="true"><AppIcon name="flag" /></span>
+          <span className="race-form-v2-sub">{editingRace ? t('races.edit_title') : t('races.form_v2_add_sub')}</span>
+        </>}
+        closeLabel={t('profile.close')}
+        shellClassName="race-center-modal-shell race-form-v2-shell"
+        cardClassName="race-center-modal-card race-form-v2-card"
       >
-        <form className="race-center-modal-form" onSubmit={handleSaveRace}>
-          <label className="modal-label">{t('races.form_name')}</label>
-          <input type="text" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+        <form className="race-center-modal-form race-form-v2" onSubmit={handleSaveRace} aria-busy={isSaving}>
+          <div className="race-form-v2-body">
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-race">
+              <h4 id="race-form-v2-race">{t('races.form_v2_section_race')}</h4>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_name')} <em aria-hidden="true">*</em></span>
+                <input className="is-strong" type="text" data-modal-initial-focus value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+              </label>
+              <div className="race-form-v2-pair">
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_date')} <em aria-hidden="true">*</em></span>
+                  <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
+                </label>
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_location')}</span>
+                  <input type="text" value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
+                </label>
+              </div>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_org')}</span>
+                <input type="text" value={form.organization} onChange={(event) => setForm((prev) => ({ ...prev, organization: event.target.value }))} />
+              </label>
+              {daysToGo != null && daysToGo > 0 ? <span className="race-form-v2-countdown">{t('races.form_v2_days_to_go', { count: daysToGo })}</span> : null}
+            </section>
 
-          <label className="modal-label">{t('races.form_org')}</label>
-          <input type="text" value={form.organization} onChange={(event) => setForm((prev) => ({ ...prev, organization: event.target.value }))} />
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-distance">
+              <h4 id="race-form-v2-distance">{t('races.form_v2_section_distance')}</h4>
+              <div className="race-form-v2-chips" role="group" aria-label={t('races.form_distance')}>
+                {DISTANCE_PRESETS.map((preset) => (
+                  <button key={preset.key} type="button" className={matchedPreset?.key === preset.key ? 'is-active' : ''} aria-pressed={matchedPreset?.key === preset.key}
+                    onClick={() => setForm((prev) => ({ ...prev, distanceKm: String(preset.km) }))}>
+                    {t(`races.form_v2_preset_${preset.key}`)}
+                  </button>
+                ))}
+                <button type="button" className={!matchedPreset ? 'is-active' : ''} aria-pressed={!matchedPreset}
+                  onClick={() => setForm((prev) => ({ ...prev, distanceKm: matchedPreset ? '' : prev.distanceKm }))}>
+                  {t('races.form_v2_preset_custom')}
+                </button>
+              </div>
+              <div className="race-form-v2-pair">
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_distance')}</span>
+                  <span className="race-form-v2-suffix">
+                    <input type="number" min="1" step="any" value={form.distanceKm} inputMode="decimal" onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
+                    <em aria-hidden="true">km</em>
+                  </span>
+                </label>
+                <label className={`race-form-v2-field${goal.valid ? '' : ' is-invalid'}`}>
+                  <span>{t('races.form_v2_goal')}</span>
+                  <input type="text" inputMode="text" placeholder="3:25:00" value={goalText} aria-invalid={!goal.valid} aria-describedby="race-form-v2-pace"
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setGoalText(next);
+                      setForm((prev) => ({ ...prev, goalTimeSeconds: parseGoalInput(next).seconds }));
+                    }} />
+                </label>
+              </div>
+              <p id="race-form-v2-pace" className={`race-form-v2-hint${goal.valid ? '' : ' is-error'}`}>
+                {!goal.valid ? t('races.form_v2_goal_invalid') : paceSeconds
+                  ? t('races.form_v2_pace', { pace: formatPaceSeconds(paceSeconds) }) : t('races.form_v2_goal_hint')}
+              </p>
+            </section>
 
-          <label className="modal-label">{t('races.form_location')}</label>
-          <input type="text" value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_date')}</label>
-          <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
-
-          <label className="modal-label">{t('races.form_distance')}</label>
-          <input type="number" min="1" step="any" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_status')}</label>
-          <select value={form.registrationStatus} onChange={(event) => setForm((prev) => ({ ...prev, registrationStatus: event.target.value }))}>
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{t(`races.status_${status.toLowerCase()}`)}</option>
-            ))}
-          </select>
-
-          <label className="modal-label">{t('races.form_goal')}</label>
-          <input type="number" min="1" step="1" value={form.goalTimeSeconds} onChange={(event) => setForm((prev) => ({ ...prev, goalTimeSeconds: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_notes')}</label>
-          <input type="text" value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-
-          <label className="shoe-checkbox-label">
-            <input
-              type="checkbox"
-              checked={form.nyrrNinePlusOneEligible}
-              onChange={(event) => setForm((prev) => ({ ...prev, nyrrNinePlusOneEligible: event.target.checked }))}
-            />
-            <span>{t('races.form_nyrr')}</span>
-          </label>
-
-          {editingRace ? (
-            <button type="button" className="btn-secondary race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)} aria-label={t('races.delete_button')}>
-              {t('races.delete_button')}
-            </button>
-          ) : null}
-
-          {formStatus ? <div className="modal-status">{formStatus}</div> : null}
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setModalOpen(false)} aria-label={t('profile.cancel')}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button" aria-label={editingRace ? t('races.save_button') : t('races.create_button')}>{editingRace ? t('races.save_button') : t('races.create_button')}</button>
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-status">
+              <h4 id="race-form-v2-status">{t('races.form_status')}</h4>
+              <div className="race-form-v2-status" role="radiogroup" aria-labelledby="race-form-v2-status">
+                {STATUS_OPTIONS.map((status) => (
+                  <label key={status}>
+                    <input type="radio" name="race-registration-status" value={status} checked={form.registrationStatus === status}
+                      onChange={() => setForm((prev) => ({ ...prev, registrationStatus: status }))} />
+                    <span className={`race-form-v2-status-option is-${status.toLowerCase()}${form.registrationStatus === status ? ' is-active' : ''}`}>
+                      <i aria-hidden="true" />{t(`races.status_${status.toLowerCase()}`)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <label className="race-form-v2-switch-row">
+                <span className="race-form-v2-switch-copy">
+                  <strong>{t('races.form_nyrr')}</strong>
+                  <span id="race-form-v2-nyrr-hint">{t('races.form_v2_nyrr_hint')}</span>
+                </span>
+                <input type="checkbox" role="switch" aria-label={t('races.form_nyrr')} aria-describedby="race-form-v2-nyrr-hint" checked={form.nyrrNinePlusOneEligible}
+                  onChange={(event) => setForm((prev) => ({ ...prev, nyrrNinePlusOneEligible: event.target.checked }))} />
+                <span className="race-form-v2-switch" aria-hidden="true" />
+              </label>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_notes')}</span>
+                <textarea rows={2} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder={t('races.form_v2_notes_placeholder')} />
+              </label>
+            </section>
+            {formStatus ? <div className="modal-status race-form-v2-status-msg" role="alert">{formStatus}</div> : null}
+          </div>
+          <div className="race-form-v2-footer">
+            {editingRace ? <button type="button" className="race-form-v2-delete race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)} disabled={isSaving}>
+              <AppIcon name="delete" aria-hidden="true" />{t('races.delete_button')}
+            </button> : null}
+            <span className="race-form-v2-spacer" />
+            <button type="button" className="race-form-v2-cancel" onClick={() => setModalOpen(false)}>{t('profile.cancel')}</button>
+            <button type="submit" className="race-form-v2-submit" disabled={!canSubmit}>{editingRace ? t('races.save_button') : t('races.create_button')}</button>
           </div>
         </form>
       </Modal>

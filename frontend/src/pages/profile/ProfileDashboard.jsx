@@ -26,9 +26,11 @@ import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../..
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../../utils/vdot';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { calculateStreaks, getDaysSinceLastRun } from '../../utils/streakUtils';
-import { buildRewardShowcase, RewardGlyph } from '../../utils/rewardBadges';
+import { buildRewardShowcase } from '../../utils/rewardBadges';
+import RewardIllustration from '../../components/RewardIllustration';
 import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
+import ProgressionChart from './ProgressionChart';
 
 const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.webp';
 // Start the largest visible image while the dashboard data is still loading.
@@ -648,7 +650,6 @@ export default function ProfileDashboard() {
   const [comebackGateStatus, setComebackGateStatus] = useState('pending');
   const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
-  const [_activeProgressionPointIndex, setActiveProgressionPointIndex] = useState(-1);
   const [_musclePlan, setMusclePlan] = useState(null);
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
@@ -1054,13 +1055,6 @@ export default function ProfileDashboard() {
     () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang),
     [activeProgressionFrame, lang, dashboardMetricRuns],
   );
-  useEffect(() => {
-    if (progressionAtlas.chartPoints.length === 0) {
-      setActiveProgressionPointIndex(-1);
-      return;
-    }
-    setActiveProgressionPointIndex(progressionAtlas.chartPoints.length - 1);
-  }, [progressionAtlas.chartPoints.length, progressionAtlas.latestPoint?.key]);
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },
@@ -1169,7 +1163,7 @@ export default function ProfileDashboard() {
       </aside>
 
       <main className="runner-shell-main">
-        <header className="runner-shell-topbar runner-dashboard-shell-topbar">
+        <header className="runner-shell-topbar runner-dashboard-shell-topbar profile-dashboard-topbar">
           <div className="runner-shell-topbar-left">
             <RunnerShellTopNav
               navItems={navItems}
@@ -1540,34 +1534,7 @@ export default function ProfileDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="hd-progression-chart-area">
-                    <svg viewBox="0 0 400 120" className="hd-progression-svg" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="hdProgLine" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#ffb4a7" />
-                          <stop offset="100%" stopColor="#f07561" />
-                        </linearGradient>
-                        <linearGradient id="hdProgArea" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgba(240,117,97,0.28)" />
-                          <stop offset="100%" stopColor="rgba(240,117,97,0.02)" />
-                        </linearGradient>
-                      </defs>
-                      {progressionAtlas.chartArea ? (
-                        <path d={progressionAtlas.chartArea} fill="url(#hdProgArea)" />
-                      ) : (
-                        <path d="M0 100 C40 95 80 80 120 75 C160 70 200 55 240 48 C280 40 320 28 360 22 L400 18 L400 120 L0 120Z" fill="url(#hdProgArea)" />
-                      )}
-                      {progressionAtlas.chartLine ? (
-                        <path d={progressionAtlas.chartLine} fill="none" stroke="url(#hdProgLine)" strokeWidth="2.5" strokeLinecap="round" />
-                      ) : (
-                        <path d="M0 100 C40 95 80 80 120 75 C160 70 200 55 240 48 C280 40 320 28 360 22 L400 18" fill="none" stroke="url(#hdProgLine)" strokeWidth="2.5" strokeLinecap="round" />
-                      )}
-                    </svg>
-                    <div className="hd-progression-range">
-                      <span>{progressionAtlas.startLabel}</span>
-                      <span>{progressionAtlas.endLabel}</span>
-                    </div>
-                  </div>
+                  <ProgressionChart key={`${activeProgressionFrame}-${lang}-${unit}`} atlas={progressionAtlas} lang={lang} unit={unit} t={t} />
                 </section>
 
                 {/* 5b. Weekly Digest */}
@@ -1767,7 +1734,7 @@ export default function ProfileDashboard() {
                       <div className="hd-rewards-next">
                         <span className="hd-rewards-next-tag">{t('profile.dashboard_redesign.rewards_next_up')}</span>
                         <div className="hd-rewards-next-icon" aria-hidden="true">
-                          <RewardGlyph icon={rewardNextMilestone.icon} />
+                          <RewardIllustration reward={rewardNextMilestone} />
                         </div>
                         <strong className="hd-rewards-next-title">{rewardNextMilestone.title}</strong>
                         <p className="hd-rewards-next-hint">{rewardNextMilestone.hint || rewardNextMilestone.subtitle}</p>
@@ -1786,7 +1753,7 @@ export default function ProfileDashboard() {
                       {rewardShowcase.earnedRewards.slice(0, 8).map((badge, i) => (
                         <div key={badge.id} className={`hd-rewards-badge${i === 0 ? ' is-latest' : ''}`}>
                           <div className="hd-rewards-badge-icon" aria-hidden="true">
-                            <RewardGlyph icon={badge.icon} />
+                            <RewardIllustration reward={badge} />
                           </div>
                           <div className="hd-rewards-badge-info">
                             <strong>{badge.title}</strong>

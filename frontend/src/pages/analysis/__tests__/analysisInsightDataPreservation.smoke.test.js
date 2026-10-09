@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLoadBalanceZoneKey } from '../loadBalancePresentation.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = readFileSync(path.join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
@@ -65,7 +66,7 @@ const requireSource = (condition, message) => {
 };
 
 requireSource(
-  /\{coachPrimarySession \? \([\s\S]*?coachPrimarySession\.slot[\s\S]*?coachPrimarySession\.title[\s\S]*?coachPrimarySession\.target[\s\S]*?coachPrimarySession\.why/.test(coachBranch),
+  ['slot', 'title', 'target', 'why'].every((field) => new RegExp(`coachPrimarySession\\??\\.${field}`).test(coachBranch)),
   'Coach primary plan must render slot, title, target, and rationale',
 );
 requireSource(
@@ -100,9 +101,9 @@ const requireAccessibleHistory = (branch, route, collection, valueMarkers) => {
 };
 
 requireAccessibleHistory(
-  coachBranch,
+  readFileSync(path.join(here, '../CoachLoadChart.jsx'), 'utf8'),
   'coach',
-  'coachLoadDashboard.chartWindow',
+  'dashboard.chartWindow',
   ['entry.label', 'entry.acute', 'entry.chronic'],
 );
 requireAccessibleHistory(
@@ -136,8 +137,9 @@ const buildLoadBalanceDashboardModel = new Function(
   'clamp',
   'resolveLoadTrendDirection',
   'resolveLoadTrendIcon',
+  'getLoadBalanceZoneKey',
   `return (${loadModelSource});`,
-)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon);
+)(clamp, resolveLoadTrendDirection, resolveLoadTrendIcon, getLoadBalanceZoneKey);
 const t = (key) => key;
 
 for (const historyLength of [7, 13, 19, 24]) {

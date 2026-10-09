@@ -1,0 +1,186 @@
+/* Rewards v2 (design 28b "Season ring"). Load last in app.css. */
+
+body:is(.theme-light, .theme-high-contrast-light) #root .rewards-v2-page { background: #f6f4f1 !important; }
+#root .rewards-v2-page::before,
+#root .rewards-v2-page .runner-shell-canvas::before { content: none !important; }
+body #root .rewards-v2-page .runner-shell-main { background: transparent !important; }
+
+#root .rewards-v2 {
+  --rw-card: #fff;
+  --rw-ink: #1c1917;
+  --rw-muted: #625c56;
+  --rw-faint: #8a837c;
+  --rw-line: rgba(28, 25, 23, 0.07);
+  --rw-accent: #a0392a;
+  --rw-warm: linear-gradient(160deg, #fff7f0 0%, #fbe9df 100%);
+  display: flex !important;
+  flex-direction: column;
+  gap: 20px;
+  color: var(--rw-ink);
+  min-width: 0;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .rewards-v2 {
+  --rw-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --rw-ink: #f8f4ef;
+  --rw-muted: #c0b8ad;
+  --rw-faint: #a69e93;
+  --rw-line: rgba(255, 248, 238, 0.1);
+  --rw-accent: #ffb4a7;
+  --rw-warm: linear-gradient(160deg, rgba(240, 117, 97, 0.16) 0%, rgba(240, 117, 97, 0.08) 100%);
+}
+
+#root .rewards-v2 :is(h1, h2, p, ul, ol) { margin: 0; }
+
+/* Hero */
+#root .rewards-v2-hero {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
+  gap: 32px;
+  align-items: center;
+  padding: 28px 32px;
+  border-radius: 28px;
+  background: var(--rw-card);
+}
+
+#root .rewards-v2-ring { position: relative; width: 220px; height: 220px; }
+#root .rewards-v2-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+#root .rewards-v2-ring circle { fill: none; stroke: var(--rw-line); stroke-width: 10; }
+#root .rewards-v2-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+#root .rewards-v2-ring-center strong { font-family: var(--font-display); font-size: 3.25rem; font-weight: 800; line-height: 1; letter-spacing: -0.05em; }
+#root .rewards-v2-ring-center span { color: var(--rw-faint); font-size: 0.8rem; }
+
+#root .rewards-v2-hero-copy { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#root .rewards-v2-kicker { color: var(--rw-accent); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+#root .rewards-v2-hero-copy h1 {
+  color: var(--rw-ink) !important;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3vw, 2.6rem) !important;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+#root .rewards-v2-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; list-style: none; }
+#root .rewards-v2-legend li { display: flex; align-items: center; gap: 8px; color: var(--rw-muted); font-size: 0.8rem; }
+#root .rewards-v2-legend i { width: 12px; height: 12px; border-radius: 4px; }
+#root .rewards-v2-legend strong { color: var(--rw-ink); font-variant-numeric: tabular-nums; }
+
+#root .rewards-v2-closest { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; align-items: center; padding: 18px 20px; border-radius: 20px; background: var(--rw-warm); }
+#root .rewards-v2-closest-medal { display: grid; width: 76px; height: 76px; place-items: center; }
+#root .rewards-v2-closest-medal svg { width: 100%; height: 100%; }
+#root .rewards-v2-closest-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+#root .rewards-v2-closest-copy > span { color: var(--rw-accent); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .rewards-v2-closest-copy strong { font-size: 1.1rem; }
+#root .rewards-v2-closest-copy p { color: var(--rw-muted); font-size: 0.8rem; line-height: 1.45; }
+#root .rewards-v2-bar { height: 6px; overflow: hidden; border-radius: 3px; background: rgba(160, 57, 42, 0.15); }
+#root .rewards-v2-bar i { display: block; height: 100%; border-radius: 3px; background: var(--rw-accent); }
+
+#root .rewards-v2-closest-copy button {
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a0392a, #e0685a);
+  color: #fff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Tracks */
+#root .rewards-v2-track {
+  --track-color: #a0392a;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding: 18px 26px;
+  border-radius: 22px;
+  background: var(--rw-card);
+}
+
+#root .rewards-v2-track-head { display: flex; flex-direction: column; gap: 6px; }
+
+#root .rewards-v2-track > * { min-width: 0; }
+#root .rewards-v2-track-scroll { overflow-x: auto; padding: 6px 3px 10px; scrollbar-width: thin; scrollbar-color: var(--rw-faint) transparent; }
+#root .rewards-v2-track-help { grid-column: 2; color: var(--rw-muted); font-size: 0.7rem; }
+#root .rewards-v2 :is(button, summary, .rewards-v2-track-scroll):focus-visible { outline: 3px solid var(--rw-accent); outline-offset: 3px; border-radius: 8px; }
+
+#root .rewards-v2-track-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--rw-ink) !important;
+  font-family: var(--font-display);
+  font-size: 1.2rem !important;
+  font-style: italic;
+  font-weight: 800;
+}
+
+#root .rewards-v2-track-head h2 i { width: 10px; height: 10px; border-radius: 3px; background: var(--track-color); }
+#root .rewards-v2-track-head p { color: var(--rw-muted); font-size: 0.8rem; }
+#root .rewards-v2-track-next { color: var(--rw-accent); font-size: 0.75rem; font-weight: 700; }
+
+#root .rewards-v2-ladder {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--steps), minmax(112px, 1fr));
+  min-width: calc(var(--steps) * 112px);
+  align-items: start;
+  padding: 0;
+  list-style: none;
+}
+
+#root .rewards-v2-ladder::before,
+#root .rewards-v2-ladder::after {
+  content: "";
+  position: absolute;
+  top: 38px;
+  left: calc(50% / var(--steps));
+  height: 4px;
+  border-radius: 2px;
+}
+
+#root .rewards-v2-ladder::before { right: calc(50% / var(--steps)); background: var(--rw-line); }
+#root .rewards-v2-ladder::after { width: calc((100% - 100% / var(--steps)) * var(--fill)); background: var(--track-color); }
+
+#root .rewards-v2-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 4px; text-align: center; }
+#root .rewards-v2-step-medal { display: grid; width: 72px; height: 72px; place-items: center; }
+#root .rewards-v2-step-medal svg { display: block; width: 72px; height: 72px; border-radius: 50%; }
+#root .rewards-v2-step.is-current .rewards-v2-step-medal svg { outline: 3px solid var(--rw-accent); outline-offset: 3px; }
+#root .rewards-v2-step.is-locked:not(.is-current) .rewards-v2-step-medal { opacity: 0.5; filter: grayscale(1); }
+#root .rewards-v2-step strong { color: var(--rw-ink); font-size: 0.78rem; line-height: 1.25; }
+#root .rewards-v2-step.is-locked:not(.is-current) strong { color: var(--rw-faint); }
+#root .rewards-v2-step-meta { color: var(--rw-faint); font-size: 0.7rem; font-variant-numeric: tabular-nums; }
+#root .rewards-v2-step.is-current .rewards-v2-step-meta { color: var(--rw-accent); font-weight: 800; }
+#root .rewards-v2-step details { width: 100%; }
+#root .rewards-v2-step summary { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 124px; padding: 4px; cursor: pointer; list-style: none; }
+#root .rewards-v2-step summary::-webkit-details-marker { display: none; }
+#root .rewards-v2-step details p { padding: 10px 4px 0; color: var(--rw-muted); font-size: 0.75rem; line-height: 1.5; text-wrap: pretty; }
+
+@media (max-width: 1180px) {
+  #root .rewards-v2-hero { grid-template-columns: 180px minmax(0, 1fr); }
+  #root .rewards-v2-ring { width: 180px; height: 180px; }
+  #root .rewards-v2-closest { grid-column: 1 / -1; }
+  #root .rewards-v2-track { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  #root .rewards-v2-track-help { grid-column: 1; }
+}
+
+@media (max-width: 720px) {
+  #root .rewards-v2-hero { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 22px; text-align: center; }
+  #root .rewards-v2-legend { justify-content: center; }
+  #root .rewards-v2-closest { text-align: left; }
+  #root .rewards-v2-ladder { grid-template-columns: repeat(var(--steps), 104px); min-width: calc(var(--steps) * 104px); padding-bottom: 6px; }
+  #root .rewards-v2-ladder::before, #root .rewards-v2-ladder::after { display: none; }
+  #root .rewards-v2-track { padding: 18px; }
+  #root .rewards-v2-hero-copy h1 { font-size: 1.9rem !important; }
+  #root .rewards-v2-closest { width: 100%; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  #root .rewards-v2-closest-medal { width: 56px; height: 56px; }
+}

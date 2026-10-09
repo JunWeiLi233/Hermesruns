@@ -9,6 +9,7 @@ import HermesLogo from '../../components/HermesLogo';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import PageSkeleton from '../../components/PageSkeleton';
 import { buildHeatmapRenderPointPool, isValidGpsCoordinate } from './heatmapRenderPointPool';
+import { buildHeatmapViewportPointPool } from './heatmapViewportPointPool';
 import {
   HEATMAP_CACHE_STORE_NAME,
   HEATMAP_CACHE_MAX_AGE_MS,
@@ -26,15 +27,15 @@ import 'leaflet/dist/leaflet.css';
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const HEATMAP_REQUEST_TIMEOUT_MS = 120000;
-// The server returns one bounded, strided render pool (it draws ~12k dots, so
-// more fidelity is invisible); this replaced paging the full multi-million-
-// point history (~75MB JSON observed in production) through the main thread.
+// A bounded global sample provides the first frame. Visible areas are then
+// refined at the current zoom without transferring the full GPS history.
 const HEATMAP_PREVIEW_RENDER_POINT_LIMIT = 3500;
 const HEATMAP_FULL_RENDER_POINT_LIMIT = 12000;
 const HEATMAP_SAMPLE_LIMIT = 12000; // align with FULL_RENDER + backend DEFAULT (was 25000)
 const HEATMAP_FULL_DRAW_CHUNK_SIZE = 640;
 const HEATMAP_CANVAS_PADDING = 0.25;
 const HEATMAP_CANVAS_PIXEL_RATIO_CAP = 1.5;
+const HEATMAP_VIEWPORT_DEBOUNCE_MS = 220;
 const SPEED_BANDS = [
   { key: 'slow', min: 0, color: '#ff375f' },
   { key: 'mid', min: 0.34, color: '#ff5a47' },
@@ -60,13 +61,14 @@ function getSpeedBand(speedRatio) {
   return SPEED_BANDS[0];
 }
 
-function getGpsDotStyle(speedRatio) {
+function getGpsDotStyle(speedRatio, visitCount = 1) {
   const speedBand = getSpeedBand(speedRatio);
+  const visits = Number.isFinite(visitCount) ? Math.max(1, visitCount) : 1;
   return {
     color: speedBand.color,
     radius: 1.65,
     fillColor: speedBand.color,
-    fillOpacity: 0.92,
+    fillOpacity: clamp(0.5 + Math.log2(visits + 1) * 0.1, 0.6, 0.92),
     opacity: 0.38,
     weight: 0.48,
     interactive: false,
@@ -80,7 +82,8 @@ function normalizeRawHeatPoint(point) {
       activityId: Number(point[0]),
       latitude: Number(point[1]),
       longitude: Number(point[2]),
-      speedRatio: Number(point[3]),
+      speedRatio: Number(point.length > 4 ? point[4] : point[3]),
+      visitCount: point.length > 5 ? Number(point[5]) : 0,
     };
   }
 
@@ -231,12 +234,12 @@ export default function Heatmap() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const zoomAnimationActiveRef = useRef(false);
-  const queuedZoomStepsRef = useRef(0);
   const boundsRef = useRef(null);
   const dotOverlayRef = useRef(null);
   const latestPointsRef = useRef([]);
   const latestPreviewRenderPointsRef = useRef([]);
   const latestFullRenderPointsRef = useRef([]);
+  const latestViewportRenderPointsRef = useRef(null);
   const hasRenderableDataRef = useRef(false);
   const lastCacheKeyRef = useRef(null);
 
@@ -381,6 +384,7 @@ export default function Heatmap() {
 
   useEffect(() => {
     latestPointsRef.current = points;
+    latestViewportRenderPointsRef.current = null;
     // One full-array scan per update: the preview pool is sampled from the
     // capped full pool (a <=12000-element pass) instead of re-scanning every
     // GPS point a second time.
@@ -393,6 +397,7 @@ export default function Heatmap() {
     if (!overlay?.syncRouteDots) return undefined;
 
     const renderMode = heatmap?.diagnostics?.complete === false ? 'preview' : 'full';
+    dotOverlayRef.current?.refreshViewport?.();
     const frameId = window.requestAnimationFrame(() => overlay.syncRouteDots(renderMode));
     return () => window.cancelAnimationFrame(frameId);
   }, [heatmap?.diagnostics?.complete, points]);
@@ -422,7 +427,7 @@ export default function Heatmap() {
           wheelDebounceTime: 24,
           wheelPxPerZoomLevel: 96,
           zoomAnimation: true,
-          zoomAnimationThreshold: 1,
+          zoomAnimationThreshold: 4,
           fadeAnimation: false,
           markerZoomAnimation: false,
           preferCanvas: true,
@@ -437,6 +442,15 @@ export default function Heatmap() {
         // black canvas with dots only. Both layers therefore load same-origin
         // through the backend tile proxy, which fetches Esri's Dark Gray
         // canvas server-side and caches it.
+        const HeatmapTileLayer = L.TileLayer.extend({
+          _pruneTiles() {
+            // Leaflet only retains children two levels away by default. A
+            // native wheel packet can span more levels; preserve the painted
+            // basemap until its replacement loads, then allow normal pruning.
+            if (this.isLoading() || this._map?._animatingZoom) return;
+            L.TileLayer.prototype._pruneTiles.call(this);
+          },
+        });
         const darkTileOptions = {
           maxZoom: 20,
           maxNativeZoom: 16,
@@ -450,18 +464,18 @@ export default function Heatmap() {
           attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS',
         };
         const backendBase = getBackendBaseUrl();
-        const baseTileLayer = L.tileLayer(
+        const baseTileLayer = new HeatmapTileLayer(
           `${backendBase}/api/maps/tiles/esri-dark/{z}/{y}/{x}.png`,
           darkTileOptions,
         );
-        const labelsTileLayer = L.tileLayer(
+        const labelsTileLayer = new HeatmapTileLayer(
           `${backendBase}/api/maps/tiles/esri-dark-labels/{z}/{y}/{x}.png`,
           darkTileOptions,
         );
         let fallbackBaseTileLayer = null;
         const activateOsmFallback = () => {
           if (fallbackBaseTileLayer || disposed) return;
-          fallbackBaseTileLayer = L.tileLayer(
+          fallbackBaseTileLayer = new HeatmapTileLayer(
             `${backendBase}/api/maps/tiles/{z}/{x}/{y}.png`,
             {
               ...darkTileOptions,
@@ -514,6 +528,18 @@ export default function Heatmap() {
         const canvasSize = { width: 0, height: 0, pixelRatio: 0 };
         const bufferCanvas = document.createElement('canvas');
         const bufferContext = bufferCanvas.getContext('2d');
+
+        const zoomBy = (delta) => {
+          // Match native wheel zoom: input during an animation is not saved
+          // for a second zoom after the user's gesture has finished.
+          if (disposed || zoomAnimationActiveRef.current) return;
+          const zoomStep = Math.sign(delta);
+          if (zoomStep === 0) return;
+          const targetZoom = clamp(map.getZoom() + zoomStep, map.getMinZoom(), map.getMaxZoom());
+          if (targetZoom === map.getZoom()) return;
+          zoomAnimationActiveRef.current = true;
+          map.setZoom(targetZoom, { animate: true });
+        };
 
         const cancelFullDraw = () => {
           activeFullDrawToken += 1;
@@ -569,7 +595,9 @@ export default function Heatmap() {
         };
 
         const paintRouteDots = (renderMode = 'full', onPaintComplete) => {
-          if (disposed) return;
+          // Keep the painted frame attached to Leaflet's transform until the
+          // camera settles, including resize and data refresh requests.
+          if (disposed || isZoomingMap) return;
 
           const zoom = map.getZoom();
           const center = map.getCenter();
@@ -608,22 +636,37 @@ export default function Heatmap() {
           const east = paddedBounds.getEast();
           const north = paddedBounds.getNorth();
           const south = paddedBounds.getSouth();
-          const renderPoints = renderMode === 'preview'
+          const bootstrapPoints = renderMode === 'preview'
             ? latestPreviewRenderPointsRef.current
             : latestFullRenderPointsRef.current;
+          const viewport = latestViewportRenderPointsRef.current;
+          // Refined GPS replaces the coarse sample inside its covered area;
+          // the global pool still supplies coverage while panning elsewhere.
+          const renderPoints = viewport ? [
+            ...bootstrapPoints.filter((point) => point.latitude < viewport.south || point.latitude > viewport.north
+              || point.longitude < viewport.west || point.longitude > viewport.east),
+            ...viewport.points,
+          ] : bootstrapPoints;
 
           cancelFullDraw();
           // Project every point NOW, before any drawing. The chunked full draw
           // spans multiple idle callbacks; if the view changes mid-render (zoom
           // snap, pan) a live latLngToLayerPoint call would mix two view states
           // into one frame and smear dots away from their true positions.
-          const projectedPoints = [];
+          const projectedCandidates = [];
           for (const point of renderPoints) {
             if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
             if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
             const projected = map.latLngToLayerPoint([point.latitude, point.longitude]).subtract(canvasLayerOrigin);
-            projectedPoints.push({ x: projected.x, y: projected.y, style: getGpsDotStyle(point.visualSpeedRatio) });
+            const world = map.project([point.latitude, point.longitude], zoom);
+            projectedCandidates.push({
+              x: projected.x, y: projected.y, worldX: world.x, worldY: world.y,
+              activityId: point.activityId, visitCount: point.visitCount, visualSpeedRatio: point.visualSpeedRatio,
+            });
           }
+          const projectedPoints = buildHeatmapViewportPointPool(projectedCandidates,
+            renderMode === 'preview' ? HEATMAP_PREVIEW_RENDER_POINT_LIMIT : HEATMAP_FULL_RENDER_POINT_LIMIT)
+            .map((point) => ({ ...point, style: getGpsDotStyle(point.visualSpeedRatio, point.densityVisits) }));
           if (renderMode !== 'full' || projectedPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
             commitCanvasLayout();
             dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -695,6 +738,7 @@ export default function Heatmap() {
         };
 
         const scheduleRouteDots = (renderMode = 'full', onPaintComplete) => {
+          if (disposed || isZoomingMap) return;
           if (drawFrameId !== null) {
             window.cancelAnimationFrame(drawFrameId);
           }
@@ -704,13 +748,70 @@ export default function Heatmap() {
           });
         };
 
+        let viewportController = null;
+        let viewportTimerId = null;
+        let viewportRequestId = 0;
+        const viewportCache = new Map();
+        const cancelViewportRequest = () => {
+          viewportRequestId += 1;
+          viewportController?.abort();
+          viewportController = null;
+          if (viewportTimerId !== null) window.clearTimeout(viewportTimerId);
+          viewportTimerId = null;
+        };
+        const loadViewport = async () => {
+          viewportTimerId = null;
+          if (disposed || isZoomingMap) return;
+          const view = map.getBounds().pad(HEATMAP_CANVAS_PADDING);
+          const area = {
+            south: Math.max(-85.051129, view.getSouth()), west: Math.max(-180, view.getWest()),
+            north: Math.min(85.051129, view.getNorth()), east: Math.min(180, view.getEast()),
+          };
+          if (area.south >= area.north || area.west >= area.east) return;
+          const params = new URLSearchParams(Object.fromEntries(
+            Object.entries(area).map(([key, value]) => [key, value.toFixed(6)]),
+          ));
+          params.set('zoom', String(clamp(Math.round(map.getZoom()), 0, 20)));
+          const key = params.toString();
+          const cached = viewportCache.get(key);
+          if (cached) {
+            latestViewportRenderPointsRef.current = cached;
+            scheduleRouteDots('full');
+            return;
+          }
+          const controller = new AbortController();
+          viewportController = controller;
+          const requestId = ++viewportRequestId;
+          try {
+            const payload = await apiJson(`/api/profile/heatmap/viewport?${key}`, { signal: controller.signal });
+            if (disposed || requestId !== viewportRequestId || !Array.isArray(payload?.points)) return;
+            const refined = { ...area, points: normalizePointSpeedRatios(payload.points) };
+            viewportCache.set(key, refined);
+            if (viewportCache.size > 2) viewportCache.delete(viewportCache.keys().next().value);
+            latestViewportRenderPointsRef.current = refined;
+            scheduleRouteDots('full');
+          } catch {
+            // Keep the existing map usable if refinement is temporarily unavailable.
+          } finally {
+            if (viewportController === controller) viewportController = null;
+          }
+        };
+        const scheduleViewportRequest = () => {
+          cancelViewportRequest();
+          if (disposed || isZoomingMap) return;
+          viewportTimerId = window.setTimeout(loadViewport, HEATMAP_VIEWPORT_DEBOUNCE_MS);
+        };
+
         const finishZoomRender = () => {
           if (disposed) return;
           isZoomingMap = false;
           zoomAnimationActiveRef.current = false;
           map.getContainer().classList.remove('is-zooming');
           zoomSettleTimeoutId = null;
-          scheduleRouteDots('full');
+          // Rebase at the completed camera so the next user-requested zoom
+          // starts with a canvas that covers the current viewport.
+          paintRouteDots('full');
+          scheduleViewportRequest();
         };
 
         const animateRouteDotsZoom = (event) => {
@@ -746,22 +847,14 @@ export default function Heatmap() {
             window.clearTimeout(zoomSettleTimeoutId);
           }
           zoomSettleTimeoutId = null;
-
-          const queuedZoomStep = Math.sign(queuedZoomStepsRef.current);
-          if (queuedZoomStep === 0) {
-            finishZoomRender();
-            return;
-          }
-          queuedZoomStepsRef.current -= queuedZoomStep;
-          const nextZoom = clamp(map.getZoom() + queuedZoomStep, map.getMinZoom(), map.getMaxZoom());
-          if (nextZoom === map.getZoom()) {
-            finishZoomRender();
-            return;
-          }
-          window.requestAnimationFrame(() => {
-            if (disposed) return;
-            map.setZoom(nextZoom, { animate: true });
-          });
+          // Leaflet ignores wheel zoom during its transition. Discard any
+          // trailing packet still waiting for its native debounce timer too,
+          // so it cannot start an extra zoom when this animation finishes.
+          const wheelHandler = map.scrollWheelZoom;
+          window.clearTimeout(wheelHandler._timer);
+          wheelHandler._delta = 0;
+          wheelHandler._startTime = null;
+          finishZoomRender();
         };
 
         const scheduleMoveEnd = () => {
@@ -774,7 +867,17 @@ export default function Heatmap() {
 
         dotOverlayRef.current = {
           syncRouteDots: scheduleRouteDots,
+          zoomBy,
+          refreshViewport: () => {
+            viewportCache.clear();
+            latestViewportRenderPointsRef.current = null;
+            scheduleViewportRequest();
+          },
           destroy: () => {
+            window.clearTimeout(map.scrollWheelZoom._timer);
+            cancelViewportRequest();
+            viewportCache.clear();
+            latestViewportRenderPointsRef.current = null;
             if (drawFrameId !== null) {
               window.cancelAnimationFrame(drawFrameId);
               drawFrameId = null;
@@ -786,15 +889,17 @@ export default function Heatmap() {
             cancelFullDraw();
             zoomAnimationActiveRef.current = false;
             map.getContainer().classList.remove('is-zooming');
-            queuedZoomStepsRef.current = 0;
           },
         };
         map.on('zoomstart', scheduleZoomStart);
         map.on('zoomanim', animateRouteDotsZoom);
         map.on('zoomend', scheduleZoomEnd);
+        map.on('movestart', cancelViewportRequest);
         map.on('moveend', scheduleMoveEnd);
-        map.on('resize', () => scheduleRouteDots('preview'));
+        map.on('moveend', scheduleViewportRequest);
+        map.on('resize', () => { scheduleRouteDots('preview'); scheduleViewportRequest(); });
         scheduleRouteDots('preview');
+        scheduleViewportRequest();
 
         mapInstanceRef.current = map;
         setMapMountFailed(false);
@@ -846,22 +951,7 @@ export default function Heatmap() {
   }), [lang, t]);
 
   const zoomMap = (delta) => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    const zoomStep = Math.sign(delta);
-    if (zoomStep === 0) return;
-    if (zoomAnimationActiveRef.current) {
-      queuedZoomStepsRef.current = clamp(
-        queuedZoomStepsRef.current + zoomStep,
-        -3,
-        3,
-      );
-      return;
-    }
-    const targetZoom = clamp(map.getZoom() + zoomStep, map.getMinZoom(), map.getMaxZoom());
-    if (targetZoom === map.getZoom()) return;
-    zoomAnimationActiveRef.current = true;
-    map.setZoom(targetZoom, { animate: true });
+    dotOverlayRef.current?.zoomBy(delta);
   };
 
   const recenterMap = () => {

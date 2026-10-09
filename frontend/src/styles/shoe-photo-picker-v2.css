@@ -1,0 +1,462 @@
+/* Shoe image picker v2 (design 4a): header with current photo, tabbed sources,
+   full-width result grid, staged selection committed from a sticky footer.
+   Load after shoes-atelier-redesign.css and before the final theme fixes. */
+
+#root .shoe-photo-modal-shell { padding: 16px; }
+
+#root .shoe-photo-modal-card.shoe-photo-picker-card {
+  --picker-ink: var(--shoe-atelier-ink, #1c1917);
+  --picker-muted: #625c56;
+  --picker-faint: #8a837c;
+  --picker-line: rgba(28, 25, 23, 0.08);
+  --picker-fill: rgba(28, 25, 23, 0.045);
+  --picker-tile: #fbf8f4;
+  --picker-accent: #a0392a;
+  --picker-accent-soft: rgba(160, 57, 42, 0.09);
+  --picker-surface: #fff;
+  --picker-footer: #fdfcfb;
+  display: flex;
+  flex-direction: column;
+  width: min(880px, calc(100vw - 32px));
+  height: min(780px, calc(100dvh - 32px));
+  max-height: none;
+  border-radius: 24px;
+  background: var(--picker-surface);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28);
+}
+
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-modal-card.shoe-photo-picker-card {
+  --picker-ink: #f6f1eb;
+  --picker-muted: #c0b8ad;
+  --picker-faint: #a69e93;
+  --picker-line: rgba(255, 248, 238, 0.12);
+  --picker-fill: rgba(255, 255, 255, 0.06);
+  --picker-tile: rgba(255, 255, 255, 0.04);
+  --picker-accent: #f07561;
+  --picker-accent-soft: rgba(240, 117, 97, 0.14);
+  --picker-surface: var(--profile-night-solid, #1e1b18);
+  --picker-footer: rgba(0, 0, 0, 0.12);
+  background: var(--picker-surface);
+}
+
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-picker-mode.is-auto { color: #76dc94; }
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-picker-mode.is-manual { color: #ffd18a; }
+body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-picker-drop { border-color: rgba(255, 248, 238, 0.24); }
+
+/* Header: thumb · kicker / shoe name · close */
+#root .shoe-photo-picker-card .modal-header {
+  flex: 0 0 auto;
+  padding: 22px 24px 16px;
+}
+
+#root .shoe-photo-picker-card .modal-header-main {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  row-gap: 4px;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  margin-right: 44px;
+}
+
+#root .shoe-photo-picker-card .shoe-photo-picker-thumb {
+  grid-row: 1 / span 2;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--picker-tile);
+}
+
+#root .shoe-photo-picker-card .shoe-photo-picker-thumb :is(img, .shoe-img-placeholder) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#root .shoe-photo-picker-card .shoe-photo-picker-kicker {
+  align-self: end;
+  color: var(--picker-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+#root .shoe-photo-picker-card .modal-header h3 {
+  align-self: start;
+  overflow: hidden;
+  color: var(--picker-ink);
+  font-size: clamp(1.35rem, 2.4vw, 1.65rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .shoe-photo-picker-card .modal-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--picker-fill);
+  color: var(--picker-ink);
+}
+
+#root .shoe-photo-picker-card .modal-form {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Layout */
+#root .shoe-photo-picker {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  color: var(--picker-ink);
+}
+
+#root .shoe-photo-picker-tabbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--picker-line);
+}
+
+#root .shoe-photo-picker-tabs { display: flex; gap: 24px; }
+
+#root .shoe-photo-picker-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--picker-faint);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+#root .shoe-photo-picker-tab svg { width: 16px; height: 16px; }
+
+#root .shoe-photo-picker-tab.is-active {
+  color: var(--picker-ink);
+  box-shadow: inset 0 -2px 0 var(--picker-accent);
+}
+
+#root .shoe-photo-picker-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#root .shoe-photo-picker-mode::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 9px;
+  background: currentColor;
+}
+
+#root .shoe-photo-picker-mode.is-auto { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .shoe-photo-picker-mode.is-manual { background: rgba(255, 149, 0, 0.14); color: #a15c00; }
+
+#root .shoe-photo-picker-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#root .shoe-photo-picker-pane { display: flex; flex-direction: column; gap: 16px; }
+
+/* Search / link input row */
+#root .shoe-photo-picker-search { display: flex; gap: 10px; margin: 0; }
+
+#root .shoe-photo-picker-input {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--picker-fill);
+  color: var(--picker-muted);
+}
+
+#root .shoe-photo-picker-input svg { flex: 0 0 18px; width: 18px; height: 18px; }
+
+#root .shoe-photo-picker-input input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--picker-ink);
+  font: inherit;
+  font-size: 0.94rem;
+  outline: none;
+  box-shadow: none;
+}
+
+#root .shoe-photo-picker-input:focus-within { box-shadow: 0 0 0 2px var(--picker-accent-soft); }
+
+#root :is(.shoe-photo-picker-dark-btn, .shoe-photo-picker-primary-btn, .shoe-photo-picker-ghost-btn) {
+  display: inline-grid;
+  place-items: center;
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#root .shoe-photo-picker-dark-btn { background: var(--picker-ink); color: var(--picker-surface); }
+
+#root :is(.shoe-photo-picker-dark-btn, .shoe-photo-picker-primary-btn):disabled {
+  background: var(--picker-fill);
+  color: var(--picker-faint);
+  cursor: not-allowed;
+}
+
+#root .shoe-photo-picker-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--picker-muted);
+  font-size: 0.8rem;
+}
+
+#root .shoe-photo-picker-hint { color: var(--picker-muted); font-size: 0.8rem; }
+
+/* Result grid */
+#root .shoe-photo-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+}
+
+#root .shoe-photo-picker-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: var(--picker-tile);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--picker-line);
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+#root .shoe-photo-picker-cell:hover { box-shadow: inset 0 0 0 1px var(--picker-line), 0 6px 18px rgba(28, 25, 23, 0.08); }
+#root .shoe-photo-picker-cell:focus-visible { outline: 2px solid var(--picker-accent); outline-offset: 2px; }
+#root .shoe-photo-picker-cell.is-selected { box-shadow: inset 0 0 0 2.5px var(--picker-accent); }
+
+#root .shoe-photo-picker-cell :is(.shoe-photo-picker-cell-img, img, .shoe-img-placeholder) {
+  width: 100%;
+  height: 100%;
+  padding: 10%;
+  box-sizing: border-box;
+  object-fit: contain;
+}
+
+#root .shoe-photo-picker-cell.is-loading {
+  cursor: default;
+  background: linear-gradient(90deg, var(--picker-fill) 0%, var(--picker-tile) 50%, var(--picker-fill) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+#root .shoe-photo-picker-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--picker-accent);
+  color: #fff;
+}
+
+#root .shoe-photo-picker-check svg { width: 15px; height: 15px; stroke-width: 2.4; }
+
+#root .shoe-photo-picker-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  border-radius: 16px;
+  background: var(--picker-tile);
+  text-align: center;
+}
+
+#root .shoe-photo-picker-empty strong { max-width: 46ch; font-size: 0.94rem; line-height: 1.45; }
+#root .shoe-photo-picker-empty span { color: var(--picker-muted); font-size: 0.8rem; }
+
+/* Upload */
+#root .shoe-photo-picker-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 360px;
+  padding: 24px;
+  border: 1.5px dashed rgba(28, 25, 23, 0.18);
+  border-radius: 18px;
+  background: var(--picker-tile);
+  text-align: center;
+  cursor: pointer;
+}
+
+#root .shoe-photo-picker-drop:hover,
+#root .shoe-photo-picker-drop:focus-within { border-color: var(--picker-accent); }
+#root .shoe-photo-picker-drop.is-busy { opacity: 0.7; cursor: progress; }
+#root .shoe-photo-picker-drop .shoe-photo-studio-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  clip: auto;
+  opacity: 0;
+  cursor: inherit;
+}
+
+#root .shoe-photo-picker-drop-mark {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--picker-accent-soft);
+  color: var(--picker-accent);
+}
+
+#root .shoe-photo-picker-drop-mark svg { width: 26px; height: 26px; }
+#root .shoe-photo-picker-drop strong { font-size: 1.05rem; }
+#root .shoe-photo-picker-drop span:last-child { max-width: 42ch; color: var(--picker-muted); font-size: 0.8rem; line-height: 1.5; }
+
+#root .shoe-photo-picker-upload-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+#root .shoe-photo-picker-upload-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 8%;
+  box-sizing: border-box;
+  border-radius: 18px;
+  background: var(--picker-tile);
+  object-fit: contain;
+}
+
+#root .shoe-photo-picker-upload-copy { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+#root .shoe-photo-picker-upload-copy strong { overflow-wrap: anywhere; font-size: 0.94rem; }
+#root .shoe-photo-picker-upload-copy span { color: var(--picker-muted); font-size: 0.8rem; line-height: 1.5; }
+
+#root .shoe-photo-picker-text-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--picker-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#root .shoe-photo-picker-text-btn.is-muted { color: var(--picker-muted); }
+#root .shoe-photo-picker-text-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+#root .shoe-photo-picker-card :is(.shoe-photo-picker-tab, .shoe-photo-picker-text-btn, .shoe-photo-picker-dark-btn, .shoe-photo-picker-ghost-btn, .shoe-photo-picker-primary-btn):focus-visible { outline: 2px solid var(--picker-accent); outline-offset: 3px; }
+#root .shoe-photo-picker-status { margin-top: 16px; color: var(--picker-muted); font-size: 0.8rem; line-height: 1.5; }
+
+/* Footer */
+#root .shoe-photo-picker-footer {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--picker-line);
+  background: var(--picker-footer);
+}
+
+#root .shoe-photo-picker-selection { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; }
+
+#root .shoe-photo-picker-selection-thumb {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--picker-tile);
+}
+
+#root .shoe-photo-picker-selection-thumb :is(img, .shoe-img-placeholder) { width: 100%; height: 100%; object-fit: contain; }
+#root .shoe-photo-picker-selection-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#root .shoe-photo-picker-selection-copy strong { font-size: 0.85rem; }
+#root .shoe-photo-picker-selection-copy span,
+#root .shoe-photo-picker-selection-empty { color: var(--picker-muted); font-size: 0.78rem; }
+
+#root .shoe-photo-picker-footer :is(.shoe-photo-picker-ghost-btn, .shoe-photo-picker-primary-btn) { height: 40px; border-radius: 999px; }
+#root .shoe-photo-picker-ghost-btn { border: 1px solid var(--picker-line); background: transparent; color: var(--picker-ink); }
+#root .shoe-photo-picker-primary-btn { background: linear-gradient(135deg, #a0392a, #e0685a); color: #fff; }
+
+@media (max-width: 640px) {
+  #root .shoe-photo-modal-shell { padding: 8px; }
+  #root .shoe-photo-modal-card.shoe-photo-picker-card { width: calc(100vw - 16px); height: calc(100dvh - 16px); border-radius: 20px; }
+  #root .shoe-photo-picker-card .modal-header { padding: 18px 16px 14px; }
+  #root .shoe-photo-picker-card .modal-header-main { grid-template-columns: 48px minmax(0, 1fr); column-gap: 12px; }
+  #root .shoe-photo-picker-card .shoe-photo-picker-thumb { width: 48px; height: 48px; }
+  #root .shoe-photo-picker-card .modal-header h3 { font-size: 1.2rem; }
+  #root .shoe-photo-picker-tabbar { padding-inline: 16px; }
+  #root .shoe-photo-picker-body { padding: 18px 16px; }
+  #root .shoe-photo-picker-footer { padding: 14px 16px; }
+  #root .shoe-photo-picker-tabs { gap: 16px; }
+  #root .shoe-photo-picker-mode { display: none; }
+  #root .shoe-photo-picker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .shoe-photo-picker-upload-preview { grid-template-columns: minmax(0, 1fr); }
+  #root .shoe-photo-picker-footer { flex-wrap: wrap; }
+  #root .shoe-photo-picker-selection { flex-basis: 100%; }
+  #root .shoe-photo-picker-footer :is(.shoe-photo-picker-ghost-btn, .shoe-photo-picker-primary-btn) { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .shoe-photo-picker-cell.is-loading { animation: none; }
+}

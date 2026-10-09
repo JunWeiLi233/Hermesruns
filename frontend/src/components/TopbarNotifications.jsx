@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useInRouterContext, useNavigate } from 'react-router';
 import AppIcon from './AppIcon';
 import { useI18n } from '../contexts/I18nContext';
 
@@ -14,23 +15,40 @@ function buildNotificationCopy(t) {
     subtitle: t(key + '.subtitle'),
     actionLabel: t(key + '.open_runs'),
     deleteLabel: t(key + '.dismiss'),
+    dismissAllLabel: t(key + '.dismiss_all'),
     emptyTitle: t(key + '.empty_title'),
     emptyBody: t(key + '.empty_body'),
     items: [
-      { id: 'training-load-tip', icon: 'load_balance_runner', copy: 'load' },
-      { id: 'route-history-tip', icon: 'map', copy: 'routes' },
-      { id: 'connections-tip', icon: 'sync', copy: 'connections' },
+      { id: 'training-load-tip', icon: 'load_balance_runner', copy: 'load', path: '/analysis' },
+      { id: 'route-history-tip', icon: 'map', copy: 'routes', path: '/heatmap' },
+      { id: 'connections-tip', icon: 'sync', copy: 'connections', path: '/settings' },
     ].map((item) => ({
       ...item,
-      eyebrow: t(key + '.' + item.copy + '_label'),
       title: t(key + '.' + item.copy + '_title'),
       body: t(key + '.' + item.copy + '_body'),
+      cta: t(key + '.' + item.copy + '_cta'),
     })),
   };
 }
 
-export default function TopbarNotifications({ onOpenRuns }) {
+function persistDeleted(ids) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(NOTIFICATION_DELETED_STORAGE_KEY, JSON.stringify(ids));
+  } catch { /* Dismiss still works when browser storage is unavailable. */ }
+}
+
+// Only mounted inside a router so the component keeps working in isolation (tests, storybook).
+function RouterNavigateBridge({ onReady }) {
+  const navigate = useNavigate();
+  useEffect(() => { onReady(() => navigate); }, [navigate, onReady]);
+  return null;
+}
+
+export default function TopbarNotifications({ onOpenRuns, onOpenTip }) {
   const { t, lang } = useI18n();
+  const inRouter = useInRouterContext();
+  const [routerNavigate, setRouterNavigate] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(() => {
     if (typeof window === 'undefined') return true;
@@ -66,14 +84,23 @@ export default function TopbarNotifications({ onOpenRuns }) {
     setDeletedIds((currentIds) => {
       if (currentIds.includes(itemId)) return currentIds;
       const nextIds = [...currentIds, itemId];
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.setItem(NOTIFICATION_DELETED_STORAGE_KEY, JSON.stringify(nextIds));
-        } catch { /* Dismiss still works when browser storage is unavailable. */ }
-      }
+      persistDeleted(nextIds);
       return nextIds;
     });
     closeRef.current?.focus();
+  }
+
+  function handleDismissAll() {
+    const nextIds = copy.items.map((item) => item.id);
+    setDeletedIds(nextIds);
+    persistDeleted(nextIds);
+    closeRef.current?.focus();
+  }
+
+  function handleOpenTip(item) {
+    setIsOpen(false);
+    if (onOpenTip) onOpenTip(item.path, item.id);
+    else if (routerNavigate) routerNavigate(item.path);
   }
 
   useEffect(() => {
@@ -112,6 +139,8 @@ export default function TopbarNotifications({ onOpenRuns }) {
     };
   }, [isOpen]);
 
+  const showBadge = hasUnread && visibleItems.length > 0;
+
   return (
     <div
       ref={rootRef}
@@ -122,6 +151,7 @@ export default function TopbarNotifications({ onOpenRuns }) {
         }
       }}
     >
+      {inRouter ? <RouterNavigateBridge onReady={setRouterNavigate} /> : null}
       <button
         ref={triggerRef}
         type="button"
@@ -133,49 +163,57 @@ export default function TopbarNotifications({ onOpenRuns }) {
         onClick={() => setIsOpen((value) => !value)}
       >
         <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-        {hasUnread && visibleItems.length > 0 ? <span className="runner-shell-notification-dot" aria-hidden="true" /> : null}
+        {showBadge ? (
+          <span className="runner-shell-notification-dot tips-v2-badge" aria-hidden="true">{visibleItems.length}</span>
+        ) : null}
       </button>
 
       {isOpen ? (
-        <div id={panelId} className={lang === 'zh-CN' ? 'runner-shell-notification-popover is-zh' : 'runner-shell-notification-popover'} role="dialog" aria-label={copy.title} aria-describedby={`${panelId}-description`}>
-          <div className="runner-shell-notification-head">
-            <div className="runner-shell-notification-heading">
-              <span className="runner-shell-notification-heading-icon" aria-hidden="true">
-                <AppIcon name="notifications" className="runner-dashboard-side-link-icon" />
-              </span>
-              <div className="runner-shell-notification-head-copy">
-                <div className="runner-shell-notification-title-row">
-                  <strong>{copy.title}</strong>
-                  {visibleItems.length > 0 ? <span className="runner-shell-notification-count" aria-hidden="true">{visibleItems.length}</span> : null}
-                </div>
-                <p id={`${panelId}-description`}>{copy.subtitle}</p>
-              </div>
+        <div
+          id={panelId}
+          className={`runner-shell-notification-popover tips-v2${lang === 'zh-CN' ? ' is-zh' : ''}`}
+          role="dialog"
+          aria-label={copy.title}
+          aria-describedby={`${panelId}-description`}
+        >
+          <div className="tips-v2-head">
+            <div className="tips-v2-head-copy">
+              <strong>{copy.title}</strong>
+              {visibleItems.length > 0 ? <span className="tips-v2-count">{visibleItems.length}</span> : null}
+              <p id={`${panelId}-description`} className="tips-v2-sr">{copy.subtitle}</p>
             </div>
-            <button
-              ref={closeRef}
-              type="button"
-              className="runner-shell-notification-close"
-              aria-label={copy.closeLabel}
-              onClick={closePopover}
-            >
-              <AppIcon name="close" className="runner-dashboard-side-link-icon" />
-            </button>
+            <div className="tips-v2-head-actions">
+              {visibleItems.length > 1 ? (
+                <button type="button" className="tips-v2-text-btn" onClick={handleDismissAll}>{copy.dismissAllLabel}</button>
+              ) : null}
+              <button
+                ref={closeRef}
+                type="button"
+                className="tips-v2-icon-btn"
+                aria-label={copy.closeLabel}
+                onClick={closePopover}
+              >
+                <AppIcon name="close" className="runner-dashboard-side-link-icon" />
+              </button>
+            </div>
           </div>
 
-          <div className="runner-shell-notification-list">
+          <div className="tips-v2-list">
             {visibleItems.length > 0 ? visibleItems.map((item) => (
-              <article key={item.id} className="runner-shell-notification-card" data-kind={item.copy}>
-                <span className="runner-shell-notification-card-icon" aria-hidden="true">
-                  <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
-                </span>
-                <div className="runner-shell-notification-card-copy">
-                  <div className="runner-shell-notification-eyebrow">{item.eyebrow}</div>
-                  <strong>{item.title}</strong>
-                  <p>{item.body}</p>
-                </div>
+              <article key={item.id} className="tips-v2-row" data-kind={item.copy}>
+                <button type="button" className="tips-v2-row-main" onClick={() => handleOpenTip(item)}>
+                  <span className="tips-v2-icon" aria-hidden="true">
+                    <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
+                  </span>
+                  <span className="tips-v2-copy">
+                    <strong>{item.title}</strong>
+                    <span>{item.body}</span>
+                    <em>{item.cta} ›</em>
+                  </span>
+                </button>
                 <button
                   type="button"
-                  className="runner-shell-notification-delete"
+                  className="tips-v2-icon-btn tips-v2-dismiss"
                   aria-label={`${copy.deleteLabel}: ${item.title}`}
                   onClick={() => handleDeleteMessage(item.id)}
                 >
@@ -183,29 +221,30 @@ export default function TopbarNotifications({ onOpenRuns }) {
                 </button>
               </article>
             )) : (
-              <div className="runner-shell-notification-empty" role="status">
-                <span className="runner-shell-notification-empty-icon" aria-hidden="true">
+              <div className="tips-v2-empty" role="status">
+                <span className="tips-v2-empty-icon" aria-hidden="true">
                   <AppIcon name="check_circle" className="runner-dashboard-side-link-icon" />
                 </span>
-                <div>
-                  <strong>{copy.emptyTitle}</strong>
-                  <p>{copy.emptyBody}</p>
-                </div>
+                <strong>{copy.emptyTitle}</strong>
+                <p>{copy.emptyBody}</p>
               </div>
             )}
           </div>
 
-          <button
-            type="button"
-            className="runner-shell-notification-link"
-            onClick={() => {
-              setIsOpen(false);
-              onOpenRuns?.();
-            }}
-          >
-            {copy.actionLabel}
-            <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
-          </button>
+          <div className="tips-v2-foot">
+            <span>{copy.subtitle}</span>
+            <button
+              type="button"
+              className="tips-v2-text-btn is-strong"
+              onClick={() => {
+                setIsOpen(false);
+                onOpenRuns?.();
+              }}
+            >
+              {copy.actionLabel}
+              <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

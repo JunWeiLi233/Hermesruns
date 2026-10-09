@@ -26,7 +26,7 @@ for (const [key, zhVal, enVal] of [
   assert.ok(!/[?\uFFFD]/.test(pick(zh, key)));
 }
 
-assert.match(analysisJsx, /t\('analysis\.stitch_injury_low'\)/);
+assert.match(analysisJsx, /t\(`analysis\.stitch_injury_\$\{injury\.level \|\| 'low'\}`\)/);
 assert.match(analysisJsx, /t\(`analysis\.vdot_trend_insight_copy_\$\{vdotTrend\.direction\}`\)/);
 
 for (const dir of ['improving', 'declining', 'maintaining']) {
@@ -36,7 +36,7 @@ for (const dir of ['improving', 'declining', 'maintaining']) {
   assert.ok(!/insight copy/i.test(pick(en, key)));
 }
 
-assert.match(analysisJsx, /name="load_balance_runner"/);
+assert.match(analysisJsx, /navigate\('\/analysis\/load-balance'\)/);
 assert.doesNotMatch(analysisJsx, /name="directions_run"/);
 
 console.log('analysisInjuryLabelsAndVdotInsight.smoke.test.js OK');

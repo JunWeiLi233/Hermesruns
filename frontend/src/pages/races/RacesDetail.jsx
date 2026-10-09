@@ -22,6 +22,7 @@ import worldRaceCatalog from '../../data/worldRaceCatalog';
 import { getCachedRaceImage, resolveRaceImage, invalidateRaceImageCache, rememberLoadedRaceImage } from '../../utils/raceImage';
 import { deriveRaceMapTrust } from '../../utils/raceDetailMapTrust';
 import { shouldFetchRaceElevationProfile } from '../../utils/raceDetailRequestPolicy';
+import { buildElevationScale, buildElevationDistanceTicks } from './raceElevationGeometry';
 
 const DEFAULT_HERO_IMAGE = '/images/races/race-detail-default-hero.webp';
 const EVENT_DAY_OVERRIDES = {
@@ -116,7 +117,7 @@ function buildElevationDistanceMarks(distanceKm, sampleCount) {
   }
   const lastDistance = sampleMarks[sampleMarks.length - 1];
   if (Math.abs(totalKm - lastDistance) > 0.001) {
-    sampleMarks.push(Number(totalKm.toFixed(3)));
+    sampleMarks.push(totalKm);
   }
 
   if (sampleMarks.length === sampleCount) {
@@ -124,7 +125,7 @@ function buildElevationDistanceMarks(distanceKm, sampleCount) {
   }
 
   const step = totalKm / Math.max(sampleCount - 1, 1);
-  return Array.from({ length: sampleCount }, (_, index) => Number((step * index).toFixed(3)));
+  return Array.from({ length: sampleCount }, (_, index) => index === sampleCount - 1 ? totalKm : Number((step * index).toFixed(3)));
 }
 
 function formatElevationMarkerLabel(km, raceTotalKm, isFinish, isMajor) {
@@ -205,21 +206,22 @@ function buildElevationGraph(profile, distanceKm) {
     : 42.195;
 
   const width = Math.max(960, Math.round(raceTotalKm * 28) + 68);
-  const height = 260;
-  const baseY = 214;
-  const leftPad = 26;
-  const rightPad = 20;
-  const topPad = 24;
+  const height = 240;
+  const baseY = 224;
+  const leftPad = 10;
+  const rightPad = 10;
+  const topPad = 32;
   const drawableWidth = width - leftPad - rightPad;
-  const minMeters = Math.min(...profile.map((point) => Number(point.meters || 0)));
-  const maxMeters = Math.max(...profile.map((point) => Number(point.meters || 0)), 1);
-  const rangeMeters = Math.max(8, maxMeters - minMeters);
+  const values = profile.map((point) => Number(point.meters || 0));
+  const maxMeters = Math.max(...values);
+  const scale = buildElevationScale(values);
+  const rangeMeters = scale.maximum - scale.minimum;
   const distanceMarks = buildElevationDistanceMarks(raceTotalKm, profile.length);
 
   const points = profile.map((point, index) => {
     const km = distanceMarks[index] ?? ((raceTotalKm * index) / Math.max(profile.length - 1, 1));
     const x = leftPad + (drawableWidth * km) / Math.max(raceTotalKm, 0.1);
-    const normalized = (Number(point.meters || 0) - minMeters) / rangeMeters;
+    const normalized = (Number(point.meters || 0) - scale.minimum) / rangeMeters;
     const y = baseY - normalized * (baseY - topPad);
     return {
       ...point,
@@ -235,6 +237,9 @@ function buildElevationGraph(profile, distanceKm) {
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${baseY} L ${points[0].x.toFixed(1)} ${baseY} Z`;
 
   const markers = buildElevationMarkers(points, raceTotalKm);
+  const guideLines = scale.ticks.map((meters) => ({ meters, y: baseY - ((meters - scale.minimum) / rangeMeters) * (baseY - topPad) }));
+  const distanceTicks = buildElevationDistanceTicks(raceTotalKm).map((tick) => ({ ...tick, x: leftPad + drawableWidth * tick.km / raceTotalKm }));
+  const peakPoint = points.reduce((peak, point) => point.meters > peak.meters ? point : peak, points[0]);
 
   return {
     width,
@@ -244,6 +249,10 @@ function buildElevationGraph(profile, distanceKm) {
     linePath,
     points,
     markers,
+    guideLines,
+    distanceTicks,
+    peakPoint,
+    raceTotalKm,
     peakMeters: maxMeters,
   };
 }
@@ -725,6 +734,24 @@ export default function RacesDetail() {
     setActiveElevationPointIndex(nearestIndex);
   }
 
+  function handleElevationKeyDown(event) {
+    if (!elevationGraph) return;
+    const lastIndex = elevationGraph.points.length - 1;
+    const step = Math.max(1, Math.round(lastIndex / elevationGraph.raceTotalKm));
+    const currentIndex = activeElevationPointIndex ?? 0;
+    const nextIndex = {
+      ArrowRight: Math.min(lastIndex, currentIndex + step),
+      ArrowUp: Math.min(lastIndex, currentIndex + step),
+      ArrowLeft: Math.max(0, currentIndex - step),
+      ArrowDown: Math.max(0, currentIndex - step),
+      Home: 0,
+      End: lastIndex,
+    }[event.key];
+    if (nextIndex == null) return;
+    event.preventDefault();
+    setActiveElevationPointIndex(nextIndex);
+  }
+
   const coachInsight = useMemo(() => buildCoachInsight(t, race, raceMeta, prediction), [prediction, race, raceMeta, t]);
   const heroLabels = useMemo(() => buildRaceHeroLabels(race), [race]);
   const topnavTitle = useMemo(() => buildRaceTopnavTitle(heroLabels, race), [heroLabels, race]);
@@ -1007,6 +1034,7 @@ export default function RacesDetail() {
         }).addTo(map);
 
         polyline = L.polyline(routeMapPoints, {
+          className: 'race-detail-course-route-line',
           color: '#f07561',
           weight: 6,
           opacity: 0.98,
@@ -1143,7 +1171,7 @@ export default function RacesDetail() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page races-dashboard-page race-detail-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page races-dashboard-page race-detail-page race-detail-v2-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -1202,94 +1230,114 @@ export default function RacesDetail() {
         </header>
 
         <div className="runner-shell-canvas">
-          <div className="race-detail-layout">
-            <section className="race-detail-hero">
-              <img
-                className="race-detail-hero-image"
-                src={heroImage}
-                alt={race?.name || t('races.detail_nav')}
-                width="1600"
-                height="900"
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                onLoad={(event) => {
-                  rememberLoadedRaceImage(race, event.currentTarget?.currentSrc || event.currentTarget?.src || '');
-                }}
-                onError={(e) => {
-                  e.target.onerror = null;
-                  const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;
-                  if (e.target.src !== fallback) {
-                    e.target.src = fallback;
-                  }
-                  setResolvedHeroImage('');
-                  invalidateRaceImageCache(race);
-                }}
-              />
-              <div className="race-detail-hero-overlay" />
-              <div className="race-detail-hero-body">
-                <div className="race-detail-hero-main">
-                  <span className="race-detail-pill">{t('races.detail_badge')}</span>
-                  <div className="race-detail-hero-kicker">
-                    <span>{race?.location}</span>
-                    <span>{targetDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
-                  <h1>
-                    {heroLabels.primary || race?.city || race?.name}
-                    {heroLabels.secondary ? <span>{heroLabels.secondary}</span> : null}
-                  </h1>
-                  <div className="race-detail-hero-meta">
-                    <div><AppIcon name="location_on" className="runner-dashboard-side-link-icon" /> <span>{race?.location}</span></div>
-                    <div><AppIcon name="calendar_today" className="runner-dashboard-side-link-icon" /> <span>{targetDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>
-                  </div>
+          <div className="race-detail-layout race-detail-v2">
+            <aside className="rd-v2-card">
+              <div className="rd-v2-photo">
+                <img
+                  className="race-detail-hero-image"
+                  src={heroImage}
+                  alt={race?.name || t('races.detail_nav')}
+                  width="1600"
+                  height="900"
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  onLoad={(event) => {
+                    rememberLoadedRaceImage(race, event.currentTarget?.currentSrc || event.currentTarget?.src || '');
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    const fallback = race?.heroImage || race?.image || DEFAULT_HERO_IMAGE;
+                    if (e.target.src !== fallback) {
+                      e.target.src = fallback;
+                    }
+                    setResolvedHeroImage('');
+                    invalidateRaceImageCache(race);
+                  }}
+                />
+                {race?.registrationStatus ? (
+                  <span className={`rd-v2-status is-${String(race.registrationStatus).toLowerCase()}`}>
+                    {t(`races.status_${String(race.registrationStatus).toLowerCase()}`)}
+                  </span>
+                ) : <span className="rd-v2-status">{t('races.detail_badge')}</span>}
+              </div>
+              <div className="rd-v2-card-body">
+                <div className="rd-v2-title">
+                  <h1>{topnavTitle}</h1>
+                  <p>
+                    {targetDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    {race?.location ? ` · ${race.location}` : ''}
+                  </p>
                 </div>
 
-                <div className="race-detail-countdown" aria-live="polite">
-                  <div className="race-detail-count-card">
-                    <strong>{padCountdown(countdown.days)}</strong>
-                    <span>{t('races.detail_count_days')}</span>
+                <div className="rd-v2-countdown" aria-live="polite">
+                  {[
+                    ['days', countdown.days],
+                    ['hours', countdown.hours],
+                    ['minutes', countdown.minutes],
+                    ['seconds', countdown.seconds],
+                  ].map(([unitKey, value]) => (
+                    <div key={unitKey} className={`rd-v2-count${unitKey === 'days' ? ' is-primary' : ''}`}>
+                      <strong key={unitKey === 'seconds' ? `s-${value}` : unitKey}>{unitKey === 'days' ? value : padCountdown(value)}</strong>
+                      <span>{t(`races.detail_count_${unitKey}`)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <dl className="rd-v2-times">
+                  <div>
+                    <dt>{race?.goalTimeSeconds ? t('races.detail_v2_goal') : t('races.detail_stat_distance')}</dt>
+                    <dd>{race?.goalTimeSeconds ? formatDuration(race.goalTimeSeconds) : <>{Number(race?.distanceKm || 0).toFixed(1)}<em>km</em></>}</dd>
                   </div>
-                  <div className="race-detail-count-card">
-                    <strong>{padCountdown(countdown.hours)}</strong>
-                    <span>{t('races.detail_count_hours')}</span>
+                  <div>
+                    <dt>{t('races.detail_stat_prediction')}</dt>
+                    <dd className="is-accent">{prediction ? formatDuration(prediction.adjustedSeconds) : '--'}</dd>
                   </div>
-                  <div className="race-detail-count-card">
-                    <strong>{padCountdown(countdown.minutes)}</strong>
-                    <span>{t('races.detail_count_minutes')}</span>
-                  </div>
-                  <div className="race-detail-count-card is-seconds">
-                    <strong key={`seconds-${countdown.seconds}`}>{padCountdown(countdown.seconds)}</strong>
-                    <span>{t('races.detail_count_seconds')}</span>
+                </dl>
+
+                <div className="rd-v2-coach">
+                  <CoachIdentityBadge coach={assignedCoach} lang={lang} />
+                  <p>{coachInsight}</p>
+                </div>
+
+                <div className="rd-v2-actions">
+                  <button type="button" className="rd-v2-primary" onClick={() => navigate('/schedule')}>{t('races.stitch_view_training_plan')}</button>
+                  <div>
+                    <button type="button" className="rd-v2-secondary" onClick={() => navigate('/races')}>{t('races.detail_v2_back')}</button>
+                    {race?.officialWebsite ? (
+                      <a className="rd-v2-secondary" href={race.officialWebsite} target="_blank" rel="noreferrer">{t('races.intel_official_site')} ↗</a>
+                    ) : null}
                   </div>
                 </div>
               </div>
-            </section>
+            </aside>
 
-            <section className="race-detail-grid">
-              <section className="race-detail-command-strip">
-                <div className="race-detail-stats">
-                  <article className="race-detail-stat-card">
-                    <span>{t('races.detail_stat_distance')}</span>
-                    <strong>{Number(race?.distanceKm || 0).toFixed(1)}<em>km</em></strong>
-                  </article>
-                  <article className="race-detail-stat-card is-accent">
-                    <span>{t('races.detail_stat_prediction')}</span>
-                    <strong>{prediction ? formatDuration(prediction.adjustedSeconds) : '--'}</strong>
-                  </article>
-                </div>
-
-                <article className="race-detail-coach-card">
-                  <div className="race-detail-card-head">
-                    <span>{t('races.detail_coach_title')}</span>
+            <div className="rd-v2-course">
+              <div className="rd-v2-map">
+                <article className={`race-detail-map-stage${hasAlignedRoute ? ' has-route' : ''}`}>
+                  <div
+                    className="race-detail-map-canvas"
+                    role="region"
+                    aria-label={mapCardCopy.title}
+                    aria-describedby="race-detail-map-access-copy"
+                  >
+                    <div
+                      ref={routeMapRef}
+                      className={`race-detail-map-leaflet${routeMapReady ? ' is-mounted' : ''}${routeMapPainted ? ' is-ready' : ''}`}
+                    />
                   </div>
-                  <p>{coachInsight}</p>
-                  <div className="race-detail-coach-footer">
-                    <CoachIdentityBadge coach={assignedCoach} lang={lang} />
-                  </div>
+                  <p id="race-detail-map-access-copy" className="sr-only">
+                      {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
+                  </p>
                 </article>
-              </section>
+                <div className="rd-v2-map-chips">
+                  <span>{Number(race?.distanceKm || 0).toFixed(1)} km</span>
+                  <span>+{Math.round(displayedCourseGain || 0)} m</span>
+                  <span className="is-source">{mapCardCopy.badge}</span>
+                </div>
+              </div>
 
-              <article className="race-detail-course-card">
+              <article className="race-detail-course-card rd-v2-elevation">
                 <div className="race-detail-course-head">
                   <div>
                     <h2>{t('races.detail_course_title')}</h2>
@@ -1308,46 +1356,70 @@ export default function RacesDetail() {
                 </div>
                 <div ref={raceDetailElevationChartRef} className="race-detail-elevation-chart">
                   {elevationGraph ? (
-                    <div ref={raceDetailElevationStageRef} className="race-detail-elevation-stage" style={{ width: `${elevationGraph.width}px` }}>
+                    <div ref={raceDetailElevationStageRef} className="race-detail-elevation-stage">
+                      <div className="rd-v2-elevation-plot">
+                      <div className="rd-v2-elevation-altitude-axis" aria-hidden="true">
+                        {elevationGraph.guideLines.map((guide) => (
+                          <span key={guide.meters} style={{ top: `${guide.y / elevationGraph.height * 100}%` }}>{guide.meters} m</span>
+                        ))}
+                      </div>
+                      <span
+                        className={`rd-v2-elevation-peak${elevationGraph.peakPoint.x < 180 ? ' is-left' : elevationGraph.peakPoint.x > elevationGraph.width - 180 ? ' is-right' : ''}`}
+                        style={{ left: `${elevationGraph.peakPoint.x / elevationGraph.width * 100}%`, top: `${elevationGraph.peakPoint.y / elevationGraph.height * 100}%` }}
+                        aria-hidden="true"
+                      >
+                        {elevationGraph.peakPoint.meters} m
+                      </span>
                       {activeElevationPoint ? (
                         <div
-                          className={`race-detail-elevation-tooltip${activeElevationPoint.x <= 120 ? ' is-left' : activeElevationPoint.x >= elevationGraph.width - 120 ? ' is-right' : ''}${activeElevationPoint.y <= 84 ? ' is-below' : ''}`}
+                          className={`race-detail-elevation-tooltip${activeElevationPoint.x <= elevationGraph.width * 0.3 ? ' is-left' : activeElevationPoint.x >= elevationGraph.width * 0.7 ? ' is-right' : ''}${activeElevationPoint.y <= 84 ? ' is-below' : ''}`}
                           style={{
-                            left: `${activeElevationPoint.x}px`,
-                            top: `${Math.max(18, activeElevationPoint.y - 10)}px`,
+                            left: `${activeElevationPoint.x / elevationGraph.width * 100}%`,
+                            top: `${activeElevationPoint.y / elevationGraph.height * 100}%`,
                           }}
                           role="status"
                           aria-live="polite"
                         >
-                          <strong>{`${elevationTooltipLabel}: ${activeElevationPoint.meters}m`}</strong>
+                          <strong>{`${elevationTooltipLabel}: ${activeElevationPoint.meters} m`}</strong>
                           <span>{t('races.detail_course_tooltip_point', { distance: activeElevationPoint.km.toFixed(1) })}</span>
                         </div>
                       ) : null}
                       <svg
                         ref={elevationSvgRef}
                         className="race-detail-elevation-svg"
-                        style={{ width: `${elevationGraph.width}px` }}
                         viewBox={`0 0 ${elevationGraph.width} ${elevationGraph.height}`}
-                        role="img"
+                        preserveAspectRatio="none"
+                        role="slider"
+                        tabIndex={0}
                         aria-label={t('races.detail_course_profile')}
+                        aria-valuemin={0}
+                        aria-valuemax={elevationGraph.raceTotalKm}
+                        aria-valuenow={activeElevationPoint?.km || 0}
+                        aria-valuetext={activeElevationPoint ? `${activeElevationPoint.km.toFixed(1)} km, ${elevationTooltipLabel}: ${activeElevationPoint.meters} m` : undefined}
                         onPointerMove={handleElevationPointerMove}
-                        onPointerLeave={() => setActiveElevationPointIndex(null)}
+                        onPointerDown={handleElevationPointerMove}
+                        onPointerLeave={() => { if (document.activeElement !== elevationSvgRef.current) setActiveElevationPointIndex(null); }}
+                        onFocus={() => setActiveElevationPointIndex((current) => current ?? 0)}
+                        onBlur={() => setActiveElevationPointIndex(null)}
+                        onKeyDown={handleElevationKeyDown}
                       >
                         <defs>
                           <linearGradient id="race-detail-elevation-fill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(255, 180, 167, 0.34)" />
-                            <stop offset="45%" stopColor="rgba(240, 117, 97, 0.24)" />
-                            <stop offset="100%" stopColor="rgba(240, 117, 97, 0.06)" />
+                            <stop offset="0%" stopColor="var(--rd-accent)" stopOpacity="0.18" />
+                            <stop offset="100%" stopColor="var(--rd-accent)" stopOpacity="0.02" />
                           </linearGradient>
                         </defs>
-                      <rect className="race-detail-elevation-base" x="0" y={elevationGraph.baseY} width={elevationGraph.width} height={elevationGraph.height - elevationGraph.baseY} rx="18" />
+                      <g aria-hidden="true">
+                        {elevationGraph.guideLines.map((guide) => (
+                          <line key={guide.meters} className="rd-v2-elevation-horizontal-guide" x1="0" x2={elevationGraph.width} y1={guide.y} y2={guide.y} />
+                        ))}
+                      </g>
                       <path className="race-detail-elevation-area" d={elevationGraph.areaPath} />
                       <path className="race-detail-elevation-line" d={elevationGraph.linePath} />
                       <g className="race-detail-elevation-scrubber" aria-hidden="true">
                         {activeElevationPoint ? (
                           <>
-                            <line className="race-detail-elevation-scrubber-line" x1={activeElevationPoint.x} y1={activeElevationPoint.y} x2={activeElevationPoint.x} y2={elevationGraph.baseY} />
-                            <circle className="race-detail-elevation-scrubber-dot" cx={activeElevationPoint.x} cy={activeElevationPoint.y} r="6" />
+                            <line className="race-detail-elevation-scrubber-line" x1={activeElevationPoint.x} y1={32} x2={activeElevationPoint.x} y2={elevationGraph.baseY} />
                           </>
                         ) : null}
                       </g>
@@ -1360,22 +1432,22 @@ export default function RacesDetail() {
                           <line
                             className={`race-detail-elevation-guide${marker.isMajor ? '' : ' is-minor'}`}
                             x1={marker.x}
-                            y1={marker.isMajor ? marker.y : elevationGraph.baseY - 18}
+                            y1={elevationGraph.baseY - (marker.isMajor ? 5 : 2)}
                             x2={marker.x}
                             y2={elevationGraph.baseY}
                           />
-                          {marker.isMajor ? (
-                            <text className="race-detail-elevation-value" x={marker.x} y={Math.max(18, marker.y - 10)} textAnchor="middle">
-                              {marker.value}m
-                            </text>
-                          ) : null}
-                          <circle className={`race-detail-elevation-node${marker.isMajor ? '' : ' is-minor'}`} cx={marker.x} cy={elevationGraph.baseY} r={marker.isMajor ? 11 : 7} />
-                          <text className="race-detail-elevation-node-label" x={marker.x} y={elevationGraph.baseY + 4} textAnchor="middle">
-                            {marker.label}
-                          </text>
                         </g>
                       ))}
                       </svg>
+                      {activeElevationPoint && <span className="rd-v2-elevation-active-dot" style={{ left: `${activeElevationPoint.x / elevationGraph.width * 100}%`, top: `${activeElevationPoint.y / elevationGraph.height * 100}%` }} aria-hidden="true" />}
+                      </div>
+                      <div className="rd-v2-elevation-distance-axis" aria-hidden="true">
+                        {elevationGraph.distanceTicks.map((tick, index) => (
+                          <span key={tick.km} className={`${index === 0 ? 'is-start' : tick.isFinish ? 'is-finish' : index % 2 ? 'is-intermediate' : ''}`} style={{ left: `${tick.x / elevationGraph.width * 100}%` }}>
+                            {`${tick.isFinish ? Number(tick.km.toFixed(1)) : tick.km} km`}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="race-detail-elevation-empty">
@@ -1385,27 +1457,7 @@ export default function RacesDetail() {
                   )}
                 </div>
               </article>
-
-              <section className="race-detail-lower-stack">
-                <article className={`race-detail-map-stage${hasAlignedRoute ? ' has-route' : ''}`}>
-                  <div
-                    className="race-detail-map-canvas"
-                    role="region"
-                    aria-label={mapCardCopy.title}
-                    aria-describedby="race-detail-map-access-copy"
-                  >
-                    <div
-                      ref={routeMapRef}
-                      className={`race-detail-map-leaflet${routeMapReady ? ' is-mounted' : ''}${routeMapPainted ? ' is-ready' : ''}`}
-                    />
-                  </div>
-                  <p id="race-detail-map-access-copy" className="sr-only">
-                      {`${mapCardCopy.title}. ${mapCardCopy.source}. ${race?.officialWebsite ? t('races.intel_official_site') : ''}`}
-                  </p>
-                </article>
-
-              </section>
-            </section>
+            </div>
 
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />

@@ -5817,6 +5817,121 @@ body.theme-light .runner-dashboard-fitness-strip-prediction strong {
   flex: 0 0 auto;
 }
 
+/* Match the Profile desktop top bar to the Analysis reference chrome. */
+@media (min-width: 861px) {
+  /* Keep the rail, content, and fixed header on the same sidebar boundary. */
+  #root .profile-dashboard-page {
+    --profile-sidebar-width: var(--runner-nav-expanded-width, 156px);
+  }
+
+  #root .profile-dashboard-page.is-sidebar-collapsed {
+    --profile-sidebar-width: var(--runner-nav-collapsed-width, 96px);
+  }
+
+  #root .profile-dashboard-page > .runner-shell-sidebar {
+    width: var(--profile-sidebar-width) !important;
+    min-width: var(--profile-sidebar-width) !important;
+    max-width: var(--profile-sidebar-width) !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar {
+    width: auto !important;
+    height: 88px !important;
+    min-height: 88px !important;
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: var(--profile-sidebar-width) !important;
+    z-index: 20 !important;
+    padding: 0 42px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--ahs-chrome-line, #e5e5ea) !important;
+    border-radius: 0 !important;
+    background: var(--ahs-chrome-fill, #f5f5f7) !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: var(--ahs-label, #1c1c1e) !important;
+  }
+
+  #root .profile-dashboard-page > .runner-shell-main {
+    margin-left: var(--profile-sidebar-width) !important;
+    padding-top: 88px !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-topnav-current-stack strong {
+    color: var(--ahs-strong-ink, #2c2f30) !important;
+    font-family: var(--ahs-font, -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif) !important;
+    font-size: 1.25rem !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-topbar-profile-actions {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-topbar-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    justify-content: flex-end !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-icon-btn,
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid rgba(60, 60, 67, 0.18) !important;
+    border-radius: 50% !important;
+    background: var(--ahs-surface, #fff) !important;
+    box-shadow: none !important;
+    color: var(--ahs-muted-ink, #5c6670) !important;
+  }
+
+  #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-avatar {
+    border-color: rgba(201, 90, 63, 0.24) !important;
+    background: #f7ded8 !important;
+    color: var(--ahs-accent-ink, #8f2f24) !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .profile-dashboard-page .profile-dashboard-topbar {
+    border-bottom-color: rgba(255, 238, 226, 0.12) !important;
+    background: rgba(15, 13, 10, 0.86) !important;
+    color: #fff7ef !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-topnav-current-stack strong {
+    color: #fff7ef !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-icon-btn,
+  body:is(.theme-midnight, .theme-high-contrast) #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-avatar {
+    border-color: rgba(255, 238, 226, 0.16) !important;
+    background: rgba(255, 238, 226, 0.06) !important;
+    color: rgba(255, 247, 239, 0.76) !important;
+  }
+
+  body:is(.theme-midnight, .theme-high-contrast) #root .profile-dashboard-page .profile-dashboard-topbar .runner-shell-avatar {
+    border-color: rgba(255, 154, 134, 0.28) !important;
+    background: rgba(240, 117, 97, 0.18) !important;
+    color: #ffb4a7 !important;
+  }
+}
+
+@media (min-width: 1100px) {
+  #root .profile-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:is(:hover, :focus-within)) {
+    --profile-sidebar-width: var(--runner-nav-expanded-width, 156px);
+  }
+}
+
 @media (max-width: 860px) {
   .runner-dashboard-page .runner-shell-topbar {
     padding: 14px;

@@ -349,7 +349,7 @@ html:has(#root .today-run-command-page) body {
 
   #root .analysis-page-shell {
     display: grid !important;
-    grid-template-columns: var(--runner-nav-collapsed-width, 96px) minmax(0, 1fr) !important;
+    grid-template-columns: var(--runner-shell-sidebar-width, 96px) minmax(0, 1fr) !important;
     min-height: 100vh;
     background: transparent !important;
     color: var(--ahs-strong-ink, #1c1c1e) !important;
@@ -361,7 +361,7 @@ html:has(#root .today-run-command-page) body {
   #root .analysis-page-shell:not(.is-sidebar-collapsed),
   #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover),
   #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) {
-    grid-template-columns: var(--runner-nav-expanded-width, 156px) minmax(0, 1fr) !important;
+    grid-template-columns: var(--runner-shell-sidebar-width, 156px) minmax(0, 1fr) !important;
   }
 
   #root .analysis-page-shell > .runner-shell-sidebar {
@@ -381,7 +381,7 @@ html:has(#root .today-run-command-page) body {
     height: 88px !important;
     min-height: 88px !important;
     position: fixed !important;
-    left: var(--runner-nav-collapsed-width, 96px) !important;
+    left: var(--runner-shell-sidebar-width, 96px) !important;
     right: 0 !important;
     top: 0 !important;
     z-index: 20 !important;
@@ -396,7 +396,7 @@ html:has(#root .today-run-command-page) body {
   #root .analysis-page-shell:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
   #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
   #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
-    left: var(--runner-nav-expanded-width, 156px) !important;
+    left: var(--runner-shell-sidebar-width, 156px) !important;
   }
 
   #root .analysis-page-shell .runner-shell-topnav-current-stack strong {
@@ -1120,7 +1120,7 @@ body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-c
     height: 88px !important;
     min-height: 88px !important;
     position: fixed !important;
-    left: var(--runner-nav-collapsed-width, 96px) !important;
+    left: var(--runner-shell-sidebar-width, 96px) !important;
     right: 0 !important;
     top: 0 !important;
     z-index: 20 !important;
@@ -1137,7 +1137,7 @@ body:is(.theme-light, .theme-high-contrast-light, .theme-midnight, .theme-high-c
   }
 
   #root .runner-dashboard-page:where(:not(.profile-dashboard-page)):not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar {
-    left: var(--runner-nav-expanded-width, 156px) !important;
+    left: var(--runner-shell-sidebar-width, 156px) !important;
   }
 
   #root .runner-dashboard-page:where(:not(.profile-dashboard-page)) .runner-shell-topnav-current-stack strong {
@@ -1325,7 +1325,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
     height: 88px !important;
     min-height: 88px !important;
     position: fixed !important;
-    left: var(--runner-nav-collapsed-width, 96px) !important;
+    left: var(--runner-shell-sidebar-width, 96px) !important;
     right: 0 !important;
     top: 0 !important;
     z-index: 20 !important;
@@ -1390,7 +1390,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-page-shell .an
   #root .analysis-page-shell:not(.is-sidebar-collapsed) > .runner-shell-main > .runner-shell-topbar,
 #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:hover) > .runner-shell-main > .runner-shell-topbar,
 #root .analysis-page-shell.is-sidebar-collapsed:has(> .runner-shell-sidebar:focus-within) > .runner-shell-main > .runner-shell-topbar {
-    left: var(--runner-nav-expanded-width, 156px) !important;
+    left: var(--runner-shell-sidebar-width, 156px) !important;
   }
 }
 

@@ -15,14 +15,14 @@ assert.match(
 
 assert.match(
   rewardsPageSource,
-  /allRewards\.map\(\(reward\)/,
+  /buildRewardTracks\(allRewards\)/,
   'Rewards page should render the full badge catalog instead of only earned and top upcoming rewards.',
 );
 
 assert.match(
   rewardsPageSource,
-  /rewards-progress-card-grid--catalog/,
-  'Rewards page should give the full badge catalog its own grid treatment.',
+  /track\.items\.map\(\(reward\)/,
+  'Rewards page should render every grouped catalog badge in the ladders.',
 );
 
 console.log('[PASS] Rewards catalog integration smoke test passed.');

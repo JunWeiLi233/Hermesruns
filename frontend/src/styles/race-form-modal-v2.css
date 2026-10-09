@@ -1,0 +1,293 @@
+/* Race form handoff, adapted to the existing Modal wrapper and theme cascade. */
+#root .modal-shell.race-form-v2-shell {
+  align-items: center;
+  padding: 16px;
+  background: rgba(28, 25, 23, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+#root .modal-card.race-form-v2-card {
+  --rf-ink: #1c1917;
+  --rf-muted: #625c56;
+  --rf-faint: #746e68;
+  --rf-line: rgba(28, 25, 23, 0.12);
+  --rf-soft: #faf8f5;
+  --rf-accent: #a0392a;
+  --rf-accent-soft: rgba(160, 57, 42, 0.08);
+  display: flex !important;
+  flex-direction: column;
+  width: min(540px, calc(100vw - 32px)) !important;
+  min-width: 0;
+  max-width: none !important;
+  max-height: min(820px, calc(100vh - 32px)) !important;
+  max-height: min(820px, calc(100dvh - 32px)) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: #fff !important;
+  color: var(--rf-ink) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.28) !important;
+  transform: none !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .modal-card.race-form-v2-card {
+  --rf-ink: #f8f4ef;
+  --rf-muted: #c0b8ad;
+  --rf-faint: #b5aca1;
+  --rf-line: rgba(255, 248, 238, 0.16);
+  --rf-soft: rgba(255, 255, 255, 0.05);
+  --rf-accent: #ffb4a7;
+  --rf-accent-soft: rgba(240, 117, 97, 0.16);
+  background: var(--profile-night-solid, #1e1b18) !important;
+}
+
+#root .race-form-v2-card .modal-header {
+  position: relative !important;
+  display: flex !important;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px 16px !important;
+  border-bottom: 1px solid var(--rf-line) !important;
+  background: transparent !important;
+}
+
+#root .race-form-v2-card .modal-header-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: center;
+  min-width: 0;
+}
+
+#root .race-form-v2-mark {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--rf-accent-soft);
+  color: var(--rf-accent);
+}
+
+#root .race-form-v2-mark svg { width: 20px; height: 20px; }
+#root .race-form-v2-sub { grid-column: 2; grid-row: 2; color: var(--rf-faint); font-size: 0.78rem; line-height: 1.35; }
+
+#root .race-form-v2-card .modal-header h3 {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--rf-ink) !important;
+  font-family: inherit !important;
+  font-size: 1.2rem !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.25 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#root .race-form-v2-card .modal-header::before,
+#root .race-form-v2-card .modal-header h3::after { display: none !important; }
+
+#root .race-form-v2-card .modal-close {
+  position: static;
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rf-soft);
+  color: var(--rf-ink);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+#root .race-form-v2-card .modal-close:hover { background: var(--rf-accent-soft); color: var(--rf-accent); }
+
+/* Modal adds its own .modal-form wrapper: it must shrink with the inner form. */
+#root .race-form-v2-card .modal-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none;
+  gap: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+#root .race-form-v2-card .race-form-v2 {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+#root .race-form-v2-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 20px;
+  padding: 18px 22px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#root .race-form-v2-section { display: flex; flex: 0 0 auto; flex-direction: column; gap: 12px; min-width: 0; }
+#root .race-form-v2-section h4 { margin: 0; color: var(--rf-faint); font-family: inherit; font-size: 0.72rem; font-style: normal; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+#root .race-form-v2 label { margin: 0; font-weight: 400; letter-spacing: normal; text-transform: none; }
+#root .race-form-v2-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+#root .race-form-v2-field > span:first-child { color: var(--rf-muted); font-size: 0.78rem; font-weight: 700; }
+#root .race-form-v2-field em { color: var(--rf-accent); font-style: normal; }
+
+#root .race-form-v2 :is(input[type="text"], input[type="number"], input[type="date"], textarea) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--rf-line) !important;
+  border-radius: 11px !important;
+  background: transparent !important;
+  color: var(--rf-ink) !important;
+  font: inherit;
+  font-size: 0.9rem !important;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none !important;
+}
+
+#root .race-form-v2 textarea { padding: 10px 12px !important; resize: vertical; }
+#root .race-form-v2 input.is-strong { font-size: 0.95rem !important; font-weight: 600; }
+#root .race-form-v2 :is(input, textarea):focus { border-color: var(--rf-accent) !important; outline: none; box-shadow: 0 0 0 3px var(--rf-accent-soft) !important; }
+#root .race-form-v2-field.is-invalid input { border-color: #c4261a !important; }
+#root .race-form-v2 input[type="date"] { color-scheme: light; }
+body:is(.theme-midnight, .theme-high-contrast) #root .race-form-v2 input[type="date"] { color-scheme: dark; }
+
+#root .race-form-v2-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+#root .race-form-v2-suffix { position: relative; display: block; }
+#root .race-form-v2-suffix input { padding-right: 44px !important; }
+#root .race-form-v2-suffix em { position: absolute; top: 50%; right: 12px; color: var(--rf-faint); font-size: 0.78rem; font-style: normal; transform: translateY(-50%); pointer-events: none; }
+#root .race-form-v2-countdown { align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--rf-accent-soft); color: var(--rf-accent); font-size: 0.75rem; font-weight: 700; }
+#root .race-form-v2-hint { margin: 0; color: var(--rf-faint); font-size: 0.75rem; line-height: 1.5; }
+#root .race-form-v2-hint.is-error { color: #c4261a; }
+body:is(.theme-midnight, .theme-high-contrast) #root .race-form-v2-hint.is-error { color: #ffb4a7; }
+
+#root .race-form-v2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .race-form-v2-chips button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rf-line);
+  color: var(--rf-ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#root .race-form-v2-chips button.is-active { background: #1c1917; box-shadow: none; color: #fff; }
+body:is(.theme-midnight, .theme-high-contrast) #root .race-form-v2-chips button.is-active { background: #f8f4ef; color: #1c1917; }
+
+#root .race-form-v2-status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+#root .race-form-v2-status label { position: relative; min-width: 0; cursor: pointer; }
+#root .race-form-v2-status input[type="radio"] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1px !important;
+  height: 1px;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+#root .race-form-v2-status-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 6px;
+  border-radius: 11px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--rf-line);
+  color: var(--rf-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+#root .race-form-v2-status-option.is-active { background: var(--rf-accent-soft); box-shadow: inset 0 0 0 1.5px var(--rf-accent); color: var(--rf-ink); }
+#root .race-form-v2-status i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 9px; background: #a8a29e; }
+#root .race-form-v2-status .is-applied i, #root .race-form-v2-status .is-waitlist i { background: #e9b44c; }
+#root .race-form-v2-status .is-registered i { background: #34c759; }
+#root .race-form-v2-status .is-completed i { background: #2563c4; }
+#root .race-form-v2-status .is-canceled i { background: #c4261a; }
+#root .race-form-v2-status input:focus-visible + .race-form-v2-status-option { outline: 2px solid var(--rf-accent); outline-offset: 2px; }
+
+#root .race-form-v2-switch-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 13px; background: var(--rf-soft); cursor: pointer; }
+#root .race-form-v2-switch-row input { position: absolute; right: 34px; width: 1px; height: 1px; opacity: 0; }
+#root .race-form-v2-switch-copy { display: flex; flex-direction: column; gap: 2px; }
+#root .race-form-v2-switch-copy strong { color: var(--rf-ink); font-size: 0.85rem; }
+#root .race-form-v2-switch-copy span { color: var(--rf-faint); font-size: 0.75rem; }
+#root .race-form-v2-switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: #b7b0a7; transition: background 150ms ease; }
+#root .race-form-v2-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: left 150ms ease; }
+#root .race-form-v2-switch-row input:checked + .race-form-v2-switch { background: #a0392a; }
+#root .race-form-v2-switch-row input:checked + .race-form-v2-switch::after { left: 21px; }
+#root .race-form-v2-switch-row input:focus-visible + .race-form-v2-switch { outline: 2px solid var(--rf-accent); outline-offset: 2px; }
+#root .race-form-v2-status-msg { margin: 0 !important; }
+
+#root .race-form-v2-footer { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; padding: 14px 22px; padding-bottom: max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--rf-line); }
+#root .race-form-v2-spacer { flex: 1; }
+#root .race-form-v2-footer button { min-height: 44px; border-radius: 12px; font: inherit; font-size: 0.875rem; font-weight: 700; font-style: normal; letter-spacing: 0; text-transform: none; transform: none; cursor: pointer; }
+#root .race-form-v2-cancel { padding: 0 18px; border: 1px solid var(--rf-line); background: transparent; color: var(--rf-ink); }
+#root .race-form-v2-submit { padding: 0 22px; border: 0; background: linear-gradient(135deg, #a0392a, #c65343); color: #fff; }
+#root .race-form-v2-submit:disabled { background: var(--rf-soft); color: var(--rf-faint); cursor: not-allowed; }
+#root .race-form-v2-delete.race-center-modal-delete { display: inline-flex; align-items: center; gap: 6px; width: auto; min-width: 0; margin: 0 !important; padding: 0 6px !important; border: 0 !important; background: none !important; color: #c4261a !important; box-shadow: none !important; }
+body:is(.theme-midnight, .theme-high-contrast) #root .race-form-v2-delete.race-center-modal-delete { color: #ffb4a7 !important; }
+#root .race-form-v2-delete svg { width: 16px; height: 16px; }
+#root .race-form-v2 button:focus-visible, #root .race-form-v2-card .modal-close:focus-visible { outline: 2px solid var(--rf-accent); outline-offset: 2px; }
+
+@media (max-width: 480px) {
+  #root .race-form-v2-card .modal-header { padding: 16px 18px !important; }
+  #root .race-form-v2-body { padding: 18px; }
+  #root .race-form-v2-pair { grid-template-columns: minmax(0, 1fr); }
+  #root .race-form-v2-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .race-form-v2 :is(input[type="text"], input[type="number"], input[type="date"], textarea),
+  #root .race-form-v2 input.is-strong { font-size: 1rem !important; }
+  #root .race-form-v2-footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 18px; }
+  #root .race-form-v2-footer :is(.race-form-v2-cancel, .race-form-v2-submit) { min-width: 0; padding-inline: 10px; }
+  #root .race-form-v2-spacer { display: none; }
+  #root .race-form-v2-delete.race-center-modal-delete { grid-column: 1 / -1; justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .race-form-v2-switch, #root .race-form-v2-switch::after { transition: none; }
+}

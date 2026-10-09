@@ -640,11 +640,17 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
       <div className="page-skeleton__analysis-cockpit">
         <SkeletonPanel className="page-skeleton__analysis-primary">
           <div className="page-skeleton__analysis-card-head">
-            <div>
+            <div className="page-skeleton__analysis-heading">
               <SkeletonBlock className="page-skeleton__analysis-kicker" />
               <SkeletonBlock className="page-skeleton__analysis-title" />
             </div>
-            <SkeletonBlock className="page-skeleton__analysis-value" />
+            <div className="page-skeleton__analysis-value">
+              <SkeletonBlock className="page-skeleton__analysis-value-label" />
+              <div className="page-skeleton__analysis-value-row">
+                <SkeletonBlock className="page-skeleton__analysis-value-number" />
+                <SkeletonBlock className="page-skeleton__analysis-value-unit" />
+              </div>
+            </div>
           </div>
           <div className="page-skeleton__analysis-bars">
             {Array.from({ length: 6 }, (_, index) => (
@@ -654,35 +660,47 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
               </div>
             ))}
           </div>
-          <div className="page-skeleton__analysis-legend">{Array.from({ length: 4 }, (_, index) => <SkeletonBlock key={index} />)}</div>
-          <div className="page-skeleton__analysis-decision-spine">
-            {Array.from({ length: 3 }, (_, index) => (
-              <SkeletonPanel key={index} className="page-skeleton__analysis-decision-chip">
-                <SkeletonBlock className="page-skeleton__analysis-decision-label" />
-                <SkeletonBlock className="page-skeleton__analysis-decision-value" />
-              </SkeletonPanel>
-            ))}
-          </div>
         </SkeletonPanel>
 
         <div className="page-skeleton__analysis-reference-grid">
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--load">
-            <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
-            <SkeletonBlock className="page-skeleton__analysis-gauge" />
-            <SkeletonBlock className="page-skeleton__analysis-reference-value" />
-            <SkeletonBlock className="page-skeleton__analysis-reference-status" />
-            <SkeletonBlock className="page-skeleton__analysis-reference-copy" />
-          </SkeletonPanel>
-          <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--coach">
-            <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
-            <SkeletonLines count={2} className="page-skeleton__analysis-reference-lines" />
-            <SkeletonBlock className="page-skeleton__analysis-coach-badge" />
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-gauge-stack">
+              <SkeletonBlock className="page-skeleton__analysis-gauge" />
+              <SkeletonBlock className="page-skeleton__analysis-gauge-value" />
+            </div>
+            <SkeletonLines count={2} className="page-skeleton__analysis-reference-copy" />
           </SkeletonPanel>
           <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--trend">
-            <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
-            <SkeletonBlock className="page-skeleton__analysis-trend-title" />
-            <SkeletonBlock className="page-skeleton__analysis-trend-value" />
-            <SkeletonBlock className="page-skeleton__analysis-reference-copy" />
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-trend-content">
+              <SkeletonLines count={3} className="page-skeleton__analysis-trend-copy" />
+              <div className="page-skeleton__analysis-trend-stack">
+                <SkeletonBlock className="page-skeleton__analysis-trend-title" />
+                <SkeletonBlock className="page-skeleton__analysis-trend-value" />
+              </div>
+            </div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--injury">
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <div className="page-skeleton__analysis-risk-labels">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+            <div className="page-skeleton__analysis-risk-meter">{Array.from({ length: 3 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-reference page-skeleton__analysis-reference--coach">
+            <div className="page-skeleton__analysis-reference-heading">
+              <SkeletonBlock className="page-skeleton__analysis-reference-icon" />
+              <SkeletonBlock className="page-skeleton__analysis-reference-kicker" />
+            </div>
+            <SkeletonBlock className="page-skeleton__analysis-coach-title" />
           </SkeletonPanel>
         </div>
       </div>
@@ -693,13 +711,6 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
           <SkeletonBlock className="page-skeleton__analysis-bento-value" />
           <SkeletonBlock className="page-skeleton__analysis-intensity-bar" />
           <div className="page-skeleton__analysis-bento-labels"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
-        </SkeletonPanel>
-        <SkeletonPanel className="page-skeleton__analysis-bento-card page-skeleton__analysis-bento-card--injury">
-          <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
-          <SkeletonBlock className="page-skeleton__analysis-bento-title" />
-          <SkeletonBlock className="page-skeleton__analysis-risk-value" />
-          <SkeletonBlock className="page-skeleton__analysis-risk-meter" />
-          <SkeletonLines count={2} />
         </SkeletonPanel>
         <SkeletonPanel className="page-skeleton__analysis-bento-card page-skeleton__analysis-bento-card--forecast">
           <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
@@ -726,7 +737,20 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
       <SkeletonPanel className="page-skeleton__analysis-injury">
         <div className="page-skeleton__analysis-injury-heading"><SkeletonBlock className="page-skeleton__analysis-injury-title" /><SkeletonBlock className="page-skeleton__analysis-injury-copy" /></div>
         <div className="page-skeleton__analysis-injury-grid">
-          {Array.from({ length: 3 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__analysis-injury-card"><SkeletonBlock className="page-skeleton__analysis-bento-kicker" /><SkeletonBlock className="page-skeleton__analysis-bento-title" /><SkeletonBlock className="page-skeleton__analysis-injury-art" /><SkeletonLines count={2} /></SkeletonPanel>)}
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--risk">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-injury-ring-row"><SkeletonBlock className="page-skeleton__analysis-injury-ring" /><SkeletonLines count={2} /></div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--load">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-injury-gauge"><SkeletonBlock className="page-skeleton__analysis-injury-gauge-arc" /><SkeletonBlock className="page-skeleton__analysis-injury-gauge-value" /></div>
+            <div className="page-skeleton__analysis-injury-zones"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
+          </SkeletonPanel>
+          <SkeletonPanel className="page-skeleton__analysis-injury-card page-skeleton__analysis-injury-card--checkin">
+            <SkeletonBlock className="page-skeleton__analysis-bento-kicker" />
+            <div className="page-skeleton__analysis-soreness-actions"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></div>
+            <SkeletonLines count={3} />
+          </SkeletonPanel>
         </div>
       </SkeletonPanel>
     </RunnerFrame>;
@@ -964,12 +988,19 @@ function RunnerPageSkeleton({ variant = 'runner', activeTab = 'overview' }) {
 
   if (variant === 'rewards') {
     return <RunnerFrame variant={variant}>
-      <div className="rewards-ledger-intro page-skeleton__rewards-intro"><SkeletonBlock className="page-skeleton__rewards-kicker" /><SkeletonBlock className="page-skeleton__rewards-title" /><SkeletonLines count={2} /></div>
-      <div className="rewards-ledger-hero page-skeleton__rewards-hero"><SkeletonPanel className="rewards-ledger-hero-card page-skeleton__rewards-hero-card"><div className="page-skeleton__rewards-hero-head"><SkeletonBlock className="page-skeleton__rewards-hero-tag" /><SkeletonBlock className="page-skeleton__rewards-hero-counter" /></div><SkeletonBlock className="page-skeleton__rewards-hero-glyph" /><SkeletonBlock className="page-skeleton__rewards-hero-title" /><SkeletonLines count={2} /><SkeletonBlock className="page-skeleton__rewards-meter" /><div className="page-skeleton__today-coach-actions"><SkeletonBlock /><SkeletonBlock /></div></SkeletonPanel><SkeletonPanel className="rewards-ledger-hero-card page-skeleton__rewards-hero-card"><div className="page-skeleton__rewards-hero-head"><SkeletonBlock className="page-skeleton__rewards-hero-tag" /><SkeletonBlock className="page-skeleton__rewards-hero-counter" /></div><SkeletonBlock className="page-skeleton__rewards-hero-glyph" /><SkeletonBlock className="page-skeleton__rewards-hero-title" /><SkeletonLines count={2} /><SkeletonBlock className="page-skeleton__rewards-meter" /><div className="page-skeleton__today-coach-actions"><SkeletonBlock /><SkeletonBlock /></div></SkeletonPanel></div>
-      <div className="rewards-ledger-metrics page-skeleton__rewards-stats">{Array.from({ length: 4 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__rewards-metric"><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>)}</div>
-      <section className="rewards-ledger-section page-skeleton__rewards-section"><div className="page-skeleton__rewards-section-head"><div><SkeletonBlock className="page-skeleton__rewards-card-kicker" /><SkeletonBlock className="page-skeleton__rewards-catalog-title" /></div><SkeletonBlock className="page-skeleton__rewards-section-count" /></div><div className="page-skeleton__rewards-earned-grid">{Array.from({ length: 6 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__rewards-earned-card"><SkeletonBlock className="page-skeleton__rewards-earned-icon" /><div><SkeletonBlock /><SkeletonBlock /></div></SkeletonPanel>)}</div></section>
-      <section className="rewards-ledger-section page-skeleton__rewards-section page-skeleton__rewards-section--pipeline"><div className="page-skeleton__rewards-section-head"><div><SkeletonBlock className="page-skeleton__rewards-card-kicker" /><SkeletonBlock className="page-skeleton__rewards-catalog-title" /></div><SkeletonBlock className="page-skeleton__rewards-section-count" /></div><div className="page-skeleton__rewards-pipeline">{Array.from({ length: 3 }, (_, index) => <div key={index} className="page-skeleton__rewards-pipeline-row"><SkeletonBlock className="page-skeleton__rewards-pipeline-icon" /><SkeletonBlock className="page-skeleton__rewards-pipeline-glyph" /><div className="page-skeleton__rewards-pipeline-copy"><SkeletonBlock /><SkeletonBlock /></div><SkeletonBlock className="page-skeleton__rewards-pipeline-eta" /></div>)}</div></section>
-      <section className="rewards-ledger-section rewards-ledger-catalog-section page-skeleton__rewards-catalog-section"><div className="page-skeleton__rewards-section-head"><div><SkeletonBlock className="page-skeleton__rewards-card-kicker" /><SkeletonBlock className="page-skeleton__rewards-catalog-title" /></div><SkeletonBlock className="page-skeleton__rewards-section-count" /></div><div className="page-skeleton__rewards-catalog-grid">{Array.from({ length: 131 }, (_, index) => <SkeletonPanel key={index} className="page-skeleton__rewards-badge-card"><SkeletonBlock className="page-skeleton__rewards-badge-icon" /><SkeletonBlock /><SkeletonBlock /></SkeletonPanel>)}</div></section>
+      <SkeletonPanel className="page-skeleton__rewards-v2-hero">
+        <SkeletonBlock className="page-skeleton__rewards-v2-ring" />
+        <div className="page-skeleton__rewards-v2-copy">
+          <SkeletonBlock className="page-skeleton__rewards-kicker" />
+          <SkeletonBlock className="page-skeleton__rewards-v2-headline" />
+          <div className="page-skeleton__rewards-v2-legend">{Array.from({ length: 5 }, (_, index) => <SkeletonBlock key={index} />)}</div>
+        </div>
+        <div className="page-skeleton__rewards-v2-closest"><SkeletonBlock className="page-skeleton__rewards-v2-medal" /><div><SkeletonBlock /><SkeletonLines count={2} /><SkeletonBlock className="page-skeleton__rewards-meter" /></div></div>
+      </SkeletonPanel>
+      {Array.from({ length: 5 }, (_, track) => <SkeletonPanel key={track} className="page-skeleton__rewards-v2-track">
+        <div className="page-skeleton__rewards-v2-track-head"><SkeletonBlock /><SkeletonLines count={2} /></div>
+        <div className="page-skeleton__rewards-v2-track-steps">{Array.from({ length: 5 }, (_, step) => <div key={step}><SkeletonBlock className="page-skeleton__rewards-v2-medal" /><SkeletonBlock /><SkeletonBlock /></div>)}</div>
+      </SkeletonPanel>)}
     </RunnerFrame>;
   }
 

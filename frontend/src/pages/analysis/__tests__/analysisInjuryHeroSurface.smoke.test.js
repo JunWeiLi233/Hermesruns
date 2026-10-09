@@ -27,7 +27,7 @@ assert.doesNotMatch(
 );
 assert.match(
   injuryBranch,
-  /analysis-profile-v2-focus|analysis-injury-profile-chart-card/,
+  /analysis-injury-v2-verdict|analysis-injury-v2-chart/,
   'Removing the hero must preserve the Injury Risk detail content below it.',
 );
 

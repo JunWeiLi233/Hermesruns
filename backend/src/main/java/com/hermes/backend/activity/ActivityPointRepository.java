@@ -224,6 +224,77 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("limitValue") int limitValue
     );
 
+    // Count visits before sampling, so a high-frequency recording device or a
+    // stationary pause cannot make an area look like many separate runs.
+    @Query(value = """
+            with fine_cells as (
+                select floor(ap.latitude / (cast(:latitudeCellSize as double precision) / 4.0)) as latitude_subcell,
+                       floor(ap.longitude / (cast(:longitudeCellSize as double precision) / 4.0)) as longitude_subcell,
+                       max(ap.id) as representative_id
+                from activity_points ap
+                join activities a on a.id = ap.activity_id
+                where a.runner_id = :runnerId and a.activity_type = :activityType
+                  and ap.latitude between :south and :north
+                  and ap.longitude between :west and :east
+                group by 1, 2
+            ), cell_visits as (
+                select floor(ap.latitude / cast(:latitudeCellSize as double precision)) as latitude_cell,
+                       floor(ap.longitude / cast(:longitudeCellSize as double precision)) as longitude_cell,
+                       count(distinct ap.activity_id) as visit_count
+                from activity_points ap
+                join activities a on a.id = ap.activity_id
+                where a.runner_id = :runnerId and a.activity_type = :activityType
+                  and ap.latitude between :south and :north
+                  and ap.longitude between :west and :east
+                group by 1, 2
+            ), ranked_cells as (
+                select f.*, c.visit_count,
+                       row_number() over (
+                           partition by c.latitude_cell, c.longitude_cell
+                           order by f.longitude_subcell, f.latitude_subcell
+                       ) as candidate_ordinal,
+                       dense_rank() over (order by c.longitude_cell, c.latitude_cell) as cell_ordinal
+                from fine_cells f
+                join cell_visits c on c.latitude_cell = floor(cast(f.latitude_subcell as double precision) / 4.0)
+                                  and c.longitude_cell = floor(cast(f.longitude_subcell as double precision) / 4.0)
+            ), sized_cells as (
+                select ranked_cells.*, max(cell_ordinal) over () as cell_count
+                from ranked_cells
+            ), selected_points as (
+                select sized_cells.*
+                from sized_cells
+                order by case when candidate_ordinal = 1 and
+                    mod(cell_ordinal - 1, cast(greatest(1, ceil(cast(cell_count as double precision) / :coverageLimit)) as bigint)) = 0
+                    then 0 else 1 end,
+                    visit_count desc, candidate_ordinal asc, longitude_subcell asc, latitude_subcell asc
+                limit :limitValue
+            )
+            select p.activity_id, p.latitude, p.longitude, p.distance_meters, p.elapsed_seconds,
+                   p.sequence_index, c.visit_count,
+                   case when p.distance_meters > previous.distance_meters
+                         and p.elapsed_seconds > previous.elapsed_seconds
+                       then (p.distance_meters - previous.distance_meters) /
+                            (p.elapsed_seconds - previous.elapsed_seconds)
+                       else null end as segment_speed
+            from selected_points c
+            join activity_points p on p.id = c.representative_id
+            left join activity_points previous on previous.activity_id = p.activity_id
+                 and previous.sequence_index = p.sequence_index - 1
+            order by p.activity_id desc, p.sequence_index asc
+            """, nativeQuery = true)
+    List<Object[]> findHeatmapSpatialPointsByRunnerAndType(
+            @Param("runnerId") Long runnerId,
+            @Param("activityType") String activityType,
+            @Param("south") double south,
+            @Param("west") double west,
+            @Param("north") double north,
+            @Param("east") double east,
+            @Param("latitudeCellSize") double latitudeCellSize,
+            @Param("longitudeCellSize") double longitudeCellSize,
+            @Param("coverageLimit") int coverageLimit,
+            @Param("limitValue") int limitValue
+    );
+
     @Query(value = """
             with ranked_points as (
                 select
