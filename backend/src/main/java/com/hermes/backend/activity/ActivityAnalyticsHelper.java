@@ -100,7 +100,9 @@ final class ActivityAnalyticsHelper {
                 n++;
             }
         }
-        return n > 0 ? s / (double) n : activity.getAverageCadence();
+        // Both branches must be Double: a primitive on one side unboxes the other, and a run with no cadence
+        // anywhere (the device average is null too) would throw here.
+        return n > 0 ? Double.valueOf(s / (double) n) : activity.getAverageCadence();
     }
 
     static Double averageStrideMeters(List<SamplePoint> pts) {
