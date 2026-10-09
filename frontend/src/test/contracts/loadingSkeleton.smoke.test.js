@@ -329,8 +329,8 @@ assert(
 );
 
 assert(
-  styleSource.includes('--hermes-admin-skeleton-rail-width: 304px')
-    && styleSource.includes('--hermes-admin-skeleton-topbar-height: 80px')
+  styleSource.includes('--hermes-admin-skeleton-rail-width: 156px')
+    && styleSource.includes('--hermes-admin-skeleton-topbar-height: 76px')
     && styleSource.includes('.page-skeleton__admin-sidebar {')
     && styleSource.includes('position: fixed;')
     && styleSource.includes('margin-left: var(--hermes-admin-skeleton-rail-width);')

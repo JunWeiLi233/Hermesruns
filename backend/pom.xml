@@ -29,6 +29,14 @@
 	<properties>
 		<java.version>17</java.version>
 		<hermes.build.directory>${project.basedir}/target</hermes.build.directory>
+		<!-- Security patch overrides for Spring Boot 4.1.1's managed versions; drop each
+		     once the parent ships it. Tomcat 11.0.25: CVE-2026-65182, CVE-2026-65905,
+		     CVE-2026-68525. Jackson 3.1.7 and 2.22.3: CVE-2026-89407, CVE-2026-89425,
+		     CVE-2026-68497, CVE-2026-91776, CVE-2026-91777, CVE-2026-19032, CVE-2026-83557.
+		     Jackson 2 stays aligned with the explicit jackson-databind below. -->
+		<tomcat.version>11.0.25</tomcat.version>
+		<jackson-bom.version>3.1.7</jackson-bom.version>
+		<jackson-2-bom.version>2.22.3</jackson-2-bom.version>
 	</properties>
 	<dependencies>
 		<dependency>

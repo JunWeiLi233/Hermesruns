@@ -1,6 +1,5 @@
 package com.hermes.backend.auth.mfa;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.auth.AdminPortalSessionCookie;
 import com.hermes.backend.runner.Runner;
@@ -10,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -119,11 +119,15 @@ public class AdminMfaController {
             String json = registration
                     ? adminMfaService.registrationOptions(selector, bootstrapToken)
                     : adminMfaService.authenticationOptions(selector);
-            JsonNode payload = objectMapper.readTree(json);
+            // Validate with Jackson 2, but write the options verbatim: Spring Boot 4
+            // serializes response bodies with Jackson 3, which would render a
+            // Jackson 2 JsonNode as a bean ("array", "containerNode", ...).
+            objectMapper.readTree(json);
             return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .header(HttpHeaders.PRAGMA, "no-cache")
-                    .body(payload);
+                    .body(json);
         } catch (AdminMfaException ex) {
             if (registration && SETUP_UNAVAILABLE_MESSAGE.equals(ex.getMessage())) {
                 return setupUnavailable(request);

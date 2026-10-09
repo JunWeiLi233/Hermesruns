@@ -7,8 +7,11 @@ import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -510,16 +513,18 @@ public class MarathonRouteExtractionService {
         if (imageFilePathOrDataUrl.startsWith("data:image/")) {
             return "data:" + imageFilePathOrDataUrl.length() + ":" + Integer.toHexString(imageFilePathOrDataUrl.hashCode());
         }
-        // Only stat files we actually created inside the temp dir; treat any
-        // other path as an opaque fingerprint so a crafted reference can never
-        // be used as a path-traversal oracle against arbitrary files.
+        // Only read files inside the temp dir; treat any other path as an
+        // opaque fingerprint so a crafted reference can never be used as a
+        // path-traversal oracle against arbitrary files. Temp files are keyed
+        // by content because every pipeline run stages a freshly named copy.
         Path path = SafeTempFileGuard.tempFileOrNull(imageFilePathOrDataUrl);
-        if (path == null || !Files.exists(path)) {
+        if (path == null || !Files.isRegularFile(path)) {
             return imageFilePathOrDataUrl;
         }
         try {
-            return imageFilePathOrDataUrl + ":" + Files.size(path) + ":" + Files.getLastModifiedTime(path).toMillis();
-        } catch (IOException ignored) {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path));
+            return "file-sha256:" + HexFormat.of().formatHex(digest);
+        } catch (IOException | NoSuchAlgorithmException ignored) {
             return imageFilePathOrDataUrl;
         }
     }
