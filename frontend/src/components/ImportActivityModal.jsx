@@ -14,11 +14,12 @@ import Modal from './Modal';
  */
 
 const SOURCES = [
-  { key: 'fit', field: 'exports', tag: 'FIT/GPX', titleKey: 'profile.fit_export_source_title', hintKey: 'profile.fit_export_source_hint', ext: '.fit .gpx .tcx .zip' },
-  { key: 'coros', field: 'coros', tag: 'COROS', titleKey: 'profile.coros_source_title', hintKey: 'profile.coros_source_hint', ext: '.fit .gpx .tcx .zip' },
-  { key: 'huawei', field: 'huawei', tag: 'HUAWEI', titleKey: 'profile.huawei_source_title', hintKey: 'profile.huawei_source_hint', ext: '.gpx .tcx .fit .zip' },
+  { key: 'fit', field: 'exports', tag: 'FIT/GPX', titleKey: 'profile.fit_export_source_title', hintKey: 'profile.fit_export_source_hint', ext: '.fit .gpx .tcx .zip .gz' },
+  { key: 'coros', field: 'coros', tag: 'COROS', titleKey: 'profile.coros_source_title', hintKey: 'profile.coros_source_hint', ext: '.fit .gpx .tcx .zip .gz' },
+  { key: 'huawei', field: 'huawei', tag: 'HUAWEI', titleKey: 'profile.huawei_source_title', hintKey: 'profile.huawei_source_hint', ext: '.gpx .tcx .fit .zip .gz' },
 ];
-const ACCEPT = '.gpx,.tcx,.fit,.zip';
+// .gz is a gzipped workout file (run.fit.gz), the form Strava's account export uses.
+const ACCEPT = '.gpx,.tcx,.fit,.zip,.gz';
 
 function formatSize(bytes) {
   if (!Number.isFinite(bytes)) return '';
@@ -27,8 +28,11 @@ function formatSize(bytes) {
 }
 
 function fileExt(name) {
-  const part = String(name || '').split('.').pop();
-  return part && part !== name ? part.toUpperCase().slice(0, 4) : 'FILE';
+  const parts = String(name || '').split('.');
+  if (parts.length < 2) return 'FILE';
+  let ext = parts.pop();
+  if (ext.toLowerCase() === 'gz' && parts.length > 1) ext = parts.pop(); // run.fit.gz is a FIT file
+  return ext ? ext.toUpperCase().slice(0, 4) : 'FILE';
 }
 
 export default function ImportActivityModal({ isOpen, onClose, onImported, t }) {

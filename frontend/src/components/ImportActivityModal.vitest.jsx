@@ -47,6 +47,19 @@ describe('ImportActivityModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('accepts gzipped workout files, as in a Strava export, and labels them by what they hold', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    expect(input()).toHaveAttribute('accept', expect.stringContaining('.gz'));
+    await user.upload(input(), [file('12345.fit.gz'), file('678.gpx.gz'), file('plain.gz')]);
+    expect(screen.getAllByRole('listitem').map((item) => item.querySelector('.import-v2-file-ext').textContent)).toEqual(['FIT', 'GPX', 'GZ']);
+    await user.click(screen.getByRole('button', { name: 'Import 3 file(s)' }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledOnce());
+    expect([...apiFetch.mock.calls[0][1].body.entries()].map(([field, entry]) => [field, entry.name])).toEqual([
+      ['exports', '12345.fit.gz'], ['exports', '678.gpx.gz'], ['exports', 'plain.gz'],
+    ]);
+  });
+
   it('freezes the queue and blocks closing or submitting twice during upload', async () => {
     const user = userEvent.setup();
     let resolveUpload;
