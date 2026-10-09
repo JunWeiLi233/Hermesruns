@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Settings from '../Settings';
 import { apiFetch, apiJson } from '../../../api';
@@ -12,6 +12,14 @@ import zh from '../../../i18n/locales/zh-CN';
 const state = vi.hoisted(() => ({
   lang: 'en', linked: true, logout: vi.fn(), setUnit: vi.fn(), setTheme: vi.fn(), setLang: vi.fn(),
   profileTimeZone: 'America/New_York', deviceZone: 'Europe/Copenhagen',
+  zones: {
+    maxHeartRate: { bpm: 190, source: 'DEFAULT' }, suggestedMaxHeartRate: null,
+    heartRate: { source: 'AUTO', boundaries: [114, 133, 152, 171], defaultBoundaries: [114, 133, 152, 171], zones: [
+      { zone: 1, fromBpm: null, toBpm: 113 }, { zone: 2, fromBpm: 114, toBpm: 132 }, { zone: 3, fromBpm: 133, toBpm: 151 },
+      { zone: 4, fromBpm: 152, toBpm: 170 }, { zone: 5, fromBpm: 171, toBpm: null }] },
+    limits: { minMaxHeartRate: 120, maxMaxHeartRate: 230, defaultMaxHeartRate: 190, minBoundary: 40, maxBoundary: 230 },
+    recomputeQueued: null,
+  },
   unlink: { unlinked: true, revokedAtStrava: true, removedActivities: 2 },
   failures: {},
 }));
@@ -50,6 +58,7 @@ beforeEach(() => {
   apiJson.mockImplementation(async (url, options) => {
     if (state.failures[url]) throw Object.assign(new Error('Request failed'), { status: state.failures[url] });
     if (url === '/api/profile/me') return { displayName: 'Mira Chen', email: 'preview@example.test', timeZone: state.profileTimeZone };
+    if (url === '/api/training/zones') return state.zones;
     if (url === '/api/profile/me/time-zone') return { displayName: 'Mira Chen', timeZone: JSON.parse(options.body).timeZone };
     if (url === '/api/auth/strava/unlink') return state.unlink;
     if (url === '/api/account') return { deleted: true };
@@ -63,13 +72,15 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-async function openPage() {
-  const result = render(<MemoryRouter initialEntries={['/settings']}><Routes>
+async function openPage(entry = '/settings') {
+  const result = render(<MemoryRouter initialEntries={[entry]}><Routes>
     <Route path="/settings" element={<Settings />} />
     <Route path="/settings/import-data" element={<h1>Import destination</h1>} />
     <Route path="/login" element={<h1>Login destination</h1>} />
   </Routes></MemoryRouter>);
-  await screen.findByRole('textbox', { name: t('settings.display_name_title') });
+  // The name field only exists while the Profile tab is the open one.
+  if (entry === '/settings') await screen.findByRole('textbox', { name: t('settings.display_name_title') });
+  else await screen.findByRole('tablist');
   return result;
 }
 
@@ -94,7 +105,7 @@ it('retains shell navigation and setup progress while showing only the profile g
   const { container } = await openPage();
   expect(container.querySelector('.runner-shell-sidebar')).toBeInTheDocument();
   expect(container.querySelector('.runner-shell-topbar')).toHaveTextContent('Settings');
-  expect(container.querySelectorAll('.st-v2-group')).toHaveLength(6);
+  expect(container.querySelectorAll('.st-v2-group')).toHaveLength(7);
   expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
   expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-profile');
   expect(screen.getAllByRole('tab', { selected: true })).toHaveLength(1);
@@ -213,11 +224,63 @@ it('switches and focuses tabs with arrow, Home, and End keys, including wrapping
   await user.keyboard('{End}{ArrowRight}');
   expect(tabs[0]).toHaveFocus();
   await user.keyboard('{ArrowLeft}');
-  expect(tabs[5]).toHaveFocus();
+  expect(tabs[6]).toHaveFocus();
   expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-account');
   await user.keyboard('{Home}');
   expect(tabs[0]).toHaveFocus();
-  expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1, -1]);
+  expect(tabs.map((tab) => tab.tabIndex)).toEqual([0, -1, -1, -1, -1, -1, -1]);
+});
+
+it('puts the Training tab between Preferences and Connections and asks for the zones only when it opens', async () => {
+  const user = userEvent.setup();
+  await openPage();
+  expect(screen.getAllByRole('tab').map((tab) => tab.id)).toEqual([
+    'st-v2-tab-profile', 'st-v2-tab-preferences', 'st-v2-tab-training', 'st-v2-tab-connections',
+    'st-v2-tab-notifications', 'st-v2-tab-activity', 'st-v2-tab-account',
+  ]);
+  const zoneCalls = () => apiJson.mock.calls.filter(([url]) => url === '/api/training/zones');
+  expect(zoneCalls()).toHaveLength(0);
+  await user.click(screen.getByRole('tab', { name: t('settings.training_tab') }));
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-training');
+  expect(await screen.findByRole('textbox', { name: t('settings.training_max_label') })).toHaveValue('190');
+  expect(screen.getByRole('heading', { name: t('settings.training_zones_title') })).toBeInTheDocument();
+  expect(zoneCalls()).toHaveLength(1);
+  await user.click(screen.getByRole('tab', { name: t('settings.stitch_prefs_title') }));
+  await user.click(screen.getByRole('tab', { name: t('settings.training_tab') }));
+  expect(zoneCalls()).toHaveLength(1);
+});
+
+it('opens on the Training tab when the address asks for it, and on Profile for anything else', async () => {
+  await openPage('/settings?section=training');
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-training');
+  expect(screen.getByRole('tab', { name: t('settings.training_tab') })).toHaveAttribute('aria-selected', 'true');
+  expect(await screen.findByRole('textbox', { name: t('settings.training_max_label') })).toBeInTheDocument();
+  cleanup();
+  await openPage('/settings?section=nonsense');
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-profile');
+});
+
+it('moves to the tab the address asks for even when Settings was already open', async () => {
+  const user = userEvent.setup();
+  function GoTo({ to, label }) {
+    const navigate = useNavigate();
+    return <button type="button" onClick={() => navigate(to)}>{label}</button>;
+  }
+  render(<MemoryRouter initialEntries={['/settings']}><Routes>
+    <Route path="/settings" element={<><Settings /><GoTo to="/settings?section=training" label="open training address" /><GoTo to="/settings?section=nonsense" label="open unknown address" /></>} />
+  </Routes></MemoryRouter>);
+  await screen.findByRole('textbox', { name: t('settings.display_name_title') });
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-profile');
+
+  await user.click(screen.getByRole('button', { name: 'open training address' }));
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-training');
+  expect(await screen.findByRole('textbox', { name: t('settings.training_max_label') })).toBeInTheDocument();
+
+  // An address that names no tab leaves the open tab where it is, and the reader can still switch freely.
+  await user.click(screen.getByRole('button', { name: 'open unknown address' }));
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-training');
+  await user.click(screen.getByRole('tab', { name: t('settings.stitch_prefs_title') }));
+  expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'st-v2-preferences');
 });
 
 it('adapts tab orientation to mobile and cleans up the viewport listener', async () => {

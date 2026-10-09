@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { apiJson } from '../../api';
 import { invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
@@ -73,6 +73,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { unit, setUnit } = useUnit();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -491,6 +492,7 @@ export default function Settings() {
         </header>
 
         <SettingsAtlasLayout
+          initialSection={searchParams.get('section') || undefined}
           t={t}
           navigate={navigate}
           initials={initials}

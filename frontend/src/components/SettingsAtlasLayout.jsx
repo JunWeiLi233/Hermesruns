@@ -4,12 +4,16 @@ import FooterNavLinks from './FooterNavLinks';
 import RunActivityContributionGraph from './RunActivityContributionGraph';
 import SettingsDataCard from './SettingsDataCard';
 import SettingsTimeZoneRow from './SettingsTimeZoneRow';
+import SettingsTrainingZones from './SettingsTrainingZones';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
    Disconnecting Strava and deleting the account only ask here (requestStravaDisconnect,
    onRequestDeleteAccount): the confirmation dialogs live in Settings.jsx, outside .st-v2. */
 
+const SECTION_IDS = ['profile', 'preferences', 'training', 'connections', 'notifications', 'activity', 'account'];
+
 export default function SettingsAtlasLayout({
+  initialSection,
   t,
   navigate,
   initials,
@@ -57,7 +61,14 @@ export default function SettingsAtlasLayout({
   onAvatarUpload,
   onAvatarRemove,
 }) {
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState(SECTION_IDS.includes(initialSection) ? initialSection : 'profile');
+  // The address can ask for another tab while Settings stays open (a link to /settings?section=training from
+  // here, or the browser's back and forward buttons), so a changed request moves the tab too.
+  const [requestedSection, setRequestedSection] = useState(initialSection);
+  if (initialSection !== requestedSection) {
+    setRequestedSection(initialSection);
+    if (SECTION_IDS.includes(initialSection)) setActiveSection(initialSection);
+  }
   const [compactNavigation, setCompactNavigation] = useState(false);
   const avatarInputRef = useRef(null);
   const sectionTabsRef = useRef(null);
@@ -67,6 +78,7 @@ export default function SettingsAtlasLayout({
   const sections = [
     ['profile', t('settings.stitch_account_info')],
     ['preferences', t('settings.stitch_prefs_title')],
+    ['training', t('settings.training_tab')],
     ['connections', t('settings.stitch_data_services_title')],
     ['notifications', t('settings.v2_notifications_title')],
     ['activity', t('settings.v2_activity_title')],
@@ -272,6 +284,11 @@ export default function SettingsAtlasLayout({
               </div>
               <SettingsTimeZoneRow t={t} timeZone={timeZone} onSaved={onTimeZoneSaved} />
             </div>
+          </section>
+
+          <section id="st-v2-training" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'training'} aria-labelledby="st-v2-tab-training">
+            <h2 id="st-v2-training-label" className="st-v2-group-label">{t('settings.training_zones_title')}</h2>
+            <SettingsTrainingZones t={t} active={activeSection === 'training'} />
           </section>
 
           <section id="st-v2-connections" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'connections'} aria-labelledby="st-v2-tab-connections">

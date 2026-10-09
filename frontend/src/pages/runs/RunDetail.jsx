@@ -15,6 +15,7 @@ import { formatDuration, formatLongDate, formatPaceSeconds } from '../../utils/f
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
+import RunTrainingCards from './RunTrainingCards';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -1174,6 +1175,8 @@ export default function RunDetail() {
             </div>
           )}
         </section>
+
+        <RunTrainingCards key={run.id} runId={run.id} />
 
         <div className="run-detail-v2__lower">
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">

@@ -26,6 +26,16 @@ for (const sectionId of [
   assert.ok(runDetailSource.includes(`id="${sectionId}"`), `Run Detail is missing the ${sectionId} anchor.`);
 }
 
+// The effort and zones section lives in its own component, which always renders the anchor (loaded or not).
+assert.ok(navSource.includes("'run-detail-effort'"), 'Runs subpage navigation is missing run-detail-effort.');
+assert.match(runDetailSource, /<RunTrainingCards key=\{run\.id\} runId=\{run\.id\} \/>/, 'Run Detail should render the effort and zones section for the open run.');
+assert.ok(
+  readFileSync(path.join(srcRoot, 'pages/runs/RunTrainingCards.jsx'), 'utf8').includes('id="run-detail-effort"'),
+  'The effort and zones section must keep the run-detail-effort anchor in every state.',
+);
+assert.match(enSource, /"subnav_effort": "Effort and zones"/, 'The run navigation needs an English label for the effort and zones section.');
+assert.match(zhSource, /"subnav_effort": "强度与心率区间"/, 'The run navigation needs a Chinese label for the effort and zones section.');
+
 assert.match(navSource, /aria-current=\{active \? 'location' : undefined\}/, 'The visible run section should be exposed to assistive technology.');
 assert.match(navSource, /IntersectionObserver/, 'Runs navigation should track the visible detail section.');
 for (const railControl of [

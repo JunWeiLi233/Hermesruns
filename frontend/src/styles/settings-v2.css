@@ -9,6 +9,12 @@
   --sv-fill: rgba(28, 25, 23, 0.05);
   --sv-accent: #a0392a;
   --sv-input-line: rgba(28, 25, 23, 0.12);
+  --sv-error: #c4261a;
+  --sv-zone-1: #9db8ad;
+  --sv-zone-2: #5f8f7e;
+  --sv-zone-3: #c99a2e;
+  --sv-zone-4: #d46a2f;
+  --sv-zone-5: #a0392a;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -24,6 +30,12 @@ body:is(.theme-midnight, .theme-high-contrast) #root .settings-atlas-canvas.st-v
   --sv-fill: rgba(255, 255, 255, 0.06);
   --sv-accent: #ffb4a7;
   --sv-input-line: rgba(255, 248, 238, 0.2);
+  --sv-error: #ff9b87;
+  --sv-zone-1: #7da596;
+  --sv-zone-2: #6fae9b;
+  --sv-zone-3: #e0b84f;
+  --sv-zone-4: #ee8a4e;
+  --sv-zone-5: #f07561;
 }
 
 #root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 {
@@ -269,6 +281,27 @@ body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-logout strong { colo
 #root .st-v2-danger, #root .st-v2-btn.is-danger { color: #c4261a; }
 body:is(.theme-midnight, .theme-high-contrast) #root :is(.st-v2-danger, .st-v2-btn.is-danger) { color: #ff9b87; }
 
+/* Training zones */
+#root .st-v2-zones-row { align-items: start; }
+#root .st-v2-zones-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#root .st-v2-zones-form.is-boundaries { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 14px; align-items: end; }
+#root .st-v2-zones-field { display: flex; flex-direction: column; gap: 4px; color: var(--sv-muted); font-size: 0.75rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+#root .st-v2-zones-input { width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
+#root .st-v2-zones-input[aria-invalid="true"] { border-color: var(--sv-error); }
+#root .st-v2-zones-error { grid-column: 1 / -1; color: var(--sv-error); font-size: 0.78rem; line-height: 1.45; }
+#root .st-v2-zones-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+#root .st-v2-zones-preview { grid-template-columns: minmax(0, 1fr); }
+#root .st-v2-zones-preview ul { display: grid; gap: 8px; padding: 0; list-style: none; }
+#root .st-v2-zones-preview li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 0.85rem; }
+#root .st-v2-zones-preview li i { width: 10px; height: 10px; border-radius: 3px; background: var(--zone-color); }
+#root .st-v2-zones-preview li span { color: var(--sv-muted); }
+#root .st-v2-zones-preview li strong { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+#root .st-v2-zones-preview li.is-zone-1 { --zone-color: var(--sv-zone-1); }
+#root .st-v2-zones-preview li.is-zone-2 { --zone-color: var(--sv-zone-2); }
+#root .st-v2-zones-preview li.is-zone-3 { --zone-color: var(--sv-zone-3); }
+#root .st-v2-zones-preview li.is-zone-4 { --zone-color: var(--sv-zone-4); }
+#root .st-v2-zones-preview li.is-zone-5 { --zone-color: var(--sv-zone-5); }
+
 /* The confirmation dialogs open outside .st-v2 and reuse the Runs delete dialog, whose card reads two
    tokens that only the Runs page defines. */
 #root .settings-control-page .runs-delete-modal-card { --runs-profile-card-strong: #ffffff; --runs-profile-ink: #171512; }
@@ -298,6 +331,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .settings-control-page .st-
   #root .st-v2-row-actions, #root .st-v2-row > .st-v2-btn, #root .st-v2-row > .st-v2-select, #root .st-v2-segmented, #root .st-v2-themes { justify-self: start; }
   #root .st-v2-toggle-row, #root .st-v2-logout { grid-template-columns: minmax(0, 1fr) auto; }
   #root .st-v2 :is(.st-v2-btn, .st-v2-primary, .st-v2-select, .st-v2-segmented button) { min-height: 44px; }
+  #root .st-v2-zones-input { min-height: 44px; }
+  #root .st-v2-zones-form.is-boundaries { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .st-v2-zones-form.is-boundaries .st-v2-zones-input { width: 100%; }
+  #root .st-v2-zones-actions { justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
