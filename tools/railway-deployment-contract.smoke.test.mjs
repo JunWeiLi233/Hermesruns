@@ -10,6 +10,7 @@ const dockerIgnore = read('.dockerignore')
 const applicationProperties = read('backend/src/main/resources/application.properties')
 const railway = read('.railway/railway.ts')
 const rootPackage = JSON.parse(read('package.json'))
+const rootLock = JSON.parse(read('package-lock.json'))
 
 // Read logical instructions so comments cannot satisfy checks and continuations/CRLF are harmless.
 const instructions = dockerfile.replace(/\\\n[\t ]*/g, ' ')
@@ -104,7 +105,11 @@ assert.match(railway, /export\s+const\s+partial\s*=\s*"hermes-web"/)
 assert.match(railway, /service\("hermes-web",\s*\{[\s\S]*healthcheck:\s*"\/"/)
 assert.match(railway, /healthcheckTimeout:\s*180/)
 assert.equal(existsSync(resolve(repoRoot, 'railway.json')), false)
-assert.equal(rootPackage.devDependencies?.railway, '3.11.0')
+const railwayVersion = rootPackage.devDependencies?.railway
+assert.match(railwayVersion, /^\d+\.\d+\.\d+$/, 'Keep the Railway DSL dependency pinned to an exact release.')
+assert.equal(rootLock.packages[''].devDependencies.railway, railwayVersion)
+assert.equal(rootLock.packages['node_modules/railway'].version, railwayVersion,
+  'The Railway DSL lockfile must install the pinned release.')
 
 for (const ignoredPath of [
   '.git',
