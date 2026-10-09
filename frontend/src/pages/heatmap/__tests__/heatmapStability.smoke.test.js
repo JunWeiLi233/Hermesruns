@@ -206,8 +206,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  /const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?zoomAnimationActiveRef\.current = false;[\s\S]*?scheduleRouteDots\('full'\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?const queuedZoomStep = Math\.sign\(queuedZoomStepsRef\.current\);[\s\S]*?if \(queuedZoomStep === 0\) \{[\s\S]*?finishZoomRender\(\);[\s\S]*?return;[\s\S]*?queuedZoomStepsRef\.current -= queuedZoomStep;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomStep[\s\S]*?map\.setZoom\(nextZoom, \{ animate: true \}\)/,
-  'Heatmap zooming should skip intermediate redraws and drain queued clicks one level at a time before the atomic full repaint.',
+  /const finishZoomRender = \(\) => \{[\s\S]*?isZoomingMap = false;[\s\S]*?zoomAnimationActiveRef\.current = false;[\s\S]*?paintRouteDots\('full'\);[\s\S]*?const scheduleZoomEnd = \(\) => \{[\s\S]*?finishZoomRender\(\);/,
+  'Heatmap should repaint every completed zoom so the canvas covers the current viewport.',
 );
 assert.doesNotMatch(
   heatmapSource,
@@ -216,8 +216,8 @@ assert.doesNotMatch(
 );
 assert.match(
   heatmapSource,
-  new RegExp(String.raw`wheelDebounceTime: 24[\s\S]*?wheelPxPerZoomLevel: 96[\s\S]*?zoomAnimation: true[\s\S]*?zoomAnimationThreshold: 1[\s\S]*?fadeAnimation: false[\s\S]*?markerZoomAnimation: false[\s\S]*?preferCanvas: true[\s\S]*?updateWhenZooming: false[\s\S]*?updateWhenIdle: false[\s\S]*?updateInterval: 250[\s\S]*?keepBuffer: 2[\s\S]*?className: 'heatmap-page-dark-tile-layer'[\s\S]*?errorTileUrl: 'data:image/svg\+xml,`),
-  'Heatmap should animate one-level zooms only, throttle tile updates, retain a bounded buffer, and use a dark fallback during zoom.',
+  new RegExp(String.raw`scrollWheelZoom: true[\s\S]*?wheelDebounceTime: 24[\s\S]*?wheelPxPerZoomLevel: 96[\s\S]*?zoomAnimation: true[\s\S]*?zoomAnimationThreshold: 4[\s\S]*?fadeAnimation: false[\s\S]*?markerZoomAnimation: false[\s\S]*?preferCanvas: true[\s\S]*?updateWhenZooming: false[\s\S]*?updateWhenIdle: false[\s\S]*?updateInterval: 250[\s\S]*?keepBuffer: 2[\s\S]*?className: 'heatmap-page-dark-tile-layer'[\s\S]*?errorTileUrl: 'data:image/svg\+xml,`),
+  'Heatmap should retain native wheel sensitivity and animate its bounded multi-level packets while keeping the tile update buffer.',
 );
 assert.match(
   heatmapSource,
@@ -261,23 +261,18 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /const zoomMap = \(delta\) => \{[\s\S]*?const zoomStep = Math\.sign\(delta\);[\s\S]*?if \(zoomAnimationActiveRef\.current\) \{[\s\S]*?queuedZoomStepsRef\.current = clamp\([\s\S]*?queuedZoomStepsRef\.current \+ zoomStep,[\s\S]*?-3,[\s\S]*?3,[\s\S]*?return;[\s\S]*?const targetZoom = clamp\(map\.getZoom\(\) \+ zoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);[\s\S]*?map\.setZoom\(targetZoom, \{ animate: true \}\);/,
-  'Heatmap zoom controls should queue rapid clicks and request a bounded zoom step without serializing every click.',
-);
-assert.match(
-  heatmapSource,
-  /const queuedZoomStep = Math\.sign\(queuedZoomStepsRef\.current\);[\s\S]*?queuedZoomStepsRef\.current -= queuedZoomStep;[\s\S]*?const nextZoom = clamp\(map\.getZoom\(\) \+ queuedZoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);/,
-  'Heatmap should drain queued zoom input one level per animation so rapid clicks never become an instant multi-level jump.',
+  /const zoomBy = \(delta\) => \{[\s\S]*?if \(disposed \|\| zoomAnimationActiveRef\.current\) return;[\s\S]*?const zoomStep = Math\.sign\(delta\);[\s\S]*?const targetZoom = clamp\(map\.getZoom\(\) \+ zoomStep, map\.getMinZoom\(\), map\.getMaxZoom\(\)\);[\s\S]*?map\.setZoom\(targetZoom, \{ animate: true \}\);/,
+  'Heatmap buttons should request a bounded zoom directly and ignore clicks during the current animation.',
 );
 assert.doesNotMatch(
   heatmapSource,
-  /const queuedZoomDelta = queuedZoomStepsRef\.current;[\s\S]*?map\.getZoom\(\) \+ queuedZoomDelta/,
-  'Heatmap should not apply multiple queued zoom levels in one animation.',
+  /pendingWheelView|queuedZoomStepsRef|queuedZoomFrameId|map\.setZoomAround\s*=/,
+  'Heatmap should preserve native wheel handling without saving input for automatic zooms after the animation.',
 );
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-map-shell \.leaflet-zoom-anim \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.45s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
-  'Heatmap zoom transforms should use a longer eased transition so button and wheel zooming feels smooth.',
+  /\.heatmap-page-map-shell \.leaflet-zoom-anim \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.25s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
+  'Heatmap eased zoom transforms should finish within Leaflet 1.9\'s 250 ms lifecycle.',
 );
 assert.match(
   heatmapSource,
@@ -286,7 +281,7 @@ assert.match(
 );
 assert.match(
   heatmapStyleSource,
-  /\.heatmap-page-map-shell \.leaflet-container\.is-zooming \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.45s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
+  /\.heatmap-page-map-shell \.leaflet-container\.is-zooming \.leaflet-zoom-animated\s*\{[\s\S]*?transition:\s*transform 0\.25s cubic-bezier\(0\.22, 0\.61, 0\.36, 1\) !important;/,
   'Heatmap should apply its eased zoom transition while its own zooming state is active, even when Leaflet removes its transient animation class early.',
 );
 assert.match(

@@ -110,9 +110,9 @@ const requireAccessibleHistory = (branch, route, collection, valueMarkers) => {
 };
 
 requireAccessibleHistory(
-  coachBranch,
+  readFileSync(path.join(here, '../CoachLoadChart.jsx'), 'utf8'),
   'coach',
-  'coachLoadDashboard.chartWindow',
+  'dashboard.chartWindow',
   ['entry.label', 'entry.acute', 'entry.chronic'],
 );
 requireAccessibleHistory(

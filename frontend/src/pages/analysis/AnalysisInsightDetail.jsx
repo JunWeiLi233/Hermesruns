@@ -20,6 +20,7 @@ import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } 
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
 import { buildLoadBalanceBudget, getLoadBalanceWeekStats, getLoadBalanceRecentRuns, getLoadBalanceZoneKey, getLoadContribution } from './loadBalancePresentation';
+import CoachLoadChart from './CoachLoadChart';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -1425,14 +1426,8 @@ export default function AnalysisInsightDetail() {
     return buildLoadChartGeometry(loadDashboard, loadChartWidth, true);
   }, [loadDashboard, loadChartWidth]);
 
-  const coachLoadChartGeometry = useMemo(
-    () => buildLoadChartGeometry(coachLoadDashboard),
-    [coachLoadDashboard],
-  );
-
   const [loadScrubber, setLoadScrubber] = useState(null);
   useEffect(() => { setLoadScrubber(null); }, [loadChartDays]);
-  const [coachLoadScrubber, setCoachLoadScrubber] = useState(null);
 
   const handleLoadPointerMove = useCallback((event) => {
     if (!loadChartGeometry) return;
@@ -1454,26 +1449,6 @@ export default function AnalysisInsightDetail() {
   }, [loadChartGeometry]);
 
   const handleLoadPointerLeave = useCallback(() => setLoadScrubber(null), []);
-  const handleCoachLoadPointerMove = useCallback((event) => {
-    if (!coachLoadChartGeometry) return;
-    const svg = event.currentTarget;
-    const pt = svg.createSVGPoint();
-    pt.x = event.clientX;
-    pt.y = event.clientY;
-    const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
-    const svgX = svgPt.x;
-
-    let nearest = null;
-    let nearestDist = Infinity;
-    for (const point of coachLoadChartGeometry.pts) {
-      const dist = Math.abs(point.cx - svgX);
-      if (dist < nearestDist) { nearestDist = dist; nearest = point; }
-    }
-    if (!nearest) return;
-    setCoachLoadScrubber(nearest);
-  }, [coachLoadChartGeometry]);
-
-  const handleCoachLoadPointerLeave = useCallback(() => setCoachLoadScrubber(null), []);
   const hasInjuryEvidence = injuryRows.length > 0;
   const injuryRiskToneLabel = t(hasInjuryEvidence ? `analysis.injury_v2_risk_${snapshot.injury.level}` : 'analysis.injury_v2_unavailable');
   const injuryCoachHeading = t(hasInjuryEvidence ? `analysis.injury_v2_heading_${snapshot.injury.level}` : 'analysis.injury_v2_heading_empty');
@@ -1674,94 +1649,7 @@ export default function AnalysisInsightDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="analysis-coach-bento__legend">
-                  <span><i aria-hidden="true" />{coachLoadDashboard.chartLegendAcute}</span>
-                  <span><i className="is-chronic" aria-hidden="true" />{coachLoadDashboard.chartLegendChronic}</span>
-                </div>
-                <div className="analysis-coach-command-chart-shell analysis-load-command-chart-wrap">
-                    <div className="sr-only analysis-profile-v2-history" data-analysis-history="coach">
-                      <h3>{coachLoadDashboard.chartTitle}</h3>
-                      <ul>
-                        {coachLoadDashboard.chartWindow.map((entry) => (
-                          <li key={`coach-history-${entry.day}`}>
-                            <span>{entry.label}</span>
-                            <span>{`${coachLoadDashboard.chartLegendAcute}: ${Math.round(entry.acute)}`}</span>
-                            <span>{`${coachLoadDashboard.chartLegendChronic}: ${Math.round(entry.chronic)}`}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {coachLoadChartGeometry ? (
-                      <svg
-                        viewBox={`0 0 ${coachLoadChartGeometry.width} ${coachLoadChartGeometry.height}`}
-                        preserveAspectRatio="none"
-                        className="analysis-coach-command-acwr-chart-svg"
-                        aria-hidden="true"
-                        onPointerMove={handleCoachLoadPointerMove}
-                        onPointerLeave={handleCoachLoadPointerLeave}
-                        style={{ cursor: 'crosshair', pointerEvents: 'all', display: 'block', width: '100%', height: '100%' }}
-                      >
-                        <defs>
-                          <linearGradient id="coachLoadAcuteGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="var(--coach-profile-accent)" stopOpacity="0.28" />
-                            <stop offset="100%" stopColor="var(--coach-profile-accent)" stopOpacity="0.02" />
-                          </linearGradient>
-                          <clipPath id="coachLoadChartClip">
-                            <rect x={coachLoadChartGeometry.padL} y={coachLoadChartGeometry.padT} width={coachLoadChartGeometry.width - coachLoadChartGeometry.padL - coachLoadChartGeometry.padR} height={coachLoadChartGeometry.height - coachLoadChartGeometry.padT - coachLoadChartGeometry.padB} />
-                          </clipPath>
-                        </defs>
-                        <rect x="0" y="0" width={coachLoadChartGeometry.width} height={coachLoadChartGeometry.height} fill="transparent" />
-                        {coachLoadChartGeometry.yTicks.map((tick) => (
-                          <g key={tick.value}>
-                            <line x1={coachLoadChartGeometry.padL} x2={coachLoadChartGeometry.width - coachLoadChartGeometry.padR} y1={tick.y} y2={tick.y} stroke="var(--coach-profile-line)" strokeWidth="1" />
-                            <text x={coachLoadChartGeometry.padL - 8} y={tick.y + 4} textAnchor="end" fontSize="11" fill="var(--coach-profile-muted)">{tick.value}</text>
-                          </g>
-                        ))}
-                        <g clipPath="url(#coachLoadChartClip)">
-                          <path d={coachLoadChartGeometry.acuteAreaPath} fill="url(#coachLoadAcuteGrad)" />
-                          <path d={coachLoadChartGeometry.chronicPath} fill="none" stroke="#78b4ff" strokeOpacity="0.68" strokeWidth="2" strokeDasharray="5 3" strokeLinejoin="round" />
-                          <path d={coachLoadChartGeometry.acutePath} fill="none" stroke="var(--coach-profile-accent)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-                        </g>
-                        {coachLoadScrubber && (
-                          <g className="analysis-load-command-chart-markers">
-                            <line
-                              x1={coachLoadScrubber.cx} x2={coachLoadScrubber.cx}
-                              y1={coachLoadChartGeometry.padT} y2={coachLoadChartGeometry.height - coachLoadChartGeometry.padB}
-                              stroke="var(--coach-profile-line-strong)" strokeWidth="1.5" strokeDasharray="4 3"
-                              style={{ pointerEvents: 'none' }}
-                            />
-                            <circle cx={coachLoadScrubber.cx} cy={coachLoadScrubber.acuteCy} r="18" fill="var(--coach-profile-accent-soft)" style={{ pointerEvents: 'none' }} />
-                            <circle cx={coachLoadScrubber.cx} cy={coachLoadScrubber.acuteCy} r="6" fill="var(--coach-profile-accent)" stroke="var(--coach-profile-card-solid)" strokeWidth="2.5" style={{ pointerEvents: 'none' }} />
-                            <circle cx={coachLoadScrubber.cx} cy={coachLoadScrubber.chronicCy} r="5" fill="#78b4ff" stroke="var(--coach-profile-card-solid)" strokeWidth="2" style={{ pointerEvents: 'none' }} />
-                          </g>
-                        )}
-                        {coachLoadChartGeometry.xTicks.map((tick) => (
-                          <text key={tick.day} x={tick.cx} y={coachLoadChartGeometry.height - coachLoadChartGeometry.padB + 18} textAnchor="middle" fontSize="11" fill="var(--coach-profile-muted)">{tick.label}</text>
-                        ))}
-                      </svg>
-                    ) : (
-                      <div className="analysis-load-command-chart-empty">{t('analysisInsight.load_no_data')}</div>
-                    )}
-                    {coachLoadScrubber ? (
-                      <div className="analysis-load-command-chart-tooltip" style={{ pointerEvents: 'none' }}>
-                        <div className="analysis-load-command-chart-tooltip-head">
-                          <span>{coachLoadScrubber.label}</span>
-                        </div>
-                        <div className="analysis-load-command-chart-tooltip-metrics">
-                          <div className="analysis-load-command-chart-tooltip-metric is-acute">
-                            <i aria-hidden="true" />
-                            <span>{t('analysisInsight.load_chart_acute_short')}</span>
-                            <strong>{Math.round(coachLoadScrubber.acute)}</strong>
-                          </div>
-                          <div className="analysis-load-command-chart-tooltip-metric is-chronic">
-                            <i aria-hidden="true" />
-                            <span>{t('analysisInsight.load_chart_chronic_short')}</span>
-                            <strong>{Math.round(coachLoadScrubber.chronic)}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                <CoachLoadChart key={coachPerformanceWindow} dashboard={coachLoadDashboard} />
               </section>
 
               <section className="analysis-coach-bento__recent">

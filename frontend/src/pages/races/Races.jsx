@@ -12,7 +12,7 @@ import Modal from '../../components/Modal';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { formatDuration, formatPace } from '../../utils/format';
+import { formatDuration, formatPace, formatPaceSeconds } from '../../utils/format';
 import { resolveProfileDisplayName, resolveProfileInitial } from '../../utils/profileIdentity';
 import {
   getLocalizedCountryLabel,
@@ -30,6 +30,41 @@ import { resolveRaceIntel } from '../../utils/raceIntel';
 import '../../styles/races-v2.css';
 
 const STATUS_OPTIONS = ['INTERESTED', 'APPLIED', 'REGISTERED', 'WAITLIST', 'COMPLETED', 'CANCELED'];
+const DISTANCE_PRESETS = [
+  { key: '5k', km: 5 },
+  { key: '10k', km: 10 },
+  { key: 'half', km: 21.0975 },
+  { key: 'full', km: 42.195 },
+];
+
+function formatGoalInput(seconds) {
+  const total = Math.round(Number(seconds));
+  if (!Number.isFinite(total) || total <= 0) return '';
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
+function parseGoalInput(text) {
+  const value = String(text || '').trim();
+  if (!value) return { seconds: '', valid: true };
+  if (!/^\d{1,2}(:\d{1,2}){0,2}$/.test(value)) return { seconds: '', valid: false };
+  const parts = value.split(':').map(Number);
+  if (parts.slice(1).some((part) => part > 59)) return { seconds: '', valid: false };
+  const seconds = parts.reduce((total, part) => total * 60 + part, 0) * (parts.length === 1 ? 60 : 1);
+  return seconds > 0 ? { seconds: String(seconds), valid: true } : { seconds: '', valid: false };
+}
+
+function getRaceFormCountdown(eventDate) {
+  if (!eventDate) return null;
+  const event = parseRaceDate(eventDate);
+  if (Number.isNaN(event.getTime())) return null;
+  const today = new Date();
+  // Calendar days, not elapsed hours: daylight saving must not shift the pill.
+  return Math.round((Date.UTC(event.getFullYear(), event.getMonth(), event.getDate())
+    - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+}
 
 const RACE_TARGETS = [
   { key: '5k', km: 5, icon: 'timer' },
@@ -261,12 +296,22 @@ const Races = memo(function Races() {
   const [editingRace, setEditingRace] = useState(null);
   const [form, setForm] = useState(DEFAULT_FORM);
   const [formStatus, setFormStatus] = useState('');
+  const [goalText, setGoalText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [selectedDistance, setSelectedDistance] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(0); // 0 = all months
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE_INITIAL);
   const [officialDiscoveryImages, setOfficialDiscoveryImages] = useState({});
+
+  const goal = parseGoalInput(goalText);
+  const kmValue = Number(form.distanceKm);
+  const matchedPreset = DISTANCE_PRESETS.find((preset) => Math.abs(preset.km - kmValue) < 0.01);
+  const distanceValid = form.distanceKm === '' || (Number.isFinite(kmValue) && kmValue >= 1);
+  const paceSeconds = goal.valid && goal.seconds && kmValue > 0 ? Number(goal.seconds) / kmValue : null;
+  const daysToGo = getRaceFormCountdown(form.eventDate);
+  const canSubmit = Boolean(form.name.trim() && form.eventDate && goal.valid && distanceValid && !isSaving);
 
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
@@ -305,6 +350,7 @@ const Races = memo(function Races() {
   function openCreateModal() {
     setEditingRace(null);
     setForm(DEFAULT_FORM);
+    setGoalText('');
     setFormStatus('');
     setModalOpen(true);
   }
@@ -326,6 +372,7 @@ const Races = memo(function Races() {
       notes: catalogRace.program || '',
       nyrrNinePlusOneEligible: catalogRace.program === 'NYRR 9+1',
     });
+    setGoalText('');
     setFormStatus('');
     setModalOpen(true);
   }
@@ -343,18 +390,21 @@ const Races = memo(function Races() {
       notes: race.notes || '',
       nyrrNinePlusOneEligible: !!race.nyrrNinePlusOneEligible,
     });
+    setGoalText(formatGoalInput(race.goalTimeSeconds));
     setFormStatus('');
     setModalOpen(true);
   }
 
   async function handleSaveRace(event) {
     event.preventDefault();
+    if (!canSubmit) return;
     setFormStatus('');
+    setIsSaving(true);
     try {
       const payload = {
         ...form,
         distanceKm: form.distanceKm ? Number(form.distanceKm) : null,
-        goalTimeSeconds: form.goalTimeSeconds ? Number(form.goalTimeSeconds) : null,
+        goalTimeSeconds: goal.seconds ? Number(goal.seconds) : null,
       };
       const url = editingRace ? `/api/races/${editingRace.id}` : '/api/races';
       const method = editingRace ? 'PUT' : 'POST';
@@ -369,6 +419,8 @@ const Races = memo(function Races() {
       loadData();
     } catch (error) {
       setFormStatus(error.message || t('races.save_failed'));
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -987,59 +1039,114 @@ const Races = memo(function Races() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingRace ? t('races.edit_title') : t('races.add_title')}
-        icon={<AppIcon name="flag" className="race-center-modal-header-icon" />}
-        shellClassName="race-center-modal-shell"
-        cardClassName="race-center-modal-card"
+        title={editingRace ? (form.name.trim() || t('races.edit_title')) : t('races.add_title')}
+        headerContent={<>
+          <span className="race-form-v2-mark" aria-hidden="true"><AppIcon name="flag" /></span>
+          <span className="race-form-v2-sub">{editingRace ? t('races.edit_title') : t('races.form_v2_add_sub')}</span>
+        </>}
+        closeLabel={t('profile.close')}
+        shellClassName="race-center-modal-shell race-form-v2-shell"
+        cardClassName="race-center-modal-card race-form-v2-card"
       >
-        <form className="race-center-modal-form" onSubmit={handleSaveRace}>
-          <label className="modal-label">{t('races.form_name')}</label>
-          <input type="text" value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+        <form className="race-center-modal-form race-form-v2" onSubmit={handleSaveRace} aria-busy={isSaving}>
+          <div className="race-form-v2-body">
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-race">
+              <h4 id="race-form-v2-race">{t('races.form_v2_section_race')}</h4>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_name')} <em aria-hidden="true">*</em></span>
+                <input className="is-strong" type="text" data-modal-initial-focus value={form.name} onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))} required />
+              </label>
+              <div className="race-form-v2-pair">
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_date')} <em aria-hidden="true">*</em></span>
+                  <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
+                </label>
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_location')}</span>
+                  <input type="text" value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
+                </label>
+              </div>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_org')}</span>
+                <input type="text" value={form.organization} onChange={(event) => setForm((prev) => ({ ...prev, organization: event.target.value }))} />
+              </label>
+              {daysToGo != null && daysToGo > 0 ? <span className="race-form-v2-countdown">{t('races.form_v2_days_to_go', { count: daysToGo })}</span> : null}
+            </section>
 
-          <label className="modal-label">{t('races.form_org')}</label>
-          <input type="text" value={form.organization} onChange={(event) => setForm((prev) => ({ ...prev, organization: event.target.value }))} />
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-distance">
+              <h4 id="race-form-v2-distance">{t('races.form_v2_section_distance')}</h4>
+              <div className="race-form-v2-chips" role="group" aria-label={t('races.form_distance')}>
+                {DISTANCE_PRESETS.map((preset) => (
+                  <button key={preset.key} type="button" className={matchedPreset?.key === preset.key ? 'is-active' : ''} aria-pressed={matchedPreset?.key === preset.key}
+                    onClick={() => setForm((prev) => ({ ...prev, distanceKm: String(preset.km) }))}>
+                    {t(`races.form_v2_preset_${preset.key}`)}
+                  </button>
+                ))}
+                <button type="button" className={!matchedPreset ? 'is-active' : ''} aria-pressed={!matchedPreset}
+                  onClick={() => setForm((prev) => ({ ...prev, distanceKm: matchedPreset ? '' : prev.distanceKm }))}>
+                  {t('races.form_v2_preset_custom')}
+                </button>
+              </div>
+              <div className="race-form-v2-pair">
+                <label className="race-form-v2-field">
+                  <span>{t('races.form_distance')}</span>
+                  <span className="race-form-v2-suffix">
+                    <input type="number" min="1" step="any" value={form.distanceKm} inputMode="decimal" onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
+                    <em aria-hidden="true">km</em>
+                  </span>
+                </label>
+                <label className={`race-form-v2-field${goal.valid ? '' : ' is-invalid'}`}>
+                  <span>{t('races.form_v2_goal')}</span>
+                  <input type="text" inputMode="text" placeholder="3:25:00" value={goalText} aria-invalid={!goal.valid} aria-describedby="race-form-v2-pace"
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setGoalText(next);
+                      setForm((prev) => ({ ...prev, goalTimeSeconds: parseGoalInput(next).seconds }));
+                    }} />
+                </label>
+              </div>
+              <p id="race-form-v2-pace" className={`race-form-v2-hint${goal.valid ? '' : ' is-error'}`}>
+                {!goal.valid ? t('races.form_v2_goal_invalid') : paceSeconds
+                  ? t('races.form_v2_pace', { pace: formatPaceSeconds(paceSeconds) }) : t('races.form_v2_goal_hint')}
+              </p>
+            </section>
 
-          <label className="modal-label">{t('races.form_location')}</label>
-          <input type="text" value={form.location} onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_date')}</label>
-          <input type="date" value={form.eventDate} onChange={(event) => setForm((prev) => ({ ...prev, eventDate: event.target.value }))} required />
-
-          <label className="modal-label">{t('races.form_distance')}</label>
-          <input type="number" min="1" step="any" value={form.distanceKm} onChange={(event) => setForm((prev) => ({ ...prev, distanceKm: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_status')}</label>
-          <select value={form.registrationStatus} onChange={(event) => setForm((prev) => ({ ...prev, registrationStatus: event.target.value }))}>
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>{t(`races.status_${status.toLowerCase()}`)}</option>
-            ))}
-          </select>
-
-          <label className="modal-label">{t('races.form_goal')}</label>
-          <input type="number" min="1" step="1" value={form.goalTimeSeconds} onChange={(event) => setForm((prev) => ({ ...prev, goalTimeSeconds: event.target.value }))} />
-
-          <label className="modal-label">{t('races.form_notes')}</label>
-          <input type="text" value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} />
-
-          <label className="shoe-checkbox-label">
-            <input
-              type="checkbox"
-              checked={form.nyrrNinePlusOneEligible}
-              onChange={(event) => setForm((prev) => ({ ...prev, nyrrNinePlusOneEligible: event.target.checked }))}
-            />
-            <span>{t('races.form_nyrr')}</span>
-          </label>
-
-          {editingRace ? (
-            <button type="button" className="btn-secondary race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)} aria-label={t('races.delete_button')}>
-              {t('races.delete_button')}
-            </button>
-          ) : null}
-
-          {formStatus ? <div className="modal-status">{formStatus}</div> : null}
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary modal-button" onClick={() => setModalOpen(false)} aria-label={t('profile.cancel')}>{t('profile.cancel')}</button>
-            <button type="submit" className="btn-primary modal-button" aria-label={editingRace ? t('races.save_button') : t('races.create_button')}>{editingRace ? t('races.save_button') : t('races.create_button')}</button>
+            <section className="race-form-v2-section" aria-labelledby="race-form-v2-status">
+              <h4 id="race-form-v2-status">{t('races.form_status')}</h4>
+              <div className="race-form-v2-status" role="radiogroup" aria-labelledby="race-form-v2-status">
+                {STATUS_OPTIONS.map((status) => (
+                  <label key={status}>
+                    <input type="radio" name="race-registration-status" value={status} checked={form.registrationStatus === status}
+                      onChange={() => setForm((prev) => ({ ...prev, registrationStatus: status }))} />
+                    <span className={`race-form-v2-status-option is-${status.toLowerCase()}${form.registrationStatus === status ? ' is-active' : ''}`}>
+                      <i aria-hidden="true" />{t(`races.status_${status.toLowerCase()}`)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <label className="race-form-v2-switch-row">
+                <span className="race-form-v2-switch-copy">
+                  <strong>{t('races.form_nyrr')}</strong>
+                  <span id="race-form-v2-nyrr-hint">{t('races.form_v2_nyrr_hint')}</span>
+                </span>
+                <input type="checkbox" role="switch" aria-label={t('races.form_nyrr')} aria-describedby="race-form-v2-nyrr-hint" checked={form.nyrrNinePlusOneEligible}
+                  onChange={(event) => setForm((prev) => ({ ...prev, nyrrNinePlusOneEligible: event.target.checked }))} />
+                <span className="race-form-v2-switch" aria-hidden="true" />
+              </label>
+              <label className="race-form-v2-field">
+                <span>{t('races.form_notes')}</span>
+                <textarea rows={2} value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} placeholder={t('races.form_v2_notes_placeholder')} />
+              </label>
+            </section>
+            {formStatus ? <div className="modal-status race-form-v2-status-msg" role="alert">{formStatus}</div> : null}
+          </div>
+          <div className="race-form-v2-footer">
+            {editingRace ? <button type="button" className="race-form-v2-delete race-center-modal-delete" onClick={() => handleDeleteRace(editingRace)} disabled={isSaving}>
+              <AppIcon name="delete" aria-hidden="true" />{t('races.delete_button')}
+            </button> : null}
+            <span className="race-form-v2-spacer" />
+            <button type="button" className="race-form-v2-cancel" onClick={() => setModalOpen(false)}>{t('profile.cancel')}</button>
+            <button type="submit" className="race-form-v2-submit" disabled={!canSubmit}>{editingRace ? t('races.save_button') : t('races.create_button')}</button>
           </div>
         </form>
       </Modal>

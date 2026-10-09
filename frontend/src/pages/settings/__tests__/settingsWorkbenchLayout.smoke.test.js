@@ -4,168 +4,28 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const layoutSource = readFileSync(path.join(here, "../../../components/SettingsAtlasLayout.jsx"), 'utf8');
-const splitSettingsStyleSource = readFileSync(
-  path.join(here, "../../../styles/_split/settings.css"),
-  'utf8',
-);
-const styleSource = [
-  readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8'),
-  splitSettingsStyleSource,
-].join('\n');
-const liquidGlassStyleSource = readFileSync(
-  path.join(here, "../../../styles/all-pages-liquid-glass.css"),
-  'utf8',
-);
-const pageSource = readFileSync(path.join(here, "../Settings.jsx"), 'utf8');
-
-assert.match(
-  layoutSource,
-  /settings-control-canvas settings-atlas-canvas/,
-  'Settings should mount inside the full-bleed atlas canvas instead of the old constrained shell.',
-);
-
-assert.match(
-  layoutSource,
-  /st-hero[\s\S]*st-main-grid[\s\S]*st-main-grid[\s\S]*st-services[\s\S]*st-bottom-grid/,
-  'Settings atlas should group profile, preferences, setup, services, and wellness sections explicitly.',
-);
-
-const dataServices = layoutSource.slice(layoutSource.indexOf('<section className="st-services">'), layoutSource.indexOf('{/* ── Wellness ── */}'));
-assert.ok(dataServices.indexOf('st-sync-section') < dataServices.indexOf('st-services-grid'),
-  'The Strava and Garmin cards should follow Sync health at the bottom of Data services.');
-
-assert.doesNotMatch(
-  layoutSource,
-  /settings\.danger_title/,
-  'The right rail should not be introduced as a danger zone when it contains safe setup and digest controls.',
-);
-
-for (const handlerName of [
-  'saveProfile',
-  'setUnit',
-  'setLang',
-  'setTheme',
-  'connectStrava',
-  'disconnectStrava',
-  'toggleDigest',
-  'logout',
-]) {
-  assert.match(layoutSource, new RegExp(handlerName), `Settings redesign must preserve ${handlerName}.`);
+const layoutSource = readFileSync(path.join(here, '../../../components/SettingsAtlasLayout.jsx'), 'utf8');
+const pageSource = readFileSync(path.join(here, '../Settings.jsx'), 'utf8');
+const styles = readFileSync(path.join(here, '../../../styles/settings-v2.css'), 'utf8');
+const appStyles = readFileSync(path.join(here, '../../../styles/app.css'), 'utf8');
+assert.match(layoutSource, /settings-control-canvas settings-atlas-canvas st-v2/, 'Settings should mount the grouped layout within its existing shell.');
+for (const group of ['profile', 'preferences', 'connections', 'notifications', 'activity', 'account']) {
+  assert.match(layoutSource, new RegExp(`id="st-v2-${group}"`), `Settings should retain its ${group} group.`);
+  assert.ok(layoutSource.includes(`hidden={activeSection !== '${group}'}`), `Settings should hide the inactive ${group} group.`);
 }
-
-assert.match(
-  styleSource,
-  /\.st-main-grid\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
-  'Desktop settings atlas should use balanced two-column cards instead of a loose three-column layout.',
-);
-
-assert.match(
-  styleSource,
-  /\.st-main-grid\s*{[\s\S]*?align-items:\s*stretch/,
-  'Settings workbench rows should stretch both cards to a shared height for aligned edges.',
-);
-
-assert.match(
-  styleSource,
-  /\.st-main-grid\s*>\s*\.st-card\s*{[\s\S]*?height:\s*100%[\s\S]*?box-sizing:\s*border-box/,
-  'Settings cards should fill their grid row without changing their content sizing.',
-);
-
-assert.match(
-  styleSource,
-  /\.settings-control-page \.runner-shell-canvas\.settings-control-canvas,[\s\S]*?\.settings-control-page \.settings-atlas-canvas\s*{[\s\S]*?width:\s*calc\(100% - clamp\(28px,\s*3\.2vw,\s*64px\)\)[\s\S]*?max-width:\s*none !important/,
-  'Settings canvas should override the runner-shell max-width and use the available screen width.',
-);
-
-assert.match(
-  styleSource,
-  /\.st-services-grid\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
-  'Connected services should use a two-column desktop grid instead of leaving empty right-side space.',
-);
-
-assert.ok(
-  styleSource.lastIndexOf('Settings full-bleed control room pass') > styleSource.lastIndexOf('Runner shell navigation redesign'),
-  'The Settings full-bleed override should come after broad runner-shell navigation overrides.',
-);
-
-assert.match(
-  styleSource,
-  /\.st-bottom-grid\s*{[\s\S]*?grid-template-columns:\s*1fr/,
-  'The lower Settings area should avoid an empty right rail when only wellness content is present.',
-);
-
-assert.match(
-  styleSource,
-  /@media \(max-width:\s*960px\)\s*{[\s\S]*?\.st-main-grid,[\s\S]*?\.st-services-grid,[\s\S]*?\.st-bottom-grid\s*{[\s\S]*?grid-template-columns:\s*1fr/,
-  'The Settings atlas should collapse cleanly before desktop columns become cramped.',
-);
-
-assert.match(
-  styleSource,
-  /\.st-service-meta\s*{[\s\S]*?grid-template-columns:\s*1fr\s+1fr/,
-  'Service metadata must stay in readable cards for localized labels.',
-);
-
-assert.match(
-  splitSettingsStyleSource,
-  /\.settings-atlas-quick-copy strong\s*\{[^}]*min-width:\s*0;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;[^}]*word-break:\s*normal;/,
-  'Legacy Settings quick-control labels should wrap long English and Chinese text without clipping.',
-);
-
-assert.match(
-  splitSettingsStyleSource,
-  /\.st-pref-label > div\s*\{[^}]*min-width:\s*0;/,
-  'Visible Settings preference copy must be allowed to shrink inside its control row.',
-);
-
-assert.match(
-  splitSettingsStyleSource,
-  /\.st-pref-label :is\(strong, span\)\s*\{[^}]*max-width:\s*100%;[^}]*white-space:\s*normal;[^}]*overflow-wrap:\s*anywhere;[^}]*word-break:\s*normal;/,
-  'Visible Settings preference labels and descriptions should wrap naturally in both locales.',
-);
-
-assert.match(
-  liquidGlassStyleSource,
-  /\.runner-shell-page\.settings-control-page \.st-card :is\(\s*\.st-card-head,\s*\.st-card-head > div,\s*\.st-kicker,\s*\.st-card-title\s*\)\s*{[\s\S]*?background:\s*transparent\s*!important[\s\S]*?background-image:\s*none\s*!important/,
-  'Settings card headings should stay on the parent card surface instead of showing glass-paper strips behind the words.',
-);
-
-assert.match(
-  liquidGlassStyleSource,
-  /\.runner-shell-page\.settings-control-page \.st-services :is\(\s*\.st-card-head,\s*\.st-card-head > div,\s*\.st-kicker,\s*\.st-card-title\s*\)\s*{[\s\S]*?background:\s*transparent\s*!important[\s\S]*?background-image:\s*none\s*!important/,
-  'The connected-services heading should stay on the outer surface instead of showing a panel strip behind 数据服务.',
-);
-
-const settingsCardSweepIndex = liquidGlassStyleSource.lastIndexOf('[class*="-card"]');
-const settingsHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
-  '.runner-shell-page.settings-control-page .st-card :is(',
-);
-assert.ok(
-  settingsHeadingResetIndex > settingsCardSweepIndex,
-  'The Settings heading reset must remain after the shared liquid-glass card sweep.',
-);
-
-const settingsServicesHeadingResetIndex = liquidGlassStyleSource.lastIndexOf(
-  '.runner-shell-page.settings-control-page .st-services :is(',
-);
-assert.ok(
-  settingsServicesHeadingResetIndex > settingsCardSweepIndex,
-  'The connected-services heading reset must remain after the shared liquid-glass card sweep.',
-);
-
-assert.match(
-  liquidGlassStyleSource,
-  /\.runner-shell-page \.runner-shell-canvas::before\s*\{[\s\S]*?pointer-events:\s*none;/,
-  'The runner canvas grid must stay decorative and never intercept control clicks.',
-);
-
-assert.match(
-  styleSource,
-  /\.settings-control-page \.settings-atlas-canvas > \*\s*\{[\s\S]*?position:\s*relative;[\s\S]*?z-index:\s*1;/,
-  'Settings controls must remain above decorative glass layers so the workbench stays usable.',
-);
-
+for (const handler of ['saveProfile', 'setUnit', 'setLang', 'setTheme', 'connectStrava', 'disconnectStrava', 'toggleDigest', 'logout']) {
+  assert.match(layoutSource, new RegExp(handler), `Settings must preserve ${handler}.`);
+}
+assert.match(styles, /\.st-v2-layout\s*\{[^}]*grid-template-columns:\s*260px minmax\(0, 1fr\)/, 'Desktop should pair the section index with a settings column that fills the available width.');
+assert.match(styles, /\.st-v2-index\s*\{[^}]*position:\s*sticky/, 'Desktop section index should stay visible while scrolling.');
+assert.match(styles, /@media \(max-width: 1100px\)[\s\S]*?\.st-v2-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/, 'Settings should fit smaller screens in one column.');
+assert.match(layoutSource, /role="tablist"[\s\S]*?role="tab"[\s\S]*?aria-selected=\{activeSection === id\}/, 'The section selector should expose the selected tab.');
+assert.match(styles, /\.st-v2-group\[hidden\]\s*\{\s*display:\s*none\s*!important/, 'Inactive sections must stay hidden despite the group flex layout.');
+assert.match(styles, /@media \(max-width: 1100px\)[\s\S]*?\.st-v2-nav\s*\{[^}]*overflow-x:\s*auto/, 'Mobile users should still be able to select every settings section.');
+assert.match(layoutSource, /id="st-profile-avatar-input"[\s\S]*?accept="image\/png,image\/jpeg"[\s\S]*?onChange=\{handleAvatarSelection\}/, 'The profile group should retain the image-only picker.');
+assert.match(layoutSource, /onAvatarUpload\?\.\(file\)/, 'Avatar selections should reach the authenticated upload handler.');
+assert.match(layoutSource, /avatarInputRef\.current\?\.click\(\)/, 'The visible upload button should open the file picker.');
+assert.ok(appStyles.indexOf("@import './settings-v2.css';") > appStyles.indexOf("@import './dark-mode-final-fixes.css';"), 'The settings design should load after existing theme and surface rules.');
 assert.match(
   pageSource,
   /settings-load-error[\s\S]*?components\.retry[\s\S]*?stitch_back_to_profile/,
@@ -196,16 +56,5 @@ assert.match(
   'Settings must upload profile photos through the authenticated avatar endpoint.',
 );
 
-assert.match(
-  layoutSource,
-  /id="st-profile-avatar-input"[\s\S]*?accept="image\/png,image\/jpeg"[\s\S]*?onChange=\{handleAvatarSelection\}/,
-  'The Settings hero must expose an image-only profile-photo picker.',
-);
 
-assert.match(
-  layoutSource,
-  /function handleAvatarSelection[\s\S]*?onAvatarUpload\?\.\(file\)[\s\S]*?htmlFor="st-profile-avatar-input"/,
-  'The visible avatar control must forward the selected file to the upload handler.',
-);
-
-console.log('[PASS] Settings workbench layout guardrails passed.');
+console.log('[PASS] Settings grouped layout and data contracts passed.');

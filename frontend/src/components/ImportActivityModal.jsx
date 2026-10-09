@@ -9,6 +9,8 @@ import Modal from './Modal';
  * Source tabs (FIT/GPX · COROS · Huawei) + one drop zone + a mixed file queue.
  * Posts to the same endpoint and field names as the old per-page modals:
  *   POST /api/import/batch  with fields `exports`, `coros`, `huawei`.
+ *
+ * `ImportActivityForm` is the same flow without the modal chrome; /settings/import-data renders it inline (design 24a).
  */
 
 const SOURCES = [
@@ -34,6 +36,28 @@ export default function ImportActivityModal({ isOpen, onClose, onImported, t }) 
 }
 
 function ImportActivityDialog({ onClose, onImported, t }) {
+  const busyRef = useRef(false);
+  return (
+    <Modal
+      isOpen
+      onClose={() => { if (!busyRef.current) onClose?.(); }}
+      title={t('profile.import_modal_title')}
+      closeLabel={t('profile.close')}
+      shellClassName="import-v2-shell"
+      cardClassName="import-v2-card"
+      portalToBody
+    >
+      <ImportActivityForm
+        t={t}
+        onCancel={onClose}
+        onBusyChange={(busy) => { busyRef.current = busy; }}
+        onSuccess={() => { onClose?.(); onImported?.(); }}
+      />
+    </Modal>
+  );
+}
+
+export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSourceChange, className = '' }) {
   const [source, setSource] = useState('fit');
   const [queue, setQueue] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -45,6 +69,11 @@ function ImportActivityDialog({ onClose, onImported, t }) {
   const idRef = useRef(0);
 
   const activeSource = SOURCES.find((item) => item.key === source) || SOURCES[0];
+
+  function selectSource(key) {
+    setSource(key);
+    onSourceChange?.(key);
+  }
 
   const addFiles = useCallback((fileList) => {
     if (uploadingRef.current) return;
@@ -68,7 +97,7 @@ function ImportActivityDialog({ onClose, onImported, t }) {
     else if (event.key === 'End') nextIndex = SOURCES.length - 1;
     else return;
     event.preventDefault();
-    setSource(SOURCES[nextIndex].key);
+    selectSource(SOURCES[nextIndex].key);
     tabsRef.current[nextIndex]?.focus();
   }
 
@@ -82,6 +111,7 @@ function ImportActivityDialog({ onClose, onImported, t }) {
     event.preventDefault();
     if (!queue.length || uploadingRef.current) return;
     uploadingRef.current = true;
+    onBusyChange?.(true);
     const formData = new FormData();
     queue.forEach(({ source: key, file }) => {
       const field = SOURCES.find((item) => item.key === key)?.field || 'exports';
@@ -98,26 +128,19 @@ function ImportActivityDialog({ onClose, onImported, t }) {
     } finally {
       uploadingRef.current = false;
       setUploading(false);
+      onBusyChange?.(false);
     }
     invalidateResourceCache('/api/activities');
-    onClose?.();
-    onImported?.();
+    const importedCount = queue.length;
+    setQueue([]);
+    onSuccess?.(importedCount);
   }
 
   const countLabel = queue.length ? t('profile.upload_file_count', { count: queue.length }) : t('components.import_v2.import_empty');
   const dropTitle = t('components.import_v2.drop_title', { source: activeSource.tag });
 
   return (
-    <Modal
-      isOpen
-      onClose={() => { if (!uploadingRef.current) onClose?.(); }}
-      title={t('profile.import_modal_title')}
-      closeLabel={t('profile.close')}
-      shellClassName="import-v2-shell"
-      cardClassName="import-v2-card"
-      portalToBody
-    >
-      <form className="import-v2" onSubmit={handleSubmit} aria-busy={uploading}>
+      <form className={`import-v2${className ? ` ${className}` : ''}`} onSubmit={handleSubmit} aria-busy={uploading}>
         <div className="import-v2-body">
           <p className="import-v2-lede">{t('profile.import_batch_hint')}</p>
 
@@ -134,7 +157,7 @@ function ImportActivityDialog({ onClose, onImported, t }) {
                 tabIndex={source === item.key ? 0 : -1}
                 disabled={uploading}
                 className={`import-v2-source${source === item.key ? ' is-active' : ''}`}
-                onClick={() => setSource(item.key)}
+                onClick={() => selectSource(item.key)}
                 onKeyDown={(event) => handleSourceKeyDown(event, index)}
               >
                 <strong>{t(item.titleKey)}</strong>
@@ -205,10 +228,12 @@ function ImportActivityDialog({ onClose, onImported, t }) {
           )}
 
           {status ? <div className="import-v2-error" role="alert">{status}</div> : null}
+
         </div>
 
         <div className="import-v2-actions">
-          <button type="button" className="import-v2-cancel" onClick={onClose} disabled={uploading}>
+          <span className="import-v2-selection-status">{queue.length ? t('profile.selected_files_count', { count: queue.length }) : t('profile.no_file_selected')}</span>
+          <button type="button" className="import-v2-cancel" onClick={onCancel} disabled={uploading}>
             {t('profile.cancel')}
           </button>
           <button type="submit" className="import-v2-submit" disabled={!queue.length || uploading}>
@@ -216,6 +241,5 @@ function ImportActivityDialog({ onClose, onImported, t }) {
           </button>
         </div>
       </form>
-    </Modal>
   );
 }

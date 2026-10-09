@@ -234,7 +234,6 @@ export default function Heatmap() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const zoomAnimationActiveRef = useRef(false);
-  const queuedZoomStepsRef = useRef(0);
   const boundsRef = useRef(null);
   const dotOverlayRef = useRef(null);
   const latestPointsRef = useRef([]);
@@ -428,7 +427,7 @@ export default function Heatmap() {
           wheelDebounceTime: 24,
           wheelPxPerZoomLevel: 96,
           zoomAnimation: true,
-          zoomAnimationThreshold: 1,
+          zoomAnimationThreshold: 4,
           fadeAnimation: false,
           markerZoomAnimation: false,
           preferCanvas: true,
@@ -443,6 +442,15 @@ export default function Heatmap() {
         // black canvas with dots only. Both layers therefore load same-origin
         // through the backend tile proxy, which fetches Esri's Dark Gray
         // canvas server-side and caches it.
+        const HeatmapTileLayer = L.TileLayer.extend({
+          _pruneTiles() {
+            // Leaflet only retains children two levels away by default. A
+            // native wheel packet can span more levels; preserve the painted
+            // basemap until its replacement loads, then allow normal pruning.
+            if (this.isLoading() || this._map?._animatingZoom) return;
+            L.TileLayer.prototype._pruneTiles.call(this);
+          },
+        });
         const darkTileOptions = {
           maxZoom: 20,
           maxNativeZoom: 16,
@@ -456,18 +464,18 @@ export default function Heatmap() {
           attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS',
         };
         const backendBase = getBackendBaseUrl();
-        const baseTileLayer = L.tileLayer(
+        const baseTileLayer = new HeatmapTileLayer(
           `${backendBase}/api/maps/tiles/esri-dark/{z}/{y}/{x}.png`,
           darkTileOptions,
         );
-        const labelsTileLayer = L.tileLayer(
+        const labelsTileLayer = new HeatmapTileLayer(
           `${backendBase}/api/maps/tiles/esri-dark-labels/{z}/{y}/{x}.png`,
           darkTileOptions,
         );
         let fallbackBaseTileLayer = null;
         const activateOsmFallback = () => {
           if (fallbackBaseTileLayer || disposed) return;
-          fallbackBaseTileLayer = L.tileLayer(
+          fallbackBaseTileLayer = new HeatmapTileLayer(
             `${backendBase}/api/maps/tiles/{z}/{x}/{y}.png`,
             {
               ...darkTileOptions,
@@ -520,6 +528,18 @@ export default function Heatmap() {
         const canvasSize = { width: 0, height: 0, pixelRatio: 0 };
         const bufferCanvas = document.createElement('canvas');
         const bufferContext = bufferCanvas.getContext('2d');
+
+        const zoomBy = (delta) => {
+          // Match native wheel zoom: input during an animation is not saved
+          // for a second zoom after the user's gesture has finished.
+          if (disposed || zoomAnimationActiveRef.current) return;
+          const zoomStep = Math.sign(delta);
+          if (zoomStep === 0) return;
+          const targetZoom = clamp(map.getZoom() + zoomStep, map.getMinZoom(), map.getMaxZoom());
+          if (targetZoom === map.getZoom()) return;
+          zoomAnimationActiveRef.current = true;
+          map.setZoom(targetZoom, { animate: true });
+        };
 
         const cancelFullDraw = () => {
           activeFullDrawToken += 1;
@@ -575,7 +595,9 @@ export default function Heatmap() {
         };
 
         const paintRouteDots = (renderMode = 'full', onPaintComplete) => {
-          if (disposed) return;
+          // Keep the painted frame attached to Leaflet's transform until the
+          // camera settles, including resize and data refresh requests.
+          if (disposed || isZoomingMap) return;
 
           const zoom = map.getZoom();
           const center = map.getCenter();
@@ -716,6 +738,7 @@ export default function Heatmap() {
         };
 
         const scheduleRouteDots = (renderMode = 'full', onPaintComplete) => {
+          if (disposed || isZoomingMap) return;
           if (drawFrameId !== null) {
             window.cancelAnimationFrame(drawFrameId);
           }
@@ -785,7 +808,9 @@ export default function Heatmap() {
           zoomAnimationActiveRef.current = false;
           map.getContainer().classList.remove('is-zooming');
           zoomSettleTimeoutId = null;
-          scheduleRouteDots('full');
+          // Rebase at the completed camera so the next user-requested zoom
+          // starts with a canvas that covers the current viewport.
+          paintRouteDots('full');
           scheduleViewportRequest();
         };
 
@@ -822,22 +847,14 @@ export default function Heatmap() {
             window.clearTimeout(zoomSettleTimeoutId);
           }
           zoomSettleTimeoutId = null;
-
-          const queuedZoomStep = Math.sign(queuedZoomStepsRef.current);
-          if (queuedZoomStep === 0) {
-            finishZoomRender();
-            return;
-          }
-          queuedZoomStepsRef.current -= queuedZoomStep;
-          const nextZoom = clamp(map.getZoom() + queuedZoomStep, map.getMinZoom(), map.getMaxZoom());
-          if (nextZoom === map.getZoom()) {
-            finishZoomRender();
-            return;
-          }
-          window.requestAnimationFrame(() => {
-            if (disposed) return;
-            map.setZoom(nextZoom, { animate: true });
-          });
+          // Leaflet ignores wheel zoom during its transition. Discard any
+          // trailing packet still waiting for its native debounce timer too,
+          // so it cannot start an extra zoom when this animation finishes.
+          const wheelHandler = map.scrollWheelZoom;
+          window.clearTimeout(wheelHandler._timer);
+          wheelHandler._delta = 0;
+          wheelHandler._startTime = null;
+          finishZoomRender();
         };
 
         const scheduleMoveEnd = () => {
@@ -850,12 +867,14 @@ export default function Heatmap() {
 
         dotOverlayRef.current = {
           syncRouteDots: scheduleRouteDots,
+          zoomBy,
           refreshViewport: () => {
             viewportCache.clear();
             latestViewportRenderPointsRef.current = null;
             scheduleViewportRequest();
           },
           destroy: () => {
+            window.clearTimeout(map.scrollWheelZoom._timer);
             cancelViewportRequest();
             viewportCache.clear();
             latestViewportRenderPointsRef.current = null;
@@ -870,7 +889,6 @@ export default function Heatmap() {
             cancelFullDraw();
             zoomAnimationActiveRef.current = false;
             map.getContainer().classList.remove('is-zooming');
-            queuedZoomStepsRef.current = 0;
           },
         };
         map.on('zoomstart', scheduleZoomStart);
@@ -933,22 +951,7 @@ export default function Heatmap() {
   }), [lang, t]);
 
   const zoomMap = (delta) => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    const zoomStep = Math.sign(delta);
-    if (zoomStep === 0) return;
-    if (zoomAnimationActiveRef.current) {
-      queuedZoomStepsRef.current = clamp(
-        queuedZoomStepsRef.current + zoomStep,
-        -3,
-        3,
-      );
-      return;
-    }
-    const targetZoom = clamp(map.getZoom() + zoomStep, map.getMinZoom(), map.getMaxZoom());
-    if (targetZoom === map.getZoom()) return;
-    zoomAnimationActiveRef.current = true;
-    map.setZoom(targetZoom, { animate: true });
+    dotOverlayRef.current?.zoomBy(delta);
   };
 
   const recenterMap = () => {

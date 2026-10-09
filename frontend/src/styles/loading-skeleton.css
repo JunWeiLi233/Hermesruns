@@ -3961,3 +3961,36 @@ body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis {
 }
 body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis .page-skeleton__rail,
 body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--analysis .page-skeleton__topbar { background: #232321; }
+
+/* Rewards season ring: match the live hero and five scrollable badge tracks. */
+.page-skeleton--rewards .page-skeleton__canvas { gap: 20px !important; }
+.page-skeleton--rewards .page-skeleton__rewards-v2-hero { display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); gap: 32px; align-items: center; padding: 28px 32px; border-radius: 28px; }
+.page-skeleton__rewards-v2-ring { width: 220px; height: 220px; border-radius: 50%; }
+.page-skeleton__rewards-v2-copy { display: grid; gap: 14px; min-width: 0; }
+.page-skeleton__rewards-v2-headline { width: 100%; height: 84px; border-radius: 10px; }
+.page-skeleton__rewards-v2-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.page-skeleton__rewards-v2-legend > span { width: 82px; height: 12px; border-radius: 4px; }
+.page-skeleton__rewards-v2-closest { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 16px; padding: 18px 20px; border-radius: 20px; background: var(--hermes-skeleton-surface); }
+.page-skeleton__rewards-v2-closest > div { display: grid; gap: 10px; min-width: 0; }
+.page-skeleton__rewards-v2-closest > div > span:first-child { width: 80%; height: 16px; border-radius: 6px; }
+.page-skeleton__rewards-v2-medal { width: 72px; height: 72px; border-radius: 50%; }
+.page-skeleton__rewards-v2-closest > .page-skeleton__rewards-v2-medal { width: 76px; height: 76px; }
+.page-skeleton--rewards .page-skeleton__rewards-v2-track { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: center; padding: 18px 26px; border-radius: 22px; }
+.page-skeleton__rewards-v2-track-head { display: grid; gap: 12px; }
+.page-skeleton__rewards-v2-track-head > span { width: 70%; height: 22px; border-radius: 6px; }
+.page-skeleton__rewards-v2-track-steps { display: grid; grid-template-columns: repeat(5, minmax(104px, 1fr)); gap: 12px; min-width: 0; overflow: hidden; }
+.page-skeleton__rewards-v2-track-steps > div { display: grid; justify-items: center; gap: 8px; padding: 6px; }
+.page-skeleton__rewards-v2-track-steps > div > span:not(:first-child) { width: 80%; height: 12px; border-radius: 4px; }
+@media (max-width: 1180px) {
+  .page-skeleton--rewards .page-skeleton__rewards-v2-hero { grid-template-columns: 180px minmax(0, 1fr); }
+  .page-skeleton__rewards-v2-ring { width: 180px; height: 180px; }
+  .page-skeleton__rewards-v2-closest { grid-column: 1 / -1; }
+  .page-skeleton--rewards .page-skeleton__rewards-v2-track { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+}
+@media (max-width: 720px) {
+  .page-skeleton--rewards .page-skeleton__rewards-v2-hero { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 22px; }
+  .page-skeleton__rewards-v2-copy, .page-skeleton__rewards-v2-closest { width: 100%; }
+  .page-skeleton--rewards .page-skeleton__rewards-v2-track { padding: 18px; }
+  .page-skeleton__rewards-v2-closest { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .page-skeleton__rewards-v2-closest > .page-skeleton__rewards-v2-medal { width: 56px; height: 56px; }
+}

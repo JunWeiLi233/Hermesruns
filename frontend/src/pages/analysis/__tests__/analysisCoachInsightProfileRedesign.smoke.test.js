@@ -146,10 +146,12 @@ assert.match(signalStyles, /grid-column:\s*span 8;[\s\S]*grid-template-columns:\
 assert.match(coachBranch, /coachSystem\.focusCards\.map[\s\S]*?\{card\.label\}[\s\S]*?\{card\.value\}[\s\S]*?\{card\.detail\}/, 'every training signal should retain its label, value, and detail');
 
 assert.match(rule('#root .analysis-coach-bento__load'), /grid-column:\s*span 8;/, 'load evidence should retain the wide chart tile');
-assert.match(rule('#root .analysis-coach-bento__load .analysis-coach-command-chart-shell'), /height:\s*220px;[\s\S]*min-height:\s*220px;[\s\S]*min-width:\s*0;/, 'ACWR chart should retain its visible height while fitting the tile width');
-assert.match(coachBranch, /onPointerMove=\{handleCoachLoadPointerMove\}/, 'ACWR chart should retain interactive pointer tracking');
-assert.match(coachBranch, /onPointerLeave=\{handleCoachLoadPointerLeave\}/, 'ACWR chart should retain pointer reset');
-assert.match(coachBranch, /data-analysis-history="coach"[\s\S]*?coachLoadDashboard\.chartWindow\.map/, 'ACWR chart should retain its accessible data history');
+const chart = fs.readFileSync(path.join(here, '../CoachLoadChart.jsx'), 'utf8');
+assert.match(rule('#root .analysis-coach-bento .coach-load-chart__plot'), /position:\s*relative;[\s\S]*width:\s*100%;/, 'The load chart should fit its measured tile width.');
+assert.match(coachBranch, /<CoachLoadChart key=\{coachPerformanceWindow\} dashboard=\{coachLoadDashboard\}/, 'The route should supply the selected load window to the chart.');
+assert.match(chart, /onPointerMove=\{selectPoint\}/, 'The load chart should retain interactive pointer tracking.');
+assert.match(chart, /onPointerLeave=/, 'The load chart should retain pointer reset.');
+assert.match(chart, /data-analysis-history="coach"[\s\S]*?dashboard\.chartWindow\.map/, 'The load chart should retain its accessible data history.');
 assert.match(visualStyles, /body #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-profile-v2--coach \.analysis-coach-command-performance-copy\s*\{[\s\S]*display:\s*none\s*!important;/, 'cached legacy chunks should not remount the removed performance copy block');
 
 assert.match(rule('#root .analysis-coach-bento__recent'), /grid-column:\s*span 4;[\s\S]*gap:\s*6px;/, 'recent training should retain its adjacent desktop tile and title spacing');
@@ -177,8 +179,10 @@ assert.match(tabletStyles, /analysis-coach-bento__recent\s*\{\s*grid-column:\s*1
 assert.match(compactStyles, /analysis-coach-bento__reasons\s*\{\s*grid-column:\s*1 \/ -1\s*!important;/, 'all coach tiles should stack on compact screens');
 assert.match(compactStyles, /analysis-coach-bento__verdict\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'decision copy and readiness should stack on compact screens');
 assert.match(compactStyles, /analysis-coach-bento__signals\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\);/, 'training signals should stack on compact screens');
-assert.match(narrowStyles, /analysis-coach-command-chart-shell\s*\{\s*display:\s*block;\s*overflow-x:\s*auto;/, 'narrow screens should retain access to the complete load chart');
-assert.match(narrowStyles, /analysis-coach-command-acwr-chart-svg\s*\{\s*min-width:\s*560px;/, 'narrow chart labels should retain readable spacing');
+assert.match(narrowStyles, /analysis-coach-bento__load\s*\{\s*padding:\s*20px 16px;/, 'Narrow chart tiles should retain usable side padding.');
+assert.match(styles, /coach-load-chart__plot svg\s*\{[^}]*width:\s*100%;[^}]*height:\s*auto;/, 'The complete chart should fit narrow screens.');
+assert.match(styles, /coach-load-chart__plot svg text\s*\{[^}]*font:\s*11px/, 'Chart labels should keep their native readable size.');
+assert.doesNotMatch(styles, /min-width:\s*560px/, 'Phone charts should not require horizontal scrolling.');
 assert.match(styles, /analysis-coach-bento__cta:focus-visible\s*\{[^}]*outline:\s*2px solid #ffb4a7;[^}]*outline-offset:\s*3px;/, 'today action should retain visible keyboard focus');
 assert.match(styles, /:is\(\.analysis-coach-bento__recent-row, \.analysis-coach-bento__toggle button\):focus-visible\s*\{[^}]*outline:\s*2px solid var\(--bento-accent\);/, 'recent sessions and chart windows should retain visible keyboard focus');
 assert.match(styles, /body:is\(\.theme-midnight, \.theme-high-contrast\) #root \.analysis-insight-detail-page\.is-coach-insight \.analysis-coach-bento\s*\{[^}]*--bento-card:[^}]*--bento-ink:\s*#f8f4ef;/, 'coach tiles should retain theme-specific readable surfaces');

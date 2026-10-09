@@ -26,7 +26,8 @@ import { consumeStravaOauthPendingFlag, STRAVA_SYNC_FINISHED_EVENT } from '../..
 import { estimateCurrentVdot, computeVdotTrend, buildOrderedRacePredictions } from '../../utils/vdot';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { calculateStreaks, getDaysSinceLastRun } from '../../utils/streakUtils';
-import { buildRewardShowcase, RewardGlyph } from '../../utils/rewardBadges';
+import { buildRewardShowcase } from '../../utils/rewardBadges';
+import RewardIllustration from '../../components/RewardIllustration';
 import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
 import ProgressionChart from './ProgressionChart';
@@ -1733,7 +1734,7 @@ export default function ProfileDashboard() {
                       <div className="hd-rewards-next">
                         <span className="hd-rewards-next-tag">{t('profile.dashboard_redesign.rewards_next_up')}</span>
                         <div className="hd-rewards-next-icon" aria-hidden="true">
-                          <RewardGlyph icon={rewardNextMilestone.icon} />
+                          <RewardIllustration reward={rewardNextMilestone} />
                         </div>
                         <strong className="hd-rewards-next-title">{rewardNextMilestone.title}</strong>
                         <p className="hd-rewards-next-hint">{rewardNextMilestone.hint || rewardNextMilestone.subtitle}</p>
@@ -1752,7 +1753,7 @@ export default function ProfileDashboard() {
                       {rewardShowcase.earnedRewards.slice(0, 8).map((badge, i) => (
                         <div key={badge.id} className={`hd-rewards-badge${i === 0 ? ' is-latest' : ''}`}>
                           <div className="hd-rewards-badge-icon" aria-hidden="true">
-                            <RewardGlyph icon={badge.icon} />
+                            <RewardIllustration reward={badge} />
                           </div>
                           <div className="hd-rewards-badge-info">
                             <strong>{badge.title}</strong>

@@ -5,8 +5,8 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-insight-detail
 #root .analysis-insight-detail-page.is-load-balance::before,
 #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas::before { content: none !important; display: none !important; }
 body #root .analysis-insight-detail-page.is-load-balance .runner-shell-main { background: transparent !important; }
-body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { width: 100%; max-width: none; margin: 0; padding: 0 60px 64px !important; background: transparent !important; box-shadow: none !important; }
-body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile.analysis-load-v2 { width: 100% !important; max-width: 1216px !important; margin: 0 auto !important; padding: 0 !important; }
+body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { width: 100%; max-width: none; margin: 0; padding: 0 32px 64px !important; background: transparent !important; box-shadow: none !important; }
+body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile.analysis-load-v2 { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
 
 #root .analysis-insight-detail-page.is-load-balance .analysis-load-v2 {
   --lb-card: #fff;
@@ -20,8 +20,8 @@ body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile.
   --lb-good-soft: rgba(52, 199, 89, 0.12);
   --lb-band: rgba(52, 199, 89, 0.09);
   width: 100%;
-  max-width: 1216px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 0 !important;
   background: transparent !important;
   display: flex;
@@ -251,7 +251,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-metric:is
 @media (max-width: 1100px) {
   #root .analysis-load-v2-top { grid-template-columns: minmax(0, 1fr); }
   #root .analysis-load-v2-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { padding: 20px 32px 40px !important; }
+  body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { padding: 20px 24px 40px !important; }
   #root .analysis-load-v2-athlete { margin-top: 12px; }
 }
 

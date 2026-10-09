@@ -50,7 +50,7 @@ for (const file of styleImports.slice(styleImports.indexOf(modalStyles) + 1)) {
   postcss.parse(read(`../../../styles/${file}`)).walkRules((rule) => {
     if (!/\.modal-(?:card|shell|header|form)\b/.test(rule.selector)) return;
     for (const selector of rule.selectors) {
-      assert.match(selector, /\.(?:scan|edit|garmin)-v2-(?:card|shell)\b/, `${file} must scope shared dialog styles to its own modal: ${selector}`);
+      assert.match(selector, /\.(?:scan|edit|garmin|race-form)-v2-(?:card|shell)\b/, `${file} must scope shared dialog styles to its own modal: ${selector}`);
     }
   });
 }

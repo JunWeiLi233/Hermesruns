@@ -1,0 +1,181 @@
+/* Training tips popover v2 (design 22a). Load last in app.css.
+   Positioning/animation still come from the existing .runner-shell-notification-popover rules. */
+
+.runner-shell-notification-btn { position: relative; }
+
+.runner-shell-notification-dot.tips-v2-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid !important;
+  min-width: 18px !important;
+  width: auto !important;
+  height: 18px !important;
+  padding: 0 5px;
+  box-sizing: border-box;
+  place-items: center;
+  border-radius: 999px !important;
+  background: #a0392a !important;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--runner-shell-topbar-bg, #fff) !important;
+}
+
+body #root .runner-shell-notification-popover.tips-v2 {
+  --tv-card: #fff;
+  --tv-ink: #1c1917;
+  --tv-muted: #625c56;
+  --tv-faint: #8a837c;
+  --tv-line: rgba(28, 25, 23, 0.07);
+  --tv-hover: rgba(28, 25, 23, 0.035);
+  --tv-accent: #a0392a;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(380px, calc(100vw - 24px));
+  padding: 0 !important;
+  overflow: hidden auto;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--tv-card) !important;
+  color: var(--tv-ink);
+  box-shadow: 0 24px 60px rgba(28, 25, 23, 0.18), 0 0 0 1px rgba(28, 25, 23, 0.04) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-notification-popover.tips-v2 {
+  --tv-card: var(--profile-night-solid-raised, #242a34);
+  --tv-ink: #f8f4ef;
+  --tv-muted: #c0b8ad;
+  --tv-faint: #a69e93;
+  --tv-line: rgba(255, 248, 238, 0.1);
+  --tv-hover: rgba(255, 255, 255, 0.05);
+  --tv-accent: #ffb4a7;
+}
+
+#root .runner-shell-notification-popover.tips-v2::before,
+#root .runner-shell-notification-popover.tips-v2::after { content: none !important; }
+.tips-v2-head, .tips-v2-foot { flex: 0 0 auto; }
+
+.tips-v2 :is(p, strong) { margin: 0; }
+.tips-v2-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.tips-v2-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 12px 12px 18px;
+  border-bottom: 1px solid var(--tv-line);
+}
+
+.tips-v2-head-copy { display: flex; align-items: baseline; gap: 8px; }
+.tips-v2-head-copy strong { font-size: 16px; font-weight: 700; }
+.tips-v2-count { color: var(--tv-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.tips-v2-head-actions { display: flex; align-items: center; gap: 4px; }
+
+.tips-v2-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tv-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tips-v2-text-btn:hover { background: var(--tv-hover); color: var(--tv-ink); }
+.tips-v2-text-btn.is-strong { color: var(--tv-ink); font-size: 13px; }
+.tips-v2-text-btn svg { width: 15px; height: 15px; }
+
+.tips-v2-icon-btn {
+  display: grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--tv-faint);
+  cursor: pointer;
+}
+
+.tips-v2-icon-btn:hover { background: var(--tv-hover); color: var(--tv-ink); }
+.tips-v2-icon-btn svg { width: 15px; height: 15px; }
+.tips-v2 button:focus-visible { outline: 2px solid var(--tv-accent); outline-offset: 2px; }
+
+.tips-v2-list { display: flex; flex-direction: column; padding: 6px; }
+
+.tips-v2-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: start;
+  border-radius: 14px;
+}
+
+.tips-v2-row:hover { background: var(--tv-hover); }
+
+.tips-v2-row-main {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 4px 12px 12px;
+  border: 0;
+  background: none;
+  color: var(--tv-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tips-v2-dismiss { margin: 8px 6px 0 0; opacity: 0.7; }
+.tips-v2-row:hover .tips-v2-dismiss, .tips-v2-dismiss:focus-visible { opacity: 1; }
+
+.tips-v2-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; }
+.tips-v2-icon svg { width: 18px; height: 18px; }
+.tips-v2-row[data-kind="load"] .tips-v2-icon { background: rgba(160, 57, 42, 0.09); color: #a0392a; }
+.tips-v2-row[data-kind="routes"] .tips-v2-icon { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+.tips-v2-row[data-kind="connections"] .tips-v2-icon { background: rgba(0, 122, 255, 0.1); color: #2563c4; }
+body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="load"] .tips-v2-icon { color: #ffb4a7; }
+body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="routes"] .tips-v2-icon { color: #9cd2aa; }
+body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="connections"] .tips-v2-icon { color: #9cc3ff; }
+
+.tips-v2-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tips-v2-copy strong { font-size: 14px; font-weight: 700; line-height: 1.35; }
+.tips-v2-copy > span { color: var(--tv-muted); font-size: 12.5px; line-height: 1.5; text-wrap: pretty; }
+.tips-v2-copy em { margin-top: 3px; color: var(--tv-accent); font-size: 12px; font-style: normal; font-weight: 700; }
+
+.tips-v2-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 18px; text-align: center; }
+.tips-v2-empty-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 999px; background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+.tips-v2-empty-icon svg { width: 20px; height: 20px; }
+.tips-v2-empty strong { font-size: 14px; }
+.tips-v2-empty p { color: var(--tv-muted); font-size: 12.5px; line-height: 1.5; }
+
+.tips-v2-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px 8px 18px;
+  border-top: 1px solid var(--tv-line);
+}
+
+.tips-v2-foot > span { overflow: hidden; color: var(--tv-faint); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 520px) {
+  .tips-v2-icon-btn { flex-basis: 44px; width: 44px; height: 44px; }
+  .tips-v2-dismiss { margin: 4px 2px 0 0; opacity: 1; }
+  .tips-v2-row { grid-template-columns: minmax(0, 1fr) 44px; }
+}

@@ -94,7 +94,7 @@ it.each(previouslyInaccessible)('can edit and save $name from the saved agenda',
   const { agenda } = await openPage();
   const row = getSavedRow(agenda, race);
   fireEvent.click(within(row).getByRole('button', { name: race.name, exact: true }));
-  const dialog = screen.getByRole('dialog', { name: en.races.edit_title });
+  const dialog = screen.getByRole('dialog', { name: race.name });
   expect(within(dialog).getByDisplayValue(race.notes)).toBeInTheDocument();
   expect(within(dialog).getByDisplayValue(race.eventDate)).toBeInTheDocument();
   const updatedName = `${race.name} updated`;

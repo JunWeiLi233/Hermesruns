@@ -1,0 +1,53 @@
+/* One desktop boundary for the rail, page content, and fixed system bar. */
+@media (min-width: 861px) {
+  #root .runner-shell-page.runner-dashboard-page {
+    --runner-shell-sidebar-width: var(--runner-nav-expanded-width, 156px);
+    display: grid !important;
+    grid-template-columns: var(--runner-shell-sidebar-width) minmax(0, 1fr) !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    place-items: stretch !important;
+  }
+
+  #root .runner-shell-page.runner-dashboard-page.is-sidebar-collapsed {
+    --runner-shell-sidebar-width: var(--runner-nav-collapsed-width, 96px);
+  }
+
+  body #root .runner-shell-page.runner-dashboard-page > .runner-shell-sidebar {
+    width: var(--runner-shell-sidebar-width) !important;
+    min-width: var(--runner-shell-sidebar-width) !important;
+    max-width: var(--runner-shell-sidebar-width) !important;
+    box-sizing: border-box;
+  }
+
+  body #root .runner-shell-page.runner-dashboard-page > .runner-shell-main {
+    grid-column: 2 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    padding-top: 88px !important;
+  }
+
+  body #root .runner-shell-page.runner-dashboard-page > .runner-shell-main > .runner-shell-topbar {
+    left: var(--runner-shell-sidebar-width) !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+}
+
+/* Hover/focus expansion starts at the same breakpoint as the rail itself. */
+@media (min-width: 1100px) {
+  #root .runner-shell-page.runner-dashboard-page.is-sidebar-collapsed:has(> .runner-shell-sidebar:is(:hover, :focus-within)) {
+    --runner-shell-sidebar-width: var(--runner-nav-expanded-width, 156px);
+  }
+}
+
+/* Touch tablets use bottom navigation and release the desktop rail space. */
+@media (min-width: 861px) and (max-width: 1100px) and (pointer: coarse) {
+  body.has-mobile-runner-navigation #root .runner-shell-page.runner-dashboard-page {
+    --runner-shell-sidebar-width: 0px;
+  }
+}

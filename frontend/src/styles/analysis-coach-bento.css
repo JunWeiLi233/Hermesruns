@@ -1,6 +1,6 @@
 /* Coach Insight v2 (design 5b): bento dashboard. Load before the final theme fixes.
    Scoped to .analysis-coach-bento inside the coach-insight detail page; the
-   runner shell, readiness ring geometry and load chart SVG are reused as-is. */
+   runner shell and readiness ring geometry are reused as-is. */
 
 #root .analysis-insight-detail-page.is-coach-insight .analysis-coach-bento {
   --bento-card: var(--analysis-v2-card, #fff);
@@ -274,39 +274,6 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-pa
   box-shadow: 0 1px 3px rgba(28, 25, 23, 0.12);
 }
 
-#root .analysis-coach-bento__load .analysis-coach-command-chart-shell {
-  position: relative;
-  height: 220px;
-  min-height: 220px;
-  margin-top: 0;
-  min-width: 0;
-}
-
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip {
-  z-index: 4;
-  min-width: 168px;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid var(--bento-line);
-  border-radius: 14px;
-  background: var(--coach-profile-card-solid);
-  color: var(--bento-ink);
-  box-shadow: 0 12px 28px rgba(28, 25, 23, 0.12);
-}
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-head { padding-bottom: 8px; border-bottom: 1px solid var(--bento-line); }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-head span { color: var(--bento-muted); font-size: 0.75rem; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metrics { display: grid; gap: 7px; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric { display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 7px; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric > i { width: 7px; height: 7px; border-radius: 50%; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric.is-acute > i { background: var(--coach-profile-accent); }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric.is-chronic > i { background: #78b4ff; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric span { color: var(--bento-muted); font-size: 0.75rem; }
-#root .analysis-coach-bento .analysis-load-command-chart-tooltip-metric strong { color: var(--bento-ink); font-size: 0.85rem; }
-#root .analysis-coach-bento .analysis-load-command-chart-empty { color: var(--bento-muted); }
-#root .analysis-coach-bento__legend { display: flex; flex-wrap: wrap; gap: 16px; color: var(--bento-muted); font-size: 0.75rem; }
-#root .analysis-coach-bento__legend span { display: inline-flex; align-items: center; gap: 6px; }
-#root .analysis-coach-bento__legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--coach-profile-accent); }
-#root .analysis-coach-bento__legend i.is-chronic { background: #78b4ff; }
 #root .analysis-coach-bento :is(.analysis-coach-bento__recent-row, .analysis-coach-bento__toggle button):focus-visible { outline: 2px solid var(--bento-accent); outline-offset: 3px; }
 
 /* Recent */
@@ -417,8 +384,77 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-pa
   #root .analysis-coach-bento__signals { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Coach load graph: native-size labels and a point-anchored tooltip. */
+#root .analysis-coach-bento .coach-load-chart {
+  --coach-chart-acute: #b13d2d;
+  --coach-chart-chronic: #6597d3;
+  --coach-chart-tooltip: #fff;
+  min-width: 0;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-coach-bento .coach-load-chart {
+  --coach-chart-acute: #ffac9a;
+  --coach-chart-chronic: #92bdff;
+  --coach-chart-tooltip: #292624;
+}
+#root .analysis-coach-bento .coach-load-chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  margin-bottom: 14px;
+  color: var(--bento-muted);
+  font-size: 0.75rem;
+}
+#root .coach-load-chart__legend > span { display: inline-flex; align-items: center; gap: 8px; }
+#root .coach-load-chart__legend strong { color: var(--bento-ink); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+#root .coach-load-chart__legend i { width: 18px; height: 0; border-top: 2px solid var(--coach-chart-acute); }
+#root .coach-load-chart__legend i.is-chronic { border-color: var(--coach-chart-chronic); border-top-style: dashed; }
+#root .coach-load-chart__legend > time { margin-left: auto; color: var(--bento-muted); }
+#root .analysis-coach-bento .coach-load-chart__plot {
+  position: relative;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  touch-action: pan-y pinch-zoom;
+  cursor: crosshair;
+}
+#root .coach-load-chart__plot:focus-visible { outline: 2px solid var(--coach-chart-acute); outline-offset: 4px; }
+#root .coach-load-chart__plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+#root .coach-load-chart__plot svg text { fill: var(--bento-muted); font: 11px var(--font-body, sans-serif); font-variant-numeric: tabular-nums; }
+#root .coach-load-chart__grid { stroke: var(--bento-line); stroke-width: 1; }
+#root .coach-load-chart__line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+#root .coach-load-chart__line.is-acute { stroke: var(--coach-chart-acute); }
+#root .coach-load-chart__line.is-chronic { stroke: var(--coach-chart-chronic); stroke-width: 1.75; stroke-dasharray: 5 5; }
+#root .coach-load-chart__markers { pointer-events: none; }
+#root .coach-load-chart__markers circle { stroke: var(--bento-card); stroke-width: 2; }
+#root .coach-load-chart__markers .is-acute { fill: var(--coach-chart-acute); }
+#root .coach-load-chart__markers .is-chronic { fill: var(--coach-chart-chronic); }
+#root .coach-load-chart__markers .coach-load-chart__halo { fill: var(--coach-chart-acute); fill-opacity: 0.1; stroke: none; }
+#root .coach-load-chart__crosshair { stroke: var(--bento-muted); stroke-opacity: 0.4; stroke-width: 1; stroke-dasharray: 3 4; }
+#root .analysis-coach-bento .coach-load-chart__tooltip {
+  position: absolute;
+  display: grid;
+  box-sizing: border-box;
+  height: 110px;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--bento-line);
+  border-radius: 12px;
+  background: var(--coach-chart-tooltip);
+  color: var(--bento-ink);
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
+  pointer-events: none;
+  z-index: 2;
+}
+#root .coach-load-chart__tooltip time { padding-bottom: 7px; border-bottom: 1px solid var(--bento-line); color: var(--bento-muted); font-size: 0.75rem; }
+#root .coach-load-chart__tooltip > div { display: grid; grid-template-columns: 7px 1fr auto; align-items: center; gap: 8px; font-size: 0.75rem; }
+#root .coach-load-chart__tooltip i { width: 7px; height: 7px; border-radius: 50%; background: var(--coach-chart-acute); }
+#root .coach-load-chart__tooltip .is-chronic i { background: var(--coach-chart-chronic); }
+#root .coach-load-chart__tooltip strong { font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+#root .coach-load-chart__empty { display: grid; min-height: 240px; place-items: center; color: var(--bento-muted); font-size: 0.85rem; }
 @media (max-width: 640px) {
-  #root .analysis-coach-bento__load .analysis-coach-command-chart-shell { display: block; overflow-x: auto; overscroll-behavior-x: contain; }
-  #root .analysis-coach-bento__load .analysis-coach-command-acwr-chart-svg { min-width: 560px; }
-  #root .analysis-coach-bento__load .analysis-coach-command-acwr-chart-svg text { font-size: 14px; }
+  #root .analysis-coach-bento__load { padding: 20px 16px; }
+  #root .coach-load-chart__legend { gap: 10px 16px; }
+  #root .coach-load-chart__legend > time { width: 100%; margin-left: 26px; }
 }

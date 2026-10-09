@@ -190,13 +190,14 @@
   transform: translateZ(0);
 }
 
-/* Give each one-level zoom enough time to interpolate without slowing panning. */
+/* Match Leaflet 1.9's 250ms lifecycle so canvas repaint and tile pruning happen
+   after the visual transition. */
 .heatmap-page-map-shell .leaflet-zoom-anim .leaflet-zoom-animated {
-  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
+  transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
 }
 
 .heatmap-page-map-shell .leaflet-container.is-zooming .leaflet-zoom-animated {
-  transition: transform 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
+  transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1) !important;
 }
 
 /* Keep the recovery basemap in the same dark visual language as Esri. */

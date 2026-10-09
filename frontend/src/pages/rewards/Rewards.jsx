@@ -11,7 +11,9 @@ import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
-import { buildRewardShowcase, RewardGlyph } from '../../utils/rewardBadges';
+import { buildRewardShowcase } from '../../utils/rewardBadges';
+import RewardIllustration from '../../components/RewardIllustration';
+import { buildRewardTracks, buildRewardRingSegments, REWARD_RING_RADIUS, rewardProgress } from './rewardTracks';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -23,7 +25,6 @@ export default function Rewards() {
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,51 +48,25 @@ export default function Rewards() {
   }, [isAuthenticated, navigate]);
 
   const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [runs, lang]);
-  const { earnedRewards, upcomingRewards, allRewards } = rewardShowcase;
+  const { earnedRewards, allRewards } = rewardShowcase;
   const totalCount = allRewards.length;
   const earnedCount = earnedRewards.length;
-  const lockedCount = Math.max(totalCount - earnedCount, 0);
-  const heroProgressPct = totalCount > 0 ? Math.round((earnedCount / totalCount) * 100) : 0;
-  const latestUnlock = earnedRewards[0] || null;
-  const nextMilestone = upcomingRewards[0] || null;
-  const nextMilestonePct = nextMilestone ? Math.round(nextMilestone.progress * 100) : 100;
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const runnerName = profile?.displayName || profile?.email?.split('@')[0] || t('rewards.heading');
 
   const priorityPipeline = useMemo(() => {
-    const list = [...(upcomingRewards || [])];
-    list.sort((a, b) => Number(b.progress || 0) - Number(a.progress || 0));
+    const list = allRewards.filter((reward) => !reward.earned);
+    list.sort((a, b) => rewardProgress(b) - rewardProgress(a));
     return list;
-  }, [upcomingRewards]);
+  }, [allRewards]);
+  const nextMilestone = priorityPipeline[0] || null;
+  const nextMilestonePct = Math.round(rewardProgress(nextMilestone) * 100);
 
   const navItems = useMemo(() => getRunnerShellNavItems({ t, lang }), [lang, t]);
 
-  const metrics = [
-    {
-      key: 'earned',
-      label: t('rewards.badges_earned_label'),
-      value: earnedCount,
-      meta: t('rewards.hero_of_total', { earned: String(earnedCount), total: String(totalCount || 0) }),
-    },
-    {
-      key: 'completion',
-      label: t('rewards.progress_label') || t('rewards.editorial_kicker'),
-      value: `${heroProgressPct}%`,
-      meta: t('rewards.page_copy'),
-    },
-    {
-      key: 'locked',
-      label: t('rewards.locked_badges_label'),
-      value: lockedCount,
-      meta: t('rewards.upcoming_subtitle'),
-    },
-    {
-      key: 'runs',
-      label: t('rewards.runs_logged_label'),
-      value: runs.length,
-      meta: t('rewards.catalog_copy'),
-    },
-  ];
+  const rewardTracks = useMemo(() => buildRewardTracks(allRewards), [allRewards]);
+  const ringSegments = useMemo(() => buildRewardRingSegments(rewardTracks), [rewardTracks]);
+  const nearCount = priorityPipeline.filter((reward) => rewardProgress(reward) >= .5).length;
 
   if (loadState === 'error') {
     return (
@@ -100,7 +75,7 @@ export default function Rewards() {
           <p className="rewards-load-eyebrow">{t('rewards.error_eyebrow')}</p>
           <p className="rewards-load-title">{t('rewards.error_title')}</p>
           <p className="rewards-load-detail">{t('rewards.load_error')}</p>
-          <button className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button>
+          <button type="button" className="rewards-load-retry" onClick={() => window.location.reload()}>{t('rewards.retry')}</button>
         </div>
       </div>
     );
@@ -111,7 +86,7 @@ export default function Rewards() {
   }
 
   return (
-    <div className={`runner-shell-page runner-dashboard-page rewards-ledger-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
+    <div className={`runner-shell-page runner-dashboard-page rewards-ledger-page rewards-v2-page${isSidebarCollapsed ? ' is-sidebar-collapsed' : ''}`}>
       <aside className="runner-shell-sidebar">
         <div className="runner-shell-brand runner-dashboard-brand">
           <div className="runner-dashboard-brand-copy">
@@ -130,7 +105,7 @@ export default function Rewards() {
         </div>
         <nav className="runner-shell-side-nav">
           {navItems.map((item) => (
-            <button key={item.key} type="button" className={cx('runner-shell-side-link', item.route === '/profile' && false)} onClick={() => navigate(item.route)} aria-label={item.label} aria-current={item.active ? 'page' : undefined}>
+            <button key={item.key} type="button" className="runner-shell-side-link" onClick={() => navigate(item.route)} aria-label={item.label} aria-current={item.active ? 'page' : undefined}>
               <AppIcon name={item.icon} className="runner-dashboard-side-link-icon" />
               <span className="runner-dashboard-side-link-label">{item.label}</span>
             </button>
@@ -168,218 +143,108 @@ export default function Rewards() {
           </div>
         </header>
 
-        <div className="runner-shell-canvas hd-content rewards-ledger-canvas rewards-profile-canvas">
-          {/* Page intro */}
-          <section className="rewards-ledger-intro" aria-labelledby="rewards-ledger-title">
-            <span className="rewards-ledger-eyebrow">{t('rewards.editorial_kicker')}</span>
-            <h1 id="rewards-ledger-title" className="rewards-ledger-title">{t('rewards.heading')}</h1>
-            <p className="rewards-ledger-lede">{t('rewards.page_copy')}</p>
+        <div className="runner-shell-canvas hd-content rewards-ledger-canvas rewards-profile-canvas rewards-v2">
+          <section className="rewards-v2-hero" aria-labelledby="rewards-v2-title">
+            <div className="rewards-v2-ring" role="img" aria-label={t('rewards.hero_of_total', { earned: String(earnedCount), total: String(totalCount || 0) })}>
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                {ringSegments.map((segment) => (
+                  <circle
+                    key={segment.id}
+                    cx="60"
+                    cy="60"
+                    r={REWARD_RING_RADIUS}
+                    className={segment.color ? 'is-earned' : ''}
+                    style={segment.color ? { stroke: segment.color } : undefined}
+                    strokeDasharray={segment.dash}
+                    strokeDashoffset={segment.offset}
+                  />
+                ))}
+              </svg>
+              <span className="rewards-v2-ring-center">
+                <strong>{earnedCount}</strong>
+                <span>{t('rewards.v2_of_total', { total: String(totalCount || 0) })}</span>
+              </span>
+            </div>
+
+            <div className="rewards-v2-hero-copy">
+              <span className="rewards-v2-kicker">{t('rewards.heading')}</span>
+              <h1 id="rewards-v2-title">{!nextMilestone ? t('rewards.all_earned') : nearCount ? t('rewards.v2_within_reach', { count: nearCount }) : t('rewards.earned_empty_coach')}</h1>
+              <ul className="rewards-v2-legend">
+                {rewardTracks.map((track) => (
+                  <li key={track.key}>
+                    <i style={{ background: track.color }} aria-hidden="true" />
+                    {t(`rewards.v2_track_${track.key}`)}
+                    <strong>{track.earned}/{track.items.length}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {nextMilestone ? (
+              <article className="rewards-v2-closest">
+                <span className="rewards-v2-closest-medal" aria-hidden="true"><RewardIllustration reward={nextMilestone} /></span>
+                <div className="rewards-v2-closest-copy">
+                  <span>{t('rewards.next_kicker')} · {nextMilestonePct}%</span>
+                  <strong>{nextMilestone.title}</strong>
+                  <p>{nextMilestone.hint}</p>
+                  <div className="rewards-v2-bar" role="progressbar" aria-label={`${nextMilestone.title}: ${t('rewards.progress_label')}`} aria-valuenow={nextMilestonePct} aria-valuemin={0} aria-valuemax={100}>
+                    <i style={{ width: `${nextMilestonePct}%` }} />
+                  </div>
+                  <button type="button" onClick={() => navigate('/today-run')}>{t('profile.dashboard_start_workout')}</button>
+                </div>
+              </article>
+            ) : (
+              <article className="rewards-v2-closest is-complete">
+                <span className="rewards-v2-closest-medal" aria-hidden="true"><AppIcon name="check_circle" /></span>
+                <div className="rewards-v2-closest-copy">
+                  <strong>{t('rewards.all_earned')}</strong>
+                  <p>{t('rewards.catalog_copy')}</p>
+                </div>
+              </article>
+            )}
           </section>
 
-          {/* Two-panel hero: celebrate + next */}
-          <section className="rewards-ledger-hero" aria-label={t('rewards.hero_kicker')}>
-            <article className={cx('rewards-ledger-hero-card', 'rewards-ledger-hero-card--celebrate', !latestUnlock && 'is-empty')}>
-              <div className="rewards-ledger-hero-card-head">
-                <span className="rewards-ledger-hero-tag">{t('rewards.earned_badge')}</span>
-                <span className="rewards-ledger-hero-counter">
-                  <strong>{earnedCount}</strong>
-                  <em>/ {totalCount || 0}</em>
+          {rewardTracks.map((track) => (
+            <section key={track.key} className="rewards-v2-track" style={{ '--track-color': track.color }} aria-labelledby={`rewards-v2-track-${track.key}`}>
+              <div className="rewards-v2-track-head">
+                <h2 id={`rewards-v2-track-${track.key}`}><i aria-hidden="true" />{t(`rewards.v2_track_${track.key}`)}</h2>
+                <p>{t(`rewards.v2_track_${track.key}_sub`)}</p>
+                <span className="rewards-v2-track-next">
+                  {track.current
+                    ? t('rewards.v2_next_line', { title: track.current.title, pct: String(Math.round(rewardProgress(track.current) * 100)) })
+                    : t('rewards.v2_track_complete')}
                 </span>
               </div>
-              {latestUnlock ? (
-                <>
-                  <div className="rewards-ledger-hero-glyph" aria-hidden="true">
-                    <RewardGlyph icon={latestUnlock.icon} />
-                  </div>
-                  <h2 className="rewards-ledger-hero-h2">{latestUnlock.title}</h2>
-                  <p className="rewards-ledger-hero-copy">{latestUnlock.subtitle || latestUnlock.hint}</p>
-                </>
-              ) : (
-                <>
-                  <div className="rewards-ledger-hero-glyph rewards-ledger-hero-glyph--ghost" aria-hidden="true">
-                    <AppIcon name="workspace_premium" />
-                  </div>
-                  <h2 className="rewards-ledger-hero-h2">{t('rewards.empty_focus_title')}</h2>
-                  <p className="rewards-ledger-hero-copy">{t('rewards.earned_empty_coach')}</p>
-                </>
-              )}
-              <div className="rewards-ledger-hero-progress" role="progressbar" aria-label={t('rewards.progress_label')} aria-valuenow={heroProgressPct} aria-valuemin={0} aria-valuemax={100}>
-                <span style={{ width: `${heroProgressPct}%` }} />
+              <div className="rewards-v2-track-scroll" tabIndex={0} role="region" aria-labelledby={`rewards-v2-track-${track.key}`}>
+                <ol className="rewards-v2-ladder" style={{ '--steps': track.items.length, '--fill': track.fill }}>
+                  {track.items.map((reward) => {
+                    const isCurrent = track.current?.id === reward.id;
+                    const pct = Math.round(rewardProgress(reward) * 100);
+                    return (
+                      <li
+                        key={reward.id}
+                        className={cx('rewards-v2-step', reward.earned ? 'is-earned' : 'is-locked', isCurrent && 'is-current')}
+                        data-reward-id={reward.id}
+                      >
+                        <details>
+                          <summary>
+                            <span className="rewards-v2-step-medal" aria-hidden="true"><RewardIllustration reward={reward} /></span>
+                            <strong>{reward.title}</strong>
+                            <span className="rewards-v2-step-meta">
+                              {reward.earned ? t('profile.rewards_earned') : `${pct}%`}
+                            </span>
+                          </summary>
+                          <p>{reward.earned ? reward.subtitle : reward.hint}</p>
+                        </details>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
-              <span className="rewards-ledger-hero-foot">
-                <strong>{heroProgressPct}%</strong>
-                <em>{t('rewards.hero_of_total', { earned: String(earnedCount), total: String(totalCount || 0) })}</em>
-              </span>
-            </article>
+              <span className="rewards-v2-track-help">{t('rewards.v2_track_help')}</span>
+            </section>
+          ))}
 
-            <article className={cx('rewards-ledger-hero-card', 'rewards-ledger-hero-card--next', !nextMilestone && 'is-success')}>
-              <div className="rewards-ledger-hero-card-head">
-                <span className="rewards-ledger-hero-tag rewards-ledger-hero-tag--accent">{nextMilestone ? t('rewards.next_kicker') : t('rewards.earned_badge')}</span>
-                {nextMilestone && (
-                  <span className="rewards-ledger-hero-counter rewards-ledger-hero-counter--accent">
-                    <strong>{nextMilestonePct}</strong>
-                    <em>%</em>
-                  </span>
-                )}
-              </div>
-              {nextMilestone ? (
-                <>
-                  <div className="rewards-ledger-hero-glyph rewards-ledger-hero-glyph--next" aria-hidden="true">
-                    <RewardGlyph icon={nextMilestone.icon} />
-                  </div>
-                  <h2 className="rewards-ledger-hero-h2">{nextMilestone.title}</h2>
-                  <p className="rewards-ledger-hero-copy">{nextMilestone.hint}</p>
-                  <div className="rewards-ledger-hero-progress rewards-ledger-hero-progress--accent" role="progressbar" aria-label={`${nextMilestone.title}: ${t('rewards.progress_label')}`} aria-valuenow={nextMilestonePct} aria-valuemin={0} aria-valuemax={100}>
-                    <span style={{ width: `${nextMilestonePct}%` }} />
-                  </div>
-                  <div className="rewards-ledger-hero-actions">
-                    <button type="button" className="rewards-ledger-hero-cta" onClick={() => navigate('/runs')}>
-                      {t('rewards.next_cta')}
-                      <AppIcon name="arrow_forward" aria-hidden="true" />
-                    </button>
-                    <button type="button" className="rewards-ledger-hero-ghost" onClick={() => navigate('/today-run')}>
-                      {t('profile.dashboard_start_workout')}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="rewards-ledger-hero-glyph rewards-ledger-hero-glyph--next" aria-hidden="true">
-                    <AppIcon name="check_circle" />
-                  </div>
-                  <h2 className="rewards-ledger-hero-h2">{t('rewards.all_earned')}</h2>
-                  <p className="rewards-ledger-hero-copy">{t('rewards.catalog_copy')}</p>
-                </>
-              )}
-            </article>
-          </section>
-
-          {/* 4-metric ribbon */}
-          <section className="rewards-ledger-metrics" aria-label={t('rewards.hero_kicker')}>
-            {metrics.map((m, idx) => (
-              <article key={m.key} className="rewards-ledger-metric">
-                <span className="rewards-ledger-metric-index" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
-                <span className="rewards-ledger-metric-label">{m.label}</span>
-                <strong className="rewards-ledger-metric-value">{m.value}</strong>
-                <p className="rewards-ledger-metric-meta">{m.meta}</p>
-              </article>
-            ))}
-          </section>
-
-          {/* Earned ledger */}
-          <section className="rewards-ledger-section" aria-labelledby="rewards-ledger-earned">
-            <header className="rewards-ledger-section-head">
-              <div>
-                <span className="rewards-ledger-section-eyebrow">{t('rewards.earned_badge')}</span>
-                <h2 id="rewards-ledger-earned" className="rewards-ledger-section-title">{t('rewards.earned_title')}</h2>
-                <p className="rewards-ledger-section-sub">{t('rewards.earned_summary')}</p>
-              </div>
-              <span className="rewards-ledger-section-count">{earnedCount}</span>
-            </header>
-            {earnedRewards.length > 0 ? (
-              <div className="rewards-ledger-earned-grid">
-                {earnedRewards.map((reward, index) => (
-                  <article key={reward.id} className={cx('rewards-ledger-earned-card', index === 0 && 'is-latest')}>
-                    {index === 0 && <span className="rewards-ledger-earned-flag">{t('rewards.next_kicker')}</span>}
-                    <div className="rewards-ledger-earned-icon" aria-hidden="true">
-                      <RewardGlyph icon={reward.icon} />
-                    </div>
-                    <div className="rewards-ledger-earned-body">
-                      <span className="rewards-ledger-earned-rank">{String(index + 1).padStart(2, '0')}</span>
-                      <h3 className="rewards-ledger-earned-title">{reward.title}</h3>
-                      <p className="rewards-ledger-earned-sub">{reward.subtitle}</p>
-                    </div>
-                    <span className="rewards-ledger-earned-status">
-                      <span className="rewards-ledger-earned-dot" aria-hidden="true" />
-                      {t('rewards.earned_badge')}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="rewards-ledger-empty">
-                <p className="rewards-ledger-empty-msg">{t('rewards.earned_empty_coach')}</p>
-                <button type="button" className="rewards-ledger-empty-cta" onClick={() => navigate('/runs')}>{t('rewards.next_cta')}</button>
-              </div>
-            )}
-          </section>
-
-          {/* Priority pipeline */}
-          <section className="rewards-ledger-section" aria-labelledby="rewards-ledger-pipeline">
-            <header className="rewards-ledger-section-head">
-              <div>
-                <span className="rewards-ledger-section-eyebrow">{t('rewards.upcoming_subtitle')}</span>
-                <h2 id="rewards-ledger-pipeline" className="rewards-ledger-section-title">{t('rewards.upcoming_title')}</h2>
-                <p className="rewards-ledger-section-sub">{t('rewards.catalog_copy')}</p>
-              </div>
-              <span className="rewards-ledger-section-count rewards-ledger-section-count--muted">{priorityPipeline.length}</span>
-            </header>
-            {priorityPipeline.length > 0 ? (
-              <ol className="rewards-ledger-pipeline">
-                {priorityPipeline.map((reward, index) => {
-                  const pct = Math.round((reward.progress || 0) * 100);
-                  return (
-                    <li key={reward.id} className={cx('rewards-ledger-pipeline-row', index === 0 && 'is-top')}>
-                      <span className="rewards-ledger-pipeline-rank">{String(index + 1).padStart(2, '0')}</span>
-                      <div className="rewards-ledger-pipeline-icon" aria-hidden="true">
-                        <RewardGlyph icon={reward.icon} />
-                      </div>
-                      <div className="rewards-ledger-pipeline-copy">
-                        <h3 className="rewards-ledger-pipeline-title">{reward.title}</h3>
-                        <p className="rewards-ledger-pipeline-hint">{reward.hint}</p>
-                      </div>
-                      <div className="rewards-ledger-pipeline-progress">
-                        <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-label={`${reward.title}: ${t('rewards.progress_label')}`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                          <span style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="rewards-ledger-pipeline-pct">{pct}%</span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            ) : (
-              <div className="rewards-ledger-empty rewards-ledger-empty--success">
-                <p className="rewards-ledger-empty-msg">{t('rewards.all_earned')}</p>
-              </div>
-            )}
-          </section>
-          {/* Full catalog */}
-          <section className="rewards-ledger-section rewards-ledger-catalog-section" aria-labelledby="rewards-ledger-catalog">
-            <header className="rewards-ledger-section-head">
-              <div>
-                <span className="rewards-ledger-section-eyebrow">{t('rewards.hero_kicker')}</span>
-                <h2 id="rewards-ledger-catalog" className="rewards-ledger-section-title">{t('rewards.heading')}</h2>
-                <p className="rewards-ledger-section-sub">{t('rewards.catalog_copy')}</p>
-              </div>
-              <span className="rewards-ledger-section-count">{earnedCount}/{totalCount || 0}</span>
-            </header>
-            <div className="rewards-ledger-catalog-grid rewards-progress-card-grid--catalog">
-              {allRewards.map((reward) => {
-                const pct = Math.round((reward.progress || 0) * 100);
-                return (
-                  <article key={reward.id} className={cx('rewards-ledger-catalog-card', reward.earned ? 'is-earned' : 'is-locked')}>
-                    <div className="rewards-ledger-catalog-icon" aria-hidden="true">
-                      <RewardGlyph icon={reward.icon} />
-                    </div>
-                    <div className="rewards-ledger-catalog-body">
-                      <h3 className="rewards-ledger-catalog-title">{reward.title}</h3>
-                      <p className="rewards-ledger-catalog-sub">{reward.earned ? reward.subtitle : reward.hint}</p>
-                      {!reward.earned && (
-                        <div className="rewards-ledger-catalog-progress">
-                          <div className="rewards-ledger-pipeline-bar" role="progressbar" aria-label={`${reward.title}: ${t('rewards.progress_label')}`} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                            <span style={{ width: `${pct}%` }} />
-                          </div>
-                          <span>{pct}%</span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="rewards-ledger-catalog-status">{t(reward.earned ? 'profile.rewards_earned' : 'profile.rewards_locked')}</span>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
           <footer className="runner-shell-footer runner-dashboard-footer">
             <FooterNavLinks />
             <p className="rewards-ledger-signoff" aria-hidden="true">{runnerName} · {t('rewards.editorial_kicker')}</p>

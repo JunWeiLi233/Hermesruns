@@ -1,0 +1,339 @@
+/* Race detail v2 (design 23b). Load last in app.css. */
+
+/* Paint the whole page, including the canvas gutters and tall viewports. */
+html:has(#root .race-detail-v2-page) {
+  --rd-page-background: #f7f5f3;
+}
+
+html:has(body:is(.theme-midnight, .theme-high-contrast) #root .race-detail-v2-page) {
+  --rd-page-background: var(--profile-night-base, #11141a);
+}
+
+html:has(#root .race-detail-v2-page),
+body:has(#root .race-detail-v2-page),
+body #root .runner-shell-page.runner-dashboard-page.race-detail-v2-page {
+  background: var(--rd-page-background) !important;
+}
+
+body #root .runner-shell-page.race-detail-v2-page .runner-shell-canvas {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-inline: 0 !important;
+  background: transparent !important;
+}
+
+/* Clear legacy spacing on the fixed detail bar. */
+body #root .race-detail-v2-page .race-detail-topbar {
+  margin: 0 !important;
+}
+
+body #root .race-detail-v2-page::before,
+body #root .race-detail-v2-page .runner-shell-canvas::before {
+  content: none !important;
+  display: none !important;
+}
+
+#root .race-detail-layout.race-detail-v2 {
+  --rd-card: #fff;
+  --rd-ink: #1c1917;
+  --rd-muted: #625c56;
+  --rd-faint: #8a837c;
+  --rd-line: rgba(28, 25, 23, 0.08);
+  --rd-fill: rgba(28, 25, 23, 0.05);
+  --rd-accent: #a0392a;
+  display: grid !important;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 16px 20px 72px;
+  grid-template-columns: 400px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  color: var(--rd-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .race-detail-layout.race-detail-v2 {
+  --rd-card: #242a34;
+  --rd-ink: #f8f4ef;
+  --rd-muted: #c0b8ad;
+  --rd-faint: #a69e93;
+  --rd-line: rgba(255, 248, 238, 0.12);
+  --rd-fill: rgba(255, 255, 255, 0.06);
+  --rd-accent: #ffb4a7;
+}
+
+#root .race-detail-v2 > .runner-shell-footer { grid-column: 1 / -1; }
+#root .race-detail-v2 :is(h1, h2, p, dl, dd) { margin: 0; }
+
+/* Left race card */
+#root .rd-v2-card {
+  position: sticky;
+  top: 96px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--rd-card);
+}
+
+#root .rd-v2-photo { position: relative; height: 240px; background: #2b2e33; }
+#root .rd-v2-photo .race-detail-hero-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+#root .rd-v2-status {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(20, 17, 15, 0.6);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+#root .rd-v2-status:is(.is-registered, .is-completed) { background: rgba(36, 138, 61, 0.92); }
+#root .rd-v2-status:is(.is-applied, .is-waitlist) { background: rgba(161, 92, 0, 0.9); }
+
+#root .rd-v2-card-body { display: flex; flex-direction: column; gap: 16px; padding: 22px 24px 24px; }
+#root .rd-v2-title { display: flex; flex-direction: column; gap: 6px; }
+
+#root .rd-v2-title h1 {
+  display: flex;
+  flex-direction: column;
+  color: var(--rd-ink) !important;
+  font-family: var(--font-display);
+  font-size: 2.1rem !important;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+#root .rd-v2-title h1 span { color: var(--rd-muted); font-size: 1.1rem; letter-spacing: -0.02em; }
+#root .rd-v2-title p { color: var(--rd-muted); font-size: 0.85rem; }
+
+#root .rd-v2-countdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+
+#root .rd-v2-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 0;
+  border-radius: 12px;
+  background: var(--rd-fill);
+}
+
+#root .rd-v2-count strong { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+#root .rd-v2-count span { color: var(--rd-muted); font-size: 0.7rem; font-weight: 700; }
+#root .rd-v2-count.is-primary { background: #a0392a; color: #fff; }
+#root .rd-v2-count.is-primary span { color: rgba(255, 255, 255, 0.8); }
+
+#root .rd-v2-times { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--rd-line); border-bottom: 1px solid var(--rd-line); }
+#root .rd-v2-times > div { display: flex; flex-direction: column; gap: 4px; padding: 14px 0; }
+#root .rd-v2-times > div + div { padding-left: 16px; border-left: 1px solid var(--rd-line); }
+#root .rd-v2-times dt { color: var(--rd-muted); font-size: 0.75rem; font-weight: 700; }
+#root .rd-v2-times dd { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+#root .rd-v2-times dd.is-accent { color: var(--rd-accent); }
+#root .rd-v2-times em { margin-left: 3px; color: var(--rd-faint); font-size: 0.8rem; font-style: normal; }
+
+#root .rd-v2-coach { display: flex; flex-direction: column; gap: 8px; }
+#root .rd-v2-coach p { color: var(--rd-ink); font-size: 0.85rem; line-height: 1.55; text-wrap: pretty; }
+
+#root .rd-v2-actions { display: flex; flex-direction: column; gap: 8px; }
+#root .rd-v2-actions > div { display: flex; gap: 8px; }
+
+#root .rd-v2-primary,
+#root .rd-v2-secondary {
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#root .rd-v2-primary { min-height: 44px; border: 0; background: linear-gradient(135deg, #a0392a, #e0685a); color: #fff; font-weight: 800; }
+#root .rd-v2-secondary { flex: 1; border: 1px solid var(--rd-line); background: transparent; color: var(--rd-ink); }
+#root .rd-v2-secondary:hover { background: var(--rd-fill); }
+
+/* Right: course */
+#root .rd-v2-course { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#root .rd-v2-map { position: relative; overflow: hidden; border-radius: 24px; background: var(--rd-card); }
+#root .rd-v2-map .race-detail-map-stage { height: auto !important; min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+#root .rd-v2-map .race-detail-map-canvas { height: clamp(320px, 42vw, 460px) !important; min-height: 0 !important; border-radius: 0 !important; }
+
+#root .rd-v2-map-chips {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 500;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  pointer-events: none;
+}
+
+#root .rd-v2-map-chips span {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff;
+  color: #1c1917;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#root .rd-v2-map-chips .is-source { color: #248a3d; }
+
+#root .rd-v2-elevation.race-detail-course-card {
+  margin: 0 !important;
+  padding: 20px 24px !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  background: var(--rd-card) !important;
+  box-shadow: none !important;
+}
+
+#root .rd-v2-elevation .race-detail-course-head h2 {
+  color: var(--rd-ink) !important;
+  font-family: var(--font-display);
+  font-size: 1.25rem !important;
+  font-style: italic;
+  font-weight: 800;
+}
+
+#root .rd-v2-elevation .race-detail-course-head p { color: var(--rd-muted) !important; font-size: 0.8rem; }
+
+/* Keep the existing interactive profile readable on the reference's flat cards. */
+body #root .race-detail-v2 .race-detail-elevation-chart {
+  padding: 10px 0 0;
+  border-radius: 0;
+  background: var(--rd-card) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body #root .race-detail-v2 :is(.rd-v2-card, .rd-v2-elevation)::before,
+body #root .race-detail-v2 :is(.rd-v2-card, .rd-v2-elevation)::after { display: none; }
+
+#root .race-detail-v2 .race-detail-course-head p {
+  margin-top: 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#root .race-detail-v2 .race-detail-course-metrics { flex-shrink: 0; gap: 16px; }
+#root .race-detail-v2 .race-detail-course-metrics span { color: var(--rd-muted); letter-spacing: 0; text-transform: none; }
+#root .race-detail-v2 .race-detail-course-metrics strong { color: var(--rd-ink); }
+#root .race-detail-v2 .race-detail-elevation-line { stroke: var(--rd-accent); stroke-width: 2; filter: none; }
+#root .race-detail-v2 .race-detail-elevation-base { fill: transparent; }
+#root .race-detail-v2 .race-detail-elevation-area { opacity: 0.55; }
+#root .race-detail-v2 .race-detail-elevation-value { fill: var(--rd-muted); font-weight: 600; }
+#root .race-detail-v2 .race-detail-elevation-node-label { fill: var(--rd-faint); }
+#root .race-detail-v2 .race-detail-elevation-empty strong { color: var(--rd-ink); }
+#root .race-detail-v2 .race-detail-elevation-empty span { color: var(--rd-muted); }
+#root .race-detail-v2 :is(.rd-v2-primary, .rd-v2-secondary):focus-visible { outline: 2px solid var(--rd-accent); outline-offset: 3px; }
+
+/* Course overview: fixed-size labels around a responsive, full-distance plot. */
+body #root .race-detail-v2 .race-detail-elevation-chart {
+  overflow: visible;
+  height: auto;
+  margin-top: 18px;
+  padding: 0 0 0 38px;
+}
+
+body #root .race-detail-v2 .race-detail-elevation-stage {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  margin: 0;
+}
+
+#root .rd-v2-elevation-plot { position: relative; height: clamp(200px, 18vw, 250px); }
+body #root .race-detail-v2 .race-detail-elevation-svg { width: 100%; min-width: 0; height: 100%; overflow: visible; touch-action: pan-y; }
+body #root .race-detail-v2 .race-detail-elevation-svg:focus-visible { outline: 2px solid var(--rd-accent); outline-offset: 5px; border-radius: 4px; }
+body #root .race-detail-v2 .race-detail-elevation-line { stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+body #root .race-detail-v2 .race-detail-elevation-area { opacity: 1; }
+#root .rd-v2-elevation-horizontal-guide { stroke: var(--rd-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+body #root .race-detail-v2 .race-detail-elevation-guide { stroke: var(--rd-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+body #root .race-detail-v2 .race-detail-elevation-guide.is-minor { opacity: 0.35; }
+body #root .race-detail-v2 .race-detail-elevation-scrubber-line { stroke: var(--rd-accent); stroke-width: 1; stroke-dasharray: 3 5; opacity: 0.5; vector-effect: non-scaling-stroke; }
+
+#root .rd-v2-elevation-altitude-axis { position: absolute; top: 0; bottom: 0; left: -38px; width: 30px; pointer-events: none; }
+#root .rd-v2-elevation-altitude-axis span { position: absolute; right: 0; transform: translateY(-50%); color: var(--rd-faint); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#root .rd-v2-elevation-distance-axis { position: relative; height: 28px; margin-top: 2px; pointer-events: none; }
+#root .rd-v2-elevation-distance-axis span { position: absolute; top: 0; transform: translateX(-50%); color: var(--rd-faint); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#root .rd-v2-elevation-distance-axis .is-start { transform: none; }
+#root .rd-v2-elevation-distance-axis .is-finish { transform: translateX(-100%); }
+#root .rd-v2-elevation-peak { position: absolute; z-index: 1; transform: translate(-50%, calc(-100% - 10px)); padding: 4px 8px; border: 1px solid var(--rd-line); border-radius: 7px; background: var(--rd-card); color: var(--rd-accent); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
+#root .rd-v2-elevation-peak.is-left { transform: translate(0, calc(-100% - 10px)); }
+#root .rd-v2-elevation-peak.is-right { transform: translate(-100%, calc(-100% - 10px)); }
+#root .rd-v2-elevation-plot:has(.race-detail-elevation-tooltip) .rd-v2-elevation-peak { opacity: 0; }
+#root .rd-v2-elevation-active-dot { position: absolute; z-index: 2; width: 9px; height: 9px; transform: translate(-50%, -50%); border: 2px solid var(--rd-card); border-radius: 50%; background: var(--rd-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rd-accent) 12%, transparent); pointer-events: none; }
+
+body #root .race-detail-v2 .race-detail-elevation-tooltip {
+  z-index: 3;
+  min-width: 0;
+  width: max-content;
+  max-width: min(180px, 70%);
+  padding: 9px 12px;
+  border: 1px solid var(--rd-line);
+  border-radius: 10px;
+  background: var(--rd-card);
+  box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+body #root .race-detail-v2 .race-detail-elevation-tooltip strong { color: var(--rd-ink); font: 700 12px/1.4 var(--font-display); letter-spacing: 0; }
+body #root .race-detail-v2 .race-detail-elevation-tooltip span { margin-top: 3px; color: var(--rd-muted); font-size: 11px; font-weight: 400; line-height: 1.4; letter-spacing: 0; text-transform: none; }
+
+/* Scope the reference surfaces and text above the shared glass/theme rules. */
+body #root .race-detail-v2-page .race-detail-v2 :is(.rd-v2-card, .rd-v2-elevation, .race-detail-elevation-chart) {
+  border: 0 !important;
+  background: var(--rd-card) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+body #root .race-detail-v2-page .rd-v2-card-body { border: 0; background: transparent !important; box-shadow: none !important; }
+body #root .race-detail-v2-page .rd-v2-count strong { color: var(--rd-ink) !important; }
+body #root .race-detail-v2-page .rd-v2-count.is-primary strong { color: #fff !important; }
+body #root .race-detail-v2-page .rd-v2-count.is-primary span { color: rgba(255, 255, 255, 0.9) !important; }
+body #root .race-detail-v2-page .rd-v2-status { color: #fff !important; }
+body #root .race-detail-v2-page .rd-v2-map-chips span { color: #1c1917 !important; }
+body #root .race-detail-v2-page .rd-v2-map-chips .is-source { color: #248a3d !important; }
+body #root .race-detail-v2-page .rd-v2-times dd { color: var(--rd-ink) !important; }
+body #root .race-detail-v2-page .rd-v2-times dd.is-accent { color: var(--rd-accent) !important; }
+#root .race-detail-v2 .race-detail-elevation-marker.is-minor .race-detail-elevation-node-label { display: none; }
+#root .race-detail-v2 .race-detail-course-route-line { stroke: var(--rd-accent); stroke-width: 4; }
+
+@media (max-width: 1100px) {
+  #root .race-detail-layout.race-detail-v2 { grid-template-columns: minmax(0, 1fr); }
+  #root .rd-v2-card { position: static; }
+  #root .rd-v2-photo { height: 220px; }
+}
+
+@media (max-width: 640px) {
+  #root .race-detail-layout.race-detail-v2 { padding: 12px 12px 88px; }
+  #root .rd-v2-card-body { padding: 18px; }
+  #root .rd-v2-count strong { font-size: 1.25rem; }
+  #root .rd-v2-map, #root .rd-v2-elevation.race-detail-course-card, #root .rd-v2-card { border-radius: 20px !important; }
+  #root .race-detail-v2 .race-detail-course-head { flex-wrap: wrap; }
+  #root .race-detail-v2 .race-detail-course-metrics div { text-align: left; }
+  #root .rd-v2-map-chips { bottom: 38px; left: 12px; gap: 6px; }
+  #root .rd-v2-elevation-distance-axis .is-intermediate { display: none; }
+  body #root .race-detail-v2 .rd-v2-elevation.race-detail-course-card { padding: 18px 16px !important; }
+}

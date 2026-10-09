@@ -116,7 +116,7 @@ for (const handlerName of [
 
 assert.match(
   importDataPageSource,
-  /fit_export_source_title[\s\S]*coros_source_title[\s\S]*huawei_source_title[\s\S]*ImportDataGuide/,
+  /<AuthenticatedPageChrome[\s\S]*<ImportActivityForm[\s\S]*import-page-v2-guide/,
   'Manual import should remain on its dedicated /settings/import-data surface.',
 );
 

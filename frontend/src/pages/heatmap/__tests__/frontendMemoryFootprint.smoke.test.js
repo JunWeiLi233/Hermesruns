@@ -18,7 +18,8 @@ assert.match(cache, /ACTIVITIES_TTL_MS = 120 \* 1000/);
 assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'\)/);
 // Initial load and the shared import callback reuse one cached loader. The
 // modal invalidates activity resources before handing control back to it.
-assert.match(importModal, /invalidateResourceCache\('\/api\/activities'\);\s*onClose\?\.\(\);\s*onImported\?\.\(\);/);
+assert.match(importModal, /invalidateResourceCache\('\/api\/activities'\);[\s\S]*?onSuccess\?\.\(importedCount\);/);
+assert.match(importModal, /onSuccess=\{\(\) => \{ onClose\?\.\(\); onImported\?\.\(\); \}\}/);
 assert.match(analysis, /<ImportActivityModal[\s\S]*?onImported=\{loadAnalysisData\}/);
 assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
 assert.doesNotMatch(analysis, /apiJson\('\/api\/activities\/analysis'\)/);

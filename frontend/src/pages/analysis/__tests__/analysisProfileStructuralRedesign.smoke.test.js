@@ -80,7 +80,7 @@ assert.doesNotMatch(
 
 for (const [route, branch, behaviorMarkers] of [
   ['coach', coachBranch, [
-    'analysis-coach-command-chart-shell',
+    '<CoachLoadChart',
     'analysis-coach-bento__recent-list',
     'analysis-coach-bento__today',
     'coachPrimarySession.target',

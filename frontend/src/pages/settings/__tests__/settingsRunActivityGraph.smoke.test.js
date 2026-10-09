@@ -25,8 +25,8 @@ assert.match(
 
 assert.match(
   layoutSource,
-  /<section className="st-hero">[\s\S]*?<\/section>[\s\S]*?<RunActivityContributionGraph[\s\S]*?runs=\{runActivities\}[\s\S]*?status=\{runActivityState\}/,
-  'The activity graph should sit directly below the Settings profile hero.',
+  /<section id="st-v2-activity"[\s\S]*?<RunActivityContributionGraph[\s\S]*?runs=\{runActivities\}[\s\S]*?status=\{runActivityState\}/,
+  'The activity group should retain the real run calendar and its loading state.',
 );
 
 assert.match(

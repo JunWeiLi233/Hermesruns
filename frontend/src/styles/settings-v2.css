@@ -1,0 +1,266 @@
+/* Settings v2 (design 25a). Load last in app.css. */
+
+#root .settings-atlas-canvas.st-v2 {
+  --sv-card: #fff;
+  --sv-ink: #1c1917;
+  --sv-muted: #625c56;
+  --sv-faint: #8a837c;
+  --sv-line: rgba(28, 25, 23, 0.06);
+  --sv-fill: rgba(28, 25, 23, 0.05);
+  --sv-accent: #a0392a;
+  --sv-input-line: rgba(28, 25, 23, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  color: var(--sv-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-atlas-canvas.st-v2 {
+  --sv-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --sv-ink: #f8f4ef;
+  --sv-muted: #c0b8ad;
+  --sv-faint: #a69e93;
+  --sv-line: rgba(255, 248, 238, 0.1);
+  --sv-fill: rgba(255, 255, 255, 0.06);
+  --sv-accent: #ffb4a7;
+  --sv-input-line: rgba(255, 248, 238, 0.2);
+}
+
+#root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 {
+  width: 100% !important;
+  min-height: calc(100dvh - 88px);
+  margin: 0 !important;
+  padding: 32px 24px 40px !important;
+  background: #f4f4f8;
+  background-image: none;
+}
+#root .settings-atlas-canvas.st-v2::before { display: none; }
+body:is(.theme-midnight, .theme-high-contrast) #root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 { background: #16191f; }
+
+#root .st-v2 :is(h1, h2, p, ul) { margin: 0; }
+#root .st-v2-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+
+/* Index */
+#root .st-v2-index { position: sticky; top: 96px; display: flex; flex-direction: column; gap: 18px; }
+#root .st-v2-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#root .st-v2-identity > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#root .st-v2-identity strong { font-size: 1rem; }
+#root .st-v2-identity > div > span { overflow: hidden; color: var(--sv-muted); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+
+#root .st-v2-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #1c1917;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+
+#root .st-v2-avatar img { width: 100%; height: 100%; object-fit: cover; }
+#root .st-v2-avatar.is-md { width: 52px; height: 52px; font-size: 1.25rem; }
+#root .st-v2-avatar.is-lg { width: 44px; height: 44px; font-size: 1.05rem; }
+
+#root .st-v2-setup { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 16px; background: var(--sv-card); }
+#root .st-v2-setup-head { display: flex; justify-content: space-between; font-size: 0.78rem; }
+#root .st-v2-setup-head span { color: var(--sv-muted); font-weight: 700; }
+#root .st-v2-progress { height: 6px; overflow: hidden; border-radius: 3px; background: var(--sv-fill); }
+#root .st-v2-progress i { display: block; height: 100%; border-radius: 3px; background: var(--sv-accent); }
+#root .st-v2-setup ul { display: flex; flex-direction: column; gap: 6px; padding: 0; list-style: none; }
+#root .st-v2-setup li { display: flex; align-items: center; gap: 8px; color: var(--sv-ink); font-size: 0.78rem; }
+#root .st-v2-setup li.is-done { color: var(--sv-muted); }
+#root .st-v2-check { display: grid; flex: 0 0 16px; width: 16px; height: 16px; place-items: center; border-radius: 999px; background: rgba(28, 25, 23, 0.15); color: #fff; font-size: 10px; font-weight: 800; }
+#root .st-v2-setup li.is-done .st-v2-check { background: #34c759; }
+
+#root .st-v2-nav { display: flex; flex-direction: column; gap: 2px; }
+
+#root .st-v2-nav button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sv-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+#root .st-v2-nav button:hover { color: var(--sv-ink); }
+#root .st-v2-nav button.is-active { background: var(--sv-card); color: var(--sv-ink); font-weight: 700; }
+
+/* Content */
+#root .st-v2-content { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+
+#root .st-v2-title {
+  color: var(--sv-ink) !important;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.2vw, 2.75rem) !important;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+#root .st-v2-group { display: flex; flex-direction: column; gap: 8px; }
+#root .st-v2-group[hidden] { display: none !important; }
+
+#root .st-v2-group-label {
+  padding-left: 6px;
+  color: var(--sv-muted) !important;
+  font-family: inherit !important;
+  font-size: 0.75rem !important;
+  font-style: normal !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#root .st-v2-card { overflow: hidden; border: 0; border-radius: 18px; background: var(--sv-card) !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none !important; }
+
+#root .st-v2-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border: 0;
+  background: none;
+  color: var(--sv-ink);
+  font: inherit;
+  text-align: left;
+}
+
+#root .st-v2-row + .st-v2-row { border-top: 1px solid var(--sv-line); }
+#root .st-v2-row-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#root .st-v2-row-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#root .st-v2-row-copy strong { font-size: 0.9rem; font-weight: 700; }
+#root .st-v2-row-copy > span { color: var(--sv-faint); font-size: 0.78rem; line-height: 1.45; overflow-wrap: anywhere; }
+#root .st-v2-row-actions { display: flex; align-items: center; gap: 6px; }
+
+#root .st-v2-field { grid-template-columns: 180px minmax(0, 1fr); cursor: default; }
+#root .st-v2-field-label { font-size: 0.875rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+
+#root .st-v2-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--sv-input-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sv-ink);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+#root .st-v2-input:focus { border-color: var(--sv-accent); outline: none; box-shadow: 0 0 0 3px rgba(160, 57, 42, 0.12); }
+#root .st-v2-save { display: flex; justify-content: flex-end; gap: 12px; }
+#root .st-v2-msg { color: var(--sv-muted); font-size: 0.78rem; }
+
+#root .st-v2-btn {
+  display: inline-grid;
+  min-height: 34px;
+  place-items: center;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(28, 25, 23, 0.12);
+  color: var(--sv-ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-btn { box-shadow: inset 0 0 0 1px rgba(255, 248, 238, 0.18); }
+#root .st-v2-btn.is-dark { background: #1c1917; box-shadow: none; color: #fff; }
+body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-btn.is-dark { background: #f8f4ef; color: #1c1917; }
+#root .st-v2-btn.is-quiet { box-shadow: none; color: var(--sv-muted); }
+#root .st-v2-btn:is(:disabled, .is-disabled) { opacity: 0.55; cursor: progress; }
+
+#root .st-v2-primary { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: linear-gradient(135deg, #a0392a, #e0685a); color: #fff; font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+#root .st-v2-primary:disabled { background: var(--sv-fill); color: var(--sv-faint); cursor: not-allowed; }
+
+#root .st-v2-segmented { display: flex; padding: 3px; border-radius: 10px; background: var(--sv-fill); }
+#root .st-v2-segmented button { min-height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--sv-muted); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+#root .st-v2-segmented button.is-active { background: var(--sv-card); color: var(--sv-ink); box-shadow: 0 1px 3px rgba(28, 25, 23, 0.12); }
+body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-segmented button.is-active { background: rgba(255, 255, 255, 0.14); }
+
+#root .st-v2-themes { display: flex; gap: 8px; }
+#root .st-v2-theme { width: 52px; height: 36px; padding: 0; border: 0; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(28, 25, 23, 0.12); cursor: pointer; }
+#root .st-v2-theme.is-light { background: linear-gradient(135deg, #f5f5f7 50%, #fff 50%); }
+#root .st-v2-theme.is-midnight { background: linear-gradient(135deg, #14171c 50%, #242a34 50%); }
+#root .st-v2-theme.is-high-contrast { background: linear-gradient(135deg, #000 50%, #fff 50%); }
+#root .st-v2-theme.is-active { box-shadow: 0 0 0 2px var(--sv-card), 0 0 0 4px var(--sv-accent); }
+
+#root .st-v2-service { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: 11px; color: #fff; }
+#root .st-v2-service svg { width: 20px; height: 20px; }
+#root .st-v2-service.is-strava { background: #fc4c02; }
+#root .st-v2-service.is-garmin { background: #1c1917; }
+#root .st-v2-service.is-files { background: #8a837c; }
+#root .st-v2-status { display: inline-flex; align-items: center; gap: 6px; }
+#root .st-v2-status i { width: 7px; height: 7px; border-radius: 9px; background: #c9c3bc; }
+#root .st-v2-status i.is-on { background: #34c759; }
+
+#root .st-v2-sync { grid-template-columns: 180px minmax(0, 1fr); align-items: start; }
+#root .st-v2-sync ul { display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none; }
+#root .st-v2-sync li { display: grid; grid-template-columns: minmax(80px, 0.7fr) minmax(0, 1.4fr) auto; gap: 12px; align-items: center; font-size: 0.8rem; }
+#root .st-v2-sync li :is(span, strong) { min-width: 0; overflow-wrap: anywhere; }
+#root .st-v2-sync li span { color: var(--sv-muted); }
+#root .st-v2-sync li strong { font-weight: 600; text-align: right; }
+#root .st-v2-sync li em { padding: 2px 8px; border-radius: 999px; background: var(--sv-fill); color: var(--sv-muted); font-size: 0.7rem; font-style: normal; font-weight: 700; }
+#root .st-v2-sync li em.is-live { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+
+#root .st-v2-toggle-row { cursor: pointer; }
+#root .st-v2-switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: rgba(28, 25, 23, 0.18); transition: background 150ms ease; }
+#root .st-v2-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); transition: left 150ms ease; }
+#root .st-v2-switch.is-on { background: #a0392a; }
+#root .st-v2-switch.is-on::after { left: 21px; }
+#root .st-v2-toggle-row:focus-visible .st-v2-switch { outline: 2px solid var(--sv-accent); outline-offset: 2px; }
+
+/* Activity graph — reuse the component, frame it like the other groups */
+#root .st-v2-activity > :not(.st-v2-group-label) { margin: 0 !important; border-radius: 18px !important; background: var(--sv-card) !important; box-shadow: none !important; }
+#root .st-v2-activity .st-activity-graph { min-width: 0; max-width: 100%; padding: 18px; border: 0; }
+#root .st-v2-activity .st-activity-kicker { display: none; }
+#root .st-v2-activity .st-activity-title { font-size: 0.875rem; letter-spacing: normal; font-weight: 700; }
+#root .st-v2-activity .st-activity-graph-head { margin-bottom: 8px; }
+#root .st-v2-activity .st-activity-grid-frame { border-top: 0; padding-top: 0; }
+#root .st-v2-activity :is(.st-activity-months, .st-activity-weeks, .st-activity-week, .st-activity-weekday-labels) { gap: 2px; }
+
+#root .st-v2-logout { cursor: pointer; }
+#root .st-v2-logout strong { color: #c4261a; }
+body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-logout strong { color: #ff9b87; }
+#root .st-v2-logout svg { width: 16px; height: 16px; color: var(--sv-faint); }
+#root .st-v2-meta { padding-left: 6px; color: var(--sv-faint); font-size: 0.75rem; }
+
+#root .st-v2 button:focus-visible, #root .st-v2 label.st-v2-btn:focus-within { outline: 2px solid var(--sv-accent); outline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  #root .st-v2-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  #root .st-v2-index { position: static; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #root .st-v2-nav { grid-column: 1 / -1; min-width: 0; flex-direction: row; gap: 4px; padding: 3px; overflow-x: auto; }
+  #root .st-v2-nav button { flex: 0 0 auto; min-height: 44px; white-space: nowrap; }
+}
+
+@media (max-width: 640px) {
+  #root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 { padding: 24px 16px 32px !important; }
+  #root .st-v2-index { grid-template-columns: minmax(0, 1fr); }
+  #root .st-v2-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  #root :is(.st-v2-field, .st-v2-sync) { grid-template-columns: minmax(0, 1fr); }
+  #root .st-v2-row-actions, #root .st-v2-row > .st-v2-btn, #root .st-v2-segmented, #root .st-v2-themes { justify-self: start; }
+  #root .st-v2-toggle-row, #root .st-v2-logout { grid-template-columns: minmax(0, 1fr) auto; }
+  #root .st-v2 :is(.st-v2-btn, .st-v2-primary, .st-v2-segmented button) { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .st-v2-switch, #root .st-v2-switch::after { transition: none; }
+}

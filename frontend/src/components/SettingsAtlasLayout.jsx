@@ -1,6 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
 import AppIcon from './AppIcon';
 import FooterNavLinks from './FooterNavLinks';
 import RunActivityContributionGraph from './RunActivityContributionGraph';
+
+/* Settings v2 (design 25a): sticky section selector + one active group.
+   Same props as the previous SettingsAtlasLayout, so Settings.jsx does not change. */
 
 export default function SettingsAtlasLayout({
   t,
@@ -11,7 +15,6 @@ export default function SettingsAtlasLayout({
   activeThemeLabel,
   resolvedLanguageLabel,
   resolvedUnitLabel,
-  heroBadge,
   completionScore,
   digestEnabled,
   stravaStatus,
@@ -34,11 +37,11 @@ export default function SettingsAtlasLayout({
   setUnit,
   lang,
   setLang,
-  syncHealthItems,
+  syncHealthItems = [],
   wellnessRows = [],
   garminLane,
   onOpenGarminImport,
-  setupChecklist,
+  setupChecklist = [],
   runActivities = [],
   runActivityState = 'loading',
   avatarUrl,
@@ -47,9 +50,46 @@ export default function SettingsAtlasLayout({
   onAvatarUpload,
   onAvatarRemove,
 }) {
+  const [activeSection, setActiveSection] = useState('profile');
+  const [compactNavigation, setCompactNavigation] = useState(false);
+  const avatarInputRef = useRef(null);
+  const sectionTabsRef = useRef(null);
   const stravaConnected = Boolean(stravaStatus?.linked);
-  const digestStateLabel = digestEnabled ? t('settings.stitch_enabled') : t('settings.stitch_review');
   const avatarActionLabel = avatarUrl ? t('settings.avatar_change') : t('settings.avatar_upload');
+  const doneCount = setupChecklist.filter((item) => item.done).length;
+  const sections = [
+    ['profile', t('settings.stitch_account_info')],
+    ['preferences', t('settings.stitch_prefs_title')],
+    ['connections', t('settings.stitch_data_services_title')],
+    ['notifications', t('settings.v2_notifications_title')],
+    ['activity', t('settings.v2_activity_title')],
+    ['account', t('settings.v2_account_title')],
+  ];
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 1100px)');
+    if (!media) return undefined;
+    const update = () => setCompactNavigation(media.matches);
+    update();
+    media.addEventListener?.('change', update);
+    return () => media.removeEventListener?.('change', update);
+  }, []);
+
+  function handleSectionKeyDown(event, index) {
+    const nextIndex = {
+      ArrowDown: (index + 1) % sections.length,
+      ArrowRight: (index + 1) % sections.length,
+      ArrowUp: (index - 1 + sections.length) % sections.length,
+      ArrowLeft: (index - 1 + sections.length) % sections.length,
+      Home: 0,
+      End: sections.length - 1,
+    }[event.key];
+    if (nextIndex == null) return;
+    event.preventDefault();
+    const nextSection = sections[nextIndex][0];
+    setActiveSection(nextSection);
+    sectionTabsRef.current?.querySelector(`#st-v2-tab-${nextSection}`)?.focus();
+  }
 
   function handleAvatarSelection(event) {
     const file = event.target.files?.[0];
@@ -57,378 +97,286 @@ export default function SettingsAtlasLayout({
     if (file) onAvatarUpload?.(file);
   }
 
+  const avatar = (size) => (
+    <span className={`st-v2-avatar is-${size}`} aria-hidden="true">
+      {avatarUrl ? <img src={avatarUrl} alt="" width="256" height="256" loading="eager" decoding="async" /> : initials}
+    </span>
+  );
+
   return (
-    <div className="runner-shell-canvas settings-control-canvas settings-atlas-canvas">
-
-      {/* ── Hero ── */}
-      <section className="st-hero">
-        <div className="st-hero-left">
-          <div className="st-hero-avatar-wrap">
-            <input
-              id="st-profile-avatar-input"
-              className="st-avatar-file-input"
-              type="file"
-              accept="image/png,image/jpeg"
-              aria-label={avatarActionLabel}
-              disabled={avatarSaving}
-              onChange={handleAvatarSelection}
-            />
-            <label
-              className={`st-hero-avatar st-hero-avatar--editable${avatarSaving ? ' is-disabled' : ''}`}
-              htmlFor="st-profile-avatar-input"
-              title={avatarActionLabel}
-            >
-              {avatarUrl ? <img src={avatarUrl} alt="" width="256" height="256" loading="eager" decoding="async" /> : initials}
-              <span className="st-hero-avatar-edit" aria-hidden="true">
-                <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
-              </span>
-            </label>
-            <span className="st-hero-badge">{heroBadge}</span>
-          </div>
-          <div className="st-hero-copy">
-            <h1 className="st-hero-name">{displayNameResolved}</h1>
-            <p className="st-hero-desc">{mantra || t('settings.stitch_hero_copy')}</p>
-            <div className="st-hero-chips">
-              <span className="st-chip">{resolvedUnitLabel}</span>
-              <span className="st-chip">{resolvedLanguageLabel}</span>
-              <span className="st-chip">{activeThemeLabel}</span>
-            </div>
-          </div>
-        </div>
-        <div className="st-hero-right">
-          <div className="st-hero-stat">
-            <span>{t('settings.stitch_completion_title')}</span>
-            <strong>{completionScore}%</strong>
-            <div className="st-progress-track" aria-hidden="true">
-              <div className="st-progress-fill" style={{ width: `${completionScore}%` }} />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Row 1: Account + Preferences ── */}
-      <div className="st-main-grid">
-
-        {/* Account */}
-        <article className="st-card">
-          <div className="st-card-head">
+    <div className="runner-shell-canvas settings-control-canvas settings-atlas-canvas st-v2">
+      <div className="st-v2-layout">
+        <aside className="st-v2-index">
+          <div className="st-v2-identity">
+            {avatar('md')}
             <div>
-              <p className="st-kicker">{t('settings.stitch_account_kicker')}</p>
-              <h2 className="st-card-title">{t('settings.stitch_account_info')}</h2>
-            </div>
-          </div>
-          <form className="st-account-form" onSubmit={saveProfile}>
-            <div className="st-avatar-field">
-              <div>
-                <span className="st-label">{t('settings.avatar_title')}</span>
-                <p>{t('settings.avatar_hint')}</p>
-              </div>
-              <div className="st-avatar-field-actions">
-                <label
-                  className={`st-avatar-change${avatarSaving ? ' is-disabled' : ''}`}
-                  htmlFor="st-profile-avatar-input"
-                >
-                  <AppIcon name="edit" className="runner-dashboard-side-link-icon" />
-                  <span>{avatarSaving ? t('settings.avatar_uploading') : avatarActionLabel}</span>
-                </label>
-                {avatarUrl ? (
-                  <button type="button" className="st-avatar-remove" disabled={avatarSaving} onClick={onAvatarRemove}>
-                    {t('settings.avatar_remove')}
-                  </button>
-                ) : null}
-              </div>
-              {avatarMsg ? <p className="st-avatar-msg" role="status">{avatarMsg}</p> : null}
-            </div>
-            <div className="st-field">
-              <label className="st-label" htmlFor="st-display-name">{t('settings.display_name_title')}</label>
-              <input
-                id="st-display-name"
-                className="st-input"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={t('settings.display_name_placeholder')}
-                maxLength={60}
-              />
-            </div>
-            <div className="st-field">
-              <label className="st-label" htmlFor="st-mantra">{t('settings.stitch_account_identity')}</label>
-              <textarea
-                id="st-mantra"
-                className="st-textarea"
-                value={mantra}
-                onChange={(e) => setMantra(e.target.value)}
-                placeholder={t('settings.stitch_account_identity_placeholder')}
-                rows={3}
-              />
-            </div>
-            <div className="st-account-actions">
-              <button type="submit" className="st-btn-primary" disabled={nameSaving || !displayName.trim()}>
-                {nameSaving ? t('settings.saving') : t('settings.save')}
-              </button>
-              {nameMsg ? <span className="st-msg">{nameMsg}</span> : null}
-            </div>
-          </form>
-        </article>
-
-        {/* Preferences */}
-        <article className="st-card">
-          <div className="st-card-head">
-            <div>
-              <p className="st-kicker">{t('settings.stitch_preferences')}</p>
-              <h2 className="st-card-title">{t('settings.stitch_prefs_title')}</h2>
+              <strong>{displayNameResolved}</strong>
+              <span>{mantra || t('settings.stitch_hero_copy')}</span>
             </div>
           </div>
 
-          {/* Units */}
-          <div className="st-pref-row" style={{ borderTop: 'none', paddingTop: 0 }}>
-            <div className="st-pref-label">
-              <AppIcon name="straighten" className="runner-dashboard-side-link-icon" />
-              <div>
-                <strong>{t('settings.stitch_metric_label')} / {t('settings.stitch_imperial_label')}</strong>
-                <span>{t('settings.stitch_unit_desc')}</span>
-              </div>
+          <div className="st-v2-setup">
+            <div className="st-v2-setup-head">
+              <span>{t('settings.stitch_completion_title')}</span>
+              <strong>{setupChecklist.length ? `${doneCount} / ${setupChecklist.length}` : `${completionScore}%`}</strong>
             </div>
-            <div className="st-segmented">
-              <button type="button" className={unit === 'km' ? 'is-active' : ''} onClick={() => setUnit('km')}>
-                {t('settings.stitch_metric_label')}
-              </button>
-              <button type="button" className={unit === 'mile' ? 'is-active' : ''} onClick={() => setUnit('mile')}>
-                {t('settings.stitch_imperial_label')}
-              </button>
-            </div>
-          </div>
-
-          {/* Theme */}
-          <div className="st-pref-row">
-            <div className="st-pref-label">
-              <AppIcon name="palette" className="runner-dashboard-side-link-icon" />
-              <div>
-                <strong>{t('settings.stitch_theme_title')}</strong>
-                <span>{t('settings.stitch_theme_desc')}</span>
-              </div>
-            </div>
-            <div className="st-theme-cards">
-              {themeCards.map((card) => (
-                <button
-                  key={card.value}
-                  type="button"
-                  className={`st-theme-card${theme === card.value ? ' is-active' : ''}`}
-                  onClick={() => setTheme(card.value)}
-                  aria-pressed={theme === card.value}
-                  aria-label={card.label}
-                >
-                  <AppIcon name={card.icon} className="runner-dashboard-side-link-icon" />
-                  <span>{card.label}</span>
-                </button>
+            <div className="st-v2-progress" aria-hidden="true"><i style={{ width: `${completionScore}%` }} /></div>
+            <ul>
+              {setupChecklist.map((item) => (
+                <li key={item.key} className={item.done ? 'is-done' : ''}>
+                  <span className="st-v2-check" aria-hidden="true">{item.done ? '✓' : ''}</span>
+                  {item.label}
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
 
-          {/* Language */}
-          <div className="st-pref-row">
-            <div className="st-pref-label">
-              <AppIcon name="translate" className="runner-dashboard-side-link-icon" />
-              <div>
-                <strong id="settings-language-label">{t('settings.language_title')}</strong>
-                <span>{t('settings.language_hint')}</span>
-              </div>
-            </div>
-            <div className="st-select-wrap">
-              <select className="st-select" value={lang} onChange={(e) => setLang(e.target.value)} aria-labelledby="settings-language-label">
-                <option value="zh-CN">中文（简体）</option>
-                <option value="en">English (US)</option>
-              </select>
-            </div>
-          </div>
-        </article>
-      </div>
-
-      {/* ── Row 2: Checklist, Brief, Logout ── */}
-      <div className="st-main-grid">
-
-        {/* Setup checklist */}
-        <article className="st-card">
-          <div className="st-card-head">
-            <div>
-              <p className="st-kicker">{t('settings.stitch_checklist_kicker')}</p>
-              <h2 className="st-card-title">{t('settings.stitch_setup_checklist_title')}</h2>
-            </div>
-          </div>
-          <p className="st-checklist-desc">{t('settings.stitch_setup_checklist_copy')}</p>
-          <div className="st-checklist">
-            {setupChecklist.map((item) => (
-              <div key={item.key} className={`st-checklist-item${item.done ? ' is-done' : ''}`}>
-                <span className={`st-check-icon${item.done ? ' done' : ''}`}>
-                  <AppIcon name={item.done ? 'check_circle' : 'radio_button_unchecked'} className="runner-dashboard-side-link-icon" />
-                </span>
-                <span>{item.label}</span>
-              </div>
+          <nav ref={sectionTabsRef} className="st-v2-nav" role="tablist" aria-orientation={compactNavigation ? 'horizontal' : 'vertical'} aria-label={t('settings.heading')}>
+            {sections.map(([id, label], index) => (
+              <button
+                key={id}
+                id={`st-v2-tab-${id}`}
+                type="button"
+                role="tab"
+                className={activeSection === id ? 'is-active' : ''}
+                aria-selected={activeSection === id}
+                aria-controls={`st-v2-${id}`}
+                tabIndex={activeSection === id ? 0 : -1}
+                onClick={() => setActiveSection(id)}
+                onKeyDown={(event) => handleSectionKeyDown(event, index)}
+              >
+                {label}
+              </button>
             ))}
-          </div>
-        </article>
+          </nav>
+        </aside>
 
-        {/* Weekly brief + Logout */}
-        <article className="st-card">
-          <div className="st-card-head">
-            <div>
-              <p className="st-kicker">{t('settings.stitch_weekly_brief')}</p>
-              <h2 className="st-card-title">{t('settings.stitch_weekly_brief')}</h2>
-            </div>
-          </div>
-          <p className="st-brief-desc">{t('settings.stitch_weekly_brief_copy')}</p>
-          <div className="st-brief-toggle">
-            <span>{t('settings.stitch_brief_status')}: <strong>{digestStateLabel}</strong></span>
-            <button
-              type="button"
-              className={`st-toggle-btn${digestEnabled ? ' is-on' : ''}`}
-              onClick={toggleDigest}
-              aria-pressed={digestEnabled}
-              aria-label={t('settings.stitch_weekly_brief')}
-            >
-              <span className="st-toggle-thumb" />
-            </button>
-          </div>
-          <div className="st-logout-section">
-            <button
-              type="button"
-              className="st-logout-btn"
-              onClick={() => { logout(); navigate('/login'); }}
-            >
-              <AppIcon name="logout" className="runner-dashboard-side-link-icon" />
-              <span>{t('settings.logout_btn')}</span>
-            </button>
-            <span className="st-logout-hint">{t('settings.stitch_danger_copy')}</span>
-          </div>
-        </article>
-      </div>
+        <div className="st-v2-content">
+          <h1 className="st-v2-title">{t('settings.heading')}</h1>
 
-      {/* ── Connected Services (full-width) ── */}
-      <section className="st-services">
-        <div className="st-card-head">
-          <div>
-            <p className="st-kicker">{t('settings.connected_title')}</p>
-            <h2 className="st-card-title">{t('settings.stitch_data_services_title')}</h2>
-          </div>
-        </div>
-
-        {/* Sync health */}
-        <div className="st-sync-section">
-          <strong className="st-sync-title">{t('settings.stitch_sync_health_title')}</strong>
-          <div className="st-sync-list">
-            {syncHealthItems.map((item) => (
-              <div key={item.key} className="st-sync-row">
-                <div className="st-sync-copy">
-                  <strong>{item.label}</strong>
-                  <span>{item.value}</span>
+          <section id="st-v2-profile" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'profile'} aria-labelledby="st-v2-tab-profile">
+            <h2 id="st-v2-profile-label" className="st-v2-group-label">{t('settings.stitch_account_info')}</h2>
+            <form className="st-v2-card" onSubmit={saveProfile}>
+              <div className="st-v2-row">
+                <div className="st-v2-row-lead">
+                  {avatar('lg')}
+                  <div className="st-v2-row-copy">
+                    <strong>{t('settings.avatar_title')}</strong>
+                    <span>{t('settings.avatar_hint')}</span>
+                    {avatarMsg ? <span role="status">{avatarMsg}</span> : null}
+                  </div>
                 </div>
-                <span className={`st-sync-pill is-${item.tone}`}>
-                  {item.tone === 'live'
-                    ? t('settings.stitch_connected_short')
-                    : item.tone === 'ready'
-                      ? t('settings.stitch_ready_short')
-                      : t('settings.stitch_review')}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="st-services-grid">
-          {/* Strava */}
-          <div className={`st-service-card${stravaConnected ? ' is-connected' : ''}`}>
-            <div className="st-service-head">
-              <div className="st-service-icon is-strava">
-                <AppIcon name="altitude" className="runner-dashboard-side-link-icon" />
-              </div>
-              <div className="st-service-info">
-                <strong>STRAVA</strong>
-                <span>{stravaLabel}</span>
-              </div>
-            </div>
-            <div className="st-service-actions">
-              <button
-                type="button"
-                className={`settings-atlas-service-action${stravaConnected ? '' : ' is-connect'}`}
-                onClick={stravaConnected ? disconnectStrava : connectStrava}
-                disabled={stravaLinking}
-              >
-                {stravaConnected
-                  ? t('settings.stitch_manage')
-                  : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
-              </button>
-            </div>
-          </div>
-
-          {/* Garmin */}
-          <div className="st-service-card">
-            <div className="st-service-head">
-              <div className="st-service-icon is-garmin">
-                <AppIcon name="watch" className="runner-dashboard-side-link-icon" />
-              </div>
-              <div className="st-service-info">
-                <strong>{garminLane.title}</strong>
-                <span>{garminLane.summary}</span>
-              </div>
-            </div>
-            <div className="st-service-meta">
-              <div className="st-service-stat">
-                <span>{garminLane.limitLabel}</span>
-                <strong>{garminLane.limitValue}</strong>
-              </div>
-              <button
-                type="button"
-                className="st-service-stat settings-atlas-import-drop--garmin"
-                onClick={() => navigate('/settings/import-data')}
-              >
-                <span>{garminLane.manualLabel}</span>
-                <strong>{garminLane.manualValue}</strong>
-              </button>
-            </div>
-            <div className="st-service-actions">
-              <button
-                type="button"
-                className="st-service-btn is-connect"
-                onClick={onOpenGarminImport}
-              >
-                {garminLane.primaryAction}
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </section>
-
-      {/* ── Wellness ── */}
-      <div className="st-bottom-grid">
-        <article className="st-card">
-          <div className="st-card-head">
-            <div>
-              <p className="st-kicker">{t('settings.stitch_wellness_hub_title')}</p>
-              <h2 className="st-card-title">{t('settings.stitch_wellness_hub_title')}</h2>
-            </div>
-          </div>
-          <p className="st-wellness-desc">{t('settings.stitch_wellness_hub_copy')}</p>
-          <div className="st-wellness-list">
-            {wellnessRows.map((row) => (
-              <div key={row.key} className="st-wellness-row">
-                <div className="st-wellness-copy">
-                  <strong>{t(row.labelKey)}</strong>
-                  <span>{t('settings.stitch_wellness_source_label')}</span>
+                <div className="st-v2-row-actions">
+                  <input
+                    ref={avatarInputRef}
+                    id="st-profile-avatar-input"
+                    className="st-avatar-file-input"
+                    tabIndex={-1}
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    aria-label={avatarActionLabel}
+                    disabled={avatarSaving}
+                    onChange={handleAvatarSelection}
+                  />
+                  <button type="button" className="st-v2-btn" disabled={avatarSaving} onClick={() => avatarInputRef.current?.click()}>
+                    {avatarSaving ? t('settings.avatar_uploading') : avatarActionLabel}
+                  </button>
+                  {avatarUrl ? (
+                    <button type="button" className="st-v2-btn is-quiet" disabled={avatarSaving} onClick={onAvatarRemove}>
+                      {t('settings.avatar_remove')}
+                    </button>
+                  ) : null}
                 </div>
-                <span className="st-wellness-pill">{row.sourceLabel}</span>
               </div>
-            ))}
-          </div>
-        </article>
-      </div>
+              <label className="st-v2-row st-v2-field" htmlFor="st-display-name">
+                <span className="st-v2-field-label">{t('settings.display_name_title')}</span>
+                <input
+                  id="st-display-name"
+                  className="st-v2-input"
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={t('settings.display_name_placeholder')}
+                  maxLength={60}
+                />
+              </label>
+              <label className="st-v2-row st-v2-field" htmlFor="st-mantra">
+                <span className="st-v2-field-label">{t('settings.stitch_account_identity')}</span>
+                <input
+                  id="st-mantra"
+                  className="st-v2-input"
+                  type="text"
+                  value={mantra}
+                  onChange={(e) => setMantra(e.target.value)}
+                  placeholder={t('settings.stitch_account_identity_placeholder')}
+                  maxLength={120}
+                />
+              </label>
+              <div className="st-v2-row st-v2-save">
+                {nameMsg ? <span className="st-v2-msg" role="status">{nameMsg}</span> : <span />}
+                <button type="submit" className="st-v2-primary" disabled={nameSaving || !displayName.trim()}>
+                  {nameSaving ? t('settings.saving') : t('settings.save')}
+                </button>
+              </div>
+            </form>
+          </section>
 
-      <RunActivityContributionGraph
-        runs={runActivities}
-        status={runActivityState}
-        lang={lang}
-        t={t}
-      />
+          <section id="st-v2-preferences" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'preferences'} aria-labelledby="st-v2-tab-preferences">
+            <h2 id="st-v2-preferences-label" className="st-v2-group-label">{t('settings.stitch_prefs_title')}</h2>
+            <div className="st-v2-card">
+              <div className="st-v2-row">
+                <div className="st-v2-row-copy">
+                  <strong>{t('settings.v2_units_title')}</strong>
+                  <span>{t('settings.stitch_unit_desc')}</span>
+                </div>
+                <div className="st-v2-segmented" role="group" aria-label={t('settings.v2_units_title')}>
+                  <button type="button" className={unit === 'km' ? 'is-active' : ''} aria-pressed={unit === 'km'} onClick={() => setUnit('km')}>{t('settings.stitch_metric_label')}</button>
+                  <button type="button" className={unit === 'mile' ? 'is-active' : ''} aria-pressed={unit === 'mile'} onClick={() => setUnit('mile')}>{t('settings.stitch_imperial_label')}</button>
+                </div>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-copy">
+                  <strong>{t('settings.stitch_theme_title')}</strong>
+                  <span>{activeThemeLabel}</span>
+                </div>
+                <div className="st-v2-themes">
+                  {themeCards.map((card) => (
+                    <button
+                      key={card.value}
+                      type="button"
+                      className={`st-v2-theme is-${card.value}${theme === card.value ? ' is-active' : ''}`}
+                      onClick={() => setTheme(card.value)}
+                      aria-pressed={theme === card.value}
+                      aria-label={card.label}
+                      title={card.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-copy">
+                  <strong id="settings-language-label">{t('settings.language_title')}</strong>
+                  <span>{t('settings.language_hint')}</span>
+                </div>
+                <div className="st-v2-segmented" role="group" aria-labelledby="settings-language-label">
+                  <button type="button" className={lang === 'en' ? 'is-active' : ''} aria-pressed={lang === 'en'} onClick={() => setLang('en')}>English</button>
+                  <button type="button" className={lang === 'zh-CN' ? 'is-active' : ''} aria-pressed={lang === 'zh-CN'} onClick={() => setLang('zh-CN')}>简体中文</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="st-v2-connections" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'connections'} aria-labelledby="st-v2-tab-connections">
+            <h2 id="st-v2-connections-label" className="st-v2-group-label">{t('settings.stitch_data_services_title')}</h2>
+            <div className="st-v2-card">
+              <div className="st-v2-row">
+                <div className="st-v2-row-lead">
+                  <span className="st-v2-service is-strava" aria-hidden="true"><AppIcon name="altitude" /></span>
+                  <div className="st-v2-row-copy">
+                    <strong>Strava</strong>
+                    <span className="st-v2-status"><i className={stravaConnected ? 'is-on' : ''} />{stravaLabel}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={stravaConnected ? 'st-v2-btn' : 'st-v2-btn is-dark'}
+                  onClick={stravaConnected ? disconnectStrava : connectStrava}
+                  disabled={stravaLinking}
+                >
+                  {stravaConnected ? t('settings.stitch_manage') : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
+                </button>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-lead">
+                  <span className="st-v2-service is-garmin" aria-hidden="true"><AppIcon name="watch" /></span>
+                  <div className="st-v2-row-copy">
+                    <strong>{garminLane.title}</strong>
+                    <span>{garminLane.summary}</span>
+                  </div>
+                </div>
+                <button type="button" className="st-v2-btn is-dark" onClick={onOpenGarminImport}>{garminLane.primaryAction}</button>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-lead">
+                  <span className="st-v2-service is-files" aria-hidden="true"><AppIcon name="upload" /></span>
+                  <div className="st-v2-row-copy">
+                    <strong>{garminLane.manualLabel}</strong>
+                    <span>{garminLane.manualValue}</span>
+                  </div>
+                </div>
+                <button type="button" className="st-v2-btn" onClick={() => navigate('/settings/import-data')}>{t('profile.import_data')}</button>
+              </div>
+              {syncHealthItems.length > 0 && (
+                <div className="st-v2-row st-v2-sync">
+                  <span className="st-v2-field-label">{t('settings.stitch_sync_health_title')}</span>
+                  <ul>
+                    {syncHealthItems.map((item) => (
+                      <li key={item.key}>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
+                        <em className={`is-${item.tone}`}>
+                          {item.tone === 'live' ? t('settings.stitch_connected_short') : item.tone === 'ready' ? t('settings.stitch_ready_short') : t('settings.stitch_review')}
+                        </em>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section id="st-v2-notifications" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'notifications'} aria-labelledby="st-v2-tab-notifications">
+            <h2 id="st-v2-notifications-label" className="st-v2-group-label">{t('settings.v2_notifications_title')}</h2>
+            <div className="st-v2-card">
+              <button
+                type="button"
+                className="st-v2-row st-v2-toggle-row"
+                onClick={toggleDigest}
+                role="switch"
+                aria-checked={digestEnabled}
+              >
+                <span className="st-v2-row-copy">
+                  <strong>{t('settings.stitch_weekly_brief')}</strong>
+                  <span>{t('settings.stitch_weekly_brief_copy')}</span>
+                </span>
+                <span className={`st-v2-switch${digestEnabled ? ' is-on' : ''}`} aria-hidden="true" />
+              </button>
+              {wellnessRows.length > 0 && (
+                <div className="st-v2-row st-v2-sync">
+                  <span className="st-v2-field-label">{t('settings.stitch_wellness_hub_title')}</span>
+                  <ul>
+                    {wellnessRows.map((row) => (
+                      <li key={row.key}>
+                        <span>{t(row.labelKey)}</span>
+                        <strong>{row.sourceLabel}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section id="st-v2-activity" className="st-v2-group st-v2-activity" role="tabpanel" hidden={activeSection !== 'activity'} aria-labelledby="st-v2-tab-activity">
+            <h2 id="st-v2-activity-label" className="st-v2-group-label">{t('settings.v2_activity_title')}</h2>
+            <RunActivityContributionGraph runs={runActivities} status={runActivityState} lang={lang} t={t} />
+          </section>
+
+          <section id="st-v2-account" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'account'} aria-labelledby="st-v2-tab-account">
+            <h2 id="st-v2-account-label" className="st-v2-group-label">{t('settings.v2_account_title')}</h2>
+            <div className="st-v2-card">
+              <button type="button" className="st-v2-row st-v2-logout" onClick={() => { logout(); navigate('/login'); }}>
+                <span className="st-v2-row-copy">
+                  <strong>{t('settings.logout_btn')}</strong>
+                  <span>{t('settings.stitch_danger_copy')}</span>
+                </span>
+                <AppIcon name="chevron_right" />
+              </button>
+            </div>
+            <p className="st-v2-meta">{[resolvedUnitLabel, resolvedLanguageLabel, activeThemeLabel].filter(Boolean).join(' · ')}</p>
+          </section>
+        </div>
+      </div>
 
       <footer className="runner-shell-footer settings-atlas-footer">
         <FooterNavLinks />

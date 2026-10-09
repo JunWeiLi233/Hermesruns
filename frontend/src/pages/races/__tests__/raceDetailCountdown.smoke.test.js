@@ -23,26 +23,26 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /t\('races\.detail_count_seconds'\)/,
+  /\['seconds', countdown\.seconds\][\s\S]*t\(`races\.detail_count_\$\{unitKey\}`\)/,
   'Race detail countdown should render the localized seconds label.',
 );
 
 assert.match(
   racesDetailSource,
-  /key=\{`seconds-\$\{countdown\.seconds\}`\}/,
-  'Race detail countdown should remount the seconds value so the tick animation can replay.',
+  /key=\{unitKey === 'seconds' \? `s-\$\{value\}` : unitKey\}/,
+  'Race detail countdown should remount the changing seconds value.',
 );
 
 assert.match(
   styleSource,
-  /@keyframes race-detail-count-tick/,
-  'Race detail styles should define a countdown tick animation.',
+  /\.rd-v2-countdown\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/,
+  'Race detail styles should keep all four countdown units in a compact row.',
 );
 
 assert.match(
   styleSource,
-  /\.race-detail-count-card\.is-seconds\s+strong\s*\{[\s\S]*animation:\s*race-detail-count-tick/m,
-  'Race detail seconds card should animate the changing value.',
+  /\.rd-v2-count\.is-primary\s*\{[^}]*background:\s*#a0392a/,
+  'Race detail should emphasize the days tile with the reference accent.',
 );
 
 assert.match(

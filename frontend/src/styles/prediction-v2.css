@@ -17,8 +17,8 @@ body #root .prediction-v2-page .runner-shell-main { background: transparent !imp
   flex-direction: column;
   gap: 20px;
   color: var(--pv-ink);
-  max-width: 1344px;
-  padding: 28px clamp(24px, 4.5vw, 64px) 48px;
+  max-width: none;
+  padding: 28px clamp(20px, 2vw, 32px) 48px;
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2 {

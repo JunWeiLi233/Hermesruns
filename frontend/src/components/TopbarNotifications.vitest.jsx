@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TopbarNotifications from './TopbarNotifications';
@@ -11,6 +12,10 @@ const copy = {
   'components.training_tips.subtitle': 'Useful checks before your next run.',
   'components.training_tips.open_runs': 'Open runs',
   'components.training_tips.dismiss': 'Dismiss tip',
+  'components.training_tips.dismiss_all': 'Dismiss all',
+  'components.training_tips.load_cta': 'Open Analysis',
+  'components.training_tips.routes_cta': 'Open Heatmap',
+  'components.training_tips.connections_cta': 'Open Settings',
   'components.training_tips.empty_title': "You're all caught up",
   'components.training_tips.empty_body': 'Review your recent activities in Runs whenever you need them.',
   'components.training_tips.load_label': 'Training load',
@@ -41,16 +46,70 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-function renderNotifications({ onOpenRuns = vi.fn() } = {}) {
+function renderNotifications({ onOpenRuns = vi.fn(), onOpenTip } = {}) {
   return render(
     <>
-      <TopbarNotifications onOpenRuns={onOpenRuns} />
+      <TopbarNotifications onOpenRuns={onOpenRuns} onOpenTip={onOpenTip} />
       <button type="button">Outside control</button>
     </>,
   );
 }
 
 describe('TopbarNotifications', () => {
+  it('shows the unread tip count and marks it seen when opened', async () => {
+    const user = userEvent.setup();
+    const { container } = renderNotifications();
+    expect(container.querySelector('.tips-v2-badge')).toHaveTextContent('3');
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    expect(container.querySelector('.tips-v2-badge')).not.toBeInTheDocument();
+    expect(window.localStorage.getItem('hermes.topbar_notifications_seen.v1')).toBe('seen');
+  });
+
+  it('dismisses all tips, persists them, and leaves focus on the close control', async () => {
+    const user = userEvent.setup();
+    const mounted = renderNotifications();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    await user.click(screen.getByRole('button', { name: 'Dismiss all' }));
+    expect(screen.getByRole('status')).toHaveTextContent("You're all caught up");
+    expect(screen.getByRole('button', { name: 'Close training tips' })).toHaveFocus();
+    expect(screen.queryByRole('button', { name: 'Dismiss all' })).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem('hermes.topbar_notifications_deleted.v1'))).toEqual([
+      'training-load-tip', 'route-history-tip', 'connections-tip',
+    ]);
+    mounted.unmount();
+    renderNotifications();
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+  });
+
+  it.each([
+    ['Open Analysis', '/analysis', 'Analysis destination'],
+    ['Open Heatmap', '/heatmap', 'Heatmap destination'],
+    ['Open Settings', '/settings', 'Settings destination'],
+  ])('navigates from %s through the existing router', async (cta, path, destination) => {
+    const user = userEvent.setup();
+    render(<MemoryRouter><Routes>
+      <Route path="/" element={<TopbarNotifications />} />
+      <Route path={path} element={<h1>{destination}</h1>} />
+    </Routes></MemoryRouter>);
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    await user.click(screen.getByRole('button', { name: new RegExp(cta) }));
+    expect(screen.getByRole('heading', { name: destination })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('uses the tip callback override and keeps dismiss clicks from navigating', async () => {
+    const user = userEvent.setup();
+    const onOpenTip = vi.fn();
+    renderNotifications({ onOpenTip });
+    await user.click(screen.getByRole('button', { name: 'Open training tips' }));
+    await user.click(screen.getByRole('button', { name: 'Dismiss tip: Review your recent workload' }));
+    expect(onOpenTip).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /Open Heatmap/ }));
+    expect(onOpenTip).toHaveBeenCalledExactlyOnceWith('/heatmap', 'route-history-tip');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('dismisses on an outside touch without preventing the outside control action', async () => {
     const user = userEvent.setup();
     renderNotifications();
