@@ -8,7 +8,8 @@
     "build:frontend": "npm --prefix frontend run build",
     "test:backend": "node tools/run-backend-tests.mjs",
     "test:tooling": "node tools/run-tool-tests.mjs",
-    "check:architecture": "node tools/check-architecture.mjs"
+    "check:architecture": "node tools/check-architecture.mjs",
+    "test:e2e": "npm --prefix e2e test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

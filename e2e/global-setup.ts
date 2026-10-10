@@ -55,6 +55,21 @@ export default async function globalSetup(): Promise<void> {
     }
     return true;
   }, 'the seed runs to be analysed');
+  // A previous run that was stopped half way may have left a seed run edited: put A back to its baseline.
+  const zones = (await a.get('/api/training/zones')).json;
+  if (zones.maxHeartRate.bpm !== 192 || zones.heartRate.source !== 'AUTO') {
+    await a.put('/api/training/zones', { maxHeartRateBpm: 192, resetHeartRateBoundaries: true });
+    await eventually(async () => (await a.get(`/api/activities/${ids.hills}/training-metrics`)).json?.heartRate?.maxHeartRateBpm === 192, 'A\'s runs to be recomputed for its own zones');
+  }
+  for (const run of SEED_RUNS) {
+    const id = ids[run.key];
+    await a.patch(`/api/activities/${id}`, { perceivedExertion: null });
+    const efforts = ((await a.get(`/api/activities/${id}/best-efforts`)).json?.efforts ?? []) as Array<{ distanceKey: string; edited: boolean; hidden: boolean }>;
+    for (const effort of efforts) {
+      if (effort.edited) await a.patch(`/api/activities/${id}/best-efforts/${effort.distanceKey}`, { elapsedSeconds: null });
+      if (effort.hidden) await a.patch(`/api/activities/${id}/best-efforts/${effort.distanceKey}`, { hidden: false });
+    }
+  }
   writeBrowserState('runner-a.json', state.baseUrl, loginA.token, loginA.email);
 
   // --- Runners B and C: ordinary free runners made through the sign-up route.

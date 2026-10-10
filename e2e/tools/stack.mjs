@@ -117,14 +117,26 @@ async function serve() {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermesruns-e2e-'));
   const runnerEmail = 'strava+140971747@hermes.local'; // the local shared runner's fixed address
   const runnerPassword = process.env.E2E_RUNNER_PASSWORD || strongPassword();
-  const dbUrl = `jdbc:h2:file:${dataDir.replace(/\\/g, '/')}/hermes;AUTO_SERVER=TRUE`;
+  // H2 in the temp folder unless E2E_DB_URL names a database of your own (a throwaway PostgreSQL, say). Whatever it names is
+  // filled with test runs: never point it at data you keep.
+  const external = process.env.E2E_DB_URL;
+  const dbUrl = external || `jdbc:h2:file:${dataDir.replace(/\\/g, '/')}/hermes;AUTO_SERVER=TRUE`;
   const log = fs.openSync(path.join(dataDir, 'backend.log'), 'a');
+  const databaseEnv = external
+    ? {
+        APP_DB_DRIVER: external.startsWith('jdbc:postgresql:') ? 'org.postgresql.Driver' : process.env.APP_DB_DRIVER || '',
+        APP_DB_USERNAME: process.env.E2E_DB_USER ?? 'postgres',
+        APP_DB_PASSWORD: process.env.E2E_DB_PASSWORD ?? '',
+        APP_JPA_DDL_AUTO: process.env.E2E_JPA_DDL_AUTO || 'update',
+      }
+    : {};
 
   const env = {
     ...process.env,
     PORT: String(port),
     APP_SERVER_ADDRESS: '127.0.0.1',
     APP_DB_URL: dbUrl,
+    ...databaseEnv,
     HERMES_ENV: 'development',
     STRAVA_SYNC_ENABLED: 'false',
     GARMIN_WELLNESS_SYNC_ENABLED: 'false',

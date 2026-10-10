@@ -144,6 +144,84 @@ export function gpxRun(options: GpxRunOptions): string {
   ].join('\n');
 }
 
+interface Sample {
+  metres: number;
+  sec: number;
+  lat: number;
+  lon: number;
+  ele: number | null;
+  hr: number | null;
+}
+
+/** The same route, clock and stops as `gpxRun`, as plain numbers, for formats other than GPX. */
+export function trackSamples(options: GpxRunOptions): Sample[] {
+  const origin = options.origin ?? DEFAULT_ORIGIN;
+  const shape = options.shape ?? 'loop';
+  const clockwise = options.clockwise ?? true;
+  const stepM = options.stepM ?? 10;
+  const radius = options.distanceM / (2 * Math.PI);
+  const cosLat = Math.cos((origin.lat * Math.PI) / 180);
+  const paceAt = (metres: number): number => (typeof options.pace === 'function' ? options.pace(metres) : options.pace);
+  const out: Sample[] = [];
+  const add = (metres: number, sec: number): void => {
+    let east: number;
+    let north: number;
+    if (shape === 'line') {
+      east = 0;
+      north = metres;
+    } else {
+      const angle = (2 * Math.PI * metres) / options.distanceM;
+      east = (clockwise ? -1 : 1) * radius * Math.sin(angle);
+      north = radius * (1 - Math.cos(angle));
+    }
+    const hr = options.hr ?? null;
+    out.push({
+      metres,
+      sec,
+      lat: origin.lat + north / METRES_PER_DEGREE_LAT,
+      lon: origin.lon + east / (METRES_PER_DEGREE_LAT * cosLat),
+      ele: options.elevation ? options.elevation(metres) : null,
+      hr: hr === null ? null : Math.round(typeof hr === 'function' ? hr(metres) : hr),
+    });
+  };
+  let clock = 0;
+  add(0, 0);
+  for (let metres = 0; metres < options.distanceM; ) {
+    const next = Math.min(options.distanceM, metres + stepM);
+    clock += (paceAt((metres + next) / 2) / 1000) * (next - metres);
+    metres = next;
+    add(metres, clock);
+  }
+  return out;
+}
+
+/** The same run as a TCX file (Garmin Training Center v2). */
+export function tcxRun(options: GpxRunOptions & { sport?: string }): string {
+  const samples = trackSamples(options);
+  const total = samples[samples.length - 1];
+  const points = samples.map((sample) => {
+    const parts = ['<Trackpoint>'];
+    if (options.timestamps !== false) parts.push(`<Time>${isoUtc(options.start.getTime() + sample.sec * 1000)}</Time>`);
+    parts.push(`<Position><LatitudeDegrees>${sample.lat.toFixed(7)}</LatitudeDegrees><LongitudeDegrees>${sample.lon.toFixed(7)}</LongitudeDegrees></Position>`);
+    if (sample.ele !== null) parts.push(`<AltitudeMeters>${sample.ele.toFixed(1)}</AltitudeMeters>`);
+    parts.push(`<DistanceMeters>${sample.metres.toFixed(1)}</DistanceMeters>`);
+    if (sample.hr !== null) parts.push(`<HeartRateBpm><Value>${sample.hr}</Value></HeartRateBpm>`);
+    parts.push('</Trackpoint>');
+    return parts.join('');
+  });
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">',
+    `<Activities><Activity Sport="${xmlEscape(options.sport ?? 'Running')}"><Id>${isoUtc(options.start.getTime())}</Id>`,
+    `<Lap StartTime="${isoUtc(options.start.getTime())}"><TotalTimeSeconds>${total.sec.toFixed(0)}</TotalTimeSeconds>`,
+    `<DistanceMeters>${total.metres.toFixed(1)}</DistanceMeters><Track>`,
+    ...points,
+    '</Track></Lap></Activity></Activities>',
+    '</TrainingCenterDatabase>',
+    '',
+  ].join('\n');
+}
+
 /** Midnight-free "n days ago at 07:00 UTC", so seeded runs land on recent, distinct days. */
 export function daysAgo(days: number, hourUtc = 11): Date {
   const date = new Date();
