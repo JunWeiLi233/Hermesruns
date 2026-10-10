@@ -6,7 +6,7 @@
 // stack that knows them is up. A restarted stack has a new database, the saved login fails and the account is remade.
 import fs from 'node:fs';
 import path from 'node:path';
-import { Api, eventually, stackState, strongPassword } from './fixtures/api.ts';
+import { Api, eventually, freshClientAddress, stackState, strongPassword } from './fixtures/api.ts';
 import { seedRuns, SEED_RUNS } from './fixtures/seed.ts';
 
 const authDir = path.resolve(import.meta.dirname, '.auth');
@@ -35,13 +35,31 @@ function writeBrowserState(file: string, baseUrl: string, token: string, email: 
   );
 }
 
+/**
+ * Signs the local shared runner in, trying again for up to a minute. The stack answers its health URL a moment before it has made that
+ * runner (the bootstrap logs "ready" a few milliseconds before its transaction is committed), and Playwright starts here the moment
+ * the URL answers. Each try uses an address of its own, so a refused one cannot count towards locking the next one out.
+ */
+async function signInWhenReady(api: Api, email: string, password: string): Promise<{ token: string; email: string; role: string }> {
+  const deadline = Date.now() + 60_000;
+  for (;;) {
+    try {
+      return await api.login(email, password);
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      api.clientIp = freshClientAddress();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  }
+}
+
 export default async function globalSetup(): Promise<void> {
   const state = stackState();
   fs.mkdirSync(authDir, { recursive: true });
 
   // --- Runner A: the local shared runner (Pro, 21 mock Strava runs) plus the seed runs.
   const a = new Api(state.baseUrl);
-  const loginA = await a.login(state.runnerEmail, state.runnerPassword);
+  const loginA = await signInWhenReady(a, state.runnerEmail, state.runnerPassword);
   const ids = await seedRuns(a);
   await eventually(async () => {
     for (const run of SEED_RUNS) {
