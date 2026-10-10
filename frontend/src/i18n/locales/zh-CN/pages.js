@@ -2771,7 +2771,7 @@ export default {
     "s_character_workout": "你把这次跑步标为训练课，所以不判断它是轻松还是匀速。",
     "s_character_changes": "一次有变速的跑步：各段配速从 {fastest} 到 {slowest}，不是匀速的一次跑。",
     "s_character_easy_zones": "轻松的一次跑：在有心率的时间里，{easy}% 处于 1、2 区。",
-    "s_character_moderate_zones": "中等强度的一次跑：{easy}% 的时间在 1、2 区，{hard}% 在 4、5 区。",
+    "s_character_moderate_zones": "中等强度的一次跑：在有心率的时间里，{zone} 区占比最高（{percent}%）。",
     "s_character_hard_zones": "高强度的一次跑：在有心率的时间里，{hard}% 处于 4、5 区。",
     "s_character_easy_effort": "对你来说是轻松的一次跑：强度 {effort}，你平时约为 {usual}。",
     "s_character_moderate_effort": "对你来说是普通的一次跑：强度 {effort}，你平时约为 {usual}。",

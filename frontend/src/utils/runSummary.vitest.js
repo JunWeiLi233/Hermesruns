@@ -67,7 +67,12 @@ describe('the headline', () => {
       'Zone 1': '30%', 'Zone 2': '60%', 'Zone 3': '7%', 'Zone 4': '2%', 'Zone 5': '1%', 'Time with heart rate': '33 min',
     });
     expect(easy.working.rule).toBe('Hard when zones 4 and 5 hold 30% or more of the time with heart rate; easy when zones 1 and 2 hold 70% or more; otherwise moderate. Needs 10 minutes of heart rate.');
-    expect(describe1(fx.zonesModerate).text).toBe('A moderate run: 60% of your time was in zones 1 and 2, and 10% in zones 4 and 5.');
+    expect(describe1(fx.zonesModerate).text).toBe('A moderate run: you spent the most time in zone 2 (40% of your time with heart rate).');
+    // Level zones: the first of them is named.
+    const level = { ...fx.zonesModerate, facts: { ...fx.zonesModerate.facts, zonePercents: [10, 30, 30, 20, 10] } };
+    expect(describe1(level).text).toBe('A moderate run: you spent the most time in zone 2 (30% of your time with heart rate).');
+    const third = { ...fx.zonesModerate, facts: { ...fx.zonesModerate.facts, zonePercents: [5, 30, 45, 15, 5] } };
+    expect(describe1(third).text).toBe('A moderate run: you spent the most time in zone 3 (45% of your time with heart rate).');
     expect(describe1(fx.zonesHard).text).toBe('A hard run: 55% of your time with heart rate was in zones 4 and 5.');
   });
 

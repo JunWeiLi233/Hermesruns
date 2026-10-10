@@ -2773,7 +2773,7 @@ export default {
     "s_character_workout": "You marked this run as a workout, so it is not called easy or steady.",
     "s_character_changes": "A run with changes of pace: your kilometres went from {fastest} to {slowest}, so it was not one steady effort.",
     "s_character_easy_zones": "An easy run: {easy}% of your time with heart rate was in zones 1 and 2.",
-    "s_character_moderate_zones": "A moderate run: {easy}% of your time was in zones 1 and 2, and {hard}% in zones 4 and 5.",
+    "s_character_moderate_zones": "A moderate run: you spent the most time in zone {zone} ({percent}% of your time with heart rate).",
     "s_character_hard_zones": "A hard run: {hard}% of your time with heart rate was in zones 4 and 5.",
     "s_character_easy_effort": "An easy run for you: effort {effort}, against a usual {usual}.",
     "s_character_moderate_effort": "An ordinary run for you: effort {effort}, against a usual {usual}.",

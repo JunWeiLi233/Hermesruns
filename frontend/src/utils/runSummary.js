@@ -79,9 +79,11 @@ const DESCRIBE = {
     }
     if (f.basis === 'zones') {
       const zones = Array.isArray(f.zonePercents) ? f.zonePercents : [];
+      // Where most of the time went: the first zone when two are level.
+      const top = zones.reduce((best, percent, index) => (percent > best.percent ? { percent, zone: index + 1 } : best), { percent: -1, zone: 1 });
       return {
         sentence: `s_character_${finding.variant}_zones`,
-        params: { easy: x.num(f.easyPercent), hard: x.num(f.hardPercent) },
+        params: { easy: x.num(f.easyPercent), hard: x.num(f.hardPercent), zone: x.num(top.zone), percent: x.num(top.percent) },
         rows: [
           ...zones.map((percent, index) => [t('run_summary.fact_zone', { n: index + 1 }), x.percent(percent)]),
           ['fact_heart_rate_time', x.minutes(f.heartRateMinutes)],
