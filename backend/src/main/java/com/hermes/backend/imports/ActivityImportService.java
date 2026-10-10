@@ -259,11 +259,21 @@ public class ActivityImportService {
         activity.setDistanceKm(parsedActivity.distanceMeters() == null ? 0d : parsedActivity.distanceMeters() / 1000d);
         activity.setMovingTimeSeconds(parsedActivity.durationSeconds() == null ? 0 : Math.toIntExact(parsedActivity.durationSeconds()));
         activity.setStartDate(parsedActivity.startTime() == null ? null : parsedActivity.startTime().toString());
-        activity.setSourceFileName(fileName);
+        activity.setSourceFileName(capLength(fileName));
         activity.setSourceChecksum(checksum);
         activity.setCreatedAt(LocalDateTime.now());
-        activity.setAverageHeartRate(parsedActivity.averageHeartRate());
-        activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+        Double averageHeartRate = parsedActivity.averageHeartRate();
+        Double maxHeartRate = parsedActivity.maxHeartRate();
+        if (averageHeartRate == null && maxHeartRate == null) {
+            // GPX and TCX give heart rate only on each point: work the summary out from them.
+            HeartRateSummary fromPoints = HeartRateSummary.of(parsedActivity.points());
+            if (fromPoints != null) {
+                averageHeartRate = fromPoints.average();
+                maxHeartRate = fromPoints.max();
+            }
+        }
+        activity.setAverageHeartRate(averageHeartRate);
+        activity.setMaxHeartRate(maxHeartRate);
 
         // Weather adjustment
         try {
@@ -334,7 +344,7 @@ public class ActivityImportService {
 
     private String resolveActivityName(ParsedActivityData parsedActivity, String fileName) {
         if (parsedActivity.name() != null && !parsedActivity.name().isBlank()) {
-            return parsedActivity.name().trim();
+            return capLength(parsedActivity.name().trim());
         }
 
         if (fileName == null || fileName.isBlank()) {
@@ -342,7 +352,21 @@ public class ActivityImportService {
         }
 
         int dotIndex = fileName.lastIndexOf('.');
-        return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+        return capLength(dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName);
+    }
+
+    /** The longest name or file name a run keeps: the column holds 255 characters, and a longer one made the insert fail (a 500). */
+    static final int MAX_TEXT_LENGTH = 255;
+
+    static String capLength(String text) {
+        if (text == null || text.length() <= MAX_TEXT_LENGTH) {
+            return text;
+        }
+        int end = MAX_TEXT_LENGTH;
+        if (Character.isHighSurrogate(text.charAt(end - 1))) {
+            end -= 1; // do not cut an emoji in half
+        }
+        return text.substring(0, end).trim();
     }
 
     private String fileExtension(String fileName) {
