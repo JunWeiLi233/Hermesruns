@@ -31,6 +31,10 @@ const defined = new Set([...runCss.matchAll(/(--v2-[a-z0-9-]+)\s*:/g)].map((matc
 for (const token of tokens) assert.ok(defined.has(token), `${token} is used by the summary card but the run page does not define it.`);
 assert.doesNotMatch(summaryCss, /#[0-9a-fA-F]{3,8}\b|rgba?\(/, 'The summary card must use the run page tokens, not raw colours.');
 
+// The runner pages paint every paragraph muted with !important (analysis.css, contrast-fixes.css), at a specificity only a longer
+// selector beats: the sentences are the point of the card, so they keep the ink colour through one.
+assert.match(summaryCss, /#root \.run-detail-v2 \.run-summary \.run-summary__item \.run-summary__text \{[^}]*color: var\(--v2-ink\) !important;/, "The summary sentences must beat the shell muted paragraph colour.");
+
 // The shell restyles every label and span on the run page as a small muted caption, so the card's text is not in either.
 const spans = card.match(/<span\b[^>]*>/g) ?? [];
 assert.ok(spans.every((tag) => tag.includes('page-skeleton__block')), 'The summary card must not put text in a span: the shell turns every span into a caption.');

@@ -23,14 +23,16 @@
 #root .run-detail-v2 .run-summary__item.is-positive { border-left-color: var(--v2-good); }
 #root .run-detail-v2 .run-summary__item.is-caution { border-left-color: var(--v2-zone-4); }
 
-#root .run-detail-v2 .run-summary__text {
+/* The runner pages paint every paragraph in the muted colour with !important (analysis.css, contrast-fixes.css), at a specificity
+   that only a longer selector beats; the sentences are the card's point, so they are in the ink colour. */
+#root .run-detail-v2 .run-summary .run-summary__item .run-summary__text {
   margin: 0;
-  color: var(--v2-ink);
+  color: var(--v2-ink) !important;
   font-size: 0.95rem;
   line-height: 1.5;
   text-wrap: pretty;
 }
-#root .run-detail-v2 .run-summary__item.is-headline .run-summary__text { font-size: 1.08rem; font-weight: 700; }
+#root .run-detail-v2 .run-summary .run-summary__item.is-headline .run-summary__text { font-size: 1.08rem; font-weight: 700; }
 
 #root .run-detail-v2 .run-summary__toggle {
   display: inline-flex;
@@ -79,7 +81,7 @@
 #root .run-detail-v2 .run-summary__foot p { flex-basis: 100%; }
 
 #root .run-detail-v2 .run-summary__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-#root .run-detail-v2 .run-summary__error { margin: 0; color: var(--v2-error); font-size: 0.88rem; }
+#root .run-detail-v2 .run-summary .run-summary__state .run-summary__error { margin: 0; color: var(--v2-error) !important; font-size: 0.88rem; }
 
 #root .run-detail-v2 .run-summary__skeleton { display: flex; flex-direction: column; gap: 10px; }
 #root .run-detail-v2 .run-summary__skeleton .page-skeleton__block { display: block; height: 18px; border-radius: 8px; }
