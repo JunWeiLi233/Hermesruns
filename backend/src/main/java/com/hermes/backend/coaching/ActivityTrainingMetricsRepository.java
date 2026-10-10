@@ -1,6 +1,7 @@
 package com.hermes.backend.coaching;
 
 import com.hermes.backend.activity.ActivityType;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -80,4 +81,49 @@ public interface ActivityTrainingMetricsRepository extends JpaRepository<Activit
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE ActivityTrainingMetrics m SET m.stale = TRUE WHERE m.runner.id = :runnerId")
     int markAllStale(@Param("runnerId") Long runnerId);
+
+    /**
+     * What each day of a window holds: {@code [localDate, sum of effort, number of runs]}, oldest day first, only days
+     * that had a run with an effort. Fitness, fatigue, form and the weekly effort are all made from these rows.
+     */
+    @Query("""
+            SELECT m.localDate, SUM(m.effortScore), COUNT(m) FROM ActivityTrainingMetrics m
+            WHERE m.runner.id = :runnerId AND m.localDate >= :from AND m.localDate <= :to AND m.effortScore IS NOT NULL
+            GROUP BY m.localDate
+            ORDER BY m.localDate ASC
+            """)
+    List<Object[]> dailyEffort(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** The day of the runner's first run that has an effort, or null when none has. */
+    @Query("SELECT MIN(m.localDate) FROM ActivityTrainingMetrics m WHERE m.runner.id = :runnerId AND m.effortScore IS NOT NULL")
+    LocalDate firstEffortDay(@Param("runnerId") Long runnerId);
+
+    /** How many runs of a window got their effort from each source: {@code [source, count]}. */
+    @Query("""
+            SELECT m.effortSource, COUNT(m) FROM ActivityTrainingMetrics m
+            WHERE m.runner.id = :runnerId AND m.localDate >= :from AND m.localDate <= :to AND m.effortScore IS NOT NULL
+            GROUP BY m.effortSource
+            ORDER BY COUNT(m) DESC, m.effortSource ASC
+            """)
+    List<Object[]> effortSourceCounts(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** A runner's runs that have no metrics row yet. */
+    @Query("""
+            SELECT COUNT(a) FROM Activity a
+            WHERE a.runner.id = :runnerId AND a.activityType = :type
+              AND NOT EXISTS (SELECT 1 FROM ActivityTrainingMetrics m WHERE m.activity = a)
+            """)
+    long countRunsWithoutMetrics(@Param("runnerId") Long runnerId, @Param("type") ActivityType type);
+
+    /** How many of a runner's rows {@link #findStaleActivityIds} would list: the same test, counted. */
+    @Query("""
+            SELECT COUNT(m) FROM ActivityTrainingMetrics m
+            WHERE m.runner.id = :runnerId
+              AND (m.stale = TRUE OR m.modelVersion <> :modelVersion OR m.maxHrUsed <> :maxHr
+                   OR m.hrBoundary1Bpm <> :b1 OR m.hrBoundary2Bpm <> :b2 OR m.hrBoundary3Bpm <> :b3 OR m.hrBoundary4Bpm <> :b4)
+            """)
+    long countOutOfDate(@Param("runnerId") Long runnerId,
+                        @Param("modelVersion") int modelVersion,
+                        @Param("maxHr") int maxHr,
+                        @Param("b1") int b1, @Param("b2") int b2, @Param("b3") int b3, @Param("b4") int b4);
 }

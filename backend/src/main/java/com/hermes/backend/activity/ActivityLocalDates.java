@@ -35,7 +35,7 @@ public final class ActivityLocalDates {
     }
 
     /** The runner's time zone, or UTC when they have none or it is not one this server knows. */
-    static ZoneId zoneOf(Runner runner) {
+    public static ZoneId zoneOf(Runner runner) {
         String id = runner == null ? null : runner.getTimeZone();
         if (id == null || id.isBlank()) {
             return ZoneOffset.UTC;

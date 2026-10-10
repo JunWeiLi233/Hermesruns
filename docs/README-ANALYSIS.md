@@ -363,6 +363,98 @@ when the run is the only one of its route. At most the newest 500 runs of a rout
   faster than a runner who tired; they are marked so they can be hidden.
 - Only whole seconds can be typed, and only for an effort the run already has.
 
+## Fitness, Fatigue and Form
+
+The Load balance page has a card under its acute and chronic chart that follows how a runner's training has built up over
+weeks and how fresh it leaves them: **fitness**, **fatigue** and **form**. It is made from the Effort score of each run
+(see "Run Effort and Heart-Rate Zones"), not from the load the acute and chronic chart uses. The two are on different scales
+and neither changes the other; the page says so under the chart. Bringing them onto one scale would change numbers runners
+already see, so it is the owner's decision and has not been made.
+
+### The model
+
+A day's load is the sum of the Effort scores of the runner's runs on that day, on the runner's own calendar (see "The
+runner's day"); a day without a run is a day of zero. Fitness and fatigue are two exponentially weighted averages of the same
+daily numbers, a slow one and a fast one, and form is the gap between them:
+
+```
+fitness(t) = fitness(t-1) + (load(t) - fitness(t-1)) x (1 - e^(-1/42))      slow, 42 days
+fatigue(t) = fatigue(t-1) + (load(t) - fatigue(t-1)) x (1 - e^(-1/7))       fast, 7 days
+form(t)    = fitness(t) - fatigue(t)
+```
+
+This is the impulse-response model of Banister et al. (1975) in the exponentially weighted form that training software uses
+(chronic and acute training load). The 42 and 7 days are the common convention, not any one product's numbers (Strava does
+not publish its time constants); they are settings (`app.training.fitness-days`, `app.training.fatigue-days`, fatigue
+must be the shorter). Both averages start at zero the day before the first day read.
+
+The unit is the unit of the Effort score, per day. A runner who spends an hour in the middle of zone 3 (Effort 180) every day
+ends up with a fitness near 180; one who does it four days a week ends up near 103 (180 x 4/7), with the daily swings around
+it. Fatigue swings much more, which is the point: after a hard block fatigue is above fitness and form is negative, and a few
+days of rest bring fatigue down faster than fitness, so form rises above zero.
+
+### What is read
+
+One indexed query per request: the sum of the Effort scores and the number of runs for each day from the runner's first run
+(or 730 days before the first day asked for, whichever is later) to the last day asked for. Nothing is stored for these
+numbers, so they cannot drift from the runs they are made of, and no run's stream is read. Load older than 730 days before
+the window adds under a millionth to the slow average at 42 days and is not read.
+
+`GET /api/training/series?from=yyyy-MM-dd&to=yyyy-MM-dd` returns a day each from the later of `from` and the first run to `to`
+(`to` is never after the runner's today; at most 400 days), the same numbers for the 14 days after today as if the runner
+did not run (only when the window ends today), where the last day stands and how far each number moved over the 7 days
+before it, how many runs of the window got their effort from each source, and how many of the runner's runs are not counted
+yet. The runner's today is the date where they live (the time zone in Settings, UTC when none is set).
+
+### When the numbers are shown
+
+- `none`: no run has an Effort score yet.
+- `building`: the first run is less than 14 days old (today counted), so the averages have seen too little. The card says how
+  long the history is and shows nothing else.
+- `ready`: otherwise.
+
+A run is **not counted yet** when it has no Effort row (it has not been analysed) or its row is out of date because the
+zones or the model changed and it is being worked out again. Either makes the numbers different from what they will be, so the
+answer carries the count and the card says so, with a way to load again.
+
+### Saying form in a word
+
+The card says *fresh* when form is above a tenth of fitness, *tired* when it is below minus a tenth, and *even* in between;
+a swing of under 3 points is always *even*. This is Hermes' own convention to make the number readable, not a measurement,
+and the three words do not appear in the answer: the browser works them out.
+
+### The days after today
+
+The dotted stretch is arithmetic, not a forecast: with no load, each average only decays (`fitness x e^(-k/42)`,
+`fatigue x e^(-k/7)` after k days), so fatigue falls faster than fitness and form rises.
+
+### Known limits
+
+- The averages start at zero. A runner whose history starts long after they began running reads low for the first weeks.
+- Only runs are counted (Hermes only analyses runs): cross-training, strength and walking add no load.
+- A run's Effort comes from several sources (heart-rate zones, a rating, an average heart rate, pace). A history made of
+  different sources mixes scales a little; the card says how many runs came from each.
+- A time zone change moves runs between days (their Effort rows are recomputed when read), so a run can change day.
+- The numbers are the runner's own and relative: 140 is not "good" or "bad", it is more or less than before.
+
+## Weekly Effort
+
+The Load balance page also shows the runner's effort for each of the last 12 weeks against **the range of their own last three
+weeks**, so a week can be called usual, light or heavy without a target.
+
+A week is Monday to Sunday on the runner's calendar. The usual range of a week is the mean of the three weeks before it, plus
+and minus a band (`app.training.weekly-range-band`, 20%): after weeks of 300, 350 and 400 the usual range is 280 to 420. A week
+that has ended is **below**, **within** or **above** its range (the edges are within). A week still going cannot be below yet,
+because the days left can still add to it, so it is **above** or **within** already, or **building** towards the range.
+
+A week has **no range** when the three weeks before it do not all fall after the runner's first run (a week off after the first
+run is a real week of zero and counts; a week before the first run is not a week at all), and when the mean of the three is
+under 5, which is noise rather than a pattern. A week that ended before the first run is not listed.
+
+`GET /api/training/weekly-effort?weeks=12` (1 to 52) returns the weeks oldest first, the last of them the week of the runner's
+today, each with its start and end, the total, the number of runs, whether it has ended, its range and its status. The band
+is a convention of Hermes' (Strava does not publish how it sets its range), and the card says what it is.
+
 ## Recovery Estimation
 
 ```
@@ -402,6 +494,10 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 | **Chip time** | A time the runner typed in for a best effort, replacing the one measured; kept when the run is analysed again. |
 | **Estimated effort** | A best effort worked out from the run's average pace when there is no stream to measure, for a run that covered at least 90% of the distance. Marked wherever it is shown. |
 | **Same-route runs** | Runs that start and finish within 150 m of the same places, go the same way and are within 5% of the same distance. |
+| **Fitness** | A slow (42-day) exponentially weighted average of a runner's daily Effort. It rises with steady training and falls slowly with rest. |
+| **Fatigue** | A fast (7-day) average of the same daily Effort. It jumps after hard days and falls within days of rest. |
+| **Form** | Fitness minus fatigue. Above zero the runner is fresher than their recent training has been; below zero they are carrying fatigue. |
+| **Usual range (weekly effort)** | The mean of the effort of the three weeks before a week, plus and minus 20%. A week is below, within or above it. |
 
 ## Related Docs
 
