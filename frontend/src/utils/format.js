@@ -1,5 +1,5 @@
 ﻿/**
- * Formatting utilities for Hermes running analytics.
+ * Formatting utilities for HermesRuns running analytics.
  */
 
 /**

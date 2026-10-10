@@ -64,7 +64,7 @@ class EmailVerificationServiceTests {
         TransactionalMailMessage message = sentMessage(sender);
         String plainToken = tokenFrom(message.text());
         String link = "https://hermesruns.com/api/auth/verify-email?token=" + plainToken;
-        assertThat(message.subject()).isEqualTo("Verify your Hermes account");
+        assertThat(message.subject()).isEqualTo("Verify your HermesRuns account");
         assertThat(message.text()).contains(link);
         assertThat(message.html()).contains(link);
         assertThat(message.html()).doesNotContain(runner.getEmail());

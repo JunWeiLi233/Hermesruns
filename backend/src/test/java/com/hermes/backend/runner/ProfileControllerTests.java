@@ -110,8 +110,64 @@ class ProfileControllerTests {
                 "Hermes Runner",
                 null,
                 true,
-                true
+                true,
+                null
         ));
+        verify(runnerRepository).save(runner);
+    }
+
+    @Test
+    void updateTimeZoneRejectsMissingAuthorization() {
+        AuthService authService = mock(AuthService.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
+        ProfileController controller = controllerWith(authService, runnerRepository);
+
+        ResponseEntity<?> response = controller.updateTimeZone(null, new ProfileController.UpdateTimeZoneRequest("America/New_York"));
+
+        assertError(response, HttpStatus.UNAUTHORIZED, "Invalid or expired session token.");
+        verify(runnerRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void updateTimeZoneRejectsAnythingThatIsNotAnIanaZoneId() {
+        AuthService authService = mock(AuthService.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        ProfileController controller = controllerWith(authService, runnerRepository);
+
+        String[] rejected = {
+                null, "", "   ", "Mars/Olympus_Mons", "+05:00", "EST5EDT5", "../etc/passwd",
+                "America/New_York<script>", "America/" + "x".repeat(64)};
+        for (String zone : rejected) {
+            ResponseEntity<?> response = controller.updateTimeZone(
+                    "Bearer runner-token", new ProfileController.UpdateTimeZoneRequest(zone));
+
+            assertError(response, HttpStatus.BAD_REQUEST, "Time zone must be an IANA zone id such as America/New_York.");
+        }
+        assertError(controller.updateTimeZone("Bearer runner-token", null),
+                HttpStatus.BAD_REQUEST, "Time zone must be an IANA zone id such as America/New_York.");
+        assertThat(runner.getTimeZone()).as("a rejected zone must not change the stored one").isNull();
+        verify(runnerRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void updateTimeZonePersistsTheZoneAndReturnsTheProfile() {
+        AuthService authService = mock(AuthService.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(runnerRepository.save(runner)).thenReturn(runner);
+        ProfileController controller = controllerWith(authService, runnerRepository);
+
+        ResponseEntity<?> response = controller.updateTimeZone(
+                "Bearer runner-token", new ProfileController.UpdateTimeZoneRequest("  Europe/Copenhagen  "));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(new ProfileModels.ProfileResponse(
+                "runner@hermes.test", "Hermes", null, true, true, "Europe/Copenhagen"));
+        assertThat(runner.getTimeZone()).isEqualTo("Europe/Copenhagen");
         verify(runnerRepository).save(runner);
     }
 
@@ -1233,6 +1289,18 @@ class ProfileControllerTests {
 
         assertThatThrownBy(() -> controller.updateAvatar("Bearer runner-token", image)).isSameAs(failure);
         assertThat(runner.getAvatarImage()).isNotEmpty();
+    }
+
+    private ProfileController controllerWith(AuthService authService, RunnerRepository runnerRepository) {
+        return controller(
+                authService,
+                runnerRepository,
+                mock(ActivityRepository.class),
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                mock(PersonalRecordService.class),
+                mock(QuotaService.class)
+        );
     }
 
     private ProfileController controller(AuthService authService) {

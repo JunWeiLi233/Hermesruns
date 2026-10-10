@@ -24,7 +24,8 @@ public class ImportController {
 
     private static final long MAX_UPLOAD_BYTES = 20L * 1024L * 1024L; // 20MB
     private static final int MAX_BATCH_FILES = 50;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip");
+    private static final Set<String> WORKOUT_EXTENSIONS = Set.of("gpx", "tcx", "fit");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip", "gz");
 
     public ImportController(AuthService authService, ActivityImportService activityImportService) {
         this.authService = authService;
@@ -59,6 +60,15 @@ public class ImportController {
         String ext = original.substring(dot + 1).trim().toLowerCase(Locale.ROOT);
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
             throw new IllegalArgumentException("Unsupported upload file type.");
+        }
+        if ("gz".equals(ext)) {
+            // Only a gzipped workout file (run.fit.gz); a bare .gz or a gzipped anything-else is not importable.
+            String inner = original.substring(0, dot);
+            int innerDot = inner.lastIndexOf('.');
+            String innerExt = innerDot < 0 ? "" : inner.substring(innerDot + 1).trim().toLowerCase(Locale.ROOT);
+            if (!WORKOUT_EXTENSIONS.contains(innerExt)) {
+                throw new IllegalArgumentException("Unsupported upload file type.");
+            }
         }
     }
 

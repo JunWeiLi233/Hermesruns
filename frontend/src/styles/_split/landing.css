@@ -1070,6 +1070,10 @@
     box-shadow: inset 0 1px 0 var(--lc-rule);
 }
 
+.landing-cinematic-compare-table.is-single .landing-cinematic-compare-row {
+    grid-template-columns: 1fr;
+}
+
 .landing-cinematic-compare-row.is-head {
     box-shadow: none;
     color: var(--lc-ink-faint);

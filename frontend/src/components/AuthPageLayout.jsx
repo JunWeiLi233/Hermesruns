@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { useI18n } from '../contexts/I18nContext';
 import HermesMarkSvg from './HermesMarkSvg';
+import HermesWordmarkSvg from './HermesWordmarkSvg';
 import AuthDotField from './AuthDotField';
 import AuthBrandCarousel from './AuthBrandCarousel';
 import '../styles/auth-studio.css';
@@ -26,7 +27,7 @@ export default function AuthPageLayout({ variant, title, description, children }
             <div className="auth-flow-wordmark-wrap">
               <Link to="/" className="auth-flow-wordmark-row" aria-label={t('index.studio_home')}>
                 <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
-                <span className="auth-flow-wordmark">HERMES</span>
+                <HermesWordmarkSvg className="auth-flow-wordmark" />
               </Link>
               <span className="auth-flow-pulse">{t('index.stitch_pulse')}</span>
             </div>

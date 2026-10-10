@@ -17,7 +17,8 @@
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-card, .auth-flow-formside) { background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; color: #2c2f30 !important; }
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-hero, .auth-flow-header h1, .form-group--auth label, .label-row--auth label, .auth-resend-box--login h4) { color: #2c2f30 !important; text-shadow: none !important; }
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-text, .auth-flow-header p, .auth-flow-status-note, .auth-resend-copy, .auth-resend-message, .pwd-strength-label, .pwd-strength-rule, .signup-link--auth, .forgot-password--auth) { color: #625c56 !important; }
-#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-wordmark, .auth-flow-hero .is-accent, .auth-flow-pulse, .signup-link--auth a, .auth-flow-legal a, .auth-refined-language) { color: #a0392a !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] :is(.auth-flow-hero .is-accent, .auth-flow-pulse, .signup-link--auth a, .auth-flow-legal a, .auth-refined-language) { color: #a0392a !important; }
+#root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .auth-flow-wordmark { height: 30px; color: #10203d !important; --hermes-logo-accent: #a0392a; }
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input { background: #faf8f5 !important; border-color: #e5dfda !important; color: #2c2f30 !important; caret-color: #a0392a; box-shadow: none !important; }
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input::placeholder { color: #7b736e !important; opacity: 1; }
 #root .auth-page.auth-page--liquid-glass.auth-page--refined[data-auth-redesign] .form-group--auth input:focus { border-color: #a0392a !important; box-shadow: 0 0 0 3px rgba(160,57,42,.12) !important; }
@@ -133,7 +134,6 @@
   #root .auth-page--refined[data-auth-redesign] :is(.auth-flow-copy--carousel, .auth-flow-pulse) { display: none; }
   #root .auth-page--refined[data-auth-redesign] > .auth-dot-field { opacity: .4; }
   #root .auth-page--refined[data-auth-redesign] .auth-flow-wordmark-wrap { position: relative; top: auto; left: auto; }
-  #root .auth-page--refined[data-auth-redesign] .auth-flow-wordmark { font-size: 24px; }
   #root .auth-page--refined[data-auth-redesign] .auth-flow-hero { font-size: 32px; line-height: 1.08; }
   #root .auth-page--refined[data-auth-redesign] .auth-flow-slide-viewport { max-width: 420px; }
   #root .auth-page--refined[data-auth-redesign] .auth-flow-formside { flex: 1 0 auto; padding: 8px 0; }

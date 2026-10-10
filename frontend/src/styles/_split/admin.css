@@ -5240,6 +5240,12 @@ button.admin-users-command-kpi:hover {
   font-size: 1.28rem;
 }
 
+.admin-command-page .admin-command-topbar__wordmark .hermes-wordmark {
+  height: 1em;
+  color: #f3ede8;
+  --hermes-logo-accent: #f07561;
+}
+
 .admin-command-page .admin-command-topbar__nav {
   display: flex;
   align-items: center;

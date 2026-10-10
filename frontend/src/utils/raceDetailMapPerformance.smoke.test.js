@@ -9,7 +9,7 @@ const racesDetailSource = readFileSync(path.join(here, "../pages/races/RacesDeta
 assert.match(
   racesDetailSource,
   /getBackendBaseUrl[\s\S]*\/api\/maps\/tiles\/\{z\}\/\{x\}\/\{y\}\.png/,
-  'RacesDetail should use the same-origin Hermes tile endpoint for the real-world map so tile loading benefits from local caching and avoids slow direct third-party tile fetches.',
+  'RacesDetail should use the same-origin HermesRuns tile endpoint for the real-world map so tile loading benefits from local caching and avoids slow direct third-party tile fetches.',
 );
 
 assert.match(

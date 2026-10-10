@@ -1,7 +1,7 @@
 import { useId } from 'react';
 import { getRewardArtwork } from '../utils/rewardArtwork';
 
-// Hermes Runner's Passport: route surveys, race bibs, and real running equipment.
+// HermesRuns Runner's Passport: route surveys, race bibs, and real running equipment.
 // Static local SVG only: no remote assets, effects, or animation.
 const INK = '#253447';
 const BLUE = '#638399';

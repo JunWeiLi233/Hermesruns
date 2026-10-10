@@ -1,7 +1,8 @@
 import HermesMarkSvg from './HermesMarkSvg';
+import HermesWordmarkSvg from './HermesWordmarkSvg';
 
 /**
- * Icon + wordmark: same mark as favicon (not React/Vite). Optional accent (e.g. 跑 / RUN).
+ * Symbol + logotype: the HermesRuns lockup (same drawing as the favicon). Optional accent (e.g. 跑 / RUN).
  * @param {boolean} [showIcon=true] — set false for very small lines (e.g. form kicker).
  */
 export default function HermesLogo({ mark, tone = 'light', className = '', showIcon = true }) {
@@ -9,7 +10,7 @@ export default function HermesLogo({ mark, tone = 'light', className = '', showI
   return (
     <span className={root}>
       {showIcon ? <HermesMarkSvg tone={tone} className="hermes-logo__icon" /> : null}
-      <span className="hermes-logo__word">HERMES</span>
+      <HermesWordmarkSvg className="hermes-logo__word" />
       {mark != null && mark !== '' ? (
         <span className="hermes-logo__mark">{mark}</span>
       ) : null}

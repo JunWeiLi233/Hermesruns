@@ -15,7 +15,8 @@ public final class ProfileModels {
             String displayName,
             String avatarUrl,
             boolean stravaLinked,
-            boolean showLanguageSettingsHint
+            boolean showLanguageSettingsHint,
+            String timeZone
     ) {
     }
 

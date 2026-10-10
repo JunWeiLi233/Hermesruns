@@ -14,6 +14,8 @@ const home = getSeoMetadata('/', 'en');
 assert.equal(home.indexable, true);
 assert.equal(home.canonicalUrl, 'https://hermesruns.com/');
 assert.match(home.title, /Running Analytics/);
+assert.doesNotMatch(home.title, /Strava/, 'The homepage title should lead with the product, not a data source.');
+assert.doesNotMatch(home.description, /Strava/, 'The homepage description should lead with the product, not a data source.');
 assert.ok(home.description.length >= 120 && home.description.length <= 160, 'Homepage description should fit the recommended snippet length.');
 assert.equal(home.structuredData['@graph'][2]['@type'], 'WebApplication');
 
@@ -31,7 +33,7 @@ assert.equal(privateRoute.structuredData, null);
 
 const chineseHome = getSeoMetadata('/', 'zh-CN');
 assert.equal(chineseHome.locale, 'zh_CN');
-assert.match(chineseHome.title, /Hermes$/);
+assert.match(chineseHome.title, /HermesRuns$/);
 
 assert.match(appSource, /<SeoHead \/>/);
 assert.match(seoSource, /X-Robots|robots/);
@@ -40,23 +42,23 @@ for (const marker of [
   'og:image',
   'twitter:image',
   String.raw`application/ld\+json`,
-  String.raw`hermes-og-image\.svg`,
+  String.raw`hermesruns\.com/og-image\.png`,
 ]) {
   assert.match(indexHtml, new RegExp(marker), `index.html should contain ${marker}.`);
 }
 
 assert.match(indexHtml, /id="hermes-seo-fallback"/, 'Homepage should include crawlable fallback content.');
-assert.match(indexHtml, /<h1[^>]*>Running analytics with Strava sync<\/h1>/);
+assert.match(indexHtml, /<h1[^>]*>Running analytics you can check<\/h1>/);
 assert.match(indexHtml, /href="\/signup"/);
 assert.match(indexHtml, /href="\/privacy"/);
 assert.match(indexHtml, /href="\/terms"/);
-assert.match(indexHtml, /alt="Hermes running analytics dashboard preview"/);
+assert.match(indexHtml, /alt="HermesRuns: running analytics you can check"/);
 assert.match(indexHtml, /<h2[^>]*>One running analytics app for the decisions that matter<\/h2>/);
 assert.match(indexHtml, /<h3>VO2max and training zones<\/h3>/);
 assert.match(indexHtml, /<h3>Route heatmaps<\/h3>/);
 assert.match(indexHtml, /<h3>Shoe mileage tracking<\/h3>/);
 assert.match(indexHtml, /<h2[^>]*>Running analytics FAQ<\/h2>/);
 assert.match(indexHtml, /"@type": "FAQPage"/);
-assert.match(indexHtml, /"dateModified": "2026-08-27"/);
+assert.match(indexHtml, /"dateModified": "2026-10-09"/);
 
 console.log('[PASS] Route-aware SEO metadata contract passed.');

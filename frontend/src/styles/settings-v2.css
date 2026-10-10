@@ -9,6 +9,12 @@
   --sv-fill: rgba(28, 25, 23, 0.05);
   --sv-accent: #a0392a;
   --sv-input-line: rgba(28, 25, 23, 0.12);
+  --sv-error: #c4261a;
+  --sv-zone-1: #9db8ad;
+  --sv-zone-2: #5f8f7e;
+  --sv-zone-3: #c99a2e;
+  --sv-zone-4: #d46a2f;
+  --sv-zone-5: #a0392a;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -24,6 +30,12 @@ body:is(.theme-midnight, .theme-high-contrast) #root .settings-atlas-canvas.st-v
   --sv-fill: rgba(255, 255, 255, 0.06);
   --sv-accent: #ffb4a7;
   --sv-input-line: rgba(255, 248, 238, 0.2);
+  --sv-error: #ff9b87;
+  --sv-zone-1: #7da596;
+  --sv-zone-2: #6fae9b;
+  --sv-zone-3: #e0b84f;
+  --sv-zone-4: #ee8a4e;
+  --sv-zone-5: #f07561;
 }
 
 #root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 {
@@ -244,6 +256,66 @@ body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-logout strong { colo
 
 #root .st-v2 button:focus-visible, #root .st-v2 label.st-v2-btn:focus-within { outline: 2px solid var(--sv-accent); outline-offset: 2px; }
 
+/* Time zone, data export and account deletion */
+#root .st-v2-subgroup-label { margin: 20px 0 0 !important; }
+
+#root .st-v2-select {
+  max-width: 260px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--sv-input-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sv-ink);
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+#root .st-v2-select option { background: #fff; color: #1c1917; }
+#root .st-v2-select:disabled { opacity: 0.55; cursor: progress; }
+#root .st-v2 :is(select, input[type="checkbox"]):focus-visible { outline: 2px solid var(--sv-accent); outline-offset: 2px; }
+
+#root .st-v2-option { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--sv-muted); font-size: 0.78rem; font-weight: 400; letter-spacing: normal; line-height: 1.45; text-transform: none; cursor: pointer; }
+#root .st-v2-option input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--sv-accent); }
+
+#root .st-v2-danger, #root .st-v2-btn.is-danger { color: #c4261a; }
+body:is(.theme-midnight, .theme-high-contrast) #root :is(.st-v2-danger, .st-v2-btn.is-danger) { color: #ff9b87; }
+
+/* Training zones */
+#root .st-v2-zones-row { align-items: start; }
+#root .st-v2-zones-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#root .st-v2-zones-form.is-boundaries { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 14px; align-items: end; }
+#root .st-v2-zones-field { display: flex; flex-direction: column; gap: 4px; color: var(--sv-muted); font-size: 0.75rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+#root .st-v2-zones-input { width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
+#root .st-v2-zones-input[aria-invalid="true"] { border-color: var(--sv-error); }
+#root .st-v2-zones-error { grid-column: 1 / -1; color: var(--sv-error); font-size: 0.78rem; line-height: 1.45; }
+#root .st-v2-zones-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+#root .st-v2-zones-preview { grid-template-columns: minmax(0, 1fr); }
+#root .st-v2-zones-preview ul { display: grid; gap: 8px; padding: 0; list-style: none; }
+#root .st-v2-zones-preview li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 0.85rem; }
+#root .st-v2-zones-preview li i { width: 10px; height: 10px; border-radius: 3px; background: var(--zone-color); }
+#root .st-v2-zones-preview li span { color: var(--sv-muted); }
+#root .st-v2-zones-preview li strong { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+#root .st-v2-zones-preview li.is-zone-1 { --zone-color: var(--sv-zone-1); }
+#root .st-v2-zones-preview li.is-zone-2 { --zone-color: var(--sv-zone-2); }
+#root .st-v2-zones-preview li.is-zone-3 { --zone-color: var(--sv-zone-3); }
+#root .st-v2-zones-preview li.is-zone-4 { --zone-color: var(--sv-zone-4); }
+#root .st-v2-zones-preview li.is-zone-5 { --zone-color: var(--sv-zone-5); }
+
+/* The confirmation dialogs open outside .st-v2 and reuse the Runs delete dialog, whose card reads two
+   tokens that only the Runs page defines. */
+#root .settings-control-page .runs-delete-modal-card { --runs-profile-card-strong: #ffffff; --runs-profile-ink: #171512; }
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-control-page .runs-delete-modal-card { --runs-profile-card-strong: rgba(34, 30, 26, 0.94); --runs-profile-ink: #fff7ee; }
+
+#root .settings-control-page .runs-delete-modal-actions :is(.btn-secondary, .runs-delete-modal-confirm):disabled { opacity: 0.45; cursor: not-allowed; }
+#root .settings-control-page .st-dialog-field { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; color: #5b5d61; font-size: 0.95rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+#root .settings-control-page .st-dialog-input { box-sizing: border-box; width: 100%; height: 48px; padding: 0 14px; border: 1px solid #d9dce0; border-radius: 10px; background: #fff; color: #202124; font: inherit; font-size: 1rem; letter-spacing: 0.08em; }
+#root .settings-control-page .st-dialog-input:focus { border-color: #ef302b; outline: none; box-shadow: 0 0 0 3px rgba(239, 48, 43, 0.16); }
+#root .settings-control-page .st-dialog-error { margin: 16px 0 0; color: #c4261a; font-size: 0.9rem; line-height: 1.45; }
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-control-page .st-dialog-field { color: #b8c0c2; }
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-control-page .st-dialog-input { border-color: #4c5558; background: #202526; color: #f4f6f6; }
+body:is(.theme-midnight, .theme-high-contrast) #root .settings-control-page .st-dialog-error { color: #ff9b87; }
+
 @media (max-width: 1100px) {
   #root .st-v2-layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   #root .st-v2-index { position: static; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -256,9 +328,13 @@ body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-logout strong { colo
   #root .st-v2-index { grid-template-columns: minmax(0, 1fr); }
   #root .st-v2-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   #root :is(.st-v2-field, .st-v2-sync) { grid-template-columns: minmax(0, 1fr); }
-  #root .st-v2-row-actions, #root .st-v2-row > .st-v2-btn, #root .st-v2-segmented, #root .st-v2-themes { justify-self: start; }
+  #root .st-v2-row-actions, #root .st-v2-row > .st-v2-btn, #root .st-v2-row > .st-v2-select, #root .st-v2-segmented, #root .st-v2-themes { justify-self: start; }
   #root .st-v2-toggle-row, #root .st-v2-logout { grid-template-columns: minmax(0, 1fr) auto; }
-  #root .st-v2 :is(.st-v2-btn, .st-v2-primary, .st-v2-segmented button) { min-height: 44px; }
+  #root .st-v2 :is(.st-v2-btn, .st-v2-primary, .st-v2-select, .st-v2-segmented button) { min-height: 44px; }
+  #root .st-v2-zones-input { min-height: 44px; }
+  #root .st-v2-zones-form.is-boundaries { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .st-v2-zones-form.is-boundaries .st-v2-zones-input { width: 100%; }
+  #root .st-v2-zones-actions { justify-content: flex-start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
