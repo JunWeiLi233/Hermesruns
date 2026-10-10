@@ -1208,6 +1208,7 @@ export default {
     "pred_trend_copy": "See how your predicted time has changed as your fitness evolved. A downward trend means your training is working.",
     "pred_trend_window_90d": "Last 90 days",
     "pred_trend_window_samples": "{count} data points",
+    "pred_trend_chart_label": "{dist} predicted time over the last 90 days, {count} points, from {from} to {to}",
     "load_method_ratio_body": "A ratio between 0.8 and 1.3 is considered the 'sweet spot' for safe progression. Exceeding 1.5 indicates a significantly elevated risk of injury due to overreaching.",    },
   "muscle_training": {
     "v3_week_kicker": "Week of {date} · {count} sessions planned",

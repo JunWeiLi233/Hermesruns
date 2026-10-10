@@ -2210,6 +2210,7 @@ export default {
     "map_expand": "展开地图",
     "map_collapse": "关闭地图",
     "telemetry_min": "最低",
+    "telemetry_chart_label": "{metric}随跑步变化，从 {min} 到 {max}",
     "telemetry_max": "最高",
     "training_effect_title": "训练效果",
     "form_title": "跑步姿态",

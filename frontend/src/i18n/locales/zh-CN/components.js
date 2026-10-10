@@ -1208,6 +1208,7 @@ export default {
     "pred_trend_copy": "查看你的预测时间如何随体能变化。下降的趋势意味着你的训练正在生效。",
     "pred_trend_window_90d": "过去 90 天",
     "pred_trend_window_samples": "{count} 个数据点",
+    "pred_trend_chart_label": "{dist} 近 90 天预测时间，{count} 个数据点，从 {from} 到 {to}",
     "load_method_ratio_body": "当比例在 0.8 - 1.3 之间时，代表训练刺激适中，处于“甜点区”。超过 1.5 则意味着受伤风险显著增加。",    },
   "muscle_training": {
     "v3_week_kicker": "{date}起的一周 · 计划 {count} 次力量训练",

@@ -335,6 +335,16 @@ export default function PredictionDetail() {
     ? trendPredictions[trendPredictions.length - 1][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
       - trendPredictions[0][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
     : null;
+  const trendKey = useWeatherAdjustedPrediction ? 'adjusted' : 'raw';
+  // The chart is a picture: its text alternative gives the same two numbers a sighted reader takes from its ends.
+  const trendChartLabel = trendPredictions.length
+    ? t('analysis.pred_trend_chart_label', {
+      dist: title,
+      count: trendPredictions.length,
+      from: formatPredictedTime(trendPredictions[0][trendKey] * 60),
+      to: formatPredictedTime(trendPredictions[trendPredictions.length - 1][trendKey] * 60),
+    })
+    : undefined;
   const evidenceTiles = [
     {
       label: t('analysis.pred_cockpit_vdot'),
@@ -488,7 +498,7 @@ export default function PredictionDetail() {
               </div>
               <div className="prediction-trend-chart">
                 {chartData ? (
-                  <Line data={chartData} options={chartOptions} />
+                  <Line data={chartData} options={chartOptions} aria-label={trendChartLabel} />
                 ) : (
                   <div className="prediction-detail-empty">
                     <strong>{t('analysis.pred_detail_empty_title')}</strong>

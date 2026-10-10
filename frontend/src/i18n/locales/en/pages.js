@@ -2213,6 +2213,7 @@ export default {
     "map_expand": "Expand map",
     "map_collapse": "Close map",
     "telemetry_min": "Min",
+    "telemetry_chart_label": "{metric} along the run, from {min} to {max}",
     "telemetry_max": "Max",
     "training_effect_title": "Training Effect",
     "form_title": "Running Form",

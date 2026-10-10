@@ -1196,7 +1196,15 @@ export default function RunDetail() {
             </div>
             <div className="run-detail-telemetry-chart run-detail-v2__chart">
               {telemetryChartData ? (
-                <Line data={telemetryChartData} options={telemetryChartOptions} />
+                <Line
+                  data={telemetryChartData}
+                  options={telemetryChartOptions}
+                  aria-label={t('run_detail.telemetry_chart_label', {
+                    metric: activeTelemetryDefinition.label,
+                    min: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                    max: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.max, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                  })}
+                />
               ) : (
                 <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
               )}
