@@ -26,6 +26,8 @@ vi.mock('../../../contexts/I18nContext', () => ({
 vi.mock('../../../contexts/UnitContext', () => ({
   useUnit: () => ({ unit: state.unit, isMile: state.unit === 'mile' }),
 }));
+// The goals card has tests of its own; here it is a marker, so its requests and messages do not mix with the log's.
+vi.mock('../../../components/goals/GoalsCard', () => ({ default: () => <div data-testid="goals-card" /> }))
 vi.mock('../../../components/AuthenticatedPageChrome', () => ({
   default: ({ children, title, parentLabel, parentRoute, activeKey, bodyClassName }) => (
     <div data-testid="chrome" className={bodyClassName} data-title={title} data-parent-label={parentLabel} data-parent-route={parentRoute} data-active-key={activeKey}>
@@ -78,6 +80,16 @@ describe('around the page', () => {
     expect(chrome).toHaveAttribute('data-active-key', 'activities');
     expect(chrome).toHaveClass('training-log-page');
     expect(container.querySelectorAll('h1')).toHaveLength(1);
+  });
+
+  it('puts the goals card between the heading and the filters', async () => {
+    renderPage();
+    await ready();
+
+    const goals = screen.getByTestId('goals-card');
+    const filters = screen.getByRole('region', { name: t('training_log.filters_label') });
+    expect(goals.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('links to all runs and to the fitness chart', async () => {

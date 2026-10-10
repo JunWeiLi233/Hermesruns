@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import AuthenticatedPageChrome from '../../components/AuthenticatedPageChrome';
+import GoalsCard from '../../components/goals/GoalsCard';
 import { useI18n } from '../../contexts/I18nContext';
 import { tagKey } from '../../utils/runLabels';
 import { formatWeekRange, isCurrentWeek, listWeeks, longestDayKm, readFilters, writeFilters } from '../../utils/trainingLog';
@@ -155,6 +156,7 @@ export default function TrainingLog() {
             <Link to="/analysis/load-balance#load-fitness">{t('training_log.link_fitness')}</Link>
           </nav>
         </header>
+        <GoalsCard />
         {body}
       </div>
     </AuthenticatedPageChrome>

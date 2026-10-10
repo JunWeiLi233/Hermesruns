@@ -30,6 +30,7 @@ import { buildRewardShowcase } from '../../utils/rewardBadges';
 import RewardIllustration from '../../components/RewardIllustration';
 import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
+import GoalsCard from '../../components/goals/GoalsCard';
 import BestEffortsAnalysis from './BestEffortsAnalysis';
 import ProgressionChart from './ProgressionChart';
 
@@ -1603,7 +1604,10 @@ export default function ProfileDashboard() {
                   );
                 })()}
 
-                {/* 5c. Best efforts (loads when opened) */}
+                {/* 5c. Goals (asked for when the browser is idle) */}
+                <GoalsCard defer />
+
+                {/* 5d. Best efforts (loads when opened) */}
                 <BestEffortsAnalysis />
 
                 {/* 6. Bottom Grid */}
