@@ -6,6 +6,7 @@ import SettingsDataCard from './SettingsDataCard';
 import SettingsPlanCard from './SettingsPlanCard';
 import SettingsTimeZoneRow from './SettingsTimeZoneRow';
 import SettingsTrainingZones from './SettingsTrainingZones';
+import { useRunSummariesEnabled } from '../utils/runSummaryPreference';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
    Disconnecting Strava and deleting the account only ask here (requestStravaDisconnect,
@@ -73,6 +74,7 @@ export default function SettingsAtlasLayout({
   const [compactNavigation, setCompactNavigation] = useState(false);
   const avatarInputRef = useRef(null);
   const sectionTabsRef = useRef(null);
+  const [summariesOn, setSummariesOn] = useRunSummariesEnabled();
   const stravaConnected = Boolean(stravaStatus?.linked);
   const avatarActionLabel = avatarUrl ? t('settings.avatar_change') : t('settings.avatar_upload');
   const doneCount = setupChecklist.filter((item) => item.done).length;
@@ -252,6 +254,16 @@ export default function SettingsAtlasLayout({
                 <div className="st-v2-segmented" role="group" aria-label={t('settings.v2_units_title')}>
                   <button type="button" className={unit === 'km' ? 'is-active' : ''} aria-pressed={unit === 'km'} onClick={() => setUnit('km')}>{t('settings.stitch_metric_label')}</button>
                   <button type="button" className={unit === 'mile' ? 'is-active' : ''} aria-pressed={unit === 'mile'} onClick={() => setUnit('mile')}>{t('settings.stitch_imperial_label')}</button>
+                </div>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-copy">
+                  <strong id="settings-summaries-label">{t('settings.run_summaries_title')}</strong>
+                  <span>{t('settings.run_summaries_hint')}</span>
+                </div>
+                <div className="st-v2-segmented" role="group" aria-labelledby="settings-summaries-label">
+                  <button type="button" className={summariesOn ? 'is-active' : ''} aria-pressed={summariesOn} onClick={() => setSummariesOn(true)}>{t('settings.run_summaries_show')}</button>
+                  <button type="button" className={summariesOn ? '' : 'is-active'} aria-pressed={!summariesOn} onClick={() => setSummariesOn(false)}>{t('settings.run_summaries_hide')}</button>
                 </div>
               </div>
               <div className="st-v2-row">

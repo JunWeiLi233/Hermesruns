@@ -25,6 +25,7 @@ vi.mock('../../../contexts/I18nContext', () => ({
     formatNumber: (value, options) => new Intl.NumberFormat('en-US', options).format(value),
   }),
 }));
+vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', isMile: false }) }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
 vi.mock('../../../components/FooterNavLinks', () => ({ default: () => null }));

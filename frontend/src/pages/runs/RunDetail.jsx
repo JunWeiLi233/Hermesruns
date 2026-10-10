@@ -20,6 +20,7 @@ import RunGoalsCard from '../../components/goals/RunGoalsCard';
 import RunLabelsCard from './RunLabelsCard';
 import RunMatches from './RunMatches';
 import RunPaceAnalysis from './RunPaceAnalysis';
+import RunSummaryCard from './RunSummaryCard';
 import RunTrainingCards from './RunTrainingCards';
 import {
   Chart as ChartJS,
@@ -1126,6 +1127,8 @@ export default function RunDetail() {
             )}
           </div>
         </section>
+
+        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
