@@ -35,6 +35,12 @@ The statements are idempotent, so running them twice is harmless. The definition
 (`ActivityRelationshipFields.runType`, `ActivityTag`), not written by hand. Types matter: `validate` rejects `char(16)` or
 `text` for a field mapped as `varchar(16)`, and `timestamp` without a precision for a `LocalDateTime`.
 
+Checked on 2026-10-10 on a throwaway PostgreSQL 17.10 (the schema this build expects, minus what this document adds, so
+not on a copy of production): this build refuses to boot with `validate` before the SQL and boots after it; the result is
+Hibernate's own schema apart from the order of two columns and the names of the two foreign keys; running it twice changes
+nothing; the build before this release still boots on the upgraded schema, so the SQL can go first and the deploy later; the
+rollback below restores the earlier schema exactly; and the new routes answered as they do on H2. Nothing of yours was touched.
+
 ## After the deploy
 
 Nothing has to be run by hand, and no run has to be analysed again: a run type and a tag are labels, so nothing about
