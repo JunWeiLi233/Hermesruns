@@ -10,7 +10,18 @@ export default {
       "clear_all": "Clear all",
       "remove_file": "Remove {name}",
       "import_empty": "Import",
-      "uploading": "Uploading…"
+      "uploading": "Uploading…",
+      "result_imported_one": "1 run imported.",
+      "result_imported_other": "{count} runs imported.",
+      "result_none": "No runs were imported.",
+      "result_duplicates_one": "1 file was already in your history and was skipped.",
+      "result_duplicates_other": "{count} files were already in your history and were skipped.",
+      "result_non_runs_one": "1 activity was not a run and was skipped.",
+      "result_non_runs_other": "{count} activities were not runs and were skipped.",
+      "result_rejected_one": "1 file could not be imported:",
+      "result_rejected_other": "{count} files could not be imported:",
+      "result_done": "Done",
+      "result_more": "Import more files"
     },
     "account_menu": {
       "title": "Your account",

@@ -10,7 +10,18 @@ export default {
       "clear_all": "全部清除",
       "remove_file": "移除 {name}",
       "import_empty": "导入",
-      "uploading": "导入中…"
+      "uploading": "导入中…",
+      "result_imported_one": "已导入 {count} 次跑步。",
+      "result_imported_other": "已导入 {count} 次跑步。",
+      "result_none": "没有导入任何跑步。",
+      "result_duplicates_one": "{count} 个文件已在你的记录中，已跳过。",
+      "result_duplicates_other": "{count} 个文件已在你的记录中，已跳过。",
+      "result_non_runs_one": "{count} 项活动不是跑步，已跳过。",
+      "result_non_runs_other": "{count} 项活动不是跑步，已跳过。",
+      "result_rejected_one": "{count} 个文件无法导入：",
+      "result_rejected_other": "{count} 个文件无法导入：",
+      "result_done": "完成",
+      "result_more": "继续导入文件"
     },
     "account_menu": {
       "title": "当前账户",
