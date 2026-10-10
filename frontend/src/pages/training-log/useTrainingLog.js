@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '../../api';
-import { logUrl, mergeWeeks, newerPageTo, nextPageTo, prependWeeks } from '../../utils/trainingLog';
+import { logUrl, mergeWeeks, newerPageTo, nextPageTo, prependWeeks, showsLatestWeek } from '../../utils/trainingLog';
 
 /** Whether an answer has the parts the page draws. Anything else is treated as a failed load, not drawn half. */
 function isTrainingLog(data) {
@@ -20,12 +20,14 @@ function isTrainingLog(data) {
  * status: 'loading' (nothing yet) | 'refreshing' (new filters, the earlier weeks still shown) | 'ready' | 'error'
  * more:   'idle' | 'loading' | 'error' for the request for earlier weeks
  * newer:  the same, for the request for later weeks
+ * jumped: whether the log was started from a past day, that is, whether the first weeks that came for these filters stop
+ *         short of today. Later weeks added afterwards do not change it: the log was still started from that day.
  *
  * loadMore and loadNewer say, when they are done, whether they added weeks.
  */
 export default function useTrainingLog({ runType = '', tags = [], to = '' } = {}) {
   const filterKey = JSON.stringify([runType, tags, to]);
-  const [state, setState] = useState({ status: 'loading', log: null, more: 'idle', newer: 'idle' });
+  const [state, setState] = useState({ status: 'loading', log: null, jumped: false, more: 'idle', newer: 'idle' });
   const [attempt, setAttempt] = useState(0);
   const currentKey = useRef(filterKey);
   const loadingMore = useRef(false);
@@ -41,17 +43,17 @@ export default function useTrainingLog({ runType = '', tags = [], to = '' } = {}
     const [type, words, day] = JSON.parse(filterKey);
     loadingMore.current = false;
     loadingNewer.current = false;
-    setState((current) => ({ status: current.log ? 'refreshing' : 'loading', log: current.log, more: 'idle', newer: 'idle' }));
+    setState((current) => ({ status: current.log ? 'refreshing' : 'loading', log: current.log, jumped: current.jumped, more: 'idle', newer: 'idle' }));
     apiJson(logUrl({ to: day, runType: type, tags: words }), { signal: controller.signal })
       .then((data) => {
         if (controller.signal.aborted) return;
         setState(isTrainingLog(data)
-          ? { status: 'ready', log: data, more: 'idle', newer: 'idle' }
-          : { status: 'error', log: null, more: 'idle', newer: 'idle' });
+          ? { status: 'ready', log: data, jumped: !showsLatestWeek(data.weeks, data.today), more: 'idle', newer: 'idle' }
+          : { status: 'error', log: null, jumped: false, more: 'idle', newer: 'idle' });
       })
       .catch(() => {
         if (controller.signal.aborted) return;
-        setState({ status: 'error', log: null, more: 'idle', newer: 'idle' });
+        setState({ status: 'error', log: null, jumped: false, more: 'idle', newer: 'idle' });
       });
     return () => controller.abort();
   }, [filterKey, attempt]);
@@ -98,5 +100,5 @@ export default function useTrainingLog({ runType = '', tags = [], to = '' } = {}
 
   const reload = useCallback(() => setAttempt((count) => count + 1), []);
 
-  return { status: state.status, log: state.log, more: state.more, newer: state.newer, loadMore, loadNewer, reload };
+  return { status: state.status, log: state.log, jumped: state.jumped, more: state.more, newer: state.newer, loadMore, loadNewer, reload };
 }

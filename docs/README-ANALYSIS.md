@@ -535,10 +535,13 @@ Two things are about how the log is looked at, not about which runs are in it. B
 - **Jump to a date**: a date field from 1970-01-01 to the runner's today. A whole, real day sets `to`, so the log starts at the
   week of that day and goes back from there. A date still being typed is not a day: typing 2026 passes through 0002, 0020 and
   0202, so only a complete date between the floor and today is passed on, and the field keeps what it holds meanwhile. A day
-  after today, or an empty field, does nothing; "Latest weeks" takes the day out of the address. Once the weeks on screen stop
-  short of today (the newest week ends before it), **Show later weeks** is offered above them: it asks for the page of weeks
-  after the newest one (`to` = the end of the newest week plus twelve weeks, or today if that is sooner) and puts them in front.
-  Earlier and later weeks load independently and each moves the keyboard to the first of the weeks it added.
+  after today, or an empty field, does nothing. Once the weeks on screen stop short of today (the newest week ends before it),
+  **Show later weeks** is offered above them: it asks for the page of weeks after the newest one (`to` = the end of the newest
+  week plus twelve weeks, or today if that is sooner) and puts them in front. **Latest weeks** takes the day out of the
+  address and starts again from today; it is offered whenever the log was *started* from a past day (the first weeks that came
+  for these filters stopped short of today), also after later weeks have been added up to today, so a jump can always be
+  undone. A day in the week going on is not a jump. Earlier and later weeks load independently and each moves the keyboard to
+  the first of the weeks it added.
 
 ### Known limits
 

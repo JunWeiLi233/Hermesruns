@@ -37,7 +37,7 @@ export default function TrainingLog() {
   const { t, lang } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
-  const { status, log, more, newer, loadMore, loadNewer, reload } = useTrainingLog(filters);
+  const { status, log, jumped, more, newer, loadMore, loadNewer, reload } = useTrainingLog(filters);
   const weeksRef = useRef(null);
   const pendingFocus = useRef(null);
 
@@ -60,7 +60,8 @@ export default function TrainingLog() {
   const totalRuns = weeks.reduce((sum, week) => sum + week.runs, 0);
   const listed = useMemo(() => listWeeks(weeks, { foldEmpty: filtered }), [weeks, filtered]);
   const busy = status === 'refreshing';
-  // Whether the weeks on screen reach the runner's today: if not, the log was jumped to a day and later weeks are to be had.
+  // Whether the weeks on screen reach the runner's today: if not, later weeks are to be had. (Whether the log was started from
+  // a past day is another question, `jumped`: loading later weeks up to today answers the first and not the second.)
   const latest = log ? showsLatestWeek(log.weeks, log.today) : true;
 
   // After more weeks are loaded the keyboard goes to the first of them: the button that was pressed may be gone by then.
@@ -95,7 +96,7 @@ export default function TrainingLog() {
               onMetric={chooseMetric}
               jumpedTo={filters.to}
               today={log.today}
-              showLatest={Boolean(filters.to) && !latest}
+              showLatest={Boolean(filters.to) && jumped}
               busy={busy}
               onJump={jumpTo}
               onLatest={backToLatest}

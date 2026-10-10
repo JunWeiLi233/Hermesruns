@@ -948,6 +948,24 @@ describe('later weeks after a jump', () => {
     expect(names[5]).toMatch(/^Aug\s31/u);
   });
 
+  it('still has the way back once later weeks have reached today, since the log was started from a past day', async () => {
+    respond = (url) => (url.includes('to=2026-10-10')
+      ? log({ weeks: emptyWeeks('2026-10-05', 12), olderRuns: true })
+      : log({ weeks: [week('2026-08-31', [day('2026-09-01', [run({ id: 61, name: 'September jog' })])]), week('2026-08-24', [])], olderRuns: true }));
+    renderPage('/training-log?to=2026-09-01');
+    await screen.findByRole('link', { name: 'September jog' });
+    await userEvent.click(button());
+    await waitFor(() => expect(screen.queryByRole('button', { name: t('training_log.load_later') })).not.toBeInTheDocument());
+
+    expect(screen.getByRole('button', { name: t('training_log.jump_latest') })).toBeInTheDocument();
+    expect(screen.getByLabelText(t('training_log.jump_label'))).toHaveValue('2026-09-01');
+
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.jump_latest') }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log$/u));
+    expect(screen.queryByRole('button', { name: t('training_log.jump_latest') })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(t('training_log.jump_label'))).toHaveValue('');
+  });
+
   it('is disabled and says it is loading while the weeks come, and asks only once', async () => {
     renderPage('/training-log?to=2026-03-31');
     await screen.findByRole('link', { name: 'March jog' });

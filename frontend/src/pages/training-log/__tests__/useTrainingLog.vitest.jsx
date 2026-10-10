@@ -197,6 +197,49 @@ describe('a jump to a day', () => {
     expect(result.current.more).toBe('idle');
   });
 
+  it('says the log was started from a past day when the first weeks stop short of today, and not otherwise', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.jumped).toBe(true);
+    const plain = renderHook(() => useTrainingLog({}));
+    await waitFor(() => expect(plain.result.current.status).toBe('ready'));
+    expect(plain.result.current.jumped).toBe(false);
+    expect(renderHook(() => useTrainingLog({})).result.current.jumped).toBe(false);
+  });
+
+  it('is not jumped when the day is in the week going on', async () => {
+    respond = () => log();
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-10-08' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.jumped).toBe(false);
+  });
+
+  it('keeps saying the log was started from a past day after later weeks have reached today', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    respond = () => log({ weeks: [week('2026-10-05', []), week('2026-09-28', []), week('2026-09-21', [])] });
+
+    await act(async () => { await result.current.loadNewer(); });
+
+    expect(result.current.log.weeks[0].start).toBe('2026-10-05');
+    expect(result.current.jumped).toBe(true);
+  });
+
+  it('works it out again for each fresh answer and for none that failed', async () => {
+    const { result, rerender } = renderHook((props) => useTrainingLog(props), { initialProps: { to: '2026-03-31' } });
+    await waitFor(() => expect(result.current.jumped).toBe(true));
+
+    rerender({ to: '' });
+    await waitFor(() => expect(result.current.jumped).toBe(false));
+
+    rerender({ to: '2026-03-31' });
+    await waitFor(() => expect(result.current.jumped).toBe(true));
+    respond = () => new Error('boom');
+    rerender({ to: '2026-02-28' });
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(result.current.jumped).toBe(false);
+  });
+
   it('carries the filters along when it asks for later weeks', async () => {
     const { result } = renderHook(() => useTrainingLog({ runType: 'RACE', tags: ['a'], to: '2026-03-31' }));
     await waitFor(() => expect(result.current.status).toBe('ready'));
