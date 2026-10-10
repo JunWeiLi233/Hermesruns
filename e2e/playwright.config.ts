@@ -15,7 +15,9 @@ export default defineConfig({
   // One backend, one database, specs that change data: run files one after another, in file-name order.
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // One retry, because Windows now and then refuses a connection or a resource with ENOBUFS (ERR_NO_BUFFER_SPACE in Chromium) when
+  // the machine is short of socket buffers. A test that needs it is reported as "flaky", never as a pass.
+  retries: 1,
   reporter: [
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],

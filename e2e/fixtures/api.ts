@@ -33,6 +33,23 @@ export function stackState(): StackState {
   return JSON.parse(fs.readFileSync(stateFile, 'utf8')) as StackState;
 }
 
+// On Windows a new local connection is sometimes refused with ENOBUFS (or EADDRNOTAVAIL) while the machine is short of socket
+// buffers or ports, which happens with several browsers, JVMs and databases open at once. It is refused before a single byte is
+// sent, so it is safe to try again, a few times, before a test is failed over something that says nothing about the app.
+const realFetch = globalThis.fetch.bind(globalThis);
+const connectRefusals = new Set(['ENOBUFS', 'EADDRNOTAVAIL']);
+globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await realFetch(input, init);
+    } catch (error) {
+      const code = (error as { cause?: { code?: string } } | undefined)?.cause?.code ?? '';
+      if (attempt >= 5 || !connectRefusals.has(code)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+    }
+  }
+}) as typeof fetch;
+
 /** A password that passes the sign-up rules; generated per run, never printed. */
 export function strongPassword(): string {
   return `Aa1!${randomBytes(18).toString('base64url')}`;

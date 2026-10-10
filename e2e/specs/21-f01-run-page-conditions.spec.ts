@@ -1,9 +1,9 @@
 // F01 again, under the conditions the happy path does not cover: failed and slow requests, an expired session,
 // double clicks, two tabs, the keyboard, a phone, Chinese, a screen-reader scan, time zones, and deleting a run.
 import type { Page } from '@playwright/test';
-import { Api } from '../fixtures/api.ts';
+import { Api, newRunner } from '../fixtures/api.ts';
 import { daysAgo, gpxRun, rollingHills } from '../fixtures/gpx.ts';
-import { a11yViolations, contextFor, expect, expectNoHorizontalOverflow, expectNoRawKeys, openRun, prepareContext, signedIn, test } from '../fixtures/test.ts';
+import { a11yViolations, contextFor, contextWith, expect, expectNoHorizontalOverflow, expectNoRawKeys, openRun, prepareContext, signedIn, test } from '../fixtures/test.ts';
 
 test.use({ storageState: signedIn('a') });
 
@@ -284,21 +284,27 @@ test.describe('F01 phone width', () => {
 test.describe('F01 dates and deleting', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test('F01-E28 a run recorded at 11:30 pm New York time shows that evening, not the next morning in UTC', async ({ page, api }) => {
-    test.fail(true, 'BUG-003: imported file times are shown as UTC clock time');
-    // 03:30 UTC on 10 October is 23:30 on 9 October in New York (EDT, UTC-4), the zone the browser is in.
-    const start = daysAgo(0);
+  test('F01-E28 a run recorded at 11:30 pm New York time shows that evening, not the next morning in UTC', async ({ browser, baseURL, guard }) => {
+    test.fail(true, 'BUG-003: a file run is shown at its UTC clock time even when the runner has set a time zone, which the analysis does use');
+    // A runner of their own, with a time zone on the profile: the backend already counts this run on the evening of the 7th
+    // (ActivityLocalDates), so the run page and the list have to say the same thing.
+    const made = await newRunner('lateevening');
+    expect((await made.api.patch('/api/profile/me/time-zone', { timeZone: 'America/New_York' })).status).toBe(200);
+    // 03:30 UTC two days ago is 23:30 the evening before in New York (EDT, UTC-4).
+    const start = daysAgo(2);
     start.setUTCHours(3, 30, 0, 0);
     const name = `E2E Late evening ${Date.now().toString(36)}`;
-    const id = await api.importRun('late.gpx', gpxRun({ name, start, distanceM: 3000, pace: 330, elevation: rollingHills(5, 1500) }));
+    const id = await made.api.importRun('late.gpx', gpxRun({ name, start, distanceM: 3000, pace: 330, elevation: rollingHills(5, 1500) }));
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
     try {
+      const page = await context.newPage();
       await page.goto(`/runs/${id}`);
       await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
       const local = new Date(start.getTime() - 4 * 3600 * 1000);
       const day = local.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
       await expect(page.locator('main')).toContainText(`${day} at 11:30 PM`);
     } finally {
-      await api.delete(`/api/activities/${id}`);
+      await context.close();
     }
   });
 
