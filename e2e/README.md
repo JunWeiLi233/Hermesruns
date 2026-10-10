@@ -41,10 +41,14 @@ npm --prefix e2e run stack:stop
 | `fixtures/gpx.ts`, `seed.ts` | builds GPX / TCX files from a few numbers; the seed runs and what each one is for |
 | `fixtures/test.ts` | the `test` every spec imports: fails on console errors and 5xx, answers map tiles locally, an axe helper |
 | `fixtures/api.ts` | a small API client; `newRunner()` makes a throwaway runner |
-| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02, `40` F04, `45` F03 (not built), `50` F05, `60` import, `70` new runner and odd addresses, `90` data rights, `99` Strava |
+| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02, `40` F04, `45` F03 (not built), `50` F05, `60` import, `70` new runner and odd addresses, `80` the analysis screens under bad conditions (slow, failing, keyboard, back, refresh), `90` data rights, `99` Strava |
 
 Tests for a known open defect are written as `test.fail(true, 'BUG-nnn ...')`: the suite stays green, and the test fails the day the
-defect is fixed, which is the cue to remove the line.
+defect is fixed, which is the cue to remove the line. `replica/bugs.md` lists every defect, open and fixed.
+
+The suite runs once more (`retries: 1`) a test that fails, and reports it as "flaky", never as a pass. It is there for Windows, which now and
+then refuses a new local connection with `ENOBUFS` (`net::ERR_NO_BUFFER_SPACE` in Chromium) while a browser, a JVM and a database are all open; the
+API client also tries such a connection again, up to five times, before it gives up. If a run reports flaky tests, look at them.
 
 ## Things the suite has to know about the app
 

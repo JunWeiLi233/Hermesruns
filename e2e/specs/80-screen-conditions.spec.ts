@@ -4,7 +4,7 @@
 import type { BrowserContext, Page } from '@playwright/test';
 import { Api, eventually, newRunner } from '../fixtures/api.ts';
 import { SEED_RUNS } from '../fixtures/seed.ts';
-import { contextWith, expect, test } from '../fixtures/test.ts';
+import { a11yViolations, contextWith, expect, test } from '../fixtures/test.ts';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -222,6 +222,31 @@ test.describe('F04 zones editor under bad conditions', () => {
       await page.getByRole('button', { name: 'Retry' }).click();
       await expect(maxField(page)).toBeVisible();
       await expect(maxField(page)).toHaveValue('190');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('F04-E12 the zones editor has no serious accessibility violations apart from the contrast ones tracked in BUG-005', async ({ browser, baseURL, guard }) => {
+    const context = await signedInContext(browser, baseURL, guard);
+    try {
+      const page = await context.newPage();
+      await page.goto('/settings?section=training');
+      await expect(maxField(page)).toBeVisible();
+      expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('F04-E12b the zones editor: text contrast of at least 4.5 to 1 in the light theme', async ({ browser, baseURL, guard }) => {
+    test.fail(true, 'BUG-005: the grey help line under each row is #8a837c on white, 3.73 to 1');
+    const context = await signedInContext(browser, baseURL, guard);
+    try {
+      const page = await context.newPage();
+      await page.goto('/settings?section=training');
+      await expect(maxField(page)).toBeVisible();
+      expect(await a11yViolations(page, { onlyRules: ['color-contrast'] })).toEqual([]);
     } finally {
       await context.close();
     }
