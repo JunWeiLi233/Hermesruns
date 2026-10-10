@@ -209,6 +209,22 @@ class RunSummaryServiceIntegrationTests {
     }
 
     @Test
+    void theEffortIsComparedWithNinetyDaysOfRunsAndThePaceWithOnlyThirty() {
+        Runner owner = runner(null);
+        // Five runs, all between 40 and 44 days before: inside the ninety days of the effort comparison, outside the thirty of the pace's.
+        for (int i = 40; i <= 44; i++) {
+            run(owner, DAY.minusDays(i), 10, 3000, null, 80.0, null);
+        }
+        Activity today = run(owner, DAY, 10, 3000, null, 80.0, null);
+
+        RunSummary summary = service.summarise(owner, today.getId()).orElseThrow();
+
+        assertThat(ids(summary)).contains("effort");
+        assertThat(ids(summary)).doesNotContain("pace");
+        assertThat(finding(summary, "effort").facts()).containsEntry("count", 5);
+    }
+
+    @Test
     void aRunsDayIsTheOneItsEffortRowIsFiledUnderOnTheRunnersOwnCalendar() {
         Runner owner = runner("Pacific/Auckland");
         // 23:30 UTC on the 14th is the 15th in Auckland in March (UTC+13).

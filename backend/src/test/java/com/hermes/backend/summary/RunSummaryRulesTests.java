@@ -204,6 +204,17 @@ class RunSummaryRulesTests {
     }
 
     @Test
+    void aRaceGetsNoEffortLineNotEvenAgainstTheRunnersEarlierRaces() {
+        List<RecentRun> races = new ArrayList<>();
+        for (int i = 1; i <= 9; i++) {
+            races.add(earlier(i * 5, "RACE", 10, 2700, 80.0));
+        }
+
+        assertThat(RunSummaryRules.effort(inputs(run("RACE", 10, 2700, 120.0, null, null), races))).isEmpty();
+        assertThat(RunSummaryRules.evaluate(inputs(run("RACE", 10, 2700, 120.0, null, null), races)).stream().map(Finding::id)).doesNotContain("effort");
+    }
+
+    @Test
     void fourRunsToCompareWithAreNotEnoughAndFiveAre() {
         assertThat(RunSummaryRules.effort(inputs(withEffort(80), usual(4, 80, 3000)))).isEmpty();
         assertThat(RunSummaryRules.effort(inputs(withEffort(80), usual(5, 80, 3000)))).isPresent();
@@ -632,9 +643,21 @@ class RunSummaryRulesTests {
         fourthJustOutside.add(earlier(29, null, 6, 1800, null));
         assertThat(RunSummaryRules.longest(inputs(run(null, 12, 3600, null, null, null), fourthJustOutside))).isEmpty();
 
-        List<RecentRun> workoutDoesNotCount = new ArrayList<>(three);
-        workoutDoesNotCount.add(earlier(10, "WORKOUT", 20, 6000, null));
-        assertThat(RunSummaryRules.longest(inputs(run(null, 12, 3600, null, null, null), workoutDoesNotCount))).isEmpty();
+        // A workout does not make up the fourth run...
+        List<RecentRun> workoutIsNotTheFourth = new ArrayList<>(three);
+        workoutIsNotTheFourth.add(earlier(10, "WORKOUT", 3, 900, null));
+        assertThat(RunSummaryRules.longest(inputs(run(null, 12, 3600, null, null, null), workoutIsNotTheFourth))).isEmpty();
+    }
+
+    @Test
+    void aLongWorkoutDoesNotStopARunBeingTheLongestOfTheRunsThatAreNotWorkouts() {
+        List<RecentRun> before = List.of(earlier(3, null, 8, 2400, null), earlier(8, null, 9, 2700, null), earlier(14, null, 5, 1500, null),
+                earlier(20, null, 6, 1800, null), earlier(10, "WORKOUT", 20, 6000, null));
+
+        Finding finding = RunSummaryRules.longest(inputs(run(null, 12, 3600, null, null, null), before)).orElseThrow();
+
+        assertThat(fact(finding, "previousLongestKm")).isEqualTo(9.0);
+        assertThat(fact(finding, "count")).isEqualTo(4);
     }
 
     @Test
@@ -670,6 +693,18 @@ class RunSummaryRulesTests {
         // worth two (pace, form, climb) only the first fits under the cap of four.
         assertThat(findings.stream().map(Finding::id).toList()).containsExactly("character", "longest", "effort", "drift", "pace");
         assertThat(findings.stream().skip(1).map(Finding::weight).toList()).containsExactly(3, 3, 3, 2);
+    }
+
+    @Test
+    void aLineWorthMoreComesBeforeOneWorthLessEvenWhenTheFixedOrderHasItAfter() {
+        // The fixed order is longest, effort, drift, shape, pace, form, climb: here effort (2) comes before drift (3) and shape (2).
+        SummaryInputs in = new SummaryInputs(
+                run(null, 10, 3000, 100.0, null, null), usual(6, 80, 3000), splits(300, 300, 293, 293), new Drift(12, 140, 152), null);
+
+        List<Finding> findings = RunSummaryRules.evaluate(in);
+
+        assertThat(findings.stream().map(Finding::id).toList()).containsExactly("character", "drift", "effort", "shape");
+        assertThat(findings.stream().skip(1).map(Finding::weight).toList()).containsExactly(3, 2, 2);
     }
 
     @Test
