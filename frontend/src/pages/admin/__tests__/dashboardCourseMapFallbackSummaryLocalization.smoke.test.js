@@ -23,7 +23,7 @@ assert.match(
 
 assert.match(
   enComponents,
-  /"course_maps_summary_extraction_fallback":\s*"Hermes aligned this upload through the extraction pipeline fallback after the direct AI scan could not produce a trustworthy route preview\."/,
+  /"course_maps_summary_extraction_fallback":\s*"HermesRuns aligned this upload through the extraction pipeline fallback after the direct AI scan could not produce a trustworthy route preview\."/,
   'The English locale should retain the source-language extraction-pipeline fallback summary.',
 );
 

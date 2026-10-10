@@ -3,6 +3,7 @@ import AppIcon from './AppIcon';
 import FooterNavLinks from './FooterNavLinks';
 import RunActivityContributionGraph from './RunActivityContributionGraph';
 import SettingsDataCard from './SettingsDataCard';
+import SettingsPlanCard from './SettingsPlanCard';
 import SettingsTimeZoneRow from './SettingsTimeZoneRow';
 import SettingsTrainingZones from './SettingsTrainingZones';
 
@@ -399,6 +400,7 @@ export default function SettingsAtlasLayout({
                 <AppIcon name="chevron_right" />
               </button>
             </div>
+            <SettingsPlanCard t={t} />
             <SettingsDataCard t={t} onRequestDeleteAccount={onRequestDeleteAccount} />
             <p className="st-v2-meta">{[resolvedUnitLabel, resolvedLanguageLabel, activeThemeLabel].filter(Boolean).join(' · ')}</p>
           </section>

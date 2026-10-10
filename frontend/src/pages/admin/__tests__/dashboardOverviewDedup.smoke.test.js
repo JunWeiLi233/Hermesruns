@@ -12,7 +12,7 @@ assert.doesNotMatch(
 assert.doesNotMatch(
   dashboardSource,
   /ops-sidebar-brand-wordmark/,
-  'Sidebar brand should rely on HermesLogo (icon + HERMES wordmark) instead of printing HERMES twice.',
+  'Sidebar brand should rely on HermesLogo (icon + HERMESRUNS wordmark) instead of printing HERMESRUNS twice.',
 );
 
 assert.doesNotMatch(

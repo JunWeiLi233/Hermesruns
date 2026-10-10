@@ -766,7 +766,7 @@ public class OAuthController {
         if (runnerOptional.isEmpty()) {
             return errorRedirectCode(
                     "STRAVA_LINK_SESSION_EXPIRED",
-                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "Your Strava linking session expired. Please start from your HermesRuns profile again.",
                     "profile-link"
             );
         }
@@ -775,14 +775,14 @@ public class OAuthController {
         if (!Objects.equals(currentRunner.getSessionToken(), pendingLinkRequest.sessionFingerprint())) {
             return errorRedirectCode(
                     "STRAVA_LINK_SESSION_EXPIRED",
-                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "Your Strava linking session expired. Please start from your HermesRuns profile again.",
                     "profile-link"
             );
         }
         if (linkedRunner.isPresent() && !Objects.equals(linkedRunner.get().getId(), currentRunner.getId())) {
             return errorRedirectCode(
                     "STRAVA_LINK_CONFLICT",
-                    "This Strava account is already linked to another Hermes runner.",
+                    "This Strava account is already linked to another HermesRuns runner.",
                     "profile-link"
             );
         }
@@ -841,7 +841,7 @@ public class OAuthController {
                 + "?error=" + urlEncode("STRAVA_LINK_CONFIRMATION_REQUIRED")
                 + "&source=strava"
                 + "&linking=confirmation_required";
-        String details = "Hermes found your Strava athlete but needs manual confirmation before linking it to a Hermes account.";
+        String details = "HermesRuns found your Strava athlete but needs manual confirmation before linking it to a HermesRuns account.";
         String athleteLabel = resolveStravaDisplayName(athlete, athleteId);
         if (athleteLabel != null && !athleteLabel.isBlank()) {
             details += " Athlete: " + athleteLabel + ".";

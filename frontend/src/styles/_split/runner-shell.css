@@ -40,6 +40,7 @@
 
 .runner-shell-brand .hermes-logo--light .hermes-logo__word {
   color: #f3ede8;
+  --hermes-logo-accent: #f07561;
 }
 
 .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {

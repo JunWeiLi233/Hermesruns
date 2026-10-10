@@ -57,7 +57,7 @@ export default function SeoHead() {
     updateCanonical(metadata.canonicalUrl);
     upsertMeta('name', 'description', metadata.description);
     upsertMeta('name', 'robots', metadata.robots);
-    upsertMeta('name', 'author', 'Hermes');
+    upsertMeta('name', 'author', 'HermesRuns');
     upsertMeta('property', 'og:type', metadata.openGraphType);
     upsertMeta('property', 'og:url', pageUrl);
     upsertMeta('property', 'og:title', metadata.title);

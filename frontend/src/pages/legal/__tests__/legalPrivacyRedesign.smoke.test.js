@@ -48,11 +48,11 @@ if (/\.legal-page-hero h1\s*\{[^}]*letter-spacing:\s*-/s.test(splitCss)) {
 }
 
 if (/\.legal-page--privacy\s*\{[^}]*#121110/s.test(splitCss)) {
-  throw new Error('Privacy page must use the Hermes light-mode palette, not the dark editorial background.');
+  throw new Error('Privacy page must use the HermesRuns light-mode palette, not the dark editorial background.');
 }
 
-if (!pageSource.includes('<HermesLogo tone="dark" />')) {
-  throw new Error('Light-mode legal header must render the dark Hermes logo treatment.');
+if (!pageSource.includes('<HermesLogo tone="light" />')) {
+  throw new Error('Light-mode legal header must render the logo for light backgrounds (navy symbol tile, navy and brick logotype).');
 }
 
 console.log('[PASS] Legal privacy redesign guard passed.');

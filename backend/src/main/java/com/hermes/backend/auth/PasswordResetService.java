@@ -45,17 +45,17 @@ public class PasswordResetService {
 
         String link = trimTrailingSlash(publicBaseUrl) + "/reset-password?token=" + plain;
         String text =
-                "A password reset was requested for your Hermes account.\n\n"
+                "A password reset was requested for your HermesRuns account.\n\n"
                         + "This link expires in " + TOKEN_MINUTES + " minutes:\n"
                         + link
                         + "\n\nIf you did not request this, ignore this email.\n";
-        String html = "<p>A password reset was requested for your Hermes account.</p>"
+        String html = "<p>A password reset was requested for your HermesRuns account.</p>"
                 + "<p>This link expires in " + TOKEN_MINUTES + " minutes: "
                 + "<a href=\"" + link + "\">Reset your password</a></p>"
                 + "<p>If you did not request this, ignore this email.</p>";
         transactionalMailSender.send(new TransactionalMailMessage(
                 runner.getEmail(),
-                "Reset your Hermes password",
+                "Reset your HermesRuns password",
                 text,
                 html,
                 "hermes-password-reset-" + UUID.randomUUID()));

@@ -208,7 +208,7 @@ export default function AddShoes() {
   }, [browserBrand, preselectedBrand, preselectedModel]);
 
   const initials = (email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
-  const profileLabel = (email?.split('@')[0] || 'Hermes').trim();
+  const profileLabel = (email?.split('@')[0] || 'HermesRuns').trim();
   const selectedBrandName = localizeShoeBrand(formBrand || browserBrand?.brand || '', lang);
   const selectedModelName = getCatalogModelLabel(selectedCatalogModel || { model: formModel }, lang) || formModel;
   const browserModelPlaceholder = browserBrand

@@ -252,24 +252,37 @@ assert(
 
 assert(
   /\.landing-cinematic-compare-table\s*\{[\s\S]*border:\s*1px solid rgba\(33,\s*30,\s*27,\s*0\.1\);[\s\S]*overflow:\s*hidden/.test(styleSource)
-    && landingSource.includes('className="landing-cinematic-compare-cell"')
+    && landingSource.includes('className="landing-cinematic-compare-table is-single"')
     && landingSource.includes('className="landing-cinematic-compare-feature"')
-    && /\.landing-cinematic-compare-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(190px,\s*1\.35fr\) repeat\(3,\s*minmax\(92px,\s*0\.7fr\)\)/.test(styleSource)
-    && /\.landing-cinematic-compare-feature\s*\{[\s\S]*display:\s*grid;[\s\S]*gap:\s*5px;[\s\S]*justify-items:\s*start/.test(styleSource)
-    && /\.landing-cinematic-compare-icon\s*\{[\s\S]*display:\s*inline-grid;[\s\S]*place-items:\s*center;[\s\S]*width:\s*34px;[\s\S]*height:\s*34px/.test(styleSource)
-    && /\.landing-cinematic-compare-icon\.is-no\s*\{[\s\S]*color:\s*rgba\(33,\s*30,\s*27,\s*0\.42\)/.test(styleSource),
-  'Landing comparison chart should stay readable on the light landing surface with explained rows, compact columns, and visible yes/no/partial badges.',
+    && /\.landing-cinematic-compare-table\.is-single \.landing-cinematic-compare-row\s*\{[\s\S]*grid-template-columns:\s*1fr/.test(styleSource)
+    && /\.landing-cinematic-compare-feature\s*\{[\s\S]*display:\s*grid;[\s\S]*gap:\s*5px;[\s\S]*justify-items:\s*start/.test(styleSource),
+  'Landing "what is different" list should stay readable on the light landing surface: one explained row per fix, full width.',
+);
+
+const landingSectionOrder = ['id="problem"', 'id="how-it-works"', 'id="features"', 'id="tour"', 'id="races"', 'id="pricing"', 'id="faq"']
+  .map((marker) => landingSource.indexOf(marker));
+assert(
+  landingSectionOrder.every((index, position) => index > 0 && (position === 0 || index > landingSectionOrder[position - 1])),
+  'Landing should argue in order: the problem, how it works, what is different (the fixes, before the feature tour), races, pricing, questions.',
 );
 
 assert(
-  landingSource.includes("feature: t('landing.cinematic_compare_decision'), note: t('landing.cinematic_compare_decision_note'), hermes: true, strava: 'partial', runna: 'partial'")
-    && landingSource.includes("feature: t('landing.cinematic_compare_race_plan'), note: t('landing.cinematic_compare_race_plan_note'), hermes: 'partial', strava: 'partial', runna: true")
-    && landingSource.includes("feature: t('landing.cinematic_compare_formula'), note: t('landing.cinematic_compare_formula_note'), hermes: true, strava: false, runna: false")
-    && landingSource.includes("feature: t('landing.cinematic_compare_sync'), note: t('landing.cinematic_compare_sync_note'), hermes: true, strava: true, runna: 'partial'")
-    && landingSource.includes("feature: t('landing.cinematic_compare_shoes'), note: t('landing.cinematic_compare_shoes_note'), hermes: true, strava: 'partial', runna: false")
-    && landingSource.includes("feature: t('landing.cinematic_compare_local'), note: t('landing.cinematic_compare_local_note'), hermes: true, strava: false, runna: false")
-    && landingSource.includes("feature: t('landing.cinematic_compare_noise'), note: t('landing.cinematic_compare_noise_note'), hermes: true, strava: false, runna: true"),
-  'Landing comparison chart should stay objective: Runna wins structured race plans while Hermes wins transparent formulas, private local analysis, shoe decisions, and no-feed coaching.',
+  ['studio_fix_free', 'studio_fix_formula', 'studio_fix_rules', 'studio_fix_data', 'studio_fix_feed'].every((key) =>
+    landingSource.includes(`{ title: t('landing.${key}_title'), copy: t('landing.${key}_copy') }`))
+    && !/strava:|runna:|CompareGlyph|cinematic_compare_|minimal_method/.test(landingSource),
+  'Landing features should lead with the fixes, in the product\'s own words, with no columns rating other apps.',
+);
+
+assert(
+  landingSource.includes('className="landing-studio-pricing-table"')
+    && landingSource.includes("t('landing.studio_pricing_supporter_renew')")
+    && landingSource.includes('{supporterStatus ? <em className="landing-studio-price-status">{supporterStatus}</em> : null}'),
+  'Landing pricing should be a real table that says the paid plan never renews, and say when payments are not open yet.',
+);
+
+assert(
+  !/testimonial|trusted by|star rating|\d[\d,]*\+?\s+(runners|users)\s+(use|trust|love)/i.test(landingSource),
+  'Landing must not invent proof: no testimonials, "trusted by" rows, ratings or user counts.',
 );
 
 assert(

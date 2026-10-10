@@ -291,7 +291,7 @@ export default function Settings() {
     setStravaDisconnectOpen(false);
     setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
     setStravaNotice(notice.join(' '));
-    // The runs Hermes synced from Strava are gone, so pages that cached them must ask again.
+    // The runs HermesRuns synced from Strava are gone, so pages that cached them must ask again.
     invalidateResourceCache('/api/activities');
     invalidateResourceCache('/api/profile/dashboard');
     if (removed > 0) {

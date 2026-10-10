@@ -2,8 +2,8 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "admin": {
-    "title": "Hermes | Admin Verification",
-    "brand": "HERMES Admin",
+    "title": "HermesRuns | Admin Verification",
+    "brand": "HERMESRUNS Admin",
     "subtitle": "System Administrator Sign In",
     "form_title": "Admin Account Login",
     "email_label": "Admin Email",
@@ -15,9 +15,9 @@ export default {
     "system_offline": "SYSTEM OFFLINE: Cannot connect to Spring Boot.",
 
     "kinetic": {
-      "sidebar_brand": "HERMES",
+      "sidebar_brand": "HERMESRUNS",
       "sidebar_brand_sub": "Admin Console",
-      "topbar_brand": "HERMES",
+      "topbar_brand": "HERMESRUNS",
 
       "tab_overview": "Overview",
       "tab_users": "Athletes",
@@ -79,7 +79,7 @@ export default {
       "settings_theme_kicker": "Appearance",
       "settings_logout_title": "Sign Out",
       "settings_logout_kicker": "Session",
-      "settings_logout_copy": "Sign out of the Hermes admin console.",
+      "settings_logout_copy": "Sign out of the HermesRuns admin console.",
       "settings_logout_btn": "Sign Out"
     }
   },

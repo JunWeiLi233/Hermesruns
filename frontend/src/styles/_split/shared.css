@@ -1,4 +1,4 @@
-/* HERMES wordmark �?bold navy, tight kerning (matches brand asset) */
+/* HermesRuns logo: symbol + logotype lockup (drawing in replica/tools/brand_logo.py) */
 
 .hermes-logo {
     display: inline-flex;
@@ -17,11 +17,25 @@
     border-radius: 0.2em;
 }
 
+/* HermesRuns logotype (HermesWordmarkSvg): "hermes" takes the text colour, "runs" takes
+   --hermes-logo-accent. Brick on light surfaces, coral on dark ones (replica/brand-kit). */
+:root {
+    --hermes-logo-accent: #a0392a;
+}
+
+.hermes-wordmark {
+    display: block;
+    flex-shrink: 0;
+    width: auto;
+    height: 1em;
+    overflow: visible;
+}
+
+/* Beside the symbol the logotype is exactly as tall as the symbol. */
 .hermes-logo__word {
-    font-weight: 800;
-    letter-spacing: -0.08em;
+    height: 1.08em;
     color: var(--brand-ink);
-    text-transform: uppercase;
+    --hermes-logo-accent: #a0392a;
 }
 
 .hermes-logo__mark {
@@ -33,6 +47,7 @@
 
 .hermes-logo--dark .hermes-logo__word {
     color: #ffffff;
+    --hermes-logo-accent: #f07561;
 }
 
 .hermes-logo--dark .hermes-logo__mark {

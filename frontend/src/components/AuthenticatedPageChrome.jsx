@@ -51,7 +51,7 @@ export default function AuthenticatedPageChrome({
     [lang, t],
   );
   const pageTitle = resolveShellTitle(location.pathname, t);
-  const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMES').trim();
+  const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMESRUNS').trim();
   const profileInitial = profileName.slice(0, 1).toUpperCase() || 'H';
 
   return (
