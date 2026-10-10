@@ -219,20 +219,20 @@ test.describe('F05 whole page', () => {
       const page = await context.newPage();
       await page.goto('/prediction/10k');
       await expect(page.getByRole('heading', { level: 1, name: 'Race Time Prediction' })).toBeVisible();
-      expect(await a11yViolations(page, { ignoreRules: ['color-contrast', 'role-img-alt'] })).toEqual([]);
+      expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
     } finally {
       await context.close();
     }
   });
 
   test('F05-E8 the prediction history chart has a text alternative', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-006: the chart is a canvas with role=img and no accessible name');
     const context = await contextWith(browser, p, baseURL as string, guard);
     try {
       const page = await context.newPage();
       await page.goto('/prediction/10k');
       await expect(page.getByRole('heading', { level: 2, name: 'Prediction History' })).toBeVisible();
       expect(await a11yViolations(page, { onlyRules: ['role-img-alt'] })).toEqual([]);
+      await expect(page.locator('canvas[role="img"]').first()).toHaveAttribute('aria-label', /^10K predicted time over the last 90 days, \d+ points, from \d+:\d\d(:\d\d)? to \d+:\d\d(:\d\d)?$/);
     } finally {
       await context.close();
     }

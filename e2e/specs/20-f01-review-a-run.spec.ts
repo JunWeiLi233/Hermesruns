@@ -398,7 +398,7 @@ test.describe('F01 perceived exertion', () => {
   });
 });
 
-test('seed sanity: every seed run exists for the signed-in runner', async ({ api }) => {
+test('X00-H1 seed sanity: every seed run exists for the signed-in runner', async ({ api }) => {
   const seed = readSeed();
   const runs = (await api.get('/api/activities')).json as Array<{ id: number }>;
   const ids = new Set(runs.map((run) => run.id));
