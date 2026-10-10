@@ -27,7 +27,16 @@ import { canonicalizeRunsCacheEmail, createRunsLoadGeneration, invalidateRunsCac
 import { invalidateHeatmapCache } from '../../utils/heatmap/cache.js';
 import { captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
 
-const runDate = (r) => new Date(r.startTime || r.startDate || 0);
+// A run whose file carried no timestamps has no start time: that is an invalid date, not 1 January 1970 (BUG-008).
+const runDate = (r) => {
+  const raw = r.startTime || r.startDate;
+  return raw ? new Date(raw) : new Date(Number.NaN);
+};
+const runTime = (run) => {
+  const time = runDate(run).getTime();
+  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
+};
+const UNDATED_KEY = 'undated';
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -520,8 +529,9 @@ function RunRow({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDe
   const distanceKm = Number(run.distanceKm || 0);
   const movingTimeSeconds = Number(run.movingTimeSeconds || 0);
   const distanceText = formatDistance(distanceKm, 1, lang);
-  const paceText = formatPace(distanceKm, movingTimeSeconds, lang);
-  const movingTimeText = formatDuration(movingTimeSeconds);
+  const hasTime = movingTimeSeconds > 0;
+  const paceText = hasTime && distanceKm > 0 ? formatPace(distanceKm, movingTimeSeconds, lang) : '--';
+  const movingTimeText = hasTime ? formatDuration(movingTimeSeconds) : '--';
 
   return (
     <div className="recent-runs-card-shell runs-ledger-row-shell">
@@ -871,13 +881,25 @@ const Runs = memo(function Runs() {
     if (runsSort === 'distance') {
       result.sort((a, b) => Number(b.distanceKm || 0) - Number(a.distanceKm || 0));
     } else if (runsSort === 'pace') {
+      // Seconds per kilometre over the real distance. A run with no moving time has no pace and goes last, not first.
+      const paceOf = (run) => {
+        const km = Number(run.distanceKm || 0);
+        const seconds = Number(run.movingTimeSeconds || 0);
+        return km > 0 && seconds > 0 ? seconds / km : Number.POSITIVE_INFINITY;
+      };
       result.sort((a, b) => {
-        const paceA = Number(a.movingTimeSeconds || 0) / Math.max(0.1, Number(a.distanceKm || 0));
-        const paceB = Number(b.movingTimeSeconds || 0) / Math.max(0.1, Number(b.distanceKm || 0));
-        return paceA - paceB;
+        const paceA = paceOf(a);
+        const paceB = paceOf(b);
+        if (paceA === paceB) return 0;
+        return paceA < paceB ? -1 : 1;
       });
     } else {
-      result.sort((a, b) => runDate(b).getTime() - runDate(a).getTime());
+      result.sort((a, b) => {
+        const timeA = runTime(a);
+        const timeB = runTime(b);
+        if (timeA === timeB) return 0;
+        return timeB > timeA ? 1 : -1;
+      });
     }
 
     return result;
@@ -924,7 +946,7 @@ const Runs = memo(function Runs() {
   const awaitingCopy = t(stravaLinked ? 'runs.awaiting_copy_linked' : 'runs.awaiting_copy_disconnected');
   const awaitingStatus = integrationNotice || (stravaLinked
     ? formatStravaSyncLabel(stravaStatus, t)
-    : t('runs.awaiting_status_disconnected'));
+    : t(allRuns.length > 0 ? 'runs.status_files_only' : 'runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
   const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
   const filteredTimeSeconds = filteredRuns.reduce((sum, run) => sum + Number(run.movingTimeSeconds || 0), 0);
@@ -956,8 +978,9 @@ const Runs = memo(function Runs() {
     const totalsByKey = new Map();
     filteredRuns.forEach((run) => {
       const started = runDate(run);
-      if (Number.isNaN(started.getTime())) return;
-      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      const key = Number.isNaN(started.getTime())
+        ? UNDATED_KEY
+        : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
       const totals = totalsByKey.get(key) || { count: 0, totalKm: 0, totalSeconds: 0 };
       totals.count += 1;
       totals.totalKm += Number(run.distanceKm || 0)
@@ -974,15 +997,19 @@ const Runs = memo(function Runs() {
     })();
     visibleRuns.forEach((run) => {
       const started = runDate(run);
-      if (Number.isNaN(started.getTime())) return;
-      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      const dated = !Number.isNaN(started.getTime());
+      const key = dated
+        ? `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`
+        : UNDATED_KEY;
       let group = groupByKey.get(key);
       if (!group) {
         group = {
           key,
-          label: monthLabelFormatter
-            ? monthLabelFormatter.format(started)
-            : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
+          label: !dated
+            ? t('runs.undated_group')
+            : monthLabelFormatter
+              ? monthLabelFormatter.format(started)
+              : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
           runs: [],
           ...totalsByKey.get(key),
         };
@@ -991,8 +1018,10 @@ const Runs = memo(function Runs() {
       }
       group.runs.push(run);
     });
+    // Runs with no date come after every month.
+    groups.sort((a, b) => Number(a.key === UNDATED_KEY) - Number(b.key === UNDATED_KEY));
     return groups;
-  }, [filteredRuns, visibleRuns, lang]);
+  }, [filteredRuns, visibleRuns, lang, t]);
 
   const activeDaysCount = useMemo(() => {
     const uniqueDays = new Set();
@@ -1590,7 +1619,7 @@ const Runs = memo(function Runs() {
                             </span>
                             <span className="recent-runs-month-title">{group.label}</span>
                             <span className="recent-runs-month-meta">
-                              <span>{t('runs.count_label', { count: group.count })}</span>
+                              <span>{t(group.count === 1 ? 'runs.count_label_one' : 'runs.count_label', { count: group.count })}</span>
                               <span>{formatDistance(group.totalKm, 1, lang)}</span>
                               <span>{formatDuration(group.totalSeconds)}</span>
                             </span>
