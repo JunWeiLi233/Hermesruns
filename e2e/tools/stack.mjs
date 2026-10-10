@@ -170,6 +170,14 @@ async function serve() {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGBREAK']) process.on(signal, () => process.exit(0));
   process.on('exit', cleanup);
 
+  // Written before the wait, not after: Playwright starts the suite the moment the health URL answers, and its global setup reads
+  // this file at once. Written after, the file could be a few milliseconds late and the whole run would fail to start.
+  fs.mkdirSync(authDir, { recursive: true });
+  fs.writeFileSync(
+    stateFile,
+    JSON.stringify({ baseUrl, port, pid: process.pid, backendPid: child.pid, dataDir, runnerEmail, runnerPassword }, null, 2),
+    { mode: 0o600 },
+  );
   try {
     await waitHealthy(Number(process.env.E2E_BOOT_TIMEOUT_MS || 240_000), child);
   } catch (error) {
@@ -177,12 +185,6 @@ async function serve() {
     console.error(`backend log: ${path.join(dataDir, 'backend.log')}`);
     process.exit(1);
   }
-  fs.mkdirSync(authDir, { recursive: true });
-  fs.writeFileSync(
-    stateFile,
-    JSON.stringify({ baseUrl, port, pid: process.pid, backendPid: child.pid, dataDir, runnerEmail, runnerPassword }, null, 2),
-    { mode: 0o600 },
-  );
   console.log(`READY ${baseUrl} (backend pid ${child.pid}, data ${dataDir})`);
   child.on('exit', (code) => {
     console.error(`backend exited with code ${code}`);

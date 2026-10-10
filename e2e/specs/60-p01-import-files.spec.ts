@@ -127,7 +127,6 @@ test.describe('P01 through the import dialog', () => {
   });
 
   test('P01-E2 the dialog says what happened to every file: what was imported, skipped as a duplicate, and rejected and why', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-019: the dialog closes on any 200 and ignores the result, so a rejected or duplicate file is never mentioned');
     const context = await contextWith(browser, who, baseURL as string, guard);
     try {
       const page = await context.newPage();
@@ -137,9 +136,13 @@ test.describe('P01 through the import dialog', () => {
         { name: 'corrupt-file.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from('this is not xml') },
       ]);
       await dialog.getByRole('button', { name: 'Import 2 file(s)' }).click();
-      // Whatever it uses (the dialog kept open, a notice, a toast), the runner is told about the file that was refused.
+      // The dialog stays open and tells the runner what became of each file.
+      await expect(dialog.getByText('1 run imported.')).toBeVisible();
+      await expect(dialog.getByText('1 file could not be imported:')).toBeVisible();
+      await expect(dialog.getByText('corrupt-file.gpx')).toBeVisible();
+      await dialog.getByRole('button', { name: 'Done' }).click();
+      await expect(dialog).toHaveCount(0);
       await expect(page.getByRole('button', { name: /P01 mixed fine/ })).toBeVisible();
-      await expect(page.getByText('corrupt-file.gpx')).toBeVisible({ timeout: 3000 });
     } finally {
       await context.close();
     }
@@ -204,10 +207,11 @@ test.describe('P01 through the API: what the server accepts and refuses', () => 
     expect(await runNames()).toContain(accent);
   });
 
-  test('P01-E7b a 5 000-character track name is shortened or refused with a message, not a 500', async () => {
-    test.fail(true, 'BUG-020: a name longer than the column is not shortened, so the insert fails and the route answers 500');
+  test('P01-E7b a 5 000-character track name is shortened to what the column holds, not a 500', async () => {
     const long = await who.api.importFile('long-name.gpx', route(`${'x'.repeat(5000)} ${unique}`, { start: daysAgo(19) }));
-    expect(long.status).toBeLessThan(500);
+    expect(long.status).toBe(200);
+    expect(long.json.importedActivities).toBe(1);
+    expect((await runNames()).filter((name) => name.length === 255 && /^x+$/.test(name))).toHaveLength(1);
   });
 
   test('P01-E8 an XML file that tries to read a file off the server does not get it', async () => {
@@ -247,10 +251,9 @@ test.describe('P01 through the API: what the server accepts and refuses', () => 
   });
 
   test('P01-E11 a file over the 20 MB upload limit is refused with a message and not a 500', async () => {
-    test.fail(true, 'BUG-021: the multipart size limit is not handled, so the answer is 500 {"error":"Server error"}');
     const res = await who.api.importFile('huge.gpx', Buffer.alloc(21 * 1024 * 1024, 0x61));
-    expect(res.status, JSON.stringify(res.json).slice(0, 200)).toBeLessThan(500);
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status, JSON.stringify(res.json).slice(0, 200)).toBe(413);
+    expect(res.json.error).toContain('too large');
     expect((await who.api.get('/api/auth/protected/ping')).status).toBe(200);
   });
 

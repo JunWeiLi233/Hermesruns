@@ -69,9 +69,8 @@ test.describe('X01 signing in through the page', () => {
   });
 
   test('X01-E1b a login sent with the wrong content type is refused with 415 or 400, not a 500', async ({ seed }) => {
-    test.fail(true, 'BUG-024: the global handler turns HttpMediaTypeNotSupportedException into 500 {"error":"Server error"}');
     const notJson = await fetch(`${seed.baseUrl}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Forwarded-For': new Api(seed.baseUrl).clientIp ?? '' }, body: 'hello' });
-    expect(notJson.status).toBeLessThan(500);
+    expect([400, 415]).toContain(notJson.status);
   });
 
   test('X01-E2 a second sign-in as the same runner signs the first one out (current behaviour, a product decision to confirm)', async ({ seed }) => {

@@ -2,9 +2,9 @@
 // In HermesRuns: Settings > Training. Unlike Strava, a change recalculates every past run, and the page says so.
 // Runner C owns these tests; every test starts from the automatic zones.
 import type { Locator, Page } from '@playwright/test';
-import { Api, eventually } from '../fixtures/api.ts';
+import { Api, eventually, newRunner } from '../fixtures/api.ts';
 import { daysAgo, gpxRun, intervalPace, rollingHills } from '../fixtures/gpx.ts';
-import { contextFor, expect, signedIn, test } from '../fixtures/test.ts';
+import { contextFor, contextWith, expect, signedIn, test } from '../fixtures/test.ts';
 
 test.use({ storageState: signedIn('c') });
 test.describe.configure({ mode: 'serial' });
@@ -75,8 +75,7 @@ test.describe('F04 happy path', () => {
   });
 
   test('F04-H2 a max heart rate taken from your own runs is offered, and the offer alone changes nothing', async ({ browser, baseURL, seed, guard }) => {
-    // Runner A has 21 runs that carry a peak heart rate (the mock Strava runs); runner C's runs come from GPX files, which
-    // carry heart rate only as a stream, so C is offered nothing (see BUG-013).
+    // Runner A has 21 runs that carry a peak heart rate (the mock Strava runs); the offer needs 20, and runner C has fewer runs.
     const context = await contextFor(browser, 'a', baseURL as string, guard);
     try {
       const page = await context.newPage();
@@ -98,10 +97,21 @@ test.describe('F04 happy path', () => {
     }
   });
 
-  test('F04-H2b a runner whose heart rate comes only from GPX streams is offered a max heart rate from them', async ({ page }) => {
-    test.fail(true, 'BUG-013: the suggestion reads the run summary, which a GPX import leaves empty');
-    await openTraining(page);
-    await expect(page.getByText(/Your runs point to about \d+ bpm/)).toBeVisible({ timeout: 2000 });
+  test('F04-H2b a runner whose heart rate comes only from GPX streams is offered a max heart rate from them', async ({ browser, baseURL, guard }) => {
+    // A GPX file states no summary, only a stream of readings; the import works the peak out, so these runs count towards the offer
+    // (it needs 20 runs with a peak).
+    const made = await newRunner('gpxpeak');
+    for (let index = 0; index < 20; index += 1) {
+      await made.api.importRun(`peak-${index}.gpx`, gpxRun({ name: `F04 peak run ${index}`, start: daysAgo(2 + index), distanceM: 3000, pace: 330, hr: 170 + (index % 8) }));
+    }
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      await openTraining(page);
+      await expect(page.getByText(/Your runs point to about \d+ bpm, from the peak heart rate of 20 recent runs\./)).toBeVisible();
+    } finally {
+      await context.close();
+    }
   });
 
   test('F04-H3 a new max heart rate moves the automatic boundaries to the same percentages, and the list says so', async ({ page, seed }) => {

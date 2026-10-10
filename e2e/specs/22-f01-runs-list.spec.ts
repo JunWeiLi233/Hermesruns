@@ -27,10 +27,12 @@ async function readRows(rows: ReturnType<typeof rowsOf>): Promise<RowFacts[]> {
   for (const text of texts) {
     const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     // 09 | Fri | E2E Tiny scrap | GARMIN | 11:00 AM | (Fastest) | 0.1 km | 5:50 /km | 0:21
+    // A run with no start time has no day or time, and one with no moving time has no pace: -- | name | GARMIN | 4.0 km | -- | --
     const km = lines.find((line) => /^[\d.]+ km$/.test(line));
-    const pace = lines.find((line) => /^\d+:\d\d \/km$/.test(line));
-    const moving = lines[lines.length - 1];
-    if (lines.length >= 7 && km && pace) facts.push({ name: lines[2], km: parseFloat(km), pace, moving: toSeconds(moving) });
+    const pace = lines.find((line) => /^\d+:\d\d \/km$/.test(line)) ?? '--';
+    const last = lines[lines.length - 1];
+    const undated = lines[0] === '--';
+    if (lines.length >= 6 && km) facts.push({ name: lines[undated ? 1 : 2], km: parseFloat(km), pace, moving: /^[\d:]+$/.test(last) ? toSeconds(last) : 0 });
   }
   return facts;
 }
@@ -97,13 +99,11 @@ test.describe('Runs list', () => {
     const longest = await readRows(rowsOf(history));
     expect(longest[0].km).toBe(Math.max(...longest.map((row) => row.km)));
     await page.getByRole('group', { name: 'Sort runs' }).getByRole('button', { name: 'Fastest' }).click();
-    // Among runs of a kilometre or more (the 60 m scrap and the run with no times are BUG-011's business).
-    const fastest = (await readRows(rowsOf(history))).filter((row) => row.km >= 1 && row.pace !== '0:00 /km');
+    const fastest = await readRows(rowsOf(history));
     expect(fastest[0].name).toBe('E2E Fast 10k negative split');
   });
 
   test('F01-E38 sort by Fastest does not rank a run with no time, or a 60 m scrap, above real runs', async ({ page }) => {
-    test.fail(true, 'BUG-011: the pace sort divides by max(0.1 km, distance) and does not skip runs with no moving time');
     await openList(page);
     await page.getByRole('group', { name: 'Sort runs' }).getByRole('button', { name: 'Fastest' }).click();
     const rows = await readRows(rowsOf(page.getByRole('region', { name: 'Full History' })));
@@ -163,12 +163,12 @@ test.describe('Runs list', () => {
   });
 
   test('F01-E33 a month with a single run says "1 run", not "1 runs"', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-009: the month heading never singularises');
     const context = await contextFor(browser, 'c', baseURL as string, guard);
     try {
       const page = await context.newPage();
       await page.goto('/runs');
       await expect(page.getByRole('region', { name: 'Full History' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).first()).toBeVisible();
       const headings = await page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).allInnerTexts();
       expect(headings.length).toBeGreaterThan(0);
       expect(headings.filter((text) => /\b1 runs\b/.test(text)), 'month headings that count one run').toEqual([]);
@@ -178,17 +178,16 @@ test.describe('Runs list', () => {
   });
 });
 
-test.describe('Runs list: defects found on the seeded data', () => {
+test.describe('Runs list: what the seeded data puts on the page', () => {
   test('F01-E34 the header does not say "No activity has landed yet" while the list is full of runs', async ({ page }) => {
-    test.fail(true, 'BUG-007: the connection status line is the empty-state sentence for anyone who is not linked to Strava');
     await openList(page);
     await expect(rowsOf(page.getByRole('region', { name: 'Full History' })).first()).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name: 'Recent Runs' }).locator('xpath=..')).not.toContainText('No activity has landed yet', { timeout: 1500 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Recent Runs' }).locator('xpath=..')).not.toContainText('No activity has landed yet');
   });
 
   test('F01-E35 a route with no timestamps is not filed under December 1969 with a 0:00 pace', async ({ page }) => {
-    test.fail(true, 'BUG-008: a run with no start time is dated 31 December 1969 and shown at 0:00 /km');
     await openList(page);
+    await expect(page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).first()).toBeVisible();
     const headings = await page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).allInnerTexts();
     expect(headings.filter((text) => /1969|1970/.test(text)), 'month headings from the Unix epoch').toEqual([]);
     const row = page.getByRole('button', { name: /E2E Route without times/ });

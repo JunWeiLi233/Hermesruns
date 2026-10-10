@@ -7,7 +7,6 @@ test.use({ storageState: signedIn('a') });
 
 test.describe('X02 a brand-new runner', () => {
   test('X02-H1 the first visit to Home by a runner with no runs makes no failing request', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-012: /api/coach/today and /api/training/muscle/plan both create the coach state row, collide on its unique index and answer 500');
     const made = await newRunner('fresh');
     const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
     try {
@@ -21,7 +20,6 @@ test.describe('X02 a brand-new runner', () => {
   });
 
   test('X02-H2 Home, Runs, Analysis, Load balance, a prediction page and Settings all open for a runner with no runs, without errors', async ({ browser, baseURL, guard }) => {
-    guard.allow(/HTTP 500|status of 500/); // BUG-012 may fire on the first Home visit
     const made = await newRunner('fresh2');
     const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
     try {
@@ -77,19 +75,16 @@ test.describe('X03 addresses that lead nowhere', () => {
     }
   });
 
-  test('X03-E2 an analysis page that does not exist sends you back to Analysis instead of crashing', async ({ page, guard }) => {
-    test.fail(true, 'BUG-016: /analysis/<anything> renders AnalysisInsightDetail with no config and throws "Cannot read properties of null (reading title)"');
-    guard.allow(/pageerror|console\.error/);
+  test('X03-E2 an analysis page that does not exist sends you back to Analysis instead of crashing', async ({ page }) => {
     await page.goto('/analysis/nonsense');
-    await page.waitForTimeout(1500);
+    await expect(page).toHaveURL(/\/analysis$/);
     await expect(page.locator('body')).not.toContainText('Something went wrong');
   });
 
   test('X03-E3 a prediction distance that does not exist sends you somewhere useful instead of showing a blank page', async ({ page }) => {
-    test.fail(true, 'BUG-017: /prediction/<unknown> renders nothing at all');
     await page.goto('/prediction/banana');
-    await page.waitForTimeout(1500);
-    expect((await page.locator('body').innerText()).trim().length).toBeGreaterThan(20);
+    await expect(page).toHaveURL(/\/analysis$/);
+    await expect.poll(async () => (await page.locator('body').innerText()).trim().length).toBeGreaterThan(20);
   });
 
   test('X03-E4 a race that does not exist goes back to the race list', async ({ page }) => {
