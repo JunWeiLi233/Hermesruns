@@ -32,6 +32,14 @@ The statements are idempotent, so running them twice is harmless. The definition
 not written by hand. Types matter: `validate` rejects `real` for the target (it is a `double`) and `timestamp` without a
 precision for a `LocalDateTime`.
 
+Checked on 2026-10-10 on a throwaway PostgreSQL 17.10 (the schema this build expects, minus what this document adds, so
+not on a copy of production): this build refuses to boot with `validate` before the SQL and boots after it; the result is
+Hibernate's own schema apart from the order of the columns and the name of the one foreign key; running it twice changes
+nothing; the build before this release (M5) still boots on the upgraded schema, so the SQL can go first and the deploy
+later; the rollback below restores the earlier schema exactly; and the goal routes answered as they do on H2 (sixteen
+checks: set, refuse a second goal for the same period and metric, change a target, delete, what a named run adds, the
+export, and another runner seeing none of it). Nothing of yours was touched.
+
 ## After the deploy
 
 Nothing has to be run by hand. A runner starts with no goals; nothing is worked out in advance.
