@@ -1245,6 +1245,8 @@ export default function AnalysisInsightDetail() {
   const [runs, setRuns] = useState([]);
   const [coachToday, setCoachToday] = useState(null);
   const [loadState, setLoadState] = useState('loading');
+  // Bumped by "Try again": the loader runs once more.
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [coachPerformanceWindow, setCoachPerformanceWindow] = useState(7);
   const [loadChartDays, setLoadChartDays] = useState(56);
@@ -1307,7 +1309,8 @@ export default function AnalysisInsightDetail() {
       setLoadState('loading');
       try {
         const [profileData, activitiesData, coachTodayData] = await Promise.all([
-          cachedApiJson('/api/profile/me'),
+          // The profile only supplies the name behind the avatar; the page is not worth losing if it does not come.
+          cachedApiJson('/api/profile/me').catch(() => null),
           cachedApiJson('/api/activities'),
           insightKey === 'coach-insight' ? apiJson('/api/coach/today').catch(() => null) : Promise.resolve(null),
         ]);
@@ -1321,7 +1324,7 @@ export default function AnalysisInsightDetail() {
         setLoadState('error');
       }
     })();
-  }, [isAuthenticated, navigate, insightKey]);
+  }, [isAuthenticated, navigate, insightKey, reloadKey]);
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const recentRows = useMemo(() => buildRunInsightRows(runs, snapshot.bestVdot, unit, lang), [runs, snapshot.bestVdot, unit, lang]);
@@ -1514,7 +1517,14 @@ export default function AnalysisInsightDetail() {
     if (loadState === 'loading') return <PageSkeleton variant="analysis-insight" />;
     return (
       <div className="runner-shell-page runner-shell-page--loading" data-loading-state={loadState}>
-        <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
+        <div className={`runner-shell-loading${loadState === 'error' ? ' runner-shell-loading--failed' : ''}`} role={loadState === 'error' ? 'alert' : undefined}>
+          <p>{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</p>
+          {loadState === 'error' ? (
+            <button type="button" className="runner-shell-inline-btn is-primary" onClick={() => setReloadKey((key) => key + 1)}>
+              {t('analysis.stitch_load_retry')}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }

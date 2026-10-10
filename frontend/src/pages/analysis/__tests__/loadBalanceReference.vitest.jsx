@@ -31,12 +31,16 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-async function openPage() {
-  const result = render(<MemoryRouter initialEntries={['/analysis/load-balance']}><Routes>
+function renderPage() {
+  return render(<MemoryRouter initialEntries={['/analysis/load-balance']}><Routes>
     <Route path="/analysis/:insightKey" element={<AnalysisInsightDetail />} />
     <Route path="/today-run" element={<h1>Today's plan</h1>} />
     <Route path="/runs/:runId" element={<h1>Run detail</h1>} />
   </Routes></MemoryRouter>);
+}
+
+async function openPage() {
+  const result = renderPage();
   await screen.findByRole('heading', { level: 2, name: 'Acute vs. chronic load' });
   return result;
 }
@@ -81,4 +85,32 @@ it('shows unavailable load data without inventing a budget or baseline', async (
   expect(container.querySelector('.analysis-load-v2-ratio > strong')).toHaveTextContent('--');
   expect(container.querySelector('.analysis-load-v2-band')).not.toBeInTheDocument();
   expect(container.querySelector('.analysis-load-v2-metrics')).toHaveTextContent('Baseline forming');
+});
+
+// BUG-031: any one failed request replaced the whole page with a sentence and nothing to press.
+it('still shows the load numbers when only the profile request fails', async () => {
+  cachedApiJson.mockImplementation(async (url) => {
+    if (url === '/api/profile/me') throw new Error('Unavailable');
+    return activities;
+  });
+  const { container } = await openPage();
+  expect(container.querySelector('.analysis-load-v2-metrics')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it('says the runs could not be loaded, and loads them again when asked', async () => {
+  let failures = 1;
+  cachedApiJson.mockImplementation(async (url) => {
+    if (url === '/api/activities') {
+      if (failures-- > 0) throw new Error('Unavailable');
+      return activities;
+    }
+    return { displayName: 'Runner' };
+  });
+  renderPage();
+  expect(await screen.findByRole('alert')).toHaveTextContent('analysis.stitch_load_error');
+  expect(screen.queryByRole('heading', { level: 2, name: 'Acute vs. chronic load' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'analysis.stitch_load_retry' }));
+  await screen.findByRole('heading', { level: 2, name: 'Acute vs. chronic load' });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

@@ -613,6 +613,12 @@
   letter-spacing: 0.08em;
 }
 
+/* A message and a way to ask again: kept together in the middle, not one half of the screen each. */
+.runner-shell-loading--failed {
+  align-content: center;
+  gap: 1.25rem;
+}
+
 body.theme-midnight .runner-shell-loading,
 [data-theme="midnight"] .runner-shell-loading {
   color: rgba(243, 237, 232, 0.72);

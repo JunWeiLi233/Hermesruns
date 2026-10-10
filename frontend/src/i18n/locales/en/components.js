@@ -649,6 +649,7 @@ export default {
     "heat_status_day_4_9": "Adapting",
     "heat_status_day_10_14": "Adapted window",
     "stitch_load_error": "Unable to load analysis right now.",
+    "stitch_load_retry": "Try again",
     "stitch_vo2_kicker": "Aerobic signal",
     "stitch_vo2_title": "VO2max trend",
     "stitch_vo2_band": "90-day representative band",

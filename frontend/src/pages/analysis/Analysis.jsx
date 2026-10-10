@@ -440,15 +440,14 @@ export default function Analysis() {
             </section>
           ) : runsState === 'error' ? (
             <section className="analysis-overview-empty-shell">
-              <div className="premium-empty-state analysis-overview-empty-state">
+              <div className="premium-empty-state analysis-overview-empty-state" role="alert">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
-                <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
                 <div className="analysis-overview-empty-actions">
                   <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={loadAnalysisData}>
-                    {t('profile.retry_strava')}
+                    {t('analysis.stitch_load_retry')}
                   </button>
                 </div>
               </div>

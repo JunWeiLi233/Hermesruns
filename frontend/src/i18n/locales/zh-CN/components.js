@@ -649,6 +649,7 @@ export default {
     "heat_status_day_4_9": "适应进行中",
     "heat_status_day_10_14": "已进入适应窗口",
     "stitch_load_error": "分析暂时无法加载。",
+    "stitch_load_retry": "重试",
     "stitch_vo2_kicker": "有氧信号",
     "stitch_vo2_title": "VO2max 趋势",
     "stitch_vo2_band": "90 天代表趋势",
