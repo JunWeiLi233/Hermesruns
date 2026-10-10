@@ -591,6 +591,24 @@ describe('earlier weeks', () => {
 
     expect(button).toHaveFocus();
   });
+
+  it('does not move the keyboard later on account of a request that failed', async () => {
+    renderPage();
+    await ready();
+    respond = () => new Error('nope');
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.load_earlier') }));
+    await screen.findByRole('alert');
+
+    // Filtering brings in weeks older than the ones on screen were; the failed request must not claim the keyboard for them.
+    respond = () => older();
+    const chip = within(screen.getByRole('group', { name: t('training_log.filter_type') })).getByRole('button', { name: t('run_labels.type_RACE') });
+    await userEvent.click(chip);
+    await waitFor(() => expect(logCalls().at(-1)).toContain('runType=RACE'));
+    await screen.findByRole('link', { name: 'September jog' });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(chip).toHaveFocus();
+  });
 });
 
 describe('the metric the log looks at', () => {
