@@ -604,6 +604,72 @@ goals use it.
   against the target as it is now.
 - There are no suggested goals and no history of past periods beyond the one before.
 
+## Run Summary
+
+The run page has a **Run summary**: a headline that says what kind of run it was, and up to four lines that compare it with the
+runner's own recent runs, say how it was paced, how the heart rate behaved, how fresh the runner was going in and how hilly it
+was. It is made to be checked: every line is the result of a fixed rule over stated numbers, each can be opened to show those
+numbers and the rule (the thresholds are the ones in the code, sent with the line), and nothing is generated, guessed or called AI.
+A runner can hide the summary on one run, or on every run, and the setting is kept in the browser like the distance unit.
+
+`GET /api/activities/{id}/summary` answers `state: "ready"` with `findings`, or `state: "none"` with `reason: "too_short"` (under
+1 km or under 5 minutes moving), and 404 for a run that is not the caller's, not a run, or not there. The server sends findings,
+not sentences: each has an `id`, a `variant`, a `tone` (positive, neutral or caution: a colour, never a verdict), a `weight`, the
+`facts` it was worked out from (seconds per kilometre, kilometres, seconds, percent) and the `thresholds` of its rule. The browser
+words them in the runner's language and distance unit. Nothing is stored; the same run says the same until its numbers, or the
+runs around it, change.
+
+### The headline
+
+In this order of trust: what the runner labelled the run (**race**, **workout**: see "Run Type and Tags"), then whether the
+kilometre paces vary too much to call it one steady effort (**changes of pace**: the standard deviation over the mean of at least
+four full kilometres is above 10%, in grade-adjusted pace when the run had elevation), then the heart-rate zones (**hard** when
+zones 4 and 5 hold at least 30% of the time with heart rate, else **easy** when zones 1 and 2 hold at least 70%, else
+**moderate**; needs 10 minutes of heart rate), then the effort against the usual (**hard** at 1.25 times the usual or more,
+**easy** at 0.75 or less, else **moderate**), else it says it cannot tell. A run the runner called a workout is never called
+steady, and a run with changes of pace is not called easy because its heart rate was low on average.
+
+### The lines
+
+The most worth saying come first; a line that only says "as usual" is shown only to make up two lines when fewer than two say
+something more; at most four lines.
+
+| Line | Says | Rule | Needs |
+| --- | --- | --- | --- |
+| longest (3) | the longest run of the last 4 weeks | longer than every non-workout run in the 28 days before, and at least 5 km | 4 such runs |
+| effort (3 / 2 / 1) | higher, lower or typical against the usual effort; **hardest** when it is above all the runs it is compared with | the median Effort of the runner's earlier runs of the same kind in the 90 days before (for runs that are not workouts, also 70% to 140% of this run's distance); 1.25 times or more is higher, 0.75 or less lower; hardest needs 8 runs and more than all of them | 5 runs (workouts: 3 workouts of any length); not for a race |
+| drift (3 / 2 / 1) | how much more heart rate the second half took for the same pace | the existing efficiency drift of the run page: above 5% a slight rise, above 10% a high one, below that low | 20 minutes, a heart-rate stream; not for a workout |
+| shape (2 / 1) | the second half faster (**negative split**), slower (**faded**) or about the same (**even**) as the first | the mean pace of the second half of the full kilometres against the first (the middle one left out when odd), at least 2% apart; grade-adjusted pace when every kilometre has it, and the line says which | 4 full kilometres, not varying by 10% or more, not a workout |
+| pace (2 / 1) | faster, slower or about the same as the recent runs | this run's pace against total time over total distance of the runs of the last 30 days that are neither workouts nor races and are 70% to 140% of its distance; 3% or more apart is faster or slower | 3 such runs; not for a workout or a race |
+| form (2) | **fresh** or **tired** going in | fitness, fatigue and form at the end of the day before (see "Fitness, Fatigue and Form"): the same words as the fitness card, a swing of under 3 points says nothing | 14 days of effort before the run |
+| climb (2) | **hilly**, with the grade-adjusted pace when it is 5 s/km or more from the clock pace | 12 m of climb a kilometre or more | elevation |
+
+(The number in brackets is the weight. Hilly runs make raw paces differ, which is why the pacing line and the headline use the
+grade-adjusted pace when there is elevation.)
+
+### What it will not say
+
+- A race is not compared with training, and a workout gets no pace, pacing or heart-rate verdict; its effort is compared with the
+  runner's other workouts only.
+- A run whose kilometres vary by more than 10% gets no "even" or "faded", and is not called steady.
+- Nothing is said from fewer runs than the rule needs; with too little to compare with, the summary is the headline alone, or says
+  it cannot tell how hard the run was.
+- Nothing about health, injury or what to do tomorrow.
+
+### What is read
+
+One run, its stream once (the pace profile and the drift), one query of the runner's runs of the 90 days before (the same rows
+as the training log), the run's effort row, and, for the form, one read of the effort series. Only the runner's own runs.
+
+### Known limits
+
+- Runs are compared by length (70% to 140%) and kind only; terrain, weather and time of day are not taken into account, except
+  that the pacing line uses grade-adjusted pace.
+- Effort scores from different sources (heart-rate zones, a rating, pace) are compared as they are; see "Run Effort and Heart-Rate
+  Zones".
+- The usual effort and pace are those of the runs Hermes has; a runner who has just imported a long history sees summaries as
+  good as the history, and one with a short history sees fewer lines.
+
 ## Recovery Estimation
 
 ```
