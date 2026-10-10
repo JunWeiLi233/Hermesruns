@@ -17,7 +17,7 @@ assert.match(
 assert.match(
   dashboardSource,
   /preview=\{pendingCourseMapPreview\}[\s\S]*allowImageFallback=\{false\}/,
-  'Dashboard pending compare panel should not present an unaligned upload as if Hermes had already scanned a course map.',
+  'Dashboard pending compare panel should not present an unaligned upload as if HermesRuns had already scanned a course map.',
 );
 
 assert.match(

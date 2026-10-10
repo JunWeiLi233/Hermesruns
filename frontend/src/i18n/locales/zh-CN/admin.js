@@ -2,8 +2,8 @@
 // Edits should target the per-namespace block; the barrel at ./index.js merges all buckets.
 export default {
   "admin": {
-    "title": "Hermes | 管理员验证",
-    "brand": "HERMES 管理台",
+    "title": "HermesRuns | 管理员验证",
+    "brand": "HERMESRUNS 管理台",
     "subtitle": "系统管理员登录",
     "form_title": "管理员账号登录",
     "email_label": "管理员邮箱",
@@ -15,9 +15,9 @@ export default {
     "system_offline": "系统离线：无法连接到 Spring Boot。",
 
     "kinetic": {
-      "sidebar_brand": "HERMES",
+      "sidebar_brand": "HERMESRUNS",
       "sidebar_brand_sub": "管理控制台",
-      "topbar_brand": "HERMES",
+      "topbar_brand": "HERMESRUNS",
 
       "tab_overview": "总览",
       "tab_users": "运动员",
@@ -79,7 +79,7 @@ export default {
       "settings_theme_kicker": "外观",
       "settings_logout_title": "退出登录",
       "settings_logout_kicker": "会话",
-      "settings_logout_copy": "退出 Hermes 管理控制台。",
+      "settings_logout_copy": "退出 HermesRuns 管理控制台。",
       "settings_logout_btn": "退出登录"
     }
   },

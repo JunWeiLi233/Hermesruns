@@ -4,7 +4,7 @@ import { invalidateResourceCache } from '../api/resourceCache';
 import { getDeviceTimeZone, listTimeZones } from '../utils/timeZone';
 
 /**
- * The time zone Hermes uses to put a run on a calendar day. Until the runner picks one it is taken from
+ * The time zone HermesRuns uses to put a run on a calendar day. Until the runner picks one it is taken from
  * the device, once, and the row says so.
  */
 export default function SettingsTimeZoneRow({ t, timeZone, onSaved }) {

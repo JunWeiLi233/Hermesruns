@@ -48,7 +48,7 @@ export default {
     "heat": "热力"
   },
   "workflow": {
-    "title": "Hermes | 工作流编排",
+    "title": "HermesRuns | 工作流编排",
     "heading": "AI 工作流",
     "subtitle": "拖拽节点，构建自定义跑步分析流水线",
     "input_placeholder": "输入提示词或数据源...",

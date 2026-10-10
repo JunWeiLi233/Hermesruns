@@ -21,12 +21,12 @@ assert.match(
 );
 assert.match(
   zhSource,
-  /"course_maps_summary_tokyo_official_2026": "Hermes 根据东京马拉松 2026 官方分段计时地标绘制了这条赛道/,
+  /"course_maps_summary_tokyo_official_2026": "HermesRuns 根据东京马拉松 2026 官方分段计时地标绘制了这条赛道/,
   'Chinese locale should include the Tokyo course-map summary translation.',
 );
 assert.match(
   enSource,
-  /"course_maps_summary_tokyo_official_2026": "Hermes rendered this course from the official Tokyo Marathon 2026 passing-time landmarks/,
+  /"course_maps_summary_tokyo_official_2026": "HermesRuns rendered this course from the official Tokyo Marathon 2026 passing-time landmarks/,
   'English locale should preserve the canonical Tokyo course-map summary.',
 );
 assert.match(

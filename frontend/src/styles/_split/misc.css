@@ -3105,8 +3105,9 @@ button.runs-benchmark-reset:hover .runs-benchmark-reset__x {
   box-shadow: inset 0 -1px 0 rgba(72, 56, 48, 0.1);
 }
 
-.legal-page-header .hermes-logo--dark .hermes-logo__word {
-  color: var(--lp-ink);
+.legal-page-header .hermes-logo--light .hermes-logo__word {
+  color: #10203d;
+  --hermes-logo-accent: #a0392a;
 }
 
 .legal-page-hero--editorial,

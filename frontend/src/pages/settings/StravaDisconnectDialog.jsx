@@ -4,7 +4,7 @@ import Modal from '../../components/Modal';
 
 /**
  * Confirms a Strava disconnect before it happens. Disconnecting is not a toggle: Strava's rules for
- * connected apps require Hermes to delete the runs it synced from Strava, so the runner is told that
+ * connected apps require HermesRuns to delete the runs it synced from Strava, so the runner is told that
  * first. The confirmation look is shared with the Runs delete dialog.
  */
 export default function StravaDisconnectDialog({ t, isOpen, onClose, onDisconnected }) {

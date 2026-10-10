@@ -52,7 +52,7 @@ it('keeps the signup payload and shows one clear email-verification confirmation
   await mount();
   fill('TestOnly-Route!24');
   fireEvent.submit(document.querySelector('form'));
-  expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to Hermes' })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Welcome to HermesRuns' })).toBeVisible();
   expect(screen.getAllByText('Check your inbox to verify your email.')).toHaveLength(1);
   expect(apiFetch.mock.calls[0][0]).toBe('/api/auth/signup');
   expect(JSON.parse(apiFetch.mock.calls[0][1].body)).toMatchObject({ email: 'runner@example.com', password: 'TestOnly-Route!24' });

@@ -11,6 +11,7 @@ import {
 } from '../../utils/landingRaceShowcase.js';
 import AppIcon from '../../components/AppIcon';
 import HermesMarkSvg from '../../components/HermesMarkSvg';
+import HermesWordmarkSvg from '../../components/HermesWordmarkSvg';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import shoeRunMaster from '../../assets/generated/run-gait-v2/evo-sl-side-master.webp';
 import '../../styles/_split/landing.css';
@@ -426,30 +427,6 @@ function VdotSpark() {
   );
 }
 
-function CompareGlyph({ value, label }) {
-  const { t } = useI18n();
-  const status = t(value === true ? 'landing.studio_compare_yes' : value === 'partial' ? 'landing.studio_compare_partial' : 'landing.studio_compare_no');
-  if (value === true) {
-    return (
-      <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
-        <LandingGlyph name="check" className="landing-cinematic-compare-icon is-yes" />
-      </span>
-    );
-  }
-  if (value === 'partial') {
-    return (
-      <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
-        <LandingGlyph name="minus" className="landing-cinematic-compare-icon is-partial" />
-      </span>
-    );
-  }
-  return (
-    <span className="landing-cinematic-compare-cell" data-platform={label} role="img" aria-label={`${label}: ${status}`}>
-      <LandingGlyph name="close" className="landing-cinematic-compare-icon is-no" />
-    </span>
-  );
-}
-
 export default function Landing() {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
@@ -488,6 +465,7 @@ export default function Landing() {
   const navLinks = [
     ['#features', t('landing.minimal_nav_features')],
     ['#races', t('landing.cinematic_nav_races')],
+    ['#pricing', t('landing.studio_nav_pricing')],
   ];
 
 
@@ -529,15 +507,40 @@ export default function Landing() {
 
   }, [raceCountdownNow, t]);
 
-  const compareRows = [
-    { feature: t('landing.cinematic_compare_decision'), note: t('landing.cinematic_compare_decision_note'), hermes: true, strava: 'partial', runna: 'partial' },
-    { feature: t('landing.cinematic_compare_race_plan'), note: t('landing.cinematic_compare_race_plan_note'), hermes: 'partial', strava: 'partial', runna: true },
-    { feature: t('landing.cinematic_compare_formula'), note: t('landing.cinematic_compare_formula_note'), hermes: true, strava: false, runna: false },
-    { feature: t('landing.cinematic_compare_sync'), note: t('landing.cinematic_compare_sync_note'), hermes: true, strava: true, runna: 'partial' },
-    { feature: t('landing.cinematic_compare_acwr'), note: t('landing.cinematic_compare_acwr_note'), hermes: true, strava: 'partial', runna: 'partial' },
-    { feature: t('landing.cinematic_compare_shoes'), note: t('landing.cinematic_compare_shoes_note'), hermes: true, strava: 'partial', runna: false },
-    { feature: t('landing.cinematic_compare_local'), note: t('landing.cinematic_compare_local_note'), hermes: true, strava: false, runna: false },
-    { feature: t('landing.cinematic_compare_noise'), note: t('landing.cinematic_compare_noise_note'), hermes: true, strava: false, runna: true },
+  // The page's argument, in order: what runners are tired of, how it works, what is different
+  // (each row a fix, before the feature tour), pricing and questions. No app is named or rated.
+  const problems = [
+    { title: t('landing.studio_problem_paywall_title'), copy: t('landing.studio_problem_paywall_copy') },
+    { title: t('landing.studio_problem_unchecked_title'), copy: t('landing.studio_problem_unchecked_copy') },
+  ];
+  const steps = [
+    { title: t('landing.studio_step_bring_title'), copy: t('landing.studio_step_bring_copy') },
+    { title: t('landing.studio_step_call_title'), copy: t('landing.studio_step_call_copy') },
+    { title: t('landing.studio_step_working_title'), copy: t('landing.studio_step_working_copy') },
+  ];
+  const fixes = [
+    { title: t('landing.studio_fix_free_title'), copy: t('landing.studio_fix_free_copy') },
+    { title: t('landing.studio_fix_formula_title'), copy: t('landing.studio_fix_formula_copy') },
+    { title: t('landing.studio_fix_rules_title'), copy: t('landing.studio_fix_rules_copy') },
+    { title: t('landing.studio_fix_data_title'), copy: t('landing.studio_fix_data_copy') },
+    { title: t('landing.studio_fix_feed_title'), copy: t('landing.studio_fix_feed_copy') },
+  ];
+  const pricingRows = [
+    { label: t('landing.studio_pricing_row_analysis'), runner: t('landing.studio_pricing_yes'), supporter: t('landing.studio_pricing_yes') },
+    { label: t('landing.studio_pricing_row_sources'), runner: t('landing.studio_pricing_yes'), supporter: t('landing.studio_pricing_yes') },
+    { label: t('landing.studio_pricing_row_data'), runner: t('landing.studio_pricing_always'), supporter: t('landing.studio_pricing_always') },
+    { label: t('landing.studio_pricing_row_scans'), runner: t('landing.studio_pricing_runner_scans'), supporter: t('landing.studio_pricing_supporter_scans') },
+    { label: t('landing.studio_pricing_row_renew'), runner: t('landing.studio_pricing_runner_renew'), supporter: t('landing.studio_pricing_supporter_renew') },
+  ];
+  const supporterStatus = t('landing.studio_pricing_supporter_status');
+  const faqs = [
+    { q: t('landing.studio_faq_free_q'), a: t('landing.studio_faq_free_a') },
+    { q: t('landing.studio_faq_import_q'), a: t('landing.studio_faq_import_a') },
+    { q: t('landing.studio_faq_ai_q'), a: t('landing.studio_faq_ai_a') },
+    { q: t('landing.studio_faq_check_q'), a: t('landing.studio_faq_check_a') },
+    { q: t('landing.studio_faq_leave_q'), a: t('landing.studio_faq_leave_a') },
+    { q: t('landing.studio_faq_runout_q'), a: t('landing.studio_faq_runout_a') },
+    { q: t('landing.studio_faq_who_q'), a: t('landing.studio_faq_who_a') },
   ];
 
   const footerUtilityLinks = [
@@ -556,7 +559,7 @@ export default function Landing() {
             <span className="landing-cinematic-brand-glyph" aria-hidden="true">
               <LandingGlyph name="logo" />
             </span>
-            <span>HERMES</span>
+            <HermesWordmarkSvg className="landing-cinematic-brand-word" />
           </Link>
 
           <nav className="landing-cinematic-links" aria-label={t('landing.cinematic_nav_label')}>
@@ -601,8 +604,56 @@ export default function Landing() {
           <PageWidth><p id="landing-sources-label">{t('landing.studio_sources_label')}</p><div><strong>STRAVA</strong><strong>GARMIN</strong><strong>COROS</strong><span>FIT · GPX · TCX</span></div></PageWidth>
         </section>
 
+        {/* ── 2. The problem ── */}
+        <section id="problem" className="landing-studio-problem" aria-labelledby="landing-problem-title">
+          <PageWidth>
+            <div className="landing-studio-section-intro"><h2 id="landing-problem-title">{t('landing.studio_problem_title')}</h2></div>
+            <div className="landing-studio-problem-grid">
+              {problems.map(({ title, copy }) => (
+                <article key={title} className="landing-studio-problem-card">
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                </article>
+              ))}
+            </div>
+          </PageWidth>
+        </section>
+
+        {/* ── 3. How it works ── */}
+        <section id="how-it-works" className="landing-studio-steps" aria-labelledby="landing-steps-title">
+          <PageWidth>
+            <div className="landing-studio-section-intro"><h2 id="landing-steps-title">{t('landing.studio_steps_title')}</h2></div>
+            <ol className="landing-studio-steps-list">
+              {steps.map(({ title, copy }, index) => (
+                <li key={title}>
+                  <span className="landing-studio-step-number" aria-hidden="true">{index + 1}</span>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                </li>
+              ))}
+            </ol>
+          </PageWidth>
+        </section>
+
+        {/* ── 4. What is different: the fixes first, then the feature tour ── */}
+        <section id="features" className="landing-studio-fixes" aria-labelledby="landing-fixes-title">
+          <PageWidth>
+            <div className="landing-studio-section-intro"><h2 id="landing-fixes-title">{t('landing.studio_fixes_title')}</h2><p>{t('landing.studio_fixes_copy')}</p></div>
+            <div className="landing-cinematic-compare-table is-single">
+              {fixes.map(({ title, copy }) => (
+                <div key={title} className="landing-cinematic-compare-row">
+                  <span className="landing-cinematic-compare-feature">
+                    <strong>{title}</strong>
+                    <small>{copy}</small>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </PageWidth>
+        </section>
+
         {/* One feature at a time. */}
-        <section id="features" className="landing-command-deck">
+        <section id="tour" className="landing-command-deck">
           <PageWidth className="landing-command-deck-grid">
             <div className="landing-studio-section-intro"><h2>{t('landing.minimal_features_title')}</h2><p>{t('landing.studio_features_copy')}</p></div>
             <LandingFeatureOverview trend={<VdotSpark />} shoeSrc={shoeRunMaster} />
@@ -625,32 +676,57 @@ export default function Landing() {
           </PageWidth>
         </section>
 
-        {/* ── 8. Comparison ── */}
-        <section id="compare" className="landing-cinematic-compare">
+        {/* ── 5. Pricing ── */}
+        <section id="pricing" className="landing-studio-pricing" aria-labelledby="landing-pricing-title">
           <PageWidth>
-            <details className="landing-minimal-disclosure landing-minimal-comparison">
-              <summary><span>{t('landing.minimal_compare')}<small>Hermes · {t('landing.cinematic_compare_social')} · {t('landing.cinematic_compare_device')}</small></span><LandingGlyph name="chevron" /></summary>
+            <div className="landing-studio-section-intro"><h2 id="landing-pricing-title">{t('landing.studio_pricing_title')}</h2><p>{t('landing.studio_pricing_copy')}</p></div>
+            <div className="landing-studio-pricing-scroll">
+              <table className="landing-studio-pricing-table">
+                <thead>
+                  <tr>
+                    <td />
+                    <th scope="col">
+                      <strong>{t('landing.studio_pricing_runner_name')}</strong>
+                      <small>{t('landing.studio_pricing_runner_for')}</small>
+                      <span className="landing-studio-price">{t('landing.studio_pricing_runner_price')}</span>
+                    </th>
+                    <th scope="col">
+                      <strong>{t('landing.studio_pricing_supporter_name')}</strong>
+                      <small>{t('landing.studio_pricing_supporter_for')}</small>
+                      <span className="landing-studio-price">{t('landing.studio_pricing_supporter_price')}</span>
+                      {supporterStatus ? <em className="landing-studio-price-status">{supporterStatus}</em> : null}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricingRows.map(({ label, runner, supporter }) => (
+                    <tr key={label}>
+                      <th scope="row">{label}</th>
+                      <td>{runner}</td>
+                      <td>{supporter}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="landing-cinematic-hero-actions">
+              <Link to="/signup" className="landing-cinematic-btn landing-cinematic-btn--primary">{t('landing.studio_get_started')}<LandingGlyph name="arrow" /></Link>
+            </div>
+          </PageWidth>
+        </section>
 
-              <div className="landing-cinematic-compare-table">
-                <div className="landing-cinematic-compare-row is-head">
-                  <span />
-                  <strong>Hermes</strong>
-                  <span>{t('landing.cinematic_compare_social')}</span>
-                  <span>{t('landing.cinematic_compare_device')}</span>
-                </div>
-                {compareRows.map(({ feature, note, hermes, strava, runna }) => (
-                  <div key={feature} className="landing-cinematic-compare-row">
-                    <span className="landing-cinematic-compare-feature">
-                      <strong>{feature}</strong>
-                      <small>{note}</small>
-                    </span>
-                    <CompareGlyph value={hermes} label="Hermes" />
-                    <CompareGlyph value={strava} label={t('landing.cinematic_compare_social')} />
-                    <CompareGlyph value={runna} label={t('landing.cinematic_compare_device')} />
-                  </div>
-                ))}
-              </div>
-            </details>
+        {/* ── 6. Questions ── */}
+        <section id="faq" className="landing-studio-faq" aria-labelledby="landing-faq-title">
+          <PageWidth>
+            <div className="landing-studio-section-intro"><h2 id="landing-faq-title">{t('landing.studio_faq_title')}</h2></div>
+            <div className="landing-studio-faq-list">
+              {faqs.map(({ q, a }) => (
+                <details key={q} className="landing-studio-faq-item">
+                  <summary>{q}<LandingGlyph name="chevron" /></summary>
+                  <p>{a}</p>
+                </details>
+              ))}
+            </div>
           </PageWidth>
         </section>
 
@@ -679,7 +755,7 @@ export default function Landing() {
       <footer className="landing-cinematic-footer">
         <PageWidth className="landing-cinematic-footer-inner">
           <div className="landing-cinematic-footer-brand">
-            <strong>HERMES</strong>
+            <HermesWordmarkSvg className="landing-cinematic-footer-word" />
             <span>{t('landing.footer')}</span>
           </div>
           <div className="landing-cinematic-footer-links">

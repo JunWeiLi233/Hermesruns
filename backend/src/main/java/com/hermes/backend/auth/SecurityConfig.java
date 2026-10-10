@@ -110,6 +110,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/index.html", "/assets/**",
                                 "/favicon.ico", "/favicon.svg", "/hermes-tab-icon.svg", "/icons.svg",
+                                "/apple-touch-icon.png", "/og-image.png",
                                 "/robots.txt", "/sitemap.xml", "/llms.txt",
                                 "/images/**",
                                 "/error"

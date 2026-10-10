@@ -272,7 +272,7 @@ function tonePalette(tone) {
 function coachSystemCopy(lang) {
   if (lang === 'zh-CN') {
     return {
-      kicker: 'Hermes Coach System',
+      kicker: 'HermesRuns Coach System',
       readinessLabel: '训练准备度',
       readinessDescriptions: {
         protect: '先降压，把频率守住，再把身体带回稳定轨道。',
@@ -302,7 +302,7 @@ function coachSystemCopy(lang) {
       phaseTitle: '训练推进阶段',
       phases: ['稳定', '建设', '兑现'],
       scheduleTitle: '下一组训练动作',
-      scheduleCopy: '这不是固定模板，而是 Hermes 根据最近表现给出的当前最优排法。',
+      scheduleCopy: '这不是固定模板，而是 HermesRuns 根据最近表现给出的当前最优排法。',
       reasonsTitle: '系统为什么这样排',
       reasonsIntro: '每一条建议都来自最近训练数据，而不是静态模板。',
       evidenceTitle: '最近训练证据',
@@ -363,7 +363,7 @@ function coachSystemCopy(lang) {
   }
 
   return {
-    kicker: 'Hermes Coach System',
+    kicker: 'HermesRuns Coach System',
     readinessLabel: 'Readiness',
     readinessDescriptions: {
       protect: 'Lower the strain first, keep frequency alive, then rebuild from a safer base.',
@@ -387,14 +387,14 @@ function coachSystemCopy(lang) {
       build: 'A steady build sequence that turns recent performance into a more reliable training rhythm.',
     },
     blockTitle: 'Current coach system',
-    blockCopy: 'Hermes is reordering your next training block from recent performance, training load, injury signals, and marathon trend instead of showing another generic analytics stack.',
+    blockCopy: 'HermesRuns is reordering your next training block from recent performance, training load, injury signals, and marathon trend instead of showing another generic analytics stack.',
     focusTitle: 'What the system is optimizing',
     focusCopy: 'The first screen answers what to do today, what the next key workout should be, and what needs protecting this week.',
     phaseTitle: 'Block progression',
     phases: ['Stabilize', 'Build', 'Sharpen'],
     scheduleTitle: 'Next training moves',
     scheduleCopy: 'This is an adaptive microcycle built from your latest data, not a fixed template.',
-    reasonsTitle: 'Why Hermes is steering this way',
+    reasonsTitle: 'Why HermesRuns is steering this way',
     reasonsIntro: 'Each recommendation is tied to recent evidence, not a static plan.',
     evidenceTitle: 'Recent proof',
     evidenceIntro: 'These sessions are currently driving the coach system.',
@@ -447,9 +447,9 @@ function coachSystemCopy(lang) {
       load: (value, zone) => `Load ratio is ${value} and your stack is currently ${zone}, so the order of sessions needs to respect absorption before ambition.`,
       intensity: (value) => `Hard work makes up ${value}% of recent training, which is driving how much the system pulls you back toward aerobic control.`,
       injury: (label, cadence, drift) => `Injury signal is ${label}, with cadence at ${cadence} and drift at ${drift}, so recovery and quality are being rebalanced around durability.`,
-      forecast: (forecast, delta) => `Your marathon forecast sits at ${forecast} and is ${delta}, which tells Hermes whether this block should build or sharpen.`,
+      forecast: (forecast, delta) => `Your marathon forecast sits at ${forecast} and is ${delta}, which tells HermesRuns whether this block should build or sharpen.`,
     },
-    emptyRuns: 'Not enough recent training yet. Start with one easy run and Hermes will begin shaping the plan.',
+    emptyRuns: 'Not enough recent training yet. Start with one easy run and HermesRuns will begin shaping the plan.',
   };
 }
 
@@ -1487,7 +1487,7 @@ export default function AnalysisInsightDetail() {
 
   useEffect(() => {
     if (typeof document === 'undefined' || !detail) return;
-    document.title = `Hermes | ${detail.title}`;
+    document.title = `HermesRuns | ${detail.title}`;
   }, [detail]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();

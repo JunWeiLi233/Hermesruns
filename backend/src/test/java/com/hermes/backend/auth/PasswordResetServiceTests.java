@@ -63,7 +63,7 @@ class PasswordResetServiceTests {
         TransactionalMailMessage message = sentMessage(sender);
         String plainToken = tokenFrom(message.text());
         String link = "https://hermesruns.com/reset-password?token=" + plainToken;
-        assertThat(message.subject()).isEqualTo("Reset your Hermes password");
+        assertThat(message.subject()).isEqualTo("Reset your HermesRuns password");
         assertThat(message.text()).contains(link);
         assertThat(message.html()).contains(link);
         assertThat(message.html()).doesNotContain(runner.getEmail());

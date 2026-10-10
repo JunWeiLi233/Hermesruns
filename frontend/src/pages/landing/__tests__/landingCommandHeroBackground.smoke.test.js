@@ -13,19 +13,19 @@ const heroAssetPath = path.join(here, "../../../assets/generated/landing-command
 assert.match(
   landingSource,
   /import HermesMarkSvg from '\.\.\/\.\.\/components\/HermesMarkSvg';/,
-  'Landing should use the shared Hermes mark component for the brand glyph.',
+  'Landing should use the shared HermesRuns mark component for the brand glyph.',
 );
 
 assert.match(
   landingSource,
   /name === 'logo'[\s\S]*<HermesMarkSvg tone="light" className=\{`\$\{classNames\} landing-cinematic-glyph--logo`\} \/>/,
-  'LandingGlyph should support rendering the Hermes logo mark with the landing-cinematic-glyph class and logo-safe modifier.',
+  'LandingGlyph should support rendering the HermesRuns logo mark with the landing-cinematic-glyph class and logo-safe modifier.',
 );
 
 assert.match(
   landingSource,
   /landing-cinematic-brand-glyph" aria-hidden="true"[\s\S]{0,180}<LandingGlyph name="logo" \/>/,
-  'Landing brand glyph should render the Hermes logo mark.',
+  'Landing brand glyph should render the HermesRuns logo mark.',
 );
 
 assert.doesNotMatch(
@@ -131,13 +131,13 @@ assert.match(
 assert.match(
   styleSource,
   /\.landing-cinematic-glyph--logo\s*\{[\s\S]*stroke:\s*none/,
-  'Landing Hermes logo should disable the generic red stroked glyph treatment.',
+  'Landing HermesRuns logo should disable the generic red stroked glyph treatment.',
 );
 
 assert.match(
   styleSource,
   /\.landing-cinematic-glyph--logo \*:not\(\[stroke\]\)\s*\{[\s\S]*stroke:\s*none/,
-  'Landing Hermes logo filled child paths/rects should not inherit the generic red glyph stroke.',
+  'Landing HermesRuns logo filled child paths/rects should not inherit the generic red glyph stroke.',
 );
 
 assert.match(

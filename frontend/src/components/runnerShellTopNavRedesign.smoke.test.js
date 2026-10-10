@@ -28,11 +28,11 @@ assert(
   !/runner-shell-topnav-shortcuts/.test(componentSource)
     && !/runner-shell-topnav-shortcut/.test(componentSource)
     && !/runner-shell-topnav-brand/.test(componentSource)
-    && !/>\s*HERMES\s*</.test(componentSource)
+    && !/>\s*HERMESRUNS\s*</.test(componentSource)
     && !/aria-current=/.test(componentSource)
     && !/runner-shell-topnav-shortcuts/.test(styleSource)
     && !/runner-shell-topnav-shortcut/.test(styleSource),
-  'RunnerShellTopNav should not render the removed route shortcut strip or HERMES brand pill.',
+  'RunnerShellTopNav should not render the removed route shortcut strip or HERMESRUNS brand pill.',
 );
 
 assert(
@@ -43,7 +43,7 @@ assert(
     && /\.runner-shell-topnav-identity\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\);/.test(profileStyleSource)
     && !/\.runner-shell-topnav-identity\s*\{[\s\S]*grid-template-columns:\s*auto\s+minmax\(0,\s*1fr\);/.test(profileStyleSource)
     && !/\.runner-shell-topnav-brand\s*\{/.test(runnerShellStyleSource),
-  'The shared runner topnav should keep localized page labels inside a single compact identity column after removing the HERMES brand pill.',
+  'The shared runner topnav should keep localized page labels inside a single compact identity column after removing the HERMESRUNS brand pill.',
 );
 
 assert(

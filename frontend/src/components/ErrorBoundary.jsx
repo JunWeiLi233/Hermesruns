@@ -25,7 +25,7 @@ class ErrorBoundaryInner extends React.Component {
     return (
       <main className="app-error-boundary" role="alert">
         <section className="app-error-boundary__panel">
-          <p className="app-error-boundary__eyebrow">HERMES</p>
+          <p className="app-error-boundary__eyebrow">HERMESRUNS</p>
           <h1>{title}</h1>
           <p>{body}</p>
           <button type="button" onClick={() => window.location.reload()}>

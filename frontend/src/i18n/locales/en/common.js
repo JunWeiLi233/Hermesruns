@@ -48,7 +48,7 @@ export default {
     "heat": "Heat"
   },
   "workflow": {
-    "title": "Hermes | Workflow Builder",
+    "title": "HermesRuns | Workflow Builder",
     "heading": "AI Workflows",
     "subtitle": "Drag nodes to build custom running analysis pipelines",
     "input_placeholder": "Enter prompt or data source...",
