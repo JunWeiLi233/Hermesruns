@@ -100,6 +100,28 @@ export async function contextFor(browser: Browser, who: 'a' | 'b' | 'c', baseURL
   return context;
 }
 
+/** A browser context signed in as any runner you hold a token for (one made with `newRunner`, say). */
+export async function contextWith(browser: Browser, who: { token: string; email: string }, baseURL: string, guard?: Guard): Promise<BrowserContext> {
+  const context = await browser.newContext({
+    baseURL,
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: baseURL,
+          localStorage: [
+            { name: 'hermes_jwt', value: who.token },
+            { name: 'hermes_email', value: who.email },
+          ],
+        },
+      ],
+    },
+  });
+  await prepareContext(context, baseURL);
+  guard?.watch(context);
+  return context;
+}
+
 /** Opens the seeded run and waits for the run page to draw its cards. */
 export async function openRun(page: Page, key: string): Promise<number> {
   const id = readSeed().ids[key];
