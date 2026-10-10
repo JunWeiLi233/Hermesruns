@@ -21,6 +21,8 @@ import { buildRunDetailPath } from '../../utils/runRoute';
 import { resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
 import { buildLoadBalanceBudget, getLoadBalanceWeekStats, getLoadBalanceRecentRuns, getLoadBalanceZoneKey, getLoadContribution } from './loadBalancePresentation';
 import CoachLoadChart from './CoachLoadChart';
+import FitnessFormSection from './FitnessFormSection';
+import WeeklyEffortSection from './WeeklyEffortSection';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -2106,6 +2108,9 @@ export default function AnalysisInsightDetail() {
                   </article>
                 ))}
               </section>
+
+              <FitnessFormSection />
+              <WeeklyEffortSection />
 
               <section className="analysis-load-v2-drivers">
                 <div className="analysis-load-v2-head">
