@@ -10,7 +10,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -194,7 +193,7 @@ public class TrainingLogService {
         List<Long> candidates = new ArrayList<>();
         for (TrainingLogRepository.OlderRunRow row : earlier) {
             if ((runType == null || runType.equals(row.getRunType()))
-                    && dayOf(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone).isBefore(from)) {
+                    && ActivityLocalDates.placed(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone).isBefore(from)) {
                 candidates.add(row.getId());
             }
         }
@@ -219,23 +218,9 @@ public class TrainingLogService {
         return RunTypes.ALL.stream().filter(used::contains).toList();
     }
 
-    private static LocalDate dayOf(TrainingLogRepository.LogRunRow row, ZoneId zone) {
-        return dayOf(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone);
-    }
-
     /** The runner's day for a run: the one its effort row says, else worked out the way {@link ActivityLocalDates} does. */
-    private static LocalDate dayOf(LocalDate filedUnder, LocalDateTime start, LocalDateTime createdAt, Boolean stravaApiSourced,
-                                   ZoneId zone) {
-        if (filedUnder != null) {
-            return filedUnder;
-        }
-        if (start == null) {
-            return createdAt == null ? LocalDate.now() : createdAt.toLocalDate();
-        }
-        if (Boolean.TRUE.equals(stravaApiSourced)) {
-            return start.toLocalDate();
-        }
-        return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDate();
+    private static LocalDate dayOf(TrainingLogRepository.LogRunRow row, ZoneId zone) {
+        return ActivityLocalDates.placed(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone);
     }
 
     private static LogRun toRun(TrainingLogRepository.LogRunRow row, List<String> runTags) {

@@ -6,6 +6,9 @@ import com.hermes.backend.activity.ActivityBestEffort;
 import com.hermes.backend.activity.ActivityBestEffortRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityTagRepository;
+import com.hermes.backend.goals.Goal;
+import com.hermes.backend.goals.GoalMetrics;
+import com.hermes.backend.goals.GoalRepository;
 import com.hermes.backend.races.RaceEvent;
 import com.hermes.backend.races.RaceEventRepository;
 import com.hermes.backend.shoes.Shoe;
@@ -47,6 +50,7 @@ public class AccountExportService {
     private final ActivityTagRepository tags;
     private final ShoeRepository shoes;
     private final RaceEventRepository races;
+    private final GoalRepository goals;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -57,6 +61,7 @@ public class AccountExportService {
                                 ActivityTagRepository tags,
                                 ShoeRepository shoes,
                                 RaceEventRepository races,
+                                GoalRepository goals,
                                 JdbcTemplate jdbc,
                                 ObjectMapper objectMapper) {
         this.activities = activities;
@@ -64,6 +69,7 @@ public class AccountExportService {
         this.tags = tags;
         this.shoes = shoes;
         this.races = races;
+        this.goals = goals;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
     }
@@ -98,6 +104,7 @@ public class AccountExportService {
         entry(zip, "best-efforts.csv", bestEffortsCsv(bestEfforts.findAllForRunner(runner.getId())));
         entry(zip, "shoes.csv", shoesCsv(shoes.findByRunnerOrderByCreatedAtDesc(runner)));
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
+        entry(zip, "goals.csv", goalsCsv(goals.findByRunnerIdOrderByIdAsc(runner.getId())));
 
         if (includeTracks) {
             for (Activity run : runs) {
@@ -135,6 +142,8 @@ public class AccountExportService {
                               you typed in and the efforts you hid.
                 shoes.csv     Your shoes.
                 races.csv     Your saved races.
+                goals.csv     Your goals: the period and the metric, the target in the unit named in the file
+                              (km, s for seconds of moving time, runs, m), and when you set it.
                 """ + (includeTracks
                 ? "tracks/      One GPX file per run that has a GPS track.\n"
                 : "tracks/      Not included. Ask for them with ?tracks=true.\n") + """
@@ -227,6 +236,17 @@ public class AccountExportService {
                     text(race.getName()), text(race.getOrganization()), text(race.getLocation()),
                     value(race.getEventDate()), value(race.getDistanceKm()), value(race.getRegistrationStatus()),
                     value(race.getGoalTimeSeconds()), text(race.getNotes())
+            ));
+        }
+        return csv.toString();
+    }
+
+    private static String goalsCsv(List<Goal> goals) {
+        StringBuilder csv = new StringBuilder("period,metric,target,unit,created_at,updated_at\n");
+        for (Goal goal : goals) {
+            csv.append(row(
+                    goal.getPeriod(), goal.getMetric(), value(goal.getTarget()), GoalMetrics.unit(goal.getMetric()),
+                    value(goal.getCreatedAt()), value(goal.getUpdatedAt())
             ));
         }
         return csv.toString();

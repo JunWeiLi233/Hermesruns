@@ -7,6 +7,8 @@ import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.BestEffortService;
 import com.hermes.backend.activity.RunLabelService;
+import com.hermes.backend.goals.Goal;
+import com.hermes.backend.goals.GoalRepository;
 import com.hermes.backend.activity.RunRecordsCoordinator;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.races.RaceEvent;
@@ -48,6 +50,7 @@ class AccountExportIntegrationTests {
     @Autowired private RunRecordsCoordinator recordsCoordinator;
     @Autowired private BestEffortService bestEfforts;
     @Autowired private RunLabelService labels;
+    @Autowired private GoalRepository goalRows;
 
     private Runner runner() {
         Runner runner = new Runner("export-" + UUID.randomUUID() + "@hermes.test", "active");
@@ -213,6 +216,24 @@ class AccountExportIntegrationTests {
         assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,");
         assertThat(csv).doesNotContain("secret plan").doesNotContain("WORKOUT");
         assertThat(files.get("README.txt")).contains("run_type").contains("tags");
+    }
+
+    @Test
+    void exportsTheGoalsTheRunnerSetWithTheirUnitsAndNobodyElses() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        goalRows.saveAndFlush(new Goal(owner, "WEEK", "DISTANCE", 42.2));
+        goalRows.saveAndFlush(new Goal(owner, "YEAR", "TIME", 360000));
+        goalRows.saveAndFlush(new Goal(stranger, "MONTH", "COUNT", 99));
+
+        Map<String, String> files = export(owner, false);
+
+        String csv = files.get("goals.csv");
+        assertThat(csv).startsWith("period,metric,target,unit,created_at,updated_at\n");
+        assertThat(csv.lines().skip(1).toList()).hasSize(2);
+        assertThat(csv).contains("WEEK,DISTANCE,42.2,km,").contains("YEAR,TIME,360000.0,s,");
+        assertThat(csv).doesNotContain("COUNT").doesNotContain("99");
+        assertThat(files.get("README.txt")).contains("goals.csv");
     }
 
     @Test

@@ -527,6 +527,57 @@ morning is on Monday whichever clock it was recorded on.
 - A run that has not been analysed has no effort and adds none to its week; the page shows it without one.
 - The log lists runs only (as the rest of the analysis does); cross-training, strength and walking are not in it.
 
+## Goals
+
+A runner can set a **goal** for a week, a month or a year: so many kilometres, so much time, so many runs or so much climb.
+Progress is never stored. It is added up from the runner's runs each time a goal is read, on the runner's own calendar (see
+"The runner's day"), so it follows a run that is imported, deleted or moved to another day without anything to keep in step.
+
+### What a goal is
+
+| | |
+| --- | --- |
+| Period | `WEEK` (Monday to Sunday, as everywhere in the analysis), `MONTH` (a calendar month) or `YEAR` (a calendar year) |
+| Metric | `DISTANCE` (km), `TIME` (seconds of moving time), `COUNT` (runs), `ELEVATION` (metres of climb) |
+| Target | in the metric's own unit; distance is kept to 10 m, the rest to a whole number; more than zero and at most 100,000 km, a year of seconds, 10,000 runs or 1,000,000 m |
+
+A runner has **at most one goal for each period and metric**: a weekly distance goal and a weekly runs goal can sit side by
+side; a second weekly distance goal is refused (409) with "change its target instead". The period and the metric of a goal do
+not change; to move a goal to another period or metric, delete it and set a new one. Only runs count (Hermes analyses runs
+only). A run's day is the day its effort row is filed under when it has one, else the day worked out as in "The runner's day".
+
+### What is worked out
+
+For the period the runner's today is in:
+
+- **progress**: the sum of the metric over the runs from the first day of the period to today, today included; **remaining**
+  is the target minus that, nothing once the goal is reached; **percent** is progress over target, rounded down (so 59.99 of
+  60 is 99, not 100), over 100 once it is passed.
+- **days left** counts today (1 on the last day), and **needed per day** is remaining over days left. It is not given once the
+  goal is reached.
+- **expected by now** is `target x days gone / days in the period`, where the days gone are the full days before today. A
+  weekly goal of 70 km on a Wednesday expects 20 km by the start of the day. **Done by now** is what the runner had done on
+  those days. **Status** compares them: `ahead` when done is at least a tenth over expected, `on_track` within a tenth under,
+  `behind` below that, `reached` once the goal is met, and `early` on the first day of a period (no full day has passed, so there
+  is nothing to judge). Today's run is not held against the runner (the day is not over) and does not count towards "ahead".
+  The tenth is Hermes' own convention, not a measurement, and is said so on the card.
+- **previous** is the period before this one, added up the same way, with whether it would have reached today's target.
+- **this run**: `GET /api/goals?runId=` adds to each goal what that run contributes, when it is in the period being judged now
+  (a run from last week adds nothing to this week's goal). A run that is not the runner's, or does not exist, is ignored.
+
+One query reads the runner's runs from the start of the period before the oldest period any goal needs to today (a year goal
+reads two years), so a request costs the same however many goals there are, and each metric is added up once however many
+goals use it.
+
+### Known limits
+
+- Goals are for runs. A walk, a ride or a strength session adds nothing.
+- A goal is judged from the day the period began, including runs from before the goal was set (a goal set on Thursday counts
+  Monday's run).
+- Nothing is said when a period ends: the next read is simply about the next period, and "previous" is how the one before went,
+  against the target as it is now.
+- There are no suggested goals and no history of past periods beyond the one before.
+
 ## Recovery Estimation
 
 ```
