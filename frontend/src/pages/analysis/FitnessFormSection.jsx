@@ -46,7 +46,7 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
 
   const selected = selectedIndex == null ? null : geometry.entries[Math.min(selectedIndex, lastIndex)];
   const shownEntry = selected ?? geometry.entries[lastRealIndex];
-  const valueText = (entry) => `${formatShortDate(entry.date, lang)}, ${t('training_series.line_fitness')} ${oneDecimal(formatNumber, entry.fitness)}, ${t('training_series.line_fatigue')} ${oneDecimal(formatNumber, entry.fatigue)}, ${t('training_series.line_form')} ${formatChange(entry.form)}`;
+  const valueText = (entry) => `${formatShortDate(entry.date, lang)}, ${t('training_series.line_fitness')} ${oneDecimal(formatNumber, entry.fitness)}, ${t('training_series.line_fatigue')} ${oneDecimal(formatNumber, entry.fatigue)}, ${t('training_series.line_form')} ${formatChange(entry.form)}${entry.race ? `, ${t('training_series.race_day')}` : ''}`;
 
   const bottom = geometry.withForm ? geometry.formBottom : geometry.mainBottom;
   const aboveId = `${clipId}-above`;
@@ -86,6 +86,14 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
               <text x={geometry.projectionStartX - 6} y={geometry.mainTop + 10} textAnchor="end" className="analysis-fit-v2-today-label">{t('training_series.today')}</text>
             </g>
           ) : null}
+
+          {geometry.raceMarks.map((mark) => (
+            <g key={mark.date} className="analysis-fit-v2-race">
+              <line x1={mark.x} x2={mark.x} y1={geometry.mainTop} y2={bottom} className="analysis-fit-v2-race-line" />
+              <line x1={mark.x} x2={mark.x} y1={geometry.mainTop} y2={geometry.mainTop + 18} className="analysis-fit-v2-race-pole" />
+              <path d={`M${mark.x},${geometry.mainTop} L${mark.x + 10},${geometry.mainTop + 4.5} L${mark.x},${geometry.mainTop + 9} Z`} className="analysis-fit-v2-race-flag" />
+            </g>
+          ))}
 
           {shown.fatigue ? <path d={geometry.fatiguePath} className="analysis-fit-v2-line is-fatigue" /> : null}
           {shown.fitness ? <path d={geometry.fitnessPath} className="analysis-fit-v2-line is-fitness" /> : null}
@@ -134,6 +142,7 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
             {shown.fitness ? <div className="is-fitness"><i /><span>{t('training_series.line_fitness')}</span><strong>{oneDecimal(formatNumber, selected.fitness)}</strong></div> : null}
             {shown.fatigue ? <div className="is-fatigue"><i /><span>{t('training_series.line_fatigue')}</span><strong>{oneDecimal(formatNumber, selected.fatigue)}</strong></div> : null}
             {shown.form ? <div className="is-form"><i /><span>{t('training_series.line_form')}</span><strong>{formatChange(selected.form)}</strong></div> : null}
+            {selected.race ? <div className="is-race"><span>{t('training_series.race_day')}</span></div> : null}
             {!selected.projected ? <div className="is-effort"><span>{t('training_series.tooltip_effort')}</span><strong>{formatNumber(Math.round(selected.load))}</strong></div> : null}
           </div>
         ) : null}
@@ -146,6 +155,7 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
             <span>{`${t('training_series.line_fitness')}: ${oneDecimal(formatNumber, entry.fitness)}`}</span>
             <span>{`${t('training_series.line_fatigue')}: ${oneDecimal(formatNumber, entry.fatigue)}`}</span>
             <span>{`${t('training_series.line_form')}: ${formatChange(entry.form)}`}</span>
+            {entry.race ? <span>{t('training_series.race_day')}</span> : null}
           </li>
         ))}
       </ul>
@@ -251,6 +261,9 @@ export default function FitnessFormSection() {
             {data.projection.length > 0 ? (
               <p className="analysis-fit-v2-note">{t('training_series.projection_note', { days: data.projection.length })}</p>
             ) : null}
+            <p className="analysis-fit-v2-note is-faint">
+              {Array.isArray(data.raceDays) && data.raceDays.length > 0 ? t('training_series.race_key') : t('training_series.race_hint')}
+            </p>
 
             <section className="analysis-load-v2-metrics analysis-fit-v2-metrics" aria-label={t('training_series.cards_label')}>
               <article className="analysis-load-v2-metric">

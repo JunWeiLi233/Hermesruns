@@ -68,4 +68,6 @@
 @import './settings-v2.css';
 @import './rewards-v2.css';
 @import './runner-shell-chrome.css';
+@import './run-labels-v2.css';
+@import './training-log-v2.css';
 @import './race-form-modal-v2.css';

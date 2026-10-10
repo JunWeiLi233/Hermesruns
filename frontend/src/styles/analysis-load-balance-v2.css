@@ -277,6 +277,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-metric:is
   --fit-bar-above: #e0685a;
   --fit-bar-below: #f2c46d;
   --fit-bar-neutral: #b8b0a6;
+  --fit-race: var(--lb-ink);
 }
 
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis-fit-v2 {
@@ -333,6 +334,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis
 #root .analysis-load-v2 .analysis-fit-v2-zero { stroke: var(--lb-faint); stroke-width: 1; }
 #root .analysis-load-v2 .analysis-fit-v2-today,
 #root .analysis-load-v2 .analysis-fit-v2-crosshair { stroke: var(--lb-faint); stroke-width: 1; stroke-dasharray: 3 4; }
+/* A race day: a flag on a thin line through both panels. */
+#root .analysis-load-v2 .analysis-fit-v2-race-line { stroke: var(--fit-race); stroke-width: 1; stroke-opacity: 0.26; }
+#root .analysis-load-v2 .analysis-fit-v2-race-pole { stroke: var(--fit-race); stroke-width: 1.5; }
+#root .analysis-load-v2 .analysis-fit-v2-race-flag { fill: var(--fit-race); }
 #root .analysis-load-v2 .analysis-fit-v2-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 #root .analysis-load-v2 .analysis-fit-v2-line.is-fitness { stroke: var(--fit-fitness); }
 #root .analysis-load-v2 .analysis-fit-v2-line.is-fatigue { stroke: var(--fit-fatigue); stroke-width: 2; }
@@ -370,6 +375,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis
 #root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-effort { padding-top: 6px; border-top: 1px solid var(--lb-line); }
 #root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-effort + div.is-effort { padding-top: 0; border-top: 0; }
 #root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-status > span { color: var(--lb-ink); font-weight: 700; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-race > span { color: var(--lb-ink); font-weight: 700; }
 
 /* The three numbers under the chart: three across rather than the page's four. */
 #root .analysis-load-v2 .analysis-fit-v2-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

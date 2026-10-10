@@ -18,10 +18,19 @@ function resolveShellTitle(pathname, t) {
   return t('settings.heading');
 }
 
+/**
+ * The runner shell around a page: the sidebar, the top bar and the canvas. Settings pages use it as it is. Another page
+ * can say its own `title`, the page it sits under (`parentLabel`, `parentRoute`) and which sidebar item to mark
+ * (`activeKey`, as in getRunnerShellNavItems).
+ */
 export default function AuthenticatedPageChrome({
   children,
   bodyClassName = '',
   profile = null,
+  title = null,
+  parentLabel = null,
+  parentRoute = null,
+  activeKey = null,
 }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -47,10 +56,10 @@ export default function AuthenticatedPageChrome({
 
   const resolvedProfile = profile || loadedProfile;
   const navItems = useMemo(
-    () => getRunnerShellNavItems({ t, lang }),
-    [lang, t],
+    () => getRunnerShellNavItems({ t, lang, activeKey }),
+    [activeKey, lang, t],
   );
-  const pageTitle = resolveShellTitle(location.pathname, t);
+  const pageTitle = title || resolveShellTitle(location.pathname, t);
   const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMESRUNS').trim();
   const profileInitial = profileName.slice(0, 1).toUpperCase() || 'H';
 
@@ -117,15 +126,15 @@ export default function AuthenticatedPageChrome({
             <RunnerShellTopNav
               navItems={navItems}
               activeLabel={pageTitle}
-              parentLabel={t('settings.heading')}
-              parentRoute="/settings"
+              parentLabel={parentLabel || t('settings.heading')}
+              parentRoute={parentRoute || '/settings'}
               navigate={navigate}
             />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current={title ? undefined : 'page'}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <TopbarUserMenu initials={profileInitial} label={t('components.account_menu.title')} showProfile />

@@ -16,6 +16,7 @@ import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
 import RunBestEfforts from './RunBestEfforts';
+import RunLabelsCard from './RunLabelsCard';
 import RunMatches from './RunMatches';
 import RunPaceAnalysis from './RunPaceAnalysis';
 import RunTrainingCards from './RunTrainingCards';
@@ -1259,6 +1260,8 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} />
+
             <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
               <div className="run-detail-v2__card-head">
                 <h3>{t('run_detail.gear_linked')}</h3>

@@ -223,6 +223,59 @@ describe('the chart and the numbers', () => {
   });
 });
 
+describe('races on the chart', () => {
+  it('flags the days the runner raced, says what the flag means and names the day when it is looked at', async () => {
+    served = series({ overrides: { raceDays: ['2026-09-20', '2026-10-05'] } });
+    const { container } = renderCard();
+    const slider = await screen.findByRole('slider');
+
+    expect(container.querySelectorAll('.analysis-fit-v2-race')).toHaveLength(2);
+    expect(container.querySelectorAll('.analysis-fit-v2-race-flag')).toHaveLength(2);
+    expect(screen.getByText(t('training_series.race_key'))).toBeInTheDocument();
+    expect(screen.queryByText(t('training_series.race_hint'))).not.toBeInTheDocument();
+    // The picture is for the eyes: the list for a screen reader says it in words, on those days only.
+    const listed = [...container.querySelectorAll('[data-analysis-history="fitness"] li')].filter((item) => item.textContent.includes(t('training_series.race_day')));
+    expect(listed.map((item) => item.querySelector('span').textContent)).toEqual(['Sep 20', 'Oct 5']);
+
+    slider.focus();
+    await waitFor(() => expect(slider).toHaveAttribute('aria-valuenow', '39'));
+    expect(slider.getAttribute('aria-valuetext')).not.toContain(t('training_series.race_day'));
+    expect(container.querySelector('.analysis-fit-v2-tooltip .is-race')).not.toBeInTheDocument();
+
+    for (let step = 0; step < 5; step += 1) fireEvent.keyDown(slider, { key: 'ArrowLeft' });
+    expect(container.querySelector('.analysis-fit-v2-tooltip time')).toHaveTextContent('Oct 5');
+    expect(slider.getAttribute('aria-valuetext')).toContain(t('training_series.race_day'));
+    expect(container.querySelector('.analysis-fit-v2-tooltip .is-race')).toHaveTextContent(t('training_series.race_day'));
+  });
+
+  it('tells a runner with no races how to get one on the chart, and draws no flag', async () => {
+    const { container } = renderCard();
+    await screen.findByRole('slider');
+
+    expect(container.querySelector('.analysis-fit-v2-race')).not.toBeInTheDocument();
+    expect(screen.getByText(t('training_series.race_hint'))).toBeInTheDocument();
+    expect(screen.queryByText(t('training_series.race_key'))).not.toBeInTheDocument();
+  });
+
+  it('copes with an answer from a server that does not send race days yet', async () => {
+    const { raceDays, ...older } = series();
+    expect(raceDays).toEqual([]);
+    served = older;
+    const { container } = renderCard();
+    await screen.findByRole('slider');
+
+    expect(container.querySelector('.analysis-fit-v2-race')).not.toBeInTheDocument();
+    expect(screen.getByText(t('training_series.race_hint'))).toBeInTheDocument();
+  });
+
+  it('is worded in Chinese too', () => {
+    for (const key of ['race_day', 'race_key', 'race_hint']) {
+      expect(zh.training_series[key]).toBeTruthy();
+      expect(zh.training_series[key]).not.toBe(en.training_series[key]);
+    }
+  });
+});
+
 describe('looking at one day', () => {
   it('starts on today when the chart gets the keyboard, and moves a day at a time with the arrow keys', async () => {
     const { container } = renderCard();

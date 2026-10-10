@@ -35,6 +35,7 @@ const TodayRun = React.lazy(routePreloaders['/today-run']);
 const PredictionDetail = React.lazy(routeParamPreloaders['/prediction/:distKey']);
 const MuscleTraining = React.lazy(routePreloaders['/muscle-training']);
 const Rewards = React.lazy(routePreloaders['/rewards']);
+const TrainingLog = React.lazy(routePreloaders['/training-log']);
 const Settings = React.lazy(routePreloaders['/settings']);
 const ImportDataSettings = React.lazy(() => import('./pages/settings/ImportDataSettings'));
 const LegalPage = React.lazy(routePreloaders['/terms']);
@@ -279,6 +280,7 @@ function App() {
                   <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
                   <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
                   <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
+                  <Route path="/training-log" element={<UserOnlyRoute><TrainingLog /></UserOnlyRoute>} />
                   <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
                   <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
                   <Route path="/shoes" element={<UserOnlyRoute><Shoes /></UserOnlyRoute>} />

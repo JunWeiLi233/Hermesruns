@@ -74,8 +74,9 @@ export function niceCeiling(value) {
 const line = (entries, key) => entries.map((entry, index) => `${index ? 'L' : 'M'}${entry.x.toFixed(2)},${entry[key].toFixed(2)}`).join(' ');
 
 /**
- * @param series `{ points, projection }` as the server sends them: `points` is a day each with `date`, `load`,
- *               `fitness`, `fatigue` and `form`; `projection` the days after today if the runner rests
+ * @param series `{ points, projection, raceDays }` as the server sends them: `points` is a day each with `date`, `load`,
+ *               `fitness`, `fatigue` and `form`; `projection` the days after today if the runner rests; `raceDays`
+ *               the days of the window the runner raced on (flagged on the chart)
  * @param options `showFitness` and `showFatigue` say which lines are drawn (the axis is sized to those); `withForm`
  *                whether the form panel is drawn below them
  * @returns null when there are no days to draw, else both panels' boxes, every day with its position, the paths and ticks
@@ -84,6 +85,7 @@ export function buildFitnessChart(series, { width = 640, height = 300, withForm 
   const points = Array.isArray(series?.points) ? series.points : [];
   if (points.length === 0) return null;
   const projection = Array.isArray(series?.projection) ? series.projection : [];
+  const raceDays = new Set(Array.isArray(series?.raceDays) ? series.raceDays : []);
 
   const padL = 40;
   const padR = 14;
@@ -121,6 +123,7 @@ export function buildFitnessChart(series, { width = 640, height = 300, withForm 
     fatigue: day.fatigue,
     form: day.form,
     projected: day.projected,
+    race: !day.projected && raceDays.has(day.date),
     x: xOf(index),
     fitnessY: yMain(day.fitness),
     fatigueY: yMain(day.fatigue),
@@ -140,6 +143,7 @@ export function buildFitnessChart(series, { width = 640, height = 300, withForm 
     width, height, padL, padR, mainTop, mainBottom, formTop, formBottom, zeroY, yMax, formReach, withForm,
     entries,
     realCount: real.length,
+    raceMarks: real.filter((entry) => entry.race).map((entry) => ({ date: entry.date, x: entry.x, index: entry.index })),
     projectionStartX: projection.length ? real[real.length - 1].x : null,
     xTicks, yTicks, formTicks,
     fitnessPath: line(real, 'fitnessY'),

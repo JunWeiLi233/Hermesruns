@@ -209,6 +209,31 @@ describe('buildFitnessChart', () => {
     expect(plain.projectionStartX).toBeNull();
   });
 
+  it('flags the days of races on the days they fall on, and no others', () => {
+    const points = days(10);
+    const chart = buildFitnessChart({ points, projection: days(3), raceDays: [points[2].date, points[7].date, '2026-01-01'] });
+
+    expect(chart.raceMarks.map((mark) => mark.date)).toEqual([points[2].date, points[7].date]);
+    expect(chart.raceMarks.map((mark) => mark.x)).toEqual([chart.entries[2].x, chart.entries[7].x]);
+    expect(chart.raceMarks.map((mark) => mark.index)).toEqual([2, 7]);
+    expect(chart.entries.map((entry) => entry.race)).toEqual([...points.map((_, i) => i === 2 || i === 7), false, false, false]);
+  });
+
+  it('never flags a day of the projection, even if the server names it', () => {
+    const points = days(5);
+    const projection = days(3).map((day, i) => ({ ...day, date: isoDay(new Date(2026, 8, 6 + i, 12)) }));
+    const chart = buildFitnessChart({ points, projection, raceDays: [projection[1].date] });
+
+    expect(chart.raceMarks).toEqual([]);
+    expect(chart.entries.some((entry) => entry.race)).toBe(false);
+  });
+
+  it('has no flags without race days, whether the answer lacks them or they are not a list', () => {
+    expect(buildFitnessChart({ points: days(5), projection: [] }).raceMarks).toEqual([]);
+    expect(buildFitnessChart({ points: days(5), projection: [], raceDays: [] }).raceMarks).toEqual([]);
+    expect(buildFitnessChart({ points: days(5), projection: [], raceDays: 'yesterday' }).raceMarks).toEqual([]);
+  });
+
   it('draws a single day in the middle', () => {
     const chart = buildFitnessChart({ points: days(1), projection: [] }, { width: 600 });
 

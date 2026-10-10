@@ -60,6 +60,7 @@ export function series({ count = 40, loadOf = (i) => (i >= 35 || i % 7 === 6 ? 0
       fatigueChange7d: round(last.fatigue - before.fatigue),
       formChange7d: round(last.form - before.form),
     },
+    raceDays: [],
     sources: { HR_ZONES: 24, PERCEIVED: 3, PACE_MODEL: 1 },
     runs: 28,
     pendingRuns: 0,
