@@ -18,7 +18,7 @@ assert.match(appCss, /@import '\.\/training-log-v2\.css';/, 'training-log-v2.css
 assert.match(appCss, /@import '\.\/run-labels-v2\.css';/, 'run-labels-v2.css must be imported by app.css.');
 
 // Every class the training log draws with has a rule, so nothing is left unstyled by a typo.
-const logSources = ['TrainingLog.jsx', 'LogWeek.jsx', 'LogFilters.jsx'].map((name) => read(`./pages/training-log/${name}`)).join('\n');
+const logSources = ['TrainingLog.jsx', 'LogWeek.jsx', 'LogFilters.jsx', 'LogView.jsx'].map((name) => read(`./pages/training-log/${name}`)).join('\n');
 const logClasses = new Set([...logSources.matchAll(/training-log-v2__[-\w]+/g)].map((match) => match[0]));
 assert.ok(logClasses.size >= 30, 'The training log should draw with its own training-log-v2__* classes.');
 for (const name of logClasses) {

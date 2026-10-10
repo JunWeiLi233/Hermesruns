@@ -520,10 +520,33 @@ way "The runner's day" describes (a Strava API run keeps its local clock; a file
 zone). Runs near the edges of the window are read a day wider and placed before they are kept, so a run in Auckland on a Monday
 morning is on Monday whichever clock it was recorded on.
 
+### The view
+
+Two things are about how the log is looked at, not about which runs are in it. Both live in the page's address with the filters
+(`?runType=RACE&tag=hills&metric=time&to=2026-03-31`), so a view can be bookmarked, and **neither is sent to the server except
+`to`**, which is what `GET /api/training/log` already takes.
+
+- **Metric**: distance (the default, nothing in the address), time, climb or effort. It chooses what the seven bars of a week's
+  strip show (each day's runs added up in that metric, drawn against the biggest day in that metric among the weeks on the page),
+  which total is written beside each day's heading, and which figure is highlighted on each week and each run. Time is moving
+  time; a run without a figure (no elevation, not analysed yet) adds nothing, and a day with none shows a dash. Every run shows
+  its climb as well as its distance, time, pace and effort, so all four metrics can be read in words; the strip itself is for
+  the eye and is hidden from a screen reader, which has the day totals.
+- **Jump to a date**: a date field from 1970-01-01 to the runner's today. A whole, real day sets `to`, so the log starts at the
+  week of that day and goes back from there. A date still being typed is not a day: typing 2026 passes through 0002, 0020 and
+  0202, so only a complete date between the floor and today is passed on, and the field keeps what it holds meanwhile. A day
+  after today, or an empty field, does nothing; "Latest weeks" takes the day out of the address. Once the weeks on screen stop
+  short of today (the newest week ends before it), **Show later weeks** is offered above them: it asks for the page of weeks
+  after the newest one (`to` = the end of the newest week plus twelve weeks, or today if that is sooner) and puts them in front.
+  Earlier and later weeks load independently and each moves the keyboard to the first of the weeks it added.
+
 ### Known limits
 
 - Whether older runs exist is looked up among the runner's newest 5,000 runs before the window; beyond that the page simply does
   not offer earlier weeks.
+- A jump before the runner's first run shows empty weeks and says there is nothing in them or before them; the page does not
+  know the date of the first run, so the field cannot refuse it.
+- The strip's bars carry no number of their own; the figure is in the day's heading, and in the bar's hover title.
 - A run that has not been analysed has no effort and adds none to its week; the page shows it without one.
 - The log lists runs only (as the rest of the analysis does); cross-training, strength and walking are not in it.
 

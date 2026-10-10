@@ -118,6 +118,201 @@ describe('earlier weeks', () => {
   });
 });
 
+describe('saying whether more weeks were added', () => {
+  it('says so for earlier weeks that came in, and not when there was nothing to ask or the answer was refused', async () => {
+    const { result } = renderHook(() => useTrainingLog({}));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    let added;
+    await act(async () => { added = await result.current.loadMore(); });
+    expect(added).toBe(true);
+
+    respond = () => new Error('nope');
+    await act(async () => { added = await result.current.loadMore(); });
+    expect(added).toBe(false);
+    expect(result.current.more).toBe('error');
+  });
+
+  it('says no, without asking, before the first weeks are in', async () => {
+    respond = () => new Promise(() => {});
+    const { result } = renderHook(() => useTrainingLog({}));
+    let added;
+    await act(async () => { added = await result.current.loadMore(); });
+    expect(added).toBe(false);
+  });
+});
+
+describe('a jump to a day', () => {
+  const jumped = () => log({ weeks: [week('2026-03-30', [day('2026-03-31', [run({ id: 41 })])]), week('2026-03-23', [])], olderRuns: true });
+  const later = () => log({ weeks: [week('2026-04-13', [day('2026-04-14', [run({ id: 42 })])]), week('2026-04-06', [])], olderRuns: false });
+
+  beforeEach(() => {
+    respond = (url) => {
+      if (url.includes('to=2026-06-28')) return later();
+      if (url.includes('to=2026-03-31')) return jumped();
+      return log();
+    };
+  });
+
+  it('asks for the weeks ending with the week of the day, from the start', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(urls()).toEqual(['/api/training/log?weeks=12&to=2026-03-31']);
+    expect(result.current.log.weeks[0].start).toBe('2026-03-30');
+  });
+
+  it('starts again, keeping the weeks it has as refreshing, when the day changes, and when it is taken away', async () => {
+    const { result, rerender } = renderHook((props) => useTrainingLog(props), { initialProps: { to: '' } });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    let release;
+    respond = () => new Promise((resolve) => { release = () => resolve(jumped()); });
+
+    rerender({ to: '2026-03-31' });
+
+    await waitFor(() => expect(result.current.status).toBe('refreshing'));
+    expect(result.current.log.weeks).toHaveLength(3);
+    await act(async () => { release(); });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    expect(result.current.log.weeks).toHaveLength(2);
+    expect(urls()).toEqual(['/api/training/log?weeks=12', '/api/training/log?weeks=12&to=2026-03-31']);
+
+    respond = () => log();
+    rerender({ to: '' });
+    await waitFor(() => expect(result.current.log.weeks).toHaveLength(3));
+    expect(urls().at(-1)).toBe('/api/training/log?weeks=12');
+  });
+
+  it('adds the weeks after the newest one, keeps the answer about older runs as it was and says it added them', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    let added;
+    await act(async () => { added = await result.current.loadNewer(); });
+
+    expect(added).toBe(true);
+    expect(urls()).toContain('/api/training/log?weeks=12&to=2026-06-28');
+    expect(result.current.log.weeks.map((one) => one.start)).toEqual(['2026-04-13', '2026-04-06', '2026-03-30', '2026-03-23']);
+    expect(result.current.log.olderRuns).toBe(true);
+    expect(result.current.newer).toBe('idle');
+    expect(result.current.more).toBe('idle');
+  });
+
+  it('carries the filters along when it asks for later weeks', async () => {
+    const { result } = renderHook(() => useTrainingLog({ runType: 'RACE', tags: ['a'], to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    await act(async () => { await result.current.loadNewer(); });
+
+    expect(urls()).toContain('/api/training/log?weeks=12&to=2026-06-28&runType=RACE&tag=a');
+  });
+
+  it('asks for nothing, and says it added nothing, when the newest week is the one today is in', async () => {
+    const { result } = renderHook(() => useTrainingLog({}));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+
+    let added;
+    await act(async () => { added = await result.current.loadNewer(); });
+
+    expect(added).toBe(false);
+    expect(urls()).toHaveLength(1);
+  });
+
+  it('asks for nothing before the first weeks are in', async () => {
+    respond = () => new Promise(() => {});
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await act(async () => { await result.current.loadNewer(); });
+    expect(urls()).toHaveLength(1);
+  });
+
+  it('ignores a second request for later weeks while the first is on its way', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    let release;
+    respond = () => new Promise((resolve) => { release = () => resolve(later()); });
+
+    await act(async () => {
+      result.current.loadNewer();
+      result.current.loadNewer();
+    });
+    expect(urls().filter((url) => url.includes('to=2026-06-28'))).toHaveLength(1);
+    expect(result.current.newer).toBe('loading');
+
+    await act(async () => { release(); });
+    await waitFor(() => expect(result.current.newer).toBe('idle'));
+    expect(result.current.log.weeks).toHaveLength(4);
+  });
+
+  it('can load earlier and later weeks at the same time, each in its own place', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const releases = {};
+    respond = (url) => new Promise((resolve) => {
+      releases[url.includes('to=2026-06-28') ? 'later' : 'earlier'] = () => resolve(url.includes('to=2026-06-28')
+        ? later()
+        : log({ weeks: [week('2026-03-16', []), week('2026-03-09', [])], olderRuns: false }));
+    });
+
+    await act(async () => {
+      result.current.loadMore();
+      result.current.loadNewer();
+    });
+    expect(result.current.more).toBe('loading');
+    expect(result.current.newer).toBe('loading');
+    await act(async () => { releases.later(); releases.earlier(); });
+
+    await waitFor(() => expect(result.current.log.weeks).toHaveLength(6));
+    expect(result.current.log.weeks.map((one) => one.start)).toEqual(['2026-04-13', '2026-04-06', '2026-03-30', '2026-03-23', '2026-03-16', '2026-03-09']);
+    expect(result.current.log.olderRuns).toBe(false);
+  });
+
+  it('keeps the weeks it has and says so when later ones cannot be loaded', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    respond = () => new Error('nope');
+
+    let added;
+    await act(async () => { added = await result.current.loadNewer(); });
+
+    expect(added).toBe(false);
+    expect(result.current.newer).toBe('error');
+    expect(result.current.more).toBe('idle');
+    expect(result.current.status).toBe('ready');
+    expect(result.current.log.weeks).toHaveLength(2);
+  });
+
+  it('treats an answer without the parts the page draws as a failure to load later weeks', async () => {
+    const { result } = renderHook(() => useTrainingLog({ to: '2026-03-31' }));
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    respond = () => ({ weeks: 'none' });
+
+    await act(async () => { await result.current.loadNewer(); });
+
+    expect(result.current.newer).toBe('error');
+    expect(result.current.log.weeks).toHaveLength(2);
+  });
+
+  it('throws away later weeks that were asked for under another day', async () => {
+    const { result, rerender } = renderHook((props) => useTrainingLog(props), { initialProps: { to: '2026-03-31' } });
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    const gate = {};
+    respond = (url) => (url.includes('to=2026-06-28')
+      ? new Promise((resolve) => { gate.release = () => resolve(later()); })
+      : log({ weeks: [week('2026-02-23', [])], olderRuns: false }));
+    let pending;
+    act(() => { pending = result.current.loadNewer(); });
+    await waitFor(() => expect(result.current.newer).toBe('loading'));
+
+    rerender({ to: '2026-02-28' });
+    await waitFor(() => expect(result.current.log.weeks.map((one) => one.start)).toEqual(['2026-02-23']));
+    let added;
+    await act(async () => { gate.release(); added = await pending; });
+
+    expect(added).toBe(false);
+    expect(result.current.log.weeks.map((one) => one.start)).toEqual(['2026-02-23']);
+    expect(result.current.newer).toBe('idle');
+  });
+});
+
 describe('changing the filters', () => {
   it('keeps the earlier weeks, as refreshing, until the new ones arrive', async () => {
     const { result, rerender } = renderHook((props) => useTrainingLog(props), { initialProps: { runType: '', tags: [] } });

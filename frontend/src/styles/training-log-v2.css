@@ -106,6 +106,38 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
 #root .training-log-v2__chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 #root .training-log-v2__chips .training-log-v2__link { align-self: center; min-height: 34px; }
+
+/* View: the metric the log looks at and a jump to a date. A card of its own, slimmer than the filters. */
+#root .training-log-v2__view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 32px;
+  padding: 16px 22px;
+  border-radius: 24px;
+  background: var(--tl-card);
+}
+#root .training-log-v2__view[aria-busy="true"] { opacity: 0.7; }
+#root .training-log-v2__view-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+#root .training-log-v2__view .training-log-v2__filter-label { flex: 0 0 auto; }
+#root .training-log-v2__jump .training-log-v2__note { flex-basis: 100%; }
+#root .training-log-v2__date {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-fill);
+  color: var(--tl-ink);
+  color-scheme: light;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2__date { color-scheme: dark; }
+#root .training-log-v2__date:focus-visible { outline: 2px solid var(--tl-accent); outline-offset: 2px; }
+
 #root .training-log-v2__note { color: var(--tl-muted); font-size: 0.8rem; line-height: 1.5; text-wrap: pretty; }
 #root .training-log-v2__basis { color: var(--tl-faint); font-size: 0.75rem; line-height: 1.5; text-wrap: pretty; }
 #root .training-log-v2__error { color: var(--tl-error); font-size: 0.85rem; }
@@ -158,7 +190,12 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
 /* Days and runs */
 #root .training-log-v2__days { display: flex; flex-direction: column; gap: 14px; }
 #root .training-log-v2__day { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-#root .training-log-v2__day h3 { color: var(--tl-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .training-log-v2__day h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; color: var(--tl-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .training-log-v2__day-total { color: var(--tl-ink); font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
+
+/* The figure the log is looking at (the metric chosen above the weeks), on a week and on a run */
+#root .training-log-v2__totals > .is-chosen :is(dt, dd),
+#root .training-log-v2__run-stats > .is-chosen :is(dt, dd) { color: var(--tl-accent); }
 
 #root .training-log-v2__run {
   display: grid;
@@ -185,7 +222,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
 }
 #root .training-log-v2__type.is-race { background: var(--tl-accent); color: var(--tl-on-accent); }
 
-#root .training-log-v2__run-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 16px; }
+#root .training-log-v2__run-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.4rem, 1fr)); gap: 8px 16px; }
 #root .training-log-v2__run-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 #root .training-log-v2__run-stats dd { font-size: 0.9rem; white-space: nowrap; }
 
@@ -268,8 +305,11 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
 
 @media (max-width: 720px) {
   #root .training-log-v2 { gap: 16px; padding-bottom: 32px; }
-  #root .training-log-v2__filters { padding: 16px; border-radius: 20px; }
-  #root .training-log-v2__filter-label { flex-basis: 100%; }
+  #root .training-log-v2__filters,
+  #root .training-log-v2__view { padding: 16px; border-radius: 20px; }
+  #root .training-log-v2__filter-label,
+  #root .training-log-v2__view .training-log-v2__filter-label { flex-basis: 100%; }
+  #root .training-log-v2__date { flex: 1 1 10rem; min-height: 44px; }
   #root .training-log-v2__week { padding: 18px 16px; border-radius: 20px; }
   #root .training-log-v2__totals { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
   #root .training-log-v2__run { grid-template-columns: minmax(0, 1fr); padding: 14px 0; }

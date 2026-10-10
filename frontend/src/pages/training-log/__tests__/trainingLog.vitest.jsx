@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -175,7 +175,7 @@ describe('the weeks', () => {
   it('leaves out the climb of a week with none', async () => {
     renderPage();
     await ready();
-    expect(within(weekCard(/Sep\s21/u)).queryByText(t('training_log.stat_climb'))).not.toBeInTheDocument();
+    expect(within(weekCard(/Sep\s21/u).querySelector('.training-log-v2__totals')).queryByText(t('training_log.stat_climb'))).not.toBeInTheDocument();
   });
 
   it('writes the days of a week with their runs, earliest day first', async () => {
@@ -215,16 +215,26 @@ describe('the weeks', () => {
 });
 
 describe('a run', () => {
-  it('links to the run and shows its distance, time, pace and effort', async () => {
+  it('links to the run and shows its distance, time, pace, effort and climb', async () => {
     renderPage();
     await ready();
 
     const row = screen.getByRole('link', { name: 'Morning jog' }).closest('li');
     expect(screen.getByRole('link', { name: 'Morning jog' })).toHaveAttribute('href', '/runs/11');
-    expect(within(row).getAllByRole('definition').map((node) => node.textContent)).toEqual(['5.0 km', '25:00', '5:00 /km', '42']);
+    expect(within(row).getAllByRole('definition').map((node) => node.textContent)).toEqual(['5.0 km', '25:00', '5:00 /km', '42', '–']);
     expect(within(row).getAllByRole('term').map((node) => node.textContent)).toEqual([
-      t('training_log.stat_distance'), t('training_log.stat_time'), t('training_log.stat_pace'), t('training_log.stat_effort'),
+      t('training_log.stat_distance'), t('training_log.stat_time'), t('training_log.stat_pace'), t('training_log.stat_effort'), t('training_log.stat_climb'),
     ]);
+  });
+
+  it('shows the climb of a run that has some, and a dash for one that has none', async () => {
+    renderPage();
+    await ready();
+
+    const race = screen.getByRole('link', { name: 'City 10K' }).closest('li');
+    expect(within(race).getAllByRole('definition')[4]).toHaveTextContent('80 m');
+    const jog = screen.getByRole('link', { name: 'Morning jog' }).closest('li');
+    expect(within(jog).getAllByRole('definition')[4]).toHaveTextContent('–');
   });
 
   it('shows the type of a typed run and its tags, and nothing for a plain run', async () => {
@@ -267,7 +277,7 @@ describe('a run', () => {
     await ready();
 
     const row = screen.getByRole('link', { name: 'Morning jog' }).closest('li');
-    expect(within(row).getAllByRole('definition').map((node) => node.textContent)).toEqual(['3.1 mi', '25:00', '8:03 /mi', '42']);
+    expect(within(row).getAllByRole('definition').map((node) => node.textContent)).toEqual(['3.1 mi', '25:00', '8:03 /mi', '42', '–']);
     expect(within(weekCard(/Oct\s5/u).querySelector('.training-log-v2__totals')).getAllByRole('definition')[1]).toHaveTextContent('11.2 mi');
   });
 });
@@ -558,6 +568,453 @@ describe('earlier weeks', () => {
     expect(screen.queryByRole('button', { name: t('training_log.load_earlier') })).not.toBeInTheDocument();
     expect(screen.getByText(t('training_log.all_loaded'))).toBeInTheDocument();
   });
+
+  it('moves the keyboard to the first of the weeks that came, since the button may be gone by then', async () => {
+    respond = (url) => (url.includes('to=') ? older() : log());
+    renderPage();
+    await ready();
+
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.load_earlier') }));
+    await screen.findByRole('link', { name: 'September jog' });
+
+    expect(weekCard(/Sep\s14/u).querySelector('h2')).toHaveFocus();
+  });
+
+  it('leaves the keyboard on the button when the weeks could not be loaded', async () => {
+    renderPage();
+    await ready();
+    respond = () => new Error('nope');
+
+    const button = screen.getByRole('button', { name: t('training_log.load_earlier') });
+    await userEvent.click(button);
+    await screen.findByRole('alert');
+
+    expect(button).toHaveFocus();
+  });
+});
+
+describe('the metric the log looks at', () => {
+  const group = () => screen.getByRole('group', { name: t('training_log.metric_label') });
+  const chip = (metric) => within(group()).getByRole('button', { name: t(`training_log.metric_${metric}`) });
+  const heights = (name) => [...weekCard(name).querySelectorAll('.training-log-v2__strip i')].map((bar) => bar.style.height);
+  const dayTotals = (name) => [...weekCard(name).querySelectorAll('.training-log-v2__day-total')].map((node) => node.textContent);
+  const weekCaptions = (name) => [...weekCard(name).querySelectorAll('.training-log-v2__totals > .is-chosen dt')].map((node) => node.textContent);
+
+  it('offers distance, time, climb and effort, with distance chosen to begin with', async () => {
+    renderPage();
+    await ready();
+
+    expect(within(group()).getAllByRole('button').map((button) => button.textContent)).toEqual(['Distance', 'Time', 'Climb', 'Effort']);
+    expect(chip('distance')).toHaveAttribute('aria-pressed', 'true');
+    for (const metric of ['time', 'climb', 'effort']) expect(chip(metric)).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('writes each day with its total in distance to begin with, and marks the distance of the week and of each run', async () => {
+    renderPage();
+    await ready();
+
+    expect(dayTotals(/Oct\s5/u)).toEqual(['8.0 km', '10.0 km']);
+    expect(weekCaptions(/Oct\s5/u)).toEqual([t('training_log.stat_distance')]);
+    const row = screen.getByRole('link', { name: 'Morning jog' }).closest('li');
+    expect([...row.querySelectorAll('.is-chosen dt')].map((node) => node.textContent)).toEqual([t('training_log.stat_distance')]);
+    expect(row.querySelector('.is-chosen dd')).toHaveTextContent('5.0 km');
+  });
+
+  it.each([
+    ['time', ['41:40', '45:00'], ['93%', '0%', '0%', '0%', '0%', '100%', '0%'], 'Time'],
+    ['climb', ['–', '80 m'], ['0%', '0%', '0%', '0%', '0%', '100%', '0%'], 'Climb'],
+    ['effort', ['62', '90'], ['69%', '0%', '0%', '0%', '0%', '100%', '0%'], 'Effort'],
+  ])('looks at %s: redraws the strip, rewrites the day totals, marks the figures and keeps it in the address, asking the server for nothing', async (metric, totals, bars, caption) => {
+    renderPage();
+    await ready();
+
+    await userEvent.click(chip(metric));
+
+    expect(chip(metric)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip('distance')).toHaveAttribute('aria-pressed', 'false');
+    expect(heights(/Oct\s5/u)).toEqual(bars);
+    expect(dayTotals(/Oct\s5/u)).toEqual(totals);
+    expect(weekCaptions(/Oct\s5/u)).toEqual([caption]);
+    expect(screen.getByTestId('where')).toHaveTextContent(`/training-log?metric=${metric}`);
+    expect(logCalls()).toEqual(['/api/training/log?weeks=12']);
+  });
+
+  it('marks the figure of each run too', async () => {
+    renderPage('/training-log?metric=climb');
+    await ready();
+
+    const race = screen.getByRole('link', { name: 'City 10K' }).closest('li');
+    expect([...race.querySelectorAll('.is-chosen dt')].map((node) => node.textContent)).toEqual([t('training_log.stat_climb')]);
+    expect(race.querySelector('.is-chosen dd')).toHaveTextContent('80 m');
+  });
+
+  it('draws against the biggest day of the metric over all the weeks on the page', async () => {
+    renderPage('/training-log?metric=time');
+    await ready();
+
+    // 2,700 s on the Saturday is the most; Thursday the 24th (2,100 s) is seven ninths of it.
+    expect(heights(/Sep\s21/u)).toEqual(['0%', '0%', '0%', '78%', '0%', '0%', '0%']);
+  });
+
+  it('tells the days apart on hover: the day and its total in the metric', async () => {
+    renderPage();
+    await ready();
+    const titles = () => [...weekCard(/Oct\s5/u).querySelectorAll('.training-log-v2__strip li')].map((item) => item.getAttribute('title'));
+
+    expect(titles()).toEqual(['Mon, Oct 5: 8.0 km', null, null, null, null, 'Sat, Oct 10: 10.0 km', null]);
+    await userEvent.click(chip('time'));
+    expect(titles()[0]).toBe('Mon, Oct 5: 41:40');
+  });
+
+  it('shows the climb of a week with none when climb is what the log looks at', async () => {
+    renderPage('/training-log?metric=climb');
+    await ready();
+
+    const totals = weekCard(/Sep\s21/u).querySelector('.training-log-v2__totals');
+    expect(within(totals).getByText(t('training_log.stat_climb'))).toBeInTheDocument();
+    expect(within(totals).getAllByRole('definition').at(-1)).toHaveTextContent('0 m');
+  });
+
+  it('reads the metric from the address and ignores one it does not know', async () => {
+    renderPage('/training-log?metric=effort');
+    await ready();
+    expect(chip('effort')).toHaveAttribute('aria-pressed', 'true');
+    cleanup();
+
+    renderPage('/training-log?metric=pace');
+    await ready();
+    expect(chip('distance')).toHaveAttribute('aria-pressed', 'true');
+    expect(logCalls().every((url) => url === '/api/training/log?weeks=12')).toBe(true);
+  });
+
+  it('keeps the metric when the filters change and the filters when the metric changes', async () => {
+    renderPage('/training-log?metric=time');
+    await ready();
+
+    await userEvent.click(within(screen.getByRole('group', { name: t('training_log.filter_type') })).getByRole('button', { name: t('run_labels.type_RACE') }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/training-log?runType=RACE&metric=time'));
+    await userEvent.click(chip('effort'));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/training-log?runType=RACE&metric=effort'));
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.clear_filters') }));
+
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log\?metric=effort$/u));
+  });
+
+  it('goes back to distance with no metric in the address', async () => {
+    renderPage('/training-log?metric=time');
+    await ready();
+
+    await userEvent.click(chip('distance'));
+
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log$/u));
+  });
+
+  it('speaks Chinese', async () => {
+    state.lang = 'zh-CN';
+    renderPage('/training-log?metric=time');
+    await screen.findByRole('heading', { level: 1, name: '训练日志' });
+    await screen.findAllByRole('article');
+
+    expect(within(screen.getByRole('group', { name: '显示' })).getAllByRole('button').map((button) => button.textContent)).toEqual(['距离', '用时', '爬升', '强度']);
+    expect(screen.getByRole('region', { name: '查看方式' })).toBeInTheDocument();
+    expect(screen.getByLabelText('跳到某一天')).toBeInTheDocument();
+    expect(screen.getAllByRole('article')[0].querySelector('.training-log-v2__day-total')).toHaveTextContent('41:40');
+  });
+});
+
+describe('jumping to a date', () => {
+  const field = () => screen.getByLabelText(t('training_log.jump_label'));
+  const jumpedTo = (value) => fireEvent.change(field(), { target: { value } });
+  const march = () => log({
+    weeks: [week('2026-03-30', [day('2026-03-31', [run({ id: 51, name: 'March jog' })])]), week('2026-03-23', [])],
+    olderRuns: true,
+  });
+
+  beforeEach(() => {
+    respond = (url) => (url.includes('to=2026-03-31') ? march() : log());
+  });
+
+  it('is a date field from 1970 to the runner\'s today, with a line saying what it does', async () => {
+    renderPage();
+    await ready();
+
+    expect(field()).toHaveAttribute('type', 'date');
+    expect(field()).toHaveAttribute('min', '1970-01-01');
+    expect(field()).toHaveAttribute('max', '2026-10-10');
+    expect(field()).toHaveAccessibleDescription(t('training_log.jump_hint'));
+    expect(field()).toHaveValue('');
+    expect(screen.queryByRole('button', { name: t('training_log.jump_latest') })).not.toBeInTheDocument();
+  });
+
+  it('asks for the week of the chosen day and the weeks before it, and shows them', async () => {
+    renderPage();
+    await ready();
+
+    jumpedTo('2026-03-31');
+
+    await waitFor(() => expect(logCalls()).toContain('/api/training/log?weeks=12&to=2026-03-31'));
+    expect(screen.getByTestId('where')).toHaveTextContent('/training-log?to=2026-03-31');
+    expect(await screen.findByRole('link', { name: 'March jog' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Morning jog' })).not.toBeInTheDocument();
+    expect(field()).toHaveValue('2026-03-31');
+    expect(screen.getByRole('button', { name: t('training_log.jump_latest') })).toBeInTheDocument();
+    const names = screen.getAllByRole('article').map((article) => article.querySelector('h2').textContent);
+    expect(names[0]).toMatch(/^Mar\s30\s*[–-]\s*Apr\s5$/u);
+    expect(screen.queryByText(t('training_log.this_week'))).not.toBeInTheDocument();
+  });
+
+  it('waits while a year is being typed: nothing is asked for until the date is a day', async () => {
+    renderPage();
+    await ready();
+
+    for (const typed of ['0002-03-31', '0020-03-31', '0202-03-31']) jumpedTo(typed);
+    expect(field()).toHaveValue('0202-03-31');
+    expect(logCalls()).toEqual(['/api/training/log?weeks=12']);
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log$/u);
+
+    jumpedTo('2026-03-31');
+    await waitFor(() => expect(logCalls()).toEqual(['/api/training/log?weeks=12', '/api/training/log?weeks=12&to=2026-03-31']));
+  });
+
+  it('does not jump to a day after today, nor when the field is cleared', async () => {
+    renderPage();
+    await ready();
+
+    jumpedTo('2026-10-11');
+    jumpedTo('2099-01-01');
+    jumpedTo('');
+
+    expect(logCalls()).toEqual(['/api/training/log?weeks=12']);
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log$/u);
+  });
+
+  it('goes back to the latest weeks with one press, empties the field and puts the keyboard on it', async () => {
+    renderPage();
+    await ready();
+    jumpedTo('2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.jump_latest') }));
+
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log$/u));
+    expect(await screen.findByRole('link', { name: 'Morning jog' })).toBeInTheDocument();
+    expect(field()).toHaveValue('');
+    expect(field()).toHaveFocus();
+    expect(screen.queryByRole('button', { name: t('training_log.jump_latest') })).not.toBeInTheDocument();
+  });
+
+  it('reads the day from the address and asks for it from the start', async () => {
+    renderPage('/training-log?to=2026-03-31');
+
+    expect(await screen.findByRole('link', { name: 'March jog' })).toBeInTheDocument();
+    expect(logCalls()[0]).toBe('/api/training/log?weeks=12&to=2026-03-31');
+    expect(field()).toHaveValue('2026-03-31');
+  });
+
+  it('ignores a day in the address that is no day', async () => {
+    renderPage('/training-log?to=2026-02-30');
+    await ready();
+
+    expect(logCalls()).toEqual(['/api/training/log?weeks=12']);
+    expect(field()).toHaveValue('');
+  });
+
+  it('keeps the filters when it jumps and the day when the filters change', async () => {
+    renderPage('/training-log?runType=RACE');
+    await ready();
+
+    jumpedTo('2026-03-31');
+    await waitFor(() => expect(logCalls()).toContain('/api/training/log?weeks=12&to=2026-03-31&runType=RACE'));
+    expect(screen.getByTestId('where')).toHaveTextContent('/training-log?runType=RACE&to=2026-03-31');
+
+    await userEvent.click(screen.getByRole('button', { name: t('training_log.clear_filters') }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/training-log\?to=2026-03-31$/u));
+  });
+
+  it('keeps the field as it is while the weeks come, and the old weeks on screen', async () => {
+    renderPage();
+    await ready();
+    let release;
+    respond = () => new Promise((resolve) => { release = () => resolve(march()); });
+
+    jumpedTo('2026-03-31');
+
+    expect(field()).toHaveValue('2026-03-31');
+    expect(screen.getByRole('link', { name: 'Morning jog' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: t('training_log.view_label') })).toHaveAttribute('aria-busy', 'true');
+    release();
+    expect(await screen.findByRole('link', { name: 'March jog' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: t('training_log.view_label') })).not.toHaveAttribute('aria-busy');
+  });
+
+  it('shows neither the way back nor later weeks when the day is in the week going on', async () => {
+    renderPage('/training-log?to=2026-10-08');
+    await ready();
+
+    expect(logCalls()[0]).toBe('/api/training/log?weeks=12&to=2026-10-08');
+    expect(screen.queryByRole('button', { name: t('training_log.jump_latest') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('training_log.load_later') })).not.toBeInTheDocument();
+  });
+
+  it('is kept out of the way when the runner has no runs at all', async () => {
+    respond = () => log({ weeks: emptyWeeks(), olderRuns: false, runTypes: [], tags: [] });
+    renderPage();
+
+    await screen.findByRole('heading', { level: 2, name: t('training_log.empty_title') });
+    expect(screen.queryByRole('region', { name: t('training_log.view_label') })).not.toBeInTheDocument();
+  });
+});
+
+describe('later weeks after a jump', () => {
+  const march = () => log({
+    weeks: [week('2026-03-30', [day('2026-03-31', [run({ id: 51, name: 'March jog' })])]), week('2026-03-23', [])],
+    olderRuns: true,
+  });
+  const aprilToJune = () => log({
+    weeks: [...emptyWeeks('2026-06-22', 11), week('2026-04-06', [day('2026-04-07', [run({ id: 52, name: 'April jog' })])])],
+    olderRuns: true,
+  });
+  const button = () => screen.getByRole('button', { name: t('training_log.load_later') });
+
+  beforeEach(() => {
+    respond = (url) => {
+      if (url.includes('to=2026-06-28')) return aprilToJune();
+      if (url.includes('to=2026-03-31')) return march();
+      return log();
+    };
+  });
+
+  it('are offered above the weeks when the weeks stop short of today, and not otherwise', async () => {
+    renderPage();
+    await ready();
+    expect(screen.queryByRole('button', { name: t('training_log.load_later') })).not.toBeInTheDocument();
+    cleanup();
+
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+    expect(button().compareDocumentPosition(screen.getAllByRole('article')[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('asks for the weeks a page further on than the newest one, puts them above, and keeps the button while today is not reached', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+
+    await userEvent.click(button());
+
+    expect(await screen.findByRole('link', { name: 'April jog' })).toBeInTheDocument();
+    expect(logCalls()).toContain('/api/training/log?weeks=12&to=2026-06-28');
+    const names = screen.getAllByRole('article').map((article) => article.querySelector('h2').textContent);
+    expect(names).toHaveLength(14);
+    expect(names[0]).toMatch(/^Jun\s22\s*[–-]\s*28$/u);
+    expect(names[11]).toMatch(/^Apr\s6\s*[–-]\s*12$/u);
+    expect(names[12]).toMatch(/^Mar\s30/u);
+    expect(button()).toBeEnabled();
+  });
+
+  it('asks for today when a page further on would pass it, and the button goes once today is reached', async () => {
+    respond = (url) => (url.includes('to=2026-10-10')
+      ? log({ weeks: emptyWeeks('2026-10-05', 12), olderRuns: true })
+      : log({ weeks: [week('2026-08-31', [day('2026-09-01', [run({ id: 61, name: 'September jog' })])]), week('2026-08-24', [])], olderRuns: true }));
+    renderPage('/training-log?to=2026-09-01');
+    await screen.findByRole('link', { name: 'September jog' });
+
+    await userEvent.click(button());
+
+    await waitFor(() => expect(logCalls()).toContain('/api/training/log?weeks=12&to=2026-10-10'));
+    await waitFor(() => expect(screen.queryByRole('button', { name: t('training_log.load_later') })).not.toBeInTheDocument());
+    const names = screen.getAllByRole('article').map((article) => article.querySelector('h2').textContent);
+    // The five weeks after the one jumped to, each once, then the two it had.
+    expect(names).toHaveLength(7);
+    expect(names[0]).toMatch(/^Oct\s5\s*[–-]\s*11This week$/u);
+    expect(names[4]).toMatch(/^Sep\s7/u);
+    expect(names[5]).toMatch(/^Aug\s31/u);
+  });
+
+  it('is disabled and says it is loading while the weeks come, and asks only once', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+    let release;
+    respond = () => new Promise((resolve) => { release = () => resolve(aprilToJune()); });
+
+    const pressed = button();
+    await userEvent.click(pressed);
+    await userEvent.click(pressed);
+
+    expect(pressed).toBeDisabled();
+    expect(pressed).toHaveTextContent(t('training_log.loading_later'));
+    expect(logCalls().filter((url) => url.includes('to=2026-06-28'))).toHaveLength(1);
+    release();
+    expect(await screen.findByRole('link', { name: 'April jog' })).toBeInTheDocument();
+  });
+
+  it('moves the keyboard to the newest of the weeks that came', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+
+    await userEvent.click(button());
+    await screen.findByRole('link', { name: 'April jog' });
+
+    expect(screen.getAllByRole('article')[0].querySelector('h2')).toHaveFocus();
+  });
+
+  it('says so, keeps the weeks and lets the runner try again when later weeks cannot be loaded', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+    respond = () => new Error('nope');
+
+    await userEvent.click(button());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('training_log.load_later_error'));
+    expect(screen.getAllByRole('article')).toHaveLength(2);
+    expect(button()).toHaveFocus();
+
+    respond = () => aprilToJune();
+    await userEvent.click(button());
+    expect(await screen.findByRole('link', { name: 'April jog' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('does not move the keyboard later on account of a request that failed', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+    respond = () => new Error('nope');
+    await userEvent.click(button());
+    await screen.findByRole('alert');
+
+    respond = () => march();
+    const chip = within(screen.getByRole('group', { name: t('training_log.filter_type') })).getByRole('button', { name: t('run_labels.type_RACE') });
+    await userEvent.click(chip);
+    await waitFor(() => expect(logCalls().at(-1)).toContain('runType=RACE'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(chip).toHaveFocus();
+  });
+
+  it('carries the filters along', async () => {
+    renderPage('/training-log?runType=RACE&to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+
+    await userEvent.click(button());
+
+    await waitFor(() => expect(logCalls()).toContain('/api/training/log?weeks=12&to=2026-06-28&runType=RACE'));
+  });
+
+  it('does not add weeks that were asked for under another day', async () => {
+    renderPage('/training-log?to=2026-03-31');
+    await screen.findByRole('link', { name: 'March jog' });
+    let release;
+    respond = () => new Promise((resolve) => { release = () => resolve(aprilToJune()); });
+    await userEvent.click(button());
+
+    respond = () => log({ weeks: [week('2026-02-23', [day('2026-02-24', [run({ id: 71, name: 'February jog' })])])], olderRuns: false });
+    fireEvent.change(screen.getByLabelText(t('training_log.jump_label')), { target: { value: '2026-02-28' } });
+    await screen.findByRole('link', { name: 'February jog' });
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(screen.queryByRole('link', { name: 'April jog' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+  });
 });
 
 describe('when there is nothing to show', () => {
@@ -591,6 +1048,43 @@ describe('when there is nothing to show', () => {
     expect(screen.getByText(t('training_log.empty_recent_body'))).toBeInTheDocument();
     expect(screen.getAllByRole('article')).toHaveLength(12);
     expect(screen.getByRole('button', { name: t('training_log.load_earlier') })).toBeInTheDocument();
+  });
+
+  describe('after a jump to a day before the first run', () => {
+    const before = () => log({ weeks: emptyWeeks('2026-03-02', 12), olderRuns: false });
+
+    it('says there is nothing in those weeks or before them, keeps the way forward and does not call it the first run', async () => {
+      respond = (url) => (url.includes('to=') ? before() : log());
+      renderPage('/training-log?to=2026-03-04');
+      await ready();
+
+      expect(screen.getByText(t('training_log.empty_window_body'))).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { level: 2, name: t('training_log.empty_title') })).not.toBeInTheDocument();
+      expect(screen.queryByText(t('training_log.all_loaded'))).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: t('training_log.load_later') })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: t('training_log.jump_latest') })).toBeInTheDocument();
+      expect(screen.getAllByRole('article')).toHaveLength(12);
+      expect(screen.getByRole('region', { name: t('training_log.view_label') })).toBeInTheDocument();
+    });
+
+    it('says so for the filters when they are on', async () => {
+      respond = (url) => (url.includes('to=') ? before() : log());
+      renderPage('/training-log?runType=RACE&to=2026-03-04');
+
+      // With a filter on, twelve empty weeks in a row are one line, so there is no week to wait for.
+      expect(await screen.findByText(t('training_log.empty_window_filtered'))).toBeInTheDocument();
+      expect(screen.queryByText(t('training_log.all_loaded_filtered'))).not.toBeInTheDocument();
+      expect(document.querySelector('.training-log-v2__gap')).toHaveTextContent(t('training_log.gap_weeks', { count: 12 }));
+    });
+
+    it('says the earlier runs are further back when there are some', async () => {
+      respond = (url) => (url.includes('to=') ? log({ weeks: emptyWeeks('2026-03-02', 12), olderRuns: true }) : log());
+      renderPage('/training-log?to=2026-03-04');
+      await ready();
+
+      expect(screen.getByText(t('training_log.empty_recent_body'))).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: t('training_log.load_earlier') })).toBeInTheDocument();
+    });
   });
 });
 
