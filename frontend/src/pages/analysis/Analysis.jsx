@@ -19,6 +19,7 @@ import { preloadRoute } from '../../utils/routePreload';
 import { buildOrderedRacePredictions, computeVdotTrend, estimateCurrentVdot } from '../../utils/vdot';
 import { buildAnalysisSnapshot, buildVo2Bars, normalizeAnalysisList } from '../../utils/analysisInsights';
 import { formatDuration } from '../../utils/format';
+import { formatTrainingZoneBasisUpdated } from '../../utils/zoneBasisAge';
 import PageSkeleton from '../../components/PageSkeleton';
 import '../../styles/analysis-v2.css';
 
@@ -36,14 +37,6 @@ function orderedZonePace(label) {
     const seconds = (pace) => pace.split(':').reduce((total, value) => total * 60 + Number(value), 0);
     return seconds(a) - seconds(b);
   }).join('–');
-}
-
-function formatTrainingZoneBasisUpdated(value, t) {
-  const date = value instanceof Date ? value : new Date(value || 0);
-  if (!Number.isFinite(date.getTime())) return t('analysis.stitch_zone_basis_updated_recently');
-  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / ANALYSIS_DAY_MS));
-  if (days <= 0) return t('analysis.stitch_zone_basis_updated_today');
-  return t('analysis.stitch_zone_basis_updated_days', { count: days });
 }
 
 function buildTrainingZoneBasisLabel(snapshot, t) {

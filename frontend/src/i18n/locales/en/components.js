@@ -660,6 +660,7 @@ export default {
     "stitch_zone_basis": "Based on VDOT {vdot} · last {count} qualifying runs ({updated})",
     "stitch_zone_basis_empty": "Sync more qualifying runs to calculate VDOT-based zones.",
     "stitch_zone_basis_updated_today": "updated today",
+    "stitch_zone_basis_updated_one_day": "updated 1 day ago",
     "stitch_zone_basis_updated_days": "updated {count} days ago",
     "stitch_zone_basis_updated_recently": "updated recently",
     "stitch_zone_label": "Zone",

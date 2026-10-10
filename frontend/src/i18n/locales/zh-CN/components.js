@@ -660,6 +660,7 @@ export default {
     "stitch_zone_basis": "基于 VDOT {vdot} · 最近 {count} 次有效跑步（{updated}）",
     "stitch_zone_basis_empty": "同步更多有效跑步后，HermesRuns 会生成基于 VDOT 的训练区间。",
     "stitch_zone_basis_updated_today": "今天更新",
+    "stitch_zone_basis_updated_one_day": "1 天前更新",
     "stitch_zone_basis_updated_days": "{count} 天前更新",
     "stitch_zone_basis_updated_recently": "最近更新",
     "stitch_zone_label": "区间",
