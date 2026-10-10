@@ -6,6 +6,7 @@ import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.BestEffortService;
+import com.hermes.backend.activity.RunLabelService;
 import com.hermes.backend.activity.RunRecordsCoordinator;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.races.RaceEvent;
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
@@ -45,6 +47,7 @@ class AccountExportIntegrationTests {
     @Autowired private RaceEventRepository races;
     @Autowired private RunRecordsCoordinator recordsCoordinator;
     @Autowired private BestEffortService bestEfforts;
+    @Autowired private RunLabelService labels;
 
     private Runner runner() {
         Runner runner = new Runner("export-" + UUID.randomUUID() + "@hermes.test", "active");
@@ -181,6 +184,35 @@ class AccountExportIntegrationTests {
 
         assertThat(csv).contains("'=1+1").contains("'@SUM(A1)").contains("'-2+3");
         assertThat(csv).doesNotContain(",=1+1,").doesNotContain(",@SUM(A1),");
+    }
+
+    @Test
+    void exportsTheRunTypeAndTheTagsOfEachRunAndNeverSomeoneElses() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        Activity race = run(owner, "Spring 10k", ImportProvider.GARMIN, false);
+        race.setRunType("RACE");
+        activities.saveAndFlush(race);
+        List<String> raceTags = List.of("=1+1", "10k", "PR");
+        labels.apply(owner, race, new RunLabelService.Change(false, null, true, raceTags), RunLabelService.cleanTags(raceTags));
+        Activity plain = run(owner, "easy jog", ImportProvider.GARMIN, false);
+        Activity theirs = run(stranger, "theirs", ImportProvider.GARMIN, false);
+        theirs.setRunType("WORKOUT");
+        activities.saveAndFlush(theirs);
+        List<String> theirTags = List.of("secret plan");
+        labels.apply(stranger, theirs, new RunLabelService.Change(false, null, true, theirTags), RunLabelService.cleanTags(theirTags));
+
+        Map<String, String> files = export(owner, false);
+
+        String csv = files.get("runs.csv");
+        assertThat(csv).startsWith("id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
+                + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
+        List<String> lines = csv.lines().toList();
+        assertThat(lines.stream().filter(line -> line.startsWith(race.getId() + ",")).findFirst().orElseThrow())
+                .endsWith(",RACE,'=1+1; 10k; PR");
+        assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,");
+        assertThat(csv).doesNotContain("secret plan").doesNotContain("WORKOUT");
+        assertThat(files.get("README.txt")).contains("run_type").contains("tags");
     }
 
     @Test

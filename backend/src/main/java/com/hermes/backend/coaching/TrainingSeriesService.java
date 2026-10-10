@@ -65,13 +65,14 @@ public class TrainingSeriesService {
      * @param points       one per day from the later of {@code from} and the first run to {@code to}, oldest first
      * @param projection   the days after today if the runner rests, only when the window ends today
      * @param current      the last day of {@code points}; null when there are none
+     * @param raceDays     the days of the window on which the runner raced (runs typed as a race), oldest first
      * @param sources      runs in the window by where their effort came from (HR_ZONES, PERCEIVED, ...)
      * @param pendingRuns  runs of the runner that have no effort yet or whose effort is being recalculated
      */
     public record SeriesResponse(LocalDate from, LocalDate to, LocalDate today, String timeZone, String status,
                                  int historyDays, int minHistoryDays, int fitnessDays, int fatigueDays,
                                  List<Point> points, List<ProjectedPoint> projection, Current current,
-                                 Map<String, Long> sources, long runs, long pendingRuns) {
+                                 List<LocalDate> raceDays, Map<String, Long> sources, long runs, long pendingRuns) {
     }
 
     public record UsualRange(double low, double high, double average) {
@@ -174,7 +175,7 @@ public class TrainingSeriesService {
             runs += count;
         }
         return new SeriesResponse(start, end, today, zone.getId(), status, historyDays, MIN_HISTORY_DAYS, fitnessDays,
-                fatigueDays, points, projection, current, sources, runs, pendingRuns(runner));
+                fatigueDays, points, projection, current, metrics.raceDays(runnerId, start, end), sources, runs, pendingRuns(runner));
     }
 
     /**

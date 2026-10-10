@@ -1,6 +1,7 @@
 package com.hermes.backend.coaching;
 
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.RunTypes;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -93,6 +94,11 @@ public interface ActivityTrainingMetricsRepository extends JpaRepository<Activit
             ORDER BY m.localDate ASC
             """)
     List<Object[]> dailyEffort(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /** The days of a window on which the runner raced: the days their runs typed as a race were filed under. */
+    @Query("SELECT DISTINCT m.localDate FROM ActivityTrainingMetrics m WHERE m.runner.id = :runnerId AND m.localDate >= :from "
+            + "AND m.localDate <= :to AND m.activity.runType = '" + RunTypes.RACE + "' ORDER BY m.localDate ASC")
+    List<LocalDate> raceDays(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     /** The day of the runner's first run that has an effort, or null when none has. */
     @Query("SELECT MIN(m.localDate) FROM ActivityTrainingMetrics m WHERE m.runner.id = :runnerId AND m.effortScore IS NOT NULL")

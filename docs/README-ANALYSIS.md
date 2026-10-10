@@ -403,8 +403,8 @@ the window adds under a millionth to the slow average at 42 days and is not read
 `GET /api/training/series?from=yyyy-MM-dd&to=yyyy-MM-dd` returns a day each from the later of `from` and the first run to `to`
 (`to` is never after the runner's today; at most 400 days), the same numbers for the 14 days after today as if the runner
 did not run (only when the window ends today), where the last day stands and how far each number moved over the 7 days
-before it, how many runs of the window got their effort from each source, and how many of the runner's runs are not counted
-yet. The runner's today is the date where they live (the time zone in Settings, UTC when none is set).
+before it, the days of the window on which the runner raced (see "Run Type and Tags"; the chart marks them), how many runs
+of the window got their effort from each source, and how many of the runner's runs are not counted yet. The runner's today is the date where they live (the time zone in Settings, UTC when none is set).
 
 ### When the numbers are shown
 
@@ -454,6 +454,78 @@ under 5, which is noise rather than a pattern. A week that ended before the firs
 `GET /api/training/weekly-effort?weeks=12` (1 to 52) returns the weeks oldest first, the last of them the week of the runner's
 today, each with its start and end, the total, the number of runs, whether it has ended, its range and its status. The band
 is a convention of Hermes' (Strava does not publish how it sets its range), and the card says what it is.
+
+## Run Type and Tags
+
+A runner can say **what kind of run** it was and put a few **words of their own** on it. Both are labels for the runner's own use:
+nothing is computed from them, so setting or changing one recomputes nothing, and the effort scores, zones and the fitness curve
+are the same with or without them.
+
+**Run type** is one of `RACE`, `LONG_RUN` or `WORKOUT`, or nothing (the default; most runs are just runs). The three are the ones
+the log and the fitness chart do something with; a longer list would be a list of tags, which is what tags are for.
+
+**Tags** are up to 6 words per run, each up to 24 characters (an emoji or a Chinese character counts as one). Leading and
+trailing space is trimmed, runs of white space become one space, control characters are dropped and the text is normalised so
+two ways of writing an accent are one tag. The same word in another case is the same tag: the first spelling in the request is
+kept ("Hills" and "hills" are one tag, shown as "Hills"). Setting the tags **replaces** the whole set, so a request says what
+the run should have, not what to add; the order the runner gave is the order kept.
+
+`PATCH /api/activities/{id}` takes `runType` (a string, or `null` to clear) and `tags` (a list, or `null` for none) next to
+`perceivedExertion`. A request changes only the fields it names, **checks every value before saving any** (one bad value saves
+none of the good ones) and refuses a field that cannot be edited instead of ignoring it, so a typo does not look like a save.
+`GET /api/activities/{id}/labels` reads a run's type and tags with the runner's most used tags (the picker's suggestions): a tag
+is shown the way the runner writes it most often, the earliest spelling when two are equally common. A run that is not the
+caller's answers 404 whether or not it exists, as everywhere else.
+
+Tags are stored one row per run and tag (`activity_tag`, unique on the run and the lower-case form of the tag), with the runner
+on the row so that "all my tags" never has to go through a run. They are deleted with their run and with the account, and they
+are in the account export (`runs.csv`, columns `run_type` and `tags`).
+
+The fitness chart marks the days of races: `raceDays` in `GET /api/training/series` is the days of the window under which the
+runner's runs typed as a race were filed. A race that has not been analysed yet has no day to mark and is left out until it
+is.
+
+### Known limits
+
+- A run has one type. A race that is also a long run is a race; the tags are there for the rest.
+- Tags cannot be renamed or merged yet; editing a word means setting it again on each run.
+- A tag with a semicolon in it is ambiguous in the export, which joins a run's tags with "; ".
+
+## Training Log
+
+The **Training log** page (`/training-log`) lays a runner's runs out by week and day so a month can be read at a glance. Each
+week is a row with its totals (runs, distance, moving time, effort and climb) and, under it, the days that had a run with each
+run's distance, time, pace, effort, type and tags. Weeks are Monday to Sunday on the runner's calendar, newest first, and every
+week of the window is listed even when it had no run, because a gap is information.
+
+`GET /api/training/log` takes:
+
+| Parameter | Meaning |
+| --- | --- |
+| `weeks` | how many weeks, 1 to 26; 12 when not given |
+| `to` | a day; the newest week is the week of it (never after the runner's today; today when not given) |
+| `runType` | keep only runs of this type |
+| `tag` | keep only runs with this tag; repeat it to ask for runs that have **every** one of them (not any) |
+
+Earlier weeks are the next request with `to` a day before the oldest week it got; `olderRuns` says whether the runner has a run
+(that passes the filters) before the first week, so the page knows whether to offer them. A refused value is a 400 with the code
+`INVALID_LOG_REQUEST` and a plain reason.
+
+The answer also carries what the filters need: the run types the runner has used (in the order race, long run, workout,
+whatever the filters leave) and their 30 most used tags with how many runs have each. Week totals add up only the runs shown,
+so a filtered log reads "my races" with the totals of the races.
+
+A run's place is the runner's day for it: the day its effort row is filed under when it has one, else the day worked out the
+way "The runner's day" describes (a Strava API run keeps its local clock; a file's UTC time is converted with the runner's time
+zone). Runs near the edges of the window are read a day wider and placed before they are kept, so a run in Auckland on a Monday
+morning is on Monday whichever clock it was recorded on.
+
+### Known limits
+
+- Whether older runs exist is looked up among the runner's newest 5,000 runs before the window; beyond that the page simply does
+  not offer earlier weeks.
+- A run that has not been analysed has no effort and adds none to its week; the page shows it without one.
+- The log lists runs only (as the rest of the analysis does); cross-training, strength and walking are not in it.
 
 ## Recovery Estimation
 

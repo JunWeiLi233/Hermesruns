@@ -5,6 +5,7 @@ import com.hermes.backend.activity.Activity;
 import com.hermes.backend.activity.ActivityBestEffort;
 import com.hermes.backend.activity.ActivityBestEffortRepository;
 import com.hermes.backend.activity.ActivityRepository;
+import com.hermes.backend.activity.ActivityTagRepository;
 import com.hermes.backend.races.RaceEvent;
 import com.hermes.backend.races.RaceEventRepository;
 import com.hermes.backend.shoes.Shoe;
@@ -17,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -41,6 +44,7 @@ public class AccountExportService {
 
     private final ActivityRepository activities;
     private final ActivityBestEffortRepository bestEfforts;
+    private final ActivityTagRepository tags;
     private final ShoeRepository shoes;
     private final RaceEventRepository races;
     private final JdbcTemplate jdbc;
@@ -50,12 +54,14 @@ public class AccountExportService {
 
     public AccountExportService(ActivityRepository activities,
                                 ActivityBestEffortRepository bestEfforts,
+                                ActivityTagRepository tags,
                                 ShoeRepository shoes,
                                 RaceEventRepository races,
                                 JdbcTemplate jdbc,
                                 ObjectMapper objectMapper) {
         this.activities = activities;
         this.bestEfforts = bestEfforts;
+        this.tags = tags;
         this.shoes = shoes;
         this.races = races;
         this.jdbc = jdbc;
@@ -88,7 +94,7 @@ public class AccountExportService {
 
         entry(zip, "README.txt", readme(includeTracks));
         entry(zip, "profile.json", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(profile(runner)));
-        entry(zip, "runs.csv", runsCsv(runs));
+        entry(zip, "runs.csv", runsCsv(runs, tagsByRun(runner.getId())));
         entry(zip, "best-efforts.csv", bestEffortsCsv(bestEfforts.findAllForRunner(runner.getId())));
         entry(zip, "shoes.csv", shoesCsv(shoes.findByRunnerOrderByCreatedAtDesc(runner)));
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
@@ -137,15 +143,26 @@ public class AccountExportService {
                 - runs.csv has a source column. STRAVA_API means the run was fetched from Strava.
                 - start_time_basis says how to read start_time: "local" is the clock time where you ran
                   (runs fetched from Strava); "utc" is UTC (runs imported from files or devices).
+                - run_type is RACE, LONG_RUN or WORKOUT when you set one, and empty otherwise. tags holds the
+                  words you put on the run, in the order you added them, separated by "; ".
                 - GPX files carry timestamps only for runs whose start time is UTC.
                 - Not included yet: coach plans, wellness series (sleep, HRV, stress), muscle-training logs.
                 """;
     }
 
-    private static String runsCsv(List<Activity> runs) {
+    /** Each run's tags, in the order the runner added them. */
+    private Map<Long, List<String>> tagsByRun(Long runnerId) {
+        Map<Long, List<String>> byRun = new HashMap<>();
+        for (Object[] row : tags.findAllLabels(runnerId)) {
+            byRun.computeIfAbsent((Long) row[0], id -> new ArrayList<>()).add((String) row[1]);
+        }
+        return byRun;
+    }
+
+    private static String runsCsv(List<Activity> runs, Map<Long, List<String>> tagsByRun) {
         StringBuilder csv = new StringBuilder(
                 "id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
-                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at\n");
+                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
         for (Activity run : runs) {
             csv.append(row(
                     String.valueOf(run.getId()),
@@ -162,7 +179,9 @@ public class AccountExportService {
                     value(run.getCalories()),
                     value(run.getAverageCadence()),
                     text(run.getShoeName()),
-                    value(run.getCreatedAt())
+                    value(run.getCreatedAt()),
+                    text(run.getRunType()),
+                    text(String.join("; ", tagsByRun.getOrDefault(run.getId(), List.of())))
             ));
         }
         return csv.toString();

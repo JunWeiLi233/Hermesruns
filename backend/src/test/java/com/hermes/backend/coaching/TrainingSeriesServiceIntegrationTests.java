@@ -342,6 +342,58 @@ class TrainingSeriesServiceIntegrationTests {
         assertThat(weekly.bandPercent()).isEqualTo(20);
     }
 
+    /** A run of the given type on a day, analysed. */
+    private ActivityTrainingMetrics typedEffort(Runner owner, LocalDate day, String runType) {
+        ActivityTrainingMetrics row = effort(owner, day, 100);
+        Activity run = row.getActivity();
+        run.setRunType(runType);
+        activities.saveAndFlush(run);
+        return row;
+    }
+
+    @Test
+    void theDaysOfRacesAreMarkedOncePerDayOldestFirstAndOnlyInsideTheWindow() {
+        Runner owner = runner(null);
+        Runner stranger = runner(null);
+        typedEffort(owner, TODAY.minusDays(20), "RACE");
+        typedEffort(owner, TODAY.minusDays(3), "RACE");
+        typedEffort(owner, TODAY.minusDays(3), "RACE");           // two races on one day: one mark
+        typedEffort(owner, TODAY.minusDays(10), "LONG_RUN");      // not a race
+        effort(owner, TODAY.minusDays(5), 50);                    // no type at all
+        typedEffort(owner, TODAY.minusDays(200), "RACE");         // before the 180 days shown
+        typedEffort(stranger, TODAY.minusDays(1), "RACE");        // somebody else's
+
+        assertThat(service().series(owner, null, null).raceDays()).containsExactly(TODAY.minusDays(20), TODAY.minusDays(3));
+        assertThat(service().series(owner, TODAY.minusDays(25), TODAY.minusDays(10)).raceDays()).containsExactly(TODAY.minusDays(20));
+        assertThat(service().series(owner, TODAY.minusDays(250), null).raceDays())
+                .containsExactly(TODAY.minusDays(200), TODAY.minusDays(20), TODAY.minusDays(3));
+        assertThat(service().series(stranger, null, null).raceDays()).containsExactly(TODAY.minusDays(1));
+        assertThat(service().series(runner(null), null, null).raceDays()).isEmpty();
+    }
+
+    @Test
+    void takingTheRaceTypeOffARunTakesItsMarkOffTheChart() {
+        Runner owner = runner(null);
+        ActivityTrainingMetrics race = typedEffort(owner, TODAY.minusDays(6), "RACE");
+        assertThat(service().series(owner, null, null).raceDays()).containsExactly(TODAY.minusDays(6));
+
+        Activity run = race.getActivity();
+        run.setRunType(null);
+        activities.saveAndFlush(run);
+
+        assertThat(service().series(owner, null, null).raceDays()).isEmpty();
+    }
+
+    @Test
+    void aRaceThatHasNotBeenAnalysedYetHasNoDayToMarkAndIsLeftOut() {
+        Runner owner = runner(null);
+        Activity pending = run(owner, TODAY.minusDays(4));
+        pending.setRunType("RACE");
+        activities.saveAndFlush(pending);
+
+        assertThat(service().series(owner, null, null).raceDays()).isEmpty();
+    }
+
     @Test
     void weeklyEffortRefusesACountOutsideOneToFiftyTwo() {
         Runner owner = runner(null);

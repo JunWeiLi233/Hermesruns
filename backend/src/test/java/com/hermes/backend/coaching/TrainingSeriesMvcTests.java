@@ -60,7 +60,12 @@ class TrainingSeriesMvcTests {
     }
 
     private void effort(Runner owner, LocalDate day, double score, String source) {
+        effort(owner, day, score, source, null);
+    }
+
+    private void effort(Runner owner, LocalDate day, double score, String source, String runType) {
         Activity run = new Activity();
+        run.setRunType(runType);
         run.setRunner(owner);
         run.setName("run " + UUID.randomUUID());
         run.setActivityType(ActivityType.RUN);
@@ -118,6 +123,22 @@ class TrainingSeriesMvcTests {
                 .andExpect(jsonPath("$.sources.PERCEIVED").value(1))
                 .andExpect(jsonPath("$.runs").value(2))
                 .andExpect(jsonPath("$.pendingRuns").value(0));
+    }
+
+    @Test
+    void theDaysOfRacesComeWithTheSeriesForTheScreenToMark() throws Exception {
+        Runner owner = runner();
+        effort(owner, today().minusDays(12), 100, "HR_ZONES", "RACE");
+        effort(owner, today().minusDays(8), 100, "HR_ZONES", "WORKOUT");
+        effort(owner, today().minusDays(2), 80, "HR_ZONES");
+
+        mockMvc.perform(get("/api/training/series").header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.raceDays", hasSize(1)))
+                .andExpect(jsonPath("$.raceDays[0]").value(today().minusDays(12).toString()));
+        mockMvc.perform(get("/api/training/series").header("Authorization", bearer(runner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.raceDays", hasSize(0)));
     }
 
     @Test

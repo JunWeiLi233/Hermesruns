@@ -38,6 +38,13 @@ public abstract class ActivityRelationshipFields extends ActivityMetricFields {
     @Column(name = "records_version")
     private Integer recordsVersion;
 
+    /**
+     * What kind of run the runner says this was (see {@link RunTypes}); null for a run that is none of them. Part of the
+     * API response, unlike the analysis markers above.
+     */
+    @Column(name = "run_type", length = 16)
+    private String runType;
+
     @JsonIgnore
     public List<ActivityPoint> getPoints() { return points; }
     public void setPoints(List<ActivityPoint> points) { this.points = points; }
@@ -53,4 +60,7 @@ public abstract class ActivityRelationshipFields extends ActivityMetricFields {
     @JsonIgnore
     public Integer getRecordsVersion() { return recordsVersion; }
     public void setRecordsVersion(Integer recordsVersion) { this.recordsVersion = recordsVersion; }
+
+    public String getRunType() { return runType; }
+    public void setRunType(String runType) { this.runType = runType; }
 }
