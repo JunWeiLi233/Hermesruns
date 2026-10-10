@@ -5,6 +5,8 @@ import com.hermes.backend.activity.ActivityPoint;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.BestEffortService;
+import com.hermes.backend.activity.RunRecordsCoordinator;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.races.RaceEvent;
 import com.hermes.backend.races.RaceEventRepository;
@@ -41,6 +43,8 @@ class AccountExportIntegrationTests {
     @Autowired private ActivityPointRepository points;
     @Autowired private ShoeRepository shoes;
     @Autowired private RaceEventRepository races;
+    @Autowired private RunRecordsCoordinator recordsCoordinator;
+    @Autowired private BestEffortService bestEfforts;
 
     private Runner runner() {
         Runner runner = new Runner("export-" + UUID.randomUUID() + "@hermes.test", "active");
@@ -91,6 +95,28 @@ class AccountExportIntegrationTests {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         exports.write(owner, tracks, out);
         return unzip(out.toByteArray());
+    }
+
+    @Test
+    void theBestEffortsAreExportedWithTheTimesTheRunnerTypedAndTheEffortsTheyHid() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        Activity mine = run(owner, "My race", ImportProvider.GARMIN, false);
+        Activity theirs = run(stranger, "Their race", ImportProvider.GARMIN, false);
+        recordsCoordinator.process(owner.getId(), mine.getId());
+        recordsCoordinator.process(stranger.getId(), theirs.getId());
+        bestEfforts.change(owner, mine.getId(), "5km", new BestEffortService.Change(1490, false, null));
+        bestEfforts.change(owner, mine.getId(), "3km", new BestEffortService.Change(null, false, true));
+
+        Map<String, String> files = export(owner, false);
+
+        assertThat(files).containsKey("best-efforts.csv");
+        String csv = files.get("best-efforts.csv");
+        assertThat(csv).startsWith("run_id,distance,distance_m,measured_s,typed_s,counted_s,estimated,hidden,date\n");
+        assertThat(csv).contains(mine.getId() + ",5km,5000.0,1500.0,1490,1490.0,true,false,2026-10-01");
+        assertThat(csv).contains(mine.getId() + ",3km,3000.0,900.0,,900.0,true,true,2026-10-01");
+        assertThat(csv).doesNotContain(theirs.getId() + ",");
+        assertThat(files.get("README.txt")).contains("best-efforts.csv");
     }
 
     @Test

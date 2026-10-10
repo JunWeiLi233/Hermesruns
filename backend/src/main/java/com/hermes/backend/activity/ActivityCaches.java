@@ -25,6 +25,14 @@ public final class ActivityCaches {
         }
         cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(runnerId));
         cacheStore.evict(ACTIVITY_HEATMAP_NAMESPACE, runnerId + ":all");
+        evictPersonalRecords(cacheStore, runnerId);
+    }
+
+    /** Drops only the personal records: what changes when a run's best efforts are worked out or edited. */
+    public static void evictPersonalRecords(TtlCacheStore cacheStore, Long runnerId) {
+        if (cacheStore == null || runnerId == null) {
+            return;
+        }
         cacheStore.evict(PersonalRecordService.CACHE_NAMESPACE, String.valueOf(runnerId));
     }
 }

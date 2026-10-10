@@ -60,7 +60,7 @@ final class PaceProfileCalculator {
      *               {@link ActivityAnalyticsHelper#normalizeSamples} does
      */
     static PaceProfileResponse compute(List<SamplePoint> points) {
-        Track track = Track.of(points);
+        RunStream track = RunStream.of(points, MIN_STREAM_METERS, MIN_STREAM_SECONDS);
         if (track.problem() != null) {
             return PaceProfileResponse.noStream(track.problem());
         }
@@ -208,78 +208,6 @@ final class PaceProfileCalculator {
         return new PaceProfileResponse.Series(step, window, times, distances, paces, gaps, elevations);
     }
 
-    // ----- the cleaned stream -----
-
-    /**
-     * Time and distance from the first reading, and elevation where there was one (NaN where there was none). When the
-     * stream cannot be used, {@code problem} says why (one of the reasons in {@link PaceProfileResponse}) and the rest is
-     * empty.
-     */
-    private record Track(double[] t, double[] d, double[] z, int n, String problem) {
-
-        private static Track unusable(String problem) {
-            return new Track(null, null, null, 0, problem);
-        }
-
-        static Track of(List<SamplePoint> points) {
-            if (points == null || points.size() < 2) {
-                return unusable(PaceProfileResponse.NO_POINTS);
-            }
-            double[] t = new double[points.size()];
-            double[] d = new double[points.size()];
-            double[] z = new double[points.size()];
-            int n = 0;
-            int usable = 0;
-            for (SamplePoint p : points) {
-                if (p == null || p.elapsedSeconds() == null || p.distanceMeters() == null) {
-                    continue;
-                }
-                double time = p.elapsedSeconds();
-                double distance = p.distanceMeters();
-                if (!Double.isFinite(distance) || distance < 0) {
-                    continue;
-                }
-                usable++;
-                double elevation = p.elevationMeters() == null || !Double.isFinite(p.elevationMeters())
-                        ? Double.NaN
-                        : p.elevationMeters();
-                if (n > 0) {
-                    if (time < t[n - 1] || distance < d[n - 1]) {
-                        continue;
-                    }
-                    if (time == t[n - 1]) {
-                        if (distance > d[n - 1]) {
-                            d[n - 1] = distance;
-                            if (!Double.isNaN(elevation)) {
-                                z[n - 1] = elevation;
-                            }
-                        }
-                        continue;
-                    }
-                }
-                t[n] = time;
-                d[n] = distance;
-                z[n] = elevation;
-                n++;
-            }
-            if (usable < 2) {
-                return unusable(PaceProfileResponse.NO_POINTS);
-            }
-            if (n < 2 || d[n - 1] - d[0] < MIN_STREAM_METERS || t[n - 1] - t[0] < MIN_STREAM_SECONDS) {
-                return unusable(PaceProfileResponse.TOO_SHORT);
-            }
-            double t0 = t[0];
-            double d0 = d[0];
-            double[] tt = new double[n];
-            double[] dd = new double[n];
-            for (int i = 0; i < n; i++) {
-                tt[i] = t[i] - t0;
-                dd[i] = d[i] - d0;
-            }
-            return new Track(tt, dd, Arrays.copyOf(z, n), n, null);
-        }
-    }
-
     // ----- elevation and grade -----
 
     /** The run's elevation after cleaning, looked up by distance along the run. */
@@ -293,7 +221,7 @@ final class PaceProfileCalculator {
         }
 
         /** Null when the stream has too little elevation to say anything about grade. */
-        static Terrain of(Track track) {
+        static Terrain of(RunStream track) {
             int readings = 0;
             for (int i = 0; i < track.n(); i++) {
                 if (!Double.isNaN(track.z()[i])) {

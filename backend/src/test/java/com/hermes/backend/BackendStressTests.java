@@ -1,6 +1,7 @@
 package com.hermes.backend;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityBestEffortRepository;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
@@ -393,7 +394,7 @@ class BackendStressTests {
     @DisplayName("STRESS: PersonalRecordService — large activity list does not cause stack overflow or infinite loop")
     void personalRecordService_largeActivityList_noOverflow() {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        ActivityBestEffortRepository bestEfforts = mock(ActivityBestEffortRepository.class);
 
         int runCount = 200;
         List<Activity> runs = new ArrayList<>();
@@ -410,13 +411,8 @@ class BackendStressTests {
         }
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class)))
                 .thenReturn(runs);
-        Object[] emptySample = new Object[]{0.0, 0.0, 0.0, 0.0, null, null, null, null, null};
-        List<Object[]> emptySamples = new ArrayList<>();
-        emptySamples.add(emptySample);
-        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(anyLong()))
-                .thenReturn(emptySamples);
 
-        PersonalRecordService service = new PersonalRecordService(activityRepository, activityPointRepository);
+        PersonalRecordService service = new PersonalRecordService(activityRepository, bestEfforts);
         Runner runner = new Runner();
 
         long startTime = System.nanoTime();
@@ -436,54 +432,10 @@ class BackendStressTests {
     }
 
     @Test
-    @DisplayName("STRESS: PersonalRecordService — activity with many sample points")
-    void personalRecordService_manySamplePoints_handlesGracefully() {
-        ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
-
-        Activity run = new Activity();
-        run.setId(1L);
-        run.setName("Marathon");
-        run.setActivityType(ActivityType.RUN);
-        run.setDistanceKm(42.195);
-        run.setDistanceMeters(42195.0);
-        run.setMovingTimeSeconds(14400);
-        run.setStartTime(LocalDateTime.of(2026, 4, 1, 7, 0));
-
-        int sampleCount = 10000;
-        List<Object[]> samples = new ArrayList<>(sampleCount);
-        double deltaDist = 42195.0 / sampleCount;
-        double deltaSec = 14400.0 / sampleCount;
-        for (int i = 0; i < sampleCount; i++) {
-            samples.add(new Object[]{0.0, 0.0, i * deltaSec, i * deltaDist, null, null, null, null, null});
-        }
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class)))
-                .thenReturn(List.of(run));
-        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(eq(1L)))
-                .thenReturn(samples);
-
-        PersonalRecordService service = new PersonalRecordService(activityRepository, activityPointRepository);
-        Runner runner = new Runner();
-
-        long startTime = System.nanoTime();
-        PersonalRecordService.PersonalRecordsResponse response = service.buildForRunner(runner);
-        long elapsedMs = (System.nanoTime() - startTime) / 1_000_000;
-
-        assertThat(response).isNotNull();
-        System.out.println("[STRESS PERF] PersonalRecordService: " + sampleCount
-                + " sample points processed in " + elapsedMs + "ms");
-
-        if (elapsedMs > 2000) {
-            System.out.println("[STRESS WARN] PersonalRecordService: " + elapsedMs
-                    + "ms for " + sampleCount + " samples — O(n^2) best-effort scan may need optimization.");
-        }
-    }
-
-    @Test
     @DisplayName("STRESS: PersonalRecordService — null and extreme values are handled safely")
     void personalRecordService_nullAndExtremeValues_noCrash() {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        ActivityBestEffortRepository bestEfforts = mock(ActivityBestEffortRepository.class);
 
         Activity zeroDistance = new Activity();
         zeroDistance.setId(1L);
@@ -519,10 +471,8 @@ class BackendStressTests {
 
         when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class)))
                 .thenReturn(List.of(zeroDistance, negativeDistance, hugeDistance, zeroTime));
-        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(anyLong()))
-                .thenReturn(List.of());
 
-        PersonalRecordService service = new PersonalRecordService(activityRepository, activityPointRepository);
+        PersonalRecordService service = new PersonalRecordService(activityRepository, bestEfforts);
         Runner runner = new Runner();
 
         assertThatCode(() -> service.buildForRunner(runner)).doesNotThrowAnyException();
@@ -701,66 +651,6 @@ class BackendStressTests {
     // ================================================================
     // 10. PERSONAL RECORD — COMPUTATIONAL HARDENING
     // ================================================================
-
-    @Test
-    @DisplayName("STRESS: PersonalRecordService — activity with NaN/Infinity sample values")
-    void personalRecordService_nanInfinitySamples_noCrash() {
-        ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
-
-        Activity run = new Activity();
-        run.setId(1L);
-        run.setName("Bad data run");
-        run.setActivityType(ActivityType.RUN);
-        run.setDistanceKm(5.0);
-        run.setMovingTimeSeconds(1800);
-        run.setStartTime(LocalDateTime.of(2026, 1, 1, 7, 0));
-
-        List<Object[]> badSamples = new ArrayList<>();
-        badSamples.add(new Object[]{0.0, 0.0, Double.NaN, Double.NaN, null, null, null, null, null});
-        badSamples.add(new Object[]{0.0, 0.0, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, null, null, null, null, null});
-        badSamples.add(new Object[]{0.0, 0.0, 1800.0, 5000.0, null, null, null, null, null});
-
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class)))
-                .thenReturn(List.of(run));
-        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(eq(1L)))
-                .thenReturn(badSamples);
-
-        PersonalRecordService service = new PersonalRecordService(activityRepository, activityPointRepository);
-        Runner runner = new Runner();
-
-        assertThatCode(() -> service.buildForRunner(runner)).doesNotThrowAnyException();
-    }
-
-    @Test
-    @DisplayName("STRESS: PersonalRecordService — activity with descending distance values")
-    void personalRecordService_descendingDistanceSamples_noCrash() {
-        ActivityRepository activityRepository = mock(ActivityRepository.class);
-        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
-
-        Activity run = new Activity();
-        run.setId(1L);
-        run.setName("Descending distance run");
-        run.setActivityType(ActivityType.RUN);
-        run.setDistanceKm(10.0);
-        run.setMovingTimeSeconds(3600);
-        run.setStartTime(LocalDateTime.of(2026, 1, 1, 7, 0));
-
-        List<Object[]> weirdSamples = new ArrayList<>();
-        weirdSamples.add(new Object[]{0.0, 0.0, 0.0, 5000.0, null, null, null, null, null});
-        weirdSamples.add(new Object[]{0.0, 0.0, 600.0, 3000.0, null, null, null, null, null});
-        weirdSamples.add(new Object[]{0.0, 0.0, 1200.0, 1000.0, null, null, null, null, null});
-
-        when(activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(any(Runner.class), any(ActivityType.class)))
-                .thenReturn(List.of(run));
-        when(activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(eq(1L)))
-                .thenReturn(weirdSamples);
-
-        PersonalRecordService service = new PersonalRecordService(activityRepository, activityPointRepository);
-        Runner runner = new Runner();
-
-        assertThatCode(() -> service.buildForRunner(runner)).doesNotThrowAnyException();
-    }
 
     // ================================================================
     // Helpers

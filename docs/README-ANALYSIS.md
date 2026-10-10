@@ -240,6 +240,129 @@ the chart without zones.
 - A Strava run's stream is fetched when its run page first opens; the pace card waits for that instead of fetching it a
   second time.
 
+## Best Efforts and Same-Route Runs
+
+Every run page lists the fastest stretch the run holds of each standard distance, with its place among the runner's
+whole history (**PR**, 2nd, 3rd, and so on), and the runs over the same route with the pace of each. The Profile page has
+a best-efforts analysis: the three best ever at a distance, the ten best of a year, and how the best time moved from year
+to year. The server works the efforts and the route out once for a run, in the background, and keeps them in
+`activity_best_effort` and `route_match_group`. The places are not kept: they are read from the other efforts every time,
+so they cannot be out of date when a run is added, edited or deleted.
+
+### The distances
+
+400 m, half a mile, 1 km, 1 mile, 3 km, 2 miles, 5 km, 10 km, 15 km, 10 miles, 20 km, the half marathon (21 097.5 m),
+30 km, the marathon (42 195 m) and 50 km: Strava's fourteen, and the 3 km Hermes has always had. A run has an effort
+at a distance only when its stream is that long. The personal records on the Profile page (1 km, 3 km, 5 km, 10 km, half
+and marathon) read the same table, so the two can no longer disagree.
+
+### How a best effort is found
+
+The input is the same tidied stream as the pace profile (see "The stream and moving time" above), so only readings that
+say when they were recorded are used, and a run without them has no measured efforts. The runner is taken to move in a
+straight line between two readings. Distance is then a piecewise linear function of time, and the time a window of `D`
+metres takes when it starts `s` metres into the run, `arrival(s + D) - departure(s)`, is piecewise linear in `s`. Its
+smallest value is at a breakpoint: a window that starts at a reading or one that ends at one. Hermes tries both kinds, so
+the answer is exact for the stream and does not depend on where the readings fall. A search that starts windows only at
+readings misses a window whose fast stretch ends at a reading; `BestEffortCalculatorTests` compares the result with a
+brute-force search on a 1 cm grid.
+
+Standing still counts when it happens inside a window and not when it happens at its edge: a window starts when the
+runner leaves a spot (the last reading there) and ends when the runner arrives (the first reading at the end). A runner
+who stops at a crossing in the middle of a 5 km window loses that time; one who waits at the start does not.
+
+Three guards keep a GPS fault from becoming a record:
+
+- a window whose average speed is above 10 m/s (a 1:40 per km pace) is not an effort;
+- a window that takes in a stretch between two readings covered faster than 12.5 m/s, or in no time at all, is not an
+  effort either: that is the position jumping, not a runner;
+- under 1 km the window is located only to the nearest reading, so when the readings are more than 15 s apart (the
+  median) the distances under 1 km are not worked out at all.
+
+The time is rounded to 0.1 s. The start and the end of the window are kept as seconds from the first reading, so the
+run page can show where the effort sits in the run; each is rounded to a whole second on its own, so the end minus the
+start can differ from the time by a second.
+
+### Estimates
+
+A distance of 1 km or more that the stream does not hold still gets an effort when the run itself covered at least 90% of
+it: the run's moving seconds per metre times the distance (and only when that is no faster than 1:40 per km). That is the
+case for a run with no stream (entered by hand, or a treadmill run) and for a run a little short of the distance. It is marked **estimated** wherever it is shown, and it is
+replaced by the measured effort as soon as the run has a stream that holds one. An estimate takes part in places and
+records like any other effort, so a hand-entered 5 km can be the 5 km record; the runner can hide it.
+
+### What the runner decides
+
+- **A chip time.** The time of an effort can be typed in, in whole seconds, when the watch missed the start or the run
+  was timed by a race. It must be a time a runner could run: between 1:40 per km and 30:00 per km. A typed time counts
+  everywhere in place of the measured one, is marked **edited**, and is kept when the run is analysed again. Taking it back
+  (`elapsedSeconds: null`) restores the measured time.
+- **Hiding.** A hidden effort has no place, is left out of every list and record and does not push the others down. The row
+  stays, so analysing the run again does not bring it back.
+
+An effort for a distance the run no longer holds (after the stream was replaced) is removed when the run is analysed
+again, unless the runner typed a time for it or hid it.
+
+### Places and lists
+
+The place of an effort is one more than the number of the runner's efforts at that distance that are faster, with a tie
+going to the earlier day and then the earlier run. Hidden efforts are not counted. The lists on the Profile page:
+
+| list | what it holds |
+|---|---|
+| lifetime | the three best efforts ever at the distance |
+| annual | the ten best efforts of one calendar year (the latest year with an effort unless one is chosen) |
+| trend | the best time of every year, with the number of efforts that year |
+
+A run belongs to the calendar day in the runner's own time zone (see "The runner's day" above). Each run can hold only
+one effort per distance, so two places in a list are always two different runs.
+
+### When a run is analysed
+
+When it is imported (after the import commits), when its stream arrives (a Strava run is saved before its stream is
+fetched), and, for any run that has not been, when its records are first read (a run page, the best-efforts analysis, or
+the Profile page's personal records): a request analyses up to 100 runs for at most 1.5 s, newest first, and says in
+`complete` whether some are still waiting, so the screen can say that places may still change. Two requests that read
+the same waiting run do it once: the second finds it done when its turn comes. After every start, a background pass analyses up to 500 runs that have not been
+(`app.records.catchup-on-startup`, `app.records.catchup-max-runs`), which is also how an existing history is picked up
+after an upgrade. A run is marked with the version of the analysis that last ran for it (`BestEffortService.MODEL_VERSION`),
+so raising that number analyses every run again. Deleting a run takes its efforts with it, and so does deleting the
+account; the account export has them in `best-efforts.csv`.
+
+### Same-route runs
+
+Two runs are the same route when they start within 150 m of each other, finish within 150 m of each other, are within 5%
+of each other in distance, and go the same way:
+
+- a run that finishes within 150 m of where it started is a **loop**, and two loops match only when they go round the
+  same way (the sign of the area the track encloses). A loop that encloses less than 5% of the area a circle of its length
+  would is an **out-and-back** and matches only other out-and-backs;
+- a loop never matches an open route. For an open route the two ends already fix the direction: the same route run the
+  other way starts where the first finished, which is not within 150 m of its start.
+
+The thresholds are Hermes' own and are settings (`app.records.match.endpoint-tolerance-m`,
+`app.records.match.distance-tolerance-pct`); Strava names start, end, direction and distance as its criteria and does not
+publish its numbers. A route is at least 1 km. A run joins the nearest group of the runner's that it fits (the gap at the
+start plus the gap at the finish, in metres, plus a hundredth of the difference in distance), or starts a group. A group
+is anchored at the run that founded it, so two runs that each fit the founder are in one group even if they do not fit
+each other. Groups belong to one runner and are never shared.
+
+The server returns the runs of the group oldest first with their date, distance, moving time and pace (moving seconds per
+kilometre), marks the fastest (the earlier one when two are equal) and the run being viewed, and returns no runs at all
+when the run is the only one of its route. At most the newest 500 runs of a route are sent.
+
+### Known limits
+
+- The shape between the start and the finish is not compared, so two different loops of the same length from the same
+  door are one route, and a loop run from another point of the same circuit is another route.
+- A run imported twice (once from a file and once from Strava) is two runs: it can take two of the three lifetime places
+  and appears twice in its own route. Delete one of them.
+- An effort is only as good as the stream. A watch that records a position every 30 s works but is coarse, and a stream
+  whose distance is inflated by GPS drift makes efforts faster than they were (the guards above only catch jumps).
+- Estimates are the run's average pace carried over to the distance, which is slower than a runner's best stretch and
+  faster than a runner who tired; they are marked so they can be hidden.
+- Only whole seconds can be typed, and only for an effort the run already has.
+
 ## Recovery Estimation
 
 ```
@@ -275,6 +398,10 @@ Fitter runner (higher VDOT) → faster recovery. Long runs (>90 min) add penalty
 | **Heart-rate zone** | One of five bands of heart rate set from the max heart rate or by the runner. |
 | **Moving pace** | Moving seconds per kilometre: time spent standing still is left out. Every pace on the run page's pace card is one. |
 | **Grade-adjusted pace (GAP)** | The flat pace that is worth about the same effort as the pace run on the slope: faster than the pace run on a climb, slower on a gentle descent. Hermes uses a quadratic that approximates how Strava describes its own GAP, so it is close to Strava's numbers but not the same. |
+| **Best effort** | The fastest continuous stretch of a standard distance (400 m to 50 km) inside one run, found exactly from the stream. Its place (PR, 2nd, 3rd...) is among the runner's efforts at that distance. |
+| **Chip time** | A time the runner typed in for a best effort, replacing the one measured; kept when the run is analysed again. |
+| **Estimated effort** | A best effort worked out from the run's average pace when there is no stream to measure, for a run that covered at least 90% of the distance. Marked wherever it is shown. |
+| **Same-route runs** | Runs that start and finish within 150 m of the same places, go the same way and are within 5% of the same distance. |
 
 ## Related Docs
 

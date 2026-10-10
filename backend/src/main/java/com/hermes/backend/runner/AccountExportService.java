@@ -2,6 +2,8 @@ package com.hermes.backend.runner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityBestEffort;
+import com.hermes.backend.activity.ActivityBestEffortRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.races.RaceEvent;
 import com.hermes.backend.races.RaceEventRepository;
@@ -38,6 +40,7 @@ public class AccountExportService {
     private static final Duration GATE_TIMEOUT = Duration.ofMinutes(15);
 
     private final ActivityRepository activities;
+    private final ActivityBestEffortRepository bestEfforts;
     private final ShoeRepository shoes;
     private final RaceEventRepository races;
     private final JdbcTemplate jdbc;
@@ -46,11 +49,13 @@ public class AccountExportService {
     private long runningSinceMs;
 
     public AccountExportService(ActivityRepository activities,
+                                ActivityBestEffortRepository bestEfforts,
                                 ShoeRepository shoes,
                                 RaceEventRepository races,
                                 JdbcTemplate jdbc,
                                 ObjectMapper objectMapper) {
         this.activities = activities;
+        this.bestEfforts = bestEfforts;
         this.shoes = shoes;
         this.races = races;
         this.jdbc = jdbc;
@@ -84,6 +89,7 @@ public class AccountExportService {
         entry(zip, "README.txt", readme(includeTracks));
         entry(zip, "profile.json", objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(profile(runner)));
         entry(zip, "runs.csv", runsCsv(runs));
+        entry(zip, "best-efforts.csv", bestEffortsCsv(bestEfforts.findAllForRunner(runner.getId())));
         entry(zip, "shoes.csv", shoesCsv(shoes.findByRunnerOrderByCreatedAtDesc(runner)));
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
 
@@ -119,6 +125,8 @@ public class AccountExportService {
 
                 profile.json  Your account details (no passwords or tokens).
                 runs.csv      Every run Hermes holds for you.
+                best-efforts.csv  The fastest stretch of each standard distance in each run, with the times
+                              you typed in and the efforts you hid.
                 shoes.csv     Your shoes.
                 races.csv     Your saved races.
                 """ + (includeTracks
@@ -155,6 +163,25 @@ public class AccountExportService {
                     value(run.getAverageCadence()),
                     text(run.getShoeName()),
                     value(run.getCreatedAt())
+            ));
+        }
+        return csv.toString();
+    }
+
+    private static String bestEffortsCsv(List<ActivityBestEffort> efforts) {
+        StringBuilder csv = new StringBuilder(
+                "run_id,distance,distance_m,measured_s,typed_s,counted_s,estimated,hidden,date\n");
+        for (ActivityBestEffort effort : efforts) {
+            csv.append(row(
+                    String.valueOf(effort.getActivity().getId()),
+                    effort.getDistanceKey(),
+                    value(effort.getDistanceMeters()),
+                    value(effort.getElapsedSeconds()),
+                    value(effort.getEditedElapsedSeconds()),
+                    value(effort.getEffectiveSeconds()),
+                    String.valueOf(effort.isEstimated()),
+                    String.valueOf(effort.isHidden()),
+                    value(effort.getLocalDate())
             ));
         }
         return csv.toString();
