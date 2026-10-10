@@ -791,3 +791,187 @@ body:is(.theme-midnight, .theme-high-contrast) #root .run-detail-runner-page .ru
 @media (max-width: 1200px) {
   #root .run-detail-v2 .run-detail-v2__pa-body { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Best efforts and same-route runs */
+#root .run-detail-v2 .run-detail-v2__be-scroll { width: 100%; overflow-x: auto; }
+
+#root .run-detail-runner-page .run-detail-v2 :is(.run-detail-v2__be-table, .run-detail-v2__rm-table) {
+  width: 100%;
+  min-width: 540px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .run-detail-runner-page .run-detail-v2 :is(.run-detail-v2__be-table, .run-detail-v2__rm-table) thead th {
+  padding: 8px 12px 8px 0 !important;
+  border-bottom: 1px solid var(--v2-line);
+  background: transparent !important;
+  color: var(--v2-muted) !important;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+#root .run-detail-runner-page .run-detail-v2 :is(.run-detail-v2__be-table, .run-detail-v2__rm-table) tbody :is(th, td) {
+  padding: 10px 12px 10px 0 !important;
+  border-bottom: 1px solid var(--v2-line);
+  background: transparent !important;
+  color: var(--v2-ink) !important;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  vertical-align: middle;
+}
+
+#root .run-detail-runner-page .run-detail-v2 :is(.run-detail-v2__be-table, .run-detail-v2__rm-table) tbody tr:last-child :is(th, td) { border-bottom: 0; }
+
+#root .run-detail-v2 .run-detail-v2__be-distance,
+#root .run-detail-v2 .run-detail-v2__rm-run { display: table-cell; }
+
+#root .run-detail-v2 :is(.run-detail-v2__be-distance, .run-detail-v2__rm-run) :is(strong, small) { display: block; }
+#root .run-detail-v2 .run-detail-v2__be-distance strong { color: var(--v2-ink); font-size: 0.9rem; font-weight: 700; }
+#root .run-detail-v2 :is(.run-detail-v2__be-distance, .run-detail-v2__rm-run) small { color: var(--v2-muted) !important; font-size: 0.72rem; font-weight: 400; }
+
+#root .run-detail-v2 .run-detail-v2__be-time > strong { color: var(--v2-ink); font-size: 1rem; font-weight: 700; }
+#root .run-detail-v2 .run-detail-v2__be-time .run-detail-v2__be-measured { display: block; margin-top: 2px; color: var(--v2-muted) !important; font-size: 0.72rem; }
+#root .run-detail-v2 .run-detail-v2__be-pace { color: var(--v2-muted) !important; }
+#root .run-detail-v2 .run-detail-v2__be-place { white-space: nowrap; }
+
+#root .run-detail-v2 .run-detail-v2__be-row.is-hidden :is(.run-detail-v2__be-distance, .run-detail-v2__be-time, .run-detail-v2__be-pace) { opacity: 0.55; }
+#root .run-detail-v2 .run-detail-v2__be-row.is-editing { background: var(--v2-fill); }
+
+#root .run-detail-v2 .run-detail-v2__be-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--v2-fill);
+  color: var(--v2-muted) !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+#root .run-detail-v2 .run-detail-v2__be-tag.is-estimated { background: transparent; border: 1px dashed var(--v2-faint); }
+#root .run-detail-v2 .run-detail-v2__be-tag.is-fastest { background: color-mix(in srgb, var(--v2-zone-3) 22%, transparent); color: var(--v2-ink) !important; }
+
+#root .run-detail-v2 .run-detail-v2__be-pill {
+  display: inline-block;
+  min-width: 44px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--v2-fill);
+  color: var(--v2-muted) !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+#root .run-detail-v2 .run-detail-v2__be-pill.is-pr { background: var(--v2-accent); color: var(--v2-on-accent) !important; }
+#root .run-detail-v2 .run-detail-v2__be-pill.is-podium { background: var(--v2-accent-soft); color: var(--v2-accent) !important; }
+#root .run-detail-v2 .run-detail-v2__be-pill.is-hidden { background: transparent; border: 1px dashed var(--v2-faint); font-weight: 600; }
+
+#root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-actions { text-align: right; white-space: nowrap; }
+#root .run-detail-v2 .run-detail-v2__be-actions .run-detail-v2__link + .run-detail-v2__link { margin-left: 14px; }
+#root .run-detail-v2 .run-detail-v2__be-actions .run-detail-v2__link:focus-visible,
+#root .run-detail-v2 .run-detail-v2__be-edit .run-detail-v2__link:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+#root .run-detail-v2 .run-detail-v2__be-actions .run-detail-v2__link[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
+
+#root .run-detail-v2 .run-detail-v2__be-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+
+#root .run-detail-v2 .run-detail-v2__be-input {
+  width: 110px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--v2-line);
+  border-radius: 10px;
+  background: var(--v2-card);
+  color: var(--v2-ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#root .run-detail-v2 .run-detail-v2__be-input:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 1px; }
+#root .run-detail-v2 .run-detail-v2__be-input[aria-invalid="true"] { border-color: var(--v2-error); }
+#root .run-detail-v2 .run-detail-v2__be-save[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
+#root .run-detail-v2 .run-detail-v2__be-hint { flex: 1 0 100%; }
+#root .run-detail-v2 .run-detail-v2__be-problem { margin-top: 6px; }
+
+#root .run-detail-v2 .run-detail-v2__rm-summary { margin: 0; color: var(--v2-ink); font-size: 0.95rem; line-height: 1.55; }
+#root .run-detail-v2 .run-detail-v2__rm-years { align-self: flex-start; flex-wrap: wrap; }
+
+#root .run-detail-v2 .run-detail-v2__rm-chart { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#root .run-detail-v2 .run-detail-v2__rm-svg { display: block; max-width: 100%; overflow: visible; }
+#root .run-detail-v2 .run-detail-v2__rm-grid line { stroke: var(--v2-line); stroke-width: 1; }
+#root .run-detail-v2 .run-detail-v2__rm-grid text,
+#root .run-detail-v2 .run-detail-v2__rm-axis { fill: var(--v2-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+#root .run-detail-v2 .run-detail-v2__rm-trend { stroke: var(--v2-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+#root .run-detail-v2 .run-detail-v2__rm-dot.is-other { fill: color-mix(in srgb, var(--v2-muted) 55%, transparent); }
+#root .run-detail-v2 .run-detail-v2__rm-dot.is-fastest { fill: var(--v2-zone-3); stroke: var(--v2-card); stroke-width: 2; }
+#root .run-detail-v2 .run-detail-v2__rm-dot.is-current { fill: var(--v2-accent); stroke: var(--v2-card); stroke-width: 2; }
+
+#root .run-detail-v2 .run-detail-v2__rm-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; color: var(--v2-muted); font-size: 0.75rem; }
+#root .run-detail-v2 .run-detail-v2__rm-legend li::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: middle; }
+#root .run-detail-v2 .run-detail-v2__rm-legend li.is-current::before { background: var(--v2-accent); }
+#root .run-detail-v2 .run-detail-v2__rm-legend li.is-fastest::before { background: var(--v2-zone-3); }
+#root .run-detail-v2 .run-detail-v2__rm-legend li.is-other::before { background: color-mix(in srgb, var(--v2-muted) 55%, transparent); }
+#root .run-detail-v2 .run-detail-v2__rm-legend li.is-trend::before { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--v2-muted); }
+
+#root .run-detail-runner-page .run-detail-v2 .run-detail-v2__rm-row.is-current :is(th, td) { background: var(--v2-accent-soft) !important; }
+#root .run-detail-v2 .run-detail-v2__rm-run .run-detail-v2__link { font-size: 0.9rem; }
+#root .run-detail-v2 .run-detail-v2__rm-run strong { color: var(--v2-ink); font-size: 0.9rem; font-weight: 700; }
+
+@media (max-width: 640px) {
+  /* Best efforts: each effort is a short card, so the place and the actions are not a scroll away. */
+  #root .run-detail-v2 .run-detail-v2__be-scroll { overflow: visible; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table { display: block; min-width: 0; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tbody { display: block; }
+
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tr.run-detail-v2__be-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "distance place" "time pace" "actions actions";
+    align-items: center;
+    gap: 2px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--v2-line);
+  }
+
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tr.run-detail-v2__be-row:last-child { border-bottom: 0; }
+
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tr.run-detail-v2__be-row > :is(th, td) {
+    display: block;
+    padding: 0 !important;
+    border-bottom: 0 !important;
+  }
+
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table .run-detail-v2__be-distance { grid-area: distance; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table .run-detail-v2__be-time { grid-area: time; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table .run-detail-v2__be-pace { grid-area: pace; text-align: right; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table .run-detail-v2__be-place { grid-area: place; text-align: right; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table .run-detail-v2__be-actions { grid-area: actions; padding-top: 6px !important; text-align: left; }
+
+  /* The editor takes the whole row. */
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tr.run-detail-v2__be-row.is-editing { grid-template-areas: "distance place" "time time"; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__be-table tr.run-detail-v2__be-row.is-editing :is(.run-detail-v2__be-pace, .run-detail-v2__be-actions) { display: none; }
+
+  /* Same-route runs: the date, the pace and how it compares are what a phone has room for. */
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__rm-table { min-width: 0; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__rm-table :is(th, td):is(:nth-child(2), :nth-child(3)) { display: none; }
+  #root .run-detail-runner-page .run-detail-v2 .run-detail-v2__rm-table tbody td { white-space: nowrap; }
+}

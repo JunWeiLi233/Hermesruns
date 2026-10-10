@@ -1,30 +1,12 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import useElementWidth from '../../hooks/useElementWidth';
 import { formatPaceSeconds } from '../../utils/format';
 import { areaPath, distanceTicks, linePath, nearestIndex, paceDomain, paceTicks } from '../../utils/paceAnalysis';
 
 const MARGIN = { top: 14, right: 14, bottom: 30, left: 46 };
 /** The elevation area takes the bottom third of the plot, behind the pace. */
 const ELEVATION_BAND = 0.34;
-
-/** The width of the element, read before the first paint so the chart is not drawn at a guess and then redrawn. */
-function useWidth(ref, fallback = 720) {
-  const [width, setWidth] = useState(fallback);
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!node) return undefined;
-    const measured = Math.floor(node.clientWidth);
-    if (measured > 0) setWidth(measured);
-    if (typeof ResizeObserver === 'undefined') return undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const next = Math.floor(entry.contentRect.width);
-      if (next > 0) setWidth(next);
-    });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [ref]);
-  return width;
-}
 
 /** What the chart draws and reads out, for the kilometre splits or for the smoothed line. */
 function buildModel(profile, view, adjusted) {
@@ -125,7 +107,7 @@ export default function PaceChart({ profile, view, adjusted }) {
   const { t, formatNumber } = useI18n();
   const wrapperRef = useRef(null);
   const titleId = useId();
-  const width = useWidth(wrapperRef);
+  const width = useElementWidth(wrapperRef);
   const [active, setActive] = useState(null);
 
   const model = useMemo(() => buildModel(profile, view, adjusted), [profile, view, adjusted]);

@@ -15,6 +15,8 @@ import { formatDuration, formatLongDate, formatPaceSeconds } from '../../utils/f
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
+import RunBestEfforts from './RunBestEfforts';
+import RunMatches from './RunMatches';
 import RunPaceAnalysis from './RunPaceAnalysis';
 import RunTrainingCards from './RunTrainingCards';
 import {
@@ -1211,6 +1213,10 @@ export default function RunDetail() {
         <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
         <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
+
+        <RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
+
+        <RunMatches key={`matches-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
 
         <div className="run-detail-v2__lower">
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">

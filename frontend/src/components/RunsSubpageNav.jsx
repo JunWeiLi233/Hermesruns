@@ -10,6 +10,8 @@ const SECTION_ITEMS = [
   { id: 'run-detail-telemetry', labelKey: 'run_detail.subnav_telemetry', icon: 'monitor_heart' },
   { id: 'run-detail-pace', labelKey: 'run_detail.subnav_pace', icon: 'speed' },
   { id: 'run-detail-effort', labelKey: 'run_detail.subnav_effort', icon: 'zones' },
+  { id: 'run-detail-efforts', labelKey: 'run_detail.subnav_best_efforts', icon: 'trophy' },
+  { id: 'run-detail-matches', labelKey: 'run_detail.subnav_same_route', icon: 'map' },
   { id: 'run-detail-splits', labelKey: 'run_detail.subnav_splits', icon: 'splits' },
 ];
 
