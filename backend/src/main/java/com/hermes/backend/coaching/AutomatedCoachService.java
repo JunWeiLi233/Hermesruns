@@ -887,13 +887,16 @@ public class AutomatedCoachService {
 
     private CoachRunnerState getOrCreateState(Runner runner) {
         return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
-            CoachRunnerState s = new CoachRunnerState();
-            s.setRunner(runner);
-            try {
+            // A new runner's first visit to Home asks for the coach state and the muscle plan at the same moment, and both find
+            // nothing. Inserting it twice is not an option to recover from: the one that loses hits the unique index, and its
+            // transaction (on PostgreSQL) or its session (Hibernate) cannot go on. So the two take turns on the runner's own row:
+            // the first creates the state, the other waits for that transaction to end and then finds it.
+            runnerRepository.findByIdForUpdate(runner.getId());
+            return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
+                CoachRunnerState s = new CoachRunnerState();
+                s.setRunner(runner);
                 return coachRunnerStateRepository.save(s);
-            } catch (DataIntegrityViolationException race) {
-                return coachRunnerStateRepository.findByRunner(runner).orElseThrow(() -> race);
-            }
+            });
         });
     }
 

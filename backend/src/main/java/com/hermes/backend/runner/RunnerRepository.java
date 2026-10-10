@@ -6,10 +6,19 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RunnerRepository extends JpaRepository<Runner, Long>, JpaSpecificationExecutor<Runner> {
+    /**
+     * Takes the runner's row until the transaction ends, so that two requests about the same runner take turns. For the moments a
+     * request has to create something there can only be one of: the one that gets the row first creates it, and the other waits and finds it.
+     */
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Runner r WHERE r.id = :id")
+    Optional<Runner> findByIdForUpdate(@Param("id") Long id);
+
     boolean existsByEmailIgnoreCase(String email);
 
     Optional<Runner> findByEmailIgnoreCase(String email);

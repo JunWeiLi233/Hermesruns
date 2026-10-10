@@ -54,6 +54,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -353,8 +354,8 @@ class BackendStressTests {
     }
 
     @Test
-    @DisplayName("STRESS: AutomatedCoachService — concurrent getOrCreateState recovers from race")
-    void coachService_concurrentGetOrCreateState_recoversFromRace() {
+    @DisplayName("STRESS: AutomatedCoachService — concurrent getOrCreateState uses the state the other request created")
+    void coachService_concurrentGetOrCreateState_usesTheStateTheOtherRequestCreated() {
         Runner runner = runner(1L);
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
@@ -382,7 +383,9 @@ class BackendStressTests {
         AutomatedCoachService service = service(stateRepository, scheduleRepository, blockRepository, alertRepository);
 
         assertThatCode(() -> service.getCoachState(runner)).doesNotThrowAnyException();
-        verify(stateRepository).save(argThat(state -> state != recoveredState));
+        // The first lookup found nothing, but by the time this request had the runner's row the other one had created the state:
+        // it is used, and a second one is never inserted (the real thing would fail on the unique index and break the transaction).
+        verify(stateRepository, never()).save(argThat(state -> state != recoveredState));
         verify(stateRepository).save(recoveredState);
     }
 
