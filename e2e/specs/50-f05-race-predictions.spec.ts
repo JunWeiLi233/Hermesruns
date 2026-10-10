@@ -266,6 +266,28 @@ test.describe('F05 whole page', () => {
 });
 
 test.describe('F05 defects found', () => {
+  test('F05-E16 the first point of the Prediction History is what the runner could run then, not what the best run of the last six months says', async ({ browser, baseURL, guard }) => {
+    test.fail(true, 'BUG-035: every history point is blended with the best run of the last 180 days as of today, so the history is squeezed towards the present');
+    const made = await newRunner('history');
+    // 5 km at 6:20, 5:50, 5:20 and 5:00 per km, 70, 40, 14 and 4 days ago: a runner who got six minutes faster in ten weeks.
+    for (const [days, pace] of [[70, 380], [40, 350], [14, 320], [4, 300]] as const) {
+      await made.api.importRun(`h-${days}.gpx`, gpxRun({ name: `E2E history ${days}`, start: daysAgo(days), distanceM: 5000, pace }));
+    }
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      await page.goto('/prediction/5k');
+      await expect(page.getByRole('heading', { level: 2, name: 'Prediction History' })).toBeVisible();
+      const label = (await page.locator('canvas[role="img"]').first().getAttribute('aria-label')) ?? '';
+      const ends = label.match(/from (\S+) to (\S+)$/);
+      expect(ends, label).toBeTruthy();
+      // A 5K at 6:20 /km is 31:40: ten weeks ago the runner could not have been predicted a 26:35.
+      expect(toSeconds(ends![1]), `first point of: ${label}`).toBeGreaterThan(toSeconds('30:00'));
+    } finally {
+      await context.close();
+    }
+  });
+
   test('F05-E11 the "Race" row of Pace by Effort agrees with the race prediction above it', async ({ browser, baseURL, guard }) => {
     test.fail(true, 'BUG-014: the Race row is the same 4:50 /km for every distance, so the marathon page offers 3:24 under a 3:58 prediction');
     const context = await contextWith(browser, p, baseURL as string, guard);
