@@ -294,6 +294,9 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis
 #root .analysis-load-v2 .analysis-fit-v2-note.is-faint { color: var(--lb-faint); font-size: 0.75rem; }
 #root .analysis-load-v2 .analysis-fit-v2-note.is-error { color: #d70015; }
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis-fit-v2-note.is-error { color: #ffb4a7; }
+/* The page's faint grey is 4.4:1 on white and 4.0:1 on a card in the light theme, short of the 4.5:1 that small print needs. The new
+   cards use a darker one (5.1:1 on a card); the older cards of the page keep theirs, and the midnight theme already has enough. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analysis-fit-v2 { --lb-faint: #6f665c; }
 #root .analysis-load-v2 .analysis-fit-v2-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 
 /* The key above the chart: a switch for each line, showing its number for the day being looked at. */
