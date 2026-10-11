@@ -184,6 +184,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.durationSeconds AS durationSeconds,
               a.startDate AS startDate,
               a.startTime AS startTime,
+              a.stravaApiSourced AS stravaApiSourced,
               a.metrics.averageHeartRate AS averageHeartRate,
               a.metrics.maxHeartRate AS maxHeartRate,
               a.metrics.averageCadence AS averageCadence,
@@ -216,6 +217,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.durationSeconds AS durationSeconds,
               a.startDate AS startDate,
               a.startTime AS startTime,
+              a.stravaApiSourced AS stravaApiSourced,
               a.metrics.averageHeartRate AS averageHeartRate,
               a.metrics.maxHeartRate AS maxHeartRate,
               a.metrics.averageCadence AS averageCadence,
@@ -335,6 +337,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         Long getDurationSeconds();
         String getStartDate();
         LocalDateTime getStartTime();
+        Boolean getStravaApiSourced();
         Double getAverageHeartRate();
         Double getMaxHeartRate();
         Double getAverageCadence();

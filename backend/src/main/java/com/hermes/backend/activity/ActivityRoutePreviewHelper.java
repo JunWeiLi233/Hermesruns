@@ -13,7 +13,8 @@ final class ActivityRoutePreviewHelper {
     private ActivityRoutePreviewHelper() {
     }
 
-    static Map<String, Object> toRunFeedItem(Activity activity) {
+    /** The run as the feed and the single-run answer carry it; its start is the clock on the runner's wall (see {@link ActivityLocalDates#startTimeOf}). */
+    static Map<String, Object> toRunFeedItem(Activity activity, java.time.ZoneId zone) {
         Map<String, Object> body = new LinkedHashMap<>();
         ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
         body.put("id", activity.getId());
@@ -21,10 +22,10 @@ final class ActivityRoutePreviewHelper {
         body.put("stravaId", activity.getStravaId());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
-        body.put("startDate", activity.getStartDate());
+        body.put("startDate", ActivityLocalDates.startDateOf(activity, zone));
         body.put("provider", activity.getProvider() == null ? null : activity.getProvider().name());
         body.put("activityType", activity.getActivityType() == null ? null : activity.getActivityType().name());
-        body.put("startTime", activity.getStartTime());
+        body.put("startTime", ActivityLocalDates.startTimeOf(activity, zone));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("sourceFileName", activity.getSourceFileName());

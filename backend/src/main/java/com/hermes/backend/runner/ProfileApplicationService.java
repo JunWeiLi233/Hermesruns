@@ -1,6 +1,7 @@
 package com.hermes.backend.runner;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.coaching.AutomatedCoachService;
@@ -106,7 +107,7 @@ public class ProfileApplicationService {
 
         return new ProfileDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries),
+                toRunSummaryFeedItems(activitySummaries, ActivityLocalDates.zoneOf(runner)),
                 null,
                 null,
                 null,
@@ -121,7 +122,7 @@ public class ProfileApplicationService {
         List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
         return new TodayDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries),
+                toRunSummaryFeedItems(activitySummaries, ActivityLocalDates.zoneOf(runner)),
                 safeValue(() -> automatedCoachService.getTodayWithReadiness(runner), null),
                 safeValue(() -> acclimatizationService.buildContext(runner), null),
                 safeValue(() -> findRunnerRaces(runner), List.of()),
@@ -154,22 +155,23 @@ public class ProfileApplicationService {
     }
 
     private List<Map<String, Object>> toRunSummaryFeedItems(
-            List<ActivityRepository.AnalysisActivitySummaryProjection> activities
+            List<ActivityRepository.AnalysisActivitySummaryProjection> activities,
+            java.time.ZoneId zone
     ) {
         if (activities == null || activities.isEmpty()) {
             return List.of();
         }
-        return activities.stream().map(this::toRunSummaryFeedItem).toList();
+        return activities.stream().map(activity -> toRunSummaryFeedItem(activity, zone)).toList();
     }
 
-    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity) {
+    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity, java.time.ZoneId zone) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", activity.getId());
         body.put("name", activity.getName());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
-        body.put("startDate", activity.getStartDate());
-        body.put("startTime", activity.getStartTime());
+        body.put("startDate", ActivityLocalDates.localStartDate(activity.getStartDate(), activity.getStartTime(), activity.getStravaApiSourced(), zone));
+        body.put("startTime", ActivityLocalDates.localStart(activity.getStartTime(), activity.getStravaApiSourced(), zone));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("averageHeartRate", activity.getAverageHeartRate());
@@ -200,10 +202,11 @@ public class ProfileApplicationService {
             return List.of();
         }
         List<Activity> activities = findRunnerRuns(runner);
-        return races.stream().map(race -> toRaceResponse(race, activities)).toList();
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        return races.stream().map(race -> toRaceResponse(race, activities, zone)).toList();
     }
 
-    private RaceEventResponse toRaceResponse(RaceEvent raceEvent, List<Activity> runActivities) {
+    private RaceEventResponse toRaceResponse(RaceEvent raceEvent, List<Activity> runActivities, java.time.ZoneId zone) {
         Activity matchedActivity = resolveMatchedActivity(raceEvent, runActivities);
         boolean completed = matchedActivity != null
                 || raceEvent.getRegistrationStatus() == RaceRegistrationStatus.COMPLETED;
@@ -228,8 +231,8 @@ public class ProfileApplicationService {
                 matchedActivity == null ? null : new LinkedActivitySummary(
                         matchedActivity.getId(),
                         matchedActivity.getName(),
-                        matchedActivity.getStartTime(),
-                        matchedActivity.getStartDate(),
+                        ActivityLocalDates.startTimeOf(matchedActivity, zone),
+                        ActivityLocalDates.startDateOf(matchedActivity, zone),
                         matchedActivity.getDistanceKm(),
                         matchedActivity.getMovingTimeSeconds()
                 )

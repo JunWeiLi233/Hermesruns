@@ -301,13 +301,12 @@ test.describe('F01 phone width', () => {
 test.describe('F01 dates and deleting', () => {
   test.describe.configure({ mode: 'serial' });
 
-  test('F01-E28 a run recorded at 11:30 pm New York time shows that evening, not the next morning in UTC', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-003: a file run is shown at its UTC clock time even when the runner has set a time zone, which the analysis does use');
-    // A runner of their own, with a time zone on the profile: the backend already counts this run on the evening of the 7th
-    // (ActivityLocalDates), so the run page and the list have to say the same thing.
+  test('F01-E28 a run recorded in the evening New York time shows that evening on the run page and in the list, not the next morning in UTC', async ({ browser, baseURL, guard }) => {
+    // A runner of their own, with a time zone on the profile: the backend counts this run on the evening before
+    // (ActivityLocalDates), so the run page and the list have to say the same thing (BUG-003).
     const made = await newRunner('lateevening');
     expect((await made.api.patch('/api/profile/me/time-zone', { timeZone: 'America/New_York' })).status).toBe(200);
-    // 03:30 UTC two days ago is 23:30 the evening before in New York (EDT, UTC-4).
+    // 03:30 UTC two days ago is the evening before in New York (23:30 in summer time, 22:30 in winter time).
     const start = daysAgo(2);
     start.setUTCHours(3, 30, 0, 0);
     const name = `E2E Late evening ${Date.now().toString(36)}`;
@@ -317,9 +316,15 @@ test.describe('F01 dates and deleting', () => {
       const page = await context.newPage();
       await page.goto(`/runs/${id}`);
       await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-      const local = new Date(start.getTime() - 4 * 3600 * 1000);
-      const day = local.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
-      await expect(page.locator('main')).toContainText(`${day} at 11:30 PM`);
+      const day = start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
+      const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+      await expect(page.locator('main')).toContainText(`${day} at ${time}`);
+      // The list says the same: the evening's day and the clock, not the morning after.
+      await page.goto('/runs');
+      const row = page.locator('.runs-ledger-row').filter({ hasText: name });
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' }));
+      await expect(row).toContainText(time);
     } finally {
       await context.close();
     }

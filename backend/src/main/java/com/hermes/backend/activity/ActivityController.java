@@ -98,7 +98,7 @@ public class ActivityController {
         // ?id= serves the same feed-item shape for a single run.
         if (id != null) {
             return activityDataAccess.findActivityForRunner(id, activeUser.get())
-                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity)))
+                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity, ActivityLocalDates.zoneOf(activeUser.get()))))
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 
@@ -111,7 +111,8 @@ public class ActivityController {
         int requested = limit == null ? defaultLimit : limit;
         int bounded = Math.max(1, Math.min(requested, maxLimit));
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
-        return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(activeUser.get());
+        return ResponseEntity.ok(runs.stream().map(run -> ActivityRoutePreviewHelper.toRunFeedItem(run, zone)).toList());
     }
 
     @GetMapping("/route-previews")
@@ -236,6 +237,7 @@ public class ActivityController {
         int boundedLimit = normalizeAnalysisSummaryLimit(limit);
         List<ActivityRepository.AnalysisActivitySummaryProjection> runs =
                 activityDataAccess.findAnalysisSummaries(activeUser.get(), boundedLimit);
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(activeUser.get());
         List<AnalysisActivitySummary> response = runs.stream()
                 .map(run -> {
                     ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.fromRawFields(
@@ -252,8 +254,8 @@ public class ActivityController {
                             run.getDistanceKm(),
                             run.getDistanceMeters(),
                             run.getMovingTimeSeconds(),
-                            run.getStartDate(),
-                            run.getStartTime(),
+                            ActivityLocalDates.localStartDate(run.getStartDate(), run.getStartTime(), run.getStravaApiSourced(), zone),
+                            ActivityLocalDates.localStart(run.getStartTime(), run.getStravaApiSourced(), zone),
                             run.getAverageHeartRate(),
                             run.getMaxHeartRate(),
                             run.getAverageCadence(),
