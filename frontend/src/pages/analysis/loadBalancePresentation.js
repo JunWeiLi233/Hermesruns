@@ -1,4 +1,5 @@
 import { kmOf } from '../../utils/analysisInsights.js';
+import { runDayKey } from '../../utils/calendarDays.js';
 
 // Legacy headroom estimate retained for existing consumers.
 export function getLoadBalanceZoneKey(key) {
@@ -51,11 +52,11 @@ export function getLoadBalanceWeekStats(trainingLoad, runs) {
   let volumeKm = 0;
   let previousKm = 0;
   for (const run of runs) {
-    const started = new Date(run.startTime || run.startDate || 0);
-    if (!Number.isFinite(started.getTime()) || Number(run.movingTimeSeconds) <= 0) continue;
-    const day = dateTime(started.toISOString().slice(0, 10));
+    const key = runDayKey(run);
+    if (!key || Number(run.movingTimeSeconds) <= 0) continue;
+    const day = dateTime(key);
     const distance = kmOf(run);
-    if (!Number.isFinite(distance) || distance <= 0 || day > anchor || day <= anchor - 14 * DAY_MS) continue;
+    if (day == null || !Number.isFinite(distance) || distance <= 0 || day > anchor || day <= anchor - 14 * DAY_MS) continue;
     if (day > anchor - 7 * DAY_MS) volumeKm += distance;
     else previousKm += distance;
   }

@@ -13,6 +13,7 @@ import Modal from '../../components/Modal';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import { runIsWithinLastDays } from '../../utils/calendarDays';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../../utils/format';
 import {
   buildProgressionAtlas,
@@ -1034,10 +1035,12 @@ export default function ProfileDashboard() {
     ? formatPlannedDuration(heroWorkout.plannedDurationMinutes)
     : todayBundle.recommendation?.distance || '--';
   const heroPace = todayBundle.recommendation?.pace || '--';
-  const volumeKm7d = Number(coachState?.volumeKm7d);
-  const heroLoad = coachState?.volumeKm7d != null && Number.isFinite(volumeKm7d) && volumeKm7d >= 0
-    ? formatDistance(volumeKm7d, 1, lang, unit)
-    : '--';
+  // The last 7 calendar days, added up from the runs the page holds, the way Load balance adds them up (BUG-026); the coach's own
+  // figure is worked out on a clock window and only when something changes, so the two used to disagree.
+  const volumeKm7d = useMemo(() => runs.reduce((sum, run) => (
+    runIsWithinLastDays(run, 7) ? sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)) : sum
+  ), 0), [runs]);
+  const heroLoad = formatDistance(volumeKm7d, 1, lang, unit);
   const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
   const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
   const weeklyCompletion = weeklyProjectedTotal > 0

@@ -1,3 +1,4 @@
+import { addDaysToKey, runDayKey, todayKey } from './calendarDays.js';
 import { formatDuration, formatPaceSeconds, getDistanceUnitLabel } from './format.js';
 import {
   buildOrderedRacePredictions,
@@ -99,29 +100,25 @@ export function buildTrainingLoad(runs, bestVdot) {
     hrMax = Math.max(hrMax, Number(run.maxHeartRate || 0));
   });
 
+  // Each run is on the calendar day it was run (see calendarDays.js), not on the UTC date of the moment it started.
   const daily = {};
   runs.forEach((run) => {
-    const started = new Date(run.startTime || run.startDate || 0);
+    const key = runDayKey(run);
     const durationMin = Number(run.movingTimeSeconds || 0) / 60;
     const distanceKm = kmOf(run);
-    if (Number.isNaN(started.getTime()) || durationMin <= 0 || distanceKm <= 0) return;
+    if (!key || durationMin <= 0 || distanceKm <= 0) return;
 
     const vo2Fraction = resolveRunVo2Fraction(run, bestVdot, hrMax) || 0.65;
-    const key = started.toISOString().slice(0, 10);
     daily[key] = (daily[key] || 0) + effortScore(vo2Fraction, durationMin);
   });
 
   const keys = Object.keys(daily).sort();
   if (!keys.length) return null;
 
-  const start = new Date(keys[0]);
-  const end = new Date();
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-
+  const end = todayKey();
   const days = [];
-  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    days.push(cursor.toISOString().slice(0, 10));
+  for (let cursor = keys[0]; cursor <= end; cursor = addDaysToKey(cursor, 1)) {
+    days.push(cursor);
   }
   if (days.length < 7) return null;
 
@@ -518,7 +515,7 @@ export function buildRunInsightRows(runs, bestVdot, unit, lang, limit = 6) {
       const distanceValue = unit === 'mile' ? distanceKm / KM_TO_MILE : distanceKm;
       return {
         id: run.id,
-        trainingDate: new Date(run.startTime || run.startDate || 0).toISOString().slice(0, 10),
+        trainingDate: runDayKey(run) || new Date(0).toISOString().slice(0, 10),
         title: run.name || run.title || (lang === 'zh-CN' ? '训练记录' : 'Training session'),
         dateLabel: dateFormatter.format(new Date(run.startTime || run.startDate || 0)),
         distanceLabel: `${distanceValue.toFixed(1)} ${getDistanceUnitLabel(lang, unit)}`,

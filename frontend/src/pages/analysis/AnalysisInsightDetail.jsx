@@ -14,6 +14,7 @@ import PageSkeleton from '../../components/PageSkeleton';
 import Modal from '../../components/Modal';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import { runIsWithinLastDays, todayKey } from '../../utils/calendarDays';
 import { formatDuration, getDistanceUnitLabel } from '../../utils/format';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../../utils/analysisInsights';
@@ -464,14 +465,10 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
+  // The last 7 (28) calendar days, today included, as on Home and in the load figures (calendarDays.js).
+  const today = todayKey();
+  const recent7Runs = validRuns.filter((run) => runIsWithinLastDays(run, 7, today));
+  const recent28Runs = validRuns.filter((run) => runIsWithinLastDays(run, 28, today));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const runCount7 = recent7Runs.length;
@@ -705,14 +702,10 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
+  // The last 7 (28) calendar days, today included, as on Home and in the load figures (calendarDays.js).
+  const today = todayKey();
+  const recent7Runs = validRuns.filter((run) => runIsWithinLastDays(run, 7, today));
+  const recent28Runs = validRuns.filter((run) => runIsWithinLastDays(run, 28, today));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const runCount7 = recent7Runs.length;
@@ -1001,12 +994,7 @@ function buildIntensityDashboardModel(snapshot, recentRows, runs, t, lang, unit)
   const hardShare = polarized.hardSharePct ?? 0;
   const easyRatio = polarized.easyPct ?? 0;
   const hardRatio = polarized.hardPct ?? 0;
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const recent7Runs = runs.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
+  const recent7Runs = runs.filter((run) => runIsWithinLastDays(run, 7));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (
     Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)
   ), 0);

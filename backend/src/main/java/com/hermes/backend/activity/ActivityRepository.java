@@ -280,7 +280,9 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.durationSeconds AS durationSeconds,
               a.distanceKm AS distanceKm,
               a.distanceMeters AS distanceMeters,
-              COALESCE(a.startTime, a.createdAt) AS effectiveStartTime
+              COALESCE(a.startTime, a.createdAt) AS effectiveStartTime,
+              a.stravaApiSourced AS stravaApiSourced,
+              (CASE WHEN a.startTime IS NULL THEN true ELSE false END) AS undated
             FROM Activity a
             WHERE a.runner = :runner
               AND a.activityType = :type
