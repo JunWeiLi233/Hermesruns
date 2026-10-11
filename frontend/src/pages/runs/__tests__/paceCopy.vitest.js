@@ -9,6 +9,8 @@ function lookup(dictionary, key) {
 const KEYS = [
   'subnav_pace', 'pace_title', 'pace_loading', 'pace_error', 'pace_retry', 'pace_no_stream', 'pace_view_group',
   'pace_view_splits', 'pace_view_smoothed', 'pace_gap_toggle', 'pace_gap_unavailable', 'pace_gap_note',
+  'pace_no_stream_no_points', 'pace_no_stream_no_times', 'pace_no_stream_too_short', 'pace_stopped_adjusted',
+  'pace_zones_basis_before',
   'pace_basis_moving', 'pace_stopped', 'pace_chart_label', 'pace_legend_pace', 'pace_legend_elevation',
   'pace_marker_fastest', 'pace_marker_slowest', 'pace_marker_average', 'pace_marker_split', 'pace_hover_stopped',
   'pace_hover_elevation_change', 'pace_hover_partial', 'pace_zones_title', 'pace_zones_loading',

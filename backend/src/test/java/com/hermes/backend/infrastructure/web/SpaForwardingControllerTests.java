@@ -52,6 +52,17 @@ class SpaForwardingControllerTests {
     }
 
     @Test
+    void trainingLogRouteServesSpaShell() throws Exception {
+        // Refreshing /training-log, or opening a link to a filtered log (?runType=RACE&tag=hills), must serve the SPA shell
+        // anonymously, not the JSON 401 entry point; the page itself asks for the data with the runner's token.
+        mockMvc.perform(get("/training-log").param("runType", "RACE").param("tag", "hills"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
+    @Test
     void profilePreloadsHeroWithoutMakingAccountIndexable() throws Exception {
         mockMvc.perform(get("/profile"))
                 .andExpect(status().isOk())

@@ -10,7 +10,18 @@ export default {
       "clear_all": "全部清除",
       "remove_file": "移除 {name}",
       "import_empty": "导入",
-      "uploading": "导入中…"
+      "uploading": "导入中…",
+      "result_imported_one": "已导入 {count} 次跑步。",
+      "result_imported_other": "已导入 {count} 次跑步。",
+      "result_none": "没有导入任何跑步。",
+      "result_duplicates_one": "{count} 个文件已在你的记录中，已跳过。",
+      "result_duplicates_other": "{count} 个文件已在你的记录中，已跳过。",
+      "result_non_runs_one": "{count} 项活动不是跑步，已跳过。",
+      "result_non_runs_other": "{count} 项活动不是跑步，已跳过。",
+      "result_rejected_one": "{count} 个文件无法导入：",
+      "result_rejected_other": "{count} 个文件无法导入：",
+      "result_done": "完成",
+      "result_more": "继续导入文件"
     },
     "account_menu": {
       "title": "当前账户",
@@ -638,6 +649,7 @@ export default {
     "heat_status_day_4_9": "适应进行中",
     "heat_status_day_10_14": "已进入适应窗口",
     "stitch_load_error": "分析暂时无法加载。",
+    "stitch_load_retry": "重试",
     "stitch_vo2_kicker": "有氧信号",
     "stitch_vo2_title": "VO2max 趋势",
     "stitch_vo2_band": "90 天代表趋势",
@@ -649,6 +661,7 @@ export default {
     "stitch_zone_basis": "基于 VDOT {vdot} · 最近 {count} 次有效跑步（{updated}）",
     "stitch_zone_basis_empty": "同步更多有效跑步后，HermesRuns 会生成基于 VDOT 的训练区间。",
     "stitch_zone_basis_updated_today": "今天更新",
+    "stitch_zone_basis_updated_one_day": "1 天前更新",
     "stitch_zone_basis_updated_days": "{count} 天前更新",
     "stitch_zone_basis_updated_recently": "最近更新",
     "stitch_zone_label": "区间",
@@ -1195,6 +1208,7 @@ export default {
     "pred_trend_copy": "查看你的预测时间如何随体能变化。下降的趋势意味着你的训练正在生效。",
     "pred_trend_window_90d": "过去 90 天",
     "pred_trend_window_samples": "{count} 个数据点",
+    "pred_trend_chart_label": "{dist} 近 90 天预测时间，{count} 个数据点，从 {from} 到 {to}",
     "load_method_ratio_body": "当比例在 0.8 - 1.3 之间时，代表训练刺激适中，处于“甜点区”。超过 1.5 则意味着受伤风险显著增加。",    },
   "muscle_training": {
     "v3_week_kicker": "{date}起的一周 · 计划 {count} 次力量训练",

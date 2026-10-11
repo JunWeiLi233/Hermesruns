@@ -10,7 +10,18 @@ export default {
       "clear_all": "Clear all",
       "remove_file": "Remove {name}",
       "import_empty": "Import",
-      "uploading": "Uploading…"
+      "uploading": "Uploading…",
+      "result_imported_one": "1 run imported.",
+      "result_imported_other": "{count} runs imported.",
+      "result_none": "No runs were imported.",
+      "result_duplicates_one": "1 file was already in your history and was skipped.",
+      "result_duplicates_other": "{count} files were already in your history and were skipped.",
+      "result_non_runs_one": "1 activity was not a run and was skipped.",
+      "result_non_runs_other": "{count} activities were not runs and were skipped.",
+      "result_rejected_one": "1 file could not be imported:",
+      "result_rejected_other": "{count} files could not be imported:",
+      "result_done": "Done",
+      "result_more": "Import more files"
     },
     "account_menu": {
       "title": "Your account",
@@ -638,6 +649,7 @@ export default {
     "heat_status_day_4_9": "Adapting",
     "heat_status_day_10_14": "Adapted window",
     "stitch_load_error": "Unable to load analysis right now.",
+    "stitch_load_retry": "Try again",
     "stitch_vo2_kicker": "Aerobic signal",
     "stitch_vo2_title": "VO2max trend",
     "stitch_vo2_band": "90-day representative band",
@@ -649,6 +661,7 @@ export default {
     "stitch_zone_basis": "Based on VDOT {vdot} · last {count} qualifying runs ({updated})",
     "stitch_zone_basis_empty": "Sync more qualifying runs to calculate VDOT-based zones.",
     "stitch_zone_basis_updated_today": "updated today",
+    "stitch_zone_basis_updated_one_day": "updated 1 day ago",
     "stitch_zone_basis_updated_days": "updated {count} days ago",
     "stitch_zone_basis_updated_recently": "updated recently",
     "stitch_zone_label": "Zone",
@@ -1195,6 +1208,7 @@ export default {
     "pred_trend_copy": "See how your predicted time has changed as your fitness evolved. A downward trend means your training is working.",
     "pred_trend_window_90d": "Last 90 days",
     "pred_trend_window_samples": "{count} data points",
+    "pred_trend_chart_label": "{dist} predicted time over the last 90 days, {count} points, from {from} to {to}",
     "load_method_ratio_body": "A ratio between 0.8 and 1.3 is considered the 'sweet spot' for safe progression. Exceeding 1.5 indicates a significantly elevated risk of injury due to overreaching.",    },
   "muscle_training": {
     "v3_week_kicker": "Week of {date} · {count} sessions planned",

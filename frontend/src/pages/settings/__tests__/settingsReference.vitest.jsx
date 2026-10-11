@@ -6,6 +6,7 @@ import Settings from '../Settings';
 import { apiFetch, apiJson } from '../../../api';
 import { invalidateResourceCache } from '../../../api/resourceCache';
 import { downloadBlob } from '../../../utils/downloadBlob';
+import { forgetMemory, writeEnabled } from '../../../utils/runSummaryPreference';
 import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
 
@@ -159,6 +160,41 @@ it('preserves units, theme, and language actions in accessible button groups', a
   expect(state.setTheme).toHaveBeenCalledWith('midnight');
   expect(state.setLang).toHaveBeenCalledWith('zh-CN');
   expect(container.querySelector('.st-v2-theme.is-light')).toHaveAttribute('aria-pressed', 'true');
+});
+
+it('has a switch for the run summaries that turns them off and on for every run and keeps the choice', async () => {
+  const user = userEvent.setup();
+  forgetMemory();
+  await openPage();
+  await user.click(screen.getByRole('tab', { name: t('settings.stitch_prefs_title') }));
+  const group = screen.getByRole('group', { name: t('settings.run_summaries_title') });
+  const show = within(group).getByRole('button', { name: t('settings.run_summaries_show') });
+  const hide = within(group).getByRole('button', { name: t('settings.run_summaries_hide') });
+  expect(show).toHaveAttribute('aria-pressed', 'true');
+  expect(hide).toHaveAttribute('aria-pressed', 'false');
+
+  await user.click(hide);
+  expect(localStorage.getItem('hermes_run_summaries')).toBe('off');
+  expect(hide).toHaveAttribute('aria-pressed', 'true');
+  expect(show).toHaveAttribute('aria-pressed', 'false');
+
+  await user.click(show);
+  expect(localStorage.getItem('hermes_run_summaries')).toBeNull();
+  expect(show).toHaveAttribute('aria-pressed', 'true');
+  forgetMemory();
+});
+
+it('shows the run summaries switch as it was left', async () => {
+  const user = userEvent.setup();
+  forgetMemory();
+  writeEnabled(false);
+  await openPage();
+  await user.click(screen.getByRole('tab', { name: t('settings.stitch_prefs_title') }));
+
+  const group = screen.getByRole('group', { name: t('settings.run_summaries_title') });
+  expect(within(group).getByRole('button', { name: t('settings.run_summaries_hide') })).toHaveAttribute('aria-pressed', 'true');
+  writeEnabled(true);
+  forgetMemory();
 });
 
 it('updates the weekly brief switch and stores the selected preference', async () => {

@@ -10,6 +10,8 @@ import java.util.List;
  * grade-adjusted figures are {@code null} when the run has no usable elevation (see {@link GradeAdjustedPace}).</p>
  *
  * @param hasStream    false when the run has no usable stream of distance and time; every other part is then empty
+ * @param reason       why there is no profile when {@code hasStream} is false: {@link #NO_POINTS}, {@link #NO_TIMES} or
+ *                     {@link #TOO_SHORT}; null when there is one
  * @param hasElevation true when there was enough elevation to adjust for grade
  * @param splits       the full kilometres in order, then the stretch left over if it is at least 100 m
  * @param markers      the fastest and slowest full splits; null when there are fewer than two full splits or they
@@ -17,7 +19,14 @@ import java.util.List;
  * @param smoothed     pace sampled at an even step along the run's time, for the pace line and for pace zones
  */
 public record PaceProfileResponse(boolean hasStream, boolean hasElevation, Summary summary, List<Split> splits,
-                                  Markers markers, Series smoothed) {
+                                  Markers markers, Series smoothed, String reason) {
+
+    /** The run has no stored points (a run entered by hand, say), or too few readings with a time and a distance. */
+    public static final String NO_POINTS = "no_points";
+    /** The run has positions, but most of them say nothing about when (a planned route in a GPX file, say). */
+    public static final String NO_TIMES = "no_times";
+    /** The stream is under 100 m or under 10 s long. */
+    public static final String TOO_SHORT = "too_short";
 
     /**
      * @param distanceMeters  the distance of the stream, from its first reading to its last
@@ -65,7 +74,7 @@ public record PaceProfileResponse(boolean hasStream, boolean hasElevation, Summa
                          List<Double> paceSecPerKm, List<Double> gapSecPerKm, List<Double> elevationMeters) {
     }
 
-    static PaceProfileResponse noStream() {
-        return new PaceProfileResponse(false, false, null, List.of(), null, null);
+    static PaceProfileResponse noStream(String reason) {
+        return new PaceProfileResponse(false, false, null, List.of(), null, null, reason);
     }
 }

@@ -34,8 +34,25 @@ public final class ActivityLocalDates {
         return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneOf(runner)).toLocalDate();
     }
 
+    /**
+     * The same day worked out from what a query returns rather than from the entity: the day the run's effort row files it
+     * under when it has one, else as {@link #of} does (a run with no start time at all is on the day it was added).
+     */
+    public static LocalDate placed(LocalDate filedUnder, LocalDateTime start, LocalDateTime createdAt, Boolean stravaApiSourced, ZoneId zone) {
+        if (filedUnder != null) {
+            return filedUnder;
+        }
+        if (start == null) {
+            return createdAt == null ? LocalDate.now() : createdAt.toLocalDate();
+        }
+        if (Boolean.TRUE.equals(stravaApiSourced)) {
+            return start.toLocalDate();
+        }
+        return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDate();
+    }
+
     /** The runner's time zone, or UTC when they have none or it is not one this server knows. */
-    static ZoneId zoneOf(Runner runner) {
+    public static ZoneId zoneOf(Runner runner) {
         String id = runner == null ? null : runner.getTimeZone();
         if (id == null || id.isBlank()) {
             return ZoneOffset.UTC;

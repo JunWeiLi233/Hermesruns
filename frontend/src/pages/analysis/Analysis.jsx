@@ -19,6 +19,7 @@ import { preloadRoute } from '../../utils/routePreload';
 import { buildOrderedRacePredictions, computeVdotTrend, estimateCurrentVdot } from '../../utils/vdot';
 import { buildAnalysisSnapshot, buildVo2Bars, normalizeAnalysisList } from '../../utils/analysisInsights';
 import { formatDuration } from '../../utils/format';
+import { formatTrainingZoneBasisUpdated } from '../../utils/zoneBasisAge';
 import PageSkeleton from '../../components/PageSkeleton';
 import '../../styles/analysis-v2.css';
 
@@ -36,14 +37,6 @@ function orderedZonePace(label) {
     const seconds = (pace) => pace.split(':').reduce((total, value) => total * 60 + Number(value), 0);
     return seconds(a) - seconds(b);
   }).join('–');
-}
-
-function formatTrainingZoneBasisUpdated(value, t) {
-  const date = value instanceof Date ? value : new Date(value || 0);
-  if (!Number.isFinite(date.getTime())) return t('analysis.stitch_zone_basis_updated_recently');
-  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / ANALYSIS_DAY_MS));
-  if (days <= 0) return t('analysis.stitch_zone_basis_updated_today');
-  return t('analysis.stitch_zone_basis_updated_days', { count: days });
 }
 
 function buildTrainingZoneBasisLabel(snapshot, t) {
@@ -447,15 +440,14 @@ export default function Analysis() {
             </section>
           ) : runsState === 'error' ? (
             <section className="analysis-overview-empty-shell">
-              <div className="premium-empty-state analysis-overview-empty-state">
+              <div className="premium-empty-state analysis-overview-empty-state" role="alert">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
-                <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
                 <div className="analysis-overview-empty-actions">
                   <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={loadAnalysisData}>
-                    {t('profile.retry_strava')}
+                    {t('analysis.stitch_load_retry')}
                   </button>
                 </div>
               </div>

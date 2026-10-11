@@ -15,7 +15,12 @@ import { formatDuration, formatLongDate, formatPaceSeconds } from '../../utils/f
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
+import RunBestEfforts from './RunBestEfforts';
+import RunGoalsCard from '../../components/goals/RunGoalsCard';
+import RunLabelsCard from './RunLabelsCard';
+import RunMatches from './RunMatches';
 import RunPaceAnalysis from './RunPaceAnalysis';
+import RunSummaryCard from './RunSummaryCard';
 import RunTrainingCards from './RunTrainingCards';
 import {
   Chart as ChartJS,
@@ -1123,6 +1128,8 @@ export default function RunDetail() {
           </div>
         </section>
 
+        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
             <div className="run-detail-v2__coach-score">
@@ -1189,7 +1196,15 @@ export default function RunDetail() {
             </div>
             <div className="run-detail-telemetry-chart run-detail-v2__chart">
               {telemetryChartData ? (
-                <Line data={telemetryChartData} options={telemetryChartOptions} />
+                <Line
+                  data={telemetryChartData}
+                  options={telemetryChartOptions}
+                  aria-label={t('run_detail.telemetry_chart_label', {
+                    metric: activeTelemetryDefinition.label,
+                    min: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                    max: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.max, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                  })}
+                />
               ) : (
                 <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
               )}
@@ -1208,9 +1223,13 @@ export default function RunDetail() {
         </section>
 
         {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
-        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
         <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
+
+        <RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
+
+        <RunMatches key={`matches-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
 
         <div className="run-detail-v2__lower">
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">
@@ -1253,6 +1272,10 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} />
+
+            <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
+
             <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
               <div className="run-detail-v2__card-head">
                 <h3>{t('run_detail.gear_linked')}</h3>

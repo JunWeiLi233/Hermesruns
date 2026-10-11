@@ -27,7 +27,8 @@ import org.hibernate.annotations.ColumnDefault;
                 @Index(name = "idx_activity_provider_checksum", columnList = "provider, source_checksum"),
                 @Index(name = "idx_activity_strava_id", columnList = "stravaId"),
                 @Index(name = "idx_activity_shoe", columnList = "shoe_id"),
-                @Index(name = "idx_activity_strava_api_created", columnList = "stravaApiSourced, createdAt")
+                @Index(name = "idx_activity_strava_api_created", columnList = "stravaApiSourced, createdAt"),
+                @Index(name = "idx_activity_route_match_group", columnList = "route_match_group_id")
         }
 )
 public class Activity extends ActivityRelationshipFields {

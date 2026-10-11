@@ -55,18 +55,34 @@ function ImportActivityDialog({ onClose, onImported, t }) {
         t={t}
         onCancel={onClose}
         onBusyChange={(busy) => { busyRef.current = busy; }}
+        onImportedSome={() => onImported?.()}
         onSuccess={() => { onClose?.(); onImported?.(); }}
       />
     </Modal>
   );
 }
 
-export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSourceChange, className = '' }) {
+/** What the server said about a batch, reduced to what the runner needs to know; null when it said nothing readable. */
+function readReport(body) {
+  if (!body || typeof body !== 'object') return null;
+  return {
+    imported: Number(body.importedActivities) || 0,
+    duplicates: Number(body.skippedDuplicates) || 0,
+    nonRuns: Number(body.skippedNonRuns) || 0,
+    rejected: Array.isArray(body.rejectedFiles) ? body.rejectedFiles.map(String) : [],
+  };
+}
+
+const needsReview = (report) => report.rejected.length > 0 || report.duplicates > 0 || report.nonRuns > 0 || report.imported === 0;
+
+export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onBusyChange, onSourceChange, className = '' }) {
   const [source, setSource] = useState('fit');
   const [queue, setQueue] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState('');
+  // Set when the server's answer has something the runner should know: files refused, duplicates, activities that are not runs.
+  const [report, setReport] = useState(null);
   const tabsRef = useRef([]);
   const uploadingRef = useRef(false);
   const panelId = useId();
@@ -123,9 +139,17 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
     });
     setUploading(true);
     setStatus('');
+    let answer;
     try {
       const response = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-      if (!response.ok) throw new Error('import failed');
+      if (!response.ok) {
+        // The server says why (a corrupt file, a type it does not read); show that instead of a bare "failed".
+        const body = typeof response.json === 'function' ? await response.json().catch(() => null) : null;
+        const reason = body && typeof body.error === 'string' ? body.error : '';
+        setStatus(reason ? `${t('profile.import_failed')}: ${reason}` : t('profile.import_failed'));
+        return;
+      }
+      answer = typeof response.json === 'function' ? readReport(await response.json().catch(() => null)) : null;
     } catch {
       setStatus(t('profile.import_failed'));
       return;
@@ -135,8 +159,15 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
       onBusyChange?.(false);
     }
     invalidateResourceCache('/api/activities');
-    const importedCount = queue.length;
+    const submitted = queue.length;
     setQueue([]);
+    if (answer && needsReview(answer)) {
+      // Not a clean import: say what happened to each file and let the runner close it when they have read it.
+      setReport(answer);
+      if (answer.imported > 0) onImportedSome?.();
+      return;
+    }
+    const importedCount = answer ? answer.imported : submitted;
     onSuccess?.(importedCount);
   }
 
@@ -170,7 +201,9 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
             ))}
           </div>
 
-          <div role="tabpanel" id={panelId} aria-labelledby={`${panelId}-${source}`}>
+          {report ? <ImportReport report={report} t={t} /> : null}
+
+          <div role="tabpanel" id={panelId} aria-labelledby={`${panelId}-${source}`} hidden={Boolean(report)}>
             <label
               className={`import-v2-drop${isDragging ? ' is-dragging' : ''}${uploading ? ' is-busy' : ''}`}
               onDragOver={(event) => { event.preventDefault(); if (!uploadingRef.current) setIsDragging(true); }}
@@ -193,7 +226,7 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
             </label>
           </div>
 
-          <div className="import-v2-queue-head">
+          <div className="import-v2-queue-head" hidden={Boolean(report)}>
             <span role="status" aria-live="polite">{t('components.import_v2.queue_title', { count: queue.length })}</span>
             {queue.length > 0 && (
               <button type="button" className="import-v2-text-btn" onClick={() => setQueue([])} disabled={uploading}>
@@ -202,7 +235,7 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
             )}
           </div>
 
-          {queue.length === 0 ? (
+          {report ? null : queue.length === 0 ? (
             <div className="import-v2-empty">{t('components.import_v2.queue_empty')}</div>
           ) : (
             <ul className="import-v2-queue">
@@ -236,14 +269,49 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSou
         </div>
 
         <div className="import-v2-actions">
-          <span className="import-v2-selection-status">{queue.length ? t('profile.selected_files_count', { count: queue.length }) : t('profile.no_file_selected')}</span>
-          <button type="button" className="import-v2-cancel" onClick={onCancel} disabled={uploading}>
-            {t('profile.cancel')}
-          </button>
-          <button type="submit" className="import-v2-submit" disabled={!queue.length || uploading}>
-            {uploading ? t('components.import_v2.uploading') : countLabel}
-          </button>
+          {report ? (
+            <>
+              <span className="import-v2-selection-status" />
+              <button type="button" className="import-v2-cancel" onClick={() => setReport(null)}>
+                {t('components.import_v2.result_more')}
+              </button>
+              <button type="button" className="import-v2-submit" onClick={() => onSuccess?.(report.imported)}>
+                {t('components.import_v2.result_done')}
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="import-v2-selection-status">{queue.length ? t('profile.selected_files_count', { count: queue.length }) : t('profile.no_file_selected')}</span>
+              <button type="button" className="import-v2-cancel" onClick={onCancel} disabled={uploading}>
+                {t('profile.cancel')}
+              </button>
+              <button type="submit" className="import-v2-submit" disabled={!queue.length || uploading}>
+                {uploading ? t('components.import_v2.uploading') : countLabel}
+              </button>
+            </>
+          )}
         </div>
       </form>
+  );
+}
+
+function ImportReport({ report, t }) {
+  const plural = (count, key) => t(`components.import_v2.${key}_${count === 1 ? 'one' : 'other'}`, { count });
+  return (
+    <div className="import-v2-report" role="status" aria-live="polite">
+      <strong>{report.imported > 0 ? plural(report.imported, 'result_imported') : t('components.import_v2.result_none')}</strong>
+      <ul>
+        {report.duplicates > 0 ? <li>{plural(report.duplicates, 'result_duplicates')}</li> : null}
+        {report.nonRuns > 0 ? <li>{plural(report.nonRuns, 'result_non_runs')}</li> : null}
+        {report.rejected.length > 0 ? (
+          <li>
+            {plural(report.rejected.length, 'result_rejected')}
+            <ul className="import-v2-report-files">
+              {report.rejected.map((entry) => <li key={entry}>{entry}</li>)}
+            </ul>
+          </li>
+        ) : null}
+      </ul>
+    </div>
   );
 }

@@ -2,7 +2,6 @@ package com.hermes.backend.activity;
 
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.runner.Runner;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -53,13 +52,11 @@ public class ActivityPaceProfileController {
             return error(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
         Activity activity = found.get();
-        List<Object[]> rows = activityDataAccess.findAnalyticsSamplesByActivityId(activity.getId());
-        List<Object[]> timed = rows.stream().filter(row -> row != null && row.length > 2 && row[2] != null).toList();
-        if (timed.size() < Math.max(2, rows.size() / 2)) {
-            return ResponseEntity.ok(PaceProfileResponse.noStream());
+        RunStream.Samples samples = RunStream.samples(activityDataAccess.findAnalyticsSamplesByActivityId(activity.getId()), activity);
+        if (samples.problem() != null) {
+            return ResponseEntity.ok(PaceProfileResponse.noStream(samples.problem()));
         }
-        List<ActivityAnalyticsHelper.SamplePoint> points = ActivityTelemetryResponseBuilder.buildAnalyticsSamplePoints(timed, activity);
-        return ResponseEntity.ok(PaceProfileCalculator.compute(points));
+        return ResponseEntity.ok(PaceProfileCalculator.compute(samples.points()));
     }
 
     private static ResponseEntity<Map<String, String>> error(HttpStatus status, String code, String message) {

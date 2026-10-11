@@ -1,64 +1,77 @@
 package com.hermes.backend.activity;
 
 /**
- * Grade-adjusted pace: the pace on the flat that would cost the runner the same energy as the pace they ran on a
- * slope. A climb makes it faster than the pace run, a descent slower.
+ * Grade-adjusted pace: the flat pace that is worth the same effort as the pace run on a slope. A climb makes it
+ * faster than the pace run, a gentle descent slower, and a descent steep enough to need braking faster again.
  *
- * <p>The energy cost of running one metre at a slope is Minetti et al. (2002), a polynomial fitted to treadmill
- * measurements at slopes from -45% to +45% (J per kg per metre, slope as a fraction):
- * {@code 155.4 s^5 - 30.4 s^4 - 43.3 s^3 + 46.3 s^2 + 19.5 s + 3.6}. Dividing by the flat cost, 3.6, gives how many
- * times dearer a metre is on that slope. Two choices here are Hermes' own, not Minetti's:</p>
+ * <p>The effort of one metre on a slope, as a multiple of one metre on the flat, is a quadratic in the slope
+ * {@code s} (a fraction): {@code 1 + 2.896 s + 15.14 s^2}. Strava does not publish its formula. Its model is
+ * described as an empirical one, fitted to the pace runners held at the same heart rate on different grades, from the
+ * data of hundreds of thousands of athletes (Strava's 2017 engineering post "An Improved GAP Model", as summarised at
+ * https://pickletech.eu/blog-gap/; the post itself could not be read when this was written). This quadratic is the
+ * rough fit that Fellrnr.com publishes for it (https://fellrnr.com/wiki/Grade_Adjusted_Pace), and it agrees with what
+ * is public about Strava's numbers:</p>
  * <ul>
- *   <li>A slope beyond 30% counts as 30%, because a GPS or barometer trace is too noisy to trust a steeper one.</li>
- *   <li>On a descent only half of the saving Minetti measured is counted. His runners kept the effort steady on a
- *       treadmill; a runner on a road or a trail brakes and takes the impact on the way down and does not turn all of
- *       the saving into speed. Without this, a 5:00 /km run down a 10% hill would be worth 8:21 /km on the flat,
- *       far more than any runner finds. With it, 6:16 /km.</li>
+ *   <li>Strava's help centre says the downhill adjustment peaks around -10% and then eases off. The quadratic's
+ *       easiest slope is -9.6%, where a metre is worth 0.86 of a flat one.</li>
+ *   <li>Analyses of a Strava data export find the adjusted pace is no longer slower than the pace run on a descent of
+ *       about -18% (https://aaron-schroeder.github.io/reverse-engineering/grade-adjusted-pace.html). The quadratic
+ *       crosses 1 at -19.1%.</li>
+ *   <li>The 2017 post's example, as quoted at https://pickletech.eu/blog-gap/: the pace that matches 3:30 /km on the
+ *       flat is 5:08 /km on a 10% climb. The quadratic says 5:03.</li>
  * </ul>
- * <p>These numbers will not match Strava's, whose model is its own fit to heart-rate data.</p>
+ * <p>It replaced a Minetti et al. (2002) treadmill cost of running with half of the descent saving counted. That made
+ * a 10% climb about 13% dearer than Strava's example (1.66 against 1.47) and steep descents worth far more than anyone
+ * runs.</p>
+ *
+ * <p>Choices here are Hermes' own:</p>
+ * <ul>
+ *   <li>A climb steeper than 30% counts as 30%, and a descent steeper than 20% as 20%. A GPS or barometer trace is too
+ *       noisy to trust a steeper one, and Strava itself has little data there.</li>
+ *   <li>The runner's own pace does not matter. Strava's model is reported to adjust a fast runner's climbs more than a
+ *       slow runner's, so for a slower runner this reads a little fast on a climb.</li>
+ * </ul>
+ * <p>The numbers will be close to Strava's, not the same: its elevation comes from its own terrain data and its model
+ * is not public.</p>
  */
 final class GradeAdjustedPace {
 
-    /** The steepest slope that counts, as a fraction. */
-    static final double GRADE_LIMIT = 0.30;
+    /** The steepest climb that counts, as a fraction. */
+    static final double CLIMB_LIMIT = 0.30;
 
-    /** The part of Minetti's descent saving that is counted. */
-    static final double DOWNHILL_SHARE = 0.5;
+    /** The steepest descent that counts, as a fraction. */
+    static final double DESCENT_LIMIT = 0.20;
 
-    /** Minetti's cost of running one metre on the flat, J per kg. */
-    private static final double FLAT_COST = 3.6;
+    /** Effort of a metre at slope s, as a multiple of a flat metre: 1 + LINEAR s + QUADRATIC s^2. */
+    static final double LINEAR = 2.896;
+    static final double QUADRATIC = 15.14;
 
     private GradeAdjustedPace() {
     }
 
     /**
-     * How many times dearer a metre is at this slope than on the flat: 1 on the flat, above 1 on a climb, below 1 on
-     * a gentle descent.
+     * How many flat metres of effort one metre at this slope is worth: 1 on the flat, above 1 on a climb, below 1 on
+     * a gentle descent (the least, 0.86, at -9.6%) and back above 1 on a descent steeper than about -19%.
      *
-     * @param grade the slope as a fraction (0.1 is a 10% climb, -0.1 a 10% descent); beyond +/-30% it counts as
-     *              30%, and an unknown slope counts as flat
+     * @param grade the slope as a fraction (0.1 is a 10% climb, -0.1 a 10% descent); a climb beyond 30% counts as
+     *              30%, a descent beyond 20% as 20%, and an unknown slope counts as flat
      */
-    static double costRatio(double grade) {
+    static double effortRatio(double grade) {
         if (Double.isNaN(grade)) {
             return 1.0;
         }
-        double slope = Math.max(-GRADE_LIMIT, Math.min(GRADE_LIMIT, grade));
-        double cost = ((((155.4 * slope - 30.4) * slope - 43.3) * slope + 46.3) * slope + 19.5) * slope + FLAT_COST;
-        double ratio = cost / FLAT_COST;
-        if (slope < 0 && ratio < 1.0) {
-            ratio = 1.0 - DOWNHILL_SHARE * (1.0 - ratio);
-        }
-        return ratio;
+        double slope = Math.max(-DESCENT_LIMIT, Math.min(CLIMB_LIMIT, grade));
+        return 1.0 + (LINEAR + QUADRATIC * slope) * slope;
     }
 
     /**
-     * The flat pace that costs the same as {@code paceSecPerKm} did on this slope. A pace that is not a number, or
+     * The flat pace worth the same effort as {@code paceSecPerKm} was on this slope. A pace that is not a number, or
      * zero, stays as it is.
      */
     static double adjust(double paceSecPerKm, double grade) {
         if (Double.isNaN(paceSecPerKm) || paceSecPerKm == 0.0) {
             return paceSecPerKm;
         }
-        return paceSecPerKm / costRatio(grade);
+        return paceSecPerKm / effortRatio(grade);
     }
 }

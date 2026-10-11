@@ -1164,8 +1164,12 @@
   position: absolute;
   right: -12px;
   bottom: -18px;
+  width: 6.4rem;
+  height: 6.4rem;
   font-size: 6.4rem;
   color: rgba(255, 255, 255, 0.04);
+  /* A decorative mark: it must not sit on top of the Import now link and swallow its clicks (BUG-010). */
+  pointer-events: none;
 }
 
 .integration-alert-footer {
