@@ -39,9 +39,12 @@ npm --prefix e2e run stack:stop
 | `tools/stack.mjs` | starts and stops the throwaway stack |
 | `global-setup.ts` | signs in the seeded runner, imports the eleven seed runs through the real import route, waits for the background analysis, makes runners B and C |
 | `fixtures/gpx.ts`, `seed.ts` | builds GPX / TCX files from a few numbers; the seed runs and what each one is for |
-| `fixtures/test.ts` | the `test` every spec imports: fails on console errors and 5xx, answers map tiles locally, an axe helper |
+| `fixtures/test.ts` | the `test` every spec imports: fails on console errors and 5xx, answers map tiles locally, an axe helper (`a11yViolations`) and a contrast check of its own (`contrastProblems`, below) |
 | `fixtures/api.ts` | a small API client; `newRunner()` makes a throwaway runner |
-| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02, `40` F04, `45` F03 (not built), `50` F05, `60` import, `70` new runner and odd addresses, `80` the analysis screens under bad conditions (slow, failing, keyboard, back, refresh), `90` data rights, `99` Strava |
+| `fixtures/history.ts` | a throwaway runner with weeks of running behind it (`sharedHistoryRunner`, kept in `.auth/history-<label>.json` for the day and the stack, so a retry or the phone project does not import the same weeks again) |
+| `fixtures/pages.ts` | `pageOpener()`: pages for a runner you hold a token for, in the project's locale and time zone, closed again after the test |
+| `fixtures/format.ts` | how the app writes numbers and days, so a test can build the text it should see |
+| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02 (the older Load balance), `31` fitness, fatigue and form and the weekly effort range (M4), `32` the training log (M5, M5b), `33` the type and tags of a run (M5), `34` the run summary (M7), `40` F04, `45` F03 goals (M6), `50` F05, `60` import, `70` new runner and odd addresses, `80` the analysis screens under bad conditions (slow, failing, keyboard, back, refresh), `90` data rights, `99` Strava |
 
 Tests for a known open defect are written as `test.fail(true, 'BUG-nnn ...')`: the suite stays green, and the test fails the day the
 defect is fixed, which is the cue to remove the line. `replica/bugs.md` lists every defect, open and fixed.
@@ -59,3 +62,18 @@ API client also tries such a connection again, up to five times, before it gives
 * Sign-ups are limited to eight an hour per address (same note). Runners B and C are made once and kept in `.auth/accounts.json`.
 * Analysis runs in the background after an import; specs wait for it (`eventually`, `expect.poll`) instead of sleeping.
 * Dates in the seed are relative to today, in UTC, at 11:00 or 09:00; the browser zone is fixed to America/New_York.
+* The browser is started with `--lang=en-US`: the order of the segments of a date field (month, day, year) follows the browser's own language,
+  not the locale a test asks for, and a test that types a date would otherwise only work on some machines.
+* Weeks, months and years of a goal, the training log and the weekly effort are the runner's, in UTC unless the runner set a zone, so the specs of
+  the new screens work out "this week" from `utcDay(0)` and not from the browser's clock. They are run at any time of day; a run today is
+  imported at 00:00 UTC so that it has already happened (`todayRun` in `fixtures/history.ts`).
+* Runs imported from GPX, TCX or FIT files carry no climb figure (BUG-036): only runs from Strava or Garmin Connect, and the seeded runner's
+  twenty-one local runs, do. The specs that need climb use the seeded runner and only read it; the others check that a file's run shows a dash.
+
+### Contrast
+
+axe's `color-contrast` rule gives up on a page when something behind the content is a pseudo-element: on the Training log it puts all 886 pieces
+of text in "incomplete" and reports no violation at all, so a scan with axe finds nothing there however pale the text is. The specs of the new
+screens therefore also use `contrastProblems(page, { include: [...] })`, which reads the computed colour of each piece of text and lays the
+backgrounds of its ancestors over each other, and holds only the parts named to 4.5 to 1 (3 to 1 for large text). The older parts of the
+runner pages are known to fall short (BUG-005) and are left out of it by naming only the new cards.

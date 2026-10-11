@@ -74,3 +74,42 @@ export function danielsPredictSeconds(vdot: number, distanceM: number): number {
   }
   return ((low + high) / 2) * 60;
 }
+
+/** The UTC calendar day `daysBack` days before today, as `yyyy-MM-dd` (where `daysAgo(n)` puts a run). */
+export function utcDay(daysBack: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - daysBack);
+  return date.toISOString().slice(0, 10);
+}
+
+/** The Monday of the week a `yyyy-MM-dd` day is in (weeks run Monday to Sunday). */
+export function weekStartOf(day: string): string {
+  const date = new Date(`${day}T12:00:00Z`);
+  const back = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - back);
+  return date.toISOString().slice(0, 10);
+}
+
+/** A `yyyy-MM-dd` day moved by whole days. */
+export function addDays(day: string, days: number): string {
+  const date = new Date(`${day}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** 3.14159 -> "3.1": one decimal, the way the fitness cards write a number. */
+export function oneDecimal(value: number): string {
+  return value.toFixed(1);
+}
+
+/** 3.14 -> "+3.1", -4.06 -> "−4.1" (a real minus sign), 0.02 -> "0.0": how the cards write a change or a form value. */
+export function signedChange(value: number, digits = 1): string {
+  const rounded = Number(Math.abs(value).toFixed(digits));
+  if (rounded === 0) return (0).toFixed(digits);
+  return `${value > 0 ? '+' : '−'}${rounded.toFixed(digits)}`;
+}
+
+/** "2026-10-07" -> "Oct 7": a day without its year, as the chart axes and the week lists write it. */
+export function shortDay(day: string): string {
+  return new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}

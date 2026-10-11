@@ -43,7 +43,9 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
-    launchOptions: executablePath ? { executablePath } : {},
+    // The browser's own language decides the order of the segments of a date field (month, day, year here); without it the order
+    // follows the machine, and a test that types a date would only work on some.
+    launchOptions: { ...(executablePath ? { executablePath } : {}), args: ['--lang=en-US'] },
   },
   projects: [
     {
