@@ -29,7 +29,7 @@ let sent;         // every change the card sent: { method, url, body }
 let failing;      // 'METHOD url' -> an error to throw
 
 const fail = (status) => Object.assign(new Error(`failed ${status}`), { status });
-const goalCalls = () => apiJson.mock.calls.filter(([url]) => String(url).startsWith('/api/goals'));
+const goalCalls = () => apiJson.mock.calls.filter(([url]) => String(url).startsWith('/api/goals') && !String(url).includes('/suggestions'));
 
 beforeEach(() => {
   state.lang = 'en';
@@ -42,6 +42,8 @@ beforeEach(() => {
     const method = options.method || 'GET';
     const key = `${method} ${url}`;
     if (failing.has(key)) throw failing.get(key);
+    // The suggested goals have their own tests (goalSuggestions.vitest.jsx); here there are none.
+    if (method === 'GET' && String(url) === '/api/goals/suggestions') return { today: '2026-10-07', timeZone: 'Z', enough: true, suggestions: [] };
     if (method === 'GET') return response(server);
     const body = options.body ? JSON.parse(options.body) : null;
     sent.push({ method, url, body });

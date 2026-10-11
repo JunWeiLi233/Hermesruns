@@ -3,7 +3,9 @@ import { useI18n } from '../../contexts/I18nContext';
 import { sortGoals } from '../../utils/goals';
 import GoalFormModal from './GoalFormModal';
 import GoalRow, { useGoalWords } from './GoalRow';
+import GoalSuggestions from './GoalSuggestions';
 import useGoals from './useGoals';
+import useGoalSuggestions from './useGoalSuggestions';
 
 function Skeleton() {
   return (
@@ -31,9 +33,25 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
   const [deleting, setDeleting] = useState(null);
   const [problem, setProblem] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [busySuggestion, setBusySuggestion] = useState(null);
   const Heading = `h${headingLevel}`;
 
   const goals = data ? sortGoals(data.goals) : [];
+  const goalsKey = goals.map((goal) => `${goal.period}/${goal.metric}`).join(',');
+  const suggested = useGoalSuggestions({ ready: Boolean(data), goalsKey });
+
+  // Setting a suggested goal as it is: the same call as the dialog's, with the numbers the server worked out.
+  async function setSuggested(suggestion) {
+    setBusySuggestion(`${suggestion.period}/${suggestion.metric}`);
+    setProblem('');
+    const result = await create(suggestion.period, suggestion.metric, suggestion.target);
+    setBusySuggestion(null);
+    if (result.ok) {
+      setAnnouncement(t('goals.saved'));
+    } else {
+      setProblem(result.status === 409 ? t('goals.suggest_taken') : t('goals.save_failed'));
+    }
+  }
 
   async function submit({ period, metric, target }) {
     const result = dialog?.mode === 'edit' ? await changeTarget(dialog.goal.id, target) : await create(period, metric, target);
@@ -114,6 +132,16 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
         {data ? <button ref={addRef} type="button" className="goals-v2__add" onClick={() => setDialog({ mode: 'add' })}>{t('goals.add')}</button> : null}
       </div>
       {body}
+      {data && suggested.status === 'ready' ? (
+        <GoalSuggestions
+          enough={suggested.enough}
+          suggestions={suggested.suggestions}
+          busyKey={busySuggestion}
+          headingLevel={headingLevel + 1}
+          onSet={setSuggested}
+          onAdjust={(suggestion) => { setProblem(''); setDialog({ mode: 'add', suggestion }); }}
+        />
+      ) : null}
       {problem ? <p className="goals-v2__error" role="alert">{problem}</p> : null}
       {data && goals.length > 0 ? <p className="goals-v2__basis">{t('goals.basis')}</p> : null}
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
@@ -122,6 +150,7 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
         <GoalFormModal
           mode={dialog.mode}
           goal={dialog.goal ?? null}
+          suggestion={dialog.suggestion ?? null}
           goals={data?.goals ?? []}
           maxTarget={data?.maxTarget}
           onClose={() => setDialog(null)}

@@ -595,6 +595,26 @@ One query reads the runner's runs from the start of the period before the oldest
 reads two years), so a request costs the same however many goals there are, and each metric is added up once however many
 goals use it.
 
+### Suggested goals
+
+`GET /api/goals/suggestions` offers goals worth setting, worked out from the runner's own running (the rule is the same for
+everyone, and every suggestion carries the numbers it comes from, so the card can show its working):
+
+- **A usual week** is the mean of the weeks that had a run among the last 8 complete weeks (Monday to Sunday, not the one that
+  is still going). A week with no run is a holiday or an injury, not a short week, so it does not lower the bar.
+- **Nothing is suggested** before there are at least 4 active weeks and 6 runs in those 8 weeks; the card then says what it
+  takes (`enough: false`).
+- **Weekly distance**: the usual week plus 10%, rounded to a number a person would pick (a kilometre under 20 km, 5 km up to
+  60, 10 km up to 200, 25 km up to 600, 50 km up to 2,000, 100 above) and always above the usual week.
+- **Weekly runs**: the usual number of runs in an active week, between 2 and 7; more runs is not what a runner of three runs a
+  week is asking for.
+- **Monthly distance**: the average of the last 3 complete calendar months that had a run (at least 2 of them), plus 10%.
+- **Yearly distance**: the distance of the last 365 days (a runner who ran in at least 6 of the 12 months), plus 5%.
+- **Weekly time**: the usual week's moving time plus 10%, to the quarter hour, at least half an hour.
+- **Weekly climb**: only for a runner whose usual week climbs 100 m or more; plus 10%, to 50 m.
+- A goal the runner already has is not suggested, and the card shows three at a time, in that order. "Set this goal" saves the
+  target as it is; "Adjust" opens the dialog filled in. The arithmetic runs on the server and nothing leaves it.
+
 ### Known limits
 
 - Goals are for runs. A walk, a ride or a strength session adds nothing.
@@ -602,7 +622,8 @@ goals use it.
   Monday's run).
 - Nothing is said when a period ends: the next read is simply about the next period, and "previous" is how the one before went,
   against the target as it is now.
-- There are no suggested goals and no history of past periods beyond the one before.
+- There is no history of past periods beyond the one before. A suggestion is a rule of thumb (a little more than you usually
+  do), not a training plan: it knows nothing about a race, an injury or the season.
 
 ## Run Summary
 

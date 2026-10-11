@@ -33,6 +33,7 @@ class GoalControllerTests {
     private ResponseEntity<?> call(String route, String header) {
         return switch (route) {
             case "list" -> controller.list(header, null);
+            case "suggestions" -> controller.suggestions(header);
             case "create" -> controller.create(header, Map.of("period", "WEEK", "metric", "DISTANCE", "target", 20));
             case "change" -> controller.change(1L, header, Map.of("target", 5));
             default -> controller.delete(1L, header);
@@ -40,7 +41,7 @@ class GoalControllerTests {
     }
 
     @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = {"list", "create", "change", "delete"})
+    @ValueSource(strings = {"list", "suggestions", "create", "change", "delete"})
     void withoutARunnerNothingIsReadOrChangedAndTheAnswerIsNoSession(String route) {
         when(authService.findByAuthorizationHeader("Bearer gone")).thenReturn(Optional.empty());
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
