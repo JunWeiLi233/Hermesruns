@@ -213,13 +213,13 @@ test.describe('F05 empty and odd states', () => {
 });
 
 test.describe('F05 whole page', () => {
-  test('F05-E7 the prediction page has no serious accessibility violations apart from the tracked ones', async ({ browser, baseURL, guard }) => {
+  test('F05-E7 the prediction page has no serious accessibility violations', async ({ browser, baseURL, guard }) => {
     const context = await contextWith(browser, p, baseURL as string, guard);
     try {
       const page = await context.newPage();
       await page.goto('/prediction/10k');
       await expect(page.getByRole('heading', { level: 1, name: 'Race Time Prediction' })).toBeVisible();
-      expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
+      expect(await a11yViolations(page)).toEqual([]);
     } finally {
       await context.close();
     }

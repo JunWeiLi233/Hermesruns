@@ -5,7 +5,7 @@
   --ip-card: #fff;
   --ip-ink: #1c1917;
   --ip-muted: #625c56;
-  --ip-faint: #8a837c;
+  --ip-faint: #766d64;
   --ip-line: rgba(28, 25, 23, 0.08);
   --ip-fill: rgba(28, 25, 23, 0.035);
   --ip-accent: #a0392a;
@@ -90,7 +90,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .import-page-v2-sync .is-ga
   padding: 12px 16px;
   border-radius: 14px;
   background: rgba(52, 199, 89, 0.12);
-  color: #248a3d;
+  color: #1e7a35;
   font-size: 0.85rem;
   font-weight: 700;
 }

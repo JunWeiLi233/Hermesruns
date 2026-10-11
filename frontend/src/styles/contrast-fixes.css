@@ -251,6 +251,16 @@ body:is(.theme-light, .theme-high-contrast-light) #root :is(.runner-shell-footer
   color: var(--brand-accent, #a0392a) !important;
 }
 
+/* Pattern B'' — the same footer links in the dark themes (Settings, midnight): rgba(229, 226, 225, 0.28) on #16191f is 2.22 to 1.
+   Lift them to a solid grey of 5.37 to 1 (BUG-005). */
+body:is(.theme-midnight, .theme-high-contrast) #root :is(.runner-shell-footer, .runner-dashboard-footer) a {
+  color: #8b8e95 !important;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root :is(.runner-shell-footer, .runner-dashboard-footer) a:hover {
+  color: #c7c9cf !important;
+}
+
 /* Pattern B' — the same cream leak hits in-page inline buttons like the
    /analysis "导入数据" CTA when no runs exist. Pin to charcoal so the call
    to action is readable on the cream empty-state card. */

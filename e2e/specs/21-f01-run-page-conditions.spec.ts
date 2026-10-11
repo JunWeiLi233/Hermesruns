@@ -220,10 +220,10 @@ test.describe('F01 keyboard and screen reader', () => {
     await expect(readout).not.toHaveText(first);
   });
 
-  test('F01-E23 the run page has no serious or critical accessibility violations, apart from the contrast one tracked below', async ({ page }) => {
+  test('F01-E23 the run page has no serious or critical accessibility violations', async ({ page }) => {
     await openRun(page, 'hills');
     await expect(region(page, 'Best efforts').getByRole('table')).toBeVisible();
-    expect(await a11yViolations(page, { exclude: ['.leaflet-container'], ignoreRules: ['color-contrast'] })).toEqual([]);
+    expect(await a11yViolations(page, { exclude: ['.leaflet-container'] })).toEqual([]);
   });
 
   test('F01-E23b the telemetry chart has a text alternative that says what it shows', async ({ page }) => {
@@ -234,7 +234,6 @@ test.describe('F01 keyboard and screen reader', () => {
   });
 
   test('F01-E23c the run page: text contrast of at least 4.5 to 1 in the light theme', async ({ page }) => {
-    test.fail(true, 'BUG-005: three texts are between 4.13 and 4.47 to 1 (the breadcrumb, the elevation warning, the fastest pace)');
     await openRun(page, 'hills');
     await expect(region(page, 'Best efforts').getByRole('table')).toBeVisible();
     expect(await a11yViolations(page, { exclude: ['.leaflet-container'], onlyRules: ['color-contrast'] })).toEqual([]);

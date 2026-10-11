@@ -7,7 +7,7 @@
 #root .shoe-photo-modal-card.shoe-photo-picker-card {
   --picker-ink: var(--shoe-atelier-ink, #1c1917);
   --picker-muted: #625c56;
-  --picker-faint: #8a837c;
+  --picker-faint: #766d64;
   --picker-line: rgba(28, 25, 23, 0.08);
   --picker-fill: rgba(28, 25, 23, 0.045);
   --picker-tile: #fbf8f4;
@@ -178,7 +178,7 @@ body:not(.theme-light):not(.theme-high-contrast-light) #root .shoe-photo-picker-
   background: currentColor;
 }
 
-#root .shoe-photo-picker-mode.is-auto { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .shoe-photo-picker-mode.is-auto { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 #root .shoe-photo-picker-mode.is-manual { background: rgba(255, 149, 0, 0.14); color: #a15c00; }
 
 #root .shoe-photo-picker-body {

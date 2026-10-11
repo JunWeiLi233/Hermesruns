@@ -12,7 +12,7 @@
   --v2-fill: var(--run-detail-card-soft, rgba(28, 25, 23, 0.035));
   --v2-accent: var(--run-detail-accent, #a0392a);
   --v2-accent-soft: var(--run-detail-accent-soft, rgba(160, 57, 42, 0.09));
-  --v2-good: #248a3d;
+  --v2-good: #1e7a35;
   --v2-good-soft: rgba(52, 199, 89, 0.1);
   --v2-map: #d9d3c9;
   --v2-seg-active: #fff;

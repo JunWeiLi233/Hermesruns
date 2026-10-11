@@ -9175,7 +9175,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-page-shell .analysis-he
   --coach-profile-card: rgba(255, 255, 255, 0.92);
   --coach-profile-card-solid: #fff;
   --coach-profile-ink: #1c1917;
-  --coach-profile-muted: #78716c;
+  --coach-profile-muted: #6f6862;
   --coach-profile-faint: #a8a29e;
   --coach-profile-line: rgba(28, 25, 23, 0.09);
   --coach-profile-line-strong: rgba(28, 25, 23, 0.15);
@@ -10263,7 +10263,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-back:hover {
@@ -10274,7 +10274,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-cycle-pill {
   border-color: rgba(28, 25, 23, 0.1);
   background: rgba(28, 25, 23, 0.05);
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-live-pill {
@@ -10284,7 +10284,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-kicker strong {
@@ -10296,7 +10296,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-summary {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness {
@@ -10306,7 +10306,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > span {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial {
@@ -10323,7 +10323,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness-dial small,
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-profile-readiness > p {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric {
@@ -10334,7 +10334,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > span,
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > small {
-  color: #78716c;
+  color: #6f6862;
 }
 
 .analysis-insight-detail-page.is-coach-insight .analysis-coach-command-hero-metric > strong {

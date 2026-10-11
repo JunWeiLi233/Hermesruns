@@ -14,7 +14,7 @@
   --intensity-card-hover: rgba(255, 255, 255, 1);
   --intensity-input: rgba(28, 25, 23, 0.04);
   --intensity-ink: #1c1917;
-  --intensity-muted: #78716c;
+  --intensity-muted: #6f6862;
   --intensity-faint: #a8a29e;
   --intensity-accent: #c0462b;
   --intensity-accent-soft: rgba(192, 70, 43, 0.08);
@@ -365,7 +365,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 }
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy span {
-  color: #78716c;
+  color: #6f6862;
 }
 
 #root .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment .coach-identity-copy strong {
@@ -385,7 +385,7 @@ body:is(.theme-midnight, .theme-high-contrast) .analysis-insight-detail-page.is-
 
 .analysis-insight-detail-page.is-intensity .analysis-intensity-command-judgment p {
   margin: 0;
-  color: #78716c;
+  color: #6f6862;
   font-size: 0.78rem;
   line-height: 1.55;
 }

@@ -250,7 +250,7 @@ test.describe('F02 load balance, edge states', () => {
 test.describe('F02 whole page', () => {
   test('F02-E5 Load balance has no serious accessibility violations', async ({ page }) => {
     await openLoad(page);
-    expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
+    expect(await a11yViolations(page)).toEqual([]);
   });
 
   test('F02-E6 in Chinese the Load balance page shows no raw translation key', async ({ page }) => {
