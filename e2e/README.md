@@ -55,9 +55,11 @@ API client also tries such a connection again, up to five times, before it gives
 
 ## Things the suite has to know about the app
 
-* Rate limits and the sign-in lock are keyed on the first `X-Forwarded-For` value, which any client can set (BUG-001). Every browser
-  context and API client here sends an address of its own so tests do not use up each other's allowance. If the app stops trusting
-  that header, run the stack behind a proxy that sets it, or restart the stack between runs.
+* Rate limits and the sign-in lock are keyed on the client address: the connection's own, or, from a trusted proxy, the right-hand
+  end of `X-Forwarded-For` (`docs/deployment/client-address.md`, BUG-001). The throwaway stack trusts the connections from this
+  machine, as it would a proxy in front of the app, so every browser context and API client here sends an address of its own and
+  tests do not use up each other's allowance. The tests that must see the connection's own address (X01-N7 and N8) start a second
+  stack on port 18082 that trusts no proxy (`fixtures/stack.ts`, `APP_TRUSTED_PROXIES=none`).
 * A second sign-in as the same runner ends the first session. Specs never sign in again as a runner a browser is using.
 * Sign-ups are limited to eight an hour per address (same note). Runners B and C are made once and kept in `.auth/accounts.json`.
 * Analysis runs in the background after an import; specs wait for it (`eventually`, `expect.poll`) instead of sleeping.

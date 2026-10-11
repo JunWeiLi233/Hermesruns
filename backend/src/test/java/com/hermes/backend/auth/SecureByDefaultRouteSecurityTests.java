@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -54,6 +55,50 @@ class SecureByDefaultRouteSecurityTests {
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/support", "/nonsense", "/pricing/yearly", "/an/old/bookmark"})
+    void anAddressTheAppDoesNotKnowGivesABrowserTheAppWithANotFoundStatus(String path) throws Exception {
+        mockMvc.perform(get(path).accept(MediaType.TEXT_HTML))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", containsString("noindex")))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/nothing-here", "/api/activities", "/api", "/wp-login.php", "/backup.zip", "/some/dir/.env"})
+    void anythingThatIsNotAPageStaysTheJsonUnauthorizedEvenForABrowser(String path) throws Exception {
+        mockMvc.perform(get(path).accept(MediaType.TEXT_HTML, MediaType.ALL))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
+    }
+
+    @Test
+    void aScriptThatAsksForJsonOrAnythingGetsTheJsonUnauthorizedAtAnUnknownAddress() throws Exception {
+        mockMvc.perform(get("/support").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
+        mockMvc.perform(get("/support").accept(MediaType.ALL))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void aWriteToAnUnknownAddressStaysTheJsonUnauthorizedEvenFromABrowser() throws Exception {
+        mockMvc.perform(post("/support").accept(MediaType.TEXT_HTML))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
+    }
+
+    @Test
+    void anUnknownAddressIsStillNotAWayIntoAnythingThatNeedsASession() throws Exception {
+        // The shell is the same public file every route serves; it carries nothing of the caller's and nothing of the address's.
+        MvcResult page = mockMvc.perform(get("/support").accept(MediaType.TEXT_HTML)).andReturn();
+        MvcResult home = mockMvc.perform(get("/login").accept(MediaType.TEXT_HTML)).andReturn();
+        assertThat(page.getResponse().getContentAsByteArray()).isEqualTo(home.getResponse().getContentAsByteArray());
     }
 
     @Test

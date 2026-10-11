@@ -59,6 +59,117 @@ const SEO_COPY = Object.freeze({
   }),
 });
 
+// The tab, the history and a screen reader tell pages apart by their title. A page that is not public keeps the generic
+// description and its noindex robots; only the title is its own. The names are the ones the navigation uses.
+const PAGE_TITLES = Object.freeze({
+  en: Object.freeze({
+    login: 'Sign in',
+    signup: 'Create your account',
+    forgotPassword: 'Reset your password',
+    home: 'Home',
+    runs: 'Runs',
+    run: 'Run',
+    analysis: 'Analysis',
+    heatmap: 'Heatmap',
+    weather: 'Weather Engine',
+    prediction: 'Race prediction',
+    todayRun: "Today's run",
+    rewards: 'Rewards',
+    trainingLog: 'Training log',
+    settings: 'Settings',
+    importData: 'Import data',
+    shoes: 'Shoes',
+    addShoes: 'Add shoes',
+    shoeCatalog: 'Shoe catalog',
+    races: 'Races',
+    raceDetails: 'Race details',
+    schedule: 'Schedule',
+    muscleTraining: 'Muscle training',
+    admin: 'Admin',
+  }),
+  'zh-CN': Object.freeze({
+    login: '登录',
+    signup: '创建账户',
+    forgotPassword: '重置密码',
+    home: '主页',
+    runs: '跑步记录',
+    run: '跑步详情',
+    analysis: '分析',
+    heatmap: '热力图',
+    weather: '天气引擎',
+    prediction: '比赛预测',
+    todayRun: '今日训练',
+    rewards: '奖励',
+    trainingLog: '训练日志',
+    settings: '设置',
+    importData: '导入数据',
+    shoes: '跑鞋',
+    addShoes: '添加跑鞋',
+    shoeCatalog: '跑鞋库',
+    races: '赛事',
+    raceDetails: '赛事详情',
+    schedule: '计划',
+    muscleTraining: '肌肉训练',
+    admin: '管理',
+  }),
+});
+
+const PREDICTION_DISTANCE_NAMES = Object.freeze({
+  en: Object.freeze({ '5k': '5K', '10k': '10K', half: 'Half marathon', marathon: 'Marathon' }),
+  'zh-CN': Object.freeze({ '5k': '5 公里', '10k': '10 公里', half: '半程马拉松', marathon: '马拉松' }),
+});
+
+const PAGE_KEYS_BY_PATH = Object.freeze({
+  '/login': 'login',
+  '/signup': 'signup',
+  '/forgot-password': 'forgotPassword',
+  '/profile': 'home',
+  '/runs': 'runs',
+  '/analysis': 'analysis',
+  '/heatmap': 'heatmap',
+  '/weather': 'weather',
+  '/weather-engine': 'weather',
+  '/today-run': 'todayRun',
+  '/rewards': 'rewards',
+  '/training-log': 'trainingLog',
+  '/settings': 'settings',
+  '/settings/import-data': 'importData',
+  '/shoes': 'shoes',
+  '/shoes/add': 'addShoes',
+  '/add-shoes': 'addShoes',
+  '/shoe-catalog': 'shoeCatalog',
+  '/races': 'races',
+  '/schedule': 'schedule',
+  '/muscle-training': 'muscleTraining',
+  '/admin': 'admin',
+  '/workflows': 'admin',
+});
+
+function pageKeyForPath(pathname) {
+  if (Object.hasOwn(PAGE_KEYS_BY_PATH, pathname)) return PAGE_KEYS_BY_PATH[pathname];
+  if (/^\/runs\/[^/]+$/.test(pathname)) return 'run';
+  if (/^\/analysis\/[^/]+$/.test(pathname)) return 'analysis';
+  if (/^\/races\/details\/[^/]+$/.test(pathname)) return 'raceDetails';
+  if (/^\/settings\/[^/]+$/.test(pathname)) return 'settings';
+  if (/^\/dashboard(\/|$)/.test(pathname)) return 'admin';
+  return null;
+}
+
+/** "Runs | HermesRuns" for a page that is not public, or null for an address that is not one of the app's pages. */
+export function getPageTitle(pathname = '/', language = 'en') {
+  const normalizedLanguage = language === 'zh-CN' ? 'zh-CN' : 'en';
+  const names = PAGE_TITLES[normalizedLanguage];
+  const normalizedPath = normalizePathname(pathname);
+  const prediction = /^\/prediction\/([^/]+)$/.exec(normalizedPath);
+  if (prediction) {
+    const distance = PREDICTION_DISTANCE_NAMES[normalizedLanguage][prediction[1]];
+    if (!distance) return `${names.prediction} | HermesRuns`;
+    return normalizedLanguage === 'zh-CN' ? `${distance}预测 | HermesRuns` : `${distance} prediction | HermesRuns`;
+  }
+  const key = pageKeyForPath(normalizedPath);
+  return key ? `${names[key]} | HermesRuns` : null;
+}
+
 function normalizePathname(pathname) {
   const normalized = String(pathname || '/').trim().replace(/\/+$/, '');
   return normalized || '/';
@@ -128,10 +239,12 @@ export function getSeoMetadata(pathname = '/', language = 'en') {
   const normalizedPath = normalizePathname(pathname);
   const route = routeForPath(normalizedPath);
   const copy = SEO_COPY[normalizedLanguage][route];
+  const pageTitle = route === 'private' ? getPageTitle(normalizedPath, normalizedLanguage) : null;
   const indexable = route !== 'private';
   const url = `${SITE_URL}${normalizedPath}`;
   const metadata = {
     ...copy,
+    title: pageTitle || copy.title,
     indexable,
     language: normalizedLanguage === 'zh-CN' ? 'zh-CN' : 'en',
     locale: normalizedLanguage === 'zh-CN' ? 'zh_CN' : 'en_US',

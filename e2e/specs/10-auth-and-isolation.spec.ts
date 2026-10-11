@@ -378,10 +378,28 @@ test.describe('X01 the public side of the app', () => {
     }
   });
 
-  test('X01-E8 an address the app does not know opens the app or a not-found page, not a JSON error about a session token', async ({ seed }) => {
-    test.fail(true, 'BUG-023: anything outside the known routes answers 401 {"error":"Invalid or expired session token."} in the browser tab');
-    const res = await fetch(`${seed.baseUrl}/support`, { headers: { Accept: 'text/html', 'X-Forwarded-For': new Api(seed.baseUrl).clientIp ?? '' } });
-    expect(res.headers.get('content-type')).toContain('text/html');
+  test('X01-E8 an address the app does not know opens the app or a not-found page, not a JSON error about a session token', async ({ page, seed, guard }) => {
+    guard.allow(/status of 404/); // the page is not there, and the answer says so
+    const headers = { Accept: 'text/html', 'X-Forwarded-For': new Api(seed.baseUrl).clientIp ?? '' };
+    for (const route of ['/support', '/pricing', '/about', '/help', '/an/old/bookmark']) {
+      const res = await fetch(`${seed.baseUrl}${route}`, { headers });
+      const body = await res.text();
+      expect(res.headers.get('content-type'), route).toContain('text/html');
+      expect(res.status, `${route}: the page is not there, and a crawler is told so`).toBe(404);
+      expect(body, route).toContain('<div id="root"');
+    }
+    // A script that asks for JSON, a write, a file name or an API address still gets the plain refusal.
+    const json = await fetch(`${seed.baseUrl}/support`, { headers: { Accept: 'application/json', 'X-Forwarded-For': headers['X-Forwarded-For'] } });
+    expect(json.status).toBe(401);
+    await json.text();
+    const api = await fetch(`${seed.baseUrl}/api/no-such-thing`, { headers });
+    expect(api.status, 'an API address is never answered with the app').toBe(401);
+    expect(api.headers.get('content-type')).toContain('json');
+    await api.text();
+    // In a tab the app opens (its router takes an unknown address to the start page).
+    await page.goto('/support');
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    expect(await page.content()).not.toContain('Invalid or expired session token');
   });
 
   test('X01-E9 pages carry the browser protections the app promises: CSP, no sniffing, no framing, a referrer policy', async ({ seed }) => {
@@ -407,13 +425,53 @@ test.describe('X01 the public side of the app', () => {
   });
 
   test('X01-E11 the public sign-in, sign-up and recovery pages each have a title of their own', async ({ page }) => {
-    test.fail(true, 'BUG-018: /login, /signup and /forgot-password (and every signed-in page) share one generic title');
-    const titles: string[] = [];
-    for (const url of ['/login', '/signup', '/forgot-password']) {
+    const expected: Array<[string, string]> = [
+      ['/login', 'Sign in | HermesRuns'],
+      ['/signup', 'Create your account | HermesRuns'],
+      ['/forgot-password', 'Reset your password | HermesRuns'],
+    ];
+    for (const [url, title] of expected) {
       await page.goto(url);
-      await page.waitForTimeout(400);
-      titles.push(await page.title());
+      await expect(page, url).toHaveTitle(title);
     }
-    expect(new Set(titles).size, titles.join(' | ')).toBe(3);
+  });
+
+  test('X01-E11b every page of the signed-in app has a title of its own, in English and in Chinese', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('titles');
+    const pages: Array<[string, string, string]> = [
+      ['/profile', 'Home | HermesRuns', '主页 | HermesRuns'],
+      ['/runs', 'Runs | HermesRuns', '跑步记录 | HermesRuns'],
+      ['/analysis', 'Analysis | HermesRuns', '分析 | HermesRuns'],
+      ['/training-log', 'Training log | HermesRuns', '训练日志 | HermesRuns'],
+      ['/settings', 'Settings | HermesRuns', '设置 | HermesRuns'],
+      ['/shoes', 'Shoes | HermesRuns', '跑鞋 | HermesRuns'],
+      ['/races', 'Races | HermesRuns', '赛事 | HermesRuns'],
+      ['/schedule', 'Schedule | HermesRuns', '计划 | HermesRuns'],
+      ['/prediction/10k', '10K prediction | HermesRuns', '10 公里预测 | HermesRuns'],
+    ];
+    for (const lang of ['en', 'zh-CN'] as const) {
+      const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+      try {
+        // Some pages hold a frame with no storage of its own (the map's); the script is for the page, not for it.
+        await context.addInitScript((value) => {
+          try {
+            localStorage.setItem('hermes_lang', value);
+          } catch {
+            /* a frame that may not read storage */
+          }
+        }, lang);
+        const page = await context.newPage();
+        const seen: string[] = [];
+        for (const [url, english, chinese] of pages) {
+          await page.goto(url);
+          const title = lang === 'en' ? english : chinese;
+          await expect(page, `${url} in ${lang}`).toHaveTitle(title);
+          seen.push(title);
+        }
+        expect(new Set(seen).size, 'no two pages share a title').toBe(pages.length);
+      } finally {
+        await context.close();
+      }
+    }
   });
 });

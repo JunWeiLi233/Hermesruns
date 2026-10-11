@@ -83,17 +83,21 @@ public class SpaForwardingController {
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward(HttpServletRequest request) throws IOException {
         boolean indexable = isIndexableRoute(request.getRequestURI());
+        String html = readShell();
+        if (html == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return htmlResponse(html, indexable, request.getRequestURI());
+    }
+
+    /** The built index.html, or null when the frontend has not been built into this server. */
+    public static String readShell() throws IOException {
         Path localStaticIndex = Path.of("target", "classes", "static", "index.html");
         if (Files.isRegularFile(localStaticIndex)) {
-            return htmlResponse(Files.readString(localStaticIndex, StandardCharsets.UTF_8), indexable, request.getRequestURI());
+            return Files.readString(localStaticIndex, StandardCharsets.UTF_8);
         }
-
-        try (InputStream in = getClass().getResourceAsStream("/static/index.html")) {
-            if (in == null) {
-                return ResponseEntity.notFound().build();
-            }
-            String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            return htmlResponse(html, indexable, request.getRequestURI());
+        try (InputStream in = SpaForwardingController.class.getResourceAsStream("/static/index.html")) {
+            return in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 

@@ -1492,7 +1492,7 @@ export default function AnalysisInsightDetail() {
 
   useEffect(() => {
     if (typeof document === 'undefined' || !detail) return;
-    document.title = `HermesRuns | ${detail.title}`;
+    document.title = `${detail.title} | HermesRuns`;
   }, [detail]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
