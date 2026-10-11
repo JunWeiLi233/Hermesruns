@@ -1900,3 +1900,78 @@ body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-btn-p
 body:is(.theme-midnight, .theme-high-contrast) .profile-dashboard-page .hd-trend-badge.improving {
   color: var(--hd-green);
 }
+
+/* Progression: set the period beside the one of the same length just before it. */
+.hd-progression {
+  --hd-better: #1e7a35;
+  --hd-worse: #b3261e;
+}
+
+[data-theme="midnight"] .hd-progression,
+body:is(.theme-midnight, .theme-high-contrast) .hd-progression {
+  --hd-better: #8fd7a1;
+  --hd-worse: #ff9b87;
+}
+
+.hd-progression-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hd-progression-compare {
+  padding: 6px 12px;
+  border: 1px solid var(--hd-line-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--hd-text-secondary);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--hd-transition);
+}
+
+.hd-progression-compare.is-active {
+  border-color: var(--hd-accent);
+  background: var(--hd-accent-soft);
+  color: var(--hd-text-primary);
+}
+
+.hd-progression-compare:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hd-progression-compare:focus-visible {
+  outline: 2px solid var(--hd-accent);
+  outline-offset: 2px;
+}
+
+.hd-progression-delta,
+.hd-progression-compared {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--hd-text-secondary);
+}
+
+.hd-progression-compared {
+  font-weight: 600;
+  color: var(--hd-text-tertiary);
+}
+
+.hd-progression-delta.is-better { color: var(--hd-better); }
+.hd-progression-delta.is-worse { color: var(--hd-worse); }
+
+.hd-progression-line.is-previous { stroke: var(--hd-text-tertiary); }
+
+.hd-progression-legend.is-compare i {
+  background: repeating-linear-gradient(90deg, var(--hd-text-tertiary) 0 6px, transparent 6px 9px);
+}
+
+.hd-progression-dot.is-previous { background: var(--hd-text-tertiary); }
+
+.hd-progression-readout-previous { color: var(--hd-text-secondary); }

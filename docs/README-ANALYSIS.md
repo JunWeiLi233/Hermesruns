@@ -625,6 +625,37 @@ everyone, and every suggestion carries the numbers it comes from, so the card ca
 - There is no history of past periods beyond the one before. A suggestion is a rule of thumb (a little more than you usually
   do), not a training plan: it knows nothing about a race, an injury or the season.
 
+## Progression and the Comparison with the Period Before
+
+The Progression card on Home (`utils/progressionAtlas.js`) adds up the runner's runs over a range (all time, 12, 6, 3 or 1
+months back from today): total distance, climb, average pace, moving time and the number of sessions, a running total of
+distance day by day, and the distance of each week.
+
+### Compare
+
+With **Compare** on, a range of 1, 3, 6 or 12 months is set beside the stretch of the same length just before it: the 3 months
+before the last 3 months. All time has nothing before it, so the button is off there and says why.
+
+- **The stretch before** is the same number of calendar months, ending the instant before the current stretch begins. 3 months
+  back from 10 October is 10 July; the stretch before is 10 April to 9 July.
+- **The line**: the stretch before is drawn dashed on the same chart and the same scale (the scale fits the longer of the two),
+  with its running total laid on the current days, day 1 against day 1, so the two lines read against each other. Where one
+  stretch is a day shorter (months differ), its line ends where it ends. Moving the scrubber, with a pointer or the arrow keys,
+  reads out what the stretch before had added up to by the same day ("Before: 22.0 km").
+- **The change** is written under each figure: distance as an amount and a percentage of the stretch before ("10.0 km more
+  (+50%)"), moving time, climb and sessions as amounts, and pace as how much faster or slower (a smaller number of seconds per
+  kilometre is the faster pace). A change that is too small to mean anything (under 50 m, a minute, a metre, a session, a second
+  a kilometre) says "Same as before". A figure one of the stretches does not have (a pace with no runs, a climb neither has) has
+  no change under it. More distance, time, climb and sessions, and a faster pace, are shown as the better direction, in words as
+  well as colour.
+- Compare is a view of the same runs: it changes nothing stored. The choice is kept in the browser.
+
+### Known limits
+
+- Only whole numbers of months are compared; "this week against last week" or a custom range is not offered.
+- A run is on the day it was run on the runner's wall (see "The runner's day"); a stretch is judged by those days in the
+  browser's own clock for "today".
+
 ## Run Summary
 
 The run page has a **Run summary**: a headline that says what kind of run it was, and up to four lines that compare it with the
