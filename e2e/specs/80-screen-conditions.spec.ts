@@ -283,6 +283,8 @@ test.describe('F04 zones editor under bad conditions', () => {
       await expect(maxField(page)).toHaveValue('185');
       offline = false;
       await page.getByRole('button', { name: 'Save', exact: true }).click();
+      // The error goes as soon as Save is pressed; the server has the value once the page says it was saved.
+      await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
       await expect(page.getByRole('alert')).toHaveCount(0);
       expect((await who.api.get('/api/training/zones')).json.maxHeartRate.bpm).toBe(185);
     } finally {
