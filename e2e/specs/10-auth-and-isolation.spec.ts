@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Api, newRunner, strongPassword } from '../fixtures/api.ts';
 import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
+import { startStack, type NamedStack } from '../fixtures/stack.ts';
 import { contextWith, expect, expectNoRawKeys, test } from '../fixtures/test.ts';
 
 // These tests start signed out and make their own runners.
@@ -184,34 +185,71 @@ test.describe('X01 limits on guessing passwords', () => {
     expect(JSON.stringify(locked.json)).toMatch(/Too many failed attempts/);
   });
 
-  test('X01-N7 the lock follows the connection, not a header the client chooses', async ({ seed }) => {
-    test.fail(true, 'BUG-001: the address used for the lock, the sign-up cap and the 60-a-minute limits is the first X-Forwarded-For value, which any client can set');
-    const made = await newRunner('lock2');
-    const attacker = new Api(seed.baseUrl);
-    for (let attempt = 1; attempt <= 10; attempt += 1) await attacker.request('POST', '/api/auth/login', { body: { email: made.email, password: `wrong-${attempt}-Aa1!` }, token: null });
-    expect((await attacker.request('POST', '/api/auth/login', { body: { email: made.email, password: made.password }, token: null })).status).toBe(429);
-    // The same client, the same connection, one more header: it is now somebody else.
-    const rotated = new Api(seed.baseUrl);
-    const res = await rotated.request('POST', '/api/auth/login', { body: { email: made.email, password: made.password }, token: null });
-    expect(res.status, 'a locked-out client that changes X-Forwarded-For').toBe(429);
+  test('X01-N6b behind a proxy of ours the client is the address the proxy added: what the client wrote in front of it changes nothing, and another client is not locked out with it', async ({ seed }) => {
+    // The suite's stack trusts the connections from this machine, as it would a proxy in front of the app. A proxy adds the address it got
+    // the request from on the right; whatever a client wrote is on the left.
+    const made = await newRunner('lock-proxy');
+    const suffix = () => Math.floor(1 + Math.random() * 253);
+    const attacker = `203.0.113.${suffix()}`;
+    const bystander = `198.51.100.${suffix()}`;
+    const login = (password: string, forwarded: string) => {
+      const api = new Api(seed.baseUrl);
+      api.clientIp = forwarded;
+      return api.request('POST', '/api/auth/login', { body: { email: made.email, password }, token: null });
+    };
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      expect((await login(`wrong-${attempt}-Aa1!`, `192.0.2.${attempt}, ${attacker}`)).status, `attempt ${attempt}`).toBe(401);
+    }
+    const locked = await login(made.password, `192.0.2.99, ${attacker}`);
+    expect(locked.status, 'the attacker with yet another address written in front').toBe(429);
+    const other = await login(made.password, bystander);
+    expect(other.status, 'somebody else behind the same proxy').toBe(200);
+  });
+});
+
+test.describe('X01 limits on guessing passwords, on a stack that trusts no proxy', () => {
+  // How the app is reached directly: the address is the connection's own, and X-Forwarded-For is whatever the client chose to write
+  // (BUG-001: until then it was believed from anyone, so every request could be somebody new).
+  let strict: NamedStack;
+  test.beforeAll(async () => {
+    test.setTimeout(360_000);
+    strict = await startStack({ name: 'strict', port: 18082, env: { APP_TRUSTED_PROXIES: 'none' } });
+  });
+  test.afterAll(async () => {
+    await strict?.stop();
   });
 
-  test('X01-N8 the sign-up cap of eight an hour per address cannot be stepped around with a header either', async ({ seed }) => {
-    test.fail(true, 'BUG-001: the sign-up cap uses the same client-chosen address');
-    const same = '10.200.0.1';
+  test('X01-N7 the lock follows the connection, not a header the client chooses', async () => {
+    const email = `lock-${unique}@example.com`;
+    const password = strongPassword();
+    await new Api(strict.baseUrl).signUp(email, password);
+    const attempt = (secret: string) => {
+      const api = new Api(strict.baseUrl); // a new made-up address for every request
+      return api.request('POST', '/api/auth/login', { body: { email, password: secret }, token: null });
+    };
+    for (let tries = 1; tries <= 10; tries += 1) {
+      expect((await attempt(`wrong-${tries}-Aa1!`)).status, `attempt ${tries}`).toBe(401);
+    }
+    // The same client, the same connection, one more header: it is still the one that was locked out.
+    const res = await attempt(password);
+    expect(res.status, 'a locked-out client that changes X-Forwarded-For').toBe(429);
+    expect(JSON.stringify(res.json)).toMatch(/Too many failed attempts/);
+  });
+
+  test('X01-N8 the sign-up cap of eight an hour per address cannot be stepped around with a header either', async () => {
     const statuses: number[] = [];
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const api = new Api(seed.baseUrl);
-      api.clientIp = same;
-      const res = await api.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-${attempt}@example.com`, password: strongPassword() }, token: null });
+    for (let tries = 0; tries < 12; tries += 1) {
+      const api = new Api(strict.baseUrl); // a new made-up address for every request
+      const res = await api.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-${tries}@example.com`, password: strongPassword() }, token: null });
       statuses.push(res.status);
     }
-    expect(statuses.filter((status) => status === 429).length, 'sign-ups refused after the cap from one address').toBeGreaterThan(0);
-    // And the part the header must not be able to undo: a ninth, tenth... sign-up that names another address.
-    const other = new Api(seed.baseUrl);
-    other.clientIp = '10.200.0.2';
+    expect(statuses.filter((status) => status === 429).length, 'sign-ups refused after the cap from one connection').toBeGreaterThan(0);
+    expect(statuses.filter((status) => status < 300).length, 'sign-ups let through, with the ones the lock test made').toBeLessThanOrEqual(8);
+    // And the part the header must not be able to undo: one more that names an address nobody has used.
+    const other = new Api(strict.baseUrl);
+    other.clientIp = '203.0.113.200';
     const res = await other.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-other@example.com`, password: strongPassword() }, token: null });
-    expect(res.status, 'a new address made up by the client is a new allowance').toBe(429);
+    expect(res.status, 'a new address made up by the client is not a new allowance').toBe(429);
   });
 });
 

@@ -6,6 +6,11 @@
 //   node tools/stack.mjs stop     stop it and delete its database
 //   node tools/stack.mjs status   print where it is
 //
+// A second stack can run beside the first for a test that needs the app configured differently (one that trusts no proxy, say):
+// give it a name, a port and its settings in the environment, for example
+//   E2E_STACK_NAME=strict E2E_PORT=18082 APP_TRUSTED_PROXIES=none node tools/stack.mjs start
+// A named stack keeps its state in .auth/stack-<name>.json, so it and the first one do not overwrite each other.
+//
 // One Spring Boot process on a private port (default 18080) with a fresh H2 database in the OS temp folder, the built
 // frontend served from backend/target/classes/static, background syncs off and the local shared runner on. Nothing here
 // touches port 8080, your dev database or your Strava / Garmin links.
@@ -22,7 +27,8 @@ const repoRoot = path.resolve(e2eDir, '..');
 const backendDir = path.join(repoRoot, 'backend');
 const authDir = path.join(e2eDir, '.auth');
 const cacheDir = path.join(e2eDir, '.cache');
-const stateFile = path.join(authDir, 'stack.json');
+const stackName = (process.env.E2E_STACK_NAME || '').replace(/[^A-Za-z0-9_-]/g, '');
+const stateFile = path.join(authDir, stackName ? `stack-${stackName}.json` : 'stack.json');
 const isWin = process.platform === 'win32';
 const port = Number(process.env.E2E_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;

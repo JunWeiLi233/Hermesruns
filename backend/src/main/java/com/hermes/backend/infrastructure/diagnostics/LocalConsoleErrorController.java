@@ -2,6 +2,7 @@ package com.hermes.backend.infrastructure.diagnostics;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.infrastructure.web.RequestBodyValidator;
+import com.hermes.backend.infrastructure.web.RequestIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public class LocalConsoleErrorController {
     }
 
     static boolean isLocalDevRequest(HttpServletRequest request) {
-        String remoteAddr = request.getRemoteAddr();
+        String remoteAddr = RequestIpResolver.peerAddress(request);
         boolean loopbackRemote = isLoopback(remoteAddr);
 
         String serverName = request.getServerName();
