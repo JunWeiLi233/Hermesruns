@@ -2,9 +2,11 @@ package com.hermes.backend.runner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.activity.Activity;
-import com.hermes.backend.activity.ActivityPointRepository;
+import com.hermes.backend.activity.ActivityBestEffort;
+import com.hermes.backend.activity.ActivityBestEffortRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.BestEffortDistances;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import java.time.Clock;
 import java.time.Duration;
@@ -13,53 +15,62 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+/**
+ * The runner's personal records: the best time at each of six distances, and the longest run, the fastest pace and the
+ * most climbing.
+ *
+ * <p>The distance records are read from the best efforts stored for each run (see {@code BestEffortService}), so a read
+ * costs a few queries and no run's points are loaded. A run's efforts are worked out when the run is ingested, and a
+ * runner's own decisions count: a chip time they typed replaces the measured one, and an effort they hid is not a record.
+ * Runs that have not been analysed yet are caught up in the background, so records are complete a little after a
+ * deploy, not at the first request.</p>
+ */
 @Service
 public class PersonalRecordService {
+    /** Cache namespace of the per-runner personal-records response; evicted when runs change. */
+    public static final String CACHE_NAMESPACE = "personal-records";
+
     private static final Duration PERSONAL_RECORD_CACHE_TTL = Duration.ofMinutes(10);
 
-    private static final List<DistanceDefinition> DISTANCE_DEFINITIONS = List.of(
-            new DistanceDefinition("1km", 1.0),
-            new DistanceDefinition("3km", 3.0),
-            new DistanceDefinition("5km", 5.0),
-            new DistanceDefinition("10km", 10.0),
-            new DistanceDefinition("half", 21.0975),
-            new DistanceDefinition("marathon", 42.195)
-    );
+    /** The six distances the response has always had; their keys are what the profile page's celebrations key on. */
+    private static final List<DistanceDefinition> DISTANCE_DEFINITIONS = BestEffortDistances.LEGACY_KEYS.stream()
+            .map(key -> new DistanceDefinition(key, BestEffortDistances.byKey(key).orElseThrow().meters() / 1000.0))
+            .toList();
 
     private final ActivityRepository activityRepository;
-    private final ActivityPointRepository activityPointRepository;
+    private final ActivityBestEffortRepository bestEfforts;
     private final TtlCacheStore cacheStore;
 
     @Autowired
     public PersonalRecordService(
             ActivityRepository activityRepository,
-            ActivityPointRepository activityPointRepository,
+            ActivityBestEffortRepository bestEfforts,
             TtlCacheStore cacheStore
     ) {
         this.activityRepository = activityRepository;
-        this.activityPointRepository = activityPointRepository;
+        this.bestEfforts = bestEfforts;
         this.cacheStore = cacheStore;
     }
 
     public PersonalRecordService(
             ActivityRepository activityRepository,
-            ActivityPointRepository activityPointRepository
+            ActivityBestEffortRepository bestEfforts
     ) {
-        this(activityRepository, activityPointRepository,
+        this(activityRepository, bestEfforts,
                 TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC()));
     }
 
     public PersonalRecordsResponse buildForRunner(Runner runner) {
         String cacheKey = String.valueOf(runner.getId());
-        PersonalRecordsResponse cached = cacheStore.get("personal-records", cacheKey, PersonalRecordsResponse.class).orElse(null);
+        PersonalRecordsResponse cached = cacheStore.get(CACHE_NAMESPACE, cacheKey, PersonalRecordsResponse.class).orElse(null);
         if (cached != null) {
             return cached;
         }
 
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
-        Map<String, DistanceRecord> records = new LinkedHashMap<>();
         SummaryRecord longestRun = null;
         SummaryRecord fastestPace = null;
         SummaryRecord mostElevation = null;
@@ -113,17 +124,13 @@ public class PersonalRecordService {
                     mostElevation = elevationCandidate;
                 }
             }
+        }
 
-            List<SamplePoint> samples = loadSamples(run);
-            for (DistanceDefinition definition : DISTANCE_DEFINITIONS) {
-                DistanceRecord candidate = computeDistanceRecord(run, definition, samples, distanceKm, movingSeconds);
-                if (candidate == null) {
-                    continue;
-                }
-                DistanceRecord current = records.get(definition.key());
-                if (current == null || candidate.elapsedSeconds() < current.elapsedSeconds()) {
-                    records.put(definition.key(), candidate);
-                }
+        Map<String, DistanceRecord> records = new LinkedHashMap<>();
+        for (DistanceDefinition definition : DISTANCE_DEFINITIONS) {
+            List<ActivityBestEffort> best = bestEfforts.findRanked(runner.getId(), definition.key(), PageRequest.of(0, 1));
+            if (!best.isEmpty()) {
+                records.put(definition.key(), toRecord(definition, best.get(0)));
             }
         }
 
@@ -134,185 +141,24 @@ public class PersonalRecordService {
                 fastestPace,
                 mostElevation
         );
-        cacheStore.put("personal-records", cacheKey, response, PERSONAL_RECORD_CACHE_TTL);
+        cacheStore.put(CACHE_NAMESPACE, cacheKey, response, PERSONAL_RECORD_CACHE_TTL);
         return response;
     }
 
-    private DistanceRecord computeDistanceRecord(
-            Activity run,
-            DistanceDefinition definition,
-            List<SamplePoint> samples,
-            double distanceKm,
-            int movingSeconds
-    ) {
-        if (!samples.isEmpty()) {
-            DistanceRecord bestEffort = computeBestEffortFromSamples(run, definition, samples);
-            if (bestEffort != null) {
-                return bestEffort;
-            }
-        }
-
-        double lower = definition.distanceKm() * 0.9;
-        if (distanceKm < lower || movingSeconds <= 0) {
-            return null;
-        }
-
-        int normalizedSeconds = (int) Math.round((movingSeconds / distanceKm) * definition.distanceKm());
+    private DistanceRecord toRecord(DistanceDefinition definition, ActivityBestEffort effort) {
+        Activity run = effort.getActivity();
+        double seconds = effort.getEffectiveSeconds();
         return new DistanceRecord(
                 definition.key(),
                 definition.distanceKm(),
-                normalizedSeconds,
-                movingSeconds / distanceKm,
-                pickRecordedAt(run),
-                run.getName(),
-                run.getId(),
-                distanceKm,
-                false
-        );
-    }
-
-    private DistanceRecord computeBestEffortFromSamples(Activity run, DistanceDefinition definition, List<SamplePoint> samples) {
-        if (samples.size() < 2) {
-            return null;
-        }
-        double targetMeters = definition.distanceKm() * 1000.0;
-        double totalMeters = samples.get(samples.size() - 1).distanceMeters();
-        if (!Double.isFinite(totalMeters) || totalMeters < targetMeters) {
-            return null;
-        }
-
-        Double bestDuration = null;
-        for (SamplePoint start : samples) {
-            if (!Double.isFinite(start.distanceMeters()) || !Double.isFinite(start.elapsedSeconds())) {
-                continue;
-            }
-            double startMeters = start.distanceMeters();
-            double endMeters = startMeters + targetMeters;
-            if (endMeters > totalMeters) {
-                break;
-            }
-            Double endSeconds = interpolateSecondsAtDistance(samples, endMeters);
-            if (endSeconds == null || endSeconds <= start.elapsedSeconds()) {
-                continue;
-            }
-            double duration = endSeconds - start.elapsedSeconds();
-            if (bestDuration == null || duration < bestDuration) {
-                bestDuration = duration;
-            }
-        }
-
-        if (bestDuration == null) {
-            return null;
-        }
-
-        int roundedSeconds = (int) Math.round(bestDuration);
-        return new DistanceRecord(
-                definition.key(),
-                definition.distanceKm(),
-                roundedSeconds,
-                bestDuration / definition.distanceKm(),
+                (int) Math.round(seconds),
+                seconds / definition.distanceKm(),
                 pickRecordedAt(run),
                 run.getName(),
                 run.getId(),
                 resolveDistanceKm(run),
-                true
+                !effort.isEstimated()
         );
-    }
-
-    private List<SamplePoint> loadSamples(Activity run) {
-        List<Object[]> rows = activityPointRepository.findAnalyticsSamplesByActivityIdOrdered(run.getId());
-        if (rows.isEmpty()) {
-            return List.of();
-        }
-
-        List<SamplePoint> samples = new java.util.ArrayList<>(rows.size());
-        for (Object[] row : rows) {
-            if (row == null || row.length < 4) {
-                continue;
-            }
-            samples.add(new SamplePoint(
-                    row[2] == null ? null : ((Number) row[2]).doubleValue(),
-                    row[3] == null ? null : ((Number) row[3]).doubleValue()
-            ));
-        }
-        normalizeSamples(samples, run);
-        return samples;
-    }
-
-    private void normalizeSamples(List<SamplePoint> samples, Activity run) {
-        if (samples.isEmpty()) {
-            return;
-        }
-
-        double cumulativeMeters = 0;
-        for (int i = 0; i < samples.size(); i++) {
-            SamplePoint point = samples.get(i);
-            if (point.distanceMeters() != null && point.distanceMeters() >= 0) {
-                cumulativeMeters = Math.max(cumulativeMeters, point.distanceMeters());
-                continue;
-            }
-            samples.set(i, new SamplePoint(point.elapsedSeconds(), cumulativeMeters));
-        }
-
-        Double maxKnownSeconds = null;
-        for (SamplePoint point : samples) {
-            if (point.elapsedSeconds() != null) {
-                maxKnownSeconds = point.elapsedSeconds();
-            }
-        }
-
-        int totalSeconds = maxKnownSeconds != null && maxKnownSeconds > 0
-                ? maxKnownSeconds.intValue()
-                : resolveMovingSeconds(run);
-        double totalMeters = samples.get(samples.size() - 1).distanceMeters() == null
-                ? resolveDistanceKm(run) * 1000.0
-                : samples.get(samples.size() - 1).distanceMeters();
-
-        if (totalSeconds <= 0 || totalMeters <= 0) {
-            return;
-        }
-
-        for (int i = 0; i < samples.size(); i++) {
-            SamplePoint point = samples.get(i);
-            if (point.elapsedSeconds() != null) {
-                continue;
-            }
-            double seconds = (point.distanceMeters() / totalMeters) * totalSeconds;
-            samples.set(i, new SamplePoint(seconds, point.distanceMeters()));
-        }
-    }
-
-    private Double interpolateSecondsAtDistance(List<SamplePoint> samples, double targetMeters) {
-        if (samples.isEmpty()) {
-            return null;
-        }
-        for (int i = 1; i < samples.size(); i++) {
-            SamplePoint previous = samples.get(i - 1);
-            SamplePoint current = samples.get(i);
-            if (!isFinite(previous.elapsedSeconds(), previous.distanceMeters(), current.elapsedSeconds(), current.distanceMeters())) {
-                continue;
-            }
-            if (targetMeters > current.distanceMeters()) {
-                continue;
-            }
-            double span = current.distanceMeters() - previous.distanceMeters();
-            if (span <= 0) {
-                return current.elapsedSeconds();
-            }
-            double ratio = (targetMeters - previous.distanceMeters()) / span;
-            return previous.elapsedSeconds() + ratio * (current.elapsedSeconds() - previous.elapsedSeconds());
-        }
-        SamplePoint last = samples.get(samples.size() - 1);
-        return last.elapsedSeconds();
-    }
-
-    private boolean isFinite(Double... values) {
-        for (Double value : values) {
-            if (value == null || !Double.isFinite(value)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private double resolveDistanceKm(Activity run) {
@@ -383,8 +229,5 @@ public class PersonalRecordService {
             SummaryRecord fastestPace,
             SummaryRecord mostElevation
     ) {
-    }
-
-    private record SamplePoint(Double elapsedSeconds, Double distanceMeters) {
     }
 }

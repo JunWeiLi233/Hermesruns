@@ -264,3 +264,154 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-metric:is
   #root .analysis-load-v2-driver-dist { grid-column: 1; grid-row: 3; text-align: left; }
   #root .analysis-load-v2-scale-labels { font-size: 0.68rem; }
 }
+
+/* Fitness, fatigue and form, and the weekly effort (M4). They sit on this page, inside .analysis-load-v2, so they take the
+   same card, heading, range switch, key and metric styles and the same --lb-* tokens, light and midnight. Only what is new
+   is defined here. */
+#root .analysis-load-v2 .analysis-fit-v2 {
+  --fit-fitness: var(--lb-accent);
+  --fit-fatigue: #4f86d6;
+  --fit-fresh: rgba(52, 199, 89, 0.3);
+  --fit-tired: rgba(160, 57, 42, 0.26);
+  --fit-bar-within: #34c759;
+  --fit-bar-above: #e0685a;
+  --fit-bar-below: #f2c46d;
+  --fit-bar-neutral: #b8b0a6;
+  --fit-race: var(--lb-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis-fit-v2 {
+  --fit-fatigue: #78a9ef;
+  --fit-fresh: rgba(156, 210, 170, 0.34);
+  --fit-tired: rgba(255, 180, 167, 0.28);
+  --fit-bar-within: #9cd2aa;
+  --fit-bar-above: #ffb4a7;
+  --fit-bar-below: #ffd38a;
+  --fit-bar-neutral: rgba(255, 255, 255, 0.34);
+}
+
+#root .analysis-load-v2 .analysis-fit-v2-note { margin: 0; color: var(--lb-muted); font-size: 0.8rem; line-height: 1.5; text-wrap: pretty; }
+#root .analysis-load-v2 .analysis-fit-v2-note.is-faint { color: var(--lb-faint); font-size: 0.75rem; }
+#root .analysis-load-v2 .analysis-fit-v2-note.is-error { color: #d70015; }
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .analysis-fit-v2-note.is-error { color: #ffb4a7; }
+/* The page's faint grey is 4.4:1 on white and 4.0:1 on a card in the light theme, short of the 4.5:1 that small print needs. The new
+   cards use a darker one (5.1:1 on a card); the older cards of the page keep theirs, and the midnight theme already has enough. */
+body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analysis-fit-v2 { --lb-faint: #6f665c; }
+#root .analysis-load-v2 .analysis-fit-v2-state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+
+/* The key above the chart: a switch for each line, showing its number for the day being looked at. */
+#root .analysis-load-v2 .analysis-fit-v2-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+
+#root .analysis-load-v2 .analysis-fit-v2-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--lb-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lb-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+#root .analysis-load-v2 .analysis-fit-v2-toggle strong { color: var(--lb-ink); font-variant-numeric: tabular-nums; }
+#root .analysis-load-v2 .analysis-fit-v2-toggle i { width: 14px; height: 0; border-top: 3px solid var(--fit-fitness); border-radius: 2px; }
+#root .analysis-load-v2 .analysis-fit-v2-toggle.is-fatigue i { border-top-color: var(--fit-fatigue); }
+#root .analysis-load-v2 .analysis-fit-v2-toggle.is-form i { height: 8px; border-top: 0; border-radius: 2px; background: linear-gradient(180deg, var(--fit-fresh) 50%, var(--fit-tired) 50%); }
+#root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="false"] { opacity: 0.55; }
+#root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="false"] strong { color: var(--lb-muted); }
+#root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="true"] { background: var(--lb-fill); color: var(--lb-ink); }
+#root .analysis-load-v2 .analysis-fit-v2-toggle:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 2px; }
+
+/* The plot */
+#root .analysis-load-v2 .analysis-fit-v2-chart { position: relative; min-height: 0; }
+#root .analysis-load-v2 .analysis-fit-v2-plot { position: relative; touch-action: pan-y; cursor: crosshair; border-radius: 12px; }
+#root .analysis-load-v2 .analysis-fit-v2-plot:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 4px; }
+#root .analysis-load-v2 .analysis-fit-v2-svg { display: block; width: 100%; height: auto; overflow: visible; }
+#root .analysis-load-v2 .analysis-fit-v2-svg text { fill: var(--lb-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+#root .analysis-load-v2 .analysis-fit-v2-svg text.analysis-fit-v2-today-label { fill: var(--lb-muted); font-weight: 700; }
+#root .analysis-load-v2 .analysis-fit-v2-grid { stroke: var(--lb-line); stroke-width: 1; }
+#root .analysis-load-v2 .analysis-fit-v2-zero { stroke: var(--lb-faint); stroke-width: 1; }
+#root .analysis-load-v2 .analysis-fit-v2-today,
+#root .analysis-load-v2 .analysis-fit-v2-crosshair { stroke: var(--lb-faint); stroke-width: 1; stroke-dasharray: 3 4; }
+/* A race day: a flag on a thin line through both panels. */
+#root .analysis-load-v2 .analysis-fit-v2-race-line { stroke: var(--fit-race); stroke-width: 1; stroke-opacity: 0.26; }
+#root .analysis-load-v2 .analysis-fit-v2-race-pole { stroke: var(--fit-race); stroke-width: 1.5; }
+#root .analysis-load-v2 .analysis-fit-v2-race-flag { fill: var(--fit-race); }
+#root .analysis-load-v2 .analysis-fit-v2-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+#root .analysis-load-v2 .analysis-fit-v2-line.is-fitness { stroke: var(--fit-fitness); }
+#root .analysis-load-v2 .analysis-fit-v2-line.is-fatigue { stroke: var(--fit-fatigue); stroke-width: 2; }
+#root .analysis-load-v2 .analysis-fit-v2-line.is-form { stroke: var(--lb-ink); stroke-width: 1.5; }
+#root .analysis-load-v2 .analysis-fit-v2-line.is-projected { stroke-dasharray: 1 6; stroke-width: 2.5; }
+#root .analysis-load-v2 .analysis-fit-v2-form-area.is-fresh { fill: var(--fit-fresh); }
+#root .analysis-load-v2 .analysis-fit-v2-form-area.is-tired { fill: var(--fit-tired); }
+#root .analysis-load-v2 .analysis-fit-v2-dot { stroke: var(--lb-card); stroke-width: 2.5; }
+#root .analysis-load-v2 .analysis-fit-v2-dot.is-fitness { fill: var(--fit-fitness); }
+#root .analysis-load-v2 .analysis-fit-v2-dot.is-fatigue { fill: var(--fit-fatigue); }
+#root .analysis-load-v2 .analysis-fit-v2-dot.is-form { fill: var(--lb-ink); }
+
+#root .analysis-load-v2 .analysis-fit-v2-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--lb-card);
+  color: var(--lb-ink);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--lb-line);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+#root .analysis-load-v2 .analysis-fit-v2-tooltip time { color: var(--lb-muted); font-weight: 700; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div { display: flex; align-items: center; gap: 6px; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div > span { flex: 1 1 auto; color: var(--lb-muted); }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div > strong { font-variant-numeric: tabular-nums; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div > i { flex: 0 0 auto; width: 10px; height: 3px; border-radius: 2px; background: var(--fit-fitness); }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-fatigue > i { background: var(--fit-fatigue); }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-form > i { background: var(--lb-ink); }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-effort { padding-top: 6px; border-top: 1px solid var(--lb-line); }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-effort + div.is-effort { padding-top: 0; border-top: 0; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-status > span { color: var(--lb-ink); font-weight: 700; }
+#root .analysis-load-v2 .analysis-fit-v2-tooltip > div.is-race > span { color: var(--lb-ink); font-weight: 700; }
+
+/* The three numbers under the chart: three across rather than the page's four. */
+#root .analysis-load-v2 .analysis-fit-v2-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+#root .analysis-load-v2 .analysis-fit-v2-metrics .analysis-load-v2-metric { background: var(--lb-fill); border-radius: 18px; }
+#root .analysis-load-v2-metric > em.is-neutral { color: var(--lb-muted); }
+
+/* Weekly bars and the range each is compared with */
+#root .analysis-load-v2 .analysis-fit-v2-range { fill: var(--lb-band); }
+#root .analysis-load-v2 .analysis-fit-v2-bar { fill: var(--fit-bar-neutral); }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-within { fill: var(--fit-bar-within); }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-above { fill: var(--fit-bar-above); }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-below { fill: var(--fit-bar-below); }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-open { fill-opacity: 0.72; }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-current { stroke: var(--lb-ink); stroke-width: 1.5; }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-selected { stroke: var(--lb-ink); stroke-width: 2; }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i { width: 10px; height: 10px; border: 0; border-radius: 3px; background: var(--fit-bar-within); }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i.is-above { background: var(--fit-bar-above); }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i.is-below { background: var(--fit-bar-below); }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i.is-range { background: var(--lb-band); box-shadow: inset 0 0 0 1px var(--lb-line); }
+#root .analysis-load-v2-chart-meta > .analysis-load-v2-zone { white-space: normal; }
+
+/* While it loads */
+#root .analysis-load-v2 .analysis-fit-v2-skeleton { display: flex; flex-direction: column; gap: 12px; }
+#root .analysis-load-v2 .analysis-fit-v2-skeleton-chart { height: 250px; border-radius: 16px; }
+#root .analysis-load-v2 .analysis-fit-v2-skeleton-chart.is-short { height: 190px; }
+#root .analysis-load-v2 .analysis-fit-v2-skeleton-line { width: 72%; height: 12px; border-radius: 6px; }
+#root .analysis-load-v2 .analysis-fit-v2-skeleton-line.is-short { width: 44%; }
+
+@media (max-width: 900px) {
+  #root .analysis-load-v2 .analysis-fit-v2-metrics { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 640px) {
+  #root .analysis-load-v2 .analysis-fit-v2 .analysis-load-v2-chart-meta { flex-wrap: wrap; }
+  #root .analysis-load-v2 .analysis-fit-v2-skeleton-chart { height: 210px; }
+}

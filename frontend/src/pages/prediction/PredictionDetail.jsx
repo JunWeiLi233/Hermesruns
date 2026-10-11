@@ -113,6 +113,8 @@ export default function PredictionDetail() {
 
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  // Bumped by "Try again": the runs are fetched once more.
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   const distance = useMemo(() => RACE_DISTANCES.find((d) => d.key === distKey), [distKey]);
@@ -134,7 +136,7 @@ export default function PredictionDetail() {
         setLoadState('error');
       }
     })();
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, reloadKey]);
 
   const allVdotEntries = useMemo(() => collectAllVdotEntries(runs), [runs]);
   const rollingSeries = useMemo(() => computeRollingRepresentativeSeries(allVdotEntries), [allVdotEntries]);
@@ -333,6 +335,16 @@ export default function PredictionDetail() {
     ? trendPredictions[trendPredictions.length - 1][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
       - trendPredictions[0][useWeatherAdjustedPrediction ? 'adjusted' : 'raw']
     : null;
+  const trendKey = useWeatherAdjustedPrediction ? 'adjusted' : 'raw';
+  // The chart is a picture: its text alternative gives the same two numbers a sighted reader takes from its ends.
+  const trendChartLabel = trendPredictions.length
+    ? t('analysis.pred_trend_chart_label', {
+      dist: title,
+      count: trendPredictions.length,
+      from: formatPredictedTime(trendPredictions[0][trendKey] * 60),
+      to: formatPredictedTime(trendPredictions[trendPredictions.length - 1][trendKey] * 60),
+    })
+    : undefined;
   const evidenceTiles = [
     {
       label: t('analysis.pred_cockpit_vdot'),
@@ -392,6 +404,17 @@ export default function PredictionDetail() {
         </header>
 
         <div className="runner-shell-canvas">
+          {loadState === 'error' ? (
+            // A failed request is not "not enough data": say it failed, and let the runner ask again.
+            <div className="premium-empty-state prediction-load-error" role="alert">
+              <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
+              <div className="analysis-overview-empty-actions">
+                <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={() => setReloadKey((key) => key + 1)}>
+                  {t('analysis.stitch_load_retry')}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="prediction-profile-content prediction-forecast-cockpit prediction-v2">
             <section className="prediction-v2-top">
               <div className="prediction-v2-hero">
@@ -475,7 +498,7 @@ export default function PredictionDetail() {
               </div>
               <div className="prediction-trend-chart">
                 {chartData ? (
-                  <Line data={chartData} options={chartOptions} />
+                  <Line data={chartData} options={chartOptions} aria-label={trendChartLabel} />
                 ) : (
                   <div className="prediction-detail-empty">
                     <strong>{t('analysis.pred_detail_empty_title')}</strong>
@@ -485,6 +508,7 @@ export default function PredictionDetail() {
               </div>
             </section>
           </div>
+          )}
         </div>
       </main>
     </div>

@@ -19,14 +19,36 @@ final class ActivityAnalyticsHelper {
         return legacy;
     }
 
+    /**
+     * Gives every sample a distance and, where it has none, an elapsed time.
+     *
+     * <p>A sample with no distance of its own gets one from the GPS positions: the straight-line hops from the sample
+     * before it, added up. Where such a stretch has a sample with a distance of its own after it, the stretch is
+     * scaled to fit between the distance before it and that one, because the watch's own distance is the better
+     * measure and the GPS hops only say how it was spread. Without that, hops that add up to more than the watch
+     * measured (a jittery trace) would leave the samples after the stretch behind the ones inside it.</p>
+     */
     static void normalizeSamples(List<SamplePoint> pts, Activity activity) {
         if (pts.isEmpty()) return;
         double cum = 0;
+        int stretchStart = -1;
+        double stretchFloor = 0;
         for (int i = 0; i < pts.size(); i++) {
             SamplePoint p = pts.get(i);
             if (p.distanceMeters() != null && p.distanceMeters() >= 0) {
+                if (stretchStart >= 0) {
+                    if (p.distanceMeters() >= stretchFloor) {
+                        fitStretchBetween(pts, stretchStart, i, stretchFloor, p.distanceMeters());
+                        cum = stretchFloor;
+                    }
+                    stretchStart = -1;
+                }
                 cum = Math.max(cum, p.distanceMeters());
                 continue;
+            }
+            if (stretchStart < 0) {
+                stretchStart = i;
+                stretchFloor = cum;
             }
             if (i > 0) {
                 SamplePoint prev = pts.get(i - 1);
@@ -51,6 +73,25 @@ final class ActivityAnalyticsHelper {
                 int sec = (int) Math.round((p.distanceMeters() / totalDist) * totalSec);
                 pts.set(i, p.withElapsedSeconds(sec));
             }
+        }
+    }
+
+    /**
+     * Scales the GPS-made distances of the samples {@code from} up to (not including) {@code knownIndex} so that they
+     * run from {@code floor}, the distance before them, to {@code known}, the distance of the sample at
+     * {@code knownIndex}, keeping how the hops were spread. Hops that add up to nothing are spread evenly.
+     */
+    private static void fitStretchBetween(List<SamplePoint> pts, int from, int knownIndex, double floor, double known) {
+        SamplePoint last = pts.get(knownIndex - 1);
+        SamplePoint next = pts.get(knownIndex);
+        double path = (last.distanceMeters() - floor)
+                + haversineMeters(last.latitude(), last.longitude(), next.latitude(), next.longitude());
+        for (int k = from; k < knownIndex; k++) {
+            SamplePoint q = pts.get(k);
+            double share = path > 0
+                    ? (q.distanceMeters() - floor) / path
+                    : (double) (k - from + 1) / (knownIndex - from + 1);
+            pts.set(k, q.withDistanceMeters(floor + (known - floor) * share));
         }
     }
 
@@ -100,7 +141,9 @@ final class ActivityAnalyticsHelper {
                 n++;
             }
         }
-        return n > 0 ? s / (double) n : activity.getAverageCadence();
+        // Both branches must be Double: a primitive on one side unboxes the other, and a run with no cadence
+        // anywhere (the device average is null too) would throw here.
+        return n > 0 ? Double.valueOf(s / (double) n) : activity.getAverageCadence();
     }
 
     static Double averageStrideMeters(List<SamplePoint> pts) {

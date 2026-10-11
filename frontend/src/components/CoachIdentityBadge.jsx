@@ -10,7 +10,7 @@ export default function CoachIdentityBadge({ coach, lang, className = '' }) {
       {coach.avatarUrl ? (
         <img className="coach-identity-avatar" src={coach.avatarUrl} alt={coach.name} width="96" height="96" loading="lazy" decoding="async" />
       ) : (
-        <img className="coach-identity-avatar coach-identity-avatar--fallback" src={fallbackAvatarSrc} alt={coach.name || 'Hermes Coach'} width="96" height="96" loading="lazy" decoding="async" />
+        <img className="coach-identity-avatar coach-identity-avatar--fallback" src={fallbackAvatarSrc} alt={coach.name || 'HermesRuns Coach'} width="96" height="96" loading="lazy" decoding="async" />
       )}
       <div className="coach-identity-copy">
         <strong>{coach.name}</strong>

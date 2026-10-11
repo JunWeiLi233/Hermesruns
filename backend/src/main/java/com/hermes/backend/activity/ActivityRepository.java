@@ -52,6 +52,44 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
 
     List<Activity> findByIdInAndRunner(Collection<Long> ids, Runner runner);
 
+    /** The subset of {@code ids} the runner owns. Use it to scope any bulk operation to one runner. */
+    @Query("SELECT a.id FROM Activity a WHERE a.runner = :runner AND a.id IN :ids")
+    List<Long> findOwnedIds(@Param("runner") Runner runner, @Param("ids") Collection<Long> ids);
+
+    /** Ids of every activity the runner owns. */
+    @Query("SELECT a.id FROM Activity a WHERE a.runner = :runner")
+    List<Long> findAllIdsByRunner(@Param("runner") Runner runner);
+
+    /** Ids of the runner's runs that came from the Strava API. */
+    @Query("SELECT a.id FROM Activity a WHERE a.runner = :runner AND a.stravaApiSourced = true")
+    List<Long> findStravaApiSourcedIds(@Param("runner") Runner runner);
+
+    /** Ids of the runner's Strava-API runs first stored before {@code cutoff} (retention). */
+    @Query("SELECT a.id FROM Activity a WHERE a.runner = :runner AND a.stravaApiSourced = true AND a.createdAt < :cutoff")
+    List<Long> findStravaApiSourcedIdsCreatedBefore(@Param("runner") Runner runner, @Param("cutoff") LocalDateTime cutoff);
+
+    /** Runners that have at least one Strava-API run first stored before {@code cutoff}. */
+    @Query("SELECT DISTINCT a.runner.id FROM Activity a WHERE a.stravaApiSourced = true AND a.createdAt < :cutoff")
+    List<Long> findRunnerIdsWithStravaApiSourcedCreatedBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    long countByRunnerAndStravaApiSourcedTrue(Runner runner);
+
+    /**
+     * Marks runs written by the Strava sync before the flag existed. The sync stores
+     * {@code source_checksum = 'STRAVA_' + strava id}; file imports store a SHA-256 hex digest, so the
+     * two cannot be confused. Idempotent: it only touches rows not yet flagged.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @Modifying
+    @Query("""
+            UPDATE Activity a SET a.stravaApiSourced = true
+            WHERE a.provider = :provider
+              AND a.stravaId IS NOT NULL
+              AND a.sourceChecksum = CONCAT('STRAVA_', a.stravaId)
+              AND a.stravaApiSourced = false
+            """)
+    int backfillStravaApiSourced(@Param("provider") ImportProvider provider);
+
     long countByRunner(Runner runner);
 
     long countByRunnerAndActivityType(Runner runner, ActivityType activityType);

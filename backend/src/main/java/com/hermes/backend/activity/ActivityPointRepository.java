@@ -295,33 +295,45 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("limitValue") int limitValue
     );
 
+    // The step is worked out once per run in its own grouped query, so the filter below holds no bound parameter. With
+    // the parameter inside the filter, H2 worked the window function out again for every row: 1 000 points took 3.5 s
+    // and a few Runs list loads held every pooled connection (ActivityPointRoutePreviewQueryTests).
     @Query(value = """
-            with ranked_points as (
-                select
-                    ap.activity_id,
-                    ap.latitude,
-                    ap.longitude,
-                    ap.sequence_index,
-                    row_number() over (partition by ap.activity_id order by ap.sequence_index asc) as point_ordinal,
-                    count(*) over (partition by ap.activity_id) as activity_point_count
+            with valid_points as (
+                select ap.activity_id, ap.latitude, ap.longitude, ap.sequence_index
                 from activity_points ap
                 where ap.activity_id in (:activityIds)
                   and ap.latitude between -90 and 90
                   and ap.longitude between -180 and 180
-            )
-            select activity_id, latitude, longitude, sequence_index
-            from ranked_points
-            where point_ordinal = 1
-               or point_ordinal = activity_point_count
-               or mod(
-                    point_ordinal - 1,
+            ),
+            run_steps as (
+                select
+                    activity_id,
+                    count(*) as point_count,
                     case
                         when :targetPointsPerActivity <= 2 then 1
-                        when activity_point_count <= :targetPointsPerActivity then 1
-                        else cast(ceiling(activity_point_count * 1.0 / :targetPointsPerActivity) as integer)
-                    end
-                  ) = 0
-            order by activity_id asc, sequence_index asc
+                        when count(*) <= :targetPointsPerActivity then 1
+                        else cast(ceiling(count(*) * 1.0 / :targetPointsPerActivity) as integer)
+                    end as step
+                from valid_points
+                group by activity_id
+            ),
+            ranked_points as (
+                select
+                    vp.activity_id,
+                    vp.latitude,
+                    vp.longitude,
+                    vp.sequence_index,
+                    row_number() over (partition by vp.activity_id order by vp.sequence_index asc) as point_ordinal
+                from valid_points vp
+            )
+            select rp.activity_id, rp.latitude, rp.longitude, rp.sequence_index
+            from ranked_points rp
+            join run_steps rs on rs.activity_id = rp.activity_id
+            where rp.point_ordinal = 1
+               or rp.point_ordinal = rs.point_count
+               or mod(rp.point_ordinal - 1, rs.step) = 0
+            order by rp.activity_id asc, rp.sequence_index asc
             """, nativeQuery = true)
     List<Object[]> findRoutePreviewSamplesByActivityIds(
             @Param("activityIds") List<Long> activityIds,

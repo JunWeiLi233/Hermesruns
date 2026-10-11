@@ -30,6 +30,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +65,14 @@ public class AutomatedCoachService {
     private final PersonalizedRunningPlanner personalizedRunningPlanner;
     private final RaceEventRepository raceEventRepository;
     private final InjuryRiskService injuryRiskService;
+
+    // Optional, so tests that build the service by hand do not need it.
+    private ApplicationEventPublisher zoneEvents;
+
+    @Autowired(required = false)
+    void setZoneEvents(ApplicationEventPublisher zoneEvents) {
+        this.zoneEvents = zoneEvents;
+    }
 
     public AutomatedCoachService(
             RunnerRepository runnerRepository,
@@ -394,8 +404,10 @@ public class AutomatedCoachService {
 
     @Transactional
     public void updateCoachProfile(Runner runner, Integer maxHr, Integer restingHr) {
+        boolean zonesChange = false;
         if (maxHr != null) {
             if (maxHr < 120 || maxHr > 230) throw new IllegalArgumentException("maxHeartRateBpm out of range.");
+            zonesChange = !maxHr.equals(runner.getMaxHeartRateBpm());
             runner.setMaxHeartRateBpm(maxHr);
         }
         if (restingHr != null) {
@@ -408,6 +420,10 @@ public class AutomatedCoachService {
             }
         }
         runnerRepository.save(runner);
+        if (zonesChange && zoneEvents != null) {
+            // The max heart rate also sets the heart-rate zones, so the runs analysed with the old one are redone.
+            zoneEvents.publishEvent(new com.hermes.backend.runner.RunnerZonesChangedEvent(runner.getId()));
+        }
     }
 
     @Transactional
@@ -871,13 +887,16 @@ public class AutomatedCoachService {
 
     private CoachRunnerState getOrCreateState(Runner runner) {
         return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
-            CoachRunnerState s = new CoachRunnerState();
-            s.setRunner(runner);
-            try {
+            // A new runner's first visit to Home asks for the coach state and the muscle plan at the same moment, and both find
+            // nothing. Inserting it twice is not an option to recover from: the one that loses hits the unique index, and its
+            // transaction (on PostgreSQL) or its session (Hibernate) cannot go on. So the two take turns on the runner's own row:
+            // the first creates the state, the other waits for that transaction to end and then finds it.
+            runnerRepository.findByIdForUpdate(runner.getId());
+            return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
+                CoachRunnerState s = new CoachRunnerState();
+                s.setRunner(runner);
                 return coachRunnerStateRepository.save(s);
-            } catch (DataIntegrityViolationException race) {
-                return coachRunnerStateRepository.findByRunner(runner).orElseThrow(() -> race);
-            }
+            });
         });
     }
 

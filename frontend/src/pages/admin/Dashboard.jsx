@@ -9,6 +9,7 @@ import Modal from '../../components/Modal';
 
 import AppIcon from '../../components/AppIcon';
 import HermesLogo from '../../components/HermesLogo';
+import HermesWordmarkSvg from '../../components/HermesWordmarkSvg';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import ShoeBrandLogo from '../../components/ShoeBrandLogo';
@@ -2365,7 +2366,7 @@ const Dashboard = memo(function Dashboard() {
             </div>
             <div className="runner-shell-topbar-actions admin-command-topbar__controls ops-topbar-actions">
               <div className="admin-command-topbar__brand">
-                <div className="admin-command-topbar__wordmark">HERMES</div>
+                <div className="admin-command-topbar__wordmark"><HermesWordmarkSvg /></div>
                 <div className="admin-command-topbar__nav">
                   {topbarTabs.map((tab) => (
                     <button

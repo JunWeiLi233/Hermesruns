@@ -21,6 +21,8 @@ import { buildRunDetailPath } from '../../utils/runRoute';
 import { resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
 import { buildLoadBalanceBudget, getLoadBalanceWeekStats, getLoadBalanceRecentRuns, getLoadBalanceZoneKey, getLoadContribution } from './loadBalancePresentation';
 import CoachLoadChart from './CoachLoadChart';
+import FitnessFormSection from './FitnessFormSection';
+import WeeklyEffortSection from './WeeklyEffortSection';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -272,7 +274,7 @@ function tonePalette(tone) {
 function coachSystemCopy(lang) {
   if (lang === 'zh-CN') {
     return {
-      kicker: 'Hermes Coach System',
+      kicker: 'HermesRuns Coach System',
       readinessLabel: '训练准备度',
       readinessDescriptions: {
         protect: '先降压，把频率守住，再把身体带回稳定轨道。',
@@ -302,7 +304,7 @@ function coachSystemCopy(lang) {
       phaseTitle: '训练推进阶段',
       phases: ['稳定', '建设', '兑现'],
       scheduleTitle: '下一组训练动作',
-      scheduleCopy: '这不是固定模板，而是 Hermes 根据最近表现给出的当前最优排法。',
+      scheduleCopy: '这不是固定模板，而是 HermesRuns 根据最近表现给出的当前最优排法。',
       reasonsTitle: '系统为什么这样排',
       reasonsIntro: '每一条建议都来自最近训练数据，而不是静态模板。',
       evidenceTitle: '最近训练证据',
@@ -363,7 +365,7 @@ function coachSystemCopy(lang) {
   }
 
   return {
-    kicker: 'Hermes Coach System',
+    kicker: 'HermesRuns Coach System',
     readinessLabel: 'Readiness',
     readinessDescriptions: {
       protect: 'Lower the strain first, keep frequency alive, then rebuild from a safer base.',
@@ -387,14 +389,14 @@ function coachSystemCopy(lang) {
       build: 'A steady build sequence that turns recent performance into a more reliable training rhythm.',
     },
     blockTitle: 'Current coach system',
-    blockCopy: 'Hermes is reordering your next training block from recent performance, training load, injury signals, and marathon trend instead of showing another generic analytics stack.',
+    blockCopy: 'HermesRuns is reordering your next training block from recent performance, training load, injury signals, and marathon trend instead of showing another generic analytics stack.',
     focusTitle: 'What the system is optimizing',
     focusCopy: 'The first screen answers what to do today, what the next key workout should be, and what needs protecting this week.',
     phaseTitle: 'Block progression',
     phases: ['Stabilize', 'Build', 'Sharpen'],
     scheduleTitle: 'Next training moves',
     scheduleCopy: 'This is an adaptive microcycle built from your latest data, not a fixed template.',
-    reasonsTitle: 'Why Hermes is steering this way',
+    reasonsTitle: 'Why HermesRuns is steering this way',
     reasonsIntro: 'Each recommendation is tied to recent evidence, not a static plan.',
     evidenceTitle: 'Recent proof',
     evidenceIntro: 'These sessions are currently driving the coach system.',
@@ -447,9 +449,9 @@ function coachSystemCopy(lang) {
       load: (value, zone) => `Load ratio is ${value} and your stack is currently ${zone}, so the order of sessions needs to respect absorption before ambition.`,
       intensity: (value) => `Hard work makes up ${value}% of recent training, which is driving how much the system pulls you back toward aerobic control.`,
       injury: (label, cadence, drift) => `Injury signal is ${label}, with cadence at ${cadence} and drift at ${drift}, so recovery and quality are being rebalanced around durability.`,
-      forecast: (forecast, delta) => `Your marathon forecast sits at ${forecast} and is ${delta}, which tells Hermes whether this block should build or sharpen.`,
+      forecast: (forecast, delta) => `Your marathon forecast sits at ${forecast} and is ${delta}, which tells HermesRuns whether this block should build or sharpen.`,
     },
-    emptyRuns: 'Not enough recent training yet. Start with one easy run and Hermes will begin shaping the plan.',
+    emptyRuns: 'Not enough recent training yet. Start with one easy run and HermesRuns will begin shaping the plan.',
   };
 }
 
@@ -1243,6 +1245,8 @@ export default function AnalysisInsightDetail() {
   const [runs, setRuns] = useState([]);
   const [coachToday, setCoachToday] = useState(null);
   const [loadState, setLoadState] = useState('loading');
+  // Bumped by "Try again": the loader runs once more.
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [coachPerformanceWindow, setCoachPerformanceWindow] = useState(7);
   const [loadChartDays, setLoadChartDays] = useState(56);
@@ -1305,7 +1309,8 @@ export default function AnalysisInsightDetail() {
       setLoadState('loading');
       try {
         const [profileData, activitiesData, coachTodayData] = await Promise.all([
-          cachedApiJson('/api/profile/me'),
+          // The profile only supplies the name behind the avatar; the page is not worth losing if it does not come.
+          cachedApiJson('/api/profile/me').catch(() => null),
           cachedApiJson('/api/activities'),
           insightKey === 'coach-insight' ? apiJson('/api/coach/today').catch(() => null) : Promise.resolve(null),
         ]);
@@ -1319,7 +1324,7 @@ export default function AnalysisInsightDetail() {
         setLoadState('error');
       }
     })();
-  }, [isAuthenticated, navigate, insightKey]);
+  }, [isAuthenticated, navigate, insightKey, reloadKey]);
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const recentRows = useMemo(() => buildRunInsightRows(runs, snapshot.bestVdot, unit, lang), [runs, snapshot.bestVdot, unit, lang]);
@@ -1487,7 +1492,7 @@ export default function AnalysisInsightDetail() {
 
   useEffect(() => {
     if (typeof document === 'undefined' || !detail) return;
-    document.title = `Hermes | ${detail.title}`;
+    document.title = `HermesRuns | ${detail.title}`;
   }, [detail]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -1512,7 +1517,14 @@ export default function AnalysisInsightDetail() {
     if (loadState === 'loading') return <PageSkeleton variant="analysis-insight" />;
     return (
       <div className="runner-shell-page runner-shell-page--loading" data-loading-state={loadState}>
-        <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
+        <div className={`runner-shell-loading${loadState === 'error' ? ' runner-shell-loading--failed' : ''}`} role={loadState === 'error' ? 'alert' : undefined}>
+          <p>{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</p>
+          {loadState === 'error' ? (
+            <button type="button" className="runner-shell-inline-btn is-primary" onClick={() => setReloadKey((key) => key + 1)}>
+              {t('analysis.stitch_load_retry')}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -2106,6 +2118,9 @@ export default function AnalysisInsightDetail() {
                   </article>
                 ))}
               </section>
+
+              <FitnessFormSection />
+              <WeeklyEffortSection />
 
               <section className="analysis-load-v2-drivers">
                 <div className="analysis-load-v2-head">

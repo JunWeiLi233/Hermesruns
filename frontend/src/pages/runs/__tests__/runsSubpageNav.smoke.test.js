@@ -26,6 +26,71 @@ for (const sectionId of [
   assert.ok(runDetailSource.includes(`id="${sectionId}"`), `Run Detail is missing the ${sectionId} anchor.`);
 }
 
+// The pace analysis lives in its own component too, keeps its anchor in every state, and only asks for the pace profile
+// once the run page has finished asking for the run's stream.
+assert.ok(navSource.includes("'run-detail-pace'"), 'Runs subpage navigation is missing run-detail-pace.');
+assert.match(
+  runDetailSource,
+  /<RunPaceAnalysis key=\{`pace-\$\{run\.id\}`\} runId=\{run\.id\} startTime=\{run\.startTime \|\| run\.startDate\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh\} \/>/,
+  'Run Detail should render the pace analysis for the open run, with when it started (for the zones it had), ready only once its stream has been fetched.',
+);
+// Keyed siblings with the same key are duplicated or dropped when the page updates (seen live: the pace card twice).
+const detailKeys = [...runDetailSource.matchAll(/<(RunPaceAnalysis|RunTrainingCards|RunBestEfforts|RunMatches) key=\{([^}]+)\}/g)].map((match) => match[2]);
+assert.equal(detailKeys.length, 4, 'Run Detail keys the pace, effort, best-efforts and same-route sections by run.');
+assert.equal(new Set(detailKeys).size, detailKeys.length, 'The keyed sections of Run Detail must not share a key.');
+assert.ok(
+  readFileSync(path.join(srcRoot, 'pages/runs/RunPaceAnalysis.jsx'), 'utf8').includes('id="run-detail-pace"'),
+  'The pace analysis must keep the run-detail-pace anchor in every state.',
+);
+assert.match(runDetailSource, /finally \{\s*if \(!cancelled\) setStreamCheckedFor\(runId\);/, 'The stream request must mark the run as checked even when it fails, but not for a run the reader has left.');
+assert.match(
+  runDetailSource,
+  /let cancelled = false;[\s\S]*?async function fetchPoints\(\)[\s\S]*?return \(\) => \{\s*cancelled = true;\s*\};\s*\}, \[run\?\.id, isAuthenticated\]\);/,
+  'The stream request of one run must be cancelled when the run changes, or its late answer lands on the next run page.',
+);
+assert.match(enSource, /"subnav_pace": "Pace"/, 'The run navigation needs an English label for the pace section.');
+assert.match(zhSource, /"subnav_pace": "配速"/, 'The run navigation needs a Chinese label for the pace section.');
+assert.ok(
+  navSource.indexOf("'run-detail-pace'") < navSource.indexOf("'run-detail-effort'"),
+  'The pace section comes before the effort section in the run navigation, as on the page.',
+);
+
+// The effort and zones section lives in its own component, which always renders the anchor (loaded or not).
+assert.ok(navSource.includes("'run-detail-effort'"), 'Runs subpage navigation is missing run-detail-effort.');
+assert.match(runDetailSource, /<RunTrainingCards key=\{`training-\$\{run\.id\}`\} runId=\{run\.id\} \/>/, 'Run Detail should render the effort and zones section for the open run.');
+assert.ok(
+  readFileSync(path.join(srcRoot, 'pages/runs/RunTrainingCards.jsx'), 'utf8').includes('id="run-detail-effort"'),
+  'The effort and zones section must keep the run-detail-effort anchor in every state.',
+);
+assert.match(enSource, /"subnav_effort": "Effort and zones"/, 'The run navigation needs an English label for the effort and zones section.');
+assert.match(zhSource, /"subnav_effort": "强度与心率区间"/, 'The run navigation needs a Chinese label for the effort and zones section.');
+
+// The best efforts and the same-route runs follow the effort section on the page, and each keeps its anchor in every state.
+for (const [anchor, component, usage, key, enLabel, zhLabel] of [
+  ['run-detail-efforts', 'RunBestEfforts', '<RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />', 'subnav_best_efforts', 'Best efforts', '最佳成绩'],
+  ['run-detail-matches', 'RunMatches', '<RunMatches key={`matches-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />', 'subnav_same_route', 'Same route', '相同路线'],
+]) {
+  assert.ok(navSource.includes(`'${anchor}'`), `Runs subpage navigation is missing ${anchor}.`);
+  assert.ok(runDetailSource.includes(usage), `Run Detail should render ${component} for the open run, ready only once its stream has been fetched.`);
+  assert.ok(
+    readFileSync(path.join(srcRoot, `pages/runs/${component}.jsx`), 'utf8').includes(`id="${anchor}"`),
+    `${component} must keep the ${anchor} anchor in every state.`,
+  );
+  assert.ok(enSource.includes(`"${key}": "${enLabel}"`), `The run navigation needs an English label for ${anchor}.`);
+  assert.ok(zhSource.includes(`"${key}": "${zhLabel}"`), `The run navigation needs a Chinese label for ${anchor}.`);
+}
+assert.ok(
+  navSource.indexOf("'run-detail-effort'") < navSource.indexOf("'run-detail-efforts'")
+    && navSource.indexOf("'run-detail-efforts'") < navSource.indexOf("'run-detail-matches'")
+    && navSource.indexOf("'run-detail-matches'") < navSource.indexOf("'run-detail-splits'"),
+  'The navigation lists effort, best efforts, same route and splits in the order the page shows them.',
+);
+const sectionOrder = ['<RunTrainingCards', '<RunBestEfforts', '<RunMatches', 'id="run-detail-splits"'].map((marker) => runDetailSource.indexOf(marker));
+assert.ok(
+  sectionOrder.every((position, index) => position > 0 && (index === 0 || position > sectionOrder[index - 1])),
+  'Run Detail shows the effort, best efforts, same route and then splits sections, in that order.',
+);
+
 assert.match(navSource, /aria-current=\{active \? 'location' : undefined\}/, 'The visible run section should be exposed to assistive technology.');
 assert.match(navSource, /IntersectionObserver/, 'Runs navigation should track the visible detail section.');
 for (const railControl of [

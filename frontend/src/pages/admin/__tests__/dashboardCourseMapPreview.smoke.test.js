@@ -83,7 +83,7 @@ assert.match(
 assert.match(
   previewSource,
   /getBackendBaseUrl[\s\S]*\/api\/maps\/tiles\/\{z\}\/\{x\}\/\{y\}\.png/,
-  'Admin course-map preview should use the same-origin Hermes tile endpoint so the basemap still renders when direct third-party tile requests are blocked.'
+  'Admin course-map preview should use the same-origin HermesRuns tile endpoint so the basemap still renders when direct third-party tile requests are blocked.'
 );
 
 assert.match(

@@ -1,9 +1,11 @@
 package com.hermes.backend.runner;
 
+import com.hermes.backend.activity.RunRecordsCoordinator;
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.billing.QuotaService;
 import com.hermes.backend.infrastructure.web.InputSanitizer;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -21,12 +23,17 @@ public class ProfileController {
     private static final long MAX_PROFILE_AVATAR_UPLOAD_BYTES = 3L * 1024 * 1024;
     private static final Set<String> PROFILE_AVATAR_CONTENT_TYPES = Set.of("image/jpeg", "image/jpg", "image/png");
 
+    /** How long one read of the personal records may spend analysing runs that have not been, and how many. */
+    private static final Duration RECORDS_ANALYSIS_BUDGET = Duration.ofMillis(1500);
+    private static final int RECORDS_ANALYSIS_LIMIT = 100;
+
     private final AuthService authService;
     private final ProfileApplicationService profileService;
     private final ProfileHeatmapService heatmapService;
     private final ProfileAvatarService avatarService;
     private final PersonalRecordService personalRecordService;
     private final QuotaService quotaService;
+    private final RunRecordsCoordinator runRecords;
 
     public ProfileController(
             AuthService authService,
@@ -34,7 +41,8 @@ public class ProfileController {
             ProfileHeatmapService heatmapService,
             ProfileAvatarService avatarService,
             PersonalRecordService personalRecordService,
-            QuotaService quotaService
+            QuotaService quotaService,
+            RunRecordsCoordinator runRecords
     ) {
         this.authService = authService;
         this.profileService = profileService;
@@ -42,6 +50,7 @@ public class ProfileController {
         this.avatarService = avatarService;
         this.personalRecordService = personalRecordService;
         this.quotaService = quotaService;
+        this.runRecords = runRecords;
     }
 
     @GetMapping("/profile/me")
@@ -95,6 +104,27 @@ public class ProfileController {
 
         Runner runner = runnerOptional.get();
         return ResponseEntity.ok(profileService.updateDisplayName(runner, normalizedDisplayName));
+    }
+
+    /**
+     * Sets the time zone the runner trains in (an IANA id such as America/New_York). It is stored for the
+     * analysis features that turn the UTC times in imported files into the runner's own calendar day;
+     * nothing reads it yet except the profile and the data export.
+     */
+    @PatchMapping("/profile/me/time-zone")
+    public ResponseEntity<?> updateTimeZone(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody UpdateTimeZoneRequest request
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        String timeZone = request == null || request.timeZone() == null ? "" : request.timeZone().trim();
+        if (timeZone.isEmpty() || timeZone.length() > 64 || !java.time.ZoneId.getAvailableZoneIds().contains(timeZone)) {
+            return error(HttpStatus.BAD_REQUEST, "Time zone must be an IANA zone id such as America/New_York.");
+        }
+        return ResponseEntity.ok(profileService.updateTimeZone(runnerOptional.get(), timeZone));
     }
 
     @PutMapping(value = "/profile/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -249,7 +279,15 @@ public class ProfileController {
         if (runnerOptional.isEmpty()) {
             return unauthorized();
         }
-        return ResponseEntity.ok(personalRecordService.buildForRunner(runnerOptional.get()));
+        Runner runner = runnerOptional.get();
+        try {
+            // The distance records are made of the runs' best efforts, so a run that has not been analysed yet (after an
+            // upgrade, before the startup pass has reached it) is analysed now, for a short while and newest first.
+            runRecords.ensurePending(runner, RECORDS_ANALYSIS_BUDGET, RECORDS_ANALYSIS_LIMIT);
+        } catch (RuntimeException analysisFailed) {
+            // The records are derived and the next read tries again; the ones that exist are still returned.
+        }
+        return ResponseEntity.ok(personalRecordService.buildForRunner(runner));
     }
 
     private byte[] avatarSourceBytes(MultipartFile image) throws IOException {
@@ -278,6 +316,9 @@ public class ProfileController {
     }
 
     public record UpdateDisplayNameRequest(String displayName) {
+    }
+
+    public record UpdateTimeZoneRequest(String timeZone) {
     }
 
     public record ProfilePreferencesRequest(String mantra, Boolean weeklyDigestEnabled) {

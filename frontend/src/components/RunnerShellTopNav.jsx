@@ -19,7 +19,7 @@ export default function RunnerShellTopNav({
     ? navItems.filter((item) => item?.label && item?.route)
     : [];
   const activeItem = resolveActiveItem(normalizedItems, activeLabel);
-  const currentLabel = activeLabel || activeItem?.label || 'Hermes';
+  const currentLabel = activeLabel || activeItem?.label || 'HermesRuns';
 
   function handleRoute(route) {
     if (!route || typeof navigate !== 'function') return;

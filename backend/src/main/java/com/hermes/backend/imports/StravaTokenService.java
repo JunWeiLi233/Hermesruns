@@ -18,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -124,41 +125,157 @@ public class StravaTokenService {
     public String refreshStravaToken(Runner runner, String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank() || !isStravaConfigured()) return null;
         try {
-            RestTemplate rest = this.restTemplate;
-            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-            form.add("client_id", effectiveStravaClientId());
-            form.add("client_secret", effectiveStravaClientSecret());
-            form.add("grant_type", "refresh_token");
-            form.add("refresh_token", refreshToken);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> body = rest.postForObject(
-                    "https://www.strava.com/oauth/token",
-                    new HttpEntity<>(form, headers),
-                    Map.class);
-
-            if (body == null) return null;
-
-            String newAccess = stringValue(body.get("access_token"));
-            String newRefresh = stringValue(body.get("refresh_token"));
-            Long newExpires = longValue(body.get("expires_at"));
-
-            if (newAccess != null && !newAccess.isBlank()) {
-                runner.setStravaAccessToken(secretEncryptionService.encrypt(newAccess));
-                if (newRefresh != null && !newRefresh.isBlank()) {
-                    runner.setStravaRefreshToken(secretEncryptionService.encrypt(newRefresh));
-                }
-                if (newExpires != null) runner.setStravaTokenExpiresAt(newExpires);
-                runnerRepository.save(runner);
-                return newAccess;
-            }
+            return applyRefreshGrant(runner, refreshToken);
         } catch (Exception e) {
             log.warn("Strava token refresh failed for runner {}: {}", runner.getId(), e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Runs the refresh grant and stores the new tokens. Returns the new access token, or null when
+     * Strava's answer had none. Lets the HTTP client's exceptions through so callers can tell a
+     * rejected token apart from a network failure.
+     */
+    private String applyRefreshGrant(Runner runner, String refreshToken) {
+        RestTemplate rest = this.restTemplate;
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("client_id", effectiveStravaClientId());
+        form.add("client_secret", effectiveStravaClientSecret());
+        form.add("grant_type", "refresh_token");
+        form.add("refresh_token", refreshToken);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = rest.postForObject(
+                "https://www.strava.com/oauth/token",
+                new HttpEntity<>(form, headers),
+                Map.class);
+
+        if (body == null) return null;
+
+        String newAccess = stringValue(body.get("access_token"));
+        String newRefresh = stringValue(body.get("refresh_token"));
+        Long newExpires = longValue(body.get("expires_at"));
+
+        if (newAccess != null && !newAccess.isBlank()) {
+            runner.setStravaAccessToken(secretEncryptionService.encrypt(newAccess));
+            if (newRefresh != null && !newRefresh.isBlank()) {
+                runner.setStravaRefreshToken(secretEncryptionService.encrypt(newRefresh));
+            }
+            if (newExpires != null) runner.setStravaTokenExpiresAt(newExpires);
+            runnerRepository.save(runner);
+            return newAccess;
+        }
+        return null;
+    }
+
+    /** What Strava says about a runner's stored authorization. */
+    public enum AuthorizationState {
+        /** Strava issued fresh tokens: the runner has not revoked access. */
+        ACTIVE,
+        /** Strava rejected the refresh token itself: the runner revoked access (or it was invalidated). */
+        REVOKED,
+        /** No usable answer: network error, 5xx, rate limit, missing configuration, or a rejection that is not about the token. */
+        UNKNOWN
+    }
+
+    /**
+     * Asks Strava, with the refresh grant, whether the runner's authorization still stands.
+     *
+     * <p>Only a 400/401 whose error names the refresh token counts as {@link AuthorizationState#REVOKED}.
+     * A rejection of Hermes's own client credentials (a wrong or rotated client secret fails every
+     * runner's refresh) must never read as "the runner revoked access", because the caller deletes data
+     * on REVOKED. Everything unclear is UNKNOWN.</p>
+     */
+    public AuthorizationState probeAuthorization(Runner runner) {
+        String storedRefresh = runner.getStravaRefreshToken();
+        if (storedRefresh == null || storedRefresh.isBlank() || !isStravaConfigured()) {
+            return AuthorizationState.UNKNOWN;
+        }
+        String refreshToken = secretEncryptionService.decrypt(storedRefresh);
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return AuthorizationState.UNKNOWN;
+        }
+        try {
+            return applyRefreshGrant(runner, refreshToken) != null
+                    ? AuthorizationState.ACTIVE
+                    : AuthorizationState.UNKNOWN;
+        } catch (HttpClientErrorException exception) {
+            if (isInvalidRefreshTokenResponse(exception)) {
+                return AuthorizationState.REVOKED;
+            }
+            log.info("Strava authorization probe for runner {} was inconclusive: HTTP {}",
+                    runner.getId(), exception.getStatusCode().value());
+            return AuthorizationState.UNKNOWN;
+        } catch (Exception exception) {
+            log.info("Strava authorization probe for runner {} was inconclusive: {}",
+                    runner.getId(), exception.getClass().getSimpleName());
+            return AuthorizationState.UNKNOWN;
+        }
+    }
+
+    /**
+     * Strava's token endpoint answers a bad refresh token with 400 and an {@code errors} array whose entry
+     * names the {@code RefreshToken} resource or the {@code refresh_token} field. A bad client id or secret
+     * names the application instead, which this deliberately does not match.
+     */
+    static boolean isInvalidRefreshTokenResponse(HttpClientErrorException exception) {
+        int status = exception.getStatusCode().value();
+        if (status != 400 && status != 401) {
+            return false;
+        }
+        String body = exception.getResponseBodyAsString();
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.JsonNode errors = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(body).path("errors");
+            for (com.fasterxml.jackson.databind.JsonNode error : errors) {
+                String resource = error.path("resource").asText("");
+                String field = error.path("field").asText("");
+                if ("RefreshToken".equalsIgnoreCase(resource) || "refresh_token".equalsIgnoreCase(field)) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+            // A body that is not JSON is not a recognisable revocation answer.
+        }
+        return false;
+    }
+
+    /**
+     * Tells Strava to invalidate the runner's tokens and remove Hermes from their connected apps, using
+     * Strava's revoke endpoint. Best effort: the caller disconnects locally either way. Returns whether
+     * Strava confirmed. Never logs a token.
+     */
+    public boolean revokeAtStrava(Runner runner) {
+        String storedRefresh = runner.getStravaRefreshToken();
+        String clientId = effectiveStravaClientId();
+        String clientSecret = effectiveStravaClientSecret();
+        if (storedRefresh == null || storedRefresh.isBlank() || clientId.isBlank() || clientSecret.isBlank()) {
+            return false;
+        }
+        String token = secretEncryptionService.decrypt(storedRefresh);
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.setBasicAuth(clientId, clientSecret);
+            MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+            form.add("token", token);
+            form.add("token_type_hint", "refresh_token");
+            restTemplate.postForEntity("https://www.strava.com/oauth/revoke", new HttpEntity<>(form, headers), String.class);
+            return true;
+        } catch (Exception exception) {
+            log.warn("Strava token revoke failed for runner {} ({})", runner.getId(), exception.getClass().getSimpleName());
+            return false;
+        }
     }
 
     public String createProfileLinkState(Runner runner) {

@@ -97,7 +97,7 @@ assert.match(
 assert.match(
   styleSource,
   /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand\s*\{[\s\S]*overflow:\s*hidden;/,
-  'Collapsed runner sidebar should intentionally contain the brand area instead of leaving partial HERMES letters visible.',
+  'Collapsed runner sidebar should intentionally contain the brand area instead of leaving partial HERMESRUNS letters visible.',
 );
 
 assert.match(
@@ -132,7 +132,7 @@ assert.match(
 assert.match(
   styleSource,
   /\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.hermes-logo__word,\s*\n\.runner-dashboard-page\.is-sidebar-collapsed \.runner-shell-brand \.hermes-logo__mark\s*\{[\s\S]*display:\s*none;/,
-  'Collapsed runner sidebar should show the compact icon mark instead of clipping the HERMES wordmark.',
+  'Collapsed runner sidebar should show the compact icon mark instead of clipping the HERMESRUNS wordmark.',
 );
 
 assert.match(

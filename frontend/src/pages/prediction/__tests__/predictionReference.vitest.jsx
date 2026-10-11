@@ -41,12 +41,16 @@ function ChangeDistance() {
   return <button onClick={() => navigate('/prediction/marathon')}>Switch distance</button>;
 }
 
-async function openPage(key = 'marathon') {
-  const result = render(<MemoryRouter initialEntries={[`/prediction/${key}`]}><Routes>
+function renderPage(key = 'marathon') {
+  return render(<MemoryRouter initialEntries={[`/prediction/${key}`]}><Routes>
     <Route path="/prediction/:distKey" element={<><PredictionDetail /><ChangeDistance /></>} />
     <Route path="/today-run" element={<h1>Today destination</h1>} />
     <Route path="/analysis" element={<h1>Analysis destination</h1>} />
   </Routes></MemoryRouter>);
+}
+
+async function openPage(key = 'marathon') {
+  const result = renderPage(key);
   await screen.findByRole('heading', { level: 1, name: state.lang === 'zh-CN' ? zh.analysis.pred_cockpit_title : en.analysis.pred_cockpit_title });
   return result;
 }
@@ -104,15 +108,30 @@ it('shows the automatic weather correction in the forecast and trend', async () 
   expect(state.chartData.datasets).toHaveLength(2);
 });
 
-it.each(['empty', 'failed'])('avoids invented forecasts when activities are %s', async (mode) => {
-  if (mode === 'empty') activities = [];
-  else apiJson.mockRejectedValue(new Error('Unavailable'));
+it('avoids invented forecasts when there are no activities', async () => {
+  activities = [];
   const { container } = await openPage();
   expect(container.querySelector('.prediction-forecast-time')).toHaveTextContent('--');
   expect(container.querySelector('.prediction-v2-hero')).toHaveTextContent(en.analysis.pred_cockpit_basis_empty);
   expect(container.querySelectorAll('.prediction-v2-ladder li')).toHaveLength(0);
   expect(screen.queryByTestId('forecast-chart')).not.toBeInTheDocument();
   expect(container.querySelector('.prediction-v2-weather')).not.toBeInTheDocument();
+});
+
+// BUG-032: a failed request used to be drawn as the page of a runner with no runs ("not enough data yet", 0 samples).
+it('says the runs could not be loaded when the request fails, invents no forecast, and asks again on request', async () => {
+  apiJson.mockRejectedValueOnce(new Error('Unavailable'));
+  const { container } = renderPage();
+  expect(await screen.findByRole('alert')).toHaveTextContent(en.analysis.stitch_load_error);
+  expect(container.querySelector('.prediction-v2-hero')).not.toBeInTheDocument();
+  expect(container.querySelector('.prediction-forecast-time')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('forecast-chart')).not.toBeInTheDocument();
+  expect(container.querySelector('.runner-shell-topbar')).toBeInTheDocument();
+  expect(container.querySelector('.runner-shell-sidebar')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: en.analysis.stitch_load_retry }));
+  await screen.findByRole('heading', { level: 1, name: en.analysis.pred_cockpit_title });
+  expect(container.querySelector('.prediction-forecast-time')).not.toHaveTextContent('--');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('renders Chinese copy without unresolved placeholders', async () => {

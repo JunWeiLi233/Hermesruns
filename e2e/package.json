@@ -1,0 +1,18 @@
+{
+  "name": "hermesruns-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests for the HermesRuns run-analysis flows (see replica/test-plan.md)",
+  "scripts": {
+    "stack:start": "node tools/stack.mjs start",
+    "stack:stop": "node tools/stack.mjs stop",
+    "stack:status": "node tools/stack.mjs status",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0"
+  }
+}

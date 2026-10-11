@@ -92,17 +92,17 @@ public class EmailVerificationService {
         String base = trimTrailingSlash(publicBaseUrl);
         String link = base + "/api/auth/verify-email?token=" + plainToken;
         String text =
-                "Welcome to Hermes.\n\n"
+                "Welcome to HermesRuns.\n\n"
                         + "Open this link to verify your email (expires in " + TOKEN_HOURS + " hours):\n"
                         + link
                         + "\n\nIf you did not sign up, ignore this message.\n";
-        String html = "<p>Welcome to Hermes.</p>"
+        String html = "<p>Welcome to HermesRuns.</p>"
                 + "<p>Open this link to verify your email (expires in " + TOKEN_HOURS + " hours): "
                 + "<a href=\"" + link + "\">Verify your email</a></p>"
                 + "<p>If you did not sign up, ignore this message.</p>";
         transactionalMailSender.send(new TransactionalMailMessage(
                 toEmail,
-                "Verify your Hermes account",
+                "Verify your HermesRuns account",
                 text,
                 html,
                 "hermes-email-verification-" + UUID.randomUUID()));

@@ -30,6 +30,8 @@ import { buildRewardShowcase } from '../../utils/rewardBadges';
 import RewardIllustration from '../../components/RewardIllustration';
 import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
+import GoalsCard from '../../components/goals/GoalsCard';
+import BestEffortsAnalysis from './BestEffortsAnalysis';
 import ProgressionChart from './ProgressionChart';
 
 const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.webp';
@@ -1601,6 +1603,12 @@ export default function ProfileDashboard() {
                     </section>
                   );
                 })()}
+
+                {/* 5c. Goals (asked for when the browser is idle) */}
+                <GoalsCard defer />
+
+                {/* 5d. Best efforts (loads when opened) */}
+                <BestEffortsAnalysis />
 
                 {/* 6. Bottom Grid */}
                 <div className="hd-bottom-grid">

@@ -4,6 +4,8 @@ import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch } from '../../api';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
+import HermesMarkSvg from '../../components/HermesMarkSvg';
+import HermesWordmarkSvg from '../../components/HermesWordmarkSvg';
 
 export default function ForgotPassword() {
   const { t } = useI18n();
@@ -44,7 +46,10 @@ export default function ForgotPassword() {
         <section className="auth-flow-brand">
           <div className="auth-flow-brand-inner">
             <div className="auth-flow-wordmark-wrap">
-              <Link to="/" className="auth-flow-wordmark">HERMES</Link>
+              <Link to="/" className="auth-flow-wordmark-row" aria-label={t('index.studio_home')}>
+                <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
+                <HermesWordmarkSvg className="auth-flow-wordmark" />
+              </Link>
             </div>
             <div className="auth-flow-copy">
               <h2 className="auth-flow-hero">

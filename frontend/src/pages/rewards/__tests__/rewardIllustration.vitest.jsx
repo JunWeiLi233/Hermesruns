@@ -28,7 +28,7 @@ it('uses reward identity to distinguish seasons, weather, and training themes sh
   expect(scenes(['early-bird', 'night-owl', 'theme-recovery', 'theme-rain'], '')).toEqual(['dawn', 'headlamp', 'recovery-kit', 'rain-shell']);
 });
 
-it('uses the original Hermes passport collection rather than reference-image vignettes', () => {
+it('uses the original HermesRuns passport collection rather than reference-image vignettes', () => {
   const rewards = buildRewardShowcase([], 'en').allRewards;
   const { container } = render(<div>{rewards.map((reward) => <RewardIllustration key={reward.id} reward={reward} />)}</div>);
   for (const svg of container.querySelectorAll('.reward-illustration')) {

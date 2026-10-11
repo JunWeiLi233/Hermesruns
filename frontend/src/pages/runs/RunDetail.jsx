@@ -15,6 +15,13 @@ import { formatDuration, formatLongDate, formatPaceSeconds } from '../../utils/f
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
+import RunBestEfforts from './RunBestEfforts';
+import RunGoalsCard from '../../components/goals/RunGoalsCard';
+import RunLabelsCard from './RunLabelsCard';
+import RunMatches from './RunMatches';
+import RunPaceAnalysis from './RunPaceAnalysis';
+import RunSummaryCard from './RunSummaryCard';
+import RunTrainingCards from './RunTrainingCards';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -242,9 +249,14 @@ export default function RunDetail() {
   const [shareFeedback, setShareFeedback] = useState('');
   const [showAllSplits, setShowAllSplits] = useState(false);
   const [recentRuns, setRecentRuns] = useState([]);
+  // The run whose stream the page has finished asking for, so the pace analysis asks for it only after that.
+  const [streamCheckedFor, setStreamCheckedFor] = useState(null);
+  const [paceRefresh, setPaceRefresh] = useState(0);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  // The run on screen right now, for work that finishes later and must not touch the page of another run.
+  const shownRunIdRef = useRef(null);
   const navItems = useMemo(() => getRunnerShellNavItems({
     t,
     lang,
@@ -373,7 +385,10 @@ export default function RunDetail() {
     // each replacement re-fetched points/analytics/telemetry/elevation
     // (observed fetching the quartet three times for one run).
     const runId = run?.id;
-    if (!runId || !isAuthenticated) return;
+    if (!runId || !isAuthenticated) return undefined;
+    // A request for the run the reader has already left must not land on the next run's page: it would show the old
+    // run's route and numbers, and mark the new run's stream as not yet checked.
+    let cancelled = false;
     async function fetchPoints() {
       try {
         const [res, analyticsRes, telemetryRes] = await Promise.all([
@@ -381,8 +396,9 @@ export default function RunDetail() {
           apiFetch(`/api/activities/${runId}/analytics`),
           apiFetch(`/api/activities/${runId}/telemetry`),
         ]);
-        if (!res.ok) return;
+        if (cancelled || !res.ok) return;
         const data = await res.json();
+        if (cancelled) return;
         const pts = Array.isArray(data)
           ? data.map((p) => [Number(p.latitude), Number(p.longitude)]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
           : [];
@@ -390,14 +406,18 @@ export default function RunDetail() {
         setInsights(buildInsights(pts));
         if (analyticsRes.ok) {
           const payload = await analyticsRes.json();
+          if (cancelled) return;
           setAnalytics(payload && typeof payload === 'object' ? payload : null);
         }
         if (telemetryRes.ok) {
           const payload = await telemetryRes.json();
+          if (cancelled) return;
           setTelemetry(payload && typeof payload === 'object' ? payload : null);
         }
       } catch {
         // ignored
+      } finally {
+        if (!cancelled) setStreamCheckedFor(runId);
       }
     }
     async function fetchElevationStatus() {
@@ -405,6 +425,7 @@ export default function RunDetail() {
         const elevStatusRes = await apiFetch(`/api/activities/${runId}/elevation/status`);
         if (elevStatusRes.ok) {
           const payload = await elevStatusRes.json();
+          if (cancelled) return;
           setElevationStatus(payload && typeof payload === 'object' ? payload : null);
         }
       } catch {
@@ -413,7 +434,14 @@ export default function RunDetail() {
     }
     fetchPoints();
     fetchElevationStatus();
+    return () => {
+      cancelled = true;
+    };
   }, [run?.id, isAuthenticated]);
+
+  useEffect(() => {
+    shownRunIdRef.current = run?.id ?? null;
+  }, [run?.id]);
 
   useEffect(() => {
     setSelectedTelemetryPoint(null);
@@ -421,6 +449,9 @@ export default function RunDetail() {
 
   async function handleElevationRecalibration() {
     if (!run?.id || recalibratingElevation) return;
+    // The reader may open another run while this goes on; what comes back belongs to the run it was started on (`run`
+    // is the one of the render that started it).
+    const leftRun = () => shownRunIdRef.current !== run.id;
     setRecalibratingElevation(true);
     try {
       const res = await apiFetch(`/api/activities/${run.id}/elevation/recalibrate`, {
@@ -428,7 +459,7 @@ export default function RunDetail() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ coordinates: points.map(([latitude, longitude]) => ({ latitude, longitude })) }),
       });
-      if (!res.ok) return;
+      if (!res.ok || leftRun()) return;
       const [analyticsRes, telemetryRes, statusRes] = await Promise.all([
         apiFetch(`/api/activities/${run.id}/analytics`),
         apiFetch(`/api/activities/${run.id}/telemetry`),
@@ -436,16 +467,22 @@ export default function RunDetail() {
       ]);
       if (analyticsRes.ok) {
         const payload = await analyticsRes.json();
+        if (leftRun()) return;
         setAnalytics(payload && typeof payload === 'object' ? payload : null);
       }
       if (telemetryRes.ok) {
         const payload = await telemetryRes.json();
+        if (leftRun()) return;
         setTelemetry(payload && typeof payload === 'object' ? payload : null);
       }
       if (statusRes.ok) {
         const payload = await statusRes.json();
+        if (leftRun()) return;
         setElevationStatus(payload && typeof payload === 'object' ? payload : null);
       }
+      if (leftRun()) return;
+      // Grade-adjusted pace depends on the elevation that was just recalibrated.
+      setPaceRefresh((count) => count + 1);
     } finally {
       setRecalibratingElevation(false);
     }
@@ -1091,6 +1128,8 @@ export default function RunDetail() {
           </div>
         </section>
 
+        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
             <div className="run-detail-v2__coach-score">
@@ -1157,7 +1196,15 @@ export default function RunDetail() {
             </div>
             <div className="run-detail-telemetry-chart run-detail-v2__chart">
               {telemetryChartData ? (
-                <Line data={telemetryChartData} options={telemetryChartOptions} />
+                <Line
+                  data={telemetryChartData}
+                  options={telemetryChartOptions}
+                  aria-label={t('run_detail.telemetry_chart_label', {
+                    metric: activeTelemetryDefinition.label,
+                    min: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                    max: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.max, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                  })}
+                />
               ) : (
                 <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
               )}
@@ -1174,6 +1221,15 @@ export default function RunDetail() {
             </div>
           )}
         </section>
+
+        {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
+        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+
+        <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
+
+        <RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
+
+        <RunMatches key={`matches-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
 
         <div className="run-detail-v2__lower">
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">
@@ -1216,6 +1272,10 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} />
+
+            <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
+
             <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
               <div className="run-detail-v2__card-head">
                 <h3>{t('run_detail.gear_linked')}</h3>

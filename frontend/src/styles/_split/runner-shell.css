@@ -40,6 +40,7 @@
 
 .runner-shell-brand .hermes-logo--light .hermes-logo__word {
   color: #f3ede8;
+  --hermes-logo-accent: #f07561;
 }
 
 .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
@@ -610,6 +611,12 @@
   color: var(--text-muted, #595c5d);
   font-size: 0.9rem;
   letter-spacing: 0.08em;
+}
+
+/* A message and a way to ask again: kept together in the middle, not one half of the screen each. */
+.runner-shell-loading--failed {
+  align-content: center;
+  gap: 1.25rem;
 }
 
 body.theme-midnight .runner-shell-loading,

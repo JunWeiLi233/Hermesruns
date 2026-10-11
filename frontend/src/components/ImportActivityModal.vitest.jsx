@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import translations from '../i18n/translations';
 import { apiFetch } from '../api';
 import { invalidateResourceCache } from '../api/resourceCache';
-import ImportActivityModal from './ImportActivityModal';
+import ImportActivityModal, { ImportActivityForm } from './ImportActivityModal';
 
 vi.mock('../api', () => ({ apiFetch: vi.fn() }));
 vi.mock('../api/resourceCache', () => ({ invalidateResourceCache: vi.fn() }));
@@ -47,6 +47,19 @@ describe('ImportActivityModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it('accepts gzipped workout files, as in a Strava export, and labels them by what they hold', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    expect(input()).toHaveAttribute('accept', expect.stringContaining('.gz'));
+    await user.upload(input(), [file('12345.fit.gz'), file('678.gpx.gz'), file('plain.gz')]);
+    expect(screen.getAllByRole('listitem').map((item) => item.querySelector('.import-v2-file-ext').textContent)).toEqual(['FIT', 'GPX', 'GZ']);
+    await user.click(screen.getByRole('button', { name: 'Import 3 file(s)' }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledOnce());
+    expect([...apiFetch.mock.calls[0][1].body.entries()].map(([field, entry]) => [field, entry.name])).toEqual([
+      ['exports', '12345.fit.gz'], ['exports', '678.gpx.gz'], ['exports', 'plain.gz'],
+    ]);
+  });
+
   it('freezes the queue and blocks closing or submitting twice during upload', async () => {
     const user = userEvent.setup();
     let resolveUpload;
@@ -84,6 +97,91 @@ describe('ImportActivityModal', () => {
     view.rerender(<ImportActivityModal isOpen {...props} />);
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Import', exact: true })).toBeDisabled();
+  });
+
+  describe('what the server says about the batch', () => {
+    const answer = (body, ok = true) => apiFetch.mockResolvedValue({ ok, json: async () => body });
+    const submit = async (user, ...names) => {
+      await user.upload(input(), names.map(file));
+      await user.click(screen.getByRole('button', { name: `Import ${names.length} file(s)` }));
+    };
+
+    it('closes straight away when every file went in', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onImported = vi.fn();
+      answer({ importedActivities: 2, skippedDuplicates: 0, skippedNonRuns: 0, rejectedFiles: [] });
+      renderModal({ onClose, onImported });
+      await submit(user, 'a.gpx', 'b.gpx');
+      await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+      expect(onImported).toHaveBeenCalledOnce();
+    });
+
+    it('stays open and names each refused file, each duplicate and each activity that was not a run (BUG-019)', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onImported = vi.fn();
+      answer({
+        importedActivities: 1,
+        skippedDuplicates: 2,
+        skippedNonRuns: 1,
+        rejectedFiles: ['bad.gpx: Unable to parse XML workout file.', 'notes.fit: Unable to parse FIT workout file.'],
+      });
+      renderModal({ onClose, onImported });
+      await submit(user, 'ok.gpx', 'bad.gpx', 'notes.fit', 'dup1.gpx', 'dup2.gpx', 'ride.gpx');
+      expect(await screen.findByText('1 run imported.')).toBeInTheDocument();
+      expect(screen.getByText('2 files were already in your history and were skipped.')).toBeInTheDocument();
+      expect(screen.getByText('1 activity was not a run and was skipped.')).toBeInTheDocument();
+      expect(screen.getByText('2 files could not be imported:')).toBeInTheDocument();
+      expect(screen.getByText('bad.gpx: Unable to parse XML workout file.')).toBeInTheDocument();
+      expect(screen.getByText('notes.fit: Unable to parse FIT workout file.')).toBeInTheDocument();
+      // The runs list is refreshed at once; the dialog waits for the runner.
+      expect(onImported).toHaveBeenCalledOnce();
+      expect(onClose).not.toHaveBeenCalled();
+      await user.click(screen.getByRole('button', { name: 'Done' }));
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('says so when nothing was imported, and does not claim a success', async () => {
+      const user = userEvent.setup();
+      const onClose = vi.fn();
+      const onImported = vi.fn();
+      answer({ importedActivities: 0, skippedDuplicates: 1, skippedNonRuns: 0, rejectedFiles: [] });
+      renderModal({ onClose, onImported });
+      await submit(user, 'again.gpx');
+      expect(await screen.findByText('No runs were imported.')).toBeInTheDocument();
+      expect(screen.getByText('1 file was already in your history and was skipped.')).toBeInTheDocument();
+      expect(onImported).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('lets the runner go back and add more files from the report', async () => {
+      const user = userEvent.setup();
+      answer({ importedActivities: 1, skippedDuplicates: 0, skippedNonRuns: 0, rejectedFiles: ['bad.gpx: Unable to parse XML workout file.'] });
+      renderModal();
+      await submit(user, 'ok.gpx', 'bad.gpx');
+      await user.click(await screen.findByRole('button', { name: 'Import more files' }));
+      expect(screen.queryByText('1 run imported.')).not.toBeInTheDocument();
+      expect(input()).toBeVisible();
+    });
+
+    it('shows the reason the server gives when every file was refused', async () => {
+      const user = userEvent.setup();
+      apiFetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'bad.gpx: Unable to parse XML workout file.' }) });
+      renderModal();
+      await submit(user, 'bad.gpx');
+      expect(await screen.findByRole('alert')).toHaveTextContent(`${t('profile.import_failed')}: bad.gpx: Unable to parse XML workout file.`);
+    });
+
+    it('passes the number of runs that really went in, not the number of files chosen, to onSuccess', async () => {
+      const user = userEvent.setup();
+      const onSuccess = vi.fn();
+      answer({ importedActivities: 3, skippedDuplicates: 0, skippedNonRuns: 0, rejectedFiles: [] });
+      render(<ImportActivityForm t={t} onCancel={vi.fn()} onSuccess={onSuccess} />);
+      await user.upload(input(), [file('one.gpx')]);
+      await user.click(screen.getByRole('button', { name: 'Import 1 file(s)' }));
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(3));
+    });
   });
 
   it('supports arrow-key source selection with an associated panel', async () => {

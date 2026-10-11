@@ -151,19 +151,41 @@ public class GpxActivityFileParser extends AbstractXmlActivityFileParser {
         return null;
     }
 
+    /**
+     * The text of the element a key names, under a track point. Heart rate and cadence sit inside an extension
+     * block ({@code <extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>}), so a key is looked for among the
+     * point's own children first and then at any depth below it. A path such as {@code TrackPointExtension/hr}
+     * finds its first step at any depth and each following step among direct children. Reading only direct
+     * children, as this used to, dropped the heart rate of every file written the standard way.
+     */
     private String firstTextByLocalNamePathAware(Element parent, String key) {
         if (key.contains("/")) {
             String[] parts = key.split("/");
             Element cur = parent;
-            for (String p : parts) {
+            for (int i = 0; i < parts.length; i++) {
                 if (cur == null) return null;
-                String local = p.contains(":") ? p.substring(p.indexOf(':') + 1) : p;
-                cur = firstChildElementByLocalName(cur, local);
+                String local = parts[i].contains(":") ? parts[i].substring(parts[i].indexOf(':') + 1) : parts[i];
+                cur = i == 0 ? firstDescendantByLocalName(cur, local) : firstChildElementByLocalName(cur, local);
             }
             return cur == null ? null : cur.getTextContent();
         }
         String local = key.contains(":") ? key.substring(key.indexOf(':') + 1) : key;
-        return firstTextByLocalName(parent, local);
+        String direct = firstTextByLocalName(parent, local);
+        if (direct != null && !direct.isBlank()) {
+            return direct;
+        }
+        Element nested = firstDescendantByLocalName(parent, local);
+        return nested == null ? null : nested.getTextContent();
+    }
+
+    private Element firstDescendantByLocalName(Element parent, String localName) {
+        var nodes = parent.getElementsByTagNameNS("*", localName);
+        for (int index = 0; index < nodes.getLength(); index += 1) {
+            if (nodes.item(index) instanceof Element element) {
+                return element;
+            }
+        }
+        return null;
     }
 
     private Double parseFirstPositiveDouble(Element parent, String... localNames) {
