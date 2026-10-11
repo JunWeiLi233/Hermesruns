@@ -161,7 +161,7 @@ test.describe('F02 the training log: the weeks (M5)', () => {
         expect(stats).toContain(`Time ${metricOf(run, 'time')}`);
         expect(stats).toContain(`Effort ${metricOf(run, 'effort')}`);
         expect(stats.some((item) => /^Pace \d+:\d\d \/km$/.test(item)), stats.join(' | ')).toBe(true);
-        expect(stats).toContain('Climb –');
+        expect(stats, 'a run shows its climb when the file had elevation, and a dash when it had none').toContain(`Climb ${metricOf(run, 'climb')}`);
       }
     }
     const first = week.days[0].runs[0];
@@ -209,9 +209,13 @@ test.describe('F02 the training log: the weeks (M5)', () => {
       if (metric === 'distance') await expect(page).not.toHaveURL(/metric=/);
       else await expect(page).toHaveURL(new RegExp(`metric=${metric}`));
       if (metric === 'climb') {
-        // A run from a file carries no climb figure (BUG-036): every day says so with a dash, and the week totals show 0 m now that
-        // climb is what is being looked at, though they leave it out otherwise.
-        expect(await figures(logWeeks(page).first().locator('dl').first())).toContain('Climb 0 m');
+        // The long run is a file with elevation, and the importer adds up its climb (BUG-036): its day says so, the other days say it
+        // with a dash, and the week totals show the climb of the week now that climb is what is being looked at (even when it is
+        // 0 m), though they leave it out otherwise.
+        const first = logWeeks(page).first();
+        const start = await first.getAttribute('data-week');
+        const week = log.weeks.find((candidate) => candidate.start === start) as LogWeek;
+        expect(await figures(first.locator('dl').first())).toContain(`Climb ${grouped(week.elevationGainM)} m`);
       }
       for (const day of days) {
         const run = byDay.get(day) as (typeof runs)[number];
@@ -220,6 +224,8 @@ test.describe('F02 the training log: the weeks (M5)', () => {
     }
     // Looked at by effort, the week totals leave climb out when the week had none.
     expect(await figures(logWeeks(page).first().locator('dl').first())).not.toContain('Climb 0 m');
+    // And the long run, the only one with a climb, shows it where climb is shown (BUG-036).
+    expect(runs.some((run) => (run.elevationGainM ?? 0) > 0), 'the long runs carry a climb figure').toBe(true);
     // The figure being looked at is marked in every row, for the eye (no role says which figure is marked).
     await expect(rowOf(page, nameOf(3)).locator('.is-chosen dt')).toHaveText('Effort');
     expect(asked, 'changing what is shown makes no request').toHaveLength(1);

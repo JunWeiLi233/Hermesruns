@@ -269,10 +269,14 @@ test.describe('F03 goals (M6)', () => {
     await expect(row.getByText('Goal reached', { exact: true })).toBeVisible();
     await expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
     await expect(row).not.toContainText('to go');
-    // Climb: a run from a file carries no climb figure (BUG-036), so the year of climb stands at nothing.
+    // Climb: the long runs are files with elevation, and the importer adds up their climb (BUG-036), so the year of climb is theirs.
     const climb = answer.goals.find((goal) => goal.metric === 'ELEVATION') as Goal;
-    expect(climb.progress).toBe(0);
-    await expect(rowOf(page, 'Yearly climb')).toContainText('0 m of 20,000 m this year');
+    const log = (await runner.api.get('/api/training/log?weeks=26')).json as { today: string; weeks: Array<{ days: Array<{ date: string; runs: Array<{ elevationGainM: number | null }> }> }> };
+    const climbThisYear = log.weeks.flatMap((w) => w.days).filter((day) => day.date >= periodStart('YEAR', log.today) && day.date <= log.today)
+      .flatMap((day) => day.runs).reduce((sum, run) => sum + (run.elevationGainM ?? 0), 0);
+    expect(climbThisYear, 'the long runs of the year carry a climb').toBeGreaterThan(100);
+    expect(Math.abs(climb.progress - climbThisYear)).toBeLessThan(1);
+    await expect(rowOf(page, 'Yearly climb')).toContainText(`${amount('ELEVATION', climb.progress)} of 20,000 m this year`);
   });
 
   test('F03-H3 a goal counts the runs from before it was set, follows a run that is added or deleted, and keeps nothing but its target', async ({ browser, baseURL, guard }) => {
@@ -569,7 +573,7 @@ test.describe('F03 goals (M6)', () => {
 
   test.fixme('F03-E4 a goal that crosses a time-zone or daylight-saving boundary counts the right days (needs the runner\'s time zone and the BUG-003 decision on file-run times)', async () => {});
 
-  test('F03-E5 a climb goal adds up the climb figures runs carry (here the seeded runner\'s Strava-style runs), and only those', async ({ browser, baseURL, guard, seed }) => {
+  test('F03-E5 a climb goal adds up the climb figures runs carry (here the seeded runner\'s runs, Strava-style and files with elevation)', async ({ browser, baseURL, guard, seed }) => {
     const mine = new Api(seed.baseUrl, seed.a.token);
     await clearGoals(mine);
     try {
