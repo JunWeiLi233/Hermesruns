@@ -6,15 +6,15 @@
   --gl-card: #fff;
   --gl-ink: #171717;
   --gl-muted: #515563;
-  --gl-faint: #80766c;
+  --gl-faint: #6f665c;
   --gl-line: rgba(28, 25, 23, 0.08);
   --gl-fill: rgba(28, 25, 23, 0.045);
   --gl-accent: #a0392a;
   --gl-accent-soft: rgba(160, 57, 42, 0.09);
   --gl-on-accent: #fff;
-  --gl-good: #248a3d;
+  --gl-good: #1b6b2e;
   --gl-good-soft: rgba(52, 199, 89, 0.14);
-  --gl-warn: #b45309;
+  --gl-warn: #92400e;
   --gl-warn-soft: rgba(217, 119, 6, 0.14);
   --gl-error: #c4261a;
   --gl-dialog: #fff;
