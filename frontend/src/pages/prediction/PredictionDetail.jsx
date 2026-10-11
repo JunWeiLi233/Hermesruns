@@ -10,6 +10,7 @@ import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
 import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import useProfileIdentity from '../../hooks/useProfileIdentity';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import {
   collectAllVdotEntries,
@@ -106,10 +107,11 @@ function formatTrendDelta(deltaMinutes, t) {
 
 export default function PredictionDetail() {
   const { distKey } = useParams();
-  const { isAuthenticated, email } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const { initials } = useProfileIdentity(t('profile.default_name'));
 
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
@@ -322,8 +324,6 @@ export default function PredictionDetail() {
   }
 
   const title = lang === 'zh-CN' ? distance.labelZh : distance.labelEn;
-  const displayName = email?.split('@')[0] || t('profile.default_name');
-  const initials = displayName.slice(0, 1).toUpperCase();
   const primaryTime = racePredictionMinutes ? formatPredictedTime(racePredictionMinutes * 60) : '--';
   const rawPrimaryTime = rawRacePredictionMinutes ? formatPredictedTime(rawRacePredictionMinutes * 60) : '--';
   const adjustedPrimaryTime = adjustedRacePredictionMinutes ? formatPredictedTime(adjustedRacePredictionMinutes * 60) : '--';

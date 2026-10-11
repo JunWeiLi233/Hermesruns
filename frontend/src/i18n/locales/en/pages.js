@@ -2363,6 +2363,7 @@ export default {
     "run_comparison_faster": "This run was {percent}% faster than your recent {window} average pace.",
     "run_comparison_slower": "This run was {percent}% slower than your recent {window} average pace.",
     "run_comparison_same": "This run matched your recent {window} average pace — consistent effort.",
+    "run_comparison_window": "{count}-run",
     "run_comparison_not_enough": "Need at least 2 comparable recent runs to chart improvement.",
     "run_comparison_basis": "Based on your last {count} runs",
     "run_comparison_pace_trend": "Pace trend",

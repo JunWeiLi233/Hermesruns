@@ -447,7 +447,8 @@ public class ActivityController {
         List<ActivityAnalyticsHelper.LapBreakdown> rawLaps = ActivityAnalyticsHelper.buildLapBreakdown(pts);
         List<ActivityLap> enrichedLaps = rawLaps.stream().map(lap -> {
             double startM = (lap.lapIndex() - 1) * 1000.0;
-            double endM = lap.lapIndex() * 1000.0;
+            Double lastMeters = pts.get(pts.size() - 1).distanceMeters();
+            double endM = lap.partial() && lastMeters != null ? lastMeters : lap.lapIndex() * 1000.0;
             Double elevGain = ActivityLap.computeElevationGain(pts, startM, endM);
             return new ActivityLap(
                     lap.lapIndex(),
@@ -456,7 +457,8 @@ public class ActivityController {
                     lap.pace(),
                     lap.averageHeartRate(),
                     lap.averageCadence(),
-                    elevGain
+                    elevGain,
+                    lap.partial()
             );
         }).toList();
 

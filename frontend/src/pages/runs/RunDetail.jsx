@@ -710,7 +710,8 @@ export default function RunDetail() {
     if (!Array.isArray(profile) || profile.length < 2) return null;
     if (!lapRows.length) return null;
     return lapRows.map((lap) => {
-      const startKm = ((lap.lapIndex || 1) - 1) * (lap.distanceKm || 1);
+      // Whole laps are a kilometre each; the partial lap at the end starts where the last whole one stopped.
+      const startKm = (lap.lapIndex || 1) - 1;
       const endKm = startKm + (lap.distanceKm || 1);
       let gain = 0;
       for (let i = 1; i < profile.length; i++) {
@@ -757,6 +758,7 @@ export default function RunDetail() {
       paceTrend: direction === 'faster' ? 'improving' : direction === 'slower' ? 'declining' : 'stable',
     };
   }, [run, recentRuns]);
+  const comparisonWindow = runComparison ? t('run_detail.run_comparison_window', { count: runComparison.recentRuns }) : '';
 
   async function refreshRunFromActivities() {
     if (!isAuthenticated || !id) return null;
@@ -996,9 +998,10 @@ export default function RunDetail() {
     const match = /(\d+):(\d{2})/.exec(String(lap?.pace || ''));
     return match ? Number(match[1]) * 60 + Number(match[2]) : null;
   };
+  // The partial lap at the end is listed but never the fastest or slowest: like the pace profile, only whole kilometres are compared.
   const fastestVisibleLapIndex = visibleLapRows.reduce((bestIndex, lap, index, source) => {
     const seconds = lapPaceSeconds(lap);
-    if (seconds == null) return bestIndex;
+    if (seconds == null || lap.partial) return bestIndex;
     if (bestIndex === -1) return index;
     const bestSeconds = lapPaceSeconds(source[bestIndex]);
     return bestSeconds == null || seconds < bestSeconds ? index : bestIndex;
@@ -1032,13 +1035,13 @@ export default function RunDetail() {
     { key: 'cadence', label: t('run_detail.average_cadence'), value: cadenceValue, unit: t('run_detail.unit_spm') },
   ];
   const visibleLapPaces = visibleLapRows.map(lapPaceSeconds);
-  const knownLapPaces = lapRows.map(lapPaceSeconds).filter((value) => value != null);
+  const knownLapPaces = lapRows.filter((lap) => !lap.partial).map(lapPaceSeconds).filter((value) => value != null);
   const slowestLapPace = knownLapPaces.length ? Math.max(...knownLapPaces) : null;
   const fastestLapPace = knownLapPaces.length ? Math.min(...knownLapPaces) : null;
   const lapBarWidth = (seconds) => {
     if (seconds == null || slowestLapPace == null) return 0;
     const span = Math.max(1, slowestLapPace - fastestLapPace);
-    return Math.round(35 + ((slowestLapPace - seconds) / span) * 65);
+    return Math.max(10, Math.min(100, Math.round(35 + ((slowestLapPace - seconds) / span) * 65)));
   };
   const telemetryBounds = hasTelemetryData ? getTelemetryValueBounds(activeTelemetrySamples) : null;
   const effectSegments = (value) => [1, 2, 3, 4, 5].map((step) => Number.isFinite(value) && value >= step - 0.5);
@@ -1111,10 +1114,10 @@ export default function RunDetail() {
                 <div>
                   <strong>
                     {runComparison.direction === 'faster'
-                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: comparisonWindow })
                       : runComparison.direction === 'slower'
-                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: comparisonWindow })
+                        : t('run_detail.run_comparison_same', { window: comparisonWindow })}
                   </strong>
                   <p>
                     {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
@@ -1255,7 +1258,7 @@ export default function RunDetail() {
                   const lapGain = lapElevationGains ? lapElevationGains[index] : null;
                   return (
                     <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(lap.partial ? 2 : 1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
                       <td className="run-detail-v2__pace-bar" aria-hidden="true"><span style={{ width: `${lapBarWidth(visibleLapPaces[index])}%` }} /></td>
                       <td className="run-detail-v2__pace">{lap.pace || '--'}</td>
                       <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>

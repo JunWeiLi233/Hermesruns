@@ -12,6 +12,7 @@ import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import ShoeBrandLogo, { hasShoeBrandLogo } from '../../components/ShoeBrandLogo';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import useProfileIdentity from '../../hooks/useProfileIdentity';
 import shoeCatalog from '../../data/shoeCatalog';
 import { buildSeriesCatalog, mergeShoeCatalog, readLocalSeriesCatalog, writeLocalSeriesCatalog } from '../../utils/addShoeCatalog.js';
 import { preloadRoute } from '../../utils/routePreload';
@@ -75,7 +76,7 @@ function getCatalogModelLabel(item, lang) {
 const TYPE_LABELS = { daily: 'type_daily', speed: 'type_speed', race: 'type_race', trail: 'type_trail', stability: 'type_stability' };
 
 export default function AddShoes() {
-  const { isAuthenticated, email } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
@@ -207,8 +208,7 @@ export default function AddShoes() {
     setFormModel(matched.model);
   }, [browserBrand, preselectedBrand, preselectedModel]);
 
-  const initials = (email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
-  const profileLabel = (email?.split('@')[0] || 'HermesRuns').trim();
+  const { initials, displayName: profileLabel } = useProfileIdentity('HermesRuns');
   const selectedBrandName = localizeShoeBrand(formBrand || browserBrand?.brand || '', lang);
   const selectedModelName = getCatalogModelLabel(selectedCatalogModel || { model: formModel }, lang) || formModel;
   const browserModelPlaceholder = browserBrand

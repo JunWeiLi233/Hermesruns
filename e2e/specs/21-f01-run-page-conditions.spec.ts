@@ -261,6 +261,16 @@ test.describe('F01 languages and phones', () => {
     await expect(page.getByRole('region', { name: '配速分析' })).toBeVisible();
     await expectNoRawKeys(page);
   });
+
+  test('F01-E25b in Chinese the sentence that compares the run with the recent ones is Chinese all through (BUG-033)', async ({ page, seed }) => {
+    await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
+    await page.goto(`/runs/${seed.ids.hills}`);
+    const note = page.locator('#run-detail-comparison');
+    await expect(note).toBeVisible();
+    const sentence = (await note.locator('strong').first().innerText()).trim();
+    expect(sentence, 'the window is "5 次跑步", not an English "5-run"').toMatch(/最近 \d+ 次跑步平均配速/);
+    expect(sentence).not.toMatch(/-run|[A-Za-z]{3,}/);
+  });
 });
 
 test.describe('F01 phone width', () => {

@@ -195,6 +195,27 @@ test.describe('F02 load balance, edge states', () => {
     await page.getByRole('button', { name: "Open today's run" }).first().click();
     await expect(page).toHaveURL(/\/today-run/);
   });
+
+  test('F02-E15 a VO2max that has not moved in 30 days is called unchanged, not a VO2max of 0.0', async ({ browser, baseURL, guard }) => {
+    // The same run in the last 30 days and in the 30 before: the two windows come out equal. (BUG-029)
+    const made = await newRunner('vo2-flat');
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      for (const days of [8, 40]) {
+        await made.api.importRun(`flat-${days}.gpx`, gpxRun({ name: `E2E flat ${days}`, start: daysAgo(days), distanceM: 5000, pace: 330, hr: 150 }));
+      }
+      const page = await context.newPage();
+      await page.goto('/analysis');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByText('VO2max unchanged over 30 days')).toBeVisible();
+      await expect(page.getByText('unchanged in 30 d')).toBeVisible();
+      const text = await mainText(page);
+      expect(text).not.toMatch(/VO2max [+-]?0\.0/);
+      expect(text).not.toContain('+0.0');
+    } finally {
+      await context.close();
+    }
+  });
 });
 
 test.describe('F02 whole page', () => {
@@ -208,6 +229,15 @@ test.describe('F02 whole page', () => {
     await page.goto('/analysis/load-balance');
     await page.waitForTimeout(2000);
     await expectNoRawKeys(page);
+  });
+
+  test('F02-E16 in Chinese the distances on Load balance say 公里, as every other page does (BUG-034)', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
+    await page.goto('/analysis/load-balance');
+    await expect(page.locator('main').getByText(/\d 公里/).first()).toBeVisible();
+    const text = await mainText(page);
+    expect(text).toMatch(/\d(\.\d)? 公里/);
+    expect(text).not.toMatch(/\d\s?km\b/);
   });
 
   test('F02-E7 @mobile Load balance and the Analysis page fit a phone', async ({ page }) => {

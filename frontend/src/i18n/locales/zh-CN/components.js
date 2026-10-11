@@ -560,6 +560,8 @@ export default {
     "v2_headline_improving_balanced": "体能正在提升，训练负荷保持平衡。",
     "v2_status_vo2_period": "近 30 天最大摄氧量 {delta}",
     "v2_delta_period": "30 天内 {delta}",
+    "v2_delta_unchanged": "30 天内无变化",
+    "v2_status_vo2_unchanged": "近 30 天最大摄氧量没有变化",
     "v2_this_month": "本月",
     "v2_weather_uplift": "天气校正增量",
     "v2_prediction_change_basis": "相较 30 天前的预测变化",

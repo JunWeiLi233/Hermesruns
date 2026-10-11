@@ -436,6 +436,21 @@ test.describe('X01 the public side of the app', () => {
     }
   });
 
+  test('X01-E12 the circle at the top right has the same letter on every page, taken from the display name and not from the address (BUG-028)', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('avatar');
+    expect((await made.api.request('PATCH', '/api/profile/me/name', { body: { displayName: 'Zed Runner' } })).status).toBeLessThan(300);
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      for (const url of ['/profile', '/runs', '/analysis', '/settings', '/shoes', '/races', '/schedule', '/prediction/10k', '/shoes/add', '/shoe-catalog']) {
+        await page.goto(url);
+        await expect(page.locator('.runner-shell-avatar').first(), url).toHaveText('Z');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
   test('X01-E11b every page of the signed-in app has a title of its own, in English and in Chinese', async ({ browser, baseURL, guard }) => {
     const made = await newRunner('titles');
     const pages: Array<[string, string, string]> = [

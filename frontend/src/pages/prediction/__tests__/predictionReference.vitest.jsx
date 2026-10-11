@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import PredictionDetail from '../PredictionDetail';
@@ -16,7 +16,7 @@ vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: state.
   return Object.entries(values).reduce((value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)), copy);
 } }) }));
 vi.mock('../../../api', () => ({ apiJson: vi.fn(), subscribeWakeRetry: () => () => {} }));
-vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
+vi.mock('../../../components/TopbarUserMenu', () => ({ default: ({ initials }) => <span data-testid="avatar">{initials}</span> }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
 vi.mock('react-chartjs-2', () => ({ Line: ({ data }) => { state.chartData = data; return <div data-testid="forecast-chart" />; } }));
 
@@ -32,7 +32,7 @@ beforeEach(() => {
     return { id: index + 1, startTime: date.toISOString(), name: 'Morning Run', distanceKm: 10,
       movingTimeSeconds: 2800 + index * 12, averageHeartRate: 150, maxHeartRate: 190 };
   });
-  apiJson.mockImplementation(async () => activities);
+  apiJson.mockImplementation(async (path) => (path === '/api/profile/me' ? { displayName: 'Zed Runner', email: 'runner@example.test' } : activities));
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -120,7 +120,15 @@ it('avoids invented forecasts when there are no activities', async () => {
 
 // BUG-032: a failed request used to be drawn as the page of a runner with no runs ("not enough data yet", 0 samples).
 it('says the runs could not be loaded when the request fails, invents no forecast, and asks again on request', async () => {
-  apiJson.mockRejectedValueOnce(new Error('Unavailable'));
+  const answerAsBefore = apiJson.getMockImplementation();
+  let refused = false;
+  apiJson.mockImplementation(async (path, ...rest) => {
+    if (path === '/api/activities' && !refused) {
+      refused = true;
+      throw new Error('Unavailable');
+    }
+    return answerAsBefore(path, ...rest);
+  });
   const { container } = renderPage();
   expect(await screen.findByRole('alert')).toHaveTextContent(en.analysis.stitch_load_error);
   expect(container.querySelector('.prediction-v2-hero')).not.toBeInTheDocument();
@@ -132,6 +140,13 @@ it('says the runs could not be loaded when the request fails, invents no forecas
   await screen.findByRole('heading', { level: 1, name: en.analysis.pred_cockpit_title });
   expect(container.querySelector('.prediction-forecast-time')).not.toHaveTextContent('--');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+// BUG-028: the circle at the top right took its letter from the address ("R" for runner@...) here and from the display name
+// everywhere else.
+it('shows the initial of the profile display name in the circle at the top right, not the start of the address', async () => {
+  await openPage('10k');
+  await waitFor(() => expect(screen.getByTestId('avatar')).toHaveTextContent('Z'));
 });
 
 it('renders Chinese copy without unresolved placeholders', async () => {

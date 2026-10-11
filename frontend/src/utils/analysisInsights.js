@@ -1,4 +1,4 @@
-import { formatDuration, formatPaceSeconds } from './format.js';
+import { formatDuration, formatPaceSeconds, getDistanceUnitLabel } from './format.js';
 import {
   buildOrderedRacePredictions,
   collectAllVdotEntries,
@@ -521,8 +521,8 @@ export function buildRunInsightRows(runs, bestVdot, unit, lang, limit = 6) {
         trainingDate: new Date(run.startTime || run.startDate || 0).toISOString().slice(0, 10),
         title: run.name || run.title || (lang === 'zh-CN' ? '训练记录' : 'Training session'),
         dateLabel: dateFormatter.format(new Date(run.startTime || run.startDate || 0)),
-        distanceLabel: `${distanceValue.toFixed(1)} ${unit === 'mile' ? 'mi' : 'km'}`,
-        paceLabel: `${formatPaceSeconds(unit === 'mile' ? paceSec * KM_TO_MILE : paceSec)} /${unit === 'mile' ? 'mi' : 'km'}`,
+        distanceLabel: `${distanceValue.toFixed(1)} ${getDistanceUnitLabel(lang, unit)}`,
+        paceLabel: `${formatPaceSeconds(unit === 'mile' ? paceSec * KM_TO_MILE : paceSec)} /${getDistanceUnitLabel(lang, unit)}`,
         zoneKey: zone.key,
         loadScore: Math.round(effortScore(vo2Fraction, durationSec / 60)),
         cadence: Number(run.averageCadence || 0) || null,

@@ -560,6 +560,8 @@ export default {
     "v2_headline_improving_balanced": "Fitness is climbing. Load is balanced.",
     "v2_status_vo2_period": "VO2max {delta} over 30 days",
     "v2_delta_period": "{delta} in 30 d",
+    "v2_delta_unchanged": "unchanged in 30 d",
+    "v2_status_vo2_unchanged": "VO2max unchanged over 30 days",
     "v2_this_month": "This month",
     "v2_weather_uplift": "Weather-adjusted uplift",
     "v2_prediction_change_basis": "Change from the estimate 30 days ago",

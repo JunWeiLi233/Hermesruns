@@ -25,6 +25,65 @@ class ActivityAnalyticsHelperTests {
         return points.stream().map(SamplePoint::distanceMeters).toList();
     }
 
+    /** A straight run at a steady pace: a sample every 100 m, {@code secondsPer100m} apart, heart rate 150, ending at {@code metres}. */
+    private static List<SamplePoint> steadyRun(int metres, int secondsPer100m) {
+        List<SamplePoint> points = new ArrayList<>();
+        for (int m = 0; m <= metres; m += 100) {
+            points.add(new SamplePoint(40.0 + m / 111_194.93, -73.96, m / 100 * secondsPer100m, (double) m, 20.0, 150, null, null, null));
+        }
+        if (metres % 100 != 0) {
+            points.add(new SamplePoint(40.0 + metres / 111_194.93, -73.96, (int) Math.round(metres / 100.0 * secondsPer100m), (double) metres, 20.0, 150, null, null, null));
+        }
+        return points;
+    }
+
+    @Test
+    void theStretchAfterTheLastWholeKilometreIsALapOfItsOwn() {
+        // 2.35 km at 5:00 /km: two whole kilometres and 350 m, as the pace profile splits it (BUG-004).
+        List<ActivityAnalyticsHelper.LapBreakdown> laps = ActivityAnalyticsHelper.buildLapBreakdown(steadyRun(2350, 30));
+
+        assertThat(laps).hasSize(3);
+        assertThat(laps.subList(0, 2)).allSatisfy(lap -> {
+            assertThat(lap.partial()).isFalse();
+            assertThat(lap.distanceKm()).isEqualTo(1.0);
+            assertThat(lap.pace()).isEqualTo("5:00 /km");
+        });
+        ActivityAnalyticsHelper.LapBreakdown last = laps.get(2);
+        assertThat(last.partial()).isTrue();
+        assertThat(last.lapIndex()).isEqualTo(3);
+        assertThat(last.distanceKm()).isEqualTo(0.35);
+        assertThat(last.durationSeconds()).isEqualTo(105);
+        assertThat(last.pace()).as("the pace over the 350 m, per kilometre").isEqualTo("5:00 /km");
+        assertThat(last.averageHeartRate()).isEqualTo(150);
+    }
+
+    @Test
+    void aRunOfWholeKilometresHasNoPartialLap() {
+        List<ActivityAnalyticsHelper.LapBreakdown> laps = ActivityAnalyticsHelper.buildLapBreakdown(steadyRun(3000, 30));
+
+        assertThat(laps).hasSize(3);
+        assertThat(laps).noneMatch(ActivityAnalyticsHelper.LapBreakdown::partial);
+    }
+
+    @Test
+    void aScrapAfterTheLastKilometreIsLeftOutAsItIsInThePaceProfile() {
+        // 2.05 km: the last 50 m is under the profile's 100 m minimum for a split.
+        List<ActivityAnalyticsHelper.LapBreakdown> laps = ActivityAnalyticsHelper.buildLapBreakdown(steadyRun(2050, 30));
+
+        assertThat(laps).hasSize(2);
+        assertThat(laps).noneMatch(ActivityAnalyticsHelper.LapBreakdown::partial);
+    }
+
+    @Test
+    void aRunShorterThanAKilometreIsOnePartialLapNotNone() {
+        List<ActivityAnalyticsHelper.LapBreakdown> laps = ActivityAnalyticsHelper.buildLapBreakdown(steadyRun(700, 30));
+
+        assertThat(laps).hasSize(1);
+        assertThat(laps.get(0).partial()).isTrue();
+        assertThat(laps.get(0).lapIndex()).isEqualTo(1);
+        assertThat(laps.get(0).distanceKm()).isEqualTo(0.7);
+    }
+
     @Test
     void aRunWithNoDistancesAtAllGetsThemFromTheGpsHopsAlone() {
         List<Double> distances = normalizedDistances(at(0, null), at(100, null), at(250, null), at(400, null));
