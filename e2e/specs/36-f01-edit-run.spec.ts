@@ -724,4 +724,32 @@ test.describe('F01 edit a run: edges', () => {
     await expect(effortCard(page).getByRole('button', { name: '4 out of 10' })).toHaveAttribute('aria-pressed', 'true');
     await expect(labelsCard(page).getByRole('radio', { name: 'Long run' })).toBeChecked();
   });
+
+  test('F01-ED-E10 saves from several tabs at the same moment all land: a field one of them did not name is never undone, and a tag they share does not fail', async () => {
+    // Four requests at once, each naming other fields, two of them the same tag: the run's row is taken in turn, so none of them
+    // writes back what it read before the others finished. Five rounds, on whichever database the stack runs on.
+    for (let round = 0; round < 5; round += 1) {
+      const title = `Tabs round ${round}`;
+      const notes = `Notes from round ${round}`;
+      const answers = await Promise.all([
+        runner.api.patch(`/api/activities/${mainId}`, { name: title }),
+        runner.api.patch(`/api/activities/${mainId}`, { notes }),
+        runner.api.patch(`/api/activities/${mainId}`, { perceivedExertion: 6, useRatingForEffort: true }),
+        runner.api.patch(`/api/activities/${mainId}`, { runType: 'WORKOUT', tags: [`Shared ${round}`, 'track'] }),
+        runner.api.patch(`/api/activities/${mainId}`, { tags: [`shared ${round}`, 'hills'] }),
+      ]);
+      expect(answers.map((answer) => answer.status), JSON.stringify(answers.map((answer) => answer.json))).toEqual([200, 200, 200, 200, 200]);
+      const run = await runOnServer();
+      expect(run.name).toBe(title);
+      expect(run.notes).toBe(notes);
+      const edit = await editOnServer();
+      expect(edit.perceivedExertion).toBe(6);
+      expect(edit.useRatingForEffort).toBe(true);
+      expect(edit.runType).toBe('WORKOUT');
+      // One request's whole set, never a mix of the two and never the same word twice.
+      expect([...edit.tags].map((tag: string) => tag.toLowerCase()).sort()).toEqual(
+        edit.tags.includes('track') ? [`shared ${round}`, 'track'].sort() : [`shared ${round}`, 'hills'].sort(),
+      );
+    }
+  });
 });

@@ -735,7 +735,11 @@ with everything a runner can say about a run in one place:
 - **Shoes**, through the shoe route the gear card uses.
 
 Nothing is saved until **Save changes**. One `PATCH` holds only the fields that changed (a title Strava gave the run is not sent
-back as if the runner had chosen it), the shoe has its own request, and a refused request changes nothing. If the fields are saved
+back as if the runner had chosen it), the shoe has its own request, and a refused request changes nothing. The server applies the
+request as one unit (`ActivityEditService`): it takes the run's row first and holds it until the edit has committed, so a request
+that fails part-way (the title, the rating and the tags are written together) changes nothing, and two requests for one run take
+turns, each changing only the fields it names on the run as it is by then, not on the copy it read earlier. The effort score and
+the cached records list are brought up to date after the commit, from the saved run. If the fields are saved
 and the shoe is not, the panel says so and keeps the shoe as the one thing left to do. Leaving with something unsaved (Cancel, the
 close button, Escape or a click outside) asks first. The panel reads the run afresh each time it opens, so a change made in
 another tab is not overwritten by an old draft; the Type and tags card, the Effort card and the run summary on the page follow a
@@ -747,7 +751,8 @@ HermesRuns run is private to its runner. HermesRuns analyses runs only, and draw
 
 **Known limits.** There is no history of earlier titles or notes, and no way back to the title a run came with (Strava's title
 returns only for runs the runner has not renamed). Two panels open on one run at once save field by field, so the last save of a
-field wins, but a field one of them did not touch is never overwritten by it.
+field wins, but a field one of them did not touch is never overwritten by it (two saves at the same moment are applied one after the
+other, and the tags one of them sets never collide with the other's).
 
 ## Run Summary
 

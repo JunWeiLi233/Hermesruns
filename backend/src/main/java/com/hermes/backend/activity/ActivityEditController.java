@@ -1,16 +1,12 @@
 package com.hermes.backend.activity;
 
 import com.hermes.backend.auth.AuthService;
-import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import com.hermes.backend.runner.Runner;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,17 +33,14 @@ public class ActivityEditController {
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
     private final RunLabelService labelService;
-    private final ApplicationEventPublisher events;
-    private final TtlCacheStore cacheStore;
+    private final ActivityEditService editService;
 
     public ActivityEditController(AuthService authService, ActivityDataAccess activityDataAccess,
-                                  RunLabelService labelService, ApplicationEventPublisher events,
-                                  TtlCacheStore cacheStore) {
+                                  RunLabelService labelService, ActivityEditService editService) {
         this.authService = authService;
         this.activityDataAccess = activityDataAccess;
         this.labelService = labelService;
-        this.events = events;
-        this.cacheStore = cacheStore;
+        this.editService = editService;
     }
 
     /**
@@ -58,7 +51,8 @@ public class ActivityEditController {
      * {@code runType} (race, long run, workout or null) and {@code tags} (the whole list the run should have, up to six, or
      * null for none). Every value is checked before any is saved, so a refused request changes nothing. A field that cannot be
      * edited is refused instead of ignored, so a typo does not look like a save. The answer holds the fields the request
-     * named, as they are now. Returns 404 for a run that is not the caller's, without saying whether it exists.
+     * named, as they are now. Returns 404 for a run that is not the caller's, without saying whether it exists. The edit is
+     * made by {@link ActivityEditService}, all of it or none of it.
      */
     @PatchMapping("/{id}")
     public ResponseEntity<?> editActivity(
@@ -82,8 +76,7 @@ public class ActivityEditController {
             }
         }
 
-        // Check everything first, so that a request with one bad value saves none of its good ones.
-        Activity activity = found.get();
+        // Check everything that can be checked on its own first, so that a request with one bad value saves none of its good ones.
         Integer rating = null;
         boolean ratingGiven = body.containsKey(ActivityEditedEvent.PERCEIVED_EXERTION);
         if (ratingGiven) {
@@ -98,20 +91,12 @@ public class ActivityEditController {
             }
         }
         boolean useGiven = body.containsKey(ActivityEditedEvent.USE_RATING_FOR_EFFORT);
-        boolean useRating = activity.isUseRatingForEffort();
+        boolean useRating = false;
         if (useGiven) {
             if (!(body.get(ActivityEditedEvent.USE_RATING_FOR_EFFORT) instanceof Boolean flag)) {
                 return error(HttpStatus.BAD_REQUEST, "INVALID_USE_RATING_FOR_EFFORT", "Use the rating for effort is true or false.");
             }
             useRating = flag;
-        }
-        Integer ratingAfter = ratingGiven ? rating : activity.getPerceivedExertion();
-        if (useGiven && useRating && ratingAfter == null) {
-            return error(HttpStatus.BAD_REQUEST, "RATING_REQUIRED", "Rate how the run felt before asking for the rating to be used.");
-        }
-        if (ratingAfter == null) {
-            // Without a rating there is nothing to use: clearing the rating clears the choice with it.
-            useRating = false;
         }
         boolean nameGiven = body.containsKey(ActivityEditedEvent.NAME);
         String name = null;
@@ -157,47 +142,20 @@ public class ActivityEditController {
             }
         }
 
-        Set<String> changed = new LinkedHashSet<>();
-        if (ratingGiven && !Objects.equals(activity.getPerceivedExertion(), rating)) {
-            activity.setPerceivedExertion(rating);
-            changed.add(ActivityEditedEvent.PERCEIVED_EXERTION);
-        }
-        if (useRating != activity.isUseRatingForEffort()) {
-            activity.setUseRatingForEffort(useRating);
-            changed.add(ActivityEditedEvent.USE_RATING_FOR_EFFORT);
-        }
-        if (nameGiven && !Objects.equals(name, activity.getName())) {
-            activity.setName(name);
-            // A title of the runner's own: a Strava re-sync leaves it alone from now on.
-            activity.setNameEdited(true);
-            changed.add(ActivityEditedEvent.NAME);
-        }
-        if (notesGiven && !Objects.equals(notes, activity.getNotes())) {
-            activity.setNotes(notes);
-            changed.add(ActivityEditedEvent.NOTES);
-        }
-        if (!changed.isEmpty()) {
-            activityDataAccess.save(activity);
-        }
-        RunLabelService.Labels labels = null;
-        if (runTypeGiven || tagsGiven) {
-            RunLabelService.Applied applied = labelService.apply(runner.get(), activity,
-                    new RunLabelService.Change(runTypeGiven, runType, tagsGiven, tags), tags);
-            labels = applied.labels();
-            if (applied.runTypeChanged()) {
-                changed.add(ActivityEditedEvent.RUN_TYPE);
+        ActivityEditService.Outcome outcome;
+        try {
+            Optional<ActivityEditService.Outcome> made = editService.apply(runner.get(), id, new ActivityEditService.Request(
+                    ratingGiven, rating, useGiven, useRating, nameGiven, name, notesGiven, notes, runTypeGiven, runType, tagsGiven, tags));
+            if (made.isEmpty()) {
+                return error(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
             }
-            if (applied.tagsChanged()) {
-                changed.add(ActivityEditedEvent.TAGS);
-            }
+            outcome = made.get();
+        } catch (ActivityEditService.Refused refused) {
+            return error(HttpStatus.BAD_REQUEST, refused.code(), refused.getMessage());
         }
-        if (changed.contains(ActivityEditedEvent.NAME)) {
-            // The records list shows the names of the runs that hold them.
-            ActivityCaches.evictPersonalRecords(cacheStore, runner.get().getId());
-        }
-        if (!changed.isEmpty()) {
-            events.publishEvent(new ActivityEditedEvent(runner.get().getId(), id, changed));
-        }
+        Activity activity = outcome.activity();
+        Set<String> changed = outcome.changed();
+        RunLabelService.Labels labels = outcome.labels();
 
         Map<String, Object> saved = new LinkedHashMap<>();
         saved.put("id", id);
