@@ -11,7 +11,7 @@
   --tl-accent: #a0392a;
   --tl-accent-soft: rgba(160, 57, 42, 0.09);
   --tl-on-accent: #fff;
-  --tl-good: #248a3d;
+  --tl-good: #1e7a35;
   --tl-error: #c4261a;
   display: flex;
   flex-direction: column;

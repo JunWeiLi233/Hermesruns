@@ -8,6 +8,7 @@ import TopbarUserMenu from '../../components/TopbarUserMenu';
 import ShoeBrandLogo from '../../components/ShoeBrandLogo';
 import shoeCatalog from '../../data/shoeCatalog';
 import { useAuth } from '../../contexts/AuthContext';
+import useProfileIdentity from '../../hooks/useProfileIdentity';
 import { useI18n } from '../../contexts/I18nContext';
 import { mergeShoeCatalog } from '../../utils/addShoeCatalog.js';
 import { preloadRoute } from '../../utils/routePreload';
@@ -57,6 +58,7 @@ export default function ShoeCatalog() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
+  const { initials } = useProfileIdentity('HermesRuns');
 
   const [catalog, setCatalog] = useState(shoeCatalog);
   const [searchQuery, setSearchQuery] = useState('');
@@ -256,7 +258,7 @@ export default function ShoeCatalog() {
             <button type="button" className="runner-shell-topbar-link" onClick={() => navigate('/shoes/add')}>
               {t('shoes.add_page_title')}
             </button>
-            <TopbarUserMenu initials="H" label={t('components.account_menu.title')} showProfile />
+            <TopbarUserMenu initials={initials} label={t('components.account_menu.title')} showProfile />
           </div>
         </header>
 

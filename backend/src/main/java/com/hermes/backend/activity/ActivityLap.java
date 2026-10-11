@@ -4,6 +4,8 @@ package com.hermes.backend.activity;
  * Response DTO for a single per-km lap breakdown, including elevation gain.
  * Laps are computed on-the-fly from per-second sample points; this class is
  * NOT a JPA entity — no schema change is required.
+ *
+ * <p>{@code partial} is true for the stretch after the last whole kilometre, whose {@code distanceKm} is what is left.</p>
  */
 public record ActivityLap(
         int lapIndex,
@@ -12,7 +14,8 @@ public record ActivityLap(
         String pace,
         Integer averageHeartRate,
         Integer averageCadence,
-        Double elevationGainMeters
+        Double elevationGainMeters,
+        boolean partial
 ) {
 
     /** Compute the sum of positive elevation differences within a sample window. */

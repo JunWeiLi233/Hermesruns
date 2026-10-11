@@ -13,7 +13,7 @@ body #root .today-run-session-page .runner-shell-canvas.today-run-command-canvas
   --tr-card: #fff;
   --tr-ink: #1c1917;
   --tr-muted: #625c56;
-  --tr-faint: #8a837c;
+  --tr-faint: #766d64;
   --tr-line: rgba(28, 25, 23, 0.08);
   --tr-fill: rgba(28, 25, 23, 0.04);
   --tr-accent: #a0392a;
@@ -278,7 +278,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .today-run-session-page .tr
 #root .today-run-session-page .tr-v2-metric > p:first-of-type { margin-top: auto; padding-top: 18px; }
 #root .today-run-session-page .tr-v2-metric > p strong { color: var(--tr-ink); }
 #root .today-run-session-page .tr-v2-trend { font-size: 0.8rem; font-weight: 700; color: var(--tr-muted); }
-#root .today-run-session-page .tr-v2-trend.is-improving { color: #248a3d; }
+#root .today-run-session-page .tr-v2-trend.is-improving { color: #1e7a35; }
 #root .today-run-session-page .tr-v2-trend.is-declining { color: #d70015; }
 #root .today-run-session-page .tr-v2-acwr-scale { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #ffd38a 0 27%, #9cd2aa 27% 73%, #ff9b87 73% 100%); }
 #root .today-run-session-page .tr-v2-acwr-scale i { position: absolute; top: -4px; width: 3px; height: 16px; border-radius: 2px; background: var(--tr-ink); transform: translateX(-50%); }

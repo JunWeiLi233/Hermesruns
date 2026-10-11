@@ -1,5 +1,6 @@
 package com.hermes.backend.races;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hermes.backend.runner.Runner;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,6 +29,8 @@ public class GeneratedRaceGpxAsset {
     @Column(nullable = false, unique = true, length = 128)
     private String raceId;
 
+    /** Lazy, so not part of any JSON: an asset that outlives the transaction that loaded it holds a proxy nothing can read. */
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "runner_id")
     private Runner runner;

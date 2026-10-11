@@ -44,7 +44,7 @@ npm --prefix e2e run stack:stop
 | `fixtures/history.ts` | a throwaway runner with weeks of running behind it (`sharedHistoryRunner`, kept in `.auth/history-<label>.json` for the day and the stack, so a retry or the phone project does not import the same weeks again) |
 | `fixtures/pages.ts` | `pageOpener()`: pages for a runner you hold a token for, in the project's locale and time zone, closed again after the test |
 | `fixtures/format.ts` | how the app writes numbers and days, so a test can build the text it should see |
-| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02 (the older Load balance), `31` fitness, fatigue and form and the weekly effort range (M4), `32` the training log (M5, M5b), `33` the type and tags of a run (M5), `34` the run summary (M7), `40` F04, `45` F03 goals (M6), `50` F05, `60` import, `70` new runner and odd addresses, `80` the analysis screens under bad conditions (slow, failing, keyboard, back, refresh), `90` data rights, `99` Strava |
+| `specs/` | one file per flow, run in file-name order: `10` auth, `20` to `22` F01, `30` F02 (the older Load balance), `31` fitness, fatigue and form and the weekly effort range (M4), `32` the training log (M5, M5b), `33` the type and tags of a run (M5), `34` the run summary (M7), `35` the Progression card's comparison with the period before (M8), `36` the edit panel of a run (M8), `40` F04, `41` pace zones from a race (M8), `45` F03 goals (M6, and the suggested goals of M8), `50` F05, `60` import, `70` new runner and odd addresses, `80` the analysis screens under bad conditions (slow, failing, keyboard, back, refresh), `90` data rights, `99` Strava |
 
 Tests for a known open defect are written as `test.fail(true, 'BUG-nnn ...')`: the suite stays green, and the test fails the day the
 defect is fixed, which is the cue to remove the line. `replica/bugs.md` lists every defect, open and fixed.
@@ -55,9 +55,11 @@ API client also tries such a connection again, up to five times, before it gives
 
 ## Things the suite has to know about the app
 
-* Rate limits and the sign-in lock are keyed on the first `X-Forwarded-For` value, which any client can set (BUG-001). Every browser
-  context and API client here sends an address of its own so tests do not use up each other's allowance. If the app stops trusting
-  that header, run the stack behind a proxy that sets it, or restart the stack between runs.
+* Rate limits and the sign-in lock are keyed on the client address: the connection's own, or, from a trusted proxy, the right-hand
+  end of `X-Forwarded-For` (`docs/deployment/client-address.md`, BUG-001). The throwaway stack trusts the connections from this
+  machine, as it would a proxy in front of the app, so every browser context and API client here sends an address of its own and
+  tests do not use up each other's allowance. The tests that must see the connection's own address (X01-N7 and N8) start a second
+  stack on port 18082 that trusts no proxy (`fixtures/stack.ts`, `APP_TRUSTED_PROXIES=none`).
 * A second sign-in as the same runner ends the first session. Specs never sign in again as a runner a browser is using.
 * Sign-ups are limited to eight an hour per address (same note). Runners B and C are made once and kept in `.auth/accounts.json`.
 * Analysis runs in the background after an import; specs wait for it (`eventually`, `expect.poll`) instead of sleeping.

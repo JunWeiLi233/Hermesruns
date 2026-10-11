@@ -77,6 +77,21 @@ beforeEach(() => {
 });
 afterEach(() => cleanup());
 
+describe('after the run was edited elsewhere', () => {
+  it('asks again when told to, and shows what the edit changed', async () => {
+    const view = renderCard();
+    await ready();
+    expect(labelCalls()).toHaveLength(1);
+
+    served = labels({ runType: 'WORKOUT', tags: ['track'] });
+    view.rerender(<MemoryRouter><RunLabelsCard runId={7} refreshToken={1} /></MemoryRouter>);
+    await waitFor(() => expect(labelCalls()).toHaveLength(2));
+    // The old labels stay on screen until the new ones arrive, so wait for the change rather than for the radio button.
+    await waitFor(() => expect(screen.getByRole('radio', { name: t('run_labels.type_WORKOUT') })).toBeChecked());
+    expect(await screen.findByRole('list', { name: t('run_labels.tags_label') })).toHaveTextContent('track');
+  });
+});
+
 describe('loading and failing', () => {
   it('is a region named after its title, busy with a skeleton until the labels are there', async () => {
     const { container } = renderCard();

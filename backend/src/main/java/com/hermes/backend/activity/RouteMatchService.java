@@ -116,7 +116,7 @@ public class RouteMatchService {
                 continue;
             }
             LocalDate day = ActivityLocalDates.of(member, runner);
-            runs.add(new MatchRun(member.getId(), member.getName(), member.getStartTime(), day, day.getYear(), meters, moving,
+            runs.add(new MatchRun(member.getId(), member.getName(), ActivityLocalDates.startTimeOf(member, ActivityLocalDates.zoneOf(runner)), day, day.getYear(), meters, moving,
                     Math.round(moving / (meters / 1000.0) * 10.0) / 10.0, member.getId().equals(activityId), false));
         }
         if (runs.size() < 2) {

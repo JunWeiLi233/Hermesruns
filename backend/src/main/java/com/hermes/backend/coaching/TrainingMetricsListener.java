@@ -6,7 +6,6 @@ import com.hermes.backend.activity.ActivityPointsStoredEvent;
 import com.hermes.backend.runner.RunnerZonesChangedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -48,12 +47,13 @@ class TrainingMetricsListener {
     }
 
     /**
-     * Runs on the editing request itself, so the runner's next read of the run already shows the new
-     * score. The edit has been saved by then.
+     * Runs on the editing request itself, right after the edit commits, so the runner's next read of the run already shows
+     * the new score and the score is worked out from the saved run.
      */
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     void onActivityEdited(ActivityEditedEvent event) {
-        if (event.fields().contains(ActivityEditedEvent.PERCEIVED_EXERTION)) {
+        if (event.fields().contains(ActivityEditedEvent.PERCEIVED_EXERTION)
+                || event.fields().contains(ActivityEditedEvent.USE_RATING_FOR_EFFORT)) {
             compute(event.runnerId(), event.activityId());
         }
     }

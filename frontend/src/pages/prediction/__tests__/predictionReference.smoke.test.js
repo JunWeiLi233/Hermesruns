@@ -24,7 +24,7 @@ assert.match(page, /predictRaceTimeCalibrated\(adjustedVdot, distance\.meters, r
   'The weather-adjusted forecast must preserve correction of calibration anchors.');
 assert.match(selection, /adjustedVdot - input\.representativeVdot > 0\.05/,
   'The existing meaningful-weather-correction guard must stay in place.');
-assert.match(page, /const hasWeatherTrend = trendPredictions\.some\(/,
+assert.match(page, /const hasWeatherTrend = visibleTrend\.some\(/,
   'The chart must avoid an overlapping duplicate weather series.');
 assert.match(page, /<Line data=\{chartData\} options=\{chartOptions\}/, 'The existing live trend chart must stay connected.');
 

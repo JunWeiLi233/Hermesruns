@@ -42,7 +42,7 @@ assert.doesNotMatch(card, /<label\b/, 'The summary card must not use a label: th
 
 // The run page mounts it once, for the run on screen, after the overview, holding it back until the stream has been asked for.
 assert.equal((detail.match(/<RunSummaryCard\b/g) ?? []).length, 1, 'RunDetail should mount the summary card once.');
-assert.match(detail, /<RunSummaryCard key=\{`summary-\$\{run\.id\}`\} runId=\{run\.id\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh\} \/>/);
+assert.match(detail, /<RunSummaryCard key=\{`summary-\$\{run\.id\}`\} runId=\{run\.id\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh \+ editVersion\} \/>/);
 assert.ok(detail.indexOf('<RunSummaryCard') > detail.indexOf('id="run-detail-overview"'), 'The summary comes after the overview.');
 assert.ok(detail.indexOf('<RunSummaryCard') < detail.indexOf('id="run-detail-coach"'), 'The summary comes before the coach card.');
 assert.doesNotMatch(detail, /\/summary/, 'RunDetail must not fetch the summary itself; the card does.');

@@ -51,6 +51,7 @@ class AccountExportIntegrationTests {
     @Autowired private BestEffortService bestEfforts;
     @Autowired private RunLabelService labels;
     @Autowired private GoalRepository goalRows;
+    @Autowired private RunnerPaceZoneRaceRepository paceRaceRows;
 
     private Runner runner() {
         Runner runner = new Runner("export-" + UUID.randomUUID() + "@hermes.test", "active");
@@ -209,13 +210,40 @@ class AccountExportIntegrationTests {
 
         String csv = files.get("runs.csv");
         assertThat(csv).startsWith("id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
-                + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
+                + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags,"
+                + "perceived_exertion,use_rating_for_effort,notes\n");
         List<String> lines = csv.lines().toList();
         assertThat(lines.stream().filter(line -> line.startsWith(race.getId() + ",")).findFirst().orElseThrow())
-                .endsWith(",RACE,'=1+1; 10k; PR");
-        assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,");
+                .endsWith(",RACE,'=1+1; 10k; PR,,false,");
+        assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,,,false,");
         assertThat(csv).doesNotContain("secret plan").doesNotContain("WORKOUT");
         assertThat(files.get("README.txt")).contains("run_type").contains("tags");
+    }
+
+    @Test
+    void exportsTheNotesTheRatingAndTheChoiceToUseItOfEachRunAndNeverSomeoneElses() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        Activity mine = run(owner, "Windy day", ImportProvider.GARMIN, false);
+        mine.setPerceivedExertion(7);
+        mine.setUseRatingForEffort(true);
+        mine.setNotes("Windy, \"cold\" hands.\nSecond line, with a comma.");
+        activities.saveAndFlush(mine);
+        Activity formula = run(owner, "Formula notes", ImportProvider.GARMIN, false);
+        formula.setNotes("=HYPERLINK(\"http://example.invalid\")");
+        activities.saveAndFlush(formula);
+        Activity theirs = run(stranger, "theirs", ImportProvider.GARMIN, false);
+        theirs.setPerceivedExertion(3);
+        theirs.setNotes("their private thoughts");
+        activities.saveAndFlush(theirs);
+
+        Map<String, String> files = export(owner, false);
+
+        String csv = files.get("runs.csv");
+        assertThat(csv).contains(",7,true,\"Windy, \"\"cold\"\" hands.\nSecond line, with a comma.\"\n");
+        assertThat(csv).as("a formula in the notes is made harmless like one in a title").contains(",false,\"'=HYPERLINK(");
+        assertThat(csv).doesNotContain("their private thoughts");
+        assertThat(files.get("README.txt")).contains("perceived_exertion").contains("use_rating_for_effort").contains("notes");
     }
 
     @Test
@@ -232,8 +260,37 @@ class AccountExportIntegrationTests {
         assertThat(csv).startsWith("period,metric,target,unit,created_at,updated_at\n");
         assertThat(csv.lines().skip(1).toList()).hasSize(2);
         assertThat(csv).contains("WEEK,DISTANCE,42.2,km,").contains("YEAR,TIME,360000.0,s,");
-        assertThat(csv).doesNotContain("COUNT").doesNotContain("99");
+        // The stranger's goal is a MONTH of COUNT: a number such as 99 would do for a target but also turns up in a timestamp.
+        assertThat(csv).doesNotContain("COUNT").doesNotContain("MONTH");
         assertThat(files.get("README.txt")).contains("goals.csv");
+    }
+
+    @Test
+    void exportsTheRaceThePaceZonesWereCutFromAndNobodyElses() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        RunnerPaceZoneRace race = new RunnerPaceZoneRace(owner);
+        race.set(10000, 2700, LocalDate.of(2026, 9, 20));
+        paceRaceRows.saveAndFlush(race);
+        RunnerPaceZoneRace theirs = new RunnerPaceZoneRace(stranger);
+        theirs.set(5000, 1111, LocalDate.of(2026, 8, 1));
+        paceRaceRows.saveAndFlush(theirs);
+
+        Map<String, String> files = export(owner, false);
+
+        String csv = files.get("pace-zone-race.csv");
+        assertThat(csv).startsWith("distance_m,time_s,race_date,updated_at\n");
+        assertThat(csv.lines().skip(1).toList()).hasSize(1);
+        assertThat(csv).contains("10000.0,2700,2026-09-20,");
+        assertThat(csv).doesNotContain("1111").doesNotContain("2026-08-01");
+        assertThat(files.get("README.txt")).contains("pace-zone-race.csv");
+    }
+
+    @Test
+    void aRunnerWhoEnteredNoRaceGetsTheHeaderAlone() throws IOException {
+        Map<String, String> files = export(runner(), false);
+
+        assertThat(files.get("pace-zone-race.csv")).isEqualTo("distance_m,time_s,race_date,updated_at\n");
     }
 
     @Test

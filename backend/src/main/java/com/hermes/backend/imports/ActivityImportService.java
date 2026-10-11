@@ -7,6 +7,7 @@ import com.hermes.backend.activity.ActivityPoint;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.ElevationAscent;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.weather.AcclimatizationService;
@@ -173,6 +174,18 @@ public class ActivityImportService {
         return importWorkoutBytes(runner, provider, workoutName, gunzipWithLimits(gzipBytes, MAX_ZIP_ENTRY_BYTES));
     }
 
+    /** The climb of a file's track in metres, or null when its points carry no elevation. */
+    private static Double climbOf(List<ParsedTrackPoint> points) {
+        if (points == null || points.isEmpty()) {
+            return null;
+        }
+        List<Double> elevations = new ArrayList<>(points.size());
+        for (ParsedTrackPoint point : points) {
+            elevations.add(point.elevationMeters());
+        }
+        return ElevationAscent.of(elevations);
+    }
+
     private static boolean isGzipName(String fileName) {
         return fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(GZIP_SUFFIX);
     }
@@ -274,6 +287,9 @@ public class ActivityImportService {
         }
         activity.setAverageHeartRate(averageHeartRate);
         activity.setMaxHeartRate(maxHeartRate);
+        // A file carries the elevation of every point, not the climb; every other source brings one. Without elevation in
+        // the file there is no figure, which is not the same as no climb.
+        activity.setTotalElevationGain(climbOf(parsedActivity.points()));
 
         // Weather adjustment
         try {

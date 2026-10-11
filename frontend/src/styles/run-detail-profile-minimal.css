@@ -5,7 +5,7 @@
   --run-detail-card-raised: #ffffff;
   --run-detail-card-soft: rgba(28, 25, 23, 0.035);
   --run-detail-ink: #1c1917;
-  --run-detail-muted: #78716c;
+  --run-detail-muted: #6f6862;
   --run-detail-faint: #a8a29e;
   --run-detail-accent: var(--brand-accent, #a0392a);
   --run-detail-accent-soft: rgba(160, 57, 42, 0.09);
@@ -31,7 +31,7 @@ body:is(.theme-midnight, .theme-high-contrast) .run-detail-profile-minimal {
   --run-detail-card-soft: rgba(255, 255, 255, 0.035);
   --run-detail-ink: #ece5dd;
   --run-detail-muted: #a8a29e;
-  --run-detail-faint: #78716c;
+  --run-detail-faint: #6f6862;
   --run-detail-accent: #f07561;
   --run-detail-accent-soft: rgba(240, 117, 97, 0.12);
   --run-detail-dark: #1e1a16;

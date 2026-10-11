@@ -7,6 +7,7 @@ import com.hermes.backend.runner.HeartRateZones;
  *
  * <p>In order of preference, and recorded as the score's source so the number can be explained:</p>
  * <ol>
+ *   <li>{@link #PERCEIVED} first of all when the runner asked for it (a strap that misread, say) and has rated the run.</li>
  *   <li>{@link #HR_ZONES}: the heart-rate stream, as weighted minutes in zones (see {@link HrZoneAnalysis}).
  *       Used when the samples cover at least half of the moving time; the score is scaled up to the whole run.</li>
  *   <li>{@link #PERCEIVED}: the runner's own 1 to 10 rating. Minutes times a weight that runs from 1 (rating 1)
@@ -45,13 +46,14 @@ final class EffortModel {
      * @param movingSeconds      moving time, or zero when unknown
      * @param distanceKm         distance, or zero when unknown
      * @param perceivedExertion  the runner's 1 to 10 rating, or null
+     * @param preferRating       the runner wants the rating used even though a heart rate is there
      * @param averageHeartRate   the run's average heart rate, or null
      * @param hr                 the heart-rate stream analysis; {@link HrZoneAnalysis.Result#empty()} when there is none
      * @param zones              the zones in force
      * @param calibrationScale   the factor that puts the pace model on the heart-rate scale, or null
      */
-    record Input(double movingSeconds, double distanceKm, Integer perceivedExertion, Double averageHeartRate,
-                 HrZoneAnalysis.Result hr, HeartRateZones zones, Double calibrationScale) {
+    record Input(double movingSeconds, double distanceKm, Integer perceivedExertion, boolean preferRating,
+                 Double averageHeartRate, HrZoneAnalysis.Result hr, HeartRateZones zones, Double calibrationScale) {
     }
 
     /**
@@ -70,10 +72,11 @@ final class EffortModel {
                 : null;
 
         Double hrEffort = hrEffort(in);
-        if (hrEffort != null) {
+        boolean ratingUsable = validRating(in.perceivedExertion()) && movingMinutes > 0;
+        if (hrEffort != null && !(in.preferRating() && ratingUsable)) {
             return new Result(hrEffort, HR_ZONES, hrEffort, paceEffort);
         }
-        if (validRating(in.perceivedExertion()) && movingMinutes > 0) {
+        if (ratingUsable) {
             double score = round1(movingMinutes * ratingWeight(in.perceivedExertion()));
             return new Result(score, PERCEIVED, null, paceEffort);
         }

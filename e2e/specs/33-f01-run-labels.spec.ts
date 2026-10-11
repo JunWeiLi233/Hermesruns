@@ -43,6 +43,8 @@ const tagInput = (page: Page): Locator => card(page).getByRole('textbox', { name
 const addButton = (page: Page): Locator => card(page).getByRole('button', { name: 'Add tag', exact: true });
 const chips = (page: Page): Locator => card(page).getByRole('list', { name: 'Tags', exact: true }).getByRole('listitem');
 const announced = (page: Page, text: string): Locator => card(page).getByRole('status').filter({ hasText: text });
+/** The chips and the radio buttons change at once; the server has the change once the card is no longer busy saving it. */
+const settled = (page: Page): Promise<void> => expect(typeGroup(page)).not.toHaveAttribute('aria-busy', 'true');
 
 async function openRun(page: Page, run: HistoryRun): Promise<void> {
   await page.goto(`/runs/${run.id}`);
@@ -128,6 +130,8 @@ test.describe('F01 the tags of a run', () => {
     await expect(chips(page)).toHaveCount(2);
     await expect(card(page)).toContainText('2 of 6');
     await expect(card(page)).not.toContainText('No tags yet');
+    // The chip shows at once; the server has the tag once the card says it was added.
+    await expect(announced(page, 'Added the tag with the dog.')).toBeAttached();
     expect((await labelsOf(runs[first])).tags).toEqual(['hills and stairs', 'with the dog']);
 
     await page.reload();
@@ -151,6 +155,7 @@ test.describe('F01 the tags of a run', () => {
     await card(page).getByRole('button', { name: 'Remove tag rain' }).click();
     await expect(chips(page)).toHaveCount(0);
     await expect(card(page)).toContainText('No tags yet');
+    await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual([]);
   });
 
@@ -165,6 +170,7 @@ test.describe('F01 the tags of a run', () => {
     await expect(chips(page)).toHaveText(['hills×']);
     await expect(offered).toHaveText(['+ tempo', '+ rain']);
     await expect(card(page)).toBeFocused();
+    await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual(['hills']);
     // The tags of the other runs are untouched.
     expect((await labelsOf(runs[second])).tags).toEqual(['tempo', 'hills']);
@@ -237,6 +243,7 @@ test.describe('F01 what a tag may be', () => {
     await typeTag(page, 'seven');
     await expect(problem).toHaveText('A run can have 6 tags. Remove one to add another.');
     await expect(chips(page)).toHaveCount(6);
+    await settled(page);
     const stored = (await labelsOf(runs[first])).tags;
     expect(stored).toHaveLength(6);
     expect(stored).not.toContain('seven');
@@ -255,6 +262,7 @@ test.describe('F01 what a tag may be', () => {
     await expect(chips(page).nth(0)).toContainText('café ☕');
     await expect(chips(page).nth(2)).toContainText('<svg onload=alert(1)>');
     await expect(card(page).locator('li svg')).toHaveCount(0);
+    await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual(['café ☕', '长距离', '<svg onload=alert(1)>', "o'clock", '100%']);
     await page.reload();
     await expect(typeGroup(page)).toBeVisible();
@@ -280,6 +288,7 @@ test.describe('F01 what a tag may be', () => {
     await tagInput(page).press('Enter');
     await expect(chips(page)).toHaveCount(2);
     expect(patches).toHaveLength(2);
+    await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual(['hills', 'tempo']);
   });
 
@@ -316,8 +325,8 @@ test.describe('F01 labels under bad conditions', () => {
     await expect(card(page).getByRole('alert')).toHaveText('That could not be saved, so nothing was changed. Try again.');
     await expect(chips(page)).toHaveText(['kept×']);
     expect((await labelsOf(runs[first])).tags).toEqual(['kept']);
-    // The type too.
-    await typeGroup(page).getByRole('radio', { name: 'Race', exact: true }).check();
+    // The type too. A click, not check(): the failed save puts the choice back so quickly that check() sees no change and gives up.
+    await typeGroup(page).getByRole('radio', { name: 'Race', exact: true }).click();
     await expect(card(page).getByRole('alert')).toHaveText('That could not be saved, so nothing was changed. Try again.');
     await expect(typeGroup(page).getByRole('radio', { name: 'Just a run' })).toBeChecked();
     expect((await labelsOf(runs[first])).runType).toBeNull();
@@ -325,6 +334,7 @@ test.describe('F01 labels under bad conditions', () => {
     await typeTag(page, 'lost');
     await expect(chips(page)).toHaveText(['kept×', 'lost×']);
     await expect(card(page).getByRole('alert')).toHaveCount(0);
+    await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual(['kept', 'lost']);
   });
 

@@ -45,6 +45,13 @@ public class GoalService {
                                 List<String> metrics, Map<String, Double> maxTarget) {
     }
 
+    /**
+     * @param enough true when there is enough recent running to suggest anything; false tells the card to say it needs a few weeks
+     *               of running first, which is not the same as having every suggested goal already
+     */
+    public record SuggestionsResponse(LocalDate today, String timeZone, boolean enough, List<GoalSuggestions.Suggestion> suggestions) {
+    }
+
     /** A goal for that period and metric already exists. */
     public static class GoalConflictException extends RuntimeException {
         GoalConflictException(String message) {
@@ -81,6 +88,37 @@ public class GoalService {
     @Transactional(readOnly = true)
     public GoalsResponse list(Runner runner, Long runId) {
         return respond(runner, runId);
+    }
+
+    /** Goals worth setting, from the runner's last weeks of running; see {@link GoalSuggestions}. */
+    @Transactional(readOnly = true)
+    public SuggestionsResponse suggest(Runner runner) {
+        ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        LocalDate today = LocalDate.now(clock.withZone(zone));
+        Set<String> existing = new LinkedHashSet<>();
+        for (Goal goal : goals.findByRunnerIdOrderByIdAsc(runner.getId())) {
+            existing.add(goal.getPeriod() + "/" + goal.getMetric());
+        }
+        LocalDate from = today.minusDays(GoalSuggestions.YEAR_DAYS + 7L);
+        // A day more at each end, as for the goals themselves.
+        List<TrainingLogRepository.LogRunRow> rows = runs.findRows(runner.getId(), ActivityType.RUN,
+                from.minusDays(1).atStartOfDay(), today.plusDays(2).atStartOfDay());
+        Map<LocalDate, double[]> byDay = new HashMap<>();
+        for (TrainingLogRepository.LogRunRow row : rows) {
+            LocalDate day = ActivityLocalDates.placed(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone);
+            if (day.isBefore(from) || day.isAfter(today)) {
+                continue;
+            }
+            double[] sum = byDay.computeIfAbsent(day, key -> new double[4]);
+            sum[0] += GoalMetrics.of(GoalMetrics.DISTANCE, row);
+            sum[1] += GoalMetrics.of(GoalMetrics.TIME, row);
+            sum[2] += 1;
+            sum[3] += GoalMetrics.of(GoalMetrics.ELEVATION, row);
+        }
+        List<GoalSuggestions.Day> days = new ArrayList<>();
+        byDay.forEach((day, sum) -> days.add(new GoalSuggestions.Day(day, sum[0], sum[1], (int) sum[2], sum[3])));
+        return new SuggestionsResponse(today, zone.getId(), GoalSuggestions.enoughRunning(days, today),
+                GoalSuggestions.suggest(days, today, existing));
     }
 
     /** @throws IllegalArgumentException when a value is refused; {@link GoalConflictException} when the goal exists already */

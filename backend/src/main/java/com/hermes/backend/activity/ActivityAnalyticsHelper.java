@@ -113,8 +113,28 @@ final class ActivityAnalyticsHelper {
                     (int) Math.round(endSec - startSec),
                     formatPace(endSec - startSec),
                     averageHrBetweenDistance(pts, startM, endM),
-                    averageCadenceBetweenDistance(pts, startM, endM)
+                    averageCadenceBetweenDistance(pts, startM, endM),
+                    false
             ));
+        }
+        // The stretch after the last whole kilometre is a split too, as the pace profile has it: a 7.99 km run has eight rows,
+        // not seven. A scrap shorter than the profile's minimum is left out, as it is there.
+        double rest = total - laps * 1000.0;
+        if (rest >= PaceProfileCalculator.MIN_PARTIAL_SPLIT_METERS) {
+            double startM = laps * 1000.0;
+            Double startSec = interpolateSecondsAtDistance(pts, startM);
+            Double endSec = interpolateSecondsAtDistance(pts, total);
+            if (startSec != null && endSec != null && endSec > startSec) {
+                out.add(new LapBreakdown(
+                        laps + 1,
+                        round2(rest / 1000.0),
+                        (int) Math.round(endSec - startSec),
+                        formatPace((endSec - startSec) / (rest / 1000.0)),
+                        averageHrBetweenDistance(pts, startM, total),
+                        averageCadenceBetweenDistance(pts, startM, total),
+                        true
+                ));
+            }
         }
         return out;
     }
@@ -310,7 +330,7 @@ final class ActivityAnalyticsHelper {
     }
 
     record Metrics(double avgHr, double paceSecPerKm) {}
-    record LapBreakdown(int lapIndex, double distanceKm, int durationSeconds, String pace, Integer averageHeartRate, Integer averageCadence) {}
+    record LapBreakdown(int lapIndex, double distanceKm, int durationSeconds, String pace, Integer averageHeartRate, Integer averageCadence, boolean partial) {}
     record ElevationSample(double distanceKm, double elevationMeters) {}
     record CardiacDrift(double driftPercent, double firstHalfAverageHeartRate, double secondHalfAverageHeartRate, String firstHalfPace, String secondHalfPace) {}
     record PostRunDebrief(String interpretation, Integer readinessScore, String nextDayGuidance) {}

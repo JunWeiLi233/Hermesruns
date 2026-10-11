@@ -67,7 +67,7 @@ assert.ok(spaController.includes('"/training-log"'), 'SpaForwardingController mu
 // The run page mounts the card once, for the run on screen, and the run page gained no request of its own for it.
 const runDetail = read('./pages/runs/RunDetail.jsx');
 assert.equal((runDetail.match(/<RunLabelsCard\b/g) ?? []).length, 1, 'RunDetail should mount the labels card once.');
-assert.match(runDetail, /<RunLabelsCard key=\{`labels-\$\{run\.id\}`\} runId=\{run\.id\} \/>/);
+assert.match(runDetail, /<RunLabelsCard key=\{`labels-\$\{run\.id\}`\} runId=\{run\.id\} refreshToken=\{editVersion\} \/>/);
 assert.doesNotMatch(runDetail, /\/labels/, 'RunDetail must not fetch the labels itself; the card does.');
 
 // The shared shell can be given a title and a parent without changing what Settings pages get.

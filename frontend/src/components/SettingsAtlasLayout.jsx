@@ -5,6 +5,7 @@ import RunActivityContributionGraph from './RunActivityContributionGraph';
 import SettingsDataCard from './SettingsDataCard';
 import SettingsPlanCard from './SettingsPlanCard';
 import SettingsTimeZoneRow from './SettingsTimeZoneRow';
+import SettingsPaceZones from './SettingsPaceZones';
 import SettingsTrainingZones from './SettingsTrainingZones';
 import { useRunSummariesEnabled } from '../utils/runSummaryPreference';
 
@@ -302,6 +303,7 @@ export default function SettingsAtlasLayout({
           <section id="st-v2-training" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'training'} aria-labelledby="st-v2-tab-training">
             <h2 id="st-v2-training-label" className="st-v2-group-label">{t('settings.training_zones_title')}</h2>
             <SettingsTrainingZones t={t} active={activeSection === 'training'} />
+            <SettingsPaceZones t={t} lang={lang} unit={unit} active={activeSection === 'training'} />
           </section>
 
           <section id="st-v2-connections" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'connections'} aria-labelledby="st-v2-tab-connections">

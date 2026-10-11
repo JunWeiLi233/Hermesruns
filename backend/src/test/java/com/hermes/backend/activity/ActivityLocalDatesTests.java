@@ -79,4 +79,71 @@ class ActivityLocalDatesTests {
 
         assertThat(ActivityLocalDates.of(run, runnerIn("Australia/Sydney"))).isEqualTo(LocalDate.of(2026, 10, 5));
     }
+
+    // --- the time a screen prints (BUG-003) ---
+
+    @Test
+    void aFileRunIsShownAtTheClockOnTheRunnersWall() {
+        // 03:30 UTC on 8 October is 11:30 pm on 7 October in New York: the evening run is not shown as the next morning.
+        Activity evening = run(LocalDateTime.of(2026, 10, 8, 3, 30), false);
+
+        assertThat(ActivityLocalDates.startTimeOf(evening, ActivityLocalDates.zoneOf(runnerIn("America/New_York"))))
+                .isEqualTo(LocalDateTime.of(2026, 10, 7, 23, 30));
+        assertThat(ActivityLocalDates.startTimeOf(evening, ActivityLocalDates.zoneOf(runnerIn("Australia/Sydney"))))
+                .isEqualTo(LocalDateTime.of(2026, 10, 8, 14, 30));
+    }
+
+    @Test
+    void theTimeAgreesWithTheDayTheRunIsFiledUnder() {
+        Activity evening = run(LocalDateTime.of(2026, 10, 8, 3, 30), false);
+        Runner runner = runnerIn("America/New_York");
+
+        assertThat(ActivityLocalDates.startTimeOf(evening, ActivityLocalDates.zoneOf(runner)).toLocalDate())
+                .isEqualTo(ActivityLocalDates.of(evening, runner));
+    }
+
+    @Test
+    void aStravaApiRunKeepsItsClock() {
+        Activity stravaRun = run(LocalDateTime.of(2026, 10, 8, 3, 30), true);
+
+        assertThat(ActivityLocalDates.startTimeOf(stravaRun, ActivityLocalDates.zoneOf(runnerIn("America/New_York"))))
+                .isEqualTo(LocalDateTime.of(2026, 10, 8, 3, 30));
+    }
+
+    @Test
+    void withoutATimeZoneTheClockStaysAtUtc() {
+        Activity run = run(LocalDateTime.of(2026, 10, 8, 3, 30), false);
+
+        assertThat(ActivityLocalDates.startTimeOf(run, ActivityLocalDates.zoneOf(runnerIn(null)))).isEqualTo(LocalDateTime.of(2026, 10, 8, 3, 30));
+    }
+
+    @Test
+    void theClockFollowsDaylightSavingTimeByTheDateOfTheRun() {
+        // 07:30 UTC on 8 March 2026: New York changed to summer time at 02:00 that morning (07:00 UTC), so it is 03:30, not 02:30.
+        Activity springForward = run(LocalDateTime.of(2026, 3, 8, 7, 30), false);
+        Activity beforeIt = run(LocalDateTime.of(2026, 3, 8, 6, 30), false);
+
+        assertThat(ActivityLocalDates.startTimeOf(springForward, ActivityLocalDates.zoneOf(runnerIn("America/New_York"))))
+                .isEqualTo(LocalDateTime.of(2026, 3, 8, 3, 30));
+        assertThat(ActivityLocalDates.startTimeOf(beforeIt, ActivityLocalDates.zoneOf(runnerIn("America/New_York"))))
+                .isEqualTo(LocalDateTime.of(2026, 3, 8, 1, 30));
+    }
+
+    @Test
+    void aRunWithNoStartTimeHasNoClock() {
+        assertThat(ActivityLocalDates.startTimeOf(new Activity(), ActivityLocalDates.zoneOf(runnerIn("America/New_York")))).isNull();
+        assertThat(ActivityLocalDates.localStart(null, false, ActivityLocalDates.zoneOf(runnerIn("America/New_York")))).isNull();
+    }
+
+    @Test
+    void theStartDateTextMovesWithTheClockOfAFileRunAndIsKeptForAStravaRun() {
+        Activity file = run(LocalDateTime.of(2026, 10, 8, 3, 30), false);
+        file.setStartDate("2026-10-08T03:30");
+        Activity strava = run(LocalDateTime.of(2026, 10, 8, 3, 30), true);
+        strava.setStartDate("2026-10-08T03:30:00Z");
+        java.time.ZoneId newYork = ActivityLocalDates.zoneOf(runnerIn("America/New_York"));
+
+        assertThat(ActivityLocalDates.startDateOf(file, newYork)).isEqualTo("2026-10-07T23:30");
+        assertThat(ActivityLocalDates.startDateOf(strava, newYork)).isEqualTo("2026-10-08T03:30:00Z");
+    }
 }
