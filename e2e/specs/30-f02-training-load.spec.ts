@@ -1,6 +1,7 @@
 // F02 Check whether training is building or overreaching. Recon path: Progress -> weekly effort against a range -> Fitness and
-// Freshness. M4 (the fitness / fatigue / form chart and the weekly range) is not built; the closest thing HermesRuns has is
-// Analysis > Load balance (acute against chronic load, the load budget for the week ahead), which is what is tested here.
+// Freshness. This file tests the older half of Analysis > Load balance (acute against chronic load, the load budget for the week
+// ahead). The fitness / fatigue / form chart and the weekly effort range (M4) are in 31-f02-fitness-and-weekly-effort, and the
+// training log (M5, M5b) is in 32-f02-training-log.
 import type { Page } from '@playwright/test';
 import { Api, newRunner } from '../fixtures/api.ts';
 import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
@@ -216,12 +217,4 @@ test.describe('F02 whole page', () => {
     await expect(page.getByRole('region', { name: 'Race predictions' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
-});
-
-test.describe('F02 not built', () => {
-  // The recon asks for a fitness / fatigue / form chart with a weekly effort range (M4) and a training log with weekly rows (M5).
-  // They do not exist yet; these stay skipped until they do, so the case numbers are kept.
-  test.fixme('F02-H8 fitness, fatigue and form lines with toggles, race markers and a 7-day change (M4)', async () => {});
-  test.fixme('F02-H9 weekly effort against the three-week range: below, within or above (M4)', async () => {});
-  test.fixme('F02-H10 training log: weekly rows, one circle per run, calendar jump and filters (M5)', async () => {});
 });
