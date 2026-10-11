@@ -1,6 +1,11 @@
 # Memory Budget
 
-The default JVM retains its 640 MB peak heap capacity and 128 MB metaspace cap.
+The default JVM retains its 640 MB peak heap capacity and 192 MB metaspace cap.
+Do not lower the metaspace cap below what the app loads: on the production
+image (Temurin 25, these JAVA_OPTS) metaspace already uses about 112 MB right
+after startup and about 129 MB after browsing every runner page, so a 128 MB
+cap ends in `OutOfMemoryError: Metaspace` and, with ExitOnOutOfMemoryError, a
+process exit. The cap only bounds growth; unused metaspace is not committed.
 Serial GC targets 5-10% free space after collection, and ShrinkHeapInSteps is
 disabled so unused heap can be returned in one collection rather than several.
 This reduces retained memory after startup or traffic bursts; collection can

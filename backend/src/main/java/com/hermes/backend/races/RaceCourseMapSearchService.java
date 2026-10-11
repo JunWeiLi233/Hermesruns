@@ -1,6 +1,7 @@
 package com.hermes.backend.races;
 
 import com.hermes.backend.infrastructure.web.HtmlScanLimiter;
+import com.hermes.backend.infrastructure.web.HtmlTagScanner;
 import com.hermes.backend.infrastructure.web.SafeUrlExecutor;
 import com.hermes.backend.infrastructure.web.SafeUrlValidator;
 import com.hermes.backend.races.model.CourseMapCandidate;
@@ -13,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,19 +30,14 @@ import org.springframework.web.client.RestTemplate;
 public class RaceCourseMapSearchService {
     private static final int MAX_URL_LENGTH = 500;
     private static final Pattern MEDIA_URL_PATTERN = Pattern.compile("murl&quot;:&quot;([^&]+?)&quot;", Pattern.CASE_INSENSITIVE);
-    private static final Pattern META_IMAGE_PATTERN = Pattern.compile(
-            "<meta[^>]+(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"'][^>]+content=[\"']([^\"'#]+(?:\\?[^\"']*)?)[\"'][^>]*>|"
-                    + "<meta[^>]+content=[\"']([^\"'#]+(?:\\?[^\"']*)?)[\"'][^>]+(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"'][^>]*>",
+    // Attribute patterns run per tag (see HtmlTagScanner); "src=" also covers data-src / data-lazy-src.
+    private static final Pattern META_IMAGE_PROPERTY_PATTERN = Pattern.compile(
+            "(?:property|name)=[\"'](?:og:image|og:image:url|twitter:image|twitter:image:src)[\"']",
             Pattern.CASE_INSENSITIVE
     );
-    private static final Pattern IMG_PATTERN = Pattern.compile(
-            "<img[^>]+(?:src|data-src|data-lazy-src)=[\"']([^\"']+)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern HREF_PATTERN = Pattern.compile(
-            "<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
-    );
+    private static final Pattern META_CONTENT_PATTERN = Pattern.compile("content=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern IMG_SRC_PATTERN = Pattern.compile("src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern HREF_PATTERN = Pattern.compile("href=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
     private static final List<String> COURSE_HINTS = List.of(
             "course", "route", "map", "track", "parcours", "percorso", "strecke", "cours", "plan", "karte"
     );
@@ -130,26 +127,36 @@ public class RaceCourseMapSearchService {
     }
 
     private void collectMetaCandidates(Map<String, CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = META_IMAGE_PATTERN.matcher(HtmlScanLimiter.bounded(html));
-        while (matcher.find()) {
-            String raw = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+        for (String tag : HtmlTagScanner.startTags(html, Set.of("meta"))) {
+            if (!META_IMAGE_PROPERTY_PATTERN.matcher(tag).find()) continue;
+            String raw = HtmlTagScanner.lastAttribute(tag, META_CONTENT_PATTERN);
+            if (!isMetaImageContent(raw)) continue;
             addCandidate(candidates, raw, baseUri, "official-page:" + pageUrl, baseScore + scoreText(raw));
         }
     }
 
+    /** A meta image URL may only carry a fragment after its query string. */
+    private static boolean isMetaImageContent(String raw) {
+        if (raw == null || raw.isEmpty()) return false;
+        int hash = raw.indexOf('#');
+        if (hash < 0) return true;
+        int query = raw.indexOf('?', 1);
+        return query > 0 && query < hash;
+    }
+
     private void collectImageCandidates(Map<String, CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = IMG_PATTERN.matcher(HtmlScanLimiter.bounded(html));
-        while (matcher.find()) {
-            String raw = matcher.group(1);
-            int score = baseScore + scoreText(raw) + scoreText(matcher.group(0));
+        for (String tag : HtmlTagScanner.startTags(html, Set.of("img"))) {
+            String raw = HtmlTagScanner.lastAttribute(tag, IMG_SRC_PATTERN);
+            if (raw == null) continue;
+            int score = baseScore + scoreText(raw) + scoreText(tag);
             addCandidate(candidates, raw, baseUri, "official-page:" + pageUrl, score);
         }
     }
 
     private void collectLinkedImageCandidates(Map<String, CourseMapCandidate> candidates, String html, URI baseUri, String pageUrl, int baseScore) {
-        Matcher matcher = HREF_PATTERN.matcher(HtmlScanLimiter.bounded(html));
-        while (matcher.find()) {
-            String raw = matcher.group(1);
+        for (String tag : HtmlTagScanner.startTags(html, Set.of("a", "area"))) {
+            String raw = HtmlTagScanner.lastAttribute(tag, HREF_PATTERN);
+            if (raw == null) continue;
             int score = baseScore + scoreText(raw);
             addCandidate(candidates, raw, baseUri, "official-link:" + pageUrl, score);
         }

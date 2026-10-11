@@ -11,12 +11,13 @@ import com.hermes.backend.races.model.CourseMapCandidate;
 import com.hermes.backend.races.model.PromptRaceType;
 import com.hermes.backend.races.model.ResolvedCandidateAsset;
 import com.hermes.backend.routing.RoutePoint;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -1699,7 +1700,32 @@ public class RaceCourseMapService {
         if (!isPipelineFallbackEligible(source, directResult)) return null;
         if (marathonRouteExtractionService == null || marathonRouteGeoreferencingService == null) return null;
         if (!marathonRouteGeoreferencingService.isConfiguredForPipelineFallback()) return null;
-        String pipelineInput = buildInlinePipelineImageReference(asset);
+        Path pipelineImage;
+        try {
+            pipelineImage = imageService.writePipelineImageFile(asset.imageBytes());
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to stage the course-map image for route extraction.", ex);
+        }
+        try {
+            return runPipelineFallbackForUpload(pipelineImage.toString(), source, asset, raceName, city, country,
+                    latitude, longitude, distanceKm, directResult);
+        } finally {
+            imageService.deletePipelineImageFile(pipelineImage);
+        }
+    }
+
+    private RaceCourseMapResult runPipelineFallbackForUpload(
+            String pipelineInput,
+            String source,
+            ResolvedCandidateAsset asset,
+            String raceName,
+            String city,
+            String country,
+            Double latitude,
+            Double longitude,
+            Double distanceKm,
+            RaceCourseMapResult directResult
+    ) {
         scanWatcher.record("course_map.pipeline_fallback_started", "running", "Hermes started CV route extraction and anchor georeferencing fallback.");
         RoutePathExtractionResultDTO extractionResult = marathonRouteExtractionService.extractRoutePath(
                 pipelineInput,
@@ -2080,14 +2106,6 @@ public class RaceCourseMapService {
                 && marathonRouteExtractionService != null
                 && marathonRouteGeoreferencingService != null
                 && marathonRouteGeoreferencingService.isConfiguredForPipelineFallback();
-    }
-
-    private String buildInlinePipelineImageReference(ResolvedCandidateAsset asset) {
-        String mediaType = imageService.detectMediaTypeFromBytes(asset.imageBytes(), asset.imageUrl());
-        if (mediaType == null || mediaType.isBlank()) {
-            mediaType = "image/png";
-        }
-        return "data:" + mediaType + ";base64," + Base64.getEncoder().encodeToString(asset.imageBytes());
     }
 
     private List<RoutePoint> addRouteEndpointLabels(List<RoutePoint> routePoints) {

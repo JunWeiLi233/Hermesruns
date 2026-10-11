@@ -8,6 +8,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -136,6 +137,9 @@ public class RaceCourseMapImageService {
             Files.createDirectories(uploadDirectory);
             String mediaType = detectMediaTypeFromBytes(asset.imageBytes(), asset.imageUrl());
             String fileName = buildCourseMapFileName(raceId, asset.imageBytes(), mediaType);
+            if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+                throw new IllegalArgumentException("Invalid course-map upload filename.");
+            }
             Path target = uploadDirectory.resolve(fileName).normalize();
             if (!target.startsWith(uploadDirectory)) {
                 throw new IllegalArgumentException("Invalid course-map upload filename.");
@@ -157,6 +161,9 @@ public class RaceCourseMapImageService {
             Files.createDirectories(routeDirectory);
             String raceStem = sanitizeFileStem(raceId);
             String fileName = raceStem + SUCCESSFUL_ROUTE_FILE_SUFFIX;
+            if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+                throw new IllegalArgumentException("Invalid course-map route filename.");
+            }
             Path target = routeDirectory.resolve(fileName).normalize();
             if (!target.startsWith(routeDirectory)) {
                 throw new IllegalArgumentException("Invalid course-map route filename.");
@@ -291,6 +298,34 @@ public class RaceCourseMapImageService {
                     && bytes[8] == 'a' && bytes[9] == 'v' && bytes[10] == 'i' && bytes[11] == 'f') return "image/avif";
         }
         return detectMediaType(fallbackUrl);
+    }
+
+    /**
+     * Writes course-map image bytes to a fresh temp file for the CV / Qwen route
+     * pipeline, which reads images from disk. The pipeline only ever sees paths
+     * created here, never a caller-supplied path. Delete it with
+     * {@link #deletePipelineImageFile(Path)}.
+     */
+    public Path writePipelineImageFile(byte[] imageBytes) throws IOException {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("Course-map image is empty.");
+        }
+        Path file = Files.createTempFile("hermes-route-", extensionForMediaType(detectMediaTypeFromBytes(imageBytes, null)));
+        try {
+            Files.write(file, imageBytes);
+        } catch (IOException | RuntimeException ex) {
+            deletePipelineImageFile(file);
+            throw ex;
+        }
+        return file;
+    }
+
+    public void deletePipelineImageFile(Path file) {
+        if (file == null) return;
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException ignored) {
+        }
     }
 
     public boolean isCandidateImageLargeEnough(byte[] imageBytes) {
@@ -872,9 +907,25 @@ public class RaceCourseMapImageService {
 
     private String sanitizeFileStem(String raceId) {
         String stem = raceId == null ? "" : raceId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9._-]+", "-");
-        stem = stem.replaceAll("(^[.-]+|[.-]+$)", "");
+        // Collapse ".." and trim edge '.'/'-' by hand: the old (^[.-]+|[.-]+$)
+        // regex backtracked quadratically on long runs of dots or dashes.
+        StringBuilder cleaned = new StringBuilder(stem.length());
+        for (int i = 0; i < stem.length(); i++) {
+            char c = stem.charAt(i);
+            if (c == '.' && !cleaned.isEmpty() && cleaned.charAt(cleaned.length() - 1) == '.') continue;
+            cleaned.append(c);
+        }
+        int start = 0;
+        int end = cleaned.length();
+        while (start < end && isStemEdgeChar(cleaned.charAt(start))) start++;
+        while (end > start && isStemEdgeChar(cleaned.charAt(end - 1))) end--;
+        stem = cleaned.substring(start, end);
         if (stem.isBlank()) return "course-map";
         return stem.length() > 80 ? stem.substring(0, 80) : stem;
+    }
+
+    private static boolean isStemEdgeChar(char c) {
+        return c == '.' || c == '-';
     }
 
     private String shortContentHash(byte[] imageBytes) {

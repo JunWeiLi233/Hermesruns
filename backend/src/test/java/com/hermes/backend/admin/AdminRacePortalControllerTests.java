@@ -3,6 +3,7 @@ package com.hermes.backend.admin;
 import com.hermes.backend.races.CourseMapScanStep;
 import com.hermes.backend.races.CourseMapScanWatcher;
 import com.hermes.backend.races.OverlayBounds;
+import com.hermes.backend.races.RaceCourseMapBulkSeedService;
 import com.hermes.backend.races.RaceCourseMapResult;
 import com.hermes.backend.races.RaceCourseMapService;
 import com.hermes.backend.routing.RoutePoint;
@@ -252,5 +253,41 @@ class AdminRacePortalControllerTests {
         Map<String, Object> body = (Map<String, Object>) response.getBody();
         assertThat(body).containsEntry("jobId", 77L);
         verify(adminBackgroundJobService).markCompleted(Mockito.eq(job), Mockito.eq(0), Mockito.eq(1), Mockito.eq("Course-map upload scan failed: storage write failed"), any());
+    }
+
+    @Test
+    void bulkSeedRejectsACallerChosenCatalogPath() {
+        Runner admin = new Runner();
+        admin.setEmail("admin@test.local");
+        admin.setRole("ADMIN");
+        when(adminPortalService.requireAdmin("Bearer token")).thenReturn(Optional.of(admin));
+        RaceCourseMapBulkSeedService bulkSeedService = Mockito.mock(RaceCourseMapBulkSeedService.class);
+        AdminRacePortalController seedController = new AdminRacePortalController(
+                adminPortalService, adminBackgroundJobService, courseMapScanWatcher, bulkSeedService);
+
+        ResponseEntity<?> response = seedController.bulkSeedRaceCourseMaps(
+                "Bearer token", Map.of("catalogPath", "/etc/passwd"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(bulkSeedService, Mockito.never()).seedAllMissingFromCatalog(any(), any(), Mockito.anyBoolean());
+    }
+
+    @Test
+    void bulkSeedAlwaysReadsTheBundledCatalog() {
+        Runner admin = new Runner();
+        admin.setEmail("admin@test.local");
+        admin.setRole("ADMIN");
+        when(adminPortalService.requireAdmin("Bearer token")).thenReturn(Optional.of(admin));
+        RaceCourseMapBulkSeedService bulkSeedService = Mockito.mock(RaceCourseMapBulkSeedService.class);
+        when(bulkSeedService.seedAllMissingFromCatalog(null, "admin@test.local", true))
+                .thenReturn(new RaceCourseMapBulkSeedService.BulkSeedSummary(3, 2, 1, 0));
+        AdminRacePortalController seedController = new AdminRacePortalController(
+                adminPortalService, adminBackgroundJobService, courseMapScanWatcher, bulkSeedService);
+
+        ResponseEntity<?> response = seedController.bulkSeedRaceCourseMaps(
+                "Bearer token", Map.of("overwriteSynthetic", true));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        verify(bulkSeedService).seedAllMissingFromCatalog(null, "admin@test.local", true);
     }
 }
