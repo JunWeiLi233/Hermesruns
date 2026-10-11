@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../api';
 import { cachedApiJson } from '../api/resourceCache';
 import { formatCalendarDate } from '../utils/bestEfforts';
@@ -40,6 +40,7 @@ export default function SettingsPaceZones({ t, lang, unit, active }) {
   const [shown, setShown] = useState(NOTHING_SHOWN);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', failed: false });
+  const problemsId = useId();
   const today = todayKey();
 
   const fill = useCallback((race) => {
@@ -191,6 +192,12 @@ export default function SettingsPaceZones({ t, lang, unit, active }) {
     : t(`settings.pace_race_problem_${problem.key}`));
   const said = problems.filter((problem) => shown[problem.field]);
   const invalid = (field) => (said.some((problem) => problem.field === field) ? 'true' : undefined);
+  // A field with something wrong is tied to the sentences that say what, so a screen reader reads them with the field.
+  const problemId = (problem) => `${problemsId}-${problem.key}`;
+  const describedBy = (field) => {
+    const ids = said.filter((problem) => problem.field === field).map(problemId);
+    return ids.length ? ids.join(' ') : undefined;
+  };
 
   let basis;
   if (race) {
@@ -246,6 +253,7 @@ export default function SettingsPaceZones({ t, lang, unit, active }) {
                   value={customText}
                   disabled={saving}
                   aria-invalid={invalid('distance')}
+                  aria-describedby={describedBy('distance')}
                   onChange={(event) => { setCustomText(event.target.value); touch('distance'); }}
                 />
               </label>
@@ -261,6 +269,7 @@ export default function SettingsPaceZones({ t, lang, unit, active }) {
                 value={timeText}
                 disabled={saving}
                 aria-invalid={invalid('time')}
+                aria-describedby={describedBy('time')}
                 onChange={(event) => { setTimeText(event.target.value); touch('time'); }}
               />
             </label>
@@ -273,13 +282,14 @@ export default function SettingsPaceZones({ t, lang, unit, active }) {
                 value={dateText}
                 disabled={saving}
                 aria-invalid={invalid('date')}
+                aria-describedby={describedBy('date')}
                 onChange={(event) => { setDateText(event.target.value); touch('date'); }}
               />
             </label>
           </div>
           {said.length ? (
             <span className="st-v2-zones-error" role="alert">
-              {said.map((problem) => <span key={problem.key}>{problemText(problem)}</span>)}
+              {said.map((problem) => <span key={problem.key} id={problemId(problem)}>{problemText(problem)}</span>)}
             </span>
           ) : null}
           <div className="st-v2-zones-actions">

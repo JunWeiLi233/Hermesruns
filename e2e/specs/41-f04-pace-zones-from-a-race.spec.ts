@@ -367,6 +367,9 @@ test.describe('F04 pace zones: what the form refuses', () => {
       await expect(page.getByRole('alert')).toContainText(message);
       await expect(field === 'time' ? timeBox(page) : dateBox(page)).toHaveAttribute('aria-invalid', 'true');
       await expect(field === 'time' ? dateBox(page) : timeBox(page)).not.toHaveAttribute('aria-invalid', 'true');
+      // What a screen reader reads with the field is the sentence that says what is wrong with it, and only that one.
+      await expect(field === 'time' ? timeBox(page) : dateBox(page)).toHaveAccessibleDescription(message);
+      await expect(field === 'time' ? dateBox(page) : timeBox(page)).toHaveAccessibleDescription('');
       expect(await raceOnServer()).toBeNull();
       await expect(page.getByText(SAVED)).toHaveCount(0);
     });
@@ -384,6 +387,8 @@ test.describe('F04 pace zones: what the form refuses', () => {
     await expect(alert).toContainText('Pick the date of the race.');
     await expect(timeBox(page)).toHaveAttribute('aria-invalid', 'true');
     await expect(dateBox(page)).toHaveAttribute('aria-invalid', 'true');
+    await expect(timeBox(page)).toHaveAccessibleDescription('Write the time as mm:ss or h:mm:ss, like 45:00 or 1:45:30.');
+    await expect(dateBox(page)).toHaveAccessibleDescription('Pick the date of the race.');
     expect(sent).toBe(0);
   });
 
@@ -393,6 +398,7 @@ test.describe('F04 pace zones: what the form refuses', () => {
     await useButton(page).click();
     await expect(page.getByRole('alert')).toContainText('Give the distance as a number.');
     await expect(customDistance(page)).toHaveAttribute('aria-invalid', 'true');
+    await expect(customDistance(page)).toHaveAccessibleDescription('Give the distance as a number.');
     for (const custom of ['1', '101']) {
       await customDistance(page).fill(custom);
       await expect(page.getByRole('alert')).toContainText('The distance must be from 1.5 to 100 km.');

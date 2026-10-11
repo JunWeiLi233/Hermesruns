@@ -337,6 +337,38 @@ describe('what the form refuses', () => {
     expect(calls('PUT')).toHaveLength(0);
   });
 
+  it('ties each field with a problem to the sentence that says what is wrong with it, and to no other', async () => {
+    const user = userEvent.setup();
+    await open();
+    await user.click(useButton());
+    const alert = await screen.findByRole('alert');
+    const sentences = (field) => (field.getAttribute('aria-describedby') || '').split(' ').filter(Boolean).map((id) => {
+      const sentence = document.getElementById(id);
+      expect(alert).toContainElement(sentence);
+      return sentence.textContent;
+    });
+    expect(sentences(time())).toEqual([t('settings.pace_race_problem_time')]);
+    expect(sentences(date())).toEqual([t('settings.pace_race_problem_date')]);
+    expect(distance()).not.toHaveAttribute('aria-describedby');
+
+    await enter(user);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(time()).not.toHaveAttribute('aria-describedby');
+    expect(date()).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('ties a distance that is refused to its sentence too', async () => {
+    const user = userEvent.setup();
+    await open();
+    await user.selectOptions(distance(), 'other');
+    await user.type(customDistance(), 'far');
+    const alert = await screen.findByRole('alert');
+    const [id, ...others] = customDistance().getAttribute('aria-describedby').split(' ');
+    expect(others).toEqual([]);
+    expect(alert).toContainElement(document.getElementById(id));
+    expect(document.getElementById(id)).toHaveTextContent(t('settings.pace_race_problem_distance'));
+  });
+
   it.each([
     ['a time that is not a time', { text: '45' }, 'settings.pace_race_problem_time'],
     ['a time over 59 seconds', { text: '45:75' }, 'settings.pace_race_problem_time'],
