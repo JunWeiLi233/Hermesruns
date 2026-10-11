@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { raceVdot } from './paceZoneRace';
 import { estimateCurrentVdot, vdotToPaceSecondsPerKm } from './vdot';
 import {
   PACE_ZONE_KEYS,
@@ -165,6 +166,54 @@ describe('zonesVdot', () => {
     expect(zonesVdot(null, runStart, now)).toEqual({ vdot: null, basis: null });
     expect(zonesVdot('nope', runStart, now)).toEqual({ vdot: null, basis: null });
     expect(zonesVdot([run(5, '2026-09-20T08:00:00', 0), { id: 6 }], runStart, now)).toEqual({ vdot: null, basis: null });
+  });
+
+  describe('with a race the runner entered', () => {
+    const race = { distanceMeters: 10000, seconds: 2700, date: '2026-09-20' }; // 10K in 45:00, a VDOT of 45.3
+    const fromRace = { vdot: 45.3, basis: 'race' };
+
+    it('is the race\'s VDOT for a run after the race date, whatever the runner\'s runs say', () => {
+      expect(raceVdot(race)).toBe(45.3);
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, race)).toEqual(fromRace);
+      expect(zonesVdot([], runStart, now, race)).toEqual(fromRace);
+    });
+
+    it('is the race\'s VDOT for a run on the very day of the race, whatever time it started', () => {
+      expect(zonesVdot([slowRun], '2026-09-20T00:05:00', now, race)).toEqual(fromRace);
+      expect(zonesVdot([slowRun], '2026-09-20T23:55:00', now, race)).toEqual(fromRace);
+      expect(zonesVdot([slowRun], '2026-09-20', now, race)).toEqual(fromRace);
+    });
+
+    it('leaves a run from before the race date with the zones it had going into it', () => {
+      const dayBefore = '2026-09-19T23:55:00';
+      const result = zonesVdot([slowRun, fastLaterRun], dayBefore, now, race);
+
+      expect(result.basis).toBe('before');
+      expect(result.vdot).toBe(vdotOf([slowRun], new Date(dayBefore).getTime()));
+      expect(zonesVdot([slowRun], '2026-09-19', now, race).basis).toBe('before');
+      expect(zonesVdot([fastLaterRun], '2026-09-01T08:00:00', now, race).basis).toBe('today');
+      expect(zonesVdot([], '2026-09-01T08:00:00', now, race)).toEqual({ vdot: null, basis: null });
+    });
+
+    it('has the race\'s zones for a run it cannot place on a day', () => {
+      expect(zonesVdot([slowRun], undefined, now, race)).toEqual(fromRace);
+      expect(zonesVdot([slowRun], '', now, race)).toEqual(fromRace);
+      expect(zonesVdot([slowRun], 'not a date', now, race)).toEqual(fromRace);
+    });
+
+    it('ignores a race that gives no fitness, as if there were none', () => {
+      const without = zonesVdot([slowRun, fastLaterRun], runStart, now);
+
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, null)).toEqual(without);
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, undefined)).toEqual(without);
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, {})).toEqual(without);
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, { ...race, seconds: 0 })).toEqual(without);
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, { ...race, distanceMeters: 'far' })).toEqual(without);
+    });
+
+    it('does not change what the zones are for a runner who has no race', () => {
+      expect(zonesVdot([slowRun, fastLaterRun], runStart, now, null)).toEqual(zonesVdot([slowRun, fastLaterRun], runStart, now));
+    });
   });
 });
 

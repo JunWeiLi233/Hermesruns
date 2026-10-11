@@ -1,3 +1,5 @@
+import { runDayKey } from './calendarDays';
+import { raceVdot } from './paceZoneRace';
 import { estimateCurrentVdot, vdotToPaceSecondsPerKm } from './vdot';
 
 /** Everything here works in seconds per kilometre, as the pace-profile endpoint sends it. */
@@ -34,13 +36,23 @@ function startedAt(run) {
  * personal best does not pull its own pace into a harder zone. A run with nothing to go on before it gets the runner's
  * zones now (`basis` 'today'). A runner with no VDOT at all gets none.
  *
+ * A race the runner entered in Settings (`race`) sets the zones instead, for runs on or after its date (`basis` 'race'), and for
+ * a run with no date to place it by; earlier runs keep the zones they had going into them. The race is not a replacement for
+ * the runner's runs elsewhere: only the pace zones follow it.
+ *
  * @param runs      the runner's runs as /api/activities/analysis lists them
  * @param startTime when the run started: its start time, or its date for a run that has no exact time (as the list
  *                  itself reads a run)
+ * @param race      `{ distanceMeters, seconds, date }` as /api/training/pace-zones sends it, or null
  */
-export function zonesVdot(runs, startTime, now = Date.now()) {
+export function zonesVdot(runs, startTime, now = Date.now(), race = null) {
   const list = Array.isArray(runs) ? runs : [];
   const runStart = startTime ? new Date(startTime).getTime() : Number.NaN;
+  const fromRace = raceVdot(race);
+  if (fromRace != null && race?.date) {
+    const runDay = Number.isFinite(runStart) ? runDayKey({ startTime }) : null;
+    if (runDay == null || runDay >= race.date) return { vdot: fromRace, basis: 'race' };
+  }
   if (Number.isFinite(runStart)) {
     const earlier = list.filter((run) => startedAt(run) < runStart);
     const vdot = Number(estimateCurrentVdot(earlier, runStart).representativeVdot);

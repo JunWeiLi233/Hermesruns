@@ -6,6 +6,7 @@ import { cachedApiJson } from '../../../api/resourceCache';
 import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
 import { paceZoneBands } from '../../../utils/paceAnalysis';
+import { raceVdot } from '../../../utils/paceZoneRace';
 import { estimateCurrentVdot } from '../../../utils/vdot';
 import RunPaceAnalysis from '../RunPaceAnalysis';
 import { NO_STREAM, paceProfile, paceProfileWithoutElevation } from './paceFixtures';
@@ -504,6 +505,69 @@ describe('time at each pace', () => {
   it('does not ask for the run list until the profile has arrived with a stream', async () => {
     renderCard({ streamReady: false });
     expect(cachedApiJson).not.toHaveBeenCalled();
+  });
+});
+
+describe('pace zones from a race', () => {
+  const rows = (container) => [...container.querySelectorAll('[data-pace-zone]')];
+  const tenK = { distanceMeters: 10000, seconds: 2700, date: '2026-09-20' }; // 10K in 45:00
+  const withRace = (race) => {
+    const before = apiJson.getMockImplementation();
+    apiJson.mockImplementation(async (url, options) => (url === '/api/training/pace-zones' ? { race } : before(url, options)));
+  };
+
+  it('cuts the zones of a run on or after the race date from the race, and says so', async () => {
+    withRace(tenK);
+    const { container } = renderCard({ startTime: '2026-10-01T10:00:00' });
+    await waitFor(() => expect(rows(container)).toHaveLength(6));
+
+    // 10K in 45:00 is a VDOT of 45.3, not the 50 the runner's runs would give.
+    expect(raceVdot(tenK)).toBe(45.3);
+    const shown = rows(container);
+    expect(shown[5]).toHaveTextContent('slower than 6:20 /km');
+    expect(shown[4]).toHaveTextContent('5:14–6:20 /km');
+    expect(shown[0]).toHaveTextContent('faster than 4:00 /km');
+    expect(screen.getByText(t('run_detail.pace_zones_basis_race', { race: '10K in 45:00', date: 'Sep 20, 2026', vdot: raceVdot(tenK) }))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.pace_zones_basis_before', { vdot: 50 }))).not.toBeInTheDocument();
+    expect(estimateCurrentVdot).not.toHaveBeenCalled();
+    expect(apiJson).toHaveBeenCalledWith('/api/training/pace-zones');
+  });
+
+  it('gives a run on the very day of the race the race\'s zones, and a run the day before the zones it had', async () => {
+    withRace(tenK);
+    const onTheDay = renderCard({ startTime: '2026-09-20T06:30:00' });
+    expect(await screen.findByText(t('run_detail.pace_zones_basis_race', { race: '10K in 45:00', date: 'Sep 20, 2026', vdot: raceVdot(tenK) }))).toBeInTheDocument();
+    onTheDay.unmount();
+
+    const dayBefore = renderCard({ startTime: '2026-09-19T20:00:00' });
+    await waitFor(() => expect(rows(dayBefore.container)).toHaveLength(6));
+    expect(screen.getByText(t('run_detail.pace_zones_basis_before', { vdot: 50 }))).toBeInTheDocument();
+    expect(screen.queryByText(/Sep 20, 2026/)).not.toBeInTheDocument();
+  });
+
+  it('writes a race at a distance of its own in kilometres, like the paces on the card', async () => {
+    withRace({ distanceMeters: 12500, seconds: 3550, date: '2026-09-20' });
+    renderCard({ startTime: '2026-10-01T10:00:00' });
+    expect(await screen.findByText(/12\.5 km in 59:10/)).toBeInTheDocument();
+  });
+
+  it('keeps the zones from the runner\'s runs when the race cannot be loaded', async () => {
+    const before = apiJson.getMockImplementation();
+    apiJson.mockImplementation(async (url, options) => {
+      if (url === '/api/training/pace-zones') throw new Error('down');
+      return before(url, options);
+    });
+    const { container } = renderCard({ startTime: '2026-10-01T10:00:00' });
+    await waitFor(() => expect(rows(container)).toHaveLength(6));
+    expect(screen.getByText(t('run_detail.pace_zones_basis_before', { vdot: 50 }))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.pace_zones_error'))).not.toBeInTheDocument();
+  });
+
+  it('is written in Chinese when the language is Chinese', async () => {
+    state.lang = 'zh-CN';
+    withRace(tenK);
+    renderCard({ startTime: '2026-10-01T10:00:00' });
+    expect(await screen.findByText(t('run_detail.pace_zones_basis_race', { race: '10 公里 45:00', date: '2026年9月20日', vdot: raceVdot(tenK) }))).toBeInTheDocument();
   });
 });
 

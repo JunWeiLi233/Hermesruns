@@ -28,7 +28,7 @@ const zoneList = (page: Page): Locator => page.getByRole('list', { name: 'Your z
 
 async function openTraining(page: Page): Promise<void> {
   await page.goto('/settings?section=training');
-  await expect(page.getByRole('heading', { level: 2, name: 'Heart-rate zones' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Training zones' })).toBeVisible();
   await expect(maxField(page)).toBeVisible();
 }
 
@@ -327,7 +327,7 @@ test.describe('F04 conditions', () => {
   test('F04-E8 in Chinese the training settings are translated and show no raw key', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto('/settings?section=training');
-    await expect(page.getByRole('heading', { level: 2, name: '心率区间' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '训练区间' })).toBeVisible();
     const text = await page.locator('main').innerText();
     expect(text).not.toMatch(/\b(settings|training|common)\.[a-z0-9_]+/);
   });

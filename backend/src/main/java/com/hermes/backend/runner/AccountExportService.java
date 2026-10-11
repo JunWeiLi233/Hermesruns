@@ -51,6 +51,7 @@ public class AccountExportService {
     private final ShoeRepository shoes;
     private final RaceEventRepository races;
     private final GoalRepository goals;
+    private final RunnerPaceZoneRaceRepository paceZoneRaces;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +63,7 @@ public class AccountExportService {
                                 ShoeRepository shoes,
                                 RaceEventRepository races,
                                 GoalRepository goals,
+                                RunnerPaceZoneRaceRepository paceZoneRaces,
                                 JdbcTemplate jdbc,
                                 ObjectMapper objectMapper) {
         this.activities = activities;
@@ -70,6 +72,7 @@ public class AccountExportService {
         this.shoes = shoes;
         this.races = races;
         this.goals = goals;
+        this.paceZoneRaces = paceZoneRaces;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
     }
@@ -105,6 +108,7 @@ public class AccountExportService {
         entry(zip, "shoes.csv", shoesCsv(shoes.findByRunnerOrderByCreatedAtDesc(runner)));
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
         entry(zip, "goals.csv", goalsCsv(goals.findByRunnerIdOrderByIdAsc(runner.getId())));
+        entry(zip, "pace-zone-race.csv", paceZoneRaceCsv(paceZoneRaces.findByRunner(runner).orElse(null)));
 
         if (includeTracks) {
             for (Activity run : runs) {
@@ -144,6 +148,8 @@ public class AccountExportService {
                 races.csv     Your saved races.
                 goals.csv     Your goals: the period and the metric, the target in the unit named in the file
                               (km, s for seconds of moving time, runs, m), and when you set it.
+                pace-zone-race.csv  The race you cut your pace zones from, if you entered one: distance in metres,
+                              time in seconds, the date of the race.
                 """ + (includeTracks
                 ? "tracks/      One GPX file per run that has a GPS track.\n"
                 : "tracks/      Not included. Ask for them with ?tracks=true.\n") + """
@@ -248,6 +254,14 @@ public class AccountExportService {
                     goal.getPeriod(), goal.getMetric(), value(goal.getTarget()), GoalMetrics.unit(goal.getMetric()),
                     value(goal.getCreatedAt()), value(goal.getUpdatedAt())
             ));
+        }
+        return csv.toString();
+    }
+
+    private static String paceZoneRaceCsv(RunnerPaceZoneRace race) {
+        StringBuilder csv = new StringBuilder("distance_m,time_s,race_date,updated_at\n");
+        if (race != null) {
+            csv.append(row(value(race.getDistanceMeters()), value(race.getTimeSeconds()), value(race.getRaceDate()), value(race.getUpdatedAt())));
         }
         return csv.toString();
     }

@@ -224,10 +224,40 @@ it (the first of a history, or after a break of more than 90 days) is read again
 says which it used. A runner without any VDOT (runs of at least 1.5 km are needed, and 3 km or more are preferred) sees
 the chart without zones.
 
+### Pace zones from a race
+
+A runner who has not run hard lately, or who knows what a recent race said about their fitness, can cut the pace zones from
+that race instead. It is one race at a time, entered in Settings > Training > Pace zones:
+
+- **The race** is a distance (5K, 10K, half marathon, marathon, or any distance from 1.5 km to 100 km, typed in the
+  runner's unit), a time (`mm:ss` or `h:mm:ss`, from 4 minutes to 24 hours) and the day it was run (not in the future, not more
+  than five years back). The time over the distance must be a pace between 2:00 and 20:00 a kilometre; nobody has run
+  outside that. Entering another race replaces the first; removing it goes back to the runner's runs.
+- **The fitness** is the VDOT the race stands for, worked out in the browser with the same function as the rest of the analysis
+  (`calculateVdot`, Daniels and Gilbert's oxygen-power model), to one decimal. The server stores only the three numbers, never
+  the VDOT, so there is one copy of the arithmetic. The six zones are then cut from that VDOT as above.
+- **Which runs follow it.** A run on or after the race date uses the race's zones; a run before it keeps the zones it had going
+  into it, from the runner's runs (the 90 days before it, or today's if nothing came before). The run's day is the runner's own
+  day, read from the run's start as the run page writes it, so a run on the day of the race counts whatever time it started. A
+  run with no usable date has nothing to place it by and gets the race's zones. The run page says which it used: "Zones are cut
+  from 10K in 45:00 on Sep 20, 2026 (VDOT 45.3), which you entered in Settings."
+- **Settings shows both.** The card says where today's zones come from, previews the zones a typed race would give (and says
+  nothing changes until the runner uses it), and says when the race is more than about six months old, since an old result says
+  less about today's pace. It never decides anything for the runner: an old race stays in force until they replace or remove it.
+- **What it does not touch.** Only the pace zones follow the race: the Analysis page's training paces, the race predictions,
+  Effort, fitness and form, and the heart-rate zones all keep working from the runner's runs and settings.
+- **Where it is kept.** The table `runner_pace_zone_race` (one row a runner, see
+  [m8-schema-upgrade.md](deployment/m8-schema-upgrade.md)), `GET`, `PUT` and `DELETE /api/training/pace-zones`, the account
+  export (`pace-zone-race.csv`), and the account deletion. The refusals are the server's (`PaceZoneRaceService`) and the limits
+  come with the form, so the page says each one in the runner's language. Two requests from one runner at once take turns on the
+  runner's row, so the second replaces the first and neither fails.
+
 ### Known limits
 
 - A GPS jump in the distance stream moves the split boundaries after it, as it inflates the run's distance; the
   smoothed line shows no pace for a window with an impossible one.
+- A race sets the pace zones of the whole of a day: a warm-up run on the morning of the race gets the race's zones as well. There
+  is one race at a time, no history of earlier ones, and no separate race for the road, the track or the trail.
 - Elevation from a GPS-only watch is noisy. The cleaning above keeps the grade-adjusted pace of a flat run within 0.2% of
   its pace when every reading is off by 1.7 m (standard deviation), within 0.5% at 3 m and within 1.3% at 5 m (measured
   over twelve random runs of 30 minutes each), always on the faster side, because the ratio bends upwards: random ups

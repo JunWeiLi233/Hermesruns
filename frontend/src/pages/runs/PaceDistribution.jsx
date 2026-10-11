@@ -1,16 +1,10 @@
+import { PACE_ZONE_NAME_KEYS as ZONE_NAME_KEYS, paceZoneRangeLabel as rangeLabel } from '../../components/paceZoneLabels';
 import { useI18n } from '../../contexts/I18nContext';
-import { formatPaceSeconds } from '../../utils/format';
+import { distanceInUnit, formatRaceTime, presetFor } from '../../utils/paceZoneRace';
+import { formatCalendarDate } from '../../utils/bestEfforts';
+import { getDistanceUnitLabel } from '../../utils/format';
 import { zoneDurationLabel } from '../../utils/heartRateZones';
 import { timeInPaceZones } from '../../utils/paceAnalysis';
-
-const ZONE_NAME_KEYS = {
-  recovery: 'run_detail.pace_zone_recovery',
-  easy: 'run_detail.pace_zone_easy',
-  marathon: 'run_detail.pace_zone_marathon',
-  threshold: 'run_detail.pace_zone_threshold',
-  interval: 'run_detail.pace_zone_interval',
-  repetition: 'run_detail.pace_zone_repetition',
-};
 
 /** A zone's share of the time spent moving, whole percent; "<1%" for a zone that was visited only briefly. */
 function shareLabel(seconds, moving) {
@@ -19,11 +13,11 @@ function shareLabel(seconds, moving) {
   return rounded >= 1 ? `${rounded}%` : '<1%';
 }
 
-function rangeLabel(band, t) {
-  const unit = t('run_detail.unit_pace');
-  if (band.slowest == null) return `${t('run_detail.pace_zone_slower', { pace: formatPaceSeconds(band.fastest) })} ${unit}`;
-  if (band.fastest == null) return `${t('run_detail.pace_zone_faster', { pace: formatPaceSeconds(band.slowest) })} ${unit}`;
-  return `${t('run_detail.pace_zone_between', { fast: formatPaceSeconds(band.fastest), slow: formatPaceSeconds(band.slowest) })} ${unit}`;
+/** A race as one phrase: "10K in 45:00", or "12.5 km in 59:10" for a distance that is not a standard one (the paces on this card are per kilometre). */
+function raceWords(race, t, lang) {
+  const preset = presetFor(race.distanceMeters);
+  const distance = preset ? t(`settings.pace_race_distance_${preset.key}`) : `${distanceInUnit(race.distanceMeters, 'km')} ${getDistanceUnitLabel(lang, 'km')}`;
+  return t('run_detail.pace_zones_race_words', { distance, time: formatRaceTime(race.seconds) });
 }
 
 /**
@@ -33,9 +27,9 @@ function rangeLabel(band, t) {
  * @param zones { status, vdot, basis, bands } from usePaceZones
  */
 export default function PaceDistribution({ series, adjusted, zones }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const metric = adjusted ? 'gap' : 'pace';
-  const { bands, vdot, status, basis } = zones;
+  const { bands, vdot, status, basis, race } = zones;
   const { seconds, moving } = timeInPaceZones(series, bands, metric);
 
   let body;
@@ -60,7 +54,9 @@ export default function PaceDistribution({ series, adjusted, zones }) {
         <div className="run-detail-v2__zones-foot">
           <p className="run-detail-v2__muted">{adjusted ? t('run_detail.pace_zones_basis_gap') : t('run_detail.pace_zones_basis_pace')}</p>
           <p className="run-detail-v2__muted">
-            {t(basis === 'before' ? 'run_detail.pace_zones_basis_before' : 'run_detail.pace_zones_basis', { vdot: Math.round(vdot * 10) / 10 })}
+            {basis === 'race' && race
+              ? t('run_detail.pace_zones_basis_race', { race: raceWords(race, t, lang), date: formatCalendarDate(race.date, lang), vdot: Math.round(vdot * 10) / 10 })
+              : t(basis === 'before' ? 'run_detail.pace_zones_basis_before' : 'run_detail.pace_zones_basis', { vdot: Math.round(vdot * 10) / 10 })}
           </p>
         </div>
       </>
