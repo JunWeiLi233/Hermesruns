@@ -120,3 +120,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2-weather > sp
   body #root .prediction-v2-page .prediction-v2 .prediction-trend-card { padding: 20px; border-radius: 20px !important; }
   #root .prediction-v2 .prediction-trend-chart { height: 280px; }
 }
+
+/* The prediction history can be switched between 1, 3 and 6 months. */
+#root .prediction-v2 .prediction-trend-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#root .prediction-v2 .prediction-trend-ranges { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--pv-fill); }
+#root .prediction-v2 .prediction-trend-ranges button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--pv-muted); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+#root .prediction-v2 .prediction-trend-ranges button[aria-pressed="true"] { background: var(--pv-card); color: var(--pv-ink); box-shadow: 0 1px 4px var(--pv-line); }
+#root .prediction-v2 .prediction-trend-ranges button:focus-visible { outline: 2px solid var(--pv-accent); outline-offset: 2px; }

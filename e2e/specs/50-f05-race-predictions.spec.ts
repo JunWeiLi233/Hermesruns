@@ -138,7 +138,6 @@ test.describe('F05 changing data', () => {
   });
 
   test('F05-E2 a run older than the 90 days the page talks about does not move the predictions', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-015: the predicted time is also pulled towards the best run of the last 180 days (utils/vdot.js bestRecentNormalizedRaceTimeSec), which Samples and the 90-day history do not show');
     const context = await contextWith(browser, p, baseURL as string, guard);
     let oldId: number | null = null;
     try {
@@ -265,9 +264,8 @@ test.describe('F05 whole page', () => {
   });
 });
 
-test.describe('F05 defects found', () => {
+test.describe('F05 history, and the Race row of the effort ladder (found in the first test pass, fixed)', () => {
   test('F05-E16 the first point of the Prediction History is what the runner could run then, not what the best run of the last six months says', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-035: every history point is blended with the best run of the last 180 days as of today, so the history is squeezed towards the present');
     const made = await newRunner('history');
     // 5 km at 6:20, 5:50, 5:20 and 5:00 per km, 70, 40, 14 and 4 days ago: a runner who got six minutes faster in ten weeks.
     for (const [days, pace] of [[70, 380], [40, 350], [14, 320], [4, 300]] as const) {
@@ -289,7 +287,6 @@ test.describe('F05 defects found', () => {
   });
 
   test('F05-E11 the "Race" row of Pace by Effort agrees with the race prediction above it', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-014: the Race row is the same 4:50 /km for every distance, so the marathon page offers 3:24 under a 3:58 prediction');
     const context = await contextWith(browser, p, baseURL as string, guard);
     try {
       const page = await context.newPage();
@@ -298,6 +295,94 @@ test.describe('F05 defects found', () => {
       const row = page.locator('aside').getByRole('listitem').filter({ hasText: 'Race' });
       const time = toSeconds((await row.locator('strong').last().innerText()).trim());
       expect(Math.abs(time - headline) / headline, `marathon: effort table says ${time}s, headline says ${headline}s`).toBeLessThan(0.05);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+test.describe('F05 the prediction history range (M8)', () => {
+  /** Four 5K runs a runner got faster over: 31:40, 29:10, 26:40 and 25:00, 70, 40, 14 and 4 days ago. */
+  async function runnerWithHistory(label: string) {
+    const made = await newRunner(label);
+    for (const [days, pace] of [[70, 380], [40, 350], [14, 320], [4, 300]] as const) {
+      await made.api.importRun(`range-${days}.gpx`, gpxRun({ name: `E2E range ${days}`, start: daysAgo(days), distanceM: 5000, pace }));
+    }
+    return made;
+  }
+
+  const card = (page: Page) => page.locator('.prediction-trend-card');
+  const pointsOf = async (page: Page) => Number(/(\d+) data points/i.exec(await card(page).innerText())?.[1]);
+
+  test('F05-H6 the history switches between 1, 3 and 6 months: each range keeps the points inside it and says so', async ({ browser, baseURL, guard }) => {
+    const made = await runnerWithHistory('range');
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      await page.goto('/prediction/5k');
+      const group = page.getByRole('group', { name: 'Prediction history range' });
+      await expect(group.getByRole('button', { name: '3 months' })).toHaveAttribute('aria-pressed', 'true');
+      await expect(card(page)).toContainText('Last 90 days');
+      expect(await pointsOf(page), 'three months: all four runs').toBe(4);
+      const threeMonths = (await page.locator('canvas[role="img"]').first().getAttribute('aria-label')) ?? '';
+      expect(threeMonths).toMatch(/over the last 90 days, 4 points/);
+
+      await group.getByRole('button', { name: '1 month' }).click();
+      await expect(group.getByRole('button', { name: '1 month' })).toHaveAttribute('aria-pressed', 'true');
+      await expect(card(page)).toContainText('Last 30 days');
+      expect(await pointsOf(page), 'one month: the runs of 14 and 4 days ago').toBe(2);
+      const oneMonth = (await page.locator('canvas[role="img"]').first().getAttribute('aria-label')) ?? '';
+      expect(oneMonth).toMatch(/over the last 30 days, 2 points/);
+      // The month starts from the 14 days ago point (26:40-ish), not from the 70 days ago one (31:40).
+      const monthStart = oneMonth.match(/from (\S+) to (\S+)$/);
+      expect(toSeconds(monthStart![1])).toBeLessThan(toSeconds('28:30'));
+
+      await group.getByRole('button', { name: '6 months' }).click();
+      await expect(card(page)).toContainText('Last 180 days');
+      expect(await pointsOf(page)).toBe(4);
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('F05-H7 the choice is kept for the next visit, and a month with no runs says so and offers a longer range', async ({ browser, baseURL, guard }) => {
+    const runner = await newRunner('range-empty');
+    // Two runs, 60 and 50 days ago: nothing in the last month.
+    for (const days of [60, 50]) {
+      await runner.api.importRun(`quiet-${days}.gpx`, gpxRun({ name: `E2E quiet ${days}`, start: daysAgo(days), distanceM: 5000, pace: 330 }));
+    }
+    const context = await contextWith(browser, { token: runner.api.token as string, email: runner.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      await page.goto('/prediction/5k');
+      const group = page.getByRole('group', { name: 'Prediction history range' });
+      await group.getByRole('button', { name: '1 month' }).click();
+      await expect(card(page)).toContainText('No predictions in the last 30 days');
+      await expect(card(page)).toContainText('Choose a longer range');
+      await expect(page.locator('canvas[role="img"]')).toHaveCount(0);
+      await page.reload();
+      await expect(page.getByRole('group', { name: 'Prediction history range' }).getByRole('button', { name: '1 month' })).toHaveAttribute('aria-pressed', 'true');
+      await page.getByRole('group', { name: 'Prediction history range' }).getByRole('button', { name: '6 months' }).click();
+      await expect(page.locator('canvas[role="img"]').first()).toBeVisible();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('F05-H8 the range switch is reachable and pressed with the keyboard, in Chinese too', async ({ browser, baseURL, guard }) => {
+    const made = await runnerWithHistory('range-keys');
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
+      await page.goto('/prediction/5k');
+      const group = page.getByRole('group', { name: '预测历史范围' });
+      await expect(group.getByRole('button', { name: '3 个月' })).toHaveAttribute('aria-pressed', 'true');
+      await group.getByRole('button', { name: '1 个月' }).focus();
+      await page.keyboard.press('Enter');
+      await expect(group.getByRole('button', { name: '1 个月' })).toHaveAttribute('aria-pressed', 'true');
+      await expect(card(page)).toContainText('过去 30 天');
+      await expectNoRawKeys(page);
     } finally {
       await context.close();
     }
