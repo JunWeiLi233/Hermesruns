@@ -27,6 +27,29 @@ VDOT         = VO₂ / %VO₂max
 | Interval | 96% | VO₂max stimulus |
 | Repetition | 111% | Speed and economy |
 
+## Race Predictions and Their History
+
+Each prediction page (5K, 10K, half marathon, marathon at `/prediction/:distance`) turns the runner's fitness into a time over
+that distance, all in the browser (`utils/vdot.js`, `pages/prediction/PredictionDetail.jsx`).
+
+- **The time.** The runner's VDOT (the mean of their top three runs of the last 90 days, above) gives a base time over the
+  distance by Daniels' equations. The best run of the last **90 days** within 20% of that distance, taken as the time it would
+  give over it, is blended in: the nearer it is in distance and the fresher it is, the more it counts (a run 45 days old or
+  less also keeps the time from being more than half a percent faster than that run's own time over the distance). The window is the one the page says it looks
+  at (`PREDICTION_ANCHOR_DAYS`); it was 180 days, so a run the page did not list could move the time (BUG-015). The four
+  distances are kept in order, a longer race never faster than a shorter one.
+- **Pace by effort.** The ladder next to the headline has a row for easy, moderate, hard and the race itself. The race row is
+  the predicted time and the pace it makes, not a fixed share of VO₂max (BUG-014). The other rows are worked out from the
+  fitness that makes exactly that prediction (the VDOT of the predicted time over that distance): easy at 65% and moderate at
+  75% of VO₂max, hard halfway between moderate and the race's own share, so the ladder steps up to the headline for every
+  distance and cannot pass it.
+- **The history.** One point for each date in the runner's VDOT series, each worked out **as of its own day**: only the runs
+  up to that day count, and their ages are taken from it, so a runner who got six minutes faster has a line that fell by six
+  minutes instead of every point leaning on today's best run (BUG-035). A switch above the chart picks the last **1, 3 or 6
+  months** (30, 90 and 180 days; 3 by default; the choice is kept in the browser and an unknown stored value is ignored). The
+  range, the number of points and the chart's text alternative follow it; a range with no points says so and offers a longer one.
+  The "change over time" figure in the headline stays on 3 months whatever the chart shows.
+
 ## Training Load — ACWR
 
 ACWR (Acute:Chronic Workload Ratio) is your injury risk meter. It compares your recent training load (last 7 days) to your long-term load (last 28 days). A sudden spike — training much harder than your baseline — predicts injury.
