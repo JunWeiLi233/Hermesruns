@@ -210,13 +210,40 @@ class AccountExportIntegrationTests {
 
         String csv = files.get("runs.csv");
         assertThat(csv).startsWith("id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
-                + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
+                + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags,"
+                + "perceived_exertion,use_rating_for_effort,notes\n");
         List<String> lines = csv.lines().toList();
         assertThat(lines.stream().filter(line -> line.startsWith(race.getId() + ",")).findFirst().orElseThrow())
-                .endsWith(",RACE,'=1+1; 10k; PR");
-        assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,");
+                .endsWith(",RACE,'=1+1; 10k; PR,,false,");
+        assertThat(lines.stream().filter(line -> line.startsWith(plain.getId() + ",")).findFirst().orElseThrow()).endsWith(",,,,false,");
         assertThat(csv).doesNotContain("secret plan").doesNotContain("WORKOUT");
         assertThat(files.get("README.txt")).contains("run_type").contains("tags");
+    }
+
+    @Test
+    void exportsTheNotesTheRatingAndTheChoiceToUseItOfEachRunAndNeverSomeoneElses() throws IOException {
+        Runner owner = runner();
+        Runner stranger = runner();
+        Activity mine = run(owner, "Windy day", ImportProvider.GARMIN, false);
+        mine.setPerceivedExertion(7);
+        mine.setUseRatingForEffort(true);
+        mine.setNotes("Windy, \"cold\" hands.\nSecond line, with a comma.");
+        activities.saveAndFlush(mine);
+        Activity formula = run(owner, "Formula notes", ImportProvider.GARMIN, false);
+        formula.setNotes("=HYPERLINK(\"http://example.invalid\")");
+        activities.saveAndFlush(formula);
+        Activity theirs = run(stranger, "theirs", ImportProvider.GARMIN, false);
+        theirs.setPerceivedExertion(3);
+        theirs.setNotes("their private thoughts");
+        activities.saveAndFlush(theirs);
+
+        Map<String, String> files = export(owner, false);
+
+        String csv = files.get("runs.csv");
+        assertThat(csv).contains(",7,true,\"Windy, \"\"cold\"\" hands.\nSecond line, with a comma.\"\n");
+        assertThat(csv).as("a formula in the notes is made harmless like one in a title").contains(",false,\"'=HYPERLINK(");
+        assertThat(csv).doesNotContain("their private thoughts");
+        assertThat(files.get("README.txt")).contains("perceived_exertion").contains("use_rating_for_effort").contains("notes");
     }
 
     @Test

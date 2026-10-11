@@ -413,6 +413,110 @@ class TrainingEndpointsMvcTests {
         assertThat(activities.findById(run.getId()).orElseThrow().getPerceivedExertion()).isNull();
     }
 
+    @Test
+    void askingForTheRatingMakesItTheScoreEvenWithAHeartRateAndAskingNoMoreTakesItBack() throws Exception {
+        Runner owner = runner("USER");
+        Activity run = run(owner, 600, 2.0, null);
+        stream(run, 600, 140);
+        String auth = bearer(owner);
+        String url = "/api/activities/{id}";
+        mockMvc.perform(json(patch(url, run.getId()).header("Authorization", auth), "{\"perceivedExertion\":10}")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("HR_ZONES"))
+                .andExpect(jsonPath("$.effort.score").value(30.0))
+                .andExpect(jsonPath("$.effort.ratingPreferred").value(false));
+
+        mockMvc.perform(json(patch(url, run.getId()).header("Authorization", auth), "{\"useRatingForEffort\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.useRatingForEffort").value(true))
+                .andExpect(jsonPath("$.perceivedExertion").doesNotExist());
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("PERCEIVED"))
+                .andExpect(jsonPath("$.effort.score").value(50.0))
+                .andExpect(jsonPath("$.effort.perceivedExertion").value(10))
+                .andExpect(jsonPath("$.effort.ratingPreferred").value(true))
+                .andExpect(jsonPath("$.heartRate.hasStream").value(true));
+        assertThat(metrics.findByActivityIdAndRunnerId(run.getId(), owner.getId()).orElseThrow().isRatingPreferred())
+                .as("recomputed by the edit itself, not only on read").isTrue();
+
+        mockMvc.perform(json(patch(url, run.getId()).header("Authorization", auth), "{\"useRatingForEffort\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.useRatingForEffort").value(false));
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("HR_ZONES"))
+                .andExpect(jsonPath("$.effort.score").value(30.0))
+                .andExpect(jsonPath("$.effort.perceivedExertion").value(10))
+                .andExpect(jsonPath("$.effort.ratingPreferred").value(false));
+    }
+
+    @Test
+    void theChoiceAndTheRatingCanBeGivenTogetherAndClearingTheRatingClearsTheChoice() throws Exception {
+        Runner owner = runner("USER");
+        Activity run = run(owner, 600, 2.0, null);
+        stream(run, 600, 140);
+        String auth = bearer(owner);
+
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth),
+                        "{\"perceivedExertion\":8,\"useRatingForEffort\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perceivedExertion").value(8))
+                .andExpect(jsonPath("$.useRatingForEffort").value(true));
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("PERCEIVED"));
+
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"perceivedExertion\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perceivedExertion").doesNotExist())
+                .andExpect(jsonPath("$.useRatingForEffort").value(false));
+        Activity after = activities.findById(run.getId()).orElseThrow();
+        assertThat(after.getPerceivedExertion()).isNull();
+        assertThat(after.isUseRatingForEffort()).as("nothing to use any more").isFalse();
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("HR_ZONES"))
+                .andExpect(jsonPath("$.effort.ratingPreferred").value(false));
+
+        // Rating it again does not bring the choice back by itself.
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"perceivedExertion\":6}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/activities/{id}/training-metrics", run.getId()).header("Authorization", auth))
+                .andExpect(jsonPath("$.effort.source").value("HR_ZONES"));
+    }
+
+    @Test
+    void theRatingCannotBeUsedBeforeThereIsOne() throws Exception {
+        Runner owner = runner("USER");
+        Activity run = run(owner, 600, 2.0, 140.0);
+        String auth = bearer(owner);
+
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"useRatingForEffort\":true}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("RATING_REQUIRED"));
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth),
+                        "{\"perceivedExertion\":null,\"useRatingForEffort\":true}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("RATING_REQUIRED"));
+        assertThat(activities.findById(run.getId()).orElseThrow().isUseRatingForEffort()).isFalse();
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(delimiter = '|', value = {
+            "a word|{\"useRatingForEffort\":\"yes\"}",
+            "a number|{\"useRatingForEffort\":1}",
+            "nothing|{\"useRatingForEffort\":null}",
+            "a list|{\"useRatingForEffort\":[true]}"
+    })
+    void theChoiceToUseTheRatingIsTrueOrFalseAndNothingElse(String name, String body) throws Exception {
+        Runner owner = runner("USER");
+        Activity run = run(owner, 600, 2.0, 140.0);
+        run.setPerceivedExertion(5);
+        activities.saveAndFlush(run);
+
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", bearer(owner)), body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_USE_RATING_FOR_EFFORT"));
+        assertThat(activities.findById(run.getId()).orElseThrow().isUseRatingForEffort()).isFalse();
+    }
+
     @ParameterizedTest(name = "{0}")
     @CsvSource(delimiter = '|', value = {
             "zero|{\"perceivedExertion\":0}",
@@ -441,7 +545,7 @@ class TrainingEndpointsMvcTests {
         Activity run = run(owner, 600, 2.0, 140.0);
         String auth = bearer(owner);
 
-        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"name\":\"renamed\"}"))
+        mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"startTime\":\"2026-01-01T00:00:00\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("UNSUPPORTED_FIELD"));
         mockMvc.perform(json(patch("/api/activities/{id}", run.getId()).header("Authorization", auth), "{\"perceivedExertion\":5,\"distanceKm\":99}"))

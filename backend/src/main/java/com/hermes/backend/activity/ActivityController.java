@@ -98,7 +98,7 @@ public class ActivityController {
         // ?id= serves the same feed-item shape for a single run.
         if (id != null) {
             return activityDataAccess.findActivityForRunner(id, activeUser.get())
-                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity, ActivityLocalDates.zoneOf(activeUser.get()))))
+                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunDetailItem(activity, ActivityLocalDates.zoneOf(activeUser.get()))))
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 

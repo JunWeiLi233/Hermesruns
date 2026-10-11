@@ -7,12 +7,14 @@ import { useI18n } from '../../contexts/I18nContext';
 const RATINGS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /** What the score was made from, and how, for each source the server reports. */
-function sourceCopy(t, source, rating) {
+function sourceCopy(t, source, rating, chosen) {
   switch (source) {
     case 'HR_ZONES':
       return { title: t('run_detail.effort_source_hr_zones'), how: t('run_detail.effort_how_hr_zones') };
     case 'PERCEIVED':
-      return { title: t('run_detail.effort_source_perceived', { rating: rating ?? '' }), how: t('run_detail.effort_how_perceived') };
+      return chosen
+        ? { title: t('run_detail.effort_source_perceived_chosen', { rating: rating ?? '' }), how: t('run_detail.effort_how_perceived_chosen') }
+        : { title: t('run_detail.effort_source_perceived', { rating: rating ?? '' }), how: t('run_detail.effort_how_perceived') };
     case 'HR_AVERAGE':
       return { title: t('run_detail.effort_source_hr_average'), how: t('run_detail.effort_how_hr_average') };
     case 'PACE_MODEL':
@@ -38,7 +40,7 @@ export default function RunEffortCard({ runId, effort, onRatingSaved }) {
 
   const serverRating = effort.perceivedExertion ?? null;
   const rating = saving ? saving.value : saved !== undefined ? saved : serverRating;
-  const copy = sourceCopy(t, effort.source, serverRating ?? rating);
+  const copy = sourceCopy(t, effort.source, serverRating ?? rating, effort.ratingPreferred === true);
   const score = effort.score;
 
   async function saveRating(value) {
@@ -66,7 +68,9 @@ export default function RunEffortCard({ runId, effort, onRatingSaved }) {
 
   let hint = t('run_detail.rating_hint_idle');
   if (rating != null) {
-    hint = effort.source === 'PERCEIVED' ? t('run_detail.rating_hint_used') : t('run_detail.rating_hint_unused');
+    hint = effort.source === 'PERCEIVED'
+      ? t(effort.ratingPreferred === true ? 'run_detail.rating_hint_chosen' : 'run_detail.rating_hint_used')
+      : t('run_detail.rating_hint_unused');
   }
   if (saving) hint = t('run_detail.rating_saving');
 

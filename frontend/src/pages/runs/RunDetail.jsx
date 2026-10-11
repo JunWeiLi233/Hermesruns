@@ -17,7 +17,9 @@ import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
 import RunBestEfforts from './RunBestEfforts';
 import RunGoalsCard from '../../components/goals/RunGoalsCard';
+import RunEditDrawer from './RunEditDrawer';
 import RunLabelsCard from './RunLabelsCard';
+import RunNotes from './RunNotes';
 import RunMatches from './RunMatches';
 import RunPaceAnalysis from './RunPaceAnalysis';
 import RunSummaryCard from './RunSummaryCard';
@@ -252,6 +254,10 @@ export default function RunDetail() {
   // The run whose stream the page has finished asking for, so the pace analysis asks for it only after that.
   const [streamCheckedFor, setStreamCheckedFor] = useState(null);
   const [paceRefresh, setPaceRefresh] = useState(0);
+  // The edit drawer, and a count of the saves that changed what the cards beside it are drawn from (type, tags, rating, title).
+  const [editOpen, setEditOpen] = useState(false);
+  const [editVersion, setEditVersion] = useState(0);
+  const [editNotice, setEditNotice] = useState(null);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -330,6 +336,27 @@ export default function RunDetail() {
       }
     }).catch(() => {});
   }, [isAuthenticated, id]);
+
+  // The drawer saved something: the run on this page follows it, and so do the cards drawn from what was edited.
+  function handleEdited(result) {
+    const touched = result.fields.length > 0 || result.shoeChanged;
+    if (!touched) return;
+    invalidateResourceCache('/api/activities');
+    setRun((prev) => {
+      if (!prev) return prev;
+      const nextRun = { ...prev, name: result.name, notes: result.notes ?? null };
+      if (result.shoeChanged) {
+        nextRun.shoeId = result.shoeId;
+        nextRun.shoeName = result.shoeName;
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('hermes_selected_run', JSON.stringify(nextRun));
+      }
+      return nextRun;
+    });
+    if (result.fields.length > 0) setEditVersion((current) => current + 1);
+    setEditNotice({ runId: run?.id, text: t('run_detail.edit_saved') });
+  }
 
   async function assignShoe(shoeId) {
     if (!run?.id) {
@@ -1071,6 +1098,15 @@ export default function RunDetail() {
               <h1>{run.name || t('run_detail.detail_title')}</h1>
               <div className="run-detail-v2__actions">
                 {run.provider && <span className="run-detail-provider-pill run-detail-v2__provider">{run.provider}</span>}
+                <button
+                  type="button"
+                  className="run-detail-v2__btn"
+                  aria-haspopup="dialog"
+                  onClick={() => { setEditNotice(null); setEditOpen(true); }}
+                >
+                  <AppIcon name="edit" />
+                  {t('run_detail.edit_run')}
+                </button>
                 {run.provider === 'STRAVA' && (
                   <button type="button" className="run-detail-v2__btn" disabled={syncDisabled} onClick={handleResync}>
                     <AppIcon name="sync" />
@@ -1082,6 +1118,8 @@ export default function RunDetail() {
                   {shareFeedback || t('run_detail.share')}
                 </button>
               </div>
+              {editNotice && editNotice.runId === run.id ? <p className="run-detail-v2__edit-notice" role="status">{editNotice.text}</p> : null}
+              <RunNotes notes={run.notes} />
             </div>
 
             <div className="run-detail-v2__primary">
@@ -1131,7 +1169,7 @@ export default function RunDetail() {
           </div>
         </section>
 
-        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh + editVersion} />
 
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
@@ -1228,7 +1266,7 @@ export default function RunDetail() {
         {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
         <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
-        <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
+        <RunTrainingCards key={`training-${run.id}`} runId={run.id} refreshToken={editVersion} />
 
         <RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
 
@@ -1275,7 +1313,7 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
-            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} />
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} refreshToken={editVersion} />
 
             <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
 
@@ -1383,6 +1421,18 @@ export default function RunDetail() {
       <footer className="runner-shell-footer runner-dashboard-footer run-detail-footer">
         <FooterNavLinks />
       </footer>
+      {editOpen ? (
+        <RunEditDrawer
+          key={`edit-${run.id}`}
+          runId={run.id}
+          provider={run.provider}
+          shoes={shoes}
+          currentShoeName={linkedShoeName}
+          lang={lang}
+          onClose={() => setEditOpen(false)}
+          onSaved={handleEdited}
+        />
+      ) : null}
     </div>,
     {
       hasCoachReview: Boolean(analytics?.debrief),

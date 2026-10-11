@@ -686,6 +686,46 @@ before the last 3 months. All time has nothing before it, so the button is off t
 - A run is on the day it was run on the runner's wall (see "The runner's day"); a stretch is judged by those days in the
   browser's own clock for "today".
 
+## Editing a Run
+
+The **Edit** button next to a run's title opens a panel (a drawer from the right on a wide screen, the whole screen on a phone)
+with everything a runner can say about a run in one place:
+
+- **Title.** One line, up to 120 characters; spaces of any kind become single spaces. A run cannot be left without a title.
+  A title the runner sets is theirs: the run is marked `name_edited`, and a later Strava sync brings Strava's title back for every
+  run except the ones that are marked. (Strava's other data on the run, distance and time and the rest, still follows Strava.)
+  Setting the title a run already has is not a rename.
+- **Notes.** Free text up to 2000 characters, private to the runner: shown under the run's title (folded to a few lines when long),
+  read through `GET /api/activities?id=` for that one run and never part of a list, and in the account export. Line breaks are kept.
+  Control characters other than tab and line break are refused. Lengths are counted in the unit a browser's `value.length` counts
+  (an emoji is two), the same number the counter in the panel shows and the server applies.
+- **How it felt, and whether it counts.** The 1 to 10 rating of the Effort card, and a choice to **use it instead of the heart
+  rate** for this run's effort (Strava's "use it instead of heart rate"). Without the choice a rating is only used when a run has
+  little or no heart-rate data, as before. With it, the effort score is the moving minutes times the rating's weight (1 for a
+  rating of 1 to 5 for a rating of 10, evenly between), the source reads *From your rating of N out of 10, as you chose*, and the
+  run's effort is recomputed at once (its stored row remembers the choice it was made with, `rating_preferred`, so a row made
+  before a change of mind is recomputed when the run is next read, as it is for a changed rating). A choice needs a rating: `useRatingForEffort: true` without one is refused,
+  and clearing the rating clears the choice. Only that run's effort changes; the zones, the fitness model and the weekly range
+  read the effort rows as they always did.
+- **Run type and tags**, as on the Type and tags card (see Run Type and Tags): the same rules and the same words, but a draft
+  here, saved with the rest.
+- **Shoes**, through the shoe route the gear card uses.
+
+Nothing is saved until **Save changes**. One `PATCH` holds only the fields that changed (a title Strava gave the run is not sent
+back as if the runner had chosen it), the shoe has its own request, and a refused request changes nothing. If the fields are saved
+and the shoe is not, the panel says so and keeps the shoe as the one thing left to do. Leaving with something unsaved (Cancel, the
+close button, Escape or a click outside) asks first. The panel reads the run afresh each time it opens, so a change made in
+another tab is not overwritten by an old draft; the Type and tags card, the Effort card and the run summary on the page follow a
+save without a reload, and a rename drops the cached records list (it shows run names).
+
+**Left out on purpose.** Strava's edit page also has privacy, hidden details (start time, calories, heart rate, pace, power),
+mute, photos, the sport and the map type. The first four belong to the social side of that product (who can see a run); every
+HermesRuns run is private to its runner. HermesRuns analyses runs only, and draws one kind of map.
+
+**Known limits.** There is no history of earlier titles or notes, and no way back to the title a run came with (Strava's title
+returns only for runs the runner has not renamed). Two panels open on one run at once save field by field, so the last save of a
+field wins, but a field one of them did not touch is never overwritten by it.
+
 ## Run Summary
 
 The run page has a **Run summary**: a headline that says what kind of run it was, and up to four lines that compare it with the

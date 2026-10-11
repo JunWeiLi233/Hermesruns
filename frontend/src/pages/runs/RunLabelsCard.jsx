@@ -17,9 +17,9 @@ const KNOWN_TYPES = ['RACE', 'LONG_RUN', 'WORKOUT'];
  * filters by them and the fitness chart flags races); nothing is computed from them. Each change is saved at once and
  * shown before the server answers (see useRunLabelEditor); if a save fails the earlier labels come back and the card says so.
  */
-export default function RunLabelsCard({ runId }) {
+export default function RunLabelsCard({ runId, refreshToken = 0 }) {
   const { t } = useI18n();
-  const { status, data, reload } = useRunLabels(runId);
+  const { status, data, reload } = useRunLabels(runId, { refreshToken });
   const { labels: current, saving, failed, announcement, setType, addTag: queueTag, removeTag: queueRemoval } = useRunLabelEditor(runId, data);
   const titleId = useId();
   const inputId = useId();

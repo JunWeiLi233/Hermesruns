@@ -53,7 +53,8 @@ class TrainingMetricsListener {
      */
     @EventListener
     void onActivityEdited(ActivityEditedEvent event) {
-        if (event.fields().contains(ActivityEditedEvent.PERCEIVED_EXERTION)) {
+        if (event.fields().contains(ActivityEditedEvent.PERCEIVED_EXERTION)
+                || event.fields().contains(ActivityEditedEvent.USE_RATING_FOR_EFFORT)) {
             compute(event.runnerId(), event.activityId());
         }
     }

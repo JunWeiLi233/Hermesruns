@@ -1,6 +1,7 @@
 package com.hermes.backend.activity;
 
 import com.hermes.backend.auth.AuthService;
+import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import com.hermes.backend.runner.Runner;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -21,36 +22,43 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Edits the details of one of the signed-in runner's runs: how hard it felt (a rating of 1 to 10), what kind of run it was
- * and the tags on it. It has a controller of its own because {@link ActivityController} is held to a method-count ceiling.
+ * Edits the details of one of the signed-in runner's runs: its title, the notes on it, how hard it felt (a rating of 1 to 10,
+ * and whether the effort score should come from it), what kind of run it was and the tags on it. The shoe has its own route
+ * (see ShoeController). It has a controller of its own because {@link ActivityController} is held to a method-count ceiling.
  */
 @RestController
 @RequestMapping("/api/activities")
 public class ActivityEditController {
 
     private static final Set<String> EDITABLE = Set.of(
-            ActivityEditedEvent.PERCEIVED_EXERTION, ActivityEditedEvent.RUN_TYPE, ActivityEditedEvent.TAGS);
+            ActivityEditedEvent.PERCEIVED_EXERTION, ActivityEditedEvent.RUN_TYPE, ActivityEditedEvent.TAGS,
+            ActivityEditedEvent.NAME, ActivityEditedEvent.NOTES, ActivityEditedEvent.USE_RATING_FOR_EFFORT);
 
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
     private final RunLabelService labelService;
     private final ApplicationEventPublisher events;
+    private final TtlCacheStore cacheStore;
 
     public ActivityEditController(AuthService authService, ActivityDataAccess activityDataAccess,
-                                  RunLabelService labelService, ApplicationEventPublisher events) {
+                                  RunLabelService labelService, ApplicationEventPublisher events,
+                                  TtlCacheStore cacheStore) {
         this.authService = authService;
         this.activityDataAccess = activityDataAccess;
         this.labelService = labelService;
         this.events = events;
+        this.cacheStore = cacheStore;
     }
 
     /**
      * Sets or clears what the runner says about a run. A request names the fields to change and nothing else is touched:
-     * {@code perceivedExertion} (a whole number from 1 to 10, or null), {@code runType} (race, long run, workout or null)
-     * and {@code tags} (the whole list the run should have, up to six, or null for none). Every value is checked before
-     * any is saved, so a refused request changes nothing. A field that cannot be edited is refused instead of ignored, so
-     * a typo does not look like a save. The answer holds the fields the request named, as they are now. Returns 404 for a
-     * run that is not the caller's, without saying whether it exists.
+     * {@code name} (the title, which cannot be emptied), {@code notes} (text, or null for none),
+     * {@code perceivedExertion} (a whole number from 1 to 10, or null), {@code useRatingForEffort} (true or false: score the
+     * run from the rating even though it has a heart rate; it needs a rating, and clearing the rating clears it),
+     * {@code runType} (race, long run, workout or null) and {@code tags} (the whole list the run should have, up to six, or
+     * null for none). Every value is checked before any is saved, so a refused request changes nothing. A field that cannot be
+     * edited is refused instead of ignored, so a typo does not look like a save. The answer holds the fields the request
+     * named, as they are now. Returns 404 for a run that is not the caller's, without saying whether it exists.
      */
     @PatchMapping("/{id}")
     public ResponseEntity<?> editActivity(
@@ -75,6 +83,7 @@ public class ActivityEditController {
         }
 
         // Check everything first, so that a request with one bad value saves none of its good ones.
+        Activity activity = found.get();
         Integer rating = null;
         boolean ratingGiven = body.containsKey(ActivityEditedEvent.PERCEIVED_EXERTION);
         if (ratingGiven) {
@@ -86,6 +95,40 @@ public class ActivityEditController {
                             "Perceived exertion must be a whole number from 1 to 10, or null to clear it.");
                 }
                 rating = number.intValue();
+            }
+        }
+        boolean useGiven = body.containsKey(ActivityEditedEvent.USE_RATING_FOR_EFFORT);
+        boolean useRating = activity.isUseRatingForEffort();
+        if (useGiven) {
+            if (!(body.get(ActivityEditedEvent.USE_RATING_FOR_EFFORT) instanceof Boolean flag)) {
+                return error(HttpStatus.BAD_REQUEST, "INVALID_USE_RATING_FOR_EFFORT", "Use the rating for effort is true or false.");
+            }
+            useRating = flag;
+        }
+        Integer ratingAfter = ratingGiven ? rating : activity.getPerceivedExertion();
+        if (useGiven && useRating && ratingAfter == null) {
+            return error(HttpStatus.BAD_REQUEST, "RATING_REQUIRED", "Rate how the run felt before asking for the rating to be used.");
+        }
+        if (ratingAfter == null) {
+            // Without a rating there is nothing to use: clearing the rating clears the choice with it.
+            useRating = false;
+        }
+        boolean nameGiven = body.containsKey(ActivityEditedEvent.NAME);
+        String name = null;
+        if (nameGiven) {
+            try {
+                name = RunTexts.cleanName(body.get(ActivityEditedEvent.NAME));
+            } catch (IllegalArgumentException refused) {
+                return error(HttpStatus.BAD_REQUEST, "INVALID_NAME", refused.getMessage());
+            }
+        }
+        boolean notesGiven = body.containsKey(ActivityEditedEvent.NOTES);
+        String notes = null;
+        if (notesGiven) {
+            try {
+                notes = RunTexts.cleanNotes(body.get(ActivityEditedEvent.NOTES));
+            } catch (IllegalArgumentException refused) {
+                return error(HttpStatus.BAD_REQUEST, "INVALID_NOTES", refused.getMessage());
             }
         }
         boolean runTypeGiven = body.containsKey(ActivityEditedEvent.RUN_TYPE);
@@ -114,12 +157,27 @@ public class ActivityEditController {
             }
         }
 
-        Activity activity = found.get();
         Set<String> changed = new LinkedHashSet<>();
         if (ratingGiven && !Objects.equals(activity.getPerceivedExertion(), rating)) {
             activity.setPerceivedExertion(rating);
-            activityDataAccess.save(activity);
             changed.add(ActivityEditedEvent.PERCEIVED_EXERTION);
+        }
+        if (useRating != activity.isUseRatingForEffort()) {
+            activity.setUseRatingForEffort(useRating);
+            changed.add(ActivityEditedEvent.USE_RATING_FOR_EFFORT);
+        }
+        if (nameGiven && !Objects.equals(name, activity.getName())) {
+            activity.setName(name);
+            // A title of the runner's own: a Strava re-sync leaves it alone from now on.
+            activity.setNameEdited(true);
+            changed.add(ActivityEditedEvent.NAME);
+        }
+        if (notesGiven && !Objects.equals(notes, activity.getNotes())) {
+            activity.setNotes(notes);
+            changed.add(ActivityEditedEvent.NOTES);
+        }
+        if (!changed.isEmpty()) {
+            activityDataAccess.save(activity);
         }
         RunLabelService.Labels labels = null;
         if (runTypeGiven || tagsGiven) {
@@ -133,14 +191,27 @@ public class ActivityEditController {
                 changed.add(ActivityEditedEvent.TAGS);
             }
         }
+        if (changed.contains(ActivityEditedEvent.NAME)) {
+            // The records list shows the names of the runs that hold them.
+            ActivityCaches.evictPersonalRecords(cacheStore, runner.get().getId());
+        }
         if (!changed.isEmpty()) {
             events.publishEvent(new ActivityEditedEvent(runner.get().getId(), id, changed));
         }
 
         Map<String, Object> saved = new LinkedHashMap<>();
         saved.put("id", id);
+        if (nameGiven) {
+            saved.put("name", activity.getName());
+        }
+        if (notesGiven) {
+            saved.put("notes", activity.getNotes());
+        }
         if (ratingGiven) {
             saved.put("perceivedExertion", rating);
+        }
+        if (useGiven || changed.contains(ActivityEditedEvent.USE_RATING_FOR_EFFORT)) {
+            saved.put("useRatingForEffort", activity.isUseRatingForEffort());
         }
         if (runTypeGiven) {
             saved.put("runType", labels == null ? activity.getRunType() : labels.runType());
@@ -149,6 +220,46 @@ public class ActivityEditController {
             saved.put("tags", labels == null ? List.of() : labels.tags());
         }
         return ResponseEntity.ok(saved);
+    }
+
+    /**
+     * Everything the edit drawer shows for one run, in one answer: the title, the notes, the rating and whether it is used for
+     * the effort score, the run type and tags with the runner's most used tags to offer, the shoe, and the limits the form
+     * checks against so the page and the server say the same thing. Returns 404 for a run that is not the caller's, without
+     * saying whether it exists.
+     */
+    @GetMapping("/{id}/edit")
+    public ResponseEntity<?> editableDetails(
+            @PathVariable("id") Long id,
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runner.isEmpty()) {
+            return error(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired session token.");
+        }
+        Optional<Activity> found = activityDataAccess.findActivityForRunner(id, runner.get());
+        if (found.isEmpty()) {
+            return error(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
+        }
+        Activity activity = found.get();
+        RunLabelService.Labels labels = labelService.labels(activity);
+        Map<String, Object> limits = new LinkedHashMap<>();
+        limits.put("maxNameLength", RunTexts.MAX_NAME_LENGTH);
+        limits.put("maxNotesLength", RunTexts.MAX_NOTES_LENGTH);
+        limits.put("maxTags", RunLabelService.MAX_TAGS);
+        limits.put("maxTagLength", RunLabelService.MAX_TAG_LENGTH);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("id", id);
+        body.put("name", activity.getName());
+        body.put("notes", activity.getNotes());
+        body.put("perceivedExertion", activity.getPerceivedExertion());
+        body.put("useRatingForEffort", activity.isUseRatingForEffort());
+        body.put("runType", labels.runType());
+        body.put("tags", labels.tags());
+        body.put("shoeId", activity.getShoeId());
+        body.put("runTypes", RunTypes.ALL);
+        body.put("suggestions", labelService.usage(runner.get().getId(), RunLabelService.SUGGESTIONS));
+        body.put("limits", limits);
+        return ResponseEntity.ok(body);
     }
 
     /**

@@ -14,6 +14,13 @@ final class ActivityRoutePreviewHelper {
     }
 
     /** The run as the feed and the single-run answer carry it; its start is the clock on the runner's wall (see {@link ActivityLocalDates#startTimeOf}). */
+    /** One run as its own page reads it: the feed item and the notes the runner wrote on it, which are never part of a list. */
+    static Map<String, Object> toRunDetailItem(Activity activity, java.time.ZoneId zone) {
+        Map<String, Object> body = toRunFeedItem(activity, zone);
+        body.put("notes", activity.getNotes());
+        return body;
+    }
+
     static Map<String, Object> toRunFeedItem(Activity activity, java.time.ZoneId zone) {
         Map<String, Object> body = new LinkedHashMap<>();
         ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);

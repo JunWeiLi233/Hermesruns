@@ -99,6 +99,9 @@ public class TrainingMetricsService {
         if (!Objects.equals(row.getPerceivedExertionUsed(), ratingOf(activity))) {
             return true;
         }
+        if (row.isRatingPreferred() != activity.isUseRatingForEffort()) {
+            return true;
+        }
         if (!Objects.equals(row.getLocalDate(), ActivityLocalDates.of(activity, runner))) {
             return true;
         }
@@ -161,13 +164,13 @@ public class TrainingMetricsService {
         HrZoneAnalysis.Result hr = HrZoneAnalysis.analyze(stream.elapsedSeconds(), stream.heartRates(), stream.size(), zones);
 
         EffortModel.Input input = new EffortModel.Input(movingSecondsOf(activity), distanceKmOf(activity),
-                ratingOf(activity), activity.getAverageHeartRate(), hr, zones, null);
+                ratingOf(activity), activity.isUseRatingForEffort(), activity.getAverageHeartRate(), hr, zones, null);
         EffortModel.Result effort = EffortModel.compute(input);
         if (EffortModel.PACE_MODEL.equals(effort.source())) {
             Double scale = calibrationScale(runnerId);
             if (scale != null) {
                 effort = EffortModel.compute(new EffortModel.Input(input.movingSeconds(), input.distanceKm(),
-                        input.perceivedExertion(), input.averageHeartRate(), hr, zones, scale));
+                        input.perceivedExertion(), input.preferRating(), input.averageHeartRate(), hr, zones, scale));
             }
         }
 
@@ -182,6 +185,7 @@ public class TrainingMetricsService {
         row.setHrCoveredSeconds((int) Math.round(hr.coveredSeconds()));
         row.setZonesUsed(zones);
         row.setPerceivedExertionUsed(ratingOf(activity));
+        row.setRatingPreferred(activity.isUseRatingForEffort());
         row.setModelVersion(MODEL_VERSION);
         row.setStale(false);
         row.setComputedAt(LocalDateTime.now());

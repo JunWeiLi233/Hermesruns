@@ -601,7 +601,10 @@ public class StravaSyncService {
         activity.setActivityType(ActivityType.RUN);
         activity.setStravaId(stravaId);
         activity.setStravaApiSourced(true);
-        activity.setName(activityName);
+        if (!activity.isNameEdited()) {
+            // A title the runner gave the run in Hermes is theirs: only the runs they have not renamed follow Strava's.
+            activity.setName(activityName);
+        }
         activity.setDistanceMeters(distanceMeters > 0d ? distanceMeters : null);
         activity.setDistanceKm(distanceMeters > 0d ? distanceMeters / 1000d : 0d);
         activity.setDurationSeconds(movingTimeSeconds > 0L ? movingTimeSeconds : null);

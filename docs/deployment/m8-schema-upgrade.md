@@ -1,6 +1,6 @@
-# Schema upgrade: pace zones from a race (M8)
+# Schema upgrade: pace zones from a race and the edit panel (M8)
 
-This release adds one table. Production runs Hibernate in `validate` mode (`APP_JPA_DDL_AUTO=validate`), so the app **refuses
+This release adds one table and four columns. Production runs Hibernate in `validate` mode (`APP_JPA_DDL_AUTO=validate`), so the app **refuses
 to boot** until the schema matches. Run the SQL below **before** deploying the new build, and after the earlier upgrades the
 same build also needs, if they have not been run yet: [M0](m0-schema-upgrade.md), [M1](m1-schema-upgrade.md),
 [M3](m3-schema-upgrade.md), [M5](m5-schema-upgrade.md) and [M6](m6-schema-upgrade.md). Local H2 databases
@@ -25,21 +25,33 @@ CREATE TABLE IF NOT EXISTS runner_pace_zone_race (
     CONSTRAINT uk_runner_pace_zone_race_runner UNIQUE (runner_id)
 );
 
+-- What a runner wrote about a run (private notes), whether its title is theirs (a Strava re-sync then leaves the title alone), and
+-- whether the effort score should come from their rating even though the run has a heart rate.
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS notes varchar(2000);
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS name_edited boolean NOT NULL DEFAULT false;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS use_rating_for_effort boolean NOT NULL DEFAULT false;
+
+-- Whether the effort row was worked out with that choice, so a changed choice is noticed and the row recomputed.
+ALTER TABLE activity_training_metrics ADD COLUMN IF NOT EXISTS rating_preferred boolean NOT NULL DEFAULT false;
+
 COMMIT;
 ```
 
-The statements are idempotent, so running them twice is harmless. The definitions were taken from the JPA mapping
-(`RunnerPaceZoneRace`), not written by hand. Types matter: `validate` rejects `real` for the distance (it is a `double`),
-and `timestamp` without a precision for a `LocalDateTime`. The unique constraint is the one Hibernate names; it also serves
-as the index on `runner_id`, so none is added.
+The statements are idempotent, so running them twice is harmless. The definitions were taken from the JPA mappings
+(`RunnerPaceZoneRace`, `Activity`, `ActivityTrainingMetrics`), not written by hand. Types matter: `validate` rejects `real` for
+the distance (it is a `double`), and `timestamp` without a precision for a `LocalDateTime`. The unique constraint is the one
+Hibernate names; it also serves as the index on `runner_id`, so none is added. The three flags are added with a default and `NOT
+NULL`, which PostgreSQL does without rewriting the table, so the statements are quick on a large `activities` table.
 
 Checked on 2026-10-11 on a throwaway PostgreSQL 17.10 (the schema this build expects, minus what this document adds, so
 not on a copy of production): this build refuses to boot with `validate` before the SQL and boots after it; the result is
-Hibernate's own schema apart from the order of the columns and the name of the one foreign key; running it twice changes
-nothing; the build before this release (the commit before the pace zones) still boots on the upgraded schema, so the SQL can
-go first and the deploy later; the rollback below restores the earlier schema exactly; and the race routes answered as they do
-on H2 (thirty-one checks: set, replace, thirteen refusals, eight first requests and then eight replacements at once from one
-runner leaving one row, the export, another runner seeing and removing none of it, remove, and signed out). Nothing of yours was touched.
+Hibernate's own schema apart from the order of the columns (the new ones come last) and the name of the one foreign key;
+running it twice changes nothing; the build before this release (the commit before any of this) still boots on the upgraded
+schema, so the SQL can go first and the deploy later; the rollback below restores the earlier schema exactly; and the routes
+answered as they do on H2 (forty-four checks: the race set, replaced, refused thirteen ways, eight first requests and then eight
+replacements at once from one runner leaving one row, exported, removed; a title with Chinese and an emoji and notes of 2000
+characters saved and read back whole; a rating used instead of the heart rate and the effort following it both ways; the export
+columns; another runner seeing none of it). Nothing of yours was touched.
 
 ## After the deploy
 
@@ -53,6 +65,12 @@ they enter one in Settings > Training.
   after that date; earlier runs keep the zones they had. `GET`, `PUT` and `DELETE /api/training/pace-zones`.
 - The run page's *Time at each pace* card says when its zones come from a race.
 - The account export has a new file, `pace-zone-race.csv`. Deleting the account deletes the race.
+- An **Edit** button on every run page opens a panel with the run's title, notes, rating (and whether the rating stands in for the
+  heart rate), run type, tags and shoes (`GET /api/activities/{id}/edit`; `PATCH /api/activities/{id}` also takes `name`, `notes`
+  and `useRatingForEffort`). A title the runner sets is kept when Strava syncs the run again. The notes show under the run's title
+  and are in the account export (`runs.csv` has three new last columns: `perceived_exertion`, `use_rating_for_effort`, `notes`).
+- A run whose rating is used instead of the heart rate has its effort recomputed at once; the effort rows of every other run are
+  untouched (their `rating_preferred` is false, as their runs' flags are).
 
 ## Also in this build, and needing no SQL
 
@@ -68,8 +86,13 @@ they enter one in Settings > Training.
 Roll the app back first, then (only if you need to) drop what was added:
 
 ```sql
+ALTER TABLE activity_training_metrics DROP COLUMN IF EXISTS rating_preferred;
+ALTER TABLE activities DROP COLUMN IF EXISTS use_rating_for_effort;
+ALTER TABLE activities DROP COLUMN IF EXISTS name_edited;
+ALTER TABLE activities DROP COLUMN IF EXISTS notes;
 DROP TABLE IF EXISTS runner_pace_zone_race;
 ```
 
-Leaving it in place is safe for the previous build, because Hibernate's `validate` mode ignores extra tables. If you roll back
-for good, drop it: its foreign key to `runner` would block any code that hard-deletes a runner.
+Leaving all of it in place is safe for the previous build, because Hibernate's `validate` mode ignores extra tables and columns.
+Think before you drop `notes`: it holds what runners wrote about their runs, and dropping the column deletes it. If you roll back
+for good, drop the table: its foreign key to `runner` would block any code that hard-deletes a runner.

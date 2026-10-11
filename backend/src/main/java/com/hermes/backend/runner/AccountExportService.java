@@ -160,6 +160,9 @@ public class AccountExportService {
                   (runs fetched from Strava); "utc" is UTC (runs imported from files or devices).
                 - run_type is RACE, LONG_RUN or WORKOUT when you set one, and empty otherwise. tags holds the
                   words you put on the run, in the order you added them, separated by "; ".
+                - perceived_exertion is how hard you rated the run, 1 to 10, and empty when you did not.
+                  use_rating_for_effort is true when you asked for that rating, not the heart rate, to score the run.
+                  notes is what you wrote about the run. name is the title the run has now, whoever gave it.
                 - GPX files carry timestamps only for runs whose start time is UTC.
                 - Not included yet: coach plans, wellness series (sleep, HRV, stress), muscle-training logs.
                 """;
@@ -177,7 +180,8 @@ public class AccountExportService {
     private static String runsCsv(List<Activity> runs, Map<Long, List<String>> tagsByRun) {
         StringBuilder csv = new StringBuilder(
                 "id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
-                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
+                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags,"
+                        + "perceived_exertion,use_rating_for_effort,notes\n");
         for (Activity run : runs) {
             csv.append(row(
                     String.valueOf(run.getId()),
@@ -196,7 +200,10 @@ public class AccountExportService {
                     text(run.getShoeName()),
                     value(run.getCreatedAt()),
                     text(run.getRunType()),
-                    text(String.join("; ", tagsByRun.getOrDefault(run.getId(), List.of())))
+                    text(String.join("; ", tagsByRun.getOrDefault(run.getId(), List.of()))),
+                    value(run.getPerceivedExertion()),
+                    String.valueOf(run.isUseRatingForEffort()),
+                    text(run.getNotes())
             ));
         }
         return csv.toString();

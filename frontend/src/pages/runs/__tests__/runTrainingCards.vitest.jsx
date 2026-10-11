@@ -112,6 +112,43 @@ describe('effort card', () => {
     expect(t(key, { rating: effort.perceivedExertion })).toBe(expected);
   });
 
+  it('says a rating was used because the runner asked for it, not because the heart rate was missing', async () => {
+    next = metrics({ effort: { score: 50, source: 'PERCEIVED', perceivedExertion: 8, ratingPreferred: true } });
+    renderCards();
+    expect(await screen.findByText(t('run_detail.effort_source_perceived_chosen', { rating: 8 }))).toBeInTheDocument();
+    expect(screen.getByText(t('run_detail.effort_how_perceived_chosen'))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.effort_source_perceived', { rating: 8 }))).not.toBeInTheDocument();
+    expect(screen.getByText(t('run_detail.rating_hint_chosen'))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.rating_hint_used'))).not.toBeInTheDocument();
+  });
+
+  it('keeps the plain words for a rating used because there was no heart rate', async () => {
+    next = metrics({ effort: { score: 50, source: 'PERCEIVED', perceivedExertion: 8, ratingPreferred: false } });
+    renderCards();
+    expect(await screen.findByText(t('run_detail.effort_source_perceived', { rating: 8 }))).toBeInTheDocument();
+    expect(screen.getByText(t('run_detail.rating_hint_used'))).toBeInTheDocument();
+    expect(screen.queryByText(t('run_detail.rating_hint_chosen'))).not.toBeInTheDocument();
+  });
+
+  it('points to the edit panel when a rating is saved but the heart rate decides the score', async () => {
+    next = metrics({ effort: { perceivedExertion: 4 } });
+    renderCards();
+    expect(await screen.findByText(t('run_detail.rating_hint_unused'))).toHaveTextContent('Edit the run');
+  });
+
+  it('asks again when the run was edited, and keeps the numbers on screen while it does', async () => {
+    const view = renderCards();
+    await screen.findByRole('region', { name: 'Effort' });
+    expect(metricsCalls()).toHaveLength(1);
+
+    next = metrics({ effort: { score: 50, source: 'PERCEIVED', perceivedExertion: 8, ratingPreferred: true } });
+    view.rerender(<MemoryRouter><RunTrainingCards runId={7} refreshToken={1} /></MemoryRouter>);
+    expect(screen.getByText('142')).toBeInTheDocument();
+    await waitFor(() => expect(metricsCalls()).toHaveLength(2));
+    expect(await screen.findByText('50')).toBeInTheDocument();
+    expect(screen.getByText(t('run_detail.effort_source_perceived_chosen', { rating: 8 }))).toBeInTheDocument();
+  });
+
   it('says so when there is nothing to base a score on', async () => {
     next = metrics({ effort: { score: null, source: null } });
     renderCards();
