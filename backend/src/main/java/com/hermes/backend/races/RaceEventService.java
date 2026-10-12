@@ -1,6 +1,7 @@
 package com.hermes.backend.races;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.coaching.AutomatedCoachService;
@@ -35,7 +36,7 @@ public class RaceEventService {
     public List<RaceEventResponse> list(Runner runner) {
         List<Activity> runActivities = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
         return raceEventRepository.findByRunnerOrderByEventDateAsc(runner).stream()
-                .map(race -> toResponse(race, runActivities))
+                .map(race -> toResponse(race, runActivities, ActivityLocalDates.zoneOf(runner)))
                 .toList();
     }
 
@@ -77,7 +78,7 @@ public class RaceEventService {
         RaceEvent saved = raceEventRepository.save(race);
         if (automatedCoachService != null) automatedCoachService.replanFutureSchedule(runner);
         List<Activity> runs = activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN);
-        return new SaveResult(SaveOutcome.SAVED, toResponse(saved, runs));
+        return new SaveResult(SaveOutcome.SAVED, toResponse(saved, runs, ActivityLocalDates.zoneOf(runner)));
     }
 
     private void applyRequest(RaceEvent raceEvent, RaceEventRequest request) {
@@ -93,7 +94,7 @@ public class RaceEventService {
         raceEvent.setCompletedActivityId(request.completedActivityId());
     }
 
-    private RaceEventResponse toResponse(RaceEvent raceEvent, List<Activity> runActivities) {
+    private RaceEventResponse toResponse(RaceEvent raceEvent, List<Activity> runActivities, java.time.ZoneId zone) {
         Activity matchedActivity = resolveMatchedActivity(raceEvent, runActivities);
         boolean completed = matchedActivity != null || raceEvent.getRegistrationStatus() == RaceRegistrationStatus.COMPLETED;
         long countdownDays = ChronoUnit.DAYS.between(LocalDate.now(), raceEvent.getEventDate());
@@ -103,8 +104,8 @@ public class RaceEventService {
                 raceEvent.getGoalTimeSeconds(), raceEvent.getNotes(), raceEvent.isNyrrNinePlusOneEligible(),
                 raceEvent.getCompletedActivityId(), completed, countdownDays,
                 matchedActivity == null ? null : new LinkedActivitySummary(
-                        matchedActivity.getId(), matchedActivity.getName(), matchedActivity.getStartTime(),
-                        matchedActivity.getStartDate(), matchedActivity.getDistanceKm(), matchedActivity.getMovingTimeSeconds())
+                        matchedActivity.getId(), matchedActivity.getName(), ActivityLocalDates.startTimeOf(matchedActivity, zone),
+                        ActivityLocalDates.startDateOf(matchedActivity, zone), matchedActivity.getDistanceKm(), matchedActivity.getMovingTimeSeconds())
         );
     }
 

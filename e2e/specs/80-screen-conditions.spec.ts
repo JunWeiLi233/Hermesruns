@@ -227,20 +227,19 @@ test.describe('F04 zones editor under bad conditions', () => {
     }
   });
 
-  test('F04-E12 the zones editor has no serious accessibility violations apart from the contrast ones tracked in BUG-005', async ({ browser, baseURL, guard }) => {
+  test('F04-E12 the zones editor has no serious accessibility violations', async ({ browser, baseURL, guard }) => {
     const context = await signedInContext(browser, baseURL, guard);
     try {
       const page = await context.newPage();
       await page.goto('/settings?section=training');
       await expect(maxField(page)).toBeVisible();
-      expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
+      expect(await a11yViolations(page)).toEqual([]);
     } finally {
       await context.close();
     }
   });
 
   test('F04-E12b the zones editor: text contrast of at least 4.5 to 1 in the light theme', async ({ browser, baseURL, guard }) => {
-    test.fail(true, 'BUG-005: the grey help line under each row is #8a837c on white, 3.73 to 1');
     const context = await signedInContext(browser, baseURL, guard);
     try {
       const page = await context.newPage();
@@ -249,6 +248,23 @@ test.describe('F04 zones editor under bad conditions', () => {
       expect(await a11yViolations(page, { onlyRules: ['color-contrast'] })).toEqual([]);
     } finally {
       await context.close();
+    }
+  });
+
+  test('F04-E12c Settings: text contrast of at least 4.5 to 1 in both themes, the footer links in midnight included (BUG-005)', async ({ browser, baseURL, guard }) => {
+    for (const theme of ['light', 'midnight']) {
+      const context = await signedInContext(browser, baseURL, guard);
+      try {
+        const page = await context.newPage();
+        await page.addInitScript((value) => localStorage.setItem('hermes_theme', value), theme);
+        for (const section of ['training', 'account']) {
+          await page.goto(`/settings?section=${section}`);
+          await expect(page.getByRole('link', { name: 'Terms' }).first()).toBeVisible();
+          expect(await a11yViolations(page, { onlyRules: ['color-contrast'] }), `${theme}, ${section}`).toEqual([]);
+        }
+      } finally {
+        await context.close();
+      }
     }
   });
 
@@ -267,6 +283,8 @@ test.describe('F04 zones editor under bad conditions', () => {
       await expect(maxField(page)).toHaveValue('185');
       offline = false;
       await page.getByRole('button', { name: 'Save', exact: true }).click();
+      // The error goes as soon as Save is pressed; the server has the value once the page says it was saved.
+      await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
       await expect(page.getByRole('alert')).toHaveCount(0);
       expect((await who.api.get('/api/training/zones')).json.maxHeartRate.bpm).toBe(185);
     } finally {

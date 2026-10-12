@@ -11,14 +11,16 @@ import Modal from '../Modal';
  *
  * `onSubmit({ period, metric, target })` answers `{ ok: true }` or `{ ok: false, status }`; the dialog closes on ok.
  */
-export default function GoalFormModal({ mode, goal = null, goals, maxTarget, onClose, onSubmit }) {
+export default function GoalFormModal({ mode, goal = null, suggestion = null, goals, maxTarget, onClose, onSubmit }) {
   const { t, formatNumber } = useI18n();
   const { unit } = useUnit();
   const editing = mode === 'edit' && goal != null;
   const [start] = useState(() => firstFree(goals));
-  const [period, setPeriod] = useState(editing ? goal.period : start.period);
-  const [metric, setMetric] = useState(editing ? goal.metric : start.metric);
-  const [text, setText] = useState(editing ? targetToForm(goal.metric, goal.target, unit) : '');
+  // A suggestion fills the dialog in: the runner changes whatever they like before saving.
+  const prefilled = !editing && suggestion != null;
+  const [period, setPeriod] = useState(editing ? goal.period : prefilled ? suggestion.period : start.period);
+  const [metric, setMetric] = useState(editing ? goal.metric : prefilled ? suggestion.metric : start.metric);
+  const [text, setText] = useState(editing ? targetToForm(goal.metric, goal.target, unit) : prefilled ? targetToForm(suggestion.metric, suggestion.target, unit) : '');
   const [problem, setProblem] = useState(null);
   const [saving, setSaving] = useState(false);
   const targetId = useId();

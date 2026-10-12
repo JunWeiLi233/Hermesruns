@@ -251,3 +251,14 @@ body .modal-card.goal-v2-card .modal-header h3 { color: var(--gl-ink); font-fami
   .goal-form__input input { height: 48px; font-size: 1rem; }
   .goal-form__actions > button { flex: 1 1 0; min-height: 46px; }
 }
+
+/* Suggested goals: a quiet block under the list, one row per suggestion with the working behind it. */
+#root .goals-v2__suggest { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+#root .goals-v2__suggest-title { color: var(--gl-ink); font-size: 0.9rem; font-weight: 800; }
+#root .goals-v2__suggest-hint { color: var(--gl-muted); font-size: 0.8rem; line-height: 1.45; }
+#root .goals-v2__suggest-list { display: flex; flex-direction: column; gap: 8px; }
+#root .goals-v2__suggestion { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; border-radius: 14px; background: var(--gl-fill); }
+#root .goals-v2__suggestion-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 240px; }
+#root .goals-v2__suggestion-copy strong { color: var(--gl-ink); font-size: 0.9rem; font-weight: 800; }
+#root .goals-v2__suggestion-copy span { color: var(--gl-muted); font-size: 0.78rem; line-height: 1.45; }
+#root .goals-v2__suggest-note { color: var(--gl-muted); font-size: 0.8rem; line-height: 1.45; }

@@ -14,7 +14,8 @@ import PageSkeleton from '../../components/PageSkeleton';
 import Modal from '../../components/Modal';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { formatDuration } from '../../utils/format';
+import { runIsWithinLastDays, todayKey } from '../../utils/calendarDays';
+import { formatDuration, getDistanceUnitLabel } from '../../utils/format';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../../utils/analysisInsights';
 import { buildRunDetailPath } from '../../utils/runRoute';
@@ -86,10 +87,10 @@ function coachContent(t, coachInsight) {
   };
 }
 
-function formatDistanceValue(distanceKm, unit) {
+function formatDistanceValue(distanceKm, unit, lang) {
   if (distanceKm == null || Number.isNaN(distanceKm)) return '--';
   const value = unit === 'mile' ? distanceKm / 1.60934 : distanceKm;
-  const suffix = unit === 'mile' ? 'mi' : 'km';
+  const suffix = getDistanceUnitLabel(lang, unit);
   return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${suffix}`;
 }
 
@@ -464,14 +465,10 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
+  // The last 7 (28) calendar days, today included, as on Home and in the load figures (calendarDays.js).
+  const today = todayKey();
+  const recent7Runs = validRuns.filter((run) => runIsWithinLastDays(run, 7, today));
+  const recent28Runs = validRuns.filter((run) => runIsWithinLastDays(run, 28, today));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const runCount7 = recent7Runs.length;
@@ -495,9 +492,9 @@ function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = copy.actions[phaseKey] || copy.actions.build;
   const sessionTargets = [
-    formatDistanceValue(easyRunTargetKm, unit),
-    formatDistanceValue(keyRunTargetKm, unit),
-    formatDistanceValue(longRunTargetKm, unit),
+    formatDistanceValue(easyRunTargetKm, unit, lang),
+    formatDistanceValue(keyRunTargetKm, unit, lang),
+    formatDistanceValue(longRunTargetKm, unit, lang),
     lang === 'zh-CN' ? '20-30 分钟' : '20-30 min',
   ];
   const sessions = sessionTemplates.map((session, index) => ({
@@ -705,14 +702,10 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   const now = Date.now();
   const dayMs = 24 * 60 * 60 * 1000;
   const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
+  // The last 7 (28) calendar days, today included, as on Home and in the load figures (calendarDays.js).
+  const today = todayKey();
+  const recent7Runs = validRuns.filter((run) => runIsWithinLastDays(run, 7, today));
+  const recent28Runs = validRuns.filter((run) => runIsWithinLastDays(run, 28, today));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
   const runCount7 = recent7Runs.length;
@@ -739,9 +732,9 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
   const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
   const sessionTemplates = mergedCoachSessionTemplates(lang, phaseKey);
   const sessionTargets = [
-    formatDistanceValue(easyRunTargetKm, unit),
-    formatDistanceValue(keyRunTargetKm, unit),
-    formatDistanceValue(longRunTargetKm, unit),
+    formatDistanceValue(easyRunTargetKm, unit, lang),
+    formatDistanceValue(keyRunTargetKm, unit, lang),
+    formatDistanceValue(longRunTargetKm, unit, lang),
     t('analysisInsight.session_strength'),
   ];
   const sessionSlots = [
@@ -1001,12 +994,7 @@ function buildIntensityDashboardModel(snapshot, recentRows, runs, t, lang, unit)
   const hardShare = polarized.hardSharePct ?? 0;
   const easyRatio = polarized.easyPct ?? 0;
   const hardRatio = polarized.hardPct ?? 0;
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const recent7Runs = runs.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
+  const recent7Runs = runs.filter((run) => runIsWithinLastDays(run, 7));
   const volume7Km = recent7Runs.reduce((sum, run) => sum + (
     Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)
   ), 0);
@@ -1024,7 +1012,7 @@ function buildIntensityDashboardModel(snapshot, recentRows, runs, t, lang, unit)
     heroAccent: t('analysis.intensity_dashboard_hero_accent'),
     heroCopy: t(`analysis.intensity_dashboard_focus_${stateKey}`),
     weeklyVolumeLabel: t('analysis.intensity_dashboard_hero_volume'),
-    weeklyVolume: formatDistanceValue(volume7Km, unit),
+    weeklyVolume: formatDistanceValue(volume7Km, unit, lang),
     zoneTimeLabel: t('analysis.intensity_dashboard_hero_time'),
     zoneTime: formatClockDuration(polarized.easySeconds ?? 0),
     distributionTitle: t('analysis.intensity_dashboard_distribution_title'),
@@ -1382,7 +1370,7 @@ export default function AnalysisInsightDetail() {
           },
           {
             label: t('analysisInsight.load_v3_volume'),
-            value: stats.volumeKm == null ? '--' : `${Number((stats.volumeKm / (unit === 'mile' ? 1.60934 : 1)).toFixed(1))} ${unit === 'mile' ? 'mi' : 'km'}`,
+            value: stats.volumeKm == null ? '--' : `${Number((stats.volumeKm / (unit === 'mile' ? 1.60934 : 1)).toFixed(1))} ${getDistanceUnitLabel(lang, unit)}`,
             detail: stats.volumeDelta == null ? t('analysisInsight.load_v3_no_prior_week') : t('analysisInsight.load_v3_vs_week', { percent: signed(stats.volumeDelta) }),
             definition: t('analysisInsight.load_v3_volume_definition'),
             tone: 'good',
@@ -1492,7 +1480,7 @@ export default function AnalysisInsightDetail() {
 
   useEffect(() => {
     if (typeof document === 'undefined' || !detail) return;
-    document.title = `HermesRuns | ${detail.title}`;
+    document.title = `${detail.title} | HermesRuns`;
   }, [detail]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();

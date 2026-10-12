@@ -8,7 +8,7 @@
   --prediction-profile-card-hover: rgba(255, 255, 255, 1);
   --prediction-profile-input: rgba(28, 25, 23, 0.04);
   --prediction-profile-ink: #1c1917;
-  --prediction-profile-muted: #78716c;
+  --prediction-profile-muted: #6f6862;
   --prediction-profile-faint: #a8a29e;
   --prediction-profile-coral: #c0462b;
   --prediction-profile-coral-soft: rgba(192, 70, 43, 0.09);
@@ -568,7 +568,7 @@ body:is(.theme-light, .theme-high-contrast-light) .prediction-detail-page .predi
 
 .prediction-detail-page .prediction-coach-rail > p {
   margin-top: 10px;
-  color: #78716c !important;
+  color: #6f6862 !important;
   font-size: 0.8rem;
   line-height: 1.55;
 }

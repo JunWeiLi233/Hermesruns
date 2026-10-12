@@ -51,6 +51,7 @@ public class AccountExportService {
     private final ShoeRepository shoes;
     private final RaceEventRepository races;
     private final GoalRepository goals;
+    private final RunnerPaceZoneRaceRepository paceZoneRaces;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +63,7 @@ public class AccountExportService {
                                 ShoeRepository shoes,
                                 RaceEventRepository races,
                                 GoalRepository goals,
+                                RunnerPaceZoneRaceRepository paceZoneRaces,
                                 JdbcTemplate jdbc,
                                 ObjectMapper objectMapper) {
         this.activities = activities;
@@ -70,6 +72,7 @@ public class AccountExportService {
         this.shoes = shoes;
         this.races = races;
         this.goals = goals;
+        this.paceZoneRaces = paceZoneRaces;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
     }
@@ -105,6 +108,7 @@ public class AccountExportService {
         entry(zip, "shoes.csv", shoesCsv(shoes.findByRunnerOrderByCreatedAtDesc(runner)));
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
         entry(zip, "goals.csv", goalsCsv(goals.findByRunnerIdOrderByIdAsc(runner.getId())));
+        entry(zip, "pace-zone-race.csv", paceZoneRaceCsv(paceZoneRaces.findByRunner(runner).orElse(null)));
 
         if (includeTracks) {
             for (Activity run : runs) {
@@ -144,6 +148,8 @@ public class AccountExportService {
                 races.csv     Your saved races.
                 goals.csv     Your goals: the period and the metric, the target in the unit named in the file
                               (km, s for seconds of moving time, runs, m), and when you set it.
+                pace-zone-race.csv  The race you cut your pace zones from, if you entered one: distance in metres,
+                              time in seconds, the date of the race.
                 """ + (includeTracks
                 ? "tracks/      One GPX file per run that has a GPS track.\n"
                 : "tracks/      Not included. Ask for them with ?tracks=true.\n") + """
@@ -154,6 +160,9 @@ public class AccountExportService {
                   (runs fetched from Strava); "utc" is UTC (runs imported from files or devices).
                 - run_type is RACE, LONG_RUN or WORKOUT when you set one, and empty otherwise. tags holds the
                   words you put on the run, in the order you added them, separated by "; ".
+                - perceived_exertion is how hard you rated the run, 1 to 10, and empty when you did not.
+                  use_rating_for_effort is true when you asked for that rating, not the heart rate, to score the run.
+                  notes is what you wrote about the run. name is the title the run has now, whoever gave it.
                 - GPX files carry timestamps only for runs whose start time is UTC.
                 - Not included yet: coach plans, wellness series (sleep, HRV, stress), muscle-training logs.
                 """;
@@ -171,7 +180,8 @@ public class AccountExportService {
     private static String runsCsv(List<Activity> runs, Map<Long, List<String>> tagsByRun) {
         StringBuilder csv = new StringBuilder(
                 "id,name,start_time,start_time_basis,source,distance_m,duration_s,moving_time_s,"
-                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags\n");
+                        + "average_heart_rate,max_heart_rate,elevation_gain_m,calories,average_cadence,shoe,created_at,run_type,tags,"
+                        + "perceived_exertion,use_rating_for_effort,notes\n");
         for (Activity run : runs) {
             csv.append(row(
                     String.valueOf(run.getId()),
@@ -190,7 +200,10 @@ public class AccountExportService {
                     text(run.getShoeName()),
                     value(run.getCreatedAt()),
                     text(run.getRunType()),
-                    text(String.join("; ", tagsByRun.getOrDefault(run.getId(), List.of())))
+                    text(String.join("; ", tagsByRun.getOrDefault(run.getId(), List.of()))),
+                    value(run.getPerceivedExertion()),
+                    String.valueOf(run.isUseRatingForEffort()),
+                    text(run.getNotes())
             ));
         }
         return csv.toString();
@@ -248,6 +261,14 @@ public class AccountExportService {
                     goal.getPeriod(), goal.getMetric(), value(goal.getTarget()), GoalMetrics.unit(goal.getMetric()),
                     value(goal.getCreatedAt()), value(goal.getUpdatedAt())
             ));
+        }
+        return csv.toString();
+    }
+
+    private static String paceZoneRaceCsv(RunnerPaceZoneRace race) {
+        StringBuilder csv = new StringBuilder("distance_m,time_s,race_date,updated_at\n");
+        if (race != null) {
+            csv.append(row(value(race.getDistanceMeters()), value(race.getTimeSeconds()), value(race.getRaceDate()), value(race.getUpdatedAt())));
         }
         return csv.toString();
     }

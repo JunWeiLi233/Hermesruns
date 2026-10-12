@@ -43,6 +43,12 @@ public class GoalController {
         return signedIn(authorizationHeader, runner -> ResponseEntity.ok(service.list(runner, runId)));
     }
 
+    /** Goals worth setting, from the runner's own recent running, each with what it was worked out from. */
+    @GetMapping("/suggestions")
+    public ResponseEntity<?> suggestions(@RequestHeader(value = "Authorization", required = false) String authorizationHeader) {
+        return signedIn(authorizationHeader, runner -> ResponseEntity.ok(service.suggest(runner)));
+    }
+
     /** Body: {@code period} (WEEK, MONTH or YEAR), {@code metric} (DISTANCE, TIME, COUNT or ELEVATION), {@code target} (km, seconds, runs or metres). */
     @PostMapping
     public ResponseEntity<?> create(

@@ -27,7 +27,7 @@ body #root .runner-shell-notification-popover.tips-v2 {
   --tv-card: #fff;
   --tv-ink: #1c1917;
   --tv-muted: #625c56;
-  --tv-faint: #8a837c;
+  --tv-faint: #766d64;
   --tv-line: rgba(28, 25, 23, 0.07);
   --tv-hover: rgba(28, 25, 23, 0.035);
   --tv-accent: #a0392a;
@@ -146,7 +146,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runner-shell-notification-
 .tips-v2-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 11px; }
 .tips-v2-icon svg { width: 18px; height: 18px; }
 .tips-v2-row[data-kind="load"] .tips-v2-icon { background: rgba(160, 57, 42, 0.09); color: #a0392a; }
-.tips-v2-row[data-kind="routes"] .tips-v2-icon { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+.tips-v2-row[data-kind="routes"] .tips-v2-icon { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 .tips-v2-row[data-kind="connections"] .tips-v2-icon { background: rgba(0, 122, 255, 0.1); color: #2563c4; }
 body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="load"] .tips-v2-icon { color: #ffb4a7; }
 body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="routes"] .tips-v2-icon { color: #9cd2aa; }
@@ -158,7 +158,7 @@ body:is(.theme-midnight, .theme-high-contrast) .tips-v2-row[data-kind="connectio
 .tips-v2-copy em { margin-top: 3px; color: var(--tv-accent); font-size: 12px; font-style: normal; font-weight: 700; }
 
 .tips-v2-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 18px; text-align: center; }
-.tips-v2-empty-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 999px; background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+.tips-v2-empty-icon { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 999px; background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 .tips-v2-empty-icon svg { width: 20px; height: 20px; }
 .tips-v2-empty strong { font-size: 14px; }
 .tips-v2-empty p { color: var(--tv-muted); font-size: 12.5px; line-height: 1.5; }

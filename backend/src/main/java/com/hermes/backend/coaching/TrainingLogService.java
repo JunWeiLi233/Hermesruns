@@ -133,7 +133,7 @@ public class TrainingLogService {
                 continue;
             }
             LocalDate day = dayOf.get(row.getId());
-            byWeek.get(WeeklyEffortModel.weekStart(day)).computeIfAbsent(day, d -> new ArrayList<>()).add(toRun(row, runTags));
+            byWeek.get(WeeklyEffortModel.weekStart(day)).computeIfAbsent(day, d -> new ArrayList<>()).add(toRun(row, runTags, zone));
         }
 
         List<LogWeek> weekRows = new ArrayList<>();
@@ -223,13 +223,13 @@ public class TrainingLogService {
         return ActivityLocalDates.placed(row.getLocalDate(), row.getStartTime(), row.getCreatedAt(), row.getStravaApiSourced(), zone);
     }
 
-    private static LogRun toRun(TrainingLogRepository.LogRunRow row, List<String> runTags) {
+    private static LogRun toRun(TrainingLogRepository.LogRunRow row, List<String> runTags, ZoneId zone) {
         int moving = row.getMovingTimeSeconds() != null && row.getMovingTimeSeconds() > 0 ? row.getMovingTimeSeconds()
                 : row.getDurationSeconds() != null && row.getDurationSeconds() > 0 ? row.getDurationSeconds().intValue() : 0;
         double km = row.getDistanceKm() != null && row.getDistanceKm() > 0 ? row.getDistanceKm()
                 : row.getDistanceMeters() != null && row.getDistanceMeters() > 0 ? row.getDistanceMeters() / 1000.0 : 0;
         Double pace = km > 0 && moving > 0 ? round1(moving / km) : null;
-        return new LogRun(row.getId(), row.getName(), row.getStartTime(), round2(km), moving, pace,
+        return new LogRun(row.getId(), row.getName(), ActivityLocalDates.localStart(row.getStartTime(), row.getStravaApiSourced(), zone), round2(km), moving, pace,
                 row.getEffortScore() == null ? null : round1(row.getEffortScore()), row.getEffortSource(),
                 row.getElevationGain() == null ? null : round1(row.getElevationGain()), row.getRunType(), runTags);
     }

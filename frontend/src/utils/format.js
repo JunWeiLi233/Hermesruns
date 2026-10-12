@@ -53,7 +53,8 @@ export function formatLongDate(value, lang) {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    hour: '2-digit',
+    // "3:30 AM", as the Runs list writes it; the Chinese clock keeps its own two digits.
+    hour: 'numeric',
     minute: '2-digit',
   });
 }

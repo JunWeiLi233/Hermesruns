@@ -251,10 +251,9 @@ test.describe('F01 happy path: the cards of one run', () => {
     await expect(splits.getByRole('row').nth(4)).toContainText('6:30 /km'); // the stop is counted in the splits table
   });
 
-  // BUG-004: the table is fed by whole-kilometre laps only, so the 0.99 km at the end of this 7.99 km run has no row,
-  // while the Pace analysis card above it lists that split. Remove test.fail() when it is fixed.
+  // BUG-004: the table was fed by whole-kilometre laps only, so the 0.99 km at the end of this 7.99 km run had no row,
+  // while the Pace analysis card above it lists that split.
   test('F01-E10 Splits table: the last partial kilometre is listed, as it is in Pace analysis', async ({ page }) => {
-    test.fail(true, 'BUG-004: splits table drops the final partial kilometre');
     await openRun(page, 'hills');
     await page.getByRole('button', { name: 'View all' }).click();
     const splits = page.getByRole('heading', { level: 2, name: 'Splits', exact: true }).locator('xpath=ancestor::*[.//table][1]').first();

@@ -4,6 +4,7 @@
 // training log (M5, M5b) is in 32-f02-training-log.
 import type { Page } from '@playwright/test';
 import { Api, newRunner } from '../fixtures/api.ts';
+import { addDays } from '../fixtures/format.ts';
 import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
 import { a11yViolations, contextFor, contextWith, expect, expectNoHorizontalOverflow, expectNoRawKeys, signedIn, test } from '../fixtures/test.ts';
 
@@ -195,12 +196,61 @@ test.describe('F02 load balance, edge states', () => {
     await page.getByRole('button', { name: "Open today's run" }).first().click();
     await expect(page).toHaveURL(/\/today-run/);
   });
+
+  test('F02-E17 Home and Load balance add up the last seven days the same way: calendar days, whatever the hour (BUG-026)', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('week-count');
+    expect((await made.api.patch('/api/profile/me/time-zone', { timeZone: 'America/New_York' })).status).toBe(200);
+    // Today on the runner's wall; each run starts at noon there (16:00 UTC in summer time, 17:00 in winter time, the same New York day).
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const noon = (back: number): Date => {
+      const start = new Date(`${addDays(today, -back)}T16:00:00Z`);
+      return start;
+    };
+    // The day before the window (7 back) is out, whatever the hour of looking; 6 back is the first day in; 6 + 8 + 5 = 19 km are in.
+    const plan: Array<[number, number]> = [[7, 16], [6, 6], [3, 8], [1, 5]];
+    for (const [back, km] of plan) {
+      await made.api.importRun(`week-${back}.gpx`, gpxRun({ name: `E2E week ${back} days back`, start: noon(back), distanceM: km * 1000, pace: 330, hr: 150 }));
+    }
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard, { timezoneId: 'America/New_York' });
+    try {
+      const page = await context.newPage();
+      await page.goto('/profile');
+      const home = page.locator('.hd-today-stat').filter({ hasText: 'Last 7 days' }).locator('strong');
+      await expect(home).toHaveText('19.0 km');
+      await page.goto('/analysis/load-balance');
+      await expect(page.getByRole('heading', { level: 2, name: 'Acute vs. chronic load' }).first()).toBeVisible();
+      await expect.poll(async () => /Weekly volume\s*([\d.]+) km/.exec(await mainText(page))?.[1], { message: 'the Weekly volume card on Load balance' }).toBe('19');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('F02-E15 a VO2max that has not moved in 30 days is called unchanged, not a VO2max of 0.0', async ({ browser, baseURL, guard }) => {
+    // The same run in the last 30 days and in the 30 before: the two windows come out equal. (BUG-029)
+    const made = await newRunner('vo2-flat');
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      for (const days of [8, 40]) {
+        await made.api.importRun(`flat-${days}.gpx`, gpxRun({ name: `E2E flat ${days}`, start: daysAgo(days), distanceM: 5000, pace: 330, hr: 150 }));
+      }
+      const page = await context.newPage();
+      await page.goto('/analysis');
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      await expect(page.getByText('VO2max unchanged over 30 days')).toBeVisible();
+      await expect(page.getByText('unchanged in 30 d')).toBeVisible();
+      const text = await mainText(page);
+      expect(text).not.toMatch(/VO2max [+-]?0\.0/);
+      expect(text).not.toContain('+0.0');
+    } finally {
+      await context.close();
+    }
+  });
 });
 
 test.describe('F02 whole page', () => {
   test('F02-E5 Load balance has no serious accessibility violations', async ({ page }) => {
     await openLoad(page);
-    expect(await a11yViolations(page, { ignoreRules: ['color-contrast'] })).toEqual([]);
+    expect(await a11yViolations(page)).toEqual([]);
   });
 
   test('F02-E6 in Chinese the Load balance page shows no raw translation key', async ({ page }) => {
@@ -208,6 +258,15 @@ test.describe('F02 whole page', () => {
     await page.goto('/analysis/load-balance');
     await page.waitForTimeout(2000);
     await expectNoRawKeys(page);
+  });
+
+  test('F02-E16 in Chinese the distances on Load balance say 公里, as every other page does (BUG-034)', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
+    await page.goto('/analysis/load-balance');
+    await expect(page.locator('main').getByText(/\d 公里/).first()).toBeVisible();
+    const text = await mainText(page);
+    expect(text).toMatch(/\d(\.\d)? 公里/);
+    expect(text).not.toMatch(/\d\s?km\b/);
   });
 
   test('F02-E7 @mobile Load balance and the Analysis page fit a phone', async ({ page }) => {

@@ -27,6 +27,29 @@ VDOT         = VO₂ / %VO₂max
 | Interval | 96% | VO₂max stimulus |
 | Repetition | 111% | Speed and economy |
 
+## Race Predictions and Their History
+
+Each prediction page (5K, 10K, half marathon, marathon at `/prediction/:distance`) turns the runner's fitness into a time over
+that distance, all in the browser (`utils/vdot.js`, `pages/prediction/PredictionDetail.jsx`).
+
+- **The time.** The runner's VDOT (the mean of their top three runs of the last 90 days, above) gives a base time over the
+  distance by Daniels' equations. The best run of the last **90 days** within 20% of that distance, taken as the time it would
+  give over it, is blended in: the nearer it is in distance and the fresher it is, the more it counts (a run 45 days old or
+  less also keeps the time from being more than half a percent faster than that run's own time over the distance). The window is the one the page says it looks
+  at (`PREDICTION_ANCHOR_DAYS`); it was 180 days, so a run the page did not list could move the time (BUG-015). The four
+  distances are kept in order, a longer race never faster than a shorter one.
+- **Pace by effort.** The ladder next to the headline has a row for easy, moderate, hard and the race itself. The race row is
+  the predicted time and the pace it makes, not a fixed share of VO₂max (BUG-014). The other rows are worked out from the
+  fitness that makes exactly that prediction (the VDOT of the predicted time over that distance): easy at 65% and moderate at
+  75% of VO₂max, hard halfway between moderate and the race's own share, so the ladder steps up to the headline for every
+  distance and cannot pass it.
+- **The history.** One point for each date in the runner's VDOT series, each worked out **as of its own day**: only the runs
+  up to that day count, and their ages are taken from it, so a runner who got six minutes faster has a line that fell by six
+  minutes instead of every point leaning on today's best run (BUG-035). A switch above the chart picks the last **1, 3 or 6
+  months** (30, 90 and 180 days; 3 by default; the choice is kept in the browser and an unknown stored value is ignored). The
+  range, the number of points and the chart's text alternative follow it; a range with no points says so and offers a longer one.
+  The "change over time" figure in the headline stays on 3 months whatever the chart shows.
+
 ## Training Load — ACWR
 
 ACWR (Acute:Chronic Workload Ratio) is your injury risk meter. It compares your recent training load (last 7 days) to your long-term load (last 28 days). A sudden spike — training much harder than your baseline — predicts injury.
@@ -224,10 +247,40 @@ it (the first of a history, or after a break of more than 90 days) is read again
 says which it used. A runner without any VDOT (runs of at least 1.5 km are needed, and 3 km or more are preferred) sees
 the chart without zones.
 
+### Pace zones from a race
+
+A runner who has not run hard lately, or who knows what a recent race said about their fitness, can cut the pace zones from
+that race instead. It is one race at a time, entered in Settings > Training > Pace zones:
+
+- **The race** is a distance (5K, 10K, half marathon, marathon, or any distance from 1.5 km to 100 km, typed in the
+  runner's unit), a time (`mm:ss` or `h:mm:ss`, from 4 minutes to 24 hours) and the day it was run (not in the future, not more
+  than five years back). The time over the distance must be a pace between 2:00 and 20:00 a kilometre; nobody has run
+  outside that. Entering another race replaces the first; removing it goes back to the runner's runs.
+- **The fitness** is the VDOT the race stands for, worked out in the browser with the same function as the rest of the analysis
+  (`calculateVdot`, Daniels and Gilbert's oxygen-power model), to one decimal. The server stores only the three numbers, never
+  the VDOT, so there is one copy of the arithmetic. The six zones are then cut from that VDOT as above.
+- **Which runs follow it.** A run on or after the race date uses the race's zones; a run before it keeps the zones it had going
+  into it, from the runner's runs (the 90 days before it, or today's if nothing came before). The run's day is the runner's own
+  day, read from the run's start as the run page writes it, so a run on the day of the race counts whatever time it started. A
+  run with no usable date has nothing to place it by and gets the race's zones. The run page says which it used: "Zones are cut
+  from 10K in 45:00 on Sep 20, 2026 (VDOT 45.3), which you entered in Settings."
+- **Settings shows both.** The card says where today's zones come from, previews the zones a typed race would give (and says
+  nothing changes until the runner uses it), and says when the race is more than about six months old, since an old result says
+  less about today's pace. It never decides anything for the runner: an old race stays in force until they replace or remove it.
+- **What it does not touch.** Only the pace zones follow the race: the Analysis page's training paces, the race predictions,
+  Effort, fitness and form, and the heart-rate zones all keep working from the runner's runs and settings.
+- **Where it is kept.** The table `runner_pace_zone_race` (one row a runner, see
+  [m8-schema-upgrade.md](deployment/m8-schema-upgrade.md)), `GET`, `PUT` and `DELETE /api/training/pace-zones`, the account
+  export (`pace-zone-race.csv`), and the account deletion. The refusals are the server's (`PaceZoneRaceService`) and the limits
+  come with the form, so the page says each one in the runner's language. Two requests from one runner at once take turns on the
+  runner's row, so the second replaces the first and neither fails.
+
 ### Known limits
 
 - A GPS jump in the distance stream moves the split boundaries after it, as it inflates the run's distance; the
   smoothed line shows no pace for a window with an impossible one.
+- A race sets the pace zones of the whole of a day: a warm-up run on the morning of the race gets the race's zones as well. There
+  is one race at a time, no history of earlier ones, and no separate race for the road, the track or the trail.
 - Elevation from a GPS-only watch is noisy. The cleaning above keeps the grade-adjusted pace of a flat run within 0.2% of
   its pace when every reading is off by 1.7 m (standard deviation), within 0.5% at 3 m and within 1.3% at 5 m (measured
   over twelve random runs of 30 minutes each), always on the faster side, because the ratio bends upwards: random ups
@@ -595,6 +648,26 @@ One query reads the runner's runs from the start of the period before the oldest
 reads two years), so a request costs the same however many goals there are, and each metric is added up once however many
 goals use it.
 
+### Suggested goals
+
+`GET /api/goals/suggestions` offers goals worth setting, worked out from the runner's own running (the rule is the same for
+everyone, and every suggestion carries the numbers it comes from, so the card can show its working):
+
+- **A usual week** is the mean of the weeks that had a run among the last 8 complete weeks (Monday to Sunday, not the one that
+  is still going). A week with no run is a holiday or an injury, not a short week, so it does not lower the bar.
+- **Nothing is suggested** before there are at least 4 active weeks and 6 runs in those 8 weeks; the card then says what it
+  takes (`enough: false`).
+- **Weekly distance**: the usual week plus 10%, rounded to a number a person would pick (a kilometre under 20 km, 5 km up to
+  60, 10 km up to 200, 25 km up to 600, 50 km up to 2,000, 100 above) and always above the usual week.
+- **Weekly runs**: the usual number of runs in an active week, between 2 and 7; more runs is not what a runner of three runs a
+  week is asking for.
+- **Monthly distance**: the average of the last 3 complete calendar months that had a run (at least 2 of them), plus 10%.
+- **Yearly distance**: the distance of the last 365 days (a runner who ran in at least 6 of the 12 months), plus 5%.
+- **Weekly time**: the usual week's moving time plus 10%, to the quarter hour, at least half an hour.
+- **Weekly climb**: only for a runner whose usual week climbs 100 m or more; plus 10%, to 50 m.
+- A goal the runner already has is not suggested, and the card shows three at a time, in that order. "Set this goal" saves the
+  target as it is; "Adjust" opens the dialog filled in. The arithmetic runs on the server and nothing leaves it.
+
 ### Known limits
 
 - Goals are for runs. A walk, a ride or a strength session adds nothing.
@@ -602,7 +675,84 @@ goals use it.
   Monday's run).
 - Nothing is said when a period ends: the next read is simply about the next period, and "previous" is how the one before went,
   against the target as it is now.
-- There are no suggested goals and no history of past periods beyond the one before.
+- There is no history of past periods beyond the one before. A suggestion is a rule of thumb (a little more than you usually
+  do), not a training plan: it knows nothing about a race, an injury or the season.
+
+## Progression and the Comparison with the Period Before
+
+The Progression card on Home (`utils/progressionAtlas.js`) adds up the runner's runs over a range (all time, 12, 6, 3 or 1
+months back from today): total distance, climb, average pace, moving time and the number of sessions, a running total of
+distance day by day, and the distance of each week.
+
+### Compare
+
+With **Compare** on, a range of 1, 3, 6 or 12 months is set beside the stretch of the same length just before it: the 3 months
+before the last 3 months. All time has nothing before it, so the button is off there and says why.
+
+- **The stretch before** is the same number of calendar months, ending the instant before the current stretch begins. 3 months
+  back from 10 October is 10 July; the stretch before is 10 April to 9 July.
+- **The line**: the stretch before is drawn dashed on the same chart and the same scale (the scale fits the longer of the two),
+  with its running total laid on the current days, day 1 against day 1, so the two lines read against each other. Where one
+  stretch is a day shorter (months differ), its line ends where it ends. Moving the scrubber, with a pointer or the arrow keys,
+  reads out what the stretch before had added up to by the same day ("Before: 22.0 km").
+- **The change** is written under each figure: distance as an amount and a percentage of the stretch before ("10.0 km more
+  (+50%)"), moving time, climb and sessions as amounts, and pace as how much faster or slower (a smaller number of seconds per
+  kilometre is the faster pace). A change that is too small to mean anything (under 50 m, a minute, a metre, a session, a second
+  a kilometre) says "Same as before". A figure one of the stretches does not have (a pace with no runs, a climb neither has) has
+  no change under it. More distance, time, climb and sessions, and a faster pace, are shown as the better direction, in words as
+  well as colour.
+- Compare is a view of the same runs: it changes nothing stored. The choice is kept in the browser.
+
+### Known limits
+
+- Only whole numbers of months are compared; "this week against last week" or a custom range is not offered.
+- A run is on the day it was run on the runner's wall (see "The runner's day"); a stretch is judged by those days in the
+  browser's own clock for "today".
+
+## Editing a Run
+
+The **Edit** button next to a run's title opens a panel (a drawer from the right on a wide screen, the whole screen on a phone)
+with everything a runner can say about a run in one place:
+
+- **Title.** One line, up to 120 characters; spaces of any kind become single spaces. A run cannot be left without a title.
+  A title the runner sets is theirs: the run is marked `name_edited`, and a later Strava sync brings Strava's title back for every
+  run except the ones that are marked. (Strava's other data on the run, distance and time and the rest, still follows Strava.)
+  Setting the title a run already has is not a rename.
+- **Notes.** Free text up to 2000 characters, private to the runner: shown under the run's title (folded to a few lines when long),
+  read through `GET /api/activities?id=` for that one run and never part of a list, and in the account export. Line breaks are kept.
+  Control characters other than tab and line break are refused. Lengths are counted in the unit a browser's `value.length` counts
+  (an emoji is two), the same number the counter in the panel shows and the server applies.
+- **How it felt, and whether it counts.** The 1 to 10 rating of the Effort card, and a choice to **use it instead of the heart
+  rate** for this run's effort (Strava's "use it instead of heart rate"). Without the choice a rating is only used when a run has
+  little or no heart-rate data, as before. With it, the effort score is the moving minutes times the rating's weight (1 for a
+  rating of 1 to 5 for a rating of 10, evenly between), the source reads *From your rating of N out of 10, as you chose*, and the
+  run's effort is recomputed at once (its stored row remembers the choice it was made with, `rating_preferred`, so a row made
+  before a change of mind is recomputed when the run is next read, as it is for a changed rating). A choice needs a rating: `useRatingForEffort: true` without one is refused,
+  and clearing the rating clears the choice. Only that run's effort changes; the zones, the fitness model and the weekly range
+  read the effort rows as they always did.
+- **Run type and tags**, as on the Type and tags card (see Run Type and Tags): the same rules and the same words, but a draft
+  here, saved with the rest.
+- **Shoes**, through the shoe route the gear card uses.
+
+Nothing is saved until **Save changes**. One `PATCH` holds only the fields that changed (a title Strava gave the run is not sent
+back as if the runner had chosen it), the shoe has its own request, and a refused request changes nothing. The server applies the
+request as one unit (`ActivityEditService`): it takes the run's row first and holds it until the edit has committed, so a request
+that fails part-way (the title, the rating and the tags are written together) changes nothing, and two requests for one run take
+turns, each changing only the fields it names on the run as it is by then, not on the copy it read earlier. The effort score and
+the cached records list are brought up to date after the commit, from the saved run. If the fields are saved
+and the shoe is not, the panel says so and keeps the shoe as the one thing left to do. Leaving with something unsaved (Cancel, the
+close button, Escape or a click outside) asks first. The panel reads the run afresh each time it opens, so a change made in
+another tab is not overwritten by an old draft; the Type and tags card, the Effort card and the run summary on the page follow a
+save without a reload, and a rename drops the cached records list (it shows run names).
+
+**Left out on purpose.** Strava's edit page also has privacy, hidden details (start time, calories, heart rate, pace, power),
+mute, photos, the sport and the map type. The first four belong to the social side of that product (who can see a run); every
+HermesRuns run is private to its runner. HermesRuns analyses runs only, and draws one kind of map.
+
+**Known limits.** There is no history of earlier titles or notes, and no way back to the title a run came with (Strava's title
+returns only for runs the runner has not renamed). Two panels open on one run at once save field by field, so the last save of a
+field wins, but a field one of them did not touch is never overwritten by it (two saves at the same moment are applied one after the
+other, and the tags one of them sets never collide with the other's).
 
 ## Run Summary
 

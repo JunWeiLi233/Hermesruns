@@ -477,7 +477,9 @@ export default function Analysis() {
                 <h1>{t(fitnessHeadline === 'improving' && loadZone.key === 'optimal' ? 'analysis.v2_headline_improving_balanced' : `analysis.v2_headline_${fitnessHeadline}`)}</h1>
                 <p>
                   {[
-                    vdotTrend.hasData ? t('analysis.v2_status_vo2_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` }) : null,
+                    vdotTrend.hasData ? (vdotTrend.delta === 0
+                      ? t('analysis.v2_status_vo2_unchanged')
+                      : t('analysis.v2_status_vo2_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })) : null,
                     trainingLoad?.lastAcwr != null ? `ACWR ${trainingLoad.lastAcwr.toFixed(2)}` : null,
                     t(`analysis.v2_status_injury_${injury.level || 'low'}`),
                   ].filter(Boolean).join(' · ')}
@@ -495,7 +497,9 @@ export default function Analysis() {
                         {vdotTrend.hasData ? (
                           <span className={cx('analysis-v2-delta', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}>
                             <AppIcon name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'} />
-                            {t('analysis.v2_delta_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })}
+                            {vdotTrend.delta === 0
+                              ? t('analysis.v2_delta_unchanged')
+                              : t('analysis.v2_delta_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })}
                           </span>
                         ) : null}
                       </div>

@@ -269,10 +269,14 @@ test.describe('F03 goals (M6)', () => {
     await expect(row.getByText('Goal reached', { exact: true })).toBeVisible();
     await expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
     await expect(row).not.toContainText('to go');
-    // Climb: a run from a file carries no climb figure (BUG-036), so the year of climb stands at nothing.
+    // Climb: the long runs are files with elevation, and the importer adds up their climb (BUG-036), so the year of climb is theirs.
     const climb = answer.goals.find((goal) => goal.metric === 'ELEVATION') as Goal;
-    expect(climb.progress).toBe(0);
-    await expect(rowOf(page, 'Yearly climb')).toContainText('0 m of 20,000 m this year');
+    const log = (await runner.api.get('/api/training/log?weeks=26')).json as { today: string; weeks: Array<{ days: Array<{ date: string; runs: Array<{ elevationGainM: number | null }> }> }> };
+    const climbThisYear = log.weeks.flatMap((w) => w.days).filter((day) => day.date >= periodStart('YEAR', log.today) && day.date <= log.today)
+      .flatMap((day) => day.runs).reduce((sum, run) => sum + (run.elevationGainM ?? 0), 0);
+    expect(climbThisYear, 'the long runs of the year carry a climb').toBeGreaterThan(100);
+    expect(Math.abs(climb.progress - climbThisYear)).toBeLessThan(1);
+    await expect(rowOf(page, 'Yearly climb')).toContainText(`${amount('ELEVATION', climb.progress)} of 20,000 m this year`);
   });
 
   test('F03-H3 a goal counts the runs from before it was set, follows a run that is added or deleted, and keeps nothing but its target', async ({ browser, baseURL, guard }) => {
@@ -363,7 +367,134 @@ test.describe('F03 goals (M6)', () => {
     await expect(dialog(page, 'Change the target of Weekly distance').getByLabel('Target')).toHaveValue('25');
   });
 
-  test.fixme('F03-E1 no goal yet: suggested goals from your own history are offered (a could-have of M6, not built)', async () => {});
+  // ---- Suggested goals (M8) ------------------------------------------------------------------------------------------------------------
+
+  interface Suggestion {
+    period: Period;
+    metric: Metric;
+    unit: string;
+    target: number;
+    basis: { kind: string; span: number; usual: number; stretchPercent: number };
+  }
+  interface SuggestionsAnswer {
+    today: string;
+    timeZone: string;
+    enough: boolean;
+    suggestions: Suggestion[];
+  }
+  const suggestionsOf = async (who: { api: Api } = runner): Promise<SuggestionsAnswer> => (await who.api.get('/api/goals/suggestions')).json;
+  const suggestedBlock = (page: Page): Locator => page.getByRole('region', { name: 'Suggested for you' });
+
+  /** The mean distance of the complete weeks (Monday to Sunday, the eight before this one) in which the history has a run. */
+  function usualWeek(today: string): { usual: number; weeks: number } {
+    const thisMonday = weekStartOf(today);
+    const weeks = new Map<string, number>();
+    for (const run of runner.runs) {
+      const monday = weekStartOf(dayOf(run));
+      if (monday >= addDays(thisMonday, -56) && monday < thisMonday) weeks.set(monday, (weeks.get(monday) ?? 0) + run.km);
+    }
+    return { usual: Array.from(weeks.values()).reduce((sum, km) => sum + km, 0) / weeks.size, weeks: weeks.size };
+  }
+
+  test('F03-E1 with no goals the card offers goals worked out from the runner\'s own weeks, each with the working behind it', async ({ browser, baseURL, guard }) => {
+    const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    await openCard(page);
+    const answer = await suggestionsOf();
+    expect(answer.enough).toBe(true);
+    expect(answer.suggestions.length).toBeGreaterThanOrEqual(3);
+
+    // The first is a weekly distance a little above the usual week, rounded to a number a person would pick, and the usual week is
+    // the arithmetic of the runs the history was built with.
+    const first = answer.suggestions[0];
+    const { usual, weeks } = usualWeek(answer.today);
+    expect([first.period, first.metric, first.unit]).toEqual(['WEEK', 'DISTANCE', 'km']);
+    expect(first.basis).toMatchObject({ kind: 'weekly-average', span: weeks, stretchPercent: 10 });
+    expect(Math.abs(first.basis.usual - usual), 'the usual week').toBeLessThan(0.15 * weeks);
+    expect(first.target).toBeGreaterThan(first.basis.usual);
+    expect(first.target).toBeLessThanOrEqual(first.basis.usual * 1.1 + 5);
+    expect(first.target % 5).toBe(0);
+
+    // The card says all of it, three at a time.
+    const block = suggestedBlock(page);
+    await expect(block).toBeVisible();
+    const items = block.getByRole('listitem');
+    await expect(items).toHaveCount(3);
+    await expect(items.first()).toContainText(`Weekly distance: ${amount('DISTANCE', first.target)}`);
+    await expect(items.first()).toContainText(`Your usual week over the ${weeks} weeks you ran lately: ${amount('DISTANCE', first.basis.usual)}. This is 10% more.`);
+    await expect(items.nth(1)).toContainText(`Weekly runs: ${amount('COUNT', answer.suggestions[1].target)}`);
+    await expect(items.nth(1)).toContainText('This keeps it up.');
+    await expect(block).toContainText('Worked out from your own recent running, with the numbers shown.');
+    // The Profile page holds the same card.
+    await page.goto('/profile');
+    await expect(suggestedBlock(page)).toBeVisible({ timeout: 20_000 });
+    await expect(suggestedBlock(page).getByRole('listitem').first()).toContainText(`Weekly distance: ${amount('DISTANCE', first.target)}`);
+  });
+
+  test('F03-H6 setting a suggested goal as it is puts it in the list at the suggested target and takes it off the suggestions', async ({ browser, baseURL, guard }) => {
+    const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    await openCard(page);
+    const first = (await suggestionsOf()).suggestions[0];
+    await suggestedBlock(page).getByRole('button', { name: `Set the goal Weekly distance: ${amount('DISTANCE', first.target)}` }).click();
+
+    await expect(rowOf(page, 'Weekly distance')).toBeVisible();
+    await expect(rowOf(page, 'Weekly distance')).toContainText(`of ${amount('DISTANCE', first.target)} this week`);
+    const answer = await goalsOf();
+    expect(answer.goals).toHaveLength(1);
+    expect([answer.goals[0].period, answer.goals[0].metric, answer.goals[0].target]).toEqual(['WEEK', 'DISTANCE', first.target]);
+    // It is a goal now, so it is not suggested; the next one takes its place on the list.
+    await expect(suggestedBlock(page).getByRole('listitem').first()).not.toContainText('Weekly distance');
+    await expect(suggestedBlock(page).getByRole('listitem')).toHaveCount(3);
+    expect((await suggestionsOf()).suggestions.some((s) => s.period === 'WEEK' && s.metric === 'DISTANCE')).toBe(false);
+  });
+
+  test('F03-H7 Adjust opens the dialog filled in with the suggestion, and what is typed is what is set', async ({ browser, baseURL, guard }) => {
+    const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    await openCard(page);
+    const first = (await suggestionsOf()).suggestions[0];
+    await suggestedBlock(page).getByRole('button', { name: 'Adjust the suggested goal Weekly distance before setting it' }).click();
+
+    const box = dialog(page);
+    await expect(box).toBeVisible();
+    await expect(box.getByRole('radio', { name: 'Weekly', exact: true })).toBeChecked();
+    await expect(box.getByRole('radio', { name: 'Distance', exact: true })).toBeChecked();
+    await expect(box.getByLabel('Target')).toHaveValue(String(first.target));
+    await box.getByLabel('Target').fill(String(first.target - 3));
+    await box.getByRole('button', { name: 'Save goal' }).click();
+    await expect(box).toHaveCount(0);
+
+    expect((await goalsOf()).goals.map((goal) => [goal.period, goal.metric, goal.target])).toEqual([['WEEK', 'DISTANCE', first.target - 3]]);
+    await expect(rowOf(page, 'Weekly distance')).toContainText(`of ${amount('DISTANCE', first.target - 3)} this week`);
+  });
+
+  test('F03-E12 a runner with too little running is told what it takes, and is offered nothing', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('goals-few');
+    await importHistoryRun(made.api, 3, 'easy', 6, 340, 138, 'E2E few one');
+    await importHistoryRun(made.api, 10, 'easy', 6, 340, 138, 'E2E few two');
+    const answer = await suggestionsOf(made);
+    expect(answer.enough).toBe(false);
+    expect(answer.suggestions).toEqual([]);
+
+    const page = await pages.open(browser, baseURL, guard, { token: made.api.token as string, email: made.email }, ROUTE);
+    await openCard(page);
+    await expect(goalsCard(page)).toContainText('Suggestions appear after a few weeks of running: at least 6 runs across 4 of the last 8 weeks.');
+    await expect(suggestedBlock(page)).toHaveCount(0);
+  });
+
+  test('F03-E13 the suggestions are in Chinese in Chinese, with no raw key, and can be set with the keyboard', async ({ browser, baseURL, guard }) => {
+    const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
+    await page.goto(ROUTE);
+    const block = page.getByRole('region', { name: '为你推荐' });
+    await expect(block).toBeVisible({ timeout: 20_000 });
+    await expect(block).toContainText('每周距离：');
+    await expect(block).toContainText('平常一周是');
+    await expectNoRawKeys(page);
+    const first = (await suggestionsOf()).suggestions[0];
+    await block.getByRole('button', { name: /采用建议目标 每周距离/ }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('region', { name: '目标', exact: true }).getByRole('list', { name: '你的目标' })).toContainText('每周距离');
+    expect((await goalsOf()).goals[0].target).toBe(first.target);
+  });
 
   test('F03-E2 the dialog refuses what is not a target, says why, and sends nothing', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
@@ -569,7 +700,7 @@ test.describe('F03 goals (M6)', () => {
 
   test.fixme('F03-E4 a goal that crosses a time-zone or daylight-saving boundary counts the right days (needs the runner\'s time zone and the BUG-003 decision on file-run times)', async () => {});
 
-  test('F03-E5 a climb goal adds up the climb figures runs carry (here the seeded runner\'s Strava-style runs), and only those', async ({ browser, baseURL, guard, seed }) => {
+  test('F03-E5 a climb goal adds up the climb figures runs carry (here the seeded runner\'s runs, Strava-style and files with elevation)', async ({ browser, baseURL, guard, seed }) => {
     const mine = new Api(seed.baseUrl, seed.a.token);
     await clearGoals(mine);
     try {

@@ -11,7 +11,7 @@
 #root .shoe-scan-modal-card.scan-v2-card {
   --sc-ink: #1c1917;
   --sc-muted: #625c56;
-  --sc-faint: #8a837c;
+  --sc-faint: #766d64;
   --sc-line: rgba(28, 25, 23, 0.08);
   --sc-fill: rgba(28, 25, 23, 0.04);
   --sc-warm: #fbf8f4;
@@ -188,7 +188,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .scan-v2-status.is-error { 
 #root .scan-v2-km input { padding-right: 32px; font-variant-numeric: tabular-nums; }
 #root .scan-v2-km em { position: absolute; top: 50%; right: 10px; color: var(--sc-faint); font-size: 0.72rem; font-style: normal; transform: translateY(-50%); }
 #root .scan-v2-tag { margin-top: 8px; padding: 3px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
-#root .scan-v2-tag.is-new { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .scan-v2-tag.is-new { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 #root .scan-v2-tag.is-duplicate { background: rgba(255, 149, 0, 0.14); color: #a15c00; }
 body:is(.theme-midnight, .theme-high-contrast) #root .scan-v2-tag.is-new { color: #9cd2aa; }
 body:is(.theme-midnight, .theme-high-contrast) #root .scan-v2-tag.is-duplicate { color: #ffd38a; }

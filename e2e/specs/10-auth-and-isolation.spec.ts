@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Api, newRunner, strongPassword } from '../fixtures/api.ts';
 import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
+import { startStack, type NamedStack } from '../fixtures/stack.ts';
 import { contextWith, expect, expectNoRawKeys, test } from '../fixtures/test.ts';
 
 // These tests start signed out and make their own runners.
@@ -184,34 +185,71 @@ test.describe('X01 limits on guessing passwords', () => {
     expect(JSON.stringify(locked.json)).toMatch(/Too many failed attempts/);
   });
 
-  test('X01-N7 the lock follows the connection, not a header the client chooses', async ({ seed }) => {
-    test.fail(true, 'BUG-001: the address used for the lock, the sign-up cap and the 60-a-minute limits is the first X-Forwarded-For value, which any client can set');
-    const made = await newRunner('lock2');
-    const attacker = new Api(seed.baseUrl);
-    for (let attempt = 1; attempt <= 10; attempt += 1) await attacker.request('POST', '/api/auth/login', { body: { email: made.email, password: `wrong-${attempt}-Aa1!` }, token: null });
-    expect((await attacker.request('POST', '/api/auth/login', { body: { email: made.email, password: made.password }, token: null })).status).toBe(429);
-    // The same client, the same connection, one more header: it is now somebody else.
-    const rotated = new Api(seed.baseUrl);
-    const res = await rotated.request('POST', '/api/auth/login', { body: { email: made.email, password: made.password }, token: null });
-    expect(res.status, 'a locked-out client that changes X-Forwarded-For').toBe(429);
+  test('X01-N6b behind a proxy of ours the client is the address the proxy added: what the client wrote in front of it changes nothing, and another client is not locked out with it', async ({ seed }) => {
+    // The suite's stack trusts the connections from this machine, as it would a proxy in front of the app. A proxy adds the address it got
+    // the request from on the right; whatever a client wrote is on the left.
+    const made = await newRunner('lock-proxy');
+    const suffix = () => Math.floor(1 + Math.random() * 253);
+    const attacker = `203.0.113.${suffix()}`;
+    const bystander = `198.51.100.${suffix()}`;
+    const login = (password: string, forwarded: string) => {
+      const api = new Api(seed.baseUrl);
+      api.clientIp = forwarded;
+      return api.request('POST', '/api/auth/login', { body: { email: made.email, password }, token: null });
+    };
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      expect((await login(`wrong-${attempt}-Aa1!`, `192.0.2.${attempt}, ${attacker}`)).status, `attempt ${attempt}`).toBe(401);
+    }
+    const locked = await login(made.password, `192.0.2.99, ${attacker}`);
+    expect(locked.status, 'the attacker with yet another address written in front').toBe(429);
+    const other = await login(made.password, bystander);
+    expect(other.status, 'somebody else behind the same proxy').toBe(200);
+  });
+});
+
+test.describe('X01 limits on guessing passwords, on a stack that trusts no proxy', () => {
+  // How the app is reached directly: the address is the connection's own, and X-Forwarded-For is whatever the client chose to write
+  // (BUG-001: until then it was believed from anyone, so every request could be somebody new).
+  let strict: NamedStack;
+  test.beforeAll(async () => {
+    test.setTimeout(360_000);
+    strict = await startStack({ name: 'strict', port: 18082, env: { APP_TRUSTED_PROXIES: 'none' } });
+  });
+  test.afterAll(async () => {
+    await strict?.stop();
   });
 
-  test('X01-N8 the sign-up cap of eight an hour per address cannot be stepped around with a header either', async ({ seed }) => {
-    test.fail(true, 'BUG-001: the sign-up cap uses the same client-chosen address');
-    const same = '10.200.0.1';
+  test('X01-N7 the lock follows the connection, not a header the client chooses', async () => {
+    const email = `lock-${unique}@example.com`;
+    const password = strongPassword();
+    await new Api(strict.baseUrl).signUp(email, password);
+    const attempt = (secret: string) => {
+      const api = new Api(strict.baseUrl); // a new made-up address for every request
+      return api.request('POST', '/api/auth/login', { body: { email, password: secret }, token: null });
+    };
+    for (let tries = 1; tries <= 10; tries += 1) {
+      expect((await attempt(`wrong-${tries}-Aa1!`)).status, `attempt ${tries}`).toBe(401);
+    }
+    // The same client, the same connection, one more header: it is still the one that was locked out.
+    const res = await attempt(password);
+    expect(res.status, 'a locked-out client that changes X-Forwarded-For').toBe(429);
+    expect(JSON.stringify(res.json)).toMatch(/Too many failed attempts/);
+  });
+
+  test('X01-N8 the sign-up cap of eight an hour per address cannot be stepped around with a header either', async () => {
     const statuses: number[] = [];
-    for (let attempt = 0; attempt < 10; attempt += 1) {
-      const api = new Api(seed.baseUrl);
-      api.clientIp = same;
-      const res = await api.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-${attempt}@example.com`, password: strongPassword() }, token: null });
+    for (let tries = 0; tries < 12; tries += 1) {
+      const api = new Api(strict.baseUrl); // a new made-up address for every request
+      const res = await api.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-${tries}@example.com`, password: strongPassword() }, token: null });
       statuses.push(res.status);
     }
-    expect(statuses.filter((status) => status === 429).length, 'sign-ups refused after the cap from one address').toBeGreaterThan(0);
-    // And the part the header must not be able to undo: a ninth, tenth... sign-up that names another address.
-    const other = new Api(seed.baseUrl);
-    other.clientIp = '10.200.0.2';
+    expect(statuses.filter((status) => status === 429).length, 'sign-ups refused after the cap from one connection').toBeGreaterThan(0);
+    expect(statuses.filter((status) => status < 300).length, 'sign-ups let through, with the ones the lock test made').toBeLessThanOrEqual(8);
+    // And the part the header must not be able to undo: one more that names an address nobody has used.
+    const other = new Api(strict.baseUrl);
+    other.clientIp = '203.0.113.200';
     const res = await other.request('POST', '/api/auth/signup', { body: { email: `cap-${unique}-other@example.com`, password: strongPassword() }, token: null });
-    expect(res.status, 'a new address made up by the client is a new allowance').toBe(429);
+    expect(res.status, 'a new address made up by the client is not a new allowance').toBe(429);
   });
 });
 
@@ -340,10 +378,28 @@ test.describe('X01 the public side of the app', () => {
     }
   });
 
-  test('X01-E8 an address the app does not know opens the app or a not-found page, not a JSON error about a session token', async ({ seed }) => {
-    test.fail(true, 'BUG-023: anything outside the known routes answers 401 {"error":"Invalid or expired session token."} in the browser tab');
-    const res = await fetch(`${seed.baseUrl}/support`, { headers: { Accept: 'text/html', 'X-Forwarded-For': new Api(seed.baseUrl).clientIp ?? '' } });
-    expect(res.headers.get('content-type')).toContain('text/html');
+  test('X01-E8 an address the app does not know opens the app or a not-found page, not a JSON error about a session token', async ({ page, seed, guard }) => {
+    guard.allow(/status of 404/); // the page is not there, and the answer says so
+    const headers = { Accept: 'text/html', 'X-Forwarded-For': new Api(seed.baseUrl).clientIp ?? '' };
+    for (const route of ['/support', '/pricing', '/about', '/help', '/an/old/bookmark']) {
+      const res = await fetch(`${seed.baseUrl}${route}`, { headers });
+      const body = await res.text();
+      expect(res.headers.get('content-type'), route).toContain('text/html');
+      expect(res.status, `${route}: the page is not there, and a crawler is told so`).toBe(404);
+      expect(body, route).toContain('<div id="root"');
+    }
+    // A script that asks for JSON, a write, a file name or an API address still gets the plain refusal.
+    const json = await fetch(`${seed.baseUrl}/support`, { headers: { Accept: 'application/json', 'X-Forwarded-For': headers['X-Forwarded-For'] } });
+    expect(json.status).toBe(401);
+    await json.text();
+    const api = await fetch(`${seed.baseUrl}/api/no-such-thing`, { headers });
+    expect(api.status, 'an API address is never answered with the app').toBe(401);
+    expect(api.headers.get('content-type')).toContain('json');
+    await api.text();
+    // In a tab the app opens (its router takes an unknown address to the start page).
+    await page.goto('/support');
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    expect(await page.content()).not.toContain('Invalid or expired session token');
   });
 
   test('X01-E9 pages carry the browser protections the app promises: CSP, no sniffing, no framing, a referrer policy', async ({ seed }) => {
@@ -369,13 +425,68 @@ test.describe('X01 the public side of the app', () => {
   });
 
   test('X01-E11 the public sign-in, sign-up and recovery pages each have a title of their own', async ({ page }) => {
-    test.fail(true, 'BUG-018: /login, /signup and /forgot-password (and every signed-in page) share one generic title');
-    const titles: string[] = [];
-    for (const url of ['/login', '/signup', '/forgot-password']) {
+    const expected: Array<[string, string]> = [
+      ['/login', 'Sign in | HermesRuns'],
+      ['/signup', 'Create your account | HermesRuns'],
+      ['/forgot-password', 'Reset your password | HermesRuns'],
+    ];
+    for (const [url, title] of expected) {
       await page.goto(url);
-      await page.waitForTimeout(400);
-      titles.push(await page.title());
+      await expect(page, url).toHaveTitle(title);
     }
-    expect(new Set(titles).size, titles.join(' | ')).toBe(3);
+  });
+
+  test('X01-E12 the circle at the top right has the same letter on every page, taken from the display name and not from the address (BUG-028)', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('avatar');
+    expect((await made.api.request('PATCH', '/api/profile/me/name', { body: { displayName: 'Zed Runner' } })).status).toBeLessThan(300);
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+    try {
+      const page = await context.newPage();
+      for (const url of ['/profile', '/runs', '/analysis', '/settings', '/shoes', '/races', '/schedule', '/prediction/10k', '/shoes/add', '/shoe-catalog']) {
+        await page.goto(url);
+        await expect(page.locator('.runner-shell-avatar').first(), url).toHaveText('Z');
+      }
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('X01-E11b every page of the signed-in app has a title of its own, in English and in Chinese', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('titles');
+    const pages: Array<[string, string, string]> = [
+      ['/profile', 'Home | HermesRuns', '主页 | HermesRuns'],
+      ['/runs', 'Runs | HermesRuns', '跑步记录 | HermesRuns'],
+      ['/analysis', 'Analysis | HermesRuns', '分析 | HermesRuns'],
+      ['/training-log', 'Training log | HermesRuns', '训练日志 | HermesRuns'],
+      ['/settings', 'Settings | HermesRuns', '设置 | HermesRuns'],
+      ['/shoes', 'Shoes | HermesRuns', '跑鞋 | HermesRuns'],
+      ['/races', 'Races | HermesRuns', '赛事 | HermesRuns'],
+      ['/schedule', 'Schedule | HermesRuns', '计划 | HermesRuns'],
+      ['/prediction/10k', '10K prediction | HermesRuns', '10 公里预测 | HermesRuns'],
+    ];
+    for (const lang of ['en', 'zh-CN'] as const) {
+      const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
+      try {
+        // Some pages hold a frame with no storage of its own (the map's); the script is for the page, not for it.
+        await context.addInitScript((value) => {
+          try {
+            localStorage.setItem('hermes_lang', value);
+          } catch {
+            /* a frame that may not read storage */
+          }
+        }, lang);
+        const page = await context.newPage();
+        const seen: string[] = [];
+        for (const [url, english, chinese] of pages) {
+          await page.goto(url);
+          const title = lang === 'en' ? english : chinese;
+          await expect(page, `${url} in ${lang}`).toHaveTitle(title);
+          seen.push(title);
+        }
+        expect(new Set(seen).size, 'no two pages share a title').toBe(pages.length);
+      } finally {
+        await context.close();
+      }
+    }
   });
 });

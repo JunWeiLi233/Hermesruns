@@ -51,6 +51,39 @@ public final class ActivityLocalDates {
         return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zone).toLocalDate();
     }
 
+    /**
+     * The clock time on the wall where the runner ran: what a screen prints as the time of a run (BUG-003). A run fetched from
+     * the Strava API holds that already; a run from a file holds UTC, which is moved to the runner's zone (so an evening run in
+     * New York is not shown as the next morning). Without a time zone on the profile the zone is UTC and nothing moves.
+     */
+    public static LocalDateTime startTimeOf(Activity activity, ZoneId zone) {
+        return localStart(activity.getStartTime(), activity.isStravaApiSourced(), zone);
+    }
+
+    /** {@link #startTimeOf} from what a query returns rather than from the entity. */
+    public static LocalDateTime localStart(LocalDateTime start, Boolean stravaApiSourced, ZoneId zone) {
+        if (start == null || Boolean.TRUE.equals(stravaApiSourced)) {
+            return start;
+        }
+        return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zone == null ? ZoneOffset.UTC : zone).toLocalDateTime();
+    }
+
+    /**
+     * The start date text to send along with {@link #startTimeOf}: a file run's is the stored start time written out, so it
+     * moves with it; a Strava run's, and a run with no start time, is kept as it was stored.
+     */
+    public static String startDateOf(Activity activity, ZoneId zone) {
+        return localStartDate(activity.getStartDate(), activity.getStartTime(), activity.isStravaApiSourced(), zone);
+    }
+
+    /** {@link #startDateOf} from what a query returns rather than from the entity. */
+    public static String localStartDate(String startDate, LocalDateTime start, Boolean stravaApiSourced, ZoneId zone) {
+        if (start == null || Boolean.TRUE.equals(stravaApiSourced)) {
+            return startDate;
+        }
+        return localStart(start, false, zone).toString();
+    }
+
     /** The runner's time zone, or UTC when they have none or it is not one this server knows. */
     public static ZoneId zoneOf(Runner runner) {
         String id = runner == null ? null : runner.getTimeZone();

@@ -7,8 +7,8 @@ function isRunLabels(data) {
 
 /**
  * Loads a run's type and tags, with the runner's most used tags to offer (see useRunResource for what the status
- * means and how one run's answer is kept from showing under another).
+ * means and how one run's answer is kept from showing under another). `refreshToken` asks again, as when the run was edited.
  */
-export default function useRunLabels(runId) {
-  return useRunResource(runId == null ? null : `/api/activities/${runId}/labels`, isRunLabels);
+export default function useRunLabels(runId, { refreshToken = 0 } = {}) {
+  return useRunResource(runId == null ? null : `/api/activities/${runId}/labels`, isRunLabels, { refreshToken });
 }

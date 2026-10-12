@@ -1,7 +1,6 @@
 package com.hermes.backend.auth;
 
 import com.hermes.backend.infrastructure.web.SpaForwardingController;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -57,11 +56,7 @@ public class SecurityConfig {
                 .securityContext(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Invalid or expired session token.\"}");
-                        }))
+                        .authenticationEntryPoint(new PageAwareAuthenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
                         // CORS preflight requests never carry credentials (no Authorization
                         // header), so let OPTIONS on /api/** reach the MVC CORS processor when

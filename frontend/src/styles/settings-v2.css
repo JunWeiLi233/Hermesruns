@@ -4,7 +4,7 @@
   --sv-card: #fff;
   --sv-ink: #1c1917;
   --sv-muted: #625c56;
-  --sv-faint: #8a837c;
+  --sv-faint: #766d64;
   --sv-line: rgba(28, 25, 23, 0.06);
   --sv-fill: rgba(28, 25, 23, 0.05);
   --sv-accent: #a0392a;
@@ -15,6 +15,7 @@
   --sv-zone-3: #c99a2e;
   --sv-zone-4: #d46a2f;
   --sv-zone-5: #a0392a;
+  --sv-zone-6: #6b1f1a;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -36,6 +37,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .settings-atlas-canvas.st-v
   --sv-zone-3: #e0b84f;
   --sv-zone-4: #ee8a4e;
   --sv-zone-5: #f07561;
+  --sv-zone-6: #ff9b87;
 }
 
 #root .runner-dashboard-page.settings-control-page .settings-atlas-canvas.st-v2 {
@@ -218,7 +220,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-segmented button.is-
 #root .st-v2-service svg { width: 20px; height: 20px; }
 #root .st-v2-service.is-strava { background: #fc4c02; }
 #root .st-v2-service.is-garmin { background: #1c1917; }
-#root .st-v2-service.is-files { background: #8a837c; }
+#root .st-v2-service.is-files { background: #766d64; }
 #root .st-v2-status { display: inline-flex; align-items: center; gap: 6px; }
 #root .st-v2-status i { width: 7px; height: 7px; border-radius: 9px; background: #c9c3bc; }
 #root .st-v2-status i.is-on { background: #34c759; }
@@ -230,7 +232,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .st-v2-segmented button.is-
 #root .st-v2-sync li span { color: var(--sv-muted); }
 #root .st-v2-sync li strong { font-weight: 600; text-align: right; }
 #root .st-v2-sync li em { padding: 2px 8px; border-radius: 999px; background: var(--sv-fill); color: var(--sv-muted); font-size: 0.7rem; font-style: normal; font-weight: 700; }
-#root .st-v2-sync li em.is-live { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .st-v2-sync li em.is-live { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 
 #root .st-v2-toggle-row { cursor: pointer; }
 #root .st-v2-switch { position: relative; width: 44px; height: 26px; border-radius: 999px; background: rgba(28, 25, 23, 0.18); transition: background 150ms ease; }
@@ -289,6 +291,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root :is(.st-v2-danger, .st-v2-b
 #root .st-v2-zones-input { width: 96px; text-align: right; font-variant-numeric: tabular-nums; }
 #root .st-v2-zones-input[aria-invalid="true"] { border-color: var(--sv-error); }
 #root .st-v2-zones-error { grid-column: 1 / -1; color: var(--sv-error); font-size: 0.78rem; line-height: 1.45; }
+#root .st-v2-zones-error > span { display: block; }
 #root .st-v2-zones-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 #root .st-v2-zones-preview { grid-template-columns: minmax(0, 1fr); }
 #root .st-v2-zones-preview ul { display: grid; gap: 8px; padding: 0; list-style: none; }
@@ -301,6 +304,13 @@ body:is(.theme-midnight, .theme-high-contrast) #root :is(.st-v2-danger, .st-v2-b
 #root .st-v2-zones-preview li.is-zone-3 { --zone-color: var(--sv-zone-3); }
 #root .st-v2-zones-preview li.is-zone-4 { --zone-color: var(--sv-zone-4); }
 #root .st-v2-zones-preview li.is-zone-5 { --zone-color: var(--sv-zone-5); }
+#root .st-v2-zones-preview li.is-zone-6 { --zone-color: var(--sv-zone-6); }
+
+/* Pace zones from a race: the distance menu is as wide as its box, and the preview note sits above the six zones. */
+#root .st-v2-pace-race .st-v2-select { width: 100%; max-width: none; }
+#root .st-v2-pace-race .st-v2-zones-input { width: 100%; text-align: left; }
+#root .st-v2-pace-zones { display: grid; gap: 10px; }
+#root .st-v2-pace-preview-note { color: var(--sv-muted); font-size: 0.78rem; line-height: 1.45; }
 
 /* The confirmation dialogs open outside .st-v2 and reuse the Runs delete dialog, whose card reads two
    tokens that only the Runs page defines. */

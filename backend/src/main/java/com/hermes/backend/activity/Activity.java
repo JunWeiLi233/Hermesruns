@@ -31,7 +31,7 @@ import org.hibernate.annotations.ColumnDefault;
                 @Index(name = "idx_activity_route_match_group", columnList = "route_match_group_id")
         }
 )
-public class Activity extends ActivityRelationshipFields {
+public class Activity extends ActivityEditableFields {
 
     /** GPS stream marker for runs whose Strava stream has no usable latlng data (e.g. treadmill runs). */
     public static final String GPS_STREAM_STATE_NO_GPS = "NO_GPS";

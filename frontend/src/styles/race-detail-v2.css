@@ -38,7 +38,7 @@ body #root .race-detail-v2-page .runner-shell-canvas::before {
   --rd-card: #fff;
   --rd-ink: #1c1917;
   --rd-muted: #625c56;
-  --rd-faint: #8a837c;
+  --rd-faint: #766d64;
   --rd-line: rgba(28, 25, 23, 0.08);
   --rd-fill: rgba(28, 25, 23, 0.05);
   --rd-accent: #a0392a;
@@ -192,7 +192,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .race-detail-layout.race-de
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-#root .rd-v2-map-chips .is-source { color: #248a3d; }
+#root .rd-v2-map-chips .is-source { color: #1e7a35; }
 
 #root .rd-v2-elevation.race-detail-course-card {
   margin: 0 !important;
@@ -314,7 +314,7 @@ body #root .race-detail-v2-page .rd-v2-count.is-primary strong { color: #fff !im
 body #root .race-detail-v2-page .rd-v2-count.is-primary span { color: rgba(255, 255, 255, 0.9) !important; }
 body #root .race-detail-v2-page .rd-v2-status { color: #fff !important; }
 body #root .race-detail-v2-page .rd-v2-map-chips span { color: #1c1917 !important; }
-body #root .race-detail-v2-page .rd-v2-map-chips .is-source { color: #248a3d !important; }
+body #root .race-detail-v2-page .rd-v2-map-chips .is-source { color: #1e7a35 !important; }
 body #root .race-detail-v2-page .rd-v2-times dd { color: var(--rd-ink) !important; }
 body #root .race-detail-v2-page .rd-v2-times dd.is-accent { color: var(--rd-accent) !important; }
 #root .race-detail-v2 .race-detail-elevation-marker.is-minor .race-detail-elevation-node-label { display: none; }

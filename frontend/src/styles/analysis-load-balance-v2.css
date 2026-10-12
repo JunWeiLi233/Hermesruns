@@ -12,11 +12,11 @@ body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile.
   --lb-card: #fff;
   --lb-ink: #171717;
   --lb-muted: #515563;
-  --lb-faint: #80766c;
+  --lb-faint: #766d64;
   --lb-line: rgba(28, 25, 23, 0.08);
   --lb-fill: rgba(28, 25, 23, 0.05);
   --lb-accent: #a0392a;
-  --lb-good: #248a3d;
+  --lb-good: #1e7a35;
   --lb-good-soft: rgba(52, 199, 89, 0.12);
   --lb-band: rgba(52, 199, 89, 0.09);
   width: 100%;
