@@ -54,9 +54,10 @@
   backdrop-filter: none;
 }
 #root .landing-page--studio .landing-cinematic-nav-inner { min-height: 80px; grid-template-columns: 1fr auto 1fr; }
-#root .landing-page--studio .landing-cinematic-brand { color: var(--studio-ink); font-size: 20px; letter-spacing: .04em; }
-#root .landing-page--studio .landing-cinematic-brand-glyph { background: none; box-shadow: none; width: 32px; height: 36px; }
-#root .landing-page--studio .landing-cinematic-brand .hermes-wordmark { height: 22px; color: #10203d; }
+#root .landing-page--studio .landing-cinematic-brand { --hermes-logo-tile: 36px; gap: calc(var(--hermes-logo-tile) * 0.2292); color: var(--studio-ink); font-size: 20px; letter-spacing: .04em; }
+#root .landing-page--studio .landing-cinematic-brand-glyph { background: none; box-shadow: none; width: var(--hermes-logo-tile); height: var(--hermes-logo-tile); }
+#root .landing-page--studio .landing-cinematic-brand-glyph .landing-cinematic-glyph { width: var(--hermes-logo-tile); height: var(--hermes-logo-tile); }
+#root .landing-page--studio .landing-cinematic-brand .hermes-wordmark { height: calc(var(--hermes-logo-tile) * 0.4448); color: var(--hermes-logo-ink); }
 #root .landing-page--studio .landing-cinematic-links { display: flex; align-items: center; gap: 28px; }
 #root .landing-page--studio .landing-cinematic-links a { font: inherit; font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--studio-ink); }
 #root .landing-page--studio .landing-cinematic-links a:hover { text-decoration: underline; text-underline-offset: 6px; }
@@ -165,7 +166,8 @@
 #root .landing-page--studio [data-preview="progress"] .landing-studio-plan-sheet { transform: rotate(-2deg) translateY(-5px); }
 #root .landing-page--studio .landing-studio-sheet-head { display: flex; align-items: center; gap: 9px; padding: 13px 17px; border-bottom: 1px solid var(--studio-line); font-size: var(--type-micro); font-weight: 650; }
 #root .landing-page--studio .landing-studio-sheet-head > svg { margin-left: auto; width: 18px; height: 18px; flex: 0 0 18px; }
-#root .landing-page--studio .landing-studio-mini-mark { display: grid; place-items: center; width: 20px; height: 20px; color: var(--studio-surface); background: var(--studio-ink); border-radius: 4px; font-size: 11px; }
+#root .landing-page--studio .landing-studio-mini-mark { display: block; flex: 0 0 20px; width: 20px; height: 20px; }
+#root .landing-page--studio .landing-studio-mini-mark svg { display: block; width: 100%; height: 100%; }
 #root .landing-page--studio .landing-studio-plan-content { padding: 24px 23px 20px; min-height: 249px; }
 #root .landing-page--studio .landing-studio-overline { font-size: 9px; font-weight: 600; letter-spacing: .07em; color: var(--studio-muted); }
 #root .landing-page--studio .landing-studio-plan-content .landing-studio-plan-title { margin: 10px 0 12px; color: var(--studio-ink); font-size: 21px; font-weight: 600; letter-spacing: -.025em; line-height: 1.3; }
@@ -288,7 +290,7 @@
 #root .landing-page--studio .landing-cinematic-final-trust > span::before { display: none; }
 #root .landing-page--studio .landing-cinematic-footer { background: var(--studio-surface) !important; border: 0; padding: 48px 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
 #root .landing-page--studio .landing-cinematic-footer-inner { display: flex; justify-content: space-between; align-items: flex-end; align-items: last baseline; gap: 24px; }
-#root .landing-page--studio .landing-cinematic-footer-brand .hermes-wordmark { color: #10203d; height: 22px; }
+#root .landing-page--studio .landing-cinematic-footer-brand .hermes-wordmark { color: var(--hermes-logo-ink); height: 22px; }
 #root .landing-page--studio .landing-cinematic-footer-brand span { color: var(--studio-muted); font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; }
 #root .landing-page--studio .landing-cinematic-footer-link { color: var(--studio-muted); font: inherit; font-size: var(--type-small); }
 #root .landing-page--studio .landing-cinematic-footer-link:hover { color: var(--studio-ink); text-decoration: underline; text-underline-offset: 4px; }
@@ -465,8 +467,7 @@
   #root .landing-page--studio .landing-cinematic-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; font-size: 13px; }
   #root .landing-page--studio .landing-studio-language { margin-left: auto; font-size: 13px; }
   #root .landing-page--studio .landing-cinematic-nav-actions { grid-row: 1; grid-column: 2; gap: 2px; }
-  #root .landing-page--studio .landing-cinematic-brand { font-size: 18px; gap: 8px; }
-  #root .landing-page--studio .landing-cinematic-brand-glyph { width: 26px; height: 30px; }
+  #root .landing-page--studio .landing-cinematic-brand { --hermes-logo-tile: 30px; font-size: 18px; }
   #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn--ghost { display: inline-flex !important; }
   #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn { min-height: 44px; padding: 10px 12px; font-size: 12px; }
   #root .landing-page--studio .landing-cinematic-nav-actions .landing-cinematic-btn--primary svg { display: none; }

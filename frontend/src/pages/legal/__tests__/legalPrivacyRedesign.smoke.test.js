@@ -51,8 +51,8 @@ if (/\.legal-page--privacy\s*\{[^}]*#121110/s.test(splitCss)) {
   throw new Error('Privacy page must use the HermesRuns light-mode palette, not the dark editorial background.');
 }
 
-if (!pageSource.includes('<HermesLogo tone="light" />')) {
-  throw new Error('Light-mode legal header must render the logo for light backgrounds (navy symbol tile, navy and brick logotype).');
+if (!pageSource.includes('<HermesLogo />')) {
+  throw new Error('Legal header must render the logo with its default tone, which follows the theme (ink on light, paper on midnight).');
 }
 
 console.log('[PASS] Legal privacy redesign guard passed.');

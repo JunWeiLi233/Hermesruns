@@ -984,7 +984,7 @@ export default function Heatmap() {
             onClick={() => navigate('/profile')}
             title={t('profile.dashboard_nav_dashboard')}
           >
-            <HermesLogo dark />
+            <HermesLogo tone="dark" />
             <span>{t('heatmap.page_kicker')}</span>
           </button>
 

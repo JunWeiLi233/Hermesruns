@@ -68,4 +68,43 @@ assert.match(security, /"\/llms\.txt"/)
 // Root-level brand files must be public, or social cards and home-screen icons break in production.
 assert.match(security, /"\/apple-touch-icon\.png", "\/og-image\.png"/)
 
+// Brand files, from the hermes:runs logo kit (2026). The kit's own SVG and PNG files each carry a provenance
+// blob (C2PA) of 5 to 8 KB; the copies we serve do not, and the tab icon stays a few hundred bytes.
+const publicPath = (path) => resolve(repoRoot, 'frontend/public', path)
+const pngChunkTypes = (path) => {
+  const data = readFileSync(publicPath(path))
+  assert.equal(data.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `${path} must be a PNG`)
+  const types = []
+  for (let at = 8; at < data.length; at += 12 + data.readUInt32BE(at)) types.push(data.toString('latin1', at + 4, at + 8))
+  return { types, width: data.readUInt32BE(16), height: data.readUInt32BE(20) }
+}
+const faviconSvg = readFileSync(publicPath('favicon.svg'), 'utf8')
+assert.equal(readFileSync(publicPath('hermes-tab-icon.svg'), 'utf8'), faviconSvg, 'hermes-tab-icon.svg is an alias of favicon.svg')
+assert.ok(faviconSvg.length < 1024, 'The tab icon must stay small')
+assert.match(faviconSvg, /<rect width="32" height="32" rx="8" fill="#1a1714"\/>/, 'The tab icon is the kit favicon: an ink tile')
+assert.equal(faviconSvg.match(/fill="#ff5a3c"/g)?.length, 2, 'The tab icon is the kit colon: two coral squares')
+for (const svg of ['favicon.svg', 'hermes-tab-icon.svg', 'images/hermesruns-logo.svg']) {
+  assert.doesNotMatch(readFileSync(publicPath(svg), 'utf8'), /<metadata|c2pa|<script|<style|<image|href=/i, `${svg} must be plain artwork`)
+}
+assert.match(readFileSync(publicPath('images/hermesruns-logo.svg'), 'utf8'), /viewBox="0 0 464\.3 96"/, 'The horizontal logo is the kit lockup')
+assert.match(index, /<meta name="theme-color" content="#1a1714"/)
+assert.match(index, /<img src="\/images\/hermesruns-logo\.svg" alt="HermesRuns home" width="174" height="36"/)
+
+const touchIcon = pngChunkTypes('apple-touch-icon.png')
+assert.deepEqual([touchIcon.width, touchIcon.height], [180, 180])
+const socialCard = pngChunkTypes('og-image.png')
+assert.deepEqual([socialCard.width, socialCard.height], [1200, 630])
+for (const png of [touchIcon, socialCard]) {
+  assert.deepEqual(png.types.filter((type) => !['IHDR', 'IDAT', 'IEND'].includes(type)), [], 'Served PNGs carry no provenance or text chunks')
+}
+const ico = readFileSync(publicPath('favicon.ico'))
+assert.equal(ico.readUInt16LE(2), 1, 'favicon.ico must be an icon file')
+assert.deepEqual(
+  Array.from({ length: ico.readUInt16LE(4) }, (_, frame) => ico[6 + frame * 16] || 256),
+  [16, 32, 48],
+  'favicon.ico holds the 16, 32 and 48 px frames',
+)
+const webp = readFileSync(publicPath('images/og-image.webp'))
+assert.equal(webp.toString('latin1', 0, 4) + webp.toString('latin1', 8, 12), 'RIFFWEBP')
+
 console.log('public-seo-files.smoke.test: PASS')
