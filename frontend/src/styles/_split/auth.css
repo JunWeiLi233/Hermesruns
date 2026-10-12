@@ -149,7 +149,6 @@
 
 .auth-page .auth-card-kicker .hermes-logo__word {
     color: rgba(255, 255, 255, 0.9);
-    --hermes-logo-accent: #f07561;
 }
 
 .auth-page .auth-card-title {
@@ -387,10 +386,6 @@
 .auth-page--light .form-group label,
 .auth-page--light .forgot-password {
     color: #0f172a;
-}
-
-.auth-page--light .auth-card-kicker .hermes-logo__word {
-    --hermes-logo-accent: #a0392a;
 }
 
 .auth-page--light .brand-content p,
@@ -2073,25 +2068,25 @@
   background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
 }
 
-/* The HermesRuns lockup on the dark brand panel: light ink, coral "runs". */
+/* The HermesRuns lockup on the dark brand panel: paper letters, coral colon. */
 .auth-page--forgot-password .auth-flow-wordmark-row {
+  --hermes-logo-tile: 46px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: #f3ede8;
+  gap: calc(var(--hermes-logo-tile) * 0.2292);
+  color: var(--hermes-logo-paper);
   text-decoration: none;
 }
 
 .auth-page--forgot-password .auth-flow-wordmark-logo {
-  width: 30px;
-  height: 30px;
+  width: var(--hermes-logo-tile);
+  height: var(--hermes-logo-tile);
   flex: 0 0 auto;
 }
 
 .auth-page--forgot-password .auth-flow-wordmark {
-  height: 30px;
+  height: calc(var(--hermes-logo-tile) * 0.4448);
   color: inherit;
-  --hermes-logo-accent: #f07561;
 }
 
 /* 闁冲厜鍋撻柍鍏夊�?Password strength checker (signup form top card) 闁冲厜鍋撻柍鍏夊�?*/

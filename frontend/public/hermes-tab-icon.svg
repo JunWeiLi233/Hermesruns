@@ -1,3 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="HermesRuns">
-  <path fill="#10203d" d="M22 0H78A22 22 0 0 1 100 22V78A22 22 0 0 1 78 100H22A22 22 0 0 1 0 78V22A22 22 0 0 1 22 0Z"/><path fill="#ffffff" d="M20 80V30L37 20V44H63V30L80 20V80H63L55 56H45L37 80Z"/><path fill="#f07561" d="M49 58H51L51.15 61H48.85ZM48.7 63H51.3L51.6 68H48.4ZM48.3 71H51.7L52.3 79.5H47.7Z"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="HermesRuns"><rect width="32" height="32" rx="8" fill="#1a1714"/><rect x="11" y="5" width="10" height="10" rx="2.5" fill="#ff5a3c"/><rect x="11" y="17" width="10" height="10" rx="2.5" fill="#ff5a3c"/></svg>

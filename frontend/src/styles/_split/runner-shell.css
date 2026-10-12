@@ -36,11 +36,7 @@
 
 .runner-shell-brand .hermes-logo {
   font-size: 1rem;
-}
-
-.runner-shell-brand .hermes-logo--light .hermes-logo__word {
-  color: #f3ede8;
-  --hermes-logo-accent: #f07561;
+  --hermes-logo-tile: 28px;
 }
 
 .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {

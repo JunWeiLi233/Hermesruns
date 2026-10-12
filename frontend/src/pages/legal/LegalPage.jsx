@@ -212,7 +212,7 @@ export default function LegalPage({ variant = 'terms' }) {
             <AppIcon name="arrow_back" className="runner-dashboard-side-link-icon" />
             <span>{isAuthenticated ? dictionary.backApp : dictionary.backHome}</span>
           </button>
-          <HermesLogo tone="light" />
+          <HermesLogo />
         </header>
 
         <main className="legal-page-content">

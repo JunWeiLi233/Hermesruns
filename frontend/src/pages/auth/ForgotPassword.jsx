@@ -47,7 +47,7 @@ export default function ForgotPassword() {
           <div className="auth-flow-brand-inner">
             <div className="auth-flow-wordmark-wrap">
               <Link to="/" className="auth-flow-wordmark-row" aria-label={t('index.studio_home')}>
-                <HermesMarkSvg tone="light" className="auth-flow-wordmark-logo" />
+                <HermesMarkSvg tone="auto" className="auth-flow-wordmark-logo" />
                 <HermesWordmarkSvg className="auth-flow-wordmark" />
               </Link>
             </div>
