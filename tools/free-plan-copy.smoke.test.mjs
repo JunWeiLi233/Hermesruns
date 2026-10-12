@@ -14,7 +14,7 @@ const limit = match[1]
 
 for (const locale of ['en', 'zh-CN']) {
   const { default: copy } = await import(pathToFileURL(resolve(repoRoot, `frontend/src/i18n/locales/${locale}/index.js`)).href)
-  for (const [namespace, key] of [['landing', 'studio_pricing_runner_scans'], ['settings', 'plan_free_copy']]) {
+  for (const [namespace, key] of [['landing', 'studio_pricing_runner_scans'], ['landing', 'home_plan_free_scans'], ['settings', 'plan_free_copy']]) {
     const text = copy[namespace]?.[key]
     assert.equal(typeof text, 'string', `${locale} ${namespace}.${key} should exist`)
     const numbers = text.match(/\d+/g) || []

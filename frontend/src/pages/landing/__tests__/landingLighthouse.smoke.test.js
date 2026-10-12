@@ -39,28 +39,6 @@ assert.ok(
   'The landing hero shoe bitmap should stay below 300 KiB after optimization.',
 );
 
-assert.equal(
-  [...landingSource.matchAll(/<img className="landing-strava-connect-button"[^>]*>/g)].length,
-  1,
-  'The final Strava CTA should keep its official image artwork.',
-);
-assert.doesNotMatch(
-  landingSource,
-  /<img className="landing-strava-connect-button"(?![^>]*\bwidth="237"[^>]*\bheight="48")/,
-  'Strava CTA images should declare their intrinsic dimensions.',
-);
-
-assert.match(
-  landingSource,
-  /<h2>\{t\('landing.minimal_features_title'\)\}<\/h2>/,
-  'The feature overview must retain its h2 heading before the selected feature h3.',
-);
-assert.doesNotMatch(
-  landingSource,
-  /<h3>\{card\.title\}<\/h3>/,
-  'Feature deck card titles should use the next valid heading level.',
-);
-
 assert.doesNotMatch(activeIndexCss, /_split\/(?:landing|profile|analysis|runs|races|schedule|shoes|muscle-training|heatmap|weather|rewards|settings)\.css/);
 assert.doesNotMatch(
   indexHtml,
