@@ -24,6 +24,7 @@ export const routePreloaders = {
   '/heatmap': () => import('../pages/heatmap/Heatmap.jsx'),
   '/weather': () => import('../pages/weather/WeatherEngine.jsx'),
   '/today-run': () => import('../pages/today-run/TodayRun.jsx'),
+  '/training-plan': () => import('../pages/training-plan/TrainingPlan.jsx'),
   '/rewards': () => import('../pages/rewards/Rewards.jsx'),
   '/training-log': () => import('../pages/training-log/TrainingLog.jsx'),
   '/settings': () => import('../pages/settings/Settings.jsx'),

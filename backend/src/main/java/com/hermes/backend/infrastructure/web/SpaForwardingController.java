@@ -67,6 +67,7 @@ public class SpaForwardingController {
         "/analysis/{insightKey}",
         "/prediction/{distKey}",
         "/today-run",
+        "/training-plan",
         "/rewards",
         "/training-log",
         "/settings",

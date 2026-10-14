@@ -109,6 +109,8 @@ public class AccountExportService {
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
         entry(zip, "goals.csv", goalsCsv(goals.findByRunnerIdOrderByIdAsc(runner.getId())));
         entry(zip, "pace-zone-race.csv", paceZoneRaceCsv(paceZoneRaces.findByRunner(runner).orElse(null)));
+        entry(zip, "manual-runs.json", objectMapper.writeValueAsString(jdbc.queryForList(
+                "SELECT activity_id, name, started_at, time_zone, distance_meters, elapsed_seconds FROM manual_run_receipt WHERE runner_id = ? AND deleted = false ORDER BY created_at, id", runner.getId())));
 
         if (includeTracks) {
             for (Activity run : runs) {
