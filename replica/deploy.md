@@ -25,10 +25,15 @@ Date: 2026-10-13. User authorization: “focus on deploy a website” and “Int
 - Service: hermes-web (`e68edfbc-39e9-4b60-99d9-dedb3923058d`).
 - Database: existing production PostgreSQL; additive manual-run receipt table via current Hibernate update setting. SQL equivalent saved for validate-mode deployments.
 - Previous successful deployment: `58e3f26e-b939-4664-9a81-56e9a2a4e15d`.
-- Deployment status: pending upload. Append host deployment ID and final result after publishing.
+- Deployment: `f31103f4-643b-4888-b145-52bea1b65a11`, Railway status **SUCCESS**.
+- Deployed source: `e9ea0ed1e5c165a73633eed6d8442141bb31df0c` on `codex/runna-web`; draft PR https://github.com/JunWeiLi233/Hermesruns/pull/168 retains the source for review.
+- Host startup: 2026-10-14 03:13 UTC (October 13 in the user's time zone); Spring started normally with PostgreSQL and the existing schema-update setting.
+- Public route: HTTP 200 with `noindex, nofollow, noarchive`.
+- New deployed module: `TrainingPlan-CorRaG0p.js`, HTTP 200; contains the coach goal and manual-run endpoints.
+- Unauthenticated manual-run POST: HTTP 401, rejected by the existing session filter. No production activity created.
 
 ## Operation and rollback
 
 Use existing Railway health checks/logging. Watch application startup, schema creation, coach endpoints and manual-save errors. No new scheduled monitors, messages or paid services were created. Roll back to the previous deployment if startup fails; the new additive table can remain without affecting the old build. Never drop production run data to roll back.
 
-No real production account was created for deployment checks. Verify the public SPA route and unauthenticated write rejection after host success; a real signed-in end-to-end production save remains unverified.
+No real production account was created for deployment checks. Public route/assets and unauthenticated write rejection were confirmed after host success; a real signed-in end-to-end production save remains unverified. The production release is live, while PR #168 is draft and has not been merged into master.
