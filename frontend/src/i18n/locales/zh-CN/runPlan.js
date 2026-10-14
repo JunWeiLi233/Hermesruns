@@ -1,0 +1,11 @@
+export default {run_plan:{
+  title:'训练计划',home:'HermesRuns 首页',navigation:'跑步导航',today:'今日训练',runs:'跑步记录',eyebrow:'集中管理你的训练',heading:'下一次训练，一目了然。',intro:'设定目标，查看接下来的训练，并记录实际完成的跑步。',
+  create_goal:'设定跑步目标',change_goal:'调整目标',goal_name:'我的跑步目标',current_goal:'当前目标',general_training:'建立跑步节奏',no_goal:'准备好后，设定目标距离和日期，开始为目标训练。',goal_summary:'{distance} · {date}',
+  history_basis:'当前日程依据你的跑步历史和 Hermes 教练规则生成。',weekly_target:'每周目标',sessions:'每周跑步次数',today_session:'今日训练',rest:'休息日',recovery:'恢复训练',easy:'轻松跑',long:'长距离跑',tempo:'节奏跑',intervals:'间歇跑',run:'跑步',unavailable:'暂无数据',flexible:'灵活安排',no_session:'暂无训练安排',
+  rest_detail:'今天没有安排跑步，留些时间恢复。',session_detail:'打开训练详情，查看当前目标和教练建议。',distance:'距离',duration:'时间',minutes_value:'{minutes} 分钟',view_session:'查看今日训练',log_run:'记录一次跑步',open_calendar:'打开训练日历',next_two_weeks:'接下来两周',week_heading:'为跑步留出时间。',no_run:'没有跑步安排',recovery_space:'恢复时间',
+  loading:'正在获取训练计划…',load_error:'无法加载训练计划，请重试。',retry:'重试',goal_saved:'目标已保存。',run_saved:'跑步已保存到你的历史记录。',view_run:'查看已保存的跑步',planner_note:'使用 Hermes 教练规则生成。训练可能随跑步历史和恢复情况调整。',import_runs:'导入运动记录',privacy:'隐私政策',
+  review_goal:'确认目标',review_detail:'请确认即将使用的目标。',goal:'目标',goal_label:'目标名称',choose_distance:'选择距离',race_date:'目标日期',review_history:'保存后，Hermes 将根据你的跑步记录生成新的训练日程。',replace_notice:'这会替换当前目标，已有跑步记录会保留。',use_goal:'使用此目标',edit_goal:'修改目标',close:'关闭',saving:'正在保存…',
+  goal_invalid:'请选择 5 公里或 10 公里。',date_invalid:'请选择今天之后的有效日期。',date_long:'请选择未来 26 周以内的日期。',name_invalid:'名称需为 1 至 120 个字符，且不含标记代码。',goal_error:'无法确认目标是否保存成功，请刷新计划后再试。',
+  manual_name:'手动记录的跑步',manual_detail:'填写实际完成的数据，不会生成 GPS 或心率测量。',run_name:'跑步名称',start_time:'开始日期和时间',browser_zone:'时区：{zone}',time_occurrence:'此本地时间出现两次，请选择正确的一次。',first_occurrence:'第一次',second_occurrence:'第二次',distance_unit:'距离（{unit}）',km:'公里',mile:'英里',elapsed:'总耗时',hours:'小时',minutes:'分钟',seconds:'秒',elapsed_detail:'请包含暂停时间。这些数据由你填写，并非设备测量。',save_run:'保存跑步',retry_save:'重试本次保存',check_history:'查看跑步历史',
+  start_invalid:'请选择过去的有效开始时间，时钟调整跳过的时间无效。',distance_invalid:'请输入大于零且不超过 1,000 公里的距离。',duration_invalid:'总耗时需大于零且不超过七天，分钟和秒需在 0 至 59 之间。',retry_edited:'首次保存可能已完成，请先查看历史，再修改或新建记录。',save_conflict:'此保存标识已用于其他数据，请查看历史记录。',run_deleted:'此跑步已删除，重试不会重新创建。',signin_again:'登录已过期，请重新登录后保存。',save_error:'无法确认保存结果，请保持原数据重试，或查看跑步历史。'
+}};

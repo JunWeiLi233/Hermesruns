@@ -1,0 +1,49 @@
+/* Optional Tailwind 4 web adapter; import tokens.css first. */
+@theme inline {
+  --color-bg: var(--app-color-bg);
+  --color-surface: var(--app-color-surface);
+  --color-surface-subtle: var(--app-color-surface-subtle);
+  --color-border: var(--app-color-border);
+  --color-border-input: var(--app-color-border-input);
+  --color-text: var(--app-color-text);
+  --color-text-muted: var(--app-color-text-muted);
+  --color-accent: var(--app-color-accent);
+  --color-accent-pressed: var(--app-color-accent-pressed);
+  --color-on-accent: var(--app-color-on-accent);
+  --color-focus: var(--app-color-focus);
+  --color-selected: var(--app-color-selected);
+  --color-danger: var(--app-color-danger);
+  --color-danger-bg: var(--app-color-danger-bg);
+  --color-success: var(--app-color-success);
+  --color-success-bg: var(--app-color-success-bg);
+  --color-warning: var(--app-color-warning);
+  --color-warning-bg: var(--app-color-warning-bg);
+  --color-info: var(--app-color-info);
+  --color-info-bg: var(--app-color-info-bg);
+  --color-disabled: var(--app-color-disabled);
+  --color-on-disabled: var(--app-color-on-disabled);
+}
+:root {
+  --app-color-bg: #F5F3EE;
+  --app-color-surface: #FFFFFF;
+  --app-color-surface-subtle: #EDEAE3;
+  --app-color-border: #D8D5CE;
+  --app-color-border-input: #727A74;
+  --app-color-text: #202923;
+  --app-color-text-muted: #58625B;
+  --app-color-accent: #263B33;
+  --app-color-accent-pressed: #182820;
+  --app-color-on-accent: #FFFFFF;
+  --app-color-focus: #365875;
+  --app-color-selected: #E5ECE7;
+  --app-color-danger: #96372F;
+  --app-color-danger-bg: #FCECE8;
+  --app-color-success: #286047;
+  --app-color-success-bg: #E8F1EB;
+  --app-color-warning: #73520E;
+  --app-color-warning-bg: #FFF2CE;
+  --app-color-info: #365875;
+  --app-color-info-bg: #EAF0F6;
+  --app-color-disabled: #E5E3DD;
+  --app-color-on-disabled: #58625B;
+}
