@@ -43,7 +43,7 @@ class BillingControllerTests {
             return row;
         });
         BillingController controller = new BillingController(mock(AuthService.class), runners, usage, events,
-                "sk_test", "whsec_test", "price_test", "https://example.com", "", mock(SystemConfigService.class), null);
+                "sk_test", "whsec_test", "price_test", "https://example.com", "", mock(SystemConfigService.class), mock(CheckoutSessionService.class));
         Session session = new Session();
         session.setId("cs_paid");
         session.setMode("payment");
@@ -59,6 +59,9 @@ class BillingControllerTests {
             webhook.when(() -> Webhook.constructEvent("payload", "signature", "whsec_test")).thenReturn(event);
             assertThat(controller.stripeWebhook("payload", "signature").getStatusCode().value()).isEqualTo(200);
             assertThat(controller.stripeWebhook("payload", "signature").getStatusCode().value()).isEqualTo(200);
+            when(event.getType()).thenReturn("checkout.session.async_payment_succeeded");
+            when(event.getId()).thenReturn("evt_distinct_for_same_session");
+            assertThat(controller.stripeWebhook("payload", "signature").getBody()).isEqualTo("duplicate");
         }
         verify(usage, times(1)).grantPro(runner, 1);
     }

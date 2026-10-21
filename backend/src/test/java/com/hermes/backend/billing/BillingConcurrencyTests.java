@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -46,7 +46,7 @@ import static org.mockito.Mockito.*;
 
 @SpringJUnitConfig(BillingConcurrencyTests.Config.class)
 class BillingConcurrencyTests {
-    @Configuration
+    @TestConfiguration
     @EnableTransactionManagement
     @EnableJpaRepositories(basePackages = {"com.hermes.backend.billing", "com.hermes.backend.runner"})
     static class Config {
@@ -69,6 +69,7 @@ class BillingConcurrencyTests {
         @Bean AiUsageService otherUsage(RunnerRepository runners) { return new AiUsageService(runners, 3, 1000, 0); }
         @Bean QuotaService quota(RunnerRepository runners) { return new QuotaService(runners, 2, 0); }
         @Bean QuotaService otherQuota(RunnerRepository runners) { return new QuotaService(runners, 2, 0); }
+        @Bean BillingRunnerDataPurger billingPurger() { return new BillingRunnerDataPurger(); }
         @Bean CheckoutSessionService checkout(RunnerRepository runners, CheckoutAttemptRepository attempts, PlatformTransactionManager tx) {
             return new CheckoutSessionService(runners, attempts, tx, "sk_test", "price_test", "https://example.com");
         }
@@ -84,12 +85,56 @@ class BillingConcurrencyTests {
     @Autowired CheckoutAttemptRepository attempts;
     @Autowired BillingController billing;
     @Autowired CheckoutSessionService checkout;
+    @Autowired BillingRunnerDataPurger billingPurger;
+    @Autowired PlatformTransactionManager transactionManager;
+    @jakarta.persistence.PersistenceContext jakarta.persistence.EntityManager entityManager;
     @MockitoSpyBean(name = "usage") AiUsageService usage;
     @Autowired @Qualifier("otherUsage") AiUsageService otherUsage;
     @Autowired @Qualifier("quota") QuotaService quota;
     @Autowired @Qualifier("otherQuota") QuotaService otherQuota;
 
     Runner runner() { return runners.saveAndFlush(new Runner("billing-" + UUID.randomUUID() + "@hermes.test", "active")); }
+
+    @Test
+    void accountDeletionPurgesOnlyTheOwnersCheckoutAttempt() {
+        Runner owner = runner();
+        Runner other = runner();
+        attempts.saveAndFlush(new CheckoutAttempt(owner.getId(), 1, owner.getEmail(), "price", "https://example.com"));
+        attempts.saveAndFlush(new CheckoutAttempt(other.getId(), 1, other.getEmail(), "price", "https://example.com"));
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager)
+                .executeWithoutResult(status -> billingPurger.purge(owner.getId()));
+        assertThat(attempts.findById(owner.getId())).isEmpty();
+        assertThat(attempts.findById(other.getId())).isPresent();
+    }
+
+    @Test
+    void preloadedManagedAccountsAreRefreshedAfterWaitingForTheDatabaseLock() throws Exception {
+        Runner owner = runner();
+        java.util.concurrent.CyclicBarrier loaded = new java.util.concurrent.CyclicBarrier(12);
+        List<Boolean> dailyResults = concurrently(12, i -> new org.springframework.transaction.support.TransactionTemplate(transactionManager)
+                .execute(status -> {
+                    Runner managed = entityManager.find(Runner.class, owner.getId());
+                    await(loaded);
+                    return (i % 2 == 0 ? usage : otherUsage).tryConsumeQuota(managed) == null;
+                }));
+        assertThat(dailyResults.stream().filter(Boolean::booleanValue).count()).isEqualTo(3);
+        assertThat(runners.findById(owner.getId()).orElseThrow().getAiDailyScansUsed()).isEqualTo(3);
+
+        java.util.concurrent.CyclicBarrier monthlyLoaded = new java.util.concurrent.CyclicBarrier(12);
+        List<Boolean> monthlyResults = concurrently(12, i -> new org.springframework.transaction.support.TransactionTemplate(transactionManager)
+                .execute(status -> {
+                    Runner managed = entityManager.find(Runner.class, owner.getId());
+                    await(monthlyLoaded);
+                    return (i % 2 == 0 ? quota : otherQuota).tryConsumeFeature(managed, "shoe-scan");
+                }));
+        assertThat(monthlyResults.stream().filter(Boolean::booleanValue).count()).isEqualTo(2);
+        assertThat(runners.findById(owner.getId()).orElseThrow().getShoeScanCount()).isEqualTo(2);
+    }
+
+    private void await(java.util.concurrent.CyclicBarrier barrier) {
+        try { barrier.await(10, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (Exception e) { throw new IllegalStateException(e); }
+    }
 
     @Test
     void separateServiceInstancesAndDetachedAccountsCannotExceedDailyOrMonthlyQuota() throws Exception {
@@ -190,7 +235,7 @@ class BillingConcurrencyTests {
             }
             go.countDown();
             List<Boolean> results = new ArrayList<>();
-            for (Future<Boolean> future : futures) results.add(future.get());
+            for (Future<Boolean> future : futures) results.add(future.get(30, java.util.concurrent.TimeUnit.SECONDS));
             return results;
         } finally { pool.shutdownNow(); }
     }

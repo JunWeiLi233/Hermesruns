@@ -5,6 +5,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiFetch, apiJson } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
+import { withRequestDeadline } from '../../api/requestDeadline';
 import Modal from '../../components/Modal';
 import ImportActivityModal from '../../components/ImportActivityModal';
 import AppIcon from '../../components/AppIcon';
@@ -182,15 +183,19 @@ export default function Analysis() {
   // Bumping this counter invalidates results from superseded loads so a
   // retry never clobbers a newer fetch (same guard style as ProfileDashboard).
   const analysisLoadGenerationRef = useRef(0);
+  const analysisLoadControllerRef = useRef(null);
 
   const loadAnalysisData = useCallback(() => {
     const loadToken = ++analysisLoadGenerationRef.current;
+    analysisLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    analysisLoadControllerRef.current = controller;
     const isCurrentLoad = () => analysisLoadGenerationRef.current === loadToken;
 
     async function loadProfile() {
       setProfileState('loading');
       try {
-        const profileData = await cachedApiJson('/api/profile/me');
+        const profileData = await withRequestDeadline((signal) => cachedApiJson('/api/profile/me', { signal }), controller.signal);
         if (!isCurrentLoad()) return;
         setProfile(profileData);
         setProfileState('ready');
@@ -202,10 +207,14 @@ export default function Analysis() {
     async function loadRuns() {
       setRunsState('loading');
       try {
-        const activitiesData = await cachedApiJson('/api/activities/analysis');
+        const activitiesData = await withRequestDeadline((signal) => cachedApiJson('/api/activities/analysis', { signal }), controller.signal);
         if (!isCurrentLoad()) return;
+        if (!Array.isArray(activitiesData) || activitiesData.some((run) => !run || typeof run !== 'object' || Array.isArray(run))) {
+          invalidateResourceCache('/api/activities/analysis');
+          throw new Error('Invalid analysis activity list');
+        }
         startTransition(() => {
-          setRuns(Array.isArray(activitiesData) ? activitiesData : []);
+          setRuns(activitiesData);
         });
         setRunsState('ready');
       } catch {
@@ -244,6 +253,7 @@ export default function Analysis() {
     loadAnalysisData();
     return () => {
       analysisLoadGenerationRef.current += 1;
+      analysisLoadControllerRef.current?.abort();
     };
   }, [isAuthenticated, navigate, loadAnalysisData, recommendationRevision, accountToday]);
 
@@ -454,7 +464,7 @@ export default function Analysis() {
             </section>
           ) : runsState === 'error' ? (
             <section className="analysis-overview-empty-shell">
-              <div className="premium-empty-state analysis-overview-empty-state">
+              <div className="premium-empty-state analysis-overview-empty-state" role="alert">
                 <div className="premium-empty-state__icon" aria-hidden="true">
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
@@ -462,7 +472,7 @@ export default function Analysis() {
                 <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
                 <div className="analysis-overview-empty-actions">
                   <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={loadAnalysisData}>
-                    {t('profile.retry_strava')}
+                    {t('analysis.stitch_load_retry')}
                   </button>
                 </div>
               </div>

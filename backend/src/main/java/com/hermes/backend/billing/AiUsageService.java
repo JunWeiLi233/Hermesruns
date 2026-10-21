@@ -2,6 +2,9 @@ package com.hermes.backend.billing;
 
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -17,6 +20,8 @@ public class AiUsageService {
     private final int perRunnerDailyLimit;
     private final int projectDailyLimit;
     private final int projectDailyReserve;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AiUsageService(
             RunnerRepository runnerRepository,
@@ -78,8 +83,13 @@ public class AiUsageService {
     public synchronized String tryConsumeQuota(Runner runner) {
         Runner requestedRunner = runner;
         runner = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        // OSIV may have loaded this managed account before a concurrent reservation committed.
+        if (entityManager != null) entityManager.refresh(runner, LockModeType.PESSIMISTIC_WRITE);
         // Pro and admin runners are unlimited
         if (isProOrAdmin(runner)) {
+            requestedRunner.setSubscriptionTier(runner.getSubscriptionTier());
+            requestedRunner.setProExpiresAt(runner.getProExpiresAt());
+            requestedRunner.setRole(runner.getRole());
             return null;
         }
 
@@ -163,9 +173,11 @@ public class AiUsageService {
     @Transactional
     public synchronized void rollbackConsumedQuota(Runner runner) {
         if (isProOrAdmin(runner)) return;
+        LocalDate reservationDate = runner.getAiDailyResetDate();
         Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        if (entityManager != null) entityManager.refresh(fresh, LockModeType.PESSIMISTIC_WRITE);
         // A slow failed request must never refund a reservation from a newer UTC/local daily window.
-        if (!java.util.Objects.equals(fresh.getAiDailyResetDate(), runner.getAiDailyResetDate())) return;
+        if (!java.util.Objects.equals(fresh.getAiDailyResetDate(), reservationDate)) return;
         int current = fresh.getAiDailyScansUsed();
         if (current > 0) {
             fresh.setAiDailyScansUsed(current - 1);

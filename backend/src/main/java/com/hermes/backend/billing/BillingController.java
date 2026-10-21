@@ -13,6 +13,9 @@ import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -53,6 +56,8 @@ public class BillingController {
     @SuppressWarnings("unused")
     private final String priceDisplayLabel;
     private final SystemConfigService systemConfigService;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BillingController(
             AuthService authService,
@@ -194,6 +199,7 @@ public class BillingController {
         }
 
         Runner runner = runnerOpt.get();
+        if (entityManager != null) entityManager.refresh(runner, LockModeType.PESSIMISTIC_WRITE);
         if ("ADMIN".equals(runner.getRole())) {
             return ResponseEntity.ok("admin-skip");
         }
@@ -209,6 +215,7 @@ public class BillingController {
         processedStripeEventRepository.save(new ProcessedStripeEvent(event.getId()));
         processedStripeEventRepository.save(new ProcessedStripeEvent(paymentKey));
         aiUsageService.grantPro(runner, months);
+        checkoutSessionService.markPaid(runnerId, session);
         return ResponseEntity.ok("ok");
     }
 

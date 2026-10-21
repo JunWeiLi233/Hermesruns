@@ -61,7 +61,36 @@ class CheckoutSessionServiceTests {
             assertThat(service.createOrReuse(7L, 1)).isEqualTo(session.getUrl());
             assertThatThrownBy(() -> service.createOrReuse(7L, 2))
                     .isInstanceOf(CheckoutSessionService.CheckoutConflictException.class);
+            service.markPaid(7L, session);
+            assertThat(stored.get().isCompleted()).isTrue();
+            assertThatThrownBy(() -> service.createOrReuse(7L, 1))
+                    .isInstanceOf(CheckoutSessionService.CheckoutConflictException.class)
+                    .hasMessageContaining("already complete");
             stripe.verify(() -> Session.create(any(SessionCreateParams.class), any(RequestOptions.class)), times(2));
+        }
+    }
+
+    @Test
+    void lateRetryOfUncertainSessionKeepsOriginalAttemptWithoutInvalidProviderRequest() {
+        RunnerRepository runners = mock(RunnerRepository.class);
+        Runner runner = new Runner();
+        runner.setId(8L);
+        runner.setEmail("runner@example.com");
+        when(runners.findByIdForUpdate(8L)).thenReturn(Optional.of(runner));
+        CheckoutAttemptRepository attempts = mock(CheckoutAttemptRepository.class);
+        CheckoutAttempt attempt = new CheckoutAttempt(8L, 1, runner.getEmail(), "price_1", "https://example.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(attempt, "expiresAt", java.time.Instant.now().plusSeconds(1200).getEpochSecond());
+        when(attempts.findById(8L)).thenReturn(Optional.of(attempt));
+        PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
+        when(transactions.getTransaction(any())).thenAnswer(call -> new SimpleTransactionStatus());
+        CheckoutSessionService service = new CheckoutSessionService(runners, attempts, transactions,
+                "sk_test", "price_1", "https://example.com");
+        try (var provider = mockStatic(Session.class)) {
+            assertThatThrownBy(() -> service.createOrReuse(8L, 1))
+                    .isInstanceOf(CheckoutSessionService.CheckoutConflictException.class)
+                    .hasMessageContaining("still being resolved");
+            provider.verifyNoInteractions();
+            verify(attempts, never()).save(any());
         }
     }
 }

@@ -153,9 +153,13 @@ public class AdminSecurityFilter implements Filter {
         String servletPath = request.getServletPath();
         String pathInfo = request.getPathInfo();
         if (servletPath == null || servletPath.isEmpty()) {
+            // For an empty servlet mapping pathInfo already is the full decoded dispatch path.
+            if (pathInfo != null && !pathInfo.isEmpty()) {
+                return pathInfo;
+            }
             String uri = request.getRequestURI();
             String context = request.getContextPath();
-            servletPath = context != null && !context.isEmpty() && uri.startsWith(context)
+            return context != null && !context.isEmpty() && uri.startsWith(context)
                     ? uri.substring(context.length())
                     : uri;
         }

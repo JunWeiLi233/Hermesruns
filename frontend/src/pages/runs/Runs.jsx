@@ -9,6 +9,7 @@ const RUNS_STRAVA_SYNC_POLL_DEADLINE_MS = 120000;
 import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch, apiJson, getBackendBaseUrl } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
+import { withRequestDeadline } from '../../api/requestDeadline';
 import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
@@ -613,6 +614,7 @@ const Runs = memo(function Runs() {
     routePreviewRequestCoordinatorRef.current = createRoutePreviewRequestCoordinator();
   }
   const runsLoadGenerationRef = useRef(null);
+  const runsLoadControllerRef = useRef(null);
   if (runsLoadGenerationRef.current === null) {
     runsLoadGenerationRef.current = createRunsLoadGeneration();
   }
@@ -670,7 +672,11 @@ const Runs = memo(function Runs() {
 
   const loadRuns = useCallback(async ({ fromCache = false } = {}) => {
     const loadToken = runsLoadGenerationRef.current.begin();
+    runsLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    runsLoadControllerRef.current = controller;
     const isCurrentLoad = () => runsLoadGenerationRef.current.isCurrent(loadToken);
+    setLoadState((current) => current === 'error' ? 'loading' : current);
     const cachedHit = readRunsCache(localStorage, email, Date.now());
 
     if (fromCache && cachedHit && isCurrentLoad()) {
@@ -701,10 +707,14 @@ const Runs = memo(function Runs() {
       : (cachedHit?.stravaStatus ?? null);
     let runsFailed = false;
 
-    const runsPromise = cachedApiJson('/api/activities')
+    const runsPromise = withRequestDeadline((signal) => cachedApiJson('/api/activities', { signal }), controller.signal)
       .then((data) => {
         if (!isCurrentLoad()) return;
-        const list = Array.isArray(data) ? data : [];
+        if (!Array.isArray(data) || data.some((run) => !run || typeof run !== 'object' || Array.isArray(run))) {
+          invalidateResourceCache('/api/activities');
+          throw new Error('Invalid activity list');
+        }
+        const list = data;
         sortRecentRuns(list);
         latestRuns = list;
         setAllRuns(list);
@@ -719,7 +729,7 @@ const Runs = memo(function Runs() {
         }
       });
 
-    const profilePromise = cachedApiJson('/api/profile/me')
+    const profilePromise = withRequestDeadline((signal) => cachedApiJson('/api/profile/me', { signal }), controller.signal)
       .then((data) => {
         if (!isCurrentLoad() || data == null) return;
         setProfile(data);
@@ -728,7 +738,7 @@ const Runs = memo(function Runs() {
       })
       .catch(() => {});
 
-    const stravaPromise = apiJson('/api/auth/strava/status')
+    const stravaPromise = withRequestDeadline((signal) => apiJson('/api/auth/strava/status', { signal }), controller.signal)
       .then((data) => {
         if (!isCurrentLoad() || data == null) return;
         setStravaStatus(data);
@@ -766,6 +776,10 @@ const Runs = memo(function Runs() {
       return;
     }
     loadRuns({ fromCache: true });
+    return () => {
+      runsLoadGenerationRef.current.invalidate();
+      runsLoadControllerRef.current?.abort();
+    };
   }, [isAuthenticated, navigate, loadRuns]);
 
   useEffect(() => {
@@ -1573,7 +1587,10 @@ const Runs = memo(function Runs() {
             </section>
 
             <section className={`recent-runs-card-list runs-ledger-v2__list is-${runsView}`} aria-label={t('runs.full_history')}>
-              {loadState === 'error' ? <div className="recent-runs-status">{t('runs.load_error')}</div> : null}
+              {loadState === 'error' ? <div className="recent-runs-status" role="alert">
+                <p>{t('runs.load_error')}</p>
+                <button type="button" className="runner-shell-inline-btn" onClick={refreshRuns}>{t('analysis.stitch_load_retry')}</button>
+              </div> : null}
               {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
               {loadState === 'ready' && filteredRuns.length > 0 ? (
                 <>

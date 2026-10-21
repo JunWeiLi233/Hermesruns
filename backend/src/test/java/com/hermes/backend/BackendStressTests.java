@@ -132,6 +132,7 @@ class BackendStressTests {
         sharedRunner.setAiDailyScansUsed(0);
         sharedRunner.setAiDailyResetDate(LocalDate.now());
 
+        when(runnerRepository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(sharedRunner));
         when(runnerRepository.save(any(Runner.class))).thenAnswer(inv -> inv.getArgument(0));
         when(runnerRepository.sumAiDailyScansUsedForDate(any(LocalDate.class))).thenReturn(0L);
 
@@ -168,8 +169,8 @@ class BackendStressTests {
     }
 
     @Test
-    @DisplayName("STRESS: AiUsageService — normalizeDailyWindow has TOCTOU race on reset date")
-    void aiUsageService_normalizeDailyWindow_toctouRace() throws Exception {
+    @DisplayName("STRESS: AiUsageService — advisory quota reads never persist stale daily resets")
+    void aiUsageService_advisoryQuotaReadsDoNotPersistStaleDailyReset() throws Exception {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AiUsageService service = new AiUsageService(runnerRepository, 5, 200, 20);
 
@@ -178,11 +179,6 @@ class BackendStressTests {
         runner.setAiDailyScansUsed(3);
         runner.setAiDailyResetDate(LocalDate.now().minusDays(1));
 
-        AtomicInteger saveCount = new AtomicInteger(0);
-        when(runnerRepository.save(any(Runner.class))).thenAnswer(inv -> {
-            saveCount.incrementAndGet();
-            return inv.getArgument(0);
-        });
         when(runnerRepository.sumAiDailyScansUsedForDate(any())).thenReturn(0L);
 
         int threadCount = 5;
@@ -197,7 +193,13 @@ class BackendStressTests {
                 } catch (Exception e) {
                     return;
                 }
-                service.checkQuota(runner);
+                Runner requestSnapshot = new Runner();
+                requestSnapshot.setId(runner.getId());
+                requestSnapshot.setAiDailyScansUsed(runner.getAiDailyScansUsed());
+                requestSnapshot.setAiDailyResetDate(runner.getAiDailyResetDate());
+                assertThat(service.checkQuota(requestSnapshot)).isNull();
+                assertThat(requestSnapshot.getAiDailyScansUsed()).isZero();
+                assertThat(requestSnapshot.getAiDailyResetDate()).isEqualTo(LocalDate.now());
             }));
         }
 
@@ -206,12 +208,9 @@ class BackendStressTests {
         }
         executor.shutdown();
 
-        assertThat(saveCount.get()).isGreaterThan(0);
-
-        if (saveCount.get() > 1) {
-            System.out.println("[STRESS BUG] AiUsageService normalizeDailyWindow: " + saveCount.get()
-                    + " redundant saves from " + threadCount + " threads. Only 1 save should occur.");
-        }
+        verify(runnerRepository, never()).save(any());
+        assertThat(runner.getAiDailyScansUsed()).isEqualTo(3);
+        assertThat(runner.getAiDailyResetDate()).isEqualTo(LocalDate.now().minusDays(1));
     }
 
     // ================================================================

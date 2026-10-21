@@ -84,7 +84,7 @@ assert.match(
   /function openRun\(run\) \{\s*sessionStorage\.setItem\('hermes_selected_run', JSON\.stringify\(run\)\);\s*navigate\(buildRunDetailPath\(run\.id \|\| ''\)\);/,
   'Opening a ledger row should preserve the selected activity cache and ID-based detail route.',
 );
-assert.match(runsSource, /cachedApiJson\('\/api\/activities'\)[\s\S]*?setAllRuns\(list\);[\s\S]*?setLoadState\('ready'\)/, 'The ledger should retain cached full-history loading and its ready state.');
+assert.match(runsSource, /cachedApiJson\('\/api\/activities', \{ signal \}\)[\s\S]*?setAllRuns\(list\);[\s\S]*?setLoadState\('ready'\)/, 'The ledger should retain cancellable cached full-history loading and its ready state.');
 assert.match(runsSource, /invalidateResourceCache\('\/api\/activities'\)/, 'Activity mutations should still invalidate the history cache.');
 
 assert.match(runsSource, /if \(loadState === 'loading'\) return <PageSkeleton variant="runs" \/>;/, 'Initial loading should retain the dedicated Runs skeleton.');

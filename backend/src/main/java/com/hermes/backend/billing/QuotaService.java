@@ -2,6 +2,9 @@ package com.hermes.backend.billing;
 
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -24,6 +27,8 @@ public class QuotaService {
 
     private final int freeShoeScanLimit;
     private final int freeMusclePlanLimit;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public QuotaService(
             RunnerRepository runnerRepository,
@@ -62,7 +67,13 @@ public class QuotaService {
     @Transactional
     public boolean tryConsumeFeature(Runner runner, String featureKey) {
         Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
-        if (isPro(fresh)) return true;
+        if (entityManager != null) entityManager.refresh(fresh, LockModeType.PESSIMISTIC_WRITE);
+        if (isPro(fresh)) {
+            runner.setSubscriptionTier(fresh.getSubscriptionTier());
+            runner.setProExpiresAt(fresh.getProExpiresAt());
+            runner.setRole(fresh.getRole());
+            return true;
+        }
         normalizeMonthlyWindow(fresh, featureKey);
         copyShoeUsage(fresh, runner);
         if (getFeatureUsage(fresh, featureKey) >= getFeatureLimit(featureKey)) return false;
@@ -100,8 +111,10 @@ public class QuotaService {
     @Transactional
     public void rollbackConsumedFeature(Runner runner, String featureKey) {
         if (isPro(runner)) return;
+        LocalDate reservationMonth = runner.getShoeScanCountReset();
         Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
-        if (!java.util.Objects.equals(fresh.getShoeScanCountReset(), runner.getShoeScanCountReset())) return;
+        if (entityManager != null) entityManager.refresh(fresh, LockModeType.PESSIMISTIC_WRITE);
+        if (!java.util.Objects.equals(fresh.getShoeScanCountReset(), reservationMonth)) return;
         switch (featureKey) {
             case "shoe-scan" -> {
                 int current = fresh.getShoeScanCount();

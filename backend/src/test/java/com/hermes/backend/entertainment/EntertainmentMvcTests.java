@@ -36,6 +36,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(EntertainmentMvcTests.TimeConfiguration.class)
 class EntertainmentMvcTests {
     static final Instant FIRST = Instant.parse("2026-10-11T15:16:17.123456Z");
+    private static final java.util.concurrent.atomic.AtomicInteger CLIENT_NETWORKS = new java.util.concurrent.atomic.AtomicInteger();
+    private String clientNetwork;
     final ObjectMapper json = new ObjectMapper();
     @Autowired MockMvc mvc;
     @Autowired RunnerRepository runners;
@@ -55,7 +57,16 @@ class EntertainmentMvcTests {
         public Clock withZone(ZoneId zone) { return this; }
         public Instant instant() { return now; }
     }
-    @BeforeEach void time() { clock.now = FIRST; }
+    @BeforeEach void time() {
+        clock.now = FIRST;
+        // Keep the real limiter active without sharing one localhost budget across unrelated tests.
+        int network = CLIENT_NETWORKS.incrementAndGet();
+        clientNetwork = "198.18." + ((network / 256) % 256) + "." + (network % 256);
+    }
+    private org.springframework.mock.web.MockHttpServletRequest clientNetwork(org.springframework.mock.web.MockHttpServletRequest request) {
+        request.setRemoteAddr(clientNetwork);
+        return request;
+    }
     record Actor(Runner runner, String token) { String id() { return runner.getId().toString(); } }
     Actor actor() {
         Runner r = runners.saveAndFlush(new Runner("ent-" + UUID.randomUUID() + "@hermes.test", "ACTIVE"));
@@ -69,6 +80,7 @@ class EntertainmentMvcTests {
     }
     JsonNode call(Actor a, String method, String path, Object body, int expected) throws Exception {
         var request = MockMvcRequestBuilders.request(org.springframework.http.HttpMethod.valueOf(method), "/api/entertainment" + path);
+        request.with(this::clientNetwork);
         if (a != null) request.header("Authorization", a.token());
         if (body != null) request.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body));
         var response = mvc.perform(request).andReturn().getResponse();
@@ -300,6 +312,7 @@ class EntertainmentMvcTests {
         try {
             List<Callable<Integer>> calls=new ArrayList<>();
             for(int i=0;i<2;i++) calls.add(()->mvc.perform(MockMvcRequestBuilders.post("/api/entertainment/invites/accept")
+                .with(this::clientNetwork)
                 .header("Authorization",b.token()).contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(command("token",inv.get("token").asText())))).andReturn().getResponse().getStatus());
             List<Integer> statuses=new ArrayList<>(); for(var f:pool.invokeAll(calls)) statuses.add(f.get());
@@ -317,6 +330,7 @@ class EntertainmentMvcTests {
         try {
             List<Callable<Integer>> tasks=new ArrayList<>();
             for(Actor member:List.of(b,c)) tasks.add(()->mvc.perform(MockMvcRequestBuilders.put("/api/entertainment"+path)
+                .with(this::clientNetwork)
                 .header("Authorization",member.token()).contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(command("expectedVersion",version,"symbol","star")))).andReturn().getResponse().getStatus());
             List<Integer> statuses=new ArrayList<>(); for(var f:pool.invokeAll(tasks)) statuses.add(f.get());
@@ -404,6 +418,7 @@ class EntertainmentMvcTests {
             for(var entry:List.of(Map.entry(d,dInvite),Map.entry(e,eInvite))) tasks.add(()->{
                 ready.countDown(); assertThat(start.await(5,TimeUnit.SECONDS)).isTrue();
                 return mvc.perform(MockMvcRequestBuilders.post("/api/entertainment/invites/accept")
+                    .with(this::clientNetwork)
                     .header("Authorization",entry.getKey().token()).contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(command("token",entry.getValue().get("token").asText())))).andReturn().getResponse().getStatus();
             });
@@ -419,11 +434,13 @@ class EntertainmentMvcTests {
         try {
             var accept=pool.submit(()->{
                 start.await(); return mvc.perform(MockMvcRequestBuilders.post("/api/entertainment/invites/accept")
+                    .with(this::clientNetwork)
                     .header("Authorization",b.token()).contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(command("token",inv.get("token").asText())))).andReturn().getResponse().getStatus();
             });
             var revoke=pool.submit(()->{
                 start.await(); return mvc.perform(MockMvcRequestBuilders.post("/api/entertainment/groups/"+g.get("id").asText()+"/invites/"+inv.get("inviteId").asText()+"/revoke")
+                    .with(this::clientNetwork)
                     .header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON)
                     .content(json.writeValueAsString(command("expectedVersion",g.get("version").asLong())))).andReturn().getResponse().getStatus();
             });

@@ -23,8 +23,8 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const runsPromise = cachedApiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?sortRecentRuns\(list\);/,
-  'Runs should normalize the direct /api/activities response to an array before sorting and rendering activity cards.',
+  /const runsPromise = withRequestDeadline\([\s\S]*?cachedApiJson\('\/api\/activities', \{ signal \}\)[\s\S]*?if \(!Array\.isArray\(data\)[\s\S]*?throw new Error\('Invalid activity list'\);[\s\S]*?const list = data;[\s\S]*?sortRecentRuns\(list\);/,
+  'Runs should bound the cached activity read and reject malformed payloads before sorting and rendering activity cards.',
 );
 
 assert.match(
@@ -243,7 +243,7 @@ assert.match(
 );
 
 const cachePaintStart = runsSource.indexOf('if (fromCache && cachedHit && isCurrentLoad()) {');
-const freshActivitiesStart = runsSource.indexOf("const runsPromise = cachedApiJson('/api/activities')");
+const freshActivitiesStart = runsSource.indexOf('const runsPromise =');
 assert.ok(cachePaintStart >= 0 && freshActivitiesStart > cachePaintStart, 'Runs cache paint should be defined before fresh activity revalidation.');
 const cacheToRevalidationSource = runsSource.slice(cachePaintStart, freshActivitiesStart);
 assert.match(cacheToRevalidationSource, /setAllRuns\(sorted\);[\s\S]*setProfile\(cachedHit\.profile\);[\s\S]*setStravaStatus\(cachedHit\.stravaStatus\);[\s\S]*setLoadState\('ready'\);/);
@@ -271,8 +271,8 @@ assert.match(
 
 assert.match(
   runsSource,
-  /function handleStravaSyncFinished\(\) \{\s*refreshRuns\(\);/,
-  'Completed Strava sync should use the route-preview reset refresh path.',
+  /if \(isAuthenticated && recommendationRevision > 0\) refreshRuns\(\);/,
+  'Shared recommendation source updates should use the route-preview reset refresh path.',
 );
 
 assert.match(

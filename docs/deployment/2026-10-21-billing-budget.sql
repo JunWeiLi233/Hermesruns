@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS billing_checkout_attempt (
     price_id varchar(255) NOT NULL,
     base_url varchar(2048) NOT NULL,
     session_id varchar(255),
+    completed boolean NOT NULL DEFAULT false,
     session_url varchar(4096)
 );
 

@@ -26,6 +26,8 @@ public class CheckoutAttempt {
     @Column(nullable = false, length = 2048)
     private String baseUrl;
     private String sessionId;
+    @Column(nullable = false)
+    private boolean completed;
     @Column(length = 4096)
     private String sessionUrl;
 
@@ -49,5 +51,8 @@ public class CheckoutAttempt {
     String getPriceId() { return priceId; }
     String getBaseUrl() { return baseUrl; }
     String getSessionUrl() { return sessionUrl; }
+    String getSessionId() { return sessionId; }
+    boolean isCompleted() { return completed; }
+    void markCompleted() { completed = true; }
     void setSession(String id, String url) { this.sessionId = id; this.sessionUrl = url; }
 }

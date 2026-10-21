@@ -168,6 +168,13 @@ class StravaAliasConfigTests {
         }
 
         @Bean
+        jakarta.persistence.EntityManagerFactory entityManagerFactory() {
+            // Inline mocks retain AiUsageService's persistence injection annotation. This
+            // configuration-only fixture never invokes quota/persistence operations.
+            return mock(jakarta.persistence.EntityManagerFactory.class);
+        }
+
+        @Bean
         RestTemplate restTemplate() {
             return mock(RestTemplate.class);
         }

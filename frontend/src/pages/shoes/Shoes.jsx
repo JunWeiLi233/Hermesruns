@@ -6,6 +6,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson, apiFetch } from '../../api';
 import { cachedApiJson } from '../../api/resourceCache';
+import { withRequestDeadline } from '../../api/requestDeadline';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import Modal from '../../components/Modal';
@@ -225,6 +226,7 @@ const Shoes = memo(function Shoes() {
   const [shoes, setShoes] = useState([]);
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const shoesLoadControllerRef = useRef(null);
   const [duplicateClusters, setDuplicateClusters] = useState([]);
   const [mergeBusy, setMergeBusy] = useState(false);
   const [shoeActionBusyId, setShoeActionBusyId] = useState(null);
@@ -368,18 +370,32 @@ const Shoes = memo(function Shoes() {
   }, []);
 
   const loadShoes = useCallback(async () => {
+    shoesLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    shoesLoadControllerRef.current = controller;
+    const isCurrent = () => shoesLoadControllerRef.current === controller && !controller.signal.aborted;
+    setLoadState((current) => current === 'error' ? 'loading' : current);
+    // Duplicate suggestions are optional and must not hold up the owned inventory.
+    withRequestDeadline(async (signal) => {
+      const response = await apiFetch('/api/shoes/duplicate-clusters', { signal });
+      return response.ok ? response.json() : null;
+    }, controller.signal).then((data) => {
+      if (isCurrent()) setDuplicateClusters(Array.isArray(data?.clusters) ? data.clusters : []);
+    }).catch(() => {
+      if (isCurrent()) setDuplicateClusters([]);
+    });
     try {
-      const [data, dupData] = await Promise.all([
-        apiJson('/api/shoes?includeRetired=true'),
-        apiFetch('/api/shoes/duplicate-clusters').then(r => (r.ok ? r.json() : { clusters: [] })).catch(() => ({ clusters: [] })),
-      ]);
-      const list = Array.isArray(data) ? data : [];
+      const data = await withRequestDeadline((signal) => apiJson('/api/shoes?includeRetired=true', { signal }), controller.signal);
+      if (!isCurrent()) return;
+      if (!Array.isArray(data) || data.some((shoe) => !shoe || typeof shoe !== 'object' || Array.isArray(shoe))) {
+        throw new Error('Invalid shoe inventory');
+      }
+      const list = data;
       list.sort((a, b) => (b.currentDistanceKm || 0) - (a.currentDistanceKm || 0));
       setShoes(list);
-      setDuplicateClusters(Array.isArray(dupData.clusters) ? dupData.clusters : []);
       setLoadState('ready');
     } catch (err) {
-      if (err.message !== 'Unauthorized') setLoadState('error');
+      if (isCurrent() && err.message !== 'Unauthorized') setLoadState('error');
     }
   }, []);
 
@@ -400,10 +416,6 @@ const Shoes = memo(function Shoes() {
     } catch { /* ignored */ }
     finally { setMergeBusy(false); }
   }
-
-  useEffect(() => {
-    if (loadState === 'ready') loadShoes();
-  }, [loadShoes, loadState]);
 
   const checkScanAvailable = useCallback(async () => {
     try {
@@ -446,6 +458,10 @@ const Shoes = memo(function Shoes() {
     loadShoes();
     loadRuns();
     checkScanAvailable();
+    return () => {
+      shoesLoadControllerRef.current?.abort();
+      shoesLoadControllerRef.current = null;
+    };
   }, [checkScanAvailable, isAuthenticated, loadProfile, loadRuns, loadShoes, navigate]);
 
   useEffect(() => {
@@ -1331,7 +1347,10 @@ const Shoes = memo(function Shoes() {
                 </div>
 
                 {loadState === 'loading' && <div className="shoe-inventory-status shoe-inventory-status--loading">{t('shoes.loading')}</div>}
-                {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
+                {loadState === 'error' && <div className="shoe-inventory-status" role="alert">
+                  <p>{t('shoes.load_error')}</p>
+                  <button type="button" className="shoe-v2-reset" onClick={loadShoes}>{t('analysis.stitch_load_retry')}</button>
+                </div>}
                 {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
                 {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
 
